@@ -53,7 +53,8 @@ void PostProcessDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, 
 void PostProcessDescriptorSet::setFrameUniforms(DriverApi& driver,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     // initialize the descriptor-set
-    mDescriptorSet.setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
+    mDescriptorSet.setBuffer(mDescriptorSetLayout,
+            +PerViewBindingPoints::FRAME_UNIFORMS,
             uniforms.getUboHandle(), 0, uniforms.getSize());
 
     mDescriptorSet.commit(mDescriptorSetLayout, driver);

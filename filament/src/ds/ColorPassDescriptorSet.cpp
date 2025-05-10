@@ -79,7 +79,7 @@ uint8_t ColorPassDescriptorSet::getIndex(
         index |= 0x2;
     }
 
-    if (!fog) {
+    if (fog) {
         // this will remove samplers needed for fog
         index |= 0x4;
     }
@@ -88,27 +88,18 @@ uint8_t ColorPassDescriptorSet::getIndex(
     return index;
 }
 
-
-ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
+ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine, bool const vsm,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept
-        : mUniforms(uniforms) {
-
-    constexpr UserVariantFilterMask filterFog = UserVariantFilterMask(UserVariantFilterBit::FOG);
-    constexpr UserVariantFilterMask keepFog = UserVariantFilterMask(0);
-
+    : mUniforms(uniforms), mIsVsm(vsm) {
     for (bool const lit: { false, true }) {
         for (bool const ssr: { false, true }) {
             for (bool const fog: { false, true }) {
-                auto index = getIndex(lit, ssr, fog);
+                auto const index = getIndex(lit, ssr, fog);
                 mDescriptorSetLayout[index] = {
                         engine.getDescriptorSetLayoutFactory(),
                         engine.getDriverApi(),
                         descriptor_sets::getPerViewDescriptorSetLayout(
-                                MaterialDomain::SURFACE,
-                                fog ? keepFog : filterFog,
-                                lit,
-                                ssr ? ReflectionMode::SCREEN_SPACE : ReflectionMode::DEFAULT,
-                                ssr ? RefractionMode::SCREEN_SPACE : RefractionMode::NONE)
+                                MaterialDomain::SURFACE, lit, ssr, fog, vsm)
                 };
                 mDescriptorSet[index] = DescriptorSet{ mDescriptorSetLayout[index] };
             }
@@ -130,12 +121,14 @@ void ColorPassDescriptorSet::init(
         BufferObjectHandle lights,
         BufferObjectHandle recordBuffer,
         BufferObjectHandle froxelBuffer) noexcept {
-    for (auto&& descriptorSet: mDescriptorSet) {
-        descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        auto& descriptorSet = mDescriptorSet[i];
+        auto const& layout = mDescriptorSetLayout[i];
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::LIGHTS,
                 lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER,
                 recordBuffer, 0, sizeof(FroxelRecordUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::FROXEL_BUFFER,
                 froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }
 }
@@ -558,7 +551,7 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
         if (samplers[binding]) {
-            mDescriptorSet[i].setSampler(binding, th, params);
+            mDescriptorSet[i].setSampler(mDescriptorSetLayout[i], binding, th, params);
         }
     }
 }
@@ -566,9 +559,10 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
 void ColorPassDescriptorSet::setBuffer(descriptor_binding_t const binding,
         BufferObjectHandle boh, uint32_t const offset, uint32_t const size) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
-        auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();
+        auto const& layout = mDescriptorSetLayout[i];
+        auto ubos = layout.getUniformBufferDescriptors();
         if (ubos[binding]) {
-            mDescriptorSet[i].setBuffer(binding, boh, offset, size);
+            mDescriptorSet[i].setBuffer(layout, binding, boh, offset, size);
         }
     }
 }

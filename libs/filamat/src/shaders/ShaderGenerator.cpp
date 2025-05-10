@@ -36,6 +36,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -46,9 +47,9 @@ using namespace filament;
 using namespace filament::backend;
 using namespace utils;
 
-void ShaderGenerator::generateSurfaceMaterialVariantDefines(utils::io::sstream& out,
-        ShaderStage stage, MaterialBuilder::FeatureLevel featureLevel,
-        MaterialInfo const& material, filament::Variant variant) noexcept {
+void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
+        ShaderStage const stage, MaterialBuilder::FeatureLevel featureLevel,
+        MaterialInfo const& material, filament::Variant const variant) noexcept {
 
     bool const litVariants = material.isLit || material.hasShadowMultiplier;
 
@@ -228,25 +229,25 @@ void ShaderGenerator::generateSurfaceMaterialVariantProperties(io::sstream& out,
     }
 }
 
-void ShaderGenerator::generateVertexDomainDefines(io::sstream& vs, VertexDomain domain) noexcept {
+void ShaderGenerator::generateVertexDomainDefines(io::sstream& out, VertexDomain const domain) noexcept {
     switch (domain) {
         case VertexDomain::OBJECT:
-            CodeGenerator::generateDefine(vs, "VERTEX_DOMAIN_OBJECT", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_OBJECT", true);
             break;
         case VertexDomain::WORLD:
-            CodeGenerator::generateDefine(vs, "VERTEX_DOMAIN_WORLD", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_WORLD", true);
             break;
         case VertexDomain::VIEW:
-            CodeGenerator::generateDefine(vs, "VERTEX_DOMAIN_VIEW", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_VIEW", true);
             break;
         case VertexDomain::DEVICE:
-            CodeGenerator::generateDefine(vs, "VERTEX_DOMAIN_DEVICE", true);
+            CodeGenerator::generateDefine(out, "VERTEX_DOMAIN_DEVICE", true);
             break;
     }
 }
 
 void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out,
-        PostProcessVariant variant) noexcept {
+        PostProcessVariant const variant) noexcept {
     switch (variant) {
         case PostProcessVariant::OPAQUE:
             CodeGenerator::generateDefine(out, "POST_PROCESS_OPAQUE", 1u);
@@ -258,7 +259,7 @@ void ShaderGenerator::generatePostProcessMaterialVariantDefines(io::sstream& out
 }
 
 void ShaderGenerator::appendShader(io::sstream& ss,
-        const CString& shader, size_t lineOffset) noexcept {
+        const CString& shader, size_t const lineOffset) noexcept {
 
     auto countLines = [](const char* s) -> size_t {
         size_t lines = 0;
@@ -314,9 +315,9 @@ ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PreprocessorDefineList const& defines,
         MaterialBuilder::ConstantList const& constants,
         MaterialBuilder::PushConstantList const& pushConstants,
-        CString const& materialCode, size_t lineOffset,
-        CString const& materialVertexCode, size_t vertexLineOffset,
-        MaterialBuilder::MaterialDomain materialDomain) noexcept {
+        CString const& materialCode, size_t const lineOffset,
+        CString const& materialVertexCode, size_t const vertexLineOffset,
+        MaterialBuilder::MaterialDomain const materialDomain) noexcept {
 
     if (materialDomain == MaterialBuilder::MaterialDomain::COMPUTE) {
         // we shouldn't have a vertex shader in a compute material
@@ -360,8 +361,8 @@ ShaderGenerator::ShaderGenerator(
     }
 }
 
-void ShaderGenerator::fixupExternalSamplers(ShaderModel sm, std::string& shader,
-        MaterialBuilder::FeatureLevel featureLevel,
+void ShaderGenerator::fixupExternalSamplers(ShaderModel const sm, std::string& shader,
+        MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material) noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
@@ -370,11 +371,11 @@ void ShaderGenerator::fixupExternalSamplers(ShaderModel sm, std::string& shader,
     }
 }
 
-std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialBuilder::FeatureLevel featureLevel,
-        MaterialInfo const& material, const filament::Variant variant, Interpolation interpolation,
-        VertexDomain vertexDomain) const noexcept {
+std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shaderModel,
+        MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
+        MaterialBuilder::FeatureLevel const featureLevel,
+        MaterialInfo const& material, const filament::Variant variant, Interpolation const interpolation,
+        VertexDomain const vertexDomain) const noexcept {
 
     assert_invariant(filament::Variant::isValid(variant));
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
@@ -416,23 +417,23 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel shaderModel,
 
     AttributeBitset attributes = material.requiredAttributes;
     if (hasSkinningOrMorphing(variant, featureLevel)) {
-        attributes.set(VertexAttribute::BONE_INDICES);
-        attributes.set(VertexAttribute::BONE_WEIGHTS);
+        attributes.set(BONE_INDICES);
+        attributes.set(BONE_WEIGHTS);
         if (material.useLegacyMorphing) {
-            attributes.set(VertexAttribute::MORPH_POSITION_0);
-            attributes.set(VertexAttribute::MORPH_POSITION_1);
-            attributes.set(VertexAttribute::MORPH_POSITION_2);
-            attributes.set(VertexAttribute::MORPH_POSITION_3);
-            attributes.set(VertexAttribute::MORPH_TANGENTS_0);
-            attributes.set(VertexAttribute::MORPH_TANGENTS_1);
-            attributes.set(VertexAttribute::MORPH_TANGENTS_2);
-            attributes.set(VertexAttribute::MORPH_TANGENTS_3);
+            attributes.set(MORPH_POSITION_0);
+            attributes.set(MORPH_POSITION_1);
+            attributes.set(MORPH_POSITION_2);
+            attributes.set(MORPH_POSITION_3);
+            attributes.set(MORPH_TANGENTS_0);
+            attributes.set(MORPH_TANGENTS_1);
+            attributes.set(MORPH_TANGENTS_2);
+            attributes.set(MORPH_TANGENTS_3);
         }
     }
 
     MaterialBuilder::PushConstantList vertexPushConstants;
     std::copy_if(mPushConstants.begin(), mPushConstants.end(),
-            std::back_insert_iterator<MaterialBuilder::PushConstantList>(vertexPushConstants),
+            std::back_insert_iterator(vertexPushConstants),
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::VERTEX;
             });
@@ -505,11 +506,11 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel shaderModel,
     return vs.c_str();
 }
 
-std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialBuilder::FeatureLevel featureLevel,
+std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shaderModel,
+        MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
+        MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material, const filament::Variant variant,
-        Interpolation interpolation, UserVariantFilterMask variantFilter) const noexcept {
+        Interpolation const interpolation, UserVariantFilterMask const variantFilter) const noexcept {
 
     assert_invariant(filament::Variant::isValid(variant));
     assert_invariant(mMaterialDomain != MaterialBuilder::MaterialDomain::COMPUTE);
@@ -529,8 +530,8 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
     generateSurfaceMaterialVariantDefines(
             fs, ShaderStage::FRAGMENT, featureLevel, material, variant);
 
-    auto defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
-                             SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
+    auto const defaultSpecularAO = shaderModel == ShaderModel::MOBILE ?
+            SpecularAmbientOcclusion::NONE : SpecularAmbientOcclusion::SIMPLE;
     auto specularAO = material.specularAOSet ? material.specularAO : defaultSpecularAO;
     CodeGenerator::generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", uint32_t(specularAO));
 
@@ -542,12 +543,12 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
 
     MaterialBuilder::PushConstantList fragmentPushConstants;
     std::copy_if(mPushConstants.begin(), mPushConstants.end(),
-            std::back_insert_iterator<MaterialBuilder::PushConstantList>(fragmentPushConstants),
+            std::back_insert_iterator(fragmentPushConstants),
             [](MaterialBuilder::PushConstant const& constant) {
                 return constant.stage == ShaderStage::FRAGMENT;
             });
-    cg.generateSurfaceShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes, interpolation,
-            fragmentPushConstants);
+    cg.generateSurfaceShaderInputs(fs, ShaderStage::FRAGMENT, material.requiredAttributes,
+            interpolation, fragmentPushConstants);
 
     CodeGenerator::generateSurfaceTypes(fs, ShaderStage::FRAGMENT);
 
@@ -605,12 +606,16 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
     if (featureLevel >= FeatureLevel::FEATURE_LEVEL_1) {
         assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
         // this is the list of samplers we need to filter
+
+        bool const isLit = material.isLit || material.hasShadowMultiplier;
+        bool const isSSR = material.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                material.refractionMode == RefractionMode::SCREEN_SPACE;
+        bool const hasFog = !(variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG));
+
         auto const list = SamplerInterfaceBlock::filterSamplerList(
                 SibGenerator::getPerViewSib(variant).getSamplerInfoList(),
                 descriptor_sets::getPerViewDescriptorSetLayoutWithVariant(
-                        variant, mMaterialDomain, variantFilter,
-                        material.isLit || material.hasShadowMultiplier,
-                        material.reflectionMode, material.refractionMode));
+                        variant, mMaterialDomain, isLit, isSSR, hasFog));
 
         cg.generateCommonSamplers(fs, DescriptorSetBindingPoints::PER_VIEW, list);
     }
@@ -665,9 +670,9 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel shaderMode
     return fs.c_str();
 }
 
-std::string ShaderGenerator::createSurfaceComputeProgram(filament::backend::ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialBuilder::FeatureLevel featureLevel,
+std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shaderModel,
+        MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
+        MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material) const noexcept {
     assert_invariant(mMaterialDomain == MaterialBuilder::MaterialDomain::COMPUTE);
     assert_invariant(featureLevel >= FeatureLevel::FEATURE_LEVEL_2);
@@ -708,9 +713,9 @@ std::string ShaderGenerator::createSurfaceComputeProgram(filament::backend::Shad
     return s.c_str();
 }
 
-std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialBuilder::FeatureLevel featureLevel,
+std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm,
+        MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
+        MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material, const filament::Variant::type_t variantKey) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream vs;
@@ -718,7 +723,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
 
     generateUserSpecConstants(cg, vs, mConstants);
 
-    CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
+    CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
     // custom material variables
     size_t variableIndex = 0;
@@ -752,9 +757,9 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel sm,
     return vs.c_str();
 }
 
-std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
-        MaterialBuilder::FeatureLevel featureLevel,
+std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const sm,
+        MaterialBuilder::TargetApi const targetApi, MaterialBuilder::TargetLanguage const targetLanguage,
+        MaterialBuilder::FeatureLevel const featureLevel,
         MaterialInfo const& material, uint8_t variant) const noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage, featureLevel);
     io::sstream fs;
@@ -811,7 +816,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel sm,
 }
 
 bool ShaderGenerator::hasSkinningOrMorphing(
-        filament::Variant variant, MaterialBuilder::FeatureLevel featureLevel) noexcept {
+        filament::Variant const variant, MaterialBuilder::FeatureLevel const featureLevel) noexcept {
     return variant.hasSkinningOrMorphing()
             // HACK(exv): Ignore skinning/morphing variant when targeting ESSL 1.0. We should
             // either properly support skinning on FL0 or build a system in matc which allows
@@ -820,7 +825,7 @@ bool ShaderGenerator::hasSkinningOrMorphing(
 }
 
 bool ShaderGenerator::hasStereo(
-        filament::Variant variant, MaterialBuilder::FeatureLevel featureLevel) noexcept {
+        filament::Variant const variant, MaterialBuilder::FeatureLevel const featureLevel) noexcept {
     return variant.hasStereo()
             // HACK(exv): Ignore stereo variant when targeting ESSL 1.0. We should properly build a
             // system in matc which allows the set of included variants to differ per-feature level.

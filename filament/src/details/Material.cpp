@@ -96,7 +96,7 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
 
         FILAMENT_CHECK_PRECONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
-                << "the material was not built for any of the " << backendToString(backend)
+                << "the material was not built for any of the " << to_string(backend)
                 << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
     }
 
@@ -329,11 +329,12 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder,
 
     parser->hasCustomDepthShader(&mHasCustomDepthShader);
 
-    mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(
-            mIsVariantLit,
-            mReflectionMode == ReflectionMode::SCREEN_SPACE ||
-            mRefractionMode == RefractionMode::SCREEN_SPACE,
-            !(mVariantFilterMask & +UserVariantFilterBit::FOG));
+    bool const isLit = mIsVariantLit || mHasShadowMultiplier;
+    bool const isSSR = mReflectionMode == ReflectionMode::SCREEN_SPACE ||
+            mRefractionMode == RefractionMode::SCREEN_SPACE;
+    bool const hasFog = !(mVariantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+
+    mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
@@ -407,6 +408,7 @@ void FMaterial::terminate(FEngine& engine) {
 
     DriverApi& driver = engine.getDriverApi();
     mPerViewDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+    mPerViewDescriptorSetLayoutVsm.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
 }
 
@@ -1149,17 +1151,23 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     backend::DescriptorSetLayout descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
-    auto perMatLabel = mName;
-    perMatLabel.append("_perMat");
-    descriptorSetLayout.label = std::move(perMatLabel);
 
     // get the PER_VIEW descriptor binding info
-    auto perViewDescriptorSetLayout =
-            descriptor_sets::getPerViewDescriptorSetLayout(mMaterialDomain, mVariantFilterMask,
-            mIsVariantLit || mHasShadowMultiplier, mReflectionMode, mRefractionMode);
-    auto perViewLabel = mName;
-    perViewLabel.append("_perView");
-    perViewDescriptorSetLayout.label = std::move(perViewLabel);
+    bool const isLit = mIsVariantLit || mHasShadowMultiplier;
+    bool const isSSR = mReflectionMode == ReflectionMode::SCREEN_SPACE ||
+            mRefractionMode == RefractionMode::SCREEN_SPACE;
+    bool const hasFog = !(mVariantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+
+    auto perViewDescriptorSetLayout = descriptor_sets::getPerViewDescriptorSetLayout(
+            mMaterialDomain, isLit, isSSR, hasFog, false);
+
+    auto perViewDescriptorSetLayoutVsm = descriptor_sets::getPerViewDescriptorSetLayout(
+            mMaterialDomain, isLit, isSSR, hasFog, true);
+
+    // set the labels
+    descriptorSetLayout.label = CString{ mName }.append("_perMat");
+    perViewDescriptorSetLayout.label = CString{ mName }.append("_perView");
+    perViewDescriptorSetLayoutVsm.label = CString{ mName }.append("_perViewVsm");
 
     // get the PER_RENDERABLE and PER_VIEW descriptor binding info
     for (auto&& [bindingPoint, descriptorSetLayout] : {
@@ -1181,7 +1189,11 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
 
     mPerViewDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), perViewDescriptorSetLayout };
+            engine.getDriverApi(), std::move(perViewDescriptorSetLayout) };
+
+    mPerViewDescriptorSetLayoutVsm = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(perViewDescriptorSetLayoutVsm) };
 }
 
 descriptor_binding_t FMaterial::getSamplerBinding(

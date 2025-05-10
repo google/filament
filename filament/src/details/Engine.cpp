@@ -361,8 +361,6 @@ void FEngine::init() {
     }
 
     // initialize the dummy textures so that their contents are not undefined
-    static constexpr uint32_t zeroes[6] = {};
-    static constexpr uint32_t ones = 0xffffffff;
 
     mDefaultIblTexture = downcast(Texture::Builder()
             .width(1).height(1).levels(1)
@@ -371,7 +369,8 @@ void FEngine::init() {
             .build(*this));
 
     driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
-            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 6>{}.data(), 6,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
     // 3 bands = 9 float3
     constexpr float sh[9 * 3] = { 0.0f };
@@ -393,10 +392,12 @@ void FEngine::init() {
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
-            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
-            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 4>{}.data(), 4,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
 
     mPerViewDescriptorSetLayoutSsrVariant = {
@@ -451,14 +452,23 @@ void FEngine::init() {
         mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+        mDummyOneTextureArrayDepth = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                TextureFormat::DEPTH32F, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
         mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
         driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
+                    Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        driverApi.update3DImage(mDummyOneTextureArrayDepth, 0, 0, 0, 0, 1, 1, 1,
+                { std::array<float, 1>{1.0f}.data(), 4,
+                    Texture::Format::DEPTH_COMPONENT, Texture::Type::FLOAT });
 
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { std::array<uint8_t, 4>{}.data(), 4,
+                    Texture::Format::RGBA, Texture::Type::UBYTE });
 
         mLightManager.init(*this);
         mDFG.init(*this);
@@ -712,8 +722,7 @@ int FEngine::loop() {
     if (mPlatform == nullptr) {
         mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
-        const char* const backend = backendToString(mBackend);
-        slog.i << "FEngine resolved backend: " << backend << io::endl;
+        slog.i << "FEngine resolved backend: " << to_string(mBackend) << io::endl;
         if (mPlatform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
             mDriverBarrier.latch();

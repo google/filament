@@ -46,8 +46,8 @@ ShadowMapDescriptorSet::ShadowMapDescriptorSet(FEngine& engine) noexcept {
     mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutDepthVariant() };
 
     // initialize the descriptor-set
-    mDescriptorSet.setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
-            mUniformBufferHandle, 0, sizeof(PerViewUib));
+    mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutDepthVariant(),
+            +PerViewBindingPoints::FRAME_UNIFORMS, mUniformBufferHandle, 0, sizeof(PerViewUib));
 }
 
 void ShadowMapDescriptorSet::terminate(DriverApi& driver) {

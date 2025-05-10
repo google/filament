@@ -64,7 +64,7 @@ using namespace math;
 
 // this is a hack to be able to create a std::function<> with a non-copyable closure
 template<class F>
-auto make_copyable_function(F&& f) {
+static auto make_copyable_function(F&& f) {
     using dF = std::decay_t<F>;
     auto spf = std::make_shared<dF>(std::forward<F>(f));
     return [spf](auto&& ... args) -> decltype(auto) {
@@ -274,7 +274,9 @@ Texture* Texture::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FTexture::FTexture(FEngine& engine, const Builder& builder) {
+FTexture::FTexture(FEngine& engine, const Builder& builder)
+    : mHasBlitSrc(false),
+      mExternal(false) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
@@ -288,6 +290,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
     mHasBlitSrc = builder->mHasBlitSrc;
     mExternal = builder->mExternal;
+    mTextureType = backend::getTextureType(mFormat);
 
     bool const isImported = builder->mImportedId != 0;
     if (mExternal && !isImported) {
@@ -714,6 +717,10 @@ size_t FTexture::computeTextureDataSize(Format const format, Type const type,
 
 size_t FTexture::getFormatSize(InternalFormat const format) noexcept {
     return backend::getFormatSize(format);
+}
+
+TextureType FTexture::getTextureType() const noexcept {
+    return mTextureType;
 }
 
 

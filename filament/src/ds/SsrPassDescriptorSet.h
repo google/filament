@@ -47,11 +47,11 @@ public:
 
     void terminate(backend::DriverApi& driver);
 
-    void setFrameUniforms(TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
+    void setFrameUniforms(FEngine const& engine, TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
 
-    void prepareStructure(TextureHandle structure) noexcept;
+    void prepareStructure(FEngine const& engine, TextureHandle structure) noexcept;
 
-    void prepareHistorySSR(TextureHandle ssr,
+    void prepareHistorySSR(FEngine const& engine, TextureHandle ssr,
             math::mat4f const& historyProjection,
             math::mat4f const& uvFromViewMatrix,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;

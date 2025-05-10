@@ -28,6 +28,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 #include <utility>
 #include <limits>
@@ -124,27 +125,53 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     driver.bindDescriptorSet(mDescriptorSetHandle, +set, std::move(dynamicOffsets));
 }
 
-void DescriptorSet::setBuffer(
+void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
-        backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) noexcept {
-    // TODO: validate it's the right kind of descriptor
+        backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {
+
+    // Validate it's the right kind of descriptor
+    using DSLB = backend::DescriptorSetLayoutBinding;
+    FILAMENT_CHECK_PRECONDITION(DSLB::isBuffer(layout.getDescriptorType(binding)))
+            << "descriptor " << +binding << "is not a buffer";
+
     if (mDescriptors[binding].buffer.boh != boh || mDescriptors[binding].buffer.size != size) {
         // we don't set the dirty bit if only offset changes
         mDirty.set(binding);
     }
     mDescriptors[binding].buffer = { boh, offset, size };
-    mValid.set(binding, (bool)boh);
+    mValid.set(binding, bool(boh));
 }
 
 void DescriptorSet::setSampler(
+        DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
-        backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) noexcept {
-    // TODO: validate it's the right kind of descriptor
+        backend::Handle<backend::HwTexture> th, backend::SamplerParams const params) {
+
+    using namespace backend;
+    using DSLB = DescriptorSetLayoutBinding;
+
+    // Validate it's the right kind of descriptor
+    auto type = layout.getDescriptorType(binding);
+    FILAMENT_CHECK_PRECONDITION(DSLB::isSampler(type))
+            << "descriptor " << +binding << " is not a sampler";
+
+    FILAMENT_CHECK_PRECONDITION(
+            !(params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE && !isDepthDescriptor(type)))
+            << "descriptor " << +binding
+            << " is not of type DEPTH, but sampler is in COMPARE_TO_TEXTURE mode";
+
+    FILAMENT_CHECK_PRECONDITION(
+            !(params.isFiltered() &&
+            isDepthDescriptor(type) &&
+            params.compareMode != SamplerCompareMode::COMPARE_TO_TEXTURE))
+            << "descriptor " << +binding
+            << " is of type filtered DEPTH, but sampler not in COMPARE_TO_TEXTURE mode";
+
     if (mDescriptors[binding].texture.th != th || mDescriptors[binding].texture.params != params) {
         mDirty.set(binding);
     }
     mDescriptors[binding].texture = { th, params };
-    mValid.set(binding, (bool)th);
+    mValid.set(binding, bool(th));
 }
 
 DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const noexcept {
@@ -154,5 +181,53 @@ DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const 
     set.mValid = mValid;
     return set;
 }
+bool DescriptorSet::isTextureCompatibleWithDescriptor(
+    backend::TextureType t, backend::DescriptorType d) noexcept {
+    using namespace backend;
+
+    switch (d) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+            // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
+            // allows to specify which one, but not filament.
+            // Depth textures can be used as an unfiltered float sampler
+            return t == TextureType::FLOAT || t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
+            return t == TextureType::INT;
+
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
+            return t == TextureType::UINT;
+
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
+            // allows to specify which one, but not filament.
+            return t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
+
+        case DescriptorType::SAMPLER_EXTERNAL:
+        case DescriptorType::UNIFORM_BUFFER:
+        case DescriptorType::SHADER_STORAGE_BUFFER:
+        case DescriptorType::INPUT_ATTACHMENT:
+            return false;
+    }
+
+    // should never happen
+    return false;
+}
+
 
 } // namespace filament

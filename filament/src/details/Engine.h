@@ -487,8 +487,10 @@ public:
     }
 
     backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTextureArrayDepth() const { return mDummyOneTextureArrayDepth; }
+
+    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
     backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
 
     static constexpr size_t MiB = 1024u * 1024u;
@@ -628,6 +630,7 @@ private:
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArrayDepth;
     backend::Handle<backend::HwTexture> mDummyZeroTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
 

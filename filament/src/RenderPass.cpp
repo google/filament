@@ -921,7 +921,6 @@ backend::Viewport RenderPass::Executor::applyScissorViewport(
 UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
         Command const* first, Command const* last) const noexcept {
-
     SYSTRACE_CALL();
     SYSTRACE_CONTEXT();
 
@@ -941,6 +940,13 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
             currentScissor = mScissor;
             driver.scissor(mScissor);
         }
+
+        // If we have a mColorPassDescriptorSet, we need to use its idea of "VSM" to select
+        // the descriptor set layout. Materials always offer both.
+        // If we don't have a mColorPassDescriptorSet, it doesn't matter because the layout
+        // are chosen via the variant only.
+        bool const useVsmDescriptorSetLayout =
+                mColorPassDescriptorSet ? mColorPassDescriptorSet->isVSM() : false;
 
         bool const polygonOffsetOverride = mPolygonOffsetOverride;
         PipelineState pipeline{
@@ -1051,8 +1057,13 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
                     // Each material has its own version of the per-view descriptor-set layout,
                     // because it depends on the material features (e.g. lit/unlit)
+                    // TODO: QUESTION: are
+                    //      Variant::isValidDepthVariant(info.materialVariant) and
+                    //      Variant::isSSRVariant(info.materialVariant)
+                    //      constant? If so we could precompute ma->getPerViewDescriptorSetLayout()
                     pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_VIEW] =
-                            ma->getPerViewDescriptorSetLayout(info.materialVariant).getHandle();
+                            ma->getPerViewDescriptorSetLayout(info.materialVariant,
+                                    useVsmDescriptorSetLayout).getHandle();
 
                     // Each material has a per-material descriptor-set layout which encodes the
                     // material's parameters (ubo and samplers)
