@@ -108,8 +108,18 @@ Filament.loadGeneratedExtensions = function() {
         return Object.assign(options, overrides);
     };
 
+    Filament.View.prototype.setGtaoDefaults = function(overrides) {
+        const options = {
+            sampleSliceCount: 4,
+            sampleStepsPerSlice: 3,
+            thicknessHeuristic: 0.004,
+        };
+        return Object.assign(options, overrides);
+    };
+
     Filament.View.prototype.setAmbientOcclusionOptionsDefaults = function(overrides) {
         const options = {
+            aoType: Filament.View$AmbientOcclusionOptions$AmbientOcclusionType.SAO,
             radius: 0.3,
             power: 1.0,
             bias: 0.0005,
@@ -123,6 +133,7 @@ Filament.loadGeneratedExtensions = function() {
             bentNormals: false,
             minHorizonAngleRad: 0.0,
             // JavaScript binding for ssct is not yet supported, must use default value.
+            // JavaScript binding for gtao is not yet supported, must use default value.
         };
         return Object.assign(options, overrides);
     };

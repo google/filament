@@ -60,8 +60,14 @@ std::ostream& operator<<(std::ostream& out, const VignetteOptions& in);
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, RenderQuality* out);
 std::ostream& operator<<(std::ostream& out, const RenderQuality& in);
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::AmbientOcclusionType* out);
+std::ostream& operator<<(std::ostream& out, AmbientOcclusionOptions::AmbientOcclusionType in);
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::Ssct* out);
 std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Ssct& in);
+
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::Gtao* out);
+std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Gtao& in);
 
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions* out);
 std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in);

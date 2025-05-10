@@ -504,6 +504,23 @@ std::ostream& operator<<(std::ostream& out, const RenderQuality& in) {
         << "}";
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::AmbientOcclusionType* out) {
+    if (0 == compare(tokens[i], jsonChunk, "SAO")) { *out = AmbientOcclusionOptions::AmbientOcclusionType::SAO; }
+    else if (0 == compare(tokens[i], jsonChunk, "GTAO")) { *out = AmbientOcclusionOptions::AmbientOcclusionType::GTAO; }
+    else {
+        slog.w << "Invalid AmbientOcclusionOptions::AmbientOcclusionType: '" << STR(tokens[i], jsonChunk) << "'" << io::endl;
+    }
+    return i + 1;
+}
+
+std::ostream& operator<<(std::ostream& out, AmbientOcclusionOptions::AmbientOcclusionType in) {
+    switch (in) {
+        case AmbientOcclusionOptions::AmbientOcclusionType::SAO: return out << "\"SAO\"";
+        case AmbientOcclusionOptions::AmbientOcclusionType::GTAO: return out << "\"GTAO\"";
+    }
+    return out << "\"INVALID\"";
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::Ssct* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
@@ -557,13 +574,47 @@ std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Ssct&
         << "}";
 }
 
+int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions::Gtao* out) {
+    CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
+    int size = tokens[i++].size;
+    for (int j = 0; j < size; ++j) {
+        const jsmntok_t tok = tokens[i];
+        CHECK_KEY(tok);
+        if (compare(tok, jsonChunk, "sampleSliceCount") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sampleSliceCount);
+        } else if (compare(tok, jsonChunk, "sampleStepsPerSlice") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->sampleStepsPerSlice);
+        } else if (compare(tok, jsonChunk, "thicknessHeuristic") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->thicknessHeuristic);
+        } else {
+            slog.w << "Invalid Gtao key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            i = parse(tokens, i + 1);
+        }
+        if (i < 0) {
+            slog.e << "Invalid Gtao value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            return i;
+        }
+    }
+    return i;
+}
+
+std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Gtao& in) {
+    return out << "{\n"
+        << "\"sampleSliceCount\": " << int(in.sampleSliceCount) << ",\n"
+        << "\"sampleStepsPerSlice\": " << int(in.sampleStepsPerSlice) << ",\n"
+        << "\"thicknessHeuristic\": " << (in.thicknessHeuristic) << "\n"
+        << "}";
+}
+
 int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusionOptions* out) {
     CHECK_TOKTYPE(tokens[i], JSMN_OBJECT);
     int size = tokens[i++].size;
     for (int j = 0; j < size; ++j) {
         const jsmntok_t tok = tokens[i];
         CHECK_KEY(tok);
-        if (compare(tok, jsonChunk, "radius") == 0) {
+        if (compare(tok, jsonChunk, "aoType") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->aoType);
+        } else if (compare(tok, jsonChunk, "radius") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->radius);
         } else if (compare(tok, jsonChunk, "power") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->power);
@@ -589,6 +640,8 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusio
             i = parse(tokens, i + 1, jsonChunk, &out->minHorizonAngleRad);
         } else if (compare(tok, jsonChunk, "ssct") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->ssct);
+        } else if (compare(tok, jsonChunk, "gtao") == 0) {
+            i = parse(tokens, i + 1, jsonChunk, &out->gtao);
         } else {
             slog.w << "Invalid AmbientOcclusionOptions key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -603,6 +656,7 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusio
 
 std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
     return out << "{\n"
+        << "\"aoType\": " << (in.aoType) << ",\n"
         << "\"radius\": " << (in.radius) << ",\n"
         << "\"power\": " << (in.power) << ",\n"
         << "\"bias\": " << (in.bias) << ",\n"
@@ -615,7 +669,8 @@ std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions& in) {
         << "\"enabled\": " << to_string(in.enabled) << ",\n"
         << "\"bentNormals\": " << to_string(in.bentNormals) << ",\n"
         << "\"minHorizonAngleRad\": " << (in.minHorizonAngleRad) << ",\n"
-        << "\"ssct\": " << (in.ssct) << "\n"
+        << "\"ssct\": " << (in.ssct) << ",\n"
+        << "\"gtao\": " << (in.gtao) << "\n"
         << "}";
 }
 

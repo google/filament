@@ -33,6 +33,11 @@ enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
     .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN)
     ;
 
+enum_<View::AmbientOcclusionOptions::AmbientOcclusionType>("View$AmbientOcclusionOptions$AmbientOcclusionType")
+    .value("SAO", View::AmbientOcclusionOptions::AmbientOcclusionType::SAO)
+    .value("GTAO", View::AmbientOcclusionOptions::AmbientOcclusionType::GTAO)
+    ;
+
 enum_<View::TemporalAntiAliasingOptions::BoxType>("View$TemporalAntiAliasingOptions$BoxType")
     .value("AABB", View::TemporalAntiAliasingOptions::BoxType::AABB)
     .value("VARIANCE", View::TemporalAntiAliasingOptions::BoxType::VARIANCE)
