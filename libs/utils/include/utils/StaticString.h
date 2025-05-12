@@ -19,10 +19,7 @@
 
 #include <utils/compiler.h>
 
-#include <type_traits>
 #include <string_view>
-
-#include <stddef.h>
 
 namespace utils {
 
@@ -41,7 +38,7 @@ public:
     using const_iterator = std::string_view::const_iterator;
 
     // Constructor from string literal
-    template <size_t M>
+    template<unsigned int M>
     constexpr StaticString(const char (&str)[M]) noexcept : mString(str, M - 1) {} // NOLINT(*-explicit-constructor)
 
     constexpr StaticString() noexcept = default;
@@ -61,7 +58,7 @@ public:
         return mString[pos];
     }
 
-    constexpr const_reference at(size_type pos) const {
+    constexpr const_reference at(size_type const pos) const {
         return mString[pos];
     }
 
