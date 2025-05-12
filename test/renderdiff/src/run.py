@@ -16,8 +16,9 @@ import sys
 import os
 import json
 import glob
+import shutil
 
-from utils import execute, ArgParseImpl
+from utils import execute, ArgParseImpl, mkdir_p, mv_f
 from parse_test_json import parse_test_config_from_path
 from golden_manager import GoldenManager
 from image_diff import same_image
@@ -46,7 +47,7 @@ def run_test(gltf_viewer,
   assert os.access(gltf_viewer, os.X_OK)
 
   named_output_dir = os.path.join(output_dir, test_config.name)
-  execute(f'mkdir -p {named_output_dir}')
+  mkdir_p(named_output_dir)
 
   results = []
   for test in test_config.tests:
@@ -82,9 +83,8 @@ def run_test(gltf_viewer,
           result = RESULT_OK
           out_tif_basename = f'{out_name}.tif'
           out_tif_name = f'{named_output_dir}/{out_tif_basename}'
-          execute(f'mv -f {test.name}0.tif {out_tif_name}', capture_output=False)
-          execute(f'mv -f {test.name}0.json {named_output_dir}/{test.name}.json',
-                  capture_output=False)
+          mv_f(f'{test.name}0.tif', out_tif_name)
+          mv_f(f'{test.name}0.json', f'{named_output_dir}/{test.name}.json')
         else:
           result = RESULT_FAILED_TO_RENDER
           important_print(f'{test_desc} rendering failed with error={out_code}')
@@ -132,11 +132,12 @@ if __name__ == "__main__":
              opengl_lib=args.opengl_lib,
              vk_icd=args.vk_icd)
 
+  do_compare = False
   # The presence of this argument indicates comparison against a set of goldens.
   if args.golden_branch:
     # prepare goldens working directory
     tmp_golden_dir = '/tmp/renderdiff-goldens'
-    execute(f'mkdir -p {tmp_golden_dir}')
+    mkdir_p(tmp_golden_dir)
 
     # Download the golden repo into the current working directory
     golden_manager = GoldenManager(os.getcwd())
@@ -147,13 +148,15 @@ if __name__ == "__main__":
       glob.glob(f'{os.path.join(tmp_golden_dir, test.name)}/**/*.tif', recursive=True)
     }
     results = compare_goldens(results, output_dir, goldens)
-
+    do_compare = True
 
   with open(f'{output_dir}/results.json', 'w') as f:
     f.write(json.dumps(results))
-  execute(f'cp {args.test} {output_dir}/test.json')
+
+  shutil.copy2(args.test, f'{output_dir}/test.json')
 
   failed = [f"   {k['name']}" for k in results if k['result'] != RESULT_OK]
   success_count = len(results) - len(failed)
-  important_print(f'Successfully tested {success_count} / {len(results)}' +
+  op = 'tested' if do_compare else 'rendered'
+  important_print(f'Successfully {op} {success_count} / {len(results)}' +
                   ('\nFailed:\n' + ('\n'.join(failed)) if len(failed) > 0 else ''))
