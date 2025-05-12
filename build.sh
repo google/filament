@@ -463,16 +463,6 @@ function ensure_android_build {
         echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or compatible must be installed, exiting"
         exit 1
     fi
-
-    local cmake_version=$(cmake --version)
-    if [[ "${cmake_version}" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
-        if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
-           [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
-            echo "Error: cmake version ${CMAKE_MAJOR}.${CMAKE_MINOR}+ is required," \
-                 "${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
-            exit 1
-        fi
-    fi
 }
 
 function build_android {
