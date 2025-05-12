@@ -388,7 +388,7 @@ void FLightManager::setSpotLightCone(Instance i, float inner, float outer) noexc
 
 void FLightManager::setSunAngularRadius(Instance i, float angularRadius) noexcept {
     if (i && isSunLight(i)) {
-        angularRadius = clamp(angularRadius, 0.25f, 20.0f);
+        angularRadius = clamp(angularRadius, 0.01f, 20.0f);
         mManager[i].sunAngularRadius = angularRadius * f::DEG_TO_RAD;
     }
 }
