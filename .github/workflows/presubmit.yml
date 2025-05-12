@@ -131,7 +131,7 @@ jobs:
       - name: Prerequisites
         id: prereqs
         run: |
-          bash test/utils/get_mesa.sh
+          bash build/common/get-mesa.sh
           pip install tifffile numpy
       - name: Run Test
         run: bash test/renderdiff/test.sh
@@ -153,8 +153,8 @@ jobs:
       - name: Run test
         run: ./out/cmake-debug/libs/filamat/test_filamat --gtest_filter=MaterialCompiler.Wgsl*
 
-  code-correctness:
-    name: code-correctness
+  test-code-correctness:
+    name: test-code-correctness
     runs-on: 'macos-14-xlarge'
     steps:
       - uses: actions/checkout@v4.1.6

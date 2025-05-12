@@ -26,4 +26,4 @@ jobs:
           path: out/filament-release-darwin.tgz
       - name: Check public headers
         run: |
-          build/common/check-headers.sh out/release/filament/include
+          test/check-headers/test.sh out/release/filament/include
