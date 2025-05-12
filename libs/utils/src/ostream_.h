@@ -18,6 +18,8 @@
 #define TNT_UTILS_OSTREAM__H
 
 #include <utils/ostream.h>
+
+#include <utility>
 #include <mutex>
 
 namespace utils::io {
