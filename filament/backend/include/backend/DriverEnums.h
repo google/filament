@@ -25,13 +25,11 @@
 #include <backend/PresentCallable.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/compiler.h>
-#include <utils/CString.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 #include <utils/StaticString.h>
+#include <utils/debug.h>
 
 #include <math/vec4.h>
 
@@ -41,6 +39,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 /**
  * Types and enums used by filament's driver.

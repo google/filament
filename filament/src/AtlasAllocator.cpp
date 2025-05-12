@@ -16,13 +16,22 @@
 
 #include "AtlasAllocator.h"
 
+#include <utils/compiler.h>
+#include <utils/algorithm.h>
 #include <utils/debug.h>
+#include <utils/QuadTree.h>
+
+#include <algorithm>
+#include <utility>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
 using namespace utils;
 
-static inline constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t const m) noexcept {
+static constexpr std::pair<uint8_t, uint8_t> unmorton(uint16_t const m) noexcept {
     uint32_t r = (m | (uint32_t(m) << 15u)) & 0x55555555u;
     r = (r | (r >> 1u)) & 0x33333333u;
     r = (r | (r >> 2u)) & 0x0f0f0f0fu;
@@ -165,8 +174,8 @@ AtlasAllocator::NodeId AtlasAllocator::allocateInLayer(size_t const maxHeight) n
             NodeId found{ -1, 0 };
             QuadTree::traverse(candidate.l, candidate.code,
                     [this, n, &found](NodeId const& curr) -> QuadTree::TraversalResult {
-                        size_t const i = index(curr.l, curr.code);
-                        Node& node = mQuadTree[i];
+                        size_t const j = index(curr.l, curr.code);
+                        Node& node = mQuadTree[j];
                         if (curr.l == n) {
                             found = curr;
                             assert_invariant(!node.hasChildren());
