@@ -28,6 +28,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/StaticString.h>
