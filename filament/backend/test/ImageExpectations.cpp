@@ -211,6 +211,10 @@ uint32_t RenderTargetDump::hash() const {
     return mInternal->hash();
 }
 
+const std::vector<unsigned char>& RenderTargetDump::bytes() const {
+    return mInternal->bytes;
+}
+
 bool RenderTargetDump::bytesFilled() const {
     return mInternal->bytesFilled;
 }
