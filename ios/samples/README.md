@@ -102,7 +102,8 @@ project in Xcode to see changes take effect.
 
 ## Building iOS Samples with ASan / UBSan
 
-1. Turn on ASan / UBSan in Filament's top-level CMakeLists.txt by uncommenting the following line:
+1. Turn on ASan / UBSan in Filament's top-level CMakeLists.txt by passing
+   `-DFILAMENT_ENABLE_ASAN_UBSAN=1` to trigger the following line:
 
 ```
 set(EXTRA_SANITIZE_OPTIONS "-fsanitize=undefined -fsanitize=address")

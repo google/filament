@@ -163,6 +163,9 @@ jobs:
           mv out/filamat-android-release.aar out/filamat-${TAG}-android.aar
           mv out/gltfio-android-release.aar out/gltfio-${TAG}-android.aar
           mv out/filament-utils-android-release.aar out/filament-utils-${TAG}-android.aar
+          cd out/android-release/filament
+          tar -czf ../../filament-${TAG}-android-native.tgz .
+          cd ../../..
       - name: Sign sample-gltf-viewer
         run: |
           echo "${APK_KEYSTORE_BASE64}" > filament.jks.base64
@@ -184,7 +187,7 @@ jobs:
           script: |
             const upload = require('./build/common/upload-release-assets');
             const { TAG } = process.env;
-            const globber = await glob.create(['out/*.aar', 'out/*.apk'].join('\n'));
+            const globber = await glob.create(['out/*.aar', 'out/*.apk', 'out/*.tgz'].join('\n'));
             await upload({ github, context }, await globber.glob(), TAG);
 
   build-ios:
