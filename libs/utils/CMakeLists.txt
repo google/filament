@@ -65,6 +65,7 @@ set(SRCS
         src/CyclicBarrier.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
+        src/Invocable.cpp
         src/JobSystem.cpp
         src/Log.cpp
         src/NameComponentManager.cpp
