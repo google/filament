@@ -106,7 +106,11 @@ public:
 
     enum class BindGroupEntryType : uint8_t {
         UNIFORM_BUFFER,
-        TEXTURE_VIEW,
+        TEXTURE_VIEW_2D,
+        TEXTURE_VIEW_2DA,
+        TEXTURE_VIEW_CUBE,
+        TEXTURE_VIEW_CUBEA,
+        TEXTURE_VIEW_3D,
         SAMPLER
     };
 
@@ -134,7 +138,8 @@ private:
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
     static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
-            wgpu::TextureFormat aColorFormat);
+            wgpu::TextureFormat aColorFormat,
+            wgpu::TextureFormat aDepthFormat);
 
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
@@ -148,8 +153,8 @@ public:
 private:
 
     static wgpu::Buffer sDummyUniformBuffer;
-    static wgpu::Texture sDummyTexture;
-    static wgpu::TextureView sDummyTextureView;
+    static std::unordered_map<wgpu::TextureDimension, wgpu::Texture> sDummyTextureMap;
+    static std::unordered_map<wgpu::TextureViewDimension, wgpu::TextureView> sDummyTextureViewMap;
     static wgpu::Sampler sDummySampler;
 
     static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(

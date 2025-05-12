@@ -268,6 +268,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
         wEntry.binding = fEntry.binding * 2;
         entryInfo.binding = wEntry.binding;
+        wgpu::BindGroupLayoutEntry* sEntry;
 
         switch (fEntry.type) {
             case DescriptorType::SAMPLER_2D_FLOAT:
@@ -288,10 +289,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
             case DescriptorType::SAMPLER_3D_FLOAT:
             case DescriptorType::SAMPLER_3D_INT:
-            case DescriptorType::SAMPLER_3D_UINT:
-            case DescriptorType::SAMPLER_EXTERNAL: {
+            case DescriptorType::SAMPLER_3D_UINT: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
+                sEntry = &samplerEntry;
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntryInfo.binding = samplerEntry.binding;
                 samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
@@ -299,15 +300,6 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // We are simply hoping that undefined and defaults suffices here.
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
                 wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
-                // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
-                if (baseLabel.find("Skybox") != std::string::npos ||
-                        (baseLabel == "Filament Default Material_perView" && wEntry.binding == 22)) {
-                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
-                } else {
-                    wEntry.texture.viewDimension =
-                            wgpu::TextureViewDimension::e2D;// Example default
-                }
-                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
@@ -327,6 +319,81 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 PANIC_POSTCONDITION("Shader storage is not supported");
                 break;
             }
+            case DescriptorType::SAMPLER_EXTERNAL: {
+                PANIC_POSTCONDITION("External Sampler is not supported");
+                break;
+            }
+        }
+        switch (fEntry.type) {
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2D;
+                break;
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2DA;
+                break;
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBE;
+                break;
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBEA;
+                break;
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+                wEntry.texture.viewDimension = wgpu::TextureViewDimension::e3D;
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_3D;
+                break;
+            default:
+                break;
+        }
+        switch (fEntry.type) {
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                break;
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_3D_INT:
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
+                break;
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_3D_UINT:
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
+                break;
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+                //Dummies complain if you set this correctly without having an associated dummy
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                sEntry->sampler.type = wgpu::SamplerBindingType::Filtering;
+                break;
+            default:
+                break;
         }
         // fEntry.count is unused currently
     }
@@ -342,12 +409,12 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
 wgpu::Buffer WebGPUDescriptorSet::sDummyUniformBuffer = nullptr;
-wgpu::Texture WebGPUDescriptorSet::sDummyTexture = nullptr;
-wgpu::TextureView WebGPUDescriptorSet::sDummyTextureView = nullptr;
+std::unordered_map<wgpu::TextureDimension, wgpu::Texture> WebGPUDescriptorSet::sDummyTextureMap;
+std::unordered_map<wgpu::TextureViewDimension, wgpu::TextureView> WebGPUDescriptorSet::sDummyTextureViewMap;
 wgpu::Sampler WebGPUDescriptorSet::sDummySampler = nullptr;
 
 void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device const& device,
-        wgpu::TextureFormat aColorFormat) {
+        wgpu::TextureFormat aColorFormat, wgpu::TextureFormat aDepthFormat) {
     if (!sDummyUniformBuffer) {
         wgpu::BufferDescriptor bufferDescriptor{
             .label = "dummy_uniform_not_to_be_used",
@@ -358,31 +425,75 @@ void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device cons
         FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
                 << "Failed to create dummy uniform buffer?";
     }
-    if (!sDummyTexture || !sDummyTextureView) {
+    if (sDummyTextureMap.empty() || sDummyTextureViewMap.empty()) {
         wgpu::TextureDescriptor textureDescriptor{
             .label = "dummy_texture_not_to_be_used",
             .usage = wgpu::TextureUsage::TextureBinding,
             .dimension = wgpu::TextureDimension::e2D,
             .size = wgpu::Extent3D{ .width = 4, .height = 4, .depthOrArrayLayers = 1 },
             .format = aColorFormat,
+ //           .viewFormatCount = 1,
+   //         .viewFormats = &aDepthFormat
         };
-        if (!sDummyTexture) {
-            sDummyTexture = device.CreateTexture(&textureDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy texture?";
-        }
-        if (!sDummyTextureView) {
-            wgpu::TextureViewDescriptor textureViewDescriptor{
-                .label = "dummy_texture_view_not_to_be_used"
-            };
-            sDummyTextureView = sDummyTexture.CreateView(&textureViewDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
-                    << "Failed to create dummy texture view?";
-        }
+        sDummyTextureMap[wgpu::TextureDimension::e2D] = device.CreateTexture(&textureDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureMap[wgpu::TextureDimension::e2D])
+                << "Failed to create dummy texture 2D?";
+        textureDescriptor.dimension = wgpu::TextureDimension::e3D;
+        sDummyTextureMap[wgpu::TextureDimension::e3D] = device.CreateTexture(&textureDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureMap[wgpu::TextureDimension::e3D])
+                << "Failed to create dummy texture 3D?";
+
+        //Hacking as an experiment, treating 1D as cube arbitrarilly since my map key was bad idea
+        textureDescriptor.dimension = wgpu::TextureDimension::e2D;
+        textureDescriptor.size.depthOrArrayLayers = 6;
+        sDummyTextureMap[wgpu::TextureDimension::e1D] = device.CreateTexture(&textureDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureMap[wgpu::TextureDimension::e1D])
+                << "Failed to create dummy texture 3D?";
+
+
+        wgpu::TextureViewDescriptor textureViewDescriptor{
+            .label = "dummy_texture_view_not_to_be_used",
+        };
+
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::e2D] =
+                sDummyTextureMap[wgpu::TextureDimension::e2D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::e2D])
+                << "Failed to create dummy texture view?";
+
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2DArray;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray] =
+                sDummyTextureMap[wgpu::TextureDimension::e2D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::e2D])
+                << "Failed to create dummy texture view?";
+
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2DArray;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray] =
+                sDummyTextureMap[wgpu::TextureDimension::e2D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray])
+                << "Failed to create dummy texture view?";
+
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::e3D;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::e3D] =
+                sDummyTextureMap[wgpu::TextureDimension::e3D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::e3D])
+                << "Failed to create dummy texture view?";
+
+        textureViewDescriptor.arrayLayerCount = 6;
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::Cube;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::Cube] =
+                sDummyTextureMap[wgpu::TextureDimension::e1D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::Cube])
+                << "Failed to create dummy texture view?";
+
+        textureViewDescriptor.dimension = wgpu::TextureViewDimension::CubeArray;
+        sDummyTextureViewMap[wgpu::TextureViewDimension::CubeArray] =
+                sDummyTextureMap[wgpu::TextureDimension::e1D].CreateView(&textureViewDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyTextureViewMap[wgpu::TextureViewDimension::CubeArray])
+                << "Failed to create dummy texture view?";
     }
     if (!sDummySampler) {
-        wgpu::SamplerDescriptor samplerDescriptor{
-            .label = "dummy_sampler_not_to_be_used"
-        };
+        wgpu::SamplerDescriptor samplerDescriptor{ .label = "dummy_sampler_not_to_be_used" };
         sDummySampler = device.CreateSampler(&samplerDescriptor);
         FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy sampler?";
     }
@@ -394,12 +505,12 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
     assert_invariant(WebGPUDescriptorSet::sDummyUniformBuffer &&
                      "Dummy uniform buffer must have been created before "
                      "creating dummy bind group entries.");
-    assert_invariant(
+   /* assert_invariant(
             WebGPUDescriptorSet::sDummyTexture &&
             "Dummy texture must have been created before creating dummy bind group entries.");
     assert_invariant(
             WebGPUDescriptorSet::sDummyTextureView &&
-            "Dummy texture view must have been created before creating dummy bind group entries.");
+            "Dummy texture view must have been created before creating dummy bind group entries.");*/
     assert_invariant(
             WebGPUDescriptorSet::sDummySampler &&
             "Dummy sampler must have been created before creating dummy bind group entries.");
@@ -413,11 +524,27 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
             case WebGPUDescriptorSetLayout::BindGroupEntryType::UNIFORM_BUFFER:
                 entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
                 break;
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureView;
-                break;
             case WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER:
                 entry.sampler = WebGPUDescriptorSet::sDummySampler;
+                break;
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2D:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2D];
+                break;
+
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2DA:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray];
+                break;
+
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBE:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::Cube];
+                break;
+
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBEA:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::CubeArray];
+                break;
+
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_3D:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e3D];
                 break;
         }
     }
