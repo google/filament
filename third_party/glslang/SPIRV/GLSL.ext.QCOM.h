@@ -27,10 +27,10 @@
 #ifndef GLSLextQCOM_H
 #define GLSLextQCOM_H
 
-enum BuiltIn;
-enum Decoration;
-enum Op;
-enum Capability;
+enum class BuiltIn : unsigned;
+enum class Decoration : unsigned;
+enum class Op : unsigned;
+enum class Capability : unsigned;
 
 static const int GLSLextQCOMVersion = 100;
 static const int GLSLextQCOMRevision = 1;

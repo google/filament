@@ -116,7 +116,7 @@ EShMessages DeriveOptions(Source source, Semantics semantics, Target target)
             break;
     }
 
-    result = static_cast<EShMessages>(result | EShMsgHlslLegalization);
+    result = static_cast<EShMessages>(result | EShMsgHlslLegalization | EShMsgValidateCrossStageIO);
 
     return result;
 }
