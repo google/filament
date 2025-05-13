@@ -50,6 +50,8 @@ public:
      * Calling initialize() is optional and safe to do so multiple times. After initialize() returns
      * true, subsequent calls will continue to return true but have no effect.
      *
+     * initialize() must be called from the main thread.
+     *
      * @returns true if the device and command queue have been successfully obtained; false
      * otherwise.
      */
@@ -61,11 +63,15 @@ public:
      * On desktop platforms, there may be multiple GPUs suitable for rendering, and this method is
      * free to decide which one to use. On mobile systems with a single GPU, implementations should
      * simply return the result of MTLCreateSystemDefaultDevice();
+     *
+     * createDevice is called by the Metal backend from the backend thread.
      */
     virtual void createDevice(MetalDevice& outDevice) noexcept;
 
     /**
      * Create a command submission queue on the Metal device object.
+     *
+     * createCommandQueue is called by the Metal backend from the backend thread.
      *
      * @param device The device which was returned from createDevice()
      */
@@ -76,6 +82,8 @@ public:
      * Obtain a MTLCommandBuffer enqueued on this Platform's MTLCommandQueue. The command buffer is
      * guaranteed to execute before all subsequent command buffers created either by Filament, or
      * further calls to this method.
+     *
+     * createAndEnqueueCommandBuffer must be called from the main thread.
      */
     void createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept;
 
@@ -84,6 +92,8 @@ public:
      *
      * Each frame rendered requires a CAMetalDrawable texture, which is presented on-screen at the
      * completion of each frame. These are limited and provided round-robin style by the system.
+     *
+     * setDrawableFailureBehavior must be called from the main thread.
      */
     enum class DrawableFailureBehavior : uint8_t {
         /**

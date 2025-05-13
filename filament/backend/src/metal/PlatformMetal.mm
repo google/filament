@@ -24,15 +24,22 @@
 #import <Foundation/Foundation.h>
 
 #include <atomic>
+#include <mutex>
 
 namespace filament::backend {
 
 struct PlatformMetalImpl {
+    std::mutex mLock;   // locks mDevice and mCommandQueue
     id<MTLDevice> mDevice = nil;
     id<MTLCommandQueue> mCommandQueue = nil;
+
     // read form driver thread, read/written to from client thread
     std::atomic<PlatformMetal::DrawableFailureBehavior> mDrawableFailureBehavior =
             PlatformMetal::DrawableFailureBehavior::PANIC;
+
+    // These methods must be called with mLock held
+    void createDeviceImpl(MetalDevice& outDevice);
+    void createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue);
 };
 
 Platform* createDefaultMetalPlatform() {
@@ -51,14 +58,16 @@ Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::Dri
 
 
 bool PlatformMetal::initialize() noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+
     MetalDevice device{};
-    createDevice(device);
+    pImpl->createDeviceImpl(device);
     if (device.device == nil) {
         return false;
     }
 
     MetalCommandQueue commandQueue{};
-    createCommandQueue(device, commandQueue);
+    pImpl->createCommandQueueImpl(device, commandQueue);
     if (commandQueue.commandQueue == nil) {
         return false;
     }
@@ -67,8 +76,36 @@ bool PlatformMetal::initialize() noexcept {
 }
 
 void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
-    if (pImpl->mDevice) {
-        outDevice.device = pImpl->mDevice;
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    pImpl->createDeviceImpl(outDevice);
+}
+
+void PlatformMetal::createCommandQueue(
+        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    pImpl->createCommandQueueImpl(device, outCommandQueue);
+}
+
+void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
+    [commandBuffer enqueue];
+    outCommandBuffer.commandBuffer = commandBuffer;
+}
+
+void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
+    pImpl->mDrawableFailureBehavior = behavior;
+}
+
+PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
+    return pImpl->mDrawableFailureBehavior;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+void PlatformMetalImpl::createDeviceImpl(MetalDevice& outDevice) {
+    if (mDevice) {
+        outDevice.device = mDevice;
         return;
     }
 
@@ -97,32 +134,17 @@ void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
                   << utils::io::endl;
 
     outDevice.device = result;
-    pImpl->mDevice = result;
+    mDevice = result;
 }
 
-void PlatformMetal::createCommandQueue(
-        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
-    if (pImpl->mCommandQueue) {
-        outCommandQueue.commandQueue = pImpl->mCommandQueue;
+void PlatformMetalImpl::createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue) {
+    if (mCommandQueue) {
+        outCommandQueue.commandQueue = mCommandQueue;
         return;
     }
-    pImpl->mCommandQueue = [device.device newCommandQueue];
-    pImpl->mCommandQueue.label = @"Filament";
-    outCommandQueue.commandQueue = pImpl->mCommandQueue;
-}
-
-void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
-    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
-    [commandBuffer enqueue];
-    outCommandBuffer.commandBuffer = commandBuffer;
-}
-
-void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
-    pImpl->mDrawableFailureBehavior = behavior;
-}
-
-PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
-    return pImpl->mDrawableFailureBehavior;
+    mCommandQueue = [device.device newCommandQueue];
+    mCommandQueue.label = @"Filament";
+    outCommandQueue.commandQueue = mCommandQueue;
 }
 
 } // namespace filament
