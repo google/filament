@@ -17,7 +17,6 @@
 #include "GLSLPostProcessor.h"
 
 #include <GlslangToSpv.h>
-#include <SPVRemapper.h>
 #include <spirv-tools/libspirv.hpp>
 
 #include <spirv_glsl.hpp>
@@ -145,12 +144,12 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
             ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
             +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
 
-    for (auto const& sampler : samplers) {
-        layout.bindings.push_back(DescriptorSetLayoutBinding {
-                (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) ?
-                        DescriptorType::SAMPLER_EXTERNAL : DescriptorType::SAMPLER,
-                ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT, sampler.binding,
-                DescriptorFlags::NONE, 0 });
+    for (auto const& sampler: samplers) {
+        layout.bindings.push_back(DescriptorSetLayoutBinding{
+            (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)
+                    ? DescriptorType::SAMPLER_EXTERNAL
+                    : DescriptorType::SAMPLER,
+            sampler.stages, sampler.binding, DescriptorFlags::NONE, 0 });
     }
 
     return layout;
@@ -289,24 +288,8 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
         : mOptimization(optimization),
           mPrintShaders(flags & PRINT_SHADERS),
           mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
-    // SPIRV error handler registration needs to occur only once. To avoid a race we do it up here
-    // in the constructor, which gets invoked before MaterialBuilder kicks off jobs.
-    spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
-        slog.e << str << io::endl;
-    });
-
-    // Similar to above, we need to do a no-op remap to init a static table in the remapper before
-    // the jobs start using remap().
-    spv::spirvbin_t remapper(0);
-    // We need to provide at least a valid header to not crash.
-    SpirvBlob spirv {
-        0x07230203,// MAGIC
-        0,         // VERSION
-        0,         // GENERATOR
-        0,         // BOUND
-        0          // SCHEMA, must be 0
-    };
-    remapper.remap(spirv, 0);
+    // This should occur only once, to avoid races.
+    SpirvRemapWrapperSetUp();
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
@@ -988,8 +971,7 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
     }
 
     // Remove dead module-level objects: functions, types, vars
-    spv::spirvbin_t remapper(0);
-    remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
+    SpirvRemapWrapperRemap(spirv);
 }
 
 void GLSLPostProcessor::fixupClipDistance(

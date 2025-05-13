@@ -1023,8 +1023,12 @@ samplerCubemap         | Cubemap texture
 [Table [materialParamsTypes]: Material parameter types]
 
 Samplers
-:     Sampler types can also specify a `format` which can be either `int` or `float` (defaults to
-      `float`).
+:     Sampler types can specify additional options:
+
+      - `format`: either `int` or `float` (defaults to `float`).
+      - `stages`: array of strings containing the list of shader stages this
+        sampler can be accessed from. Each entry must be either `vertex` or
+        `fragment` (defaults to both).
 
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where

@@ -17,6 +17,7 @@
 #include <backend/Platform.h>
 
 #include <utils/compiler.h>
+#include <utils/ostream.h>
 
 #include <atomic>
 #include <utility>

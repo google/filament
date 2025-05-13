@@ -7,3 +7,6 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- matc non-functional change: Update GLSL postprocessor to
+  isolate calls to SPVRemap from calls to SPIRV-Cross.

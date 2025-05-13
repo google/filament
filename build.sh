@@ -151,7 +151,7 @@ function print_fgviewer_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | cut -f 1 -d ".")}
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")}
 
 # Requirements
 CMAKE_MAJOR=3
@@ -462,16 +462,6 @@ function ensure_android_build {
     if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "^${FILAMENT_NDK_VERSION}") ]]; then
         echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or compatible must be installed, exiting"
         exit 1
-    fi
-
-    local cmake_version=$(cmake --version)
-    if [[ "${cmake_version}" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
-        if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
-           [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
-            echo "Error: cmake version ${CMAKE_MAJOR}.${CMAKE_MINOR}+ is required," \
-                 "${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
-            exit 1
-        fi
     fi
 }
 

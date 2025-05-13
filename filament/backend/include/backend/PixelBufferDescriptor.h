@@ -24,10 +24,13 @@
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 
