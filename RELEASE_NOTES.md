@@ -10,7 +10,6 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.60.0
 
 - materials: remove dependence on per-view descset layout from filamat. [⚠️ **New Material Version**]
-- `ColorGrading::Builder::toneMapper` now takes a `shared_ptr<ToneMapper>`
 
 ## v1.59.5
 
