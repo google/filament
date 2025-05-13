@@ -20,18 +20,20 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <unordered_map>
 #include <tuple>
 #include <utility>
 #include <variant>
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 

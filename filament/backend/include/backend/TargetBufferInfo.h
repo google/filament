@@ -19,10 +19,14 @@
 
 #include <backend/Handle.h>
 
-#include <utils/ostream.h>
+#include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 
@@ -30,11 +34,11 @@ namespace filament::backend {
 
 struct TargetBufferInfo {
     // note: the parameters of this constructor are not in the order of this structure's fields
-    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level, uint16_t layer) noexcept
-            : handle(handle), level(level), layer(layer) {
+    TargetBufferInfo(Handle<HwTexture> handle, uint8_t const level, uint16_t const layer) noexcept
+            : handle(std::move(handle)), level(level), layer(layer) {
     }
 
-    TargetBufferInfo(Handle<HwTexture> handle, uint8_t level) noexcept
+    TargetBufferInfo(Handle<HwTexture> handle, uint8_t const level) noexcept
             : handle(handle), level(level) {
     }
 
@@ -70,11 +74,11 @@ private:
     TargetBufferInfo mInfos[MAX_SUPPORTED_RENDER_TARGET_COUNT];
 
 public:
-    TargetBufferInfo const& operator[](size_t i) const noexcept {
+    TargetBufferInfo const& operator[](size_t const i) const noexcept {
         return mInfos[i];
     }
 
-    TargetBufferInfo& operator[](size_t i) noexcept {
+    TargetBufferInfo& operator[](size_t const i) noexcept {
         return mInfos[i];
     }
 

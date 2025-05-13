@@ -17,15 +17,16 @@
 #ifndef TNT_FILAMENT_BACKEND_HANDLE_H
 #define TNT_FILAMENT_BACKEND_HANDLE_H
 
-#if !defined(NDEBUG)
-#include <utils/ostream.h>
-#endif
 #include <utils/debug.h>
 
 #include <type_traits> // FIXME: STL headers are not allowed in public headers
 #include <utility>
 
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 

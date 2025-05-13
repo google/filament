@@ -19,6 +19,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 
