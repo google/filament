@@ -468,8 +468,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
-    WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(mDevice,
-            mSwapChain->getColorFormat());
     FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen."

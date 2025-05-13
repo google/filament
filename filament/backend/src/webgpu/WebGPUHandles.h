@@ -133,9 +133,6 @@ private:
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
-            wgpu::TextureFormat aColorFormat);
-
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
     ~WebGPUDescriptorSet();
@@ -147,14 +144,6 @@ public:
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
 private:
-    static wgpu::Buffer sDummyUniformBuffer;
-    static wgpu::Texture sDummyTexture;
-    static wgpu::TextureView sDummyTextureView;
-    static wgpu::Sampler sDummySampler;
-
-    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
-            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
-
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
     // there isn't a mismatch may be easiest.
