@@ -188,8 +188,7 @@ float3 ACES(float3 color, float brightness) noexcept {
 
 #define DEFAULT_CONSTRUCTORS(A) \
         A::A() noexcept = default; \
-        A::~A() noexcept = default; \
-        A::A(A const&) noexcept = default;
+        A::~A() noexcept = default;
 
 DEFAULT_CONSTRUCTORS(ToneMapper)
 
@@ -203,10 +202,6 @@ float3 LinearToneMapper::operator()(float3 const v) const noexcept {
     return saturate(v);
 }
 
-LinearToneMapper* LinearToneMapper::clone() const noexcept {
-    return new LinearToneMapper(*this);
-}
-
 //------------------------------------------------------------------------------
 // ACES tone mappers
 //------------------------------------------------------------------------------
@@ -217,18 +212,10 @@ float3 ACESToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f);
 }
 
-ACESToneMapper* ACESToneMapper::clone() const noexcept {
-    return new ACESToneMapper(*this);
-}
-
 DEFAULT_CONSTRUCTORS(ACESLegacyToneMapper)
 
 float3 ACESLegacyToneMapper::operator()(float3 const c) const noexcept {
     return aces::ACES(c, 1.0f / 0.6f);
-}
-
-ACESLegacyToneMapper* ACESLegacyToneMapper::clone() const noexcept {
-    return new ACESLegacyToneMapper(*this);
 }
 
 DEFAULT_CONSTRUCTORS(FilmicToneMapper)
@@ -241,10 +228,6 @@ float3 FilmicToneMapper::operator()(float3 const x) const noexcept {
     constexpr float d = 0.59f;
     constexpr float e = 0.14f;
     return (x * (a * x + b)) / (x * (c * x + d) + e);
-}
-
-FilmicToneMapper* FilmicToneMapper::clone() const noexcept {
-    return new FilmicToneMapper(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -273,17 +256,12 @@ float3 PBRNeutralToneMapper::operator()(float3 color) const noexcept {
     return mix(color, float3(newPeak), g);
 }
 
-PBRNeutralToneMapper* PBRNeutralToneMapper::clone() const noexcept {
-    return new PBRNeutralToneMapper(*this);
-}
-
 //------------------------------------------------------------------------------
 // AgX tone mapper
 //------------------------------------------------------------------------------
 
 AgxToneMapper::AgxToneMapper(AgxLook const look) noexcept : look(look) {}
 AgxToneMapper::~AgxToneMapper() noexcept = default;
-AgxToneMapper::AgxToneMapper(AgxToneMapper const& rhs) noexcept = default;
 
 // These matrices taken from Blender's implementation of AgX, which works with Rec.2020 primaries.
 // https://github.com/EaryChow/AgX_LUT_Gen/blob/main/AgXBaseRec2020.py
@@ -378,10 +356,6 @@ float3 AgxToneMapper::operator()(float3 v) const noexcept {
     return v;
 }
 
-AgxToneMapper* AgxToneMapper::clone() const noexcept {
-    return new AgxToneMapper(*this);
-}
-
 //------------------------------------------------------------------------------
 // Display range tone mapper
 //------------------------------------------------------------------------------
@@ -418,10 +392,6 @@ float3 DisplayRangeToneMapper::operator()(float3 const c) const noexcept {
 
     size_t index = size_t(v);
     return mix(debugColors[index], debugColors[index + 1], saturate(v - float(index)));
-}
-
-DisplayRangeToneMapper* DisplayRangeToneMapper::clone() const noexcept {
-    return new DisplayRangeToneMapper(*this);
 }
 
 //------------------------------------------------------------------------------
@@ -484,19 +454,7 @@ GenericToneMapper::~GenericToneMapper() noexcept {
     delete mOptions;
 }
 
-GenericToneMapper::GenericToneMapper(GenericToneMapper const& rhs) noexcept {
-    mOptions = new Options(*rhs.mOptions);
-}
-
-GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper const& rhs) noexcept {
-    if (this != &rhs) {
-        delete mOptions;
-        mOptions = new Options(*rhs.mOptions);
-    }
-    return *this;
-}
-
-GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs) noexcept : mOptions(rhs.mOptions) {
+GenericToneMapper::GenericToneMapper(GenericToneMapper&& rhs)  noexcept : mOptions(rhs.mOptions) {
     rhs.mOptions = nullptr;
 }
 
@@ -509,10 +467,6 @@ GenericToneMapper& GenericToneMapper::operator=(GenericToneMapper&& rhs) noexcep
 float3 GenericToneMapper::operator()(float3 x) const noexcept {
     x = pow(x, mOptions->contrast);
     return mOptions->outputScale * x / (x + mOptions->inputScale);
-}
-
-GenericToneMapper* GenericToneMapper::clone() const noexcept {
-    return new GenericToneMapper(*this);
 }
 
 float GenericToneMapper::getContrast() const noexcept { return  mOptions->contrast; }
