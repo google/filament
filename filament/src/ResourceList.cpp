@@ -30,9 +30,11 @@ ResourceListBase::ResourceListBase(const char* typeName)
 }
 
 ResourceListBase::~ResourceListBase() noexcept {
+#ifndef NDEBUG
     if (!mList.empty()) {
         DLOG(INFO) << "leaked " << mList.size() << " " << mTypeName;
     }
+#endif
 }
 
 void ResourceListBase::insert(void* item) {
