@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_OSTREAM__H
-#define TNT_UTILS_OSTREAM__H
-
+#include <utils/Invocable.h>
 #include <utils/ostream.h>
 
-#include <utility>
-#include <mutex>
-
-namespace utils::io {
-
-struct ostream_ {
-    std::mutex mLock;
-    ostream::Buffer mData;
-    std::pair<ostream::ConsumerCallback, void*> mConsumer{};
-    bool mShowHex = false;
-};
-
-} // utils::io
-
-#endif // TNT_UTILS_OSTREAM__H
+namespace utils {
+io::ostream& InvocableBase::printInvocable(io::ostream& out, const char* name) {
+    return out << name;
+}
+} // namespace utils

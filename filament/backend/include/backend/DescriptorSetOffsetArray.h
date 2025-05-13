@@ -19,14 +19,16 @@
 
 #include <backend/DriverApiForward.h>
 
-#include <utils/ostream.h>
-
 #include <initializer_list>
 #include <memory>
 
 #include <stddef.h>
 #include <stdint.h>
 
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 

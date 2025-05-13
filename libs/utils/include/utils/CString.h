@@ -20,7 +20,6 @@
 // NOTE: this header should not include STL headers
 
 #include <utils/compiler.h>
-#include <utils/ostream.h>
 
 #include <string_view>
 #include <utility>
@@ -32,6 +31,9 @@
 #include <string.h>
 
 namespace utils {
+namespace io {
+class ostream;
+}
 
 //! \privatesection
 struct hashCStrings {
@@ -39,7 +41,7 @@ struct hashCStrings {
     typedef size_t result_type;
     result_type operator()(argument_type cstr) const noexcept {
         size_t hash = 5381;
-        while (int const c = *cstr++) {
+        while (int const c = static_cast<unsigned char>(*cstr++)) {
             hash = (hash * 33u) ^ size_t(c);
         }
         return hash;

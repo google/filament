@@ -22,6 +22,7 @@
 #include <string_view>
 
 #include <utils/Log.h>
+#include <utils/Panic.h>
 
 using namespace utils;
 using namespace std::literals;
