@@ -16,7 +16,7 @@
 
 OUTPUT_DIR="$(pwd)/out/renderdiff_tests"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
-TEST_UTILS_DIR="$(pwd)/test/utils"
+BUILD_COMMON_DIR="$(pwd)/build/common"
 MESA_DIR="$(pwd)/mesa/out/"
 VENV_DIR="$(pwd)/venv"
 
@@ -35,7 +35,7 @@ function start_() {
         set -ex
     else
         if [ ! -d ${MESA_LIB_DIR} ]; then
-            bash ${TEST_UTILS_DIR}/get_mesa.sh
+            bash ${BUILD_COMMON_DIR}/get-mesa.sh
         fi
 
         # Install python deps
