@@ -86,6 +86,12 @@ public:
      */
     uint32_t hash() const;
     /**
+     * Gets the bytes of the render target. The hash should usually be preferable for comparisons
+     * but this is available for debugging.
+     * @return The stored bytes.
+     */
+    const std::vector<unsigned char>& bytes() const;
+    /**
      * Thread safe as this is backed by an atomic.
      * Once this returns true it will never return false.
      * @return Whether the bytes have actually been copied from the GPU to the buffer.

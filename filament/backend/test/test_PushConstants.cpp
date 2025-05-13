@@ -81,7 +81,8 @@ void main() {
 
 TEST_F(BackendTest, PushConstants) {
     SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
-    FAIL_IF(Backend::VULKAN, "Crashing due to no program set when setting push constants");
+    FAIL_IF(Backend::VULKAN,
+            "Crashing due to no program set when setting push constants, see b/417477740");
 
     auto& api = getDriverApi();
 

@@ -32,13 +32,24 @@ do {                                                                            
     }                                                                                          \
 } while (false)
 
+#define NONFATAL_FAIL_IF(skipEnvironment, rationale)                                           \
+do {                                                                                           \
+    SkipEnvironment skip(skipEnvironment);                                                     \
+    if (skip.matches()) {                                                                      \
+        ADD_FAILURE()                                                                          \
+                << "Failing test as the " << skip.describe() << "\n"                           \
+                << " This test has a known failure where "   \
+                << rationale;                                                                  \
+    }                                                                                          \
+} while (false)
+
 #define FAIL_IF(skipEnvironment, rationale)                                                    \
 do {                                                                                           \
     SkipEnvironment skip(skipEnvironment);                                                     \
     if (skip.matches()) {                                                                      \
         GTEST_FAIL()                                                                           \
                 << "Failing test as the " << skip.describe() << "\n"                           \
-                << " This test should be able to succeed but it needs to fail early because"   \
+                << " This test should be able to succeed but it needs to fail early because "  \
                 << rationale;                                                                  \
     }                                                                                          \
 } while (false)
