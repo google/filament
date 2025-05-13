@@ -730,10 +730,8 @@ void FRenderableManager::destroy(Entity const e) noexcept {
 void FRenderableManager::terminate() noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
-#ifndef NDEBUG
         DLOG(INFO) << "cleaning up " << manager.getComponentCount()
                    << " leaked Renderable components";
-#endif
         while (!manager.empty()) {
             Instance const ci = manager.end() - 1;
             destroyComponent(ci);
