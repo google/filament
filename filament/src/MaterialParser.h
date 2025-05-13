@@ -93,7 +93,7 @@ public:
     using DescriptorBindingsContainer = backend::Program::DescriptorSetInfo;
     bool getDescriptorBindings(DescriptorBindingsContainer* container) const noexcept;
 
-    using DescriptorSetLayoutContainer = std::array<backend::DescriptorSetLayout, 2>;
+    using DescriptorSetLayoutContainer = backend::DescriptorSetLayout;
     bool getDescriptorSetLayout(DescriptorSetLayoutContainer* container) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;

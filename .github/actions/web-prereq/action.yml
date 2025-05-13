@@ -1,0 +1,16 @@
+name: 'Web Preqrequisites'
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Cache EMSDK
+      id: emsdk-cache
+      uses: actions/cache@v4 # Use a specific version
+      with:
+        path: emsdk
+        key: ${{ runner.os }}-emsdk-${{ env.GITHUB_EMSDK_VERSION }}
+    - name: Install Web Prerequisites
+      shell: bash
+      run: |
+        bash ./build/common/get-emscripten.sh
+        echo "EMSDK=$PWD/emsdk" >> $GITHUB_ENV

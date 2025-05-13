@@ -38,14 +38,20 @@ public:
 
     [[nodiscard]] wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&);
 
+    [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
+
     void present();
 
 private:
     void setExtent(wgpu::Extent2D const&);
 
+    wgpu::Device mDevice = nullptr;
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
+    bool mNeedStencil = false;
     wgpu::TextureFormat mDepthFormat = wgpu::TextureFormat::Undefined;
+    wgpu::Texture mDepthTexture = nullptr;
+    wgpu::TextureView mDepthTextureView = nullptr;
 };
 
 } // namespace filament::backend

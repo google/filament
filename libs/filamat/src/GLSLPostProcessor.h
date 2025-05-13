@@ -23,6 +23,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 
 #include "ShaderMinifier.h"
+#include "SpirvRemapWrapper.h"
 
 #include <spirv-tools/optimizer.hpp>
 
