@@ -63,7 +63,7 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDes
 };
 
 // Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
-// declined into 8 different layouts, based on variants.
+// expanded to 8 different layouts, based on variants.
 //
 // Note about the SHADOW_MAP binding points:
 // This descriptor can either be a SAMPLER_FLOAT or a SAMPLER_DEPTH,

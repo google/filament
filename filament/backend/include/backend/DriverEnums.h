@@ -163,7 +163,7 @@ enum class TimerQueryResult : int8_t {
     AVAILABLE = 1,  // result is available
 };
 
- constexpr std::string_view to_string(Backend const backend) noexcept {
+constexpr std::string_view to_string(Backend const backend) noexcept {
     switch (backend) {
         case Backend::NOOP:
             return "Noop";
@@ -177,7 +177,6 @@ enum class TimerQueryResult : int8_t {
             return "WebGPU";
         case Backend::DEFAULT:
             return "Default";
-            break;
     }
     return "Unknown";
 }
@@ -229,7 +228,7 @@ enum class ShaderStageFlags : uint8_t {
     ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT | COMPUTE
 };
 
- constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
+constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
     switch (type) {
         case ShaderStage::VERTEX:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
@@ -249,7 +248,7 @@ enum class TextureType : uint8_t {
     DEPTH_STENCIL
 };
 
- constexpr std::string_view to_string(TextureType type) noexcept {
+constexpr std::string_view to_string(TextureType type) noexcept {
     switch (type) {
         case TextureType::FLOAT:            return "FLOAT";
         case TextureType::INT:              return "INT";
@@ -292,7 +291,7 @@ enum class TextureType : uint8_t {
      INPUT_ATTACHMENT,
  };
 
- constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
+constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
      switch (type) {
          case DescriptorType::SAMPLER_2D_DEPTH:
          case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
@@ -304,7 +303,7 @@ enum class TextureType : uint8_t {
      return false;
  }
 
- constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
+constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
      switch (type) {
          case DescriptorType::SAMPLER_2D_FLOAT:
          case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
@@ -408,7 +407,7 @@ enum class TargetBufferFlags : uint32_t {
     ALL = COLOR_ALL | DEPTH | STENCIL       //!< Color, depth and stencil buffer selected.
 };
 
- constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
+constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
     if (index == 0u) return TargetBufferFlags::COLOR0;
     if (index == 1u) return TargetBufferFlags::COLOR1;
     if (index == 2u) return TargetBufferFlags::COLOR2;
@@ -939,7 +938,7 @@ enum class TextureSwizzle : uint8_t {
 };
 
 //! returns whether this format a depth format
- constexpr bool isDepthFormat(TextureFormat format) noexcept {
+constexpr bool isDepthFormat(TextureFormat format) noexcept {
     switch (format) {
         case TextureFormat::DEPTH32F:
         case TextureFormat::DEPTH24:
@@ -952,7 +951,7 @@ enum class TextureSwizzle : uint8_t {
     }
 }
 
- constexpr bool isStencilFormat(TextureFormat format) noexcept {
+constexpr bool isStencilFormat(TextureFormat format) noexcept {
     switch (format) {
         case TextureFormat::STENCIL8:
         case TextureFormat::DEPTH24_STENCIL8:
@@ -963,7 +962,7 @@ enum class TextureSwizzle : uint8_t {
     }
 }
 
- constexpr bool isColorFormat(TextureFormat format) noexcept {
+constexpr bool isColorFormat(TextureFormat format) noexcept {
     switch (format) {
         // Standard color formats
         case TextureFormat::R8:
@@ -990,7 +989,7 @@ enum class TextureSwizzle : uint8_t {
     return false;
 }
 
- constexpr bool isUnsignedIntFormat(TextureFormat format) {
+constexpr bool isUnsignedIntFormat(TextureFormat format) {
     switch (format) {
         case TextureFormat::R8UI:
         case TextureFormat::R16UI:
@@ -1011,7 +1010,7 @@ enum class TextureSwizzle : uint8_t {
     }
 }
 
- constexpr bool isSignedIntFormat(TextureFormat format) {
+constexpr bool isSignedIntFormat(TextureFormat format) {
     switch (format) {
         case TextureFormat::R8I:
         case TextureFormat::R16I:
@@ -1033,26 +1032,26 @@ enum class TextureSwizzle : uint8_t {
 }
 
 //! returns whether this format is a compressed format
- constexpr bool isCompressedFormat(TextureFormat format) noexcept {
+constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;
 }
 
 //! returns whether this format is an ETC2 compressed format
- constexpr bool isETC2Compression(TextureFormat format) noexcept {
+constexpr bool isETC2Compression(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11 && format <= TextureFormat::ETC2_EAC_SRGBA8;
 }
 
 //! returns whether this format is an S3TC compressed format
- constexpr bool isS3TCCompression(TextureFormat format) noexcept {
+constexpr bool isS3TCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
- constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
+constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
 //! returns whether this format is an RGTC compressed format
- constexpr bool isRGTCCompression(TextureFormat format) noexcept {
+constexpr bool isRGTCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::RED_RGTC1 && format <= TextureFormat::SIGNED_RED_GREEN_RGTC2;
 }
 
