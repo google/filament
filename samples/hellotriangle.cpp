@@ -65,7 +65,7 @@ static const Vertex TRIANGLE_VERTICES[3] = {
     {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
 };
 
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
+static constexpr uint16_t TRIANGLE_INDICES[4] = { 0, 1, 2 , 0};
 
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
@@ -147,11 +147,11 @@ int main(int argc, char** argv) {
         app.vb->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
         app.ib = IndexBuffer::Builder()
-                .indexCount(3)
+                .indexCount(4)
                 .bufferType(IndexBuffer::IndexType::USHORT)
                 .build(*engine);
         app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 8, nullptr));
         app.mat = Material::Builder()
                 .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
                 .build(*engine);
