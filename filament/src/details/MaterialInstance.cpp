@@ -40,7 +40,8 @@
 #include <utils/CString.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Log.h>
+
+#include <absl/log/log.h>
 
 #include <math/scalar.h>
 
@@ -311,7 +312,7 @@ float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
 
 void FMaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
     if (UTILS_UNLIKELY(!mMaterial->hasDoubleSidedCapability())) {
-        slog.w << "Parent material does not have double-sided capability." << io::endl;
+        LOG(WARNING) << "Parent material does not have double-sided capability.";
         return;
     }
     setParameter("_doubleSided", doubleSided);
@@ -354,19 +355,18 @@ void FMaterialInstance::use(FEngine::DriverApi& driver) const {
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
             auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
-            slog.w << "sampler parameters not set in MaterialInstance \""
-                   << mName.c_str_safe() << "\" or Material \""
-                   << mMaterial->getName().c_str_safe() << "\":\n";
+            LOG(WARNING) << "sampler parameters not set in MaterialInstance \""
+                         << mName.c_str_safe() << "\" or Material \""
+                         << mMaterial->getName().c_str_safe() << "\":";
             mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
                 auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                     return item.binding == binding;
                 });
                 // just safety-check, should never fail
                 if (UTILS_LIKELY(pos != list.end())) {
-                    slog.w << "[" << +binding << "] " << pos->name.c_str() << '\n';
+                    LOG(WARNING) << "[" << +binding << "] " << pos->name.c_str();
                 }
             });
-            flush(slog.w);
         });
         mMissingSamplerDescriptors.clear();
     }

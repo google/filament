@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -22,15 +22,15 @@
 /* Begin PBXFileReference section */
 		17ADA23252FA61486B05D5BA /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		1CAE8879115ECEC53FA0F052 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		37CB2FCA6711AE57BD4B39F7 /* hello-pbr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-pbr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		37CB2FCA6711AE57BD4B39F7 /* hello-pbr.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-pbr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		42B9073CE652C53E7F0A4602 /* FilamentView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
 		4618C7511DE661F89B114734 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
 		7D60AE7BAB964978FAA0C84C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		7FE9A0CE98FB055F3478E1CC /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		A17327655C031D575A522AD1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		A3680F594905261290AEDB79 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		AC02B019CB36611A7BCE5773 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
-		ADF252527D202BB9D53E29C8 /* clear_coat.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = clear_coat.mat; sourceTree = "<group>"; };
+		AC02B019CB36611A7BCE5773 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		ADF252527D202BB9D53E29C8 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		B35CDFC5B6E5142B5E57BE33 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
 		D57C53C47A84D05D23B65278 /* CameraManipulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CameraManipulator.cpp; sourceTree = "<group>"; };
 		DACB12BFCAAA3222E7D1E9BB /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
@@ -105,6 +105,8 @@
 			dependencies = (
 			);
 			name = "hello-pbr";
+			packageProductDependencies = (
+			);
 			productName = "hello-pbr";
 			productReference = 37CB2FCA6711AE57BD4B39F7 /* hello-pbr.app */;
 			productType = "com.apple.product-type.application";
@@ -115,10 +117,13 @@
 		55C50CCB1B22D6D3E534BB59 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 0479354FB8D9A411347D91A6 /* Build configuration list for PBXProject "hello-pbr" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -126,6 +131,8 @@
 				en,
 			);
 			mainGroup = 8B171658B4A1227B9CA44459;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -302,6 +309,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -348,6 +356,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -394,6 +403,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -550,6 +560,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",

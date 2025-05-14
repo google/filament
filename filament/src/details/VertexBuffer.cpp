@@ -32,9 +32,10 @@
 #include <utils/CString.h>
 #include <utils/StaticString.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
+
+#include <absl/log/log.h>
 
 #include <algorithm>
 #include <array>
@@ -102,16 +103,14 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
     if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT &&
         size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
 
-#ifndef NDEBUG
         if (byteOffset & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteOffset not multiple of 4" << utils::io::endl;
+            DLOG(INFO) << "[performance] VertexBuffer::Builder::attribute() byteOffset not "
+                          "multiple of 4";
         }
         if (byteStride & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteStride not multiple of 4" << utils::io::endl;
+            DLOG(INFO) << "[performance] VertexBuffer::Builder::attribute() byteStride not "
+                          "multiple of 4";
         }
-#endif
 
         auto& entry = mImpl->mAttributes[attribute];
         entry.buffer = bufferIndex;
@@ -125,8 +124,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
 
         mImpl->mDeclaredAttributes.set(attribute);
     } else {
-        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
-                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
+        LOG(WARNING) << "Ignoring VertexBuffer attribute, the limit of "
+                     << MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded";
     }
     return *this;
 }

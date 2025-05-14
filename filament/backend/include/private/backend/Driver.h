@@ -39,7 +39,7 @@
 #define FILAMENT_DEBUG_COMMANDS_NONE         0x0
 // Command debugging enabled. No logging by default.
 #define FILAMENT_DEBUG_COMMANDS_ENABLE       0x1
-// Command debugging enabled. Every command logged to slog.d
+// Command debugging enabled. Every command logged to DLOG(INFO)
 #define FILAMENT_DEBUG_COMMANDS_LOG          0x2
 // Command debugging enabled. Every command logged to systrace
 #define FILAMENT_DEBUG_COMMANDS_SYSTRACE     0x4

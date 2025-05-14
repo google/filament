@@ -21,13 +21,14 @@
 #include "MetalUtils.h"
 
 #include <utils/Panic.h>
-#include <utils/Log.h>
 #include <utils/trap.h>
+
+#include <absl/log/log.h>
 
 #define NSERROR_CHECK(message)                                                                     \
     if (error) {                                                                                   \
         auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding]; \
-        utils::slog.e << description << utils::io::endl;                                           \
+        LOG(ERROR) << description;                                                                 \
     }                                                                                              \
     FILAMENT_CHECK_POSTCONDITION(error == nil) << message;
 

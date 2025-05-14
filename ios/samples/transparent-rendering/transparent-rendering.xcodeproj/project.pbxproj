@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -82,6 +82,8 @@
 			dependencies = (
 			);
 			name = "transparent-rendering";
+			packageProductDependencies = (
+			);
 			productName = "transparent-rendering";
 			productReference = 7ED3EBFE01876351CFF9AD1A /* transparent-rendering.app */;
 			productType = "com.apple.product-type.application";
@@ -92,12 +94,13 @@
 		81DCFDD51562B31512E28C40 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 				};
 			};
 			buildConfigurationList = 8A22BD23DB15965551506480 /* Build configuration list for PBXProject "transparent-rendering" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -105,6 +108,8 @@
 				en,
 			);
 			mainGroup = 4C27390036DEB15C67D5A664;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -388,6 +393,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -431,6 +437,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -474,6 +481,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -517,6 +525,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.transparent-rendering";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";

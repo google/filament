@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -81,6 +81,8 @@
 			dependencies = (
 			);
 			name = "backend-test";
+			packageProductDependencies = (
+			);
 			productName = "backend-test";
 			productReference = 13DDE7723EC1A6EFCA4D2D58 /* backend-test.app */;
 			productType = "com.apple.product-type.application";
@@ -91,12 +93,13 @@
 		8A7A83D59A7827D3335343C2 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 				};
 			};
 			buildConfigurationList = E89E1EEA671E49DBAC9D5A9C /* Build configuration list for PBXProject "backend-test" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -104,6 +107,8 @@
 				en,
 			);
 			mainGroup = 3D2B936C924E0DB70941EE6D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -249,6 +254,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -356,6 +362,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -456,6 +463,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -501,6 +509,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);

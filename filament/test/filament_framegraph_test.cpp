@@ -29,6 +29,8 @@
 
 #include "details/Texture.h"
 
+#include <absl/log/log.h>
+
 using namespace filament;
 using namespace backend;
 
@@ -76,7 +78,9 @@ protected:
     }
 
     void TearDown() override {
-        //fg.export_graphviz(utils::slog.d);
+        //utils::io::sstream graphviz;
+        //fg.export_graphviz(graphviz);
+        //DLOG(INFO) << graphviz.c_str();
     }
 
     Backend backend = Backend::NOOP;
@@ -107,7 +111,9 @@ TEST(DependencyGraphTest, Simple) {
 
     graph.cull();
 
-    //graph.export_graphviz(utils::slog.d);
+    //utils::io::sstream graphviz;
+    //graph.export_graphviz(graphviz);
+    //DLOG(INFO) << graphviz.c_str();
 
     EXPECT_FALSE(n2->isCulled());
     EXPECT_FALSE(n1->isCulled());
@@ -141,7 +147,9 @@ TEST(DependencyGraphTest, Culling1) {
 
     graph.cull();
 
-    //graph.export_graphviz(utils::slog.d);
+    //utils::io::sstream graphviz;
+    //graph.export_graphviz(graphviz);
+    //DLOG(INFO) << graphviz.c_str();
 
     EXPECT_TRUE(n1_0->isCulled());
     EXPECT_TRUE(n1_0->isCulledCalled());
@@ -182,7 +190,9 @@ TEST(DependencyGraphTest, Culling2) {
 
     graph.cull();
 
-    //graph.export_graphviz(utils::slog.d);
+    //utils::io::sstream graphviz;
+    //graph.export_graphviz(graphviz);
+    //DLOG(INFO) << graphviz.c_str();
 
     EXPECT_TRUE(n1_0->isCulled());
     EXPECT_TRUE(n1_0_0->isCulled());
