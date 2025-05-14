@@ -19,6 +19,7 @@
     - [Vulkan](./notes/vulkan_debugging.md)
     - [SPIR-V](./notes/spirv_debugging.md)
     - [Running with ASAN and UBSAN](./notes/asan_ubsan.md)
+    - [Using Instruments on macOS](./notes/instruments.md)
   - [Libraries](./notes/libs.md)
     - [bluegl](./dup/bluegl.md)
     - [bluevk](./dup/bluevk.md)
