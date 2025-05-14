@@ -14,7 +14,7 @@ void main() {
     inputs.position.z = inputs.position.z * -0.5 + 0.5;
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, WebGPU and Metal, clip space is Y-up.
     inputs.position.y = -inputs.position.y;
 #endif
 
