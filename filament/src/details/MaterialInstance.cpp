@@ -50,6 +50,8 @@
 #include <string_view>
 #include <utility>
 
+#include <stddef.h>
+
 using namespace filament::math;
 using namespace utils;
 
@@ -74,12 +76,13 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    // even if the material doesn't have any parameters, we allocate a small UBO because it's
+    // expected by the per-material descriptor-set layout
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
@@ -143,12 +146,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms.setUniforms(other->getUniformBuffer());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),

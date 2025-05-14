@@ -205,7 +205,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 view.prepareSSAO(data.ssao ?
                         resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
-                view.prepareShadowMapping(view.getVsmShadowOptions().highPrecision);
+                view.prepareShadowMapping(engine, view.getVsmShadowOptions().highPrecision);
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
