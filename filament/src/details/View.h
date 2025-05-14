@@ -178,11 +178,11 @@ public:
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMapping(bool highPrecision) const noexcept;
+    void prepareShadowMapping(FEngine const& engine, bool highPrecision) const noexcept;
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
     void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
-    void unbindSamplers(backend::DriverApi& driver) noexcept;
+    void unbindSamplers(FEngine& engine) noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }

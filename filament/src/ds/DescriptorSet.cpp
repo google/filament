@@ -87,6 +87,7 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     mValid.forEachSetBit([&layout, &driver,
             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
             (backend::descriptor_binding_t const binding) {
+        assert_invariant(layout.isValid(binding));
         if (layout.isSampler(binding)) {
             driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
@@ -114,7 +115,7 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     // within the renderpass. We have to comment the assert out since it crashed a client's debug
     // build.
     // assert_invariant(mDirty.none());
-    if (mDirty.any() && !mSetAfterCommitWarning) {
+    if (UTILS_VERY_UNLIKELY(mDirty.any() && !mSetAfterCommitWarning)) {
         mDirty.forEachSetBit([&](uint8_t const binding) {
             utils::slog.w << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
                           << ") binding=" << (int) binding
@@ -177,7 +178,7 @@ void DescriptorSet::setSampler(
 DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const noexcept {
     DescriptorSet set{layout};
     set.mDescriptors = mDescriptors; // Use the vector's assignment operator
-    set.mDirty = mDirty;
+    set.mDirty = mValid | mDirty;    // Dirty all valid descriptors so they're updated during commit
     set.mValid = mValid;
     return set;
 }

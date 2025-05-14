@@ -978,7 +978,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 // this descriptor-set is also used for ssr/picking/structure and these could be stale
                 // it would be better to use a separate desriptor-set for those two cases so that we don't
                 // have to do this
-                view.unbindSamplers(driver);
+                view.unbindSamplers(engine);
                 view.commitUniformsAndSamplers(driver);
             });
 
