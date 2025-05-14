@@ -26,6 +26,7 @@ namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
     SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
+    SKIP_IF(Backend::VULKAN, "Frame callbacks are unsupported in Vulkan, see b/417254479");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
@@ -85,6 +86,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
 
 TEST_F(BackendTest, FrameCompletedCallback) {
     SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
+    SKIP_IF(Backend::VULKAN, "Frame callbacks are unsupported in Vulkan, see b/417254479");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);

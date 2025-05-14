@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <utils/FixedCapacityVector.h>
+#include <utils/Panic.h>
 
 using namespace utils;
 

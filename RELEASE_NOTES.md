@@ -7,10 +7,15 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.60.1
+
+
 ## v1.60.0
 
 - materials: remove dependence on per-view descset layout from filamat. [⚠️ **New Material Version**]
-- `ColorGrading::Builder::toneMapper` now takes a `shared_ptr<ToneMapper>`
+- matc non-functional change: Update GLSL postprocessor to
+  isolate calls to SPVRemap from calls to SPIRV-Cross.
+
 
 ## v1.59.5
 

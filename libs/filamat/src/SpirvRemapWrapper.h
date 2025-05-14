@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_OSTREAM__H
-#define TNT_UTILS_OSTREAM__H
+#ifndef TNT_SPIRVREMAPWRAPPER_H
+#define TNT_SPIRVREMAPWRAPPER_H
 
-#include <utils/ostream.h>
+#include <cstdint>
+#include <vector>
 
-#include <utility>
-#include <mutex>
+namespace filamat {
 
-namespace utils::io {
+void SpirvRemapWrapperSetUp();
+void SpirvRemapWrapperRemap(std::vector<uint32_t>& spirv);
 
-struct ostream_ {
-    std::mutex mLock;
-    ostream::Buffer mData;
-    std::pair<ostream::ConsumerCallback, void*> mConsumer{};
-    bool mShowHex = false;
-};
+} // namespace filamat
 
-} // utils::io
-
-#endif // TNT_UTILS_OSTREAM__H
+#endif //TNT_SPIRVREMAPWRAPPER_H

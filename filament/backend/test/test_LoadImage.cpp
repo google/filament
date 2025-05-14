@@ -212,7 +212,7 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
 }
 
 TEST_F(LoadImageTest, UpdateImage2D) {
-    FAIL_IF(Backend::VULKAN, "Multiple test cases crash");
+    FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 3644679986;
@@ -485,6 +485,9 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
+            "see b/417254499");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();

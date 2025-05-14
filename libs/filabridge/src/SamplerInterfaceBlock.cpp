@@ -49,13 +49,13 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
     return *this;
 }
 
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        std::string_view samplerName, Binding binding, Type type, Format format,
-        Precision precision, bool multisample) noexcept {
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(std::string_view samplerName,
+        Binding binding, Type type, Format format, Precision precision, bool multisample,
+        ShaderStageFlags stages) noexcept {
     mEntries.push_back({
             { samplerName.data(), samplerName.size() }, // name
             { }, // uniform name
-            binding, type, format, precision, multisample });
+            binding, type, format, precision, multisample, stages });
     return *this;
 }
 
@@ -66,7 +66,7 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
     for (auto& e : list) {
-        add(e.name, e.binding, e.type, e.format, e.precision, e.multisample);
+        add(e.name, e.binding, e.type, e.format, e.precision, e.multisample, e.stages);
     }
     return *this;
 }
@@ -91,6 +91,7 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
         size_t const i = std::distance(builder.mEntries.data(), &e);
         SamplerInfo& info = samplersInfoList[i];
         info = e;
+        info.stages &= builder.mStageFlags;
         info.uniformName = generateUniformName(mName.c_str(), e.name.c_str());
         infoMap[{ info.name.data(), info.name.size() }] = i; // info.name.c_str() guaranteed constant
     }
