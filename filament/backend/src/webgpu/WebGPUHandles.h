@@ -103,6 +103,7 @@ struct WGPUBufferObject : HwBufferObject {
 
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
+    std::string label;
 
     enum class BindGroupEntryType : uint8_t {
         UNIFORM_BUFFER,
@@ -137,12 +138,13 @@ private:
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
+    std::string bglLabel;
     static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
             wgpu::TextureFormat aColorFormat,
             wgpu::TextureFormat aDepthFormat);
 
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
-            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
+            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries, std::string label);
     ~WebGPUDescriptorSet();
 
     wgpu::BindGroup lockAndReturn(wgpu::Device const&);

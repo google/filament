@@ -591,7 +591,7 @@ void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
         Handle<HwDescriptorSetLayout> dslh) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
-    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getBindGroupEntries());
+    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getBindGroupEntries(), layout->label);
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {

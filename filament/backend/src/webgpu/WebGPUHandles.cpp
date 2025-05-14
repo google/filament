@@ -247,6 +247,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         const auto& temp = std::get_if<utils::CString>(&layout.label);
         baseLabel = temp->c_str();
     }
+    label = baseLabel;
 
     // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
     // debugging. For now, hack an incrementing value.
@@ -493,7 +494,7 @@ void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device cons
                 << "Failed to create dummy texture view?";
     }
     if (!sDummySampler) {
-        wgpu::SamplerDescriptor samplerDescriptor{ .label = "dummy_sampler_not_to_be_used" };
+        wgpu::SamplerDescriptor samplerDescriptor{ .label = "dummy_sampler_not_to_be_used" , .addressModeU = wgpu::AddressMode::MirrorRepeat};
         sDummySampler = device.CreateSampler(&samplerDescriptor);
         FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy sampler?";
     }
@@ -546,6 +547,7 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_3D:
                 entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e3D];
                 break;
+            default: break;
         }
     }
     std::sort(entries.begin(), entries.end(),
@@ -556,9 +558,10 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
 }
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
-        std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
+        std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries, std::string label)
     : mLayout(layout),
       mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
+    bglLabel = label;
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
     for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {
@@ -593,6 +596,20 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
         .entryCount = mEntriesSortedByBinding.size(),
         .entries = mEntriesSortedByBinding.data()
     };
+    for(auto e : mEntriesSortedByBinding){
+        if(e.sampler.Get() == sDummySampler.Get()){
+            printf("===R Dummy %s UBO %i\n", bglLabel.c_str(), e.binding/2);
+        }
+        for(auto dt : sDummyTextureViewMap){
+            if(e.textureView.Get() == dt.second.Get())
+            {
+                printf("===R Dummy %s Tex %i\n", bglLabel.c_str(), e.binding/2);
+            }
+        }
+        if(e.buffer.Get() == sDummyUniformBuffer.Get()){
+            printf("===R Dummy %s Sam %i\n", bglLabel.c_str(),(e.binding-1)/2);
+        }
+    }
     mBindGroup = device.CreateBindGroup(&desc);
     FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
     // once we have created the bind group itself we should no longer need any other state
