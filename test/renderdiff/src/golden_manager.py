@@ -15,6 +15,7 @@
 import os
 import shutil
 import re
+import sys
 
 from utils import execute, ArgParseImpl, mkdir_p
 
@@ -132,12 +133,19 @@ class GoldenManager:
     rdiff_dir = os.path.join(assets_dir, GOLDENS_DIR)
     shutil.copytree(rdiff_dir, dest_dir, dirs_exist_ok=True)
 
-# For testing only
+# The main entry point will enable download content of a branch to a directory
 if __name__ == "__main__":
+  parser = ArgParseImpl()
+  parser.add_argument('--branch', type=str, help='Branch of the golden repo', default='main')
+  parser.add_argument('--output', type=str, help='Directory to download to', required=True)
+
+  args, _ = parser.parse_known_args(sys.argv[1:])
+
+  # prepare goldens working directory
+  golden_dir = args.output
+  assert os.path.isdir(golden_dir),\
+    f"Output directory {golden_dir} does not exist"
+
+  # Download the golden repo into the current working directory
   golden_manager = GoldenManager(os.getcwd())
-  # golden_manager.source_from_and_commit(
-  #     os.path.join(os.getcwd(), 'out/renderdiff_tests'),
-  #     'First commit (local)',
-  #     branch='branch-test')
-  # golden_manager.merge_to_main('branch-test', push_to_remote=True)
-  # golden_manager.download_to(os.path.join(os.getcwd(), 'tmp/goldens'))
+  golden_manager.download_to(golden_dir, branch=args.branch)
