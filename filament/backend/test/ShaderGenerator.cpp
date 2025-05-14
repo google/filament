@@ -118,7 +118,7 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
     } else if (backend == Backend::VULKAN) {
         shader.insert(pos, "#define TARGET_VULKAN_ENVIRONMENT\n");
     } else if (backend == Backend::WEBGPU) {
-        shader.insert(pos, "#define TARGET_VULKAN_ENVIRONMENT\n");
+        shader.insert(pos, "#define TARGET_WEBGPU_ENVIRONMENT\n");
     }
 
     const char* shaderCString = shader.c_str();
