@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 namespace test {
@@ -84,7 +85,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 
         PipelineState state;
         state.program = shader.getProgram();
-        state.pipelineLayout.setLayout[1] = { shader.getDescriptorSetLayout() };
+        state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
         state.rasterState.colorWrite = true;
         state.rasterState.depthWrite = false;
         state.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -159,6 +160,8 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "All values including alpha are written as 0, see b/417254943");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -199,8 +202,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     params.flags.discardEnd = TargetBufferFlags::NONE;
     params.viewport.height = 512;
     params.viewport.width = 512;
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
-            renderTarget, swapChain, shader.getProgram(), params);
+    renderTriangle({ { shader.getDescriptorSetLayout() } }, renderTarget, swapChain,
+            shader.getProgram(), params);
 
     // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
     // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
@@ -218,7 +221,7 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
     params.flags.clear = TargetBufferFlags::NONE;
     params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+    renderTriangle({{ shader.getDescriptorSetLayout() }},
             renderTarget, swapChain, shader.getProgram(), params);
 
 

@@ -1980,7 +1980,7 @@ public class View {
         }
 
         /**
-         * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
+         * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
          */
         public float filterWidth = 1.0f;
         /**

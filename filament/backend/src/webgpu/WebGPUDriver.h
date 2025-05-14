@@ -39,8 +39,8 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WGPURenderTarget;
 class WGPUTimerQuery;
-struct WGPURenderTarget;
 
 /**
  * WebGPU backend (driver) implementation
@@ -50,15 +50,14 @@ public:
     ~WebGPUDriver() noexcept override;
 
     [[nodiscard]] Dispatcher getDispatcher() const noexcept final;
-    [[nodiscard]] static Driver* create(WebGPUPlatform& platform,
-            const Platform::DriverConfig& driverConfig) noexcept;
+    [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
-    explicit WebGPUDriver(WebGPUPlatform& platform,
-            const Platform::DriverConfig& driverConfig) noexcept;
+    explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
-
+    [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
+    [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
     template<typename GPUBufferObject>
     void updateGPUBuffer(GPUBufferObject* gpuBufferObject, BufferDescriptor&& bufferDescriptor,
             uint32_t byteOffset) {
@@ -96,6 +95,7 @@ private:
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
     WGPUTimerQuery* mTimerQuery = nullptr;
 
+    tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
     /*
      * Driver interface
      */
@@ -149,4 +149,4 @@ private:
 
 }// namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
+#endif // TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H

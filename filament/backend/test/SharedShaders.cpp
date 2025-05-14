@@ -138,7 +138,7 @@ std::optional<std::string> GetGlslUniform(ShaderUniformType type) {
         }
         case ShaderUniformType::Simple: {
             return R"(
-layout(binding = 0, set = 1) uniform Params {
+layout(binding = 0, set = 0) uniform Params {
     highp vec4 color;
     // Use scaleMinusOne instead of scale so that a 0 initialized value is a good default
     highp vec4 scaleMinusOne;
@@ -148,7 +148,7 @@ layout(binding = 0, set = 1) uniform Params {
         }
         case ShaderUniformType::SimpleWithPadding: {
             return R"(
-layout(binding = 0, set = 1) uniform Params {
+layout(binding = 0, set = 0) uniform Params {
     highp vec4 padding[4];  // offset of 64 bytes
 
     highp vec4 color;
@@ -160,7 +160,7 @@ layout(binding = 0, set = 1) uniform Params {
         }
         case ShaderUniformType::Sampler: {
             return R"(
-layout(location = 0, set = 1) uniform sampler2D test_tex;
+layout(location = 0, set = 0) uniform sampler2D test_tex;
 )";
         }
         default:

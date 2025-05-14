@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 #include <utils/Hash.h>
+#include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUDriver.h"
+#include "WebGPUHandles.h"
 
 #include "WebGPUPipelineCreation.h"
 #include "WebGPUSwapChain.h"
@@ -32,19 +34,15 @@
 #include <utils/Panic.h>
 #include <utils/ostream.h>
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <dawn/webgpu_cpp_print.h>
-#endif
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <sstream>
 #include <string_view>
-#endif
 #include <utility>
 #include <variant>
 #include <iostream>
@@ -785,11 +783,14 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th,
 void WebGPUDriver::setupExternalImage(void* image) {
 }
 
-void WebGPUDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {}
+void WebGPUDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
+}
 
-void WebGPUDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {}
+void WebGPUDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+}
 
-void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) { }
+void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) {
+}
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
@@ -878,7 +879,7 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
-
+//    mTimerQuery->beginTimeElapsedQuery();
     wgpu::CommandBufferDescriptor commandBufferDescriptor{
         .label = "command_buffer",
     };
@@ -893,6 +894,10 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
                 if (mTimerQuery) {
                         mTimerQuery->endTimeElapsedQuery();
                 }
+            }
+            else
+            {
+                std::cout << "NOT SUCCESS" << std::endl;
             }
     });
 
@@ -1208,6 +1213,5 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     }
     return wgpu::AddressMode::Undefined;
 }
-
 
 } // namespace filament

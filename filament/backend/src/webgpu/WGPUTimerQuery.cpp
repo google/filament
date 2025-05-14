@@ -20,6 +20,7 @@
 #include <chrono>
 #include <memory>
 #include <iostream>
+
 namespace filament::backend {
 
 void WGPUTimerQuery::beginTimeElapsedQuery() {

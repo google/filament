@@ -21,6 +21,9 @@
 #include <functional>
 #include <optional>
 
+#include "gtest/gtest.h"
+#include "gmock/gmock.h"
+
 #include "backend/Handle.h"
 #include "backend/DriverApiForward.h"
 #include "BackendTest.h"
@@ -71,6 +74,7 @@ private:
 
 template <typename HandleType>
 filament::backend::Handle<HandleType> Cleanup::add(filament::backend::Handle<HandleType> handle) {
+    EXPECT_THAT(handle, ::testing::IsTrue()) << "Added a null handle to clean up.";
     addInternal(handle);
     return handle;
 }

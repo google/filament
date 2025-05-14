@@ -196,9 +196,43 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
     auto typeString = typeValue->toJsonString()->getString();
     auto nameString = nameValue->toJsonString()->getString();
 
+    const JsonishValue* stagesValue = jsonObject.getValue("stages");
+    using filament::backend::ShaderStageFlags;
+    auto stages = ShaderStageFlags::NONE;
+    if (stagesValue) {
+        if (stagesValue->getType() != JsonishValue::ARRAY) {
+            std::cerr << "parameters: stages must be an ARRAY." << std::endl;
+            return false;
+        }
+        for (auto value: stagesValue->toJsonArray()->getElements()) {
+            if (value->getType() == JsonishValue::Type::STRING) {
+                using namespace std::literals;
+                using Qualifier = filament::BufferInterfaceBlock::Qualifier;
+                auto stageString = value->toJsonString()->getString();
+                if (Enums::isValid<ShaderStageType>(stageString)) {
+                    stages |= Enums::toEnum<ShaderStageType>(stageString);
+                } else {
+                    std::cerr << "stages: the stage '" << stageString
+                              << "' for parameter with name '" << nameString
+                              << "' is not a valid shader stage." << std::endl;
+                    return false;
+                }
+                continue;
+            }
+            std::cerr << "parameters: stages must be an array of STRINGs." << std::endl;
+            return false;
+        }
+    }
+
     size_t const arraySize = extractArraySize(typeString);
 
     if (Enums::isValid<UniformType>(typeString)) {
+        if (stages != ShaderStageFlags::NONE) {
+            std::cerr << "parameters: the uniform parameter with name '" << nameString << "'"
+                      << " has shader stages specified. Shader stages are only supported for"
+                      << " samplers." << std::endl;
+            return false;
+        }
         MaterialBuilder::UniformType const type = Enums::toEnum<UniformType>(typeString);
         ParameterPrecision precision = ParameterPrecision::DEFAULT;
         if (precisionValue) {
@@ -228,6 +262,11 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
+        if (stages == ShaderStageFlags::NONE) {
+            // TODO: Infer the default shader stages based on which blocks are present in the
+            // material.
+            stages = ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT;
+        }
         if (transformNameValue) {
             if (type != MaterialBuilder::SamplerType::SAMPLER_EXTERNAL) {
                 std::cerr << "parameters: the parameter with name '" << nameString << "'"
@@ -237,9 +276,10 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 return false;
             }
             auto transformName = transformNameValue->toJsonString()->getString();
-            builder.parameter(nameString.c_str(), type, format, precision, multisample, transformName.c_str());
+            builder.parameter(nameString.c_str(), type, format, precision, multisample,
+                    transformName.c_str(), stages);
         } else {
-            builder.parameter(nameString.c_str(), type, format, precision, multisample);
+            builder.parameter(nameString.c_str(), type, format, precision, multisample, "", stages);
         }
 
     } else {

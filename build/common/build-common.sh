@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# build-common.sh will generate the following variables:
+#     $GENERATE_ARCHIVES
+#     $BUILD_DEBUG
+#     $BUILD_RELEASE
+
+# Typically a build script (build.sh) would source this script. For example,
+#   source `dirname $0`/../common/build-common.sh
+
+# Usage: the first argument selects the build type:
+# - release, to build release only
+# - debug, to build debug only
+# - continuous, to build release and debug
+# - presubmit, for presubmit builds
+#
+# The default is release
 if [[ ! "$TARGET" ]]; then
     if [[ "$1" ]]; then
         TARGET=$1

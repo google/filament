@@ -25,11 +25,11 @@
 #include <backend/PresentCallable.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/compiler.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <math/vec4.h>
 
@@ -39,6 +39,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 /**
  * Types and enums used by filament's driver.
@@ -1139,6 +1143,7 @@ struct ExternalSamplerDatum {
 static_assert(sizeof(ExternalSamplerDatum) == 12);
 
 struct DescriptorSetLayout {
+    std::variant<utils::StaticString, utils::CString, std::monostate> label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
 
 //  TODO: uncomment when needed
@@ -1455,6 +1460,11 @@ enum class Workaround : uint16_t {
     DISABLE_BLIT_INTO_TEXTURE_ARRAY,
     // Multiple workarounds needed for PowerVR GPUs
     POWER_VR_SHADER_WORKAROUNDS,
+    // Some browsers, such as Firefox on Mac, struggle with slow shader compile/link times when
+    // creating programs for the default material, leading to startup stutters. This workaround
+    // prevents these stutters by not precaching depth variants of the default material for those
+    // particular browsers.
+    DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
 };
 
 using StereoscopicType = backend::Platform::StereoscopicType;

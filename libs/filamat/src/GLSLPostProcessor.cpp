@@ -17,7 +17,6 @@
 #include "GLSLPostProcessor.h"
 
 #include <GlslangToSpv.h>
-#include <SPVRemapper.h>
 #include <spirv-tools/libspirv.hpp>
 
 #include <spirv_glsl.hpp>
@@ -34,14 +33,19 @@
 
 #include "MetalArgumentBuffer.h"
 #include "SpirvFixup.h"
-#include "utils/ostream.h"
 
 #include <filament/MaterialEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
+#include <algorithm>
+#include <optional>
 #include <sstream>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #ifdef FILAMENT_SUPPORTS_WEBGPU
@@ -140,32 +144,27 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
             ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
             +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
 
-    for (auto const& sampler : samplers) {
-        layout.bindings.push_back(DescriptorSetLayoutBinding {
-                (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) ?
-                        DescriptorType::SAMPLER_EXTERNAL : DescriptorType::SAMPLER,
-                ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT, sampler.binding,
-                DescriptorFlags::NONE, 0 });
+    for (auto const& sampler: samplers) {
+        layout.bindings.push_back(DescriptorSetLayoutBinding{
+            (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)
+                    ? DescriptorType::SAMPLER_EXTERNAL
+                    : DescriptorType::SAMPLER,
+            sampler.stages, sampler.binding, DescriptorFlags::NONE, 0 });
     }
 
     return layout;
 }
 
-static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
+static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
         const GLSLPostProcessor::Config& config, DescriptorSetInfo& descriptors) {
     const MaterialInfo& material = *config.materialInfo;
 
-    DescriptorSetLayout const info = [&]() {
+    // get the descriptor set layout for the given pinding point
+    DescriptorSetLayout const descriptorSetLayout = [&] {
         switch (set) {
             case DescriptorSetBindingPoints::PER_VIEW: {
-                if (filament::Variant::isValidDepthVariant(config.variant)) {
-                    return descriptor_sets::getDepthVariantLayout();
-                }
-                if (filament::Variant::isSSRVariant(config.variant)) {
-                    return descriptor_sets::getSsrVariantLayout();
-                }
-                return descriptor_sets::getPerViewDescriptorSetLayout(config.domain,
-                        config.variantFilter,
+                return descriptor_sets::getPerViewDescriptorSetLayoutWithVariant(
+                        config.variant, config.domain, config.variantFilter,
                         material.isLit || material.hasShadowMultiplier,
                         material.reflectionMode,
                         material.refractionMode);
@@ -179,7 +178,8 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
         }
     }();
 
-    auto samplerList = [&]() {
+    // get the sampler list for this binding point
+    auto samplerList = [&] {
         switch (set) {
             case DescriptorSetBindingPoints::PER_VIEW:
                 return SibGenerator::getPerViewSib(config.variant).getSamplerInfoList();
@@ -192,42 +192,34 @@ static void collectDescriptorsForSet(filament::DescriptorSetBindingPoints set,
         }
     }();
 
-    // remove all the samplers that are not included in the descriptor-set layout
-    samplerList.erase(std::remove_if(samplerList.begin(), samplerList.end(),
-                              [&info](auto const& entry) {
-                                  auto pos = std::find_if(info.bindings.begin(),
-                                          info.bindings.end(), [&entry](const auto& item) {
-                                              return item.binding == entry.binding;
-                                          });
-                                  return pos == info.bindings.end();
-                              }),
-            samplerList.end());
+    // filter the list with the descriptor set layout
+    auto const descriptorSetSamplerList =
+            SamplerInterfaceBlock::filterSamplerList(std::move(samplerList), descriptorSetLayout);
 
-    auto getDescriptorName = [&](DescriptorSetBindingPoints set, descriptor_binding_t binding) {
+    // helper to get the name of a descriptor for this set, given a binding.
+    auto getDescriptorName = [set, &descriptorSetSamplerList](descriptor_binding_t binding) {
         if (set == DescriptorSetBindingPoints::PER_MATERIAL) {
-            auto pos = std::find_if(samplerList.begin(), samplerList.end(),
+            auto pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
-            if (pos == samplerList.end()) {
+            if (pos == descriptorSetSamplerList.end()) {
                 return descriptor_sets::getDescriptorName(set, binding);
             }
-            SamplerInterfaceBlock::SamplerInfo& sampler = *pos;
-            return sampler.uniformName;
+            return pos->uniformName;
         }
         return descriptor_sets::getDescriptorName(set, binding);
     };
 
-    for (size_t i = 0; i < info.bindings.size(); i++) {
-        backend::descriptor_binding_t binding = info.bindings[i].binding;
-        auto name = getDescriptorName(set, binding);
-        if (info.bindings[i].type == DescriptorType::SAMPLER ||
-            info.bindings[i].type == DescriptorType::SAMPLER_EXTERNAL) {
-            auto pos = std::find_if(samplerList.begin(), samplerList.end(),
+    for (auto descriptor : descriptorSetLayout.bindings) {
+        descriptor_binding_t binding = descriptor.binding;
+        auto name = getDescriptorName(binding);
+        if (descriptor.type == DescriptorType::SAMPLER ||
+            descriptor.type == DescriptorType::SAMPLER_EXTERNAL) {
+            auto pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
-            assert_invariant(pos != samplerList.end());
-            SamplerInterfaceBlock::SamplerInfo& sampler = *pos;
-            descriptors.emplace_back(name, info.bindings[i], sampler);
+            assert_invariant(pos != descriptorSetSamplerList.end());
+            descriptors.emplace_back(name, descriptor, *pos);
         } else {
-            descriptors.emplace_back(name, info.bindings[i], std::nullopt);
+            descriptors.emplace_back(name, descriptor, std::nullopt);
         }
     }
 
@@ -296,24 +288,8 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
         : mOptimization(optimization),
           mPrintShaders(flags & PRINT_SHADERS),
           mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
-    // SPIRV error handler registration needs to occur only once. To avoid a race we do it up here
-    // in the constructor, which gets invoked before MaterialBuilder kicks off jobs.
-    spv::spirvbin_t::registerErrorHandler([](const std::string& str) {
-        slog.e << str << io::endl;
-    });
-
-    // Similar to above, we need to do a no-op remap to init a static table in the remapper before
-    // the jobs start using remap().
-    spv::spirvbin_t remapper(0);
-    // We need to provide at least a valid header to not crash.
-    SpirvBlob spirv {
-        0x07230203,// MAGIC
-        0,         // VERSION
-        0,         // GENERATOR
-        0,         // BOUND
-        0          // SCHEMA, must be 0
-    };
-    remapper.remap(spirv, 0);
+    // This should occur only once, to avoid races.
+    SpirvRemapWrapperSetUp();
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
@@ -365,7 +341,7 @@ static std::string stringifySpvOptimizerMessage(spv_message_level_t level, const
 }
 
 void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
-        filament::backend::ShaderStage stage, filament::backend::ShaderModel shaderModel,
+        ShaderStage stage, ShaderModel shaderModel,
         bool useFramebufferFetch, const DescriptorSets& descriptorSets,
         const ShaderMinifier* minifier) {
     using namespace msl;
@@ -674,7 +650,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
         //        SpvRules should be enough.
         //        I think this could cause the compilation to fail on gl_VertexID.
         using Type = std::underlying_type_t<EShMessages>;
-        msg = EShMessages(Type(msg) | Type(EShMessages::EShMsgVulkanRules));
+        msg = EShMessages(Type(msg) | Type(EShMsgVulkanRules));
     }
 
     bool const ok = tShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
@@ -684,7 +660,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     }
 
     // add texture lod bias
-    if (config.shaderType == backend::ShaderStage::FRAGMENT &&
+    if (config.shaderType == ShaderStage::FRAGMENT &&
         config.domain == MaterialDomain::SURFACE) {
         GLSLTools::textureLodBias(tShader);
     }
@@ -760,8 +736,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
     return true;
 }
 
-bool GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
-        GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
+bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
+        Config const& config, InternalConfig& internalConfig) const {
     using TargetApi = MaterialBuilder::TargetApi;
     assert_invariant(bool(internalConfig.spirvOutput) == (config.targetApi != TargetApi::OPENGL));
 
@@ -832,7 +808,7 @@ bool GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 }
 
 bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
-        GLSLPostProcessor::Config const& config, InternalConfig& internalConfig) const {
+        Config const& config, InternalConfig& internalConfig) const {
     SpirvBlob spirv;
 
     bool const optimizeForSize = mOptimization == MaterialBuilderBase::Optimization::SIZE;
@@ -928,7 +904,7 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
 #else
         try {
             *internalConfig.glslOutput = glslCompiler.compile();
-        } catch (spirv_cross::CompilerError e) {
+        } catch (CompilerError e) {
             slog.e << "ERROR: " << e.what() << io::endl;
             return false;
         }
@@ -948,8 +924,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
     return true;
 }
 
-std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
-    auto optimizer = std::make_shared<spvtools::Optimizer>(SPV_ENV_UNIVERSAL_1_3);
+std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
+    auto optimizer = std::make_shared<Optimizer>(SPV_ENV_UNIVERSAL_1_3);
     optimizer->SetMessageConsumer([](spv_message_level_t level,
             const char* source, const spv_position_t& position, const char* message) {
         if (!filterSpvOptimizerMessage(level)) {
@@ -961,7 +937,7 @@ std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
     return optimizer;
 }
 
-std::shared_ptr<spvtools::Optimizer> GLSLPostProcessor::createOptimizer(
+std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
         MaterialBuilder::Optimization optimization, Config const& config) {
     auto optimizer = createEmptyOptimizer();
 
@@ -995,12 +971,11 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
     }
 
     // Remove dead module-level objects: functions, types, vars
-    spv::spirvbin_t remapper(0);
-    remapper.remap(spirv, spv::spirvbin_base_t::DCE_ALL);
+    SpirvRemapWrapperRemap(spirv);
 }
 
 void GLSLPostProcessor::fixupClipDistance(
-        SpirvBlob& spirv, GLSLPostProcessor::Config const& config) const {
+        SpirvBlob& spirv, Config const& config) const {
     if (!config.usesClipDistance) {
         return;
     }
@@ -1040,7 +1015,7 @@ void GLSLPostProcessor::fixupClipDistance(
 
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
-    auto RegisterPass = [&](spvtools::Optimizer::PassToken&& pass,
+    auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
         if (!(config.targetApi & apiFilter)) {
             return;
@@ -1085,7 +1060,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
-    auto RegisterPass = [&](spvtools::Optimizer::PassToken&& pass,
+    auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
         if (!(config.targetApi & apiFilter)) {
             return;

@@ -340,7 +340,7 @@ void OpenGLContext::setDefaultState() noexcept {
         GL_DITHER,
         GL_SAMPLE_ALPHA_TO_COVERAGE,
         GL_SAMPLE_COVERAGE,
-        GL_POLYGON_OFFSET_FILL,  
+        GL_POLYGON_OFFSET_FILL,
     };
 
     UTILS_NOUNROLL
@@ -542,6 +542,13 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "Intel")) {
             // Intel GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
+
+            if (strstr(renderer, "Mesa")) {
+                // Mesa Intel driver on Linux/Android
+                // Renderer of the form [Mesa Intel(R) HD Graphics 505 (APL 3)]
+                // b/405252622
+                bugs->disable_invalidate_framebuffer = true;
+            }
         } else if (strstr(renderer, "PowerVR")) {
             // PowerVR GPU
             // On PowerVR (Rogue GE8320) glFlush doesn't seem to do anything, in particular,
@@ -600,6 +607,12 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         // For Mozilla, the issue appears to be observed regardless of whether the renderer is
         // ANGLE or not. (b/376125497)
         bugs->rebind_buffer_after_deletion = true;
+
+        // We disable depth precache for the default material on Mozilla FireFox. It struggles with
+        // slow shader compile/link times if the shader contains large arrays of uniform. Some depth
+        // program variants have skinning-related data, which incurs this slowness and end up
+        // causing an initial startup stalls. (b/392917621)
+        bugs->disable_depth_precache_for_default_material = true;
     }
 
 #ifdef BACKEND_OPENGL_VERSION_GLES
@@ -1069,41 +1082,41 @@ void OpenGLContext::resetState() noexcept {
     glCullFace(state.raster.cullFace);
     glBlendEquationSeparate(state.raster.blendEquationRGB, state.raster.blendEquationA);
     glBlendFuncSeparate(
-        state.raster.blendFunctionSrcRGB, 
+        state.raster.blendFunctionSrcRGB,
         state.raster.blendFunctionDstRGB,
         state.raster.blendFunctionSrcA,
         state.raster.blendFunctionDstA
     );
     glColorMask(
-        state.raster.colorMask, 
-        state.raster.colorMask, 
-        state.raster.colorMask, 
+        state.raster.colorMask,
+        state.raster.colorMask,
+        state.raster.colorMask,
         state.raster.colorMask
     );
     glDepthMask(state.raster.depthMask);
     glDepthFunc(state.raster.depthFunc);
-    
+
     // state.stencil
     glStencilFuncSeparate(
-        GL_FRONT, 
-        state.stencil.front.func.func, 
-        state.stencil.front.func.ref, 
+        GL_FRONT,
+        state.stencil.front.func.func,
+        state.stencil.front.func.ref,
         state.stencil.front.func.mask
     );
     glStencilFuncSeparate(
-        GL_BACK, 
-        state.stencil.back.func.func, 
-        state.stencil.back.func.ref, 
+        GL_BACK,
+        state.stencil.back.func.func,
+        state.stencil.back.func.ref,
         state.stencil.back.func.mask
     );
     glStencilOpSeparate(
-        GL_FRONT, 
+        GL_FRONT,
         state.stencil.front.op.sfail,
         state.stencil.front.op.dpfail,
         state.stencil.front.op.dppass
     );
     glStencilOpSeparate(
-        GL_BACK, 
+        GL_BACK,
         state.stencil.back.op.sfail,
         state.stencil.back.op.dpfail,
         state.stencil.back.op.dppass
@@ -1206,9 +1219,9 @@ void OpenGLContext::resetState() noexcept {
 
     // state.window
     glScissor(
-        state.window.scissor.x, 
-        state.window.scissor.y, 
-        state.window.scissor.z, 
+        state.window.scissor.x,
+        state.window.scissor.y,
+        state.window.scissor.z,
         state.window.scissor.w
     );
     glViewport(

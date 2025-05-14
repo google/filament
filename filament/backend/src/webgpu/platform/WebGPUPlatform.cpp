@@ -99,22 +99,45 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
 
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     // TODO consider passing limits
-    constexpr std::array desiredFeatures = {
-        wgpu::FeatureName::DepthClipControl,
-        wgpu::FeatureName::Depth32FloatStencil8,
-        wgpu::FeatureName::CoreFeaturesAndLimits };
-    std::vector<wgpu::FeatureName> requiredFeatures;
-    requiredFeatures.reserve(desiredFeatures.size());
+    constexpr std::array optionalFeatures = { wgpu::FeatureName::DepthClipControl,
+        wgpu::FeatureName::Depth32FloatStencil8, wgpu::FeatureName::CoreFeaturesAndLimits };
+
+    constexpr std::array requiredFeatures = { wgpu::FeatureName::TransientAttachments };
+
     wgpu::SupportedFeatures supportedFeatures;
     adapter.GetFeatures(&supportedFeatures);
+
+    std::vector<wgpu::FeatureName> enabledFeatures;
+    enabledFeatures.reserve(requiredFeatures.size() + optionalFeatures.size());
+
     std::set_intersection(supportedFeatures.features,
-            supportedFeatures.features + supportedFeatures.featureCount, desiredFeatures.begin(),
-            desiredFeatures.end(), std::back_inserter(requiredFeatures));
+            supportedFeatures.features + supportedFeatures.featureCount, requiredFeatures.begin(),
+            requiredFeatures.end(), std::back_inserter(enabledFeatures));
+
+    if (enabledFeatures.size() != requiredFeatures.size()) {
+        std::vector<wgpu::FeatureName> missingFeatures;
+        std::set_difference(requiredFeatures.begin(), requiredFeatures.end(),
+                supportedFeatures.features,
+                supportedFeatures.features + supportedFeatures.featureCount,
+                std::back_inserter(missingFeatures));
+
+        std::stringstream missingFeaturesStream{};
+        for (const auto& entry: missingFeatures) {
+            missingFeaturesStream << std::to_string(static_cast<uint32_t>(entry)) << " ";
+        }
+        PANIC_POSTCONDITION("Some required features are not available %s/n",
+                missingFeaturesStream.str().c_str());
+    }
+
+    std::set_intersection(supportedFeatures.features,
+            supportedFeatures.features + supportedFeatures.featureCount, optionalFeatures.begin(),
+            optionalFeatures.end(), std::back_inserter(enabledFeatures));
+
     wgpu::DeviceDescriptor deviceDescriptor{};
     deviceDescriptor.label = "graphics_device";
     deviceDescriptor.defaultQueue.label = "default_queue";
-    deviceDescriptor.requiredFeatureCount = requiredFeatures.size();
-    deviceDescriptor.requiredFeatures = requiredFeatures.data();
+    deviceDescriptor.requiredFeatureCount = enabledFeatures.size();
+    deviceDescriptor.requiredFeatures = enabledFeatures.data();
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
                     wgpu::StringView message) {

@@ -16,7 +16,17 @@
 
 #include "WebGPUHandles.h"
 
+#include <backend/DriverEnums.h>
+
+#include <utils/BitmaskEnum.h>
+#include <utils/Panic.h>
+
+#include <webgpu/webgpu_cpp.h>
+
+#include <algorithm>
+#include <cstdint>
 #include <utility>
+#include <vector>
 
 namespace {
 constexpr wgpu::BufferUsage getBufferObjectUsage(
@@ -110,6 +120,44 @@ wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool nor
     }
 }
 
+wgpu::StringView getUserTextureLabel(filament::backend::SamplerType target) {
+    // TODO will be helpful to get more useful info than this
+    using filament::backend::SamplerType;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            return "a_2D_user_texture";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "a_2D_array_user_texture";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "a_cube_map_user_texture";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "an_external_user_texture";
+        case SamplerType::SAMPLER_3D:
+            return "a_3D_user_texture";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "a_cube_mape_array_user_texture";
+    }
+}
+
+wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) {
+    // TODO will be helpful to get more useful info than this
+    using filament::backend::SamplerType;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            return "a_2D_user_texture_view";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "a_2D_array_user_texture_view";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "a_cube_map_user_texture_view";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "an_external_user_texture_view";
+        case SamplerType::SAMPLER_3D:
+            return "a_3D_user_texture_view";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "a_cube_mape_array_user_texture_view";
+    }
+}
+
 }// namespace
 
 namespace filament::backend {
@@ -137,7 +185,7 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
         mAttributes[attrib.buffer].push_back({
             .format = vertexFormat,
             .offset = attrib.offset,
-            .shaderLocation = static_cast<uint32_t>(mAttributes[attrib.buffer].size()),
+            .shaderLocation = attribIndex,
         });
 
         mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
@@ -192,11 +240,20 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wgpu::Device const& device) {
     assert_invariant(device);
 
+    std::string baseLabel;
+    if (std::holds_alternative<utils::StaticString>(layout.label)) {
+        const auto& temp = std::get_if<utils::StaticString>(&layout.label);
+        baseLabel = temp->c_str();
+    } else if (std::holds_alternative<utils::CString>(layout.label)) {
+        const auto& temp = std::get_if<utils::CString>(&layout.label);
+        baseLabel = temp->c_str();
+    }
+
     // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
     // debugging. For now, hack an incrementing value.
     static int layoutNum = 0;
 
-    uint samplerCount =
+    unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
                 return fEntry.type == DescriptorType::SAMPLER ||
                        fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
@@ -205,86 +262,204 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     std::vector<wgpu::BindGroupLayoutEntry> wEntries;
     wEntries.reserve(layout.bindings.size() + samplerCount);
+    mBindGroupEntries.reserve(wEntries.capacity());
 
     for (auto fEntry: layout.bindings) {
         auto& wEntry = wEntries.emplace_back();
+        auto& entryInfo = mBindGroupEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
         wEntry.binding = fEntry.binding * 2;
+        entryInfo.binding = wEntry.binding;
 
         switch (fEntry.type) {
-            // TODO Metal treats these the same. Is this fine?
             case DescriptorType::SAMPLER_EXTERNAL:
             case DescriptorType::SAMPLER: {
-                // Sampler binding is 2n+1 due to split.
                 auto& samplerEntry = wEntries.emplace_back();
+                auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
+                samplerEntryInfo.binding = samplerEntry.binding;
+                samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
                 samplerEntry.visibility = wEntry.visibility;
                 // We are simply hoping that undefined and defaults suffices here.
-                samplerEntry.sampler.type = wgpu::SamplerBindingType::Undefined;
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Undefined;
+                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
+                // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
+                if (baseLabel.find("Skybox") != std::string::npos ||
+                        (baseLabel == "Filament Default Material_perView" && wEntry.binding == 22)) {
+                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+                } else {
+                    wEntry.texture.viewDimension =
+                            wgpu::TextureViewDimension::e2D;// Example default
+                }
+                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
                 wEntry.buffer.hasDynamicOffset =
                         any(fEntry.flags & DescriptorFlags::DYNAMIC_OFFSET);
+                entryInfo.hasDynamicOffset = wEntry.buffer.hasDynamicOffset;
                 wEntry.buffer.type = wgpu::BufferBindingType::Uniform;
                 // TODO: Ideally we fill minBindingSize
                 break;
             }
 
             case DescriptorType::INPUT_ATTACHMENT: {
-                // TODO: support INPUT_ATTACHMENT. Metal does not currently.
                 PANIC_POSTCONDITION("Input Attachment is not supported");
                 break;
             }
-
             case DescriptorType::SHADER_STORAGE_BUFFER: {
-                // TODO: Vulkan does not support this, can we?
                 PANIC_POSTCONDITION("Shader storage is not supported");
                 break;
             }
         }
-
-        // Currently flags are only used to specify dynamic offset.
-
-        // UNUSED
-        // fEntry.count
+        // fEntry.count is unused currently
     }
-
+    std::string label =  "layout_" + baseLabel + std::to_string(++layoutNum) ;
     wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-        // debugging. For now, hack an incrementing value.
-        .label{ "layout_" + std::to_string(++layoutNum) },
+        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };
-    // TODO Do we need to defer this until we have more info on textures and samplers??
-    mLayoutSize = wEntries.size();
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
 }
 
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
-WebGPUDescriptorSet::WebGPUDescriptorSet(const wgpu::BindGroupLayout& layout, uint layoutSize)
-    : mLayout(layout),
-      entries(layoutSize, wgpu::BindGroupEntry{}) {
-    // Establish the size of entries based on the layout. This should be reliable and efficient.
+wgpu::Buffer WebGPUDescriptorSet::sDummyUniformBuffer = nullptr;
+wgpu::Texture WebGPUDescriptorSet::sDummyTexture = nullptr;
+wgpu::TextureView WebGPUDescriptorSet::sDummyTextureView = nullptr;
+wgpu::Sampler WebGPUDescriptorSet::sDummySampler = nullptr;
+
+void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device const& device,
+        wgpu::TextureFormat aColorFormat) {
+    if (!sDummyUniformBuffer) {
+        wgpu::BufferDescriptor bufferDescriptor{
+            .label = "dummy_uniform_not_to_be_used",
+            .usage = wgpu::BufferUsage::Uniform,
+            .size = 4
+        };
+        sDummyUniformBuffer = device.CreateBuffer(&bufferDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
+                << "Failed to create dummy uniform buffer?";
+    }
+    if (!sDummyTexture || !sDummyTextureView) {
+        wgpu::TextureDescriptor textureDescriptor{
+            .label = "dummy_texture_not_to_be_used",
+            .usage = wgpu::TextureUsage::TextureBinding,
+            .dimension = wgpu::TextureDimension::e2D,
+            .size = wgpu::Extent3D{ .width = 4, .height = 4, .depthOrArrayLayers = 1 },
+            .format = aColorFormat,
+        };
+        if (!sDummyTexture) {
+            sDummyTexture = device.CreateTexture(&textureDescriptor);
+            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy texture?";
+        }
+        if (!sDummyTextureView) {
+            wgpu::TextureViewDescriptor textureViewDescriptor{
+                .label = "dummy_texture_view_not_to_be_used"
+            };
+            sDummyTextureView = sDummyTexture.CreateView(&textureViewDescriptor);
+            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
+                    << "Failed to create dummy texture view?";
+        }
+    }
+    if (!sDummySampler) {
+        wgpu::SamplerDescriptor samplerDescriptor{
+            .label = "dummy_sampler_not_to_be_used"
+        };
+        sDummySampler = device.CreateSampler(&samplerDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy sampler?";
+    }
 }
-WebGPUDescriptorSet::~WebGPUDescriptorSet() {}
+
+std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedByBinding(
+        std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&
+                bindGroupEntries) {
+    assert_invariant(WebGPUDescriptorSet::sDummyUniformBuffer &&
+                     "Dummy uniform buffer must have been created before "
+                     "creating dummy bind group entries.");
+    assert_invariant(
+            WebGPUDescriptorSet::sDummyTexture &&
+            "Dummy texture must have been created before creating dummy bind group entries.");
+    assert_invariant(
+            WebGPUDescriptorSet::sDummyTextureView &&
+            "Dummy texture view must have been created before creating dummy bind group entries.");
+    assert_invariant(
+            WebGPUDescriptorSet::sDummySampler &&
+            "Dummy sampler must have been created before creating dummy bind group entries.");
+    using filament::backend::WebGPUDescriptorSetLayout;
+    std::vector<wgpu::BindGroupEntry> entries;
+    entries.reserve(bindGroupEntries.size());
+    for (auto const& entryInfo: bindGroupEntries) {
+        auto& entry = entries.emplace_back();
+        entry.binding = entryInfo.binding;
+        switch (entryInfo.type) {
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::UNIFORM_BUFFER:
+                entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
+                break;
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW:
+                entry.textureView = WebGPUDescriptorSet::sDummyTextureView;
+                break;
+            case WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER:
+                entry.sampler = WebGPUDescriptorSet::sDummySampler;
+                break;
+        }
+    }
+    std::sort(entries.begin(), entries.end(),
+            [](wgpu::BindGroupEntry const& a, wgpu::BindGroupEntry const& b) {
+                return a.binding < b.binding;
+            });
+    return entries;
+}
+
+WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
+        std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
+    : mLayout(layout),
+      mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
+    // Establish the size of entries based on the layout. This should be reliable and efficient.
+    assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
+    for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {
+        mEntryIndexByBinding[i] = INVALID_INDEX;
+    }
+    for (size_t index = 0; index < mEntriesSortedByBinding.size(); index++) {
+        wgpu::BindGroupEntry const& entry = mEntriesSortedByBinding[index];
+        assert_invariant(entry.binding < mEntryIndexByBinding.size());
+        mEntryIndexByBinding[entry.binding] = static_cast<uint8_t>(index);
+    }
+    for (auto const& entry : bindGroupEntries) {
+        if (entry.hasDynamicOffset) {
+            assert_invariant(entry.binding < mEntriesByBindingWithDynamicOffsets.size());
+            mEntriesByBindingWithDynamicOffsets[entry.binding] = true;
+        }
+    }
+    mDynamicOffsets.reserve(mEntriesSortedByBinding.size());
+}
+
+WebGPUDescriptorSet::~WebGPUDescriptorSet() {
+    mBindGroup = nullptr;
+    mLayout = nullptr;
+}
 
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     if (mBindGroup) {
         return mBindGroup;
     }
     // TODO label? Should we just copy layout label?
-    wgpu::BindGroupDescriptor desc{ .layout = mLayout,
-        .entryCount = entries.size(),
-        .entries = entries.data() };
+    wgpu::BindGroupDescriptor desc{
+        .layout = mLayout,
+        .entryCount = mEntriesSortedByBinding.size(),
+        .entries = mEntriesSortedByBinding.data()
+    };
     mBindGroup = device.CreateBindGroup(&desc);
+    FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
+    // once we have created the bind group itself we should no longer need any other state
+    mLayout = nullptr;
+    mEntriesSortedByBinding.clear();
+    mEntriesSortedByBinding.shrink_to_fit();
     return mBindGroup;
 }
 
-void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
+void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& entry) {
     if (mBindGroup) {
         // We will keep getting hits from future updates, but shouldn't do anything
         // Filament guarantees this won't change after things have locked.
@@ -292,6 +467,523 @@ void WebGPUDescriptorSet::addEntry(uint index, wgpu::BindGroupEntry&& entry) {
     }
     // TODO: Putting some level of trust that Filament is not going to reuse indexes or go past the
     // layout index for efficiency. Add guards if wrong.
-    entries[index] = std::move(entry);
+    FILAMENT_CHECK_POSTCONDITION(index < mEntryIndexByBinding.size())
+            << "impossible/invalid index for a descriptor/binding (our of range or >= "
+               "MAX_DESCRIPTOR_COUNT) "
+            << index;
+    uint8_t entryIndex = mEntryIndexByBinding[index];
+    FILAMENT_CHECK_POSTCONDITION(
+            entryIndex != INVALID_INDEX && entryIndex < mEntriesSortedByBinding.size())
+            << "Invalid binding " << index;
+    entry.binding = index;
+    mEntriesSortedByBinding[entryIndex] = std::move(entry);
+    mEntriesByBindingAdded[index] = true;
 }
+
+uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
+    // mDynamicOffsets already reserves enough memory for the number of entries in the set
+    mDynamicOffsets.clear();
+    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
+    // unused entries TODO: is this necessary?
+    size_t inputIndex = 0;
+    size_t outputIndex = 0;
+    for (auto const& entry : mEntriesSortedByBinding) {
+        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
+            if (mEntriesByBindingAdded[entry.binding]) {
+                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
+            } else {
+                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
+            }
+        }
+    }
+    return mDynamicOffsets.data();
+}
+
+size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
+    return mEntriesByBindingWithDynamicOffsets.count();
+}
+
+WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
+        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+        wgpu::Device const& device) noexcept {
+    assert_invariant(
+            samples == 1 ||
+            samples == 4 &&
+                    "An invalid number of samples were requested, as WGPU requires the sample "
+                    "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
+                    "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
+                    "https://gpuweb.github.io/gpuweb/#multisample-state");
+    // First, the texture aspect, starting with the defaults/basic configuration
+    mUsage = fToWGPUTextureUsage(usage);
+    mFormat = fToWGPUTextureFormat(format);
+    mAspect = fToWGPUTextureViewAspect(usage, format);
+    wgpu::TextureDescriptor textureDescriptor{
+        .label = getUserTextureLabel(target),
+        .usage = mUsage,
+        .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
+                                                       : wgpu::TextureDimension::e2D,
+        .size = { .width = width, .height = height, .depthOrArrayLayers = depth },
+        .format = mFormat,
+        .mipLevelCount = levels,
+        .sampleCount = samples,
+        // TODO Is this fine? Could do all-the-things, a naive mapping or get something from
+        // Filament
+        .viewFormatCount = 0,
+        .viewFormats = nullptr,
+    };
+    // adjust for specific cases
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            mArrayLayerCount = 1;
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            textureDescriptor.size.depthOrArrayLayers = 6;
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_3D:
+            mArrayLayerCount = 1;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            textureDescriptor.size.depthOrArrayLayers = depth * 6;
+            mArrayLayerCount = textureDescriptor.size.depthOrArrayLayers;
+            break;
+    }
+    assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
+                     "Could not find appropriate WebGPU format");
+    mTexture = device.CreateTexture(&textureDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(mTexture)
+            << "Failed to create texture for " << textureDescriptor.label;
+    // Second, the texture view aspect
+    mTexView = makeTextureView(0, levels, target);
+}
+
+WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
+    mTexture = src->mTexture;
+    mTexView = makeTextureView(baseLevel, levelCount, target);
+}
+
+wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
+    wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
+
+    // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
+    // TODO Validate assumptions, revisit if issues.
+    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+        retUsage |= wgpu::TextureUsage::CopySrc;
+    }
+    if (any((TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE) & fUsage)) {
+        retUsage |= wgpu::TextureUsage::CopyDst;
+    }
+    if (any(TextureUsage::SAMPLEABLE & fUsage)) {
+        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
+    // WGPU Render attachment covers either color or stencil situation dependant
+    // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
+    // issues, investigate here.
+    if (any((TextureUsage::COLOR_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT |
+                    TextureUsage::DEPTH_ATTACHMENT) &
+                fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+    }
+
+    // This is from Vulkan logic- if there are any issues try disabling this first, allows perf
+    // benefit though
+    const bool useTransientAttachment =
+            // Usage consists of attachment flags only.
+            none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
+            // Usage contains at least one attachment flag.
+            any(fUsage & TextureUsage::ALL_ATTACHMENTS) &&
+            // Depth resolve cannot use transient attachment because it uses a custom shader.
+            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
+            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
+    if (useTransientAttachment) {
+        retUsage |= wgpu::TextureUsage::TransientAttachment;
+    }
+    // NOTE: Unused wgpu flags:
+    //  StorageBinding
+    //  StorageAttachment
+
+    // NOTE: Unused Filament flags:
+    //  SUBPASS_INPUT VK goes to input attachment which we don't support right now
+    //  PROTECTED
+    return retUsage;
+}
+
+wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {
+    switch (fFormat) {
+        case filament::backend::TextureFormat::R8:
+            return wgpu::TextureFormat::R8Unorm;
+        case filament::backend::TextureFormat::R8_SNORM:
+            return wgpu::TextureFormat::R8Snorm;
+        case filament::backend::TextureFormat::R8UI:
+            return wgpu::TextureFormat::R8Uint;
+        case filament::backend::TextureFormat::R8I:
+            return wgpu::TextureFormat::R8Sint;
+        case filament::backend::TextureFormat::STENCIL8:
+            return wgpu::TextureFormat::Stencil8;
+        case filament::backend::TextureFormat::R16F:
+            return wgpu::TextureFormat::R16Float;
+        case filament::backend::TextureFormat::R16UI:
+            return wgpu::TextureFormat::R16Uint;
+        case filament::backend::TextureFormat::R16I:
+            return wgpu::TextureFormat::R16Sint;
+        case filament::backend::TextureFormat::RG8:
+            return wgpu::TextureFormat::RG8Unorm;
+        case filament::backend::TextureFormat::RG8_SNORM:
+            return wgpu::TextureFormat::RG8Snorm;
+        case filament::backend::TextureFormat::RG8UI:
+            return wgpu::TextureFormat::RG8Uint;
+        case filament::backend::TextureFormat::RG8I:
+            return wgpu::TextureFormat::RG8Sint;
+        case filament::backend::TextureFormat::R32F:
+            return wgpu::TextureFormat::R32Float;
+        case filament::backend::TextureFormat::R32UI:
+            return wgpu::TextureFormat::R32Uint;
+        case filament::backend::TextureFormat::R32I:
+            return wgpu::TextureFormat::R32Sint;
+        case filament::backend::TextureFormat::RG16F:
+            return wgpu::TextureFormat::RG16Float;
+        case filament::backend::TextureFormat::RG16UI:
+            return wgpu::TextureFormat::RG16Uint;
+        case filament::backend::TextureFormat::RG16I:
+            return wgpu::TextureFormat::RG16Sint;
+        case filament::backend::TextureFormat::RGBA8:
+            return wgpu::TextureFormat::RGBA8Unorm;
+        case filament::backend::TextureFormat::SRGB8_A8:
+            return wgpu::TextureFormat::RGBA8UnormSrgb;
+        case filament::backend::TextureFormat::RGBA8_SNORM:
+            return wgpu::TextureFormat::RGBA8Snorm;
+        case filament::backend::TextureFormat::RGBA8UI:
+            return wgpu::TextureFormat::RGBA8Uint;
+        case filament::backend::TextureFormat::RGBA8I:
+            return wgpu::TextureFormat::RGBA8Sint;
+        case filament::backend::TextureFormat::DEPTH16:
+            return wgpu::TextureFormat::Depth16Unorm;
+        case filament::backend::TextureFormat::DEPTH24:
+            return wgpu::TextureFormat::Depth24Plus;
+        case filament::backend::TextureFormat::DEPTH32F:
+            return wgpu::TextureFormat::Depth32Float;
+        case filament::backend::TextureFormat::DEPTH24_STENCIL8:
+            return wgpu::TextureFormat::Depth24PlusStencil8;
+        case filament::backend::TextureFormat::DEPTH32F_STENCIL8:
+            return wgpu::TextureFormat::Depth32FloatStencil8;
+        case filament::backend::TextureFormat::RG32F:
+            return wgpu::TextureFormat::RG32Float;
+        case filament::backend::TextureFormat::RG32UI:
+            return wgpu::TextureFormat::RG32Uint;
+        case filament::backend::TextureFormat::RG32I:
+            return wgpu::TextureFormat::RG32Sint;
+        case filament::backend::TextureFormat::RGBA16F:
+            return wgpu::TextureFormat::RGBA16Float;
+        case filament::backend::TextureFormat::RGBA16UI:
+            return wgpu::TextureFormat::RGBA16Uint;
+        case filament::backend::TextureFormat::RGBA16I:
+            return wgpu::TextureFormat::RGBA16Sint;
+        case filament::backend::TextureFormat::RGBA32F:
+            return wgpu::TextureFormat::RGBA32Float;
+        case filament::backend::TextureFormat::RGBA32UI:
+            return wgpu::TextureFormat::RGBA32Uint;
+        case filament::backend::TextureFormat::RGBA32I:
+            return wgpu::TextureFormat::RGBA32Sint;
+        case filament::backend::TextureFormat::EAC_R11:
+            return wgpu::TextureFormat::EACR11Unorm;
+        case filament::backend::TextureFormat::EAC_R11_SIGNED:
+            return wgpu::TextureFormat::EACR11Snorm;
+        case filament::backend::TextureFormat::EAC_RG11:
+            return wgpu::TextureFormat::EACRG11Unorm;
+        case filament::backend::TextureFormat::EAC_RG11_SIGNED:
+            return wgpu::TextureFormat::EACRG11Snorm;
+        case filament::backend::TextureFormat::ETC2_RGB8:
+            return wgpu::TextureFormat::ETC2RGB8Unorm;
+        case filament::backend::TextureFormat::ETC2_SRGB8:
+            return wgpu::TextureFormat::ETC2RGB8UnormSrgb;
+        case filament::backend::TextureFormat::ETC2_RGB8_A1:
+            return wgpu::TextureFormat::ETC2RGB8A1Unorm;
+        case filament::backend::TextureFormat::ETC2_SRGB8_A1:
+            return wgpu::TextureFormat::ETC2RGB8A1UnormSrgb;
+        case filament::backend::TextureFormat::ETC2_EAC_RGBA8:
+            return wgpu::TextureFormat::ETC2RGBA8Unorm;
+        case filament::backend::TextureFormat::ETC2_EAC_SRGBA8:
+            return wgpu::TextureFormat::ETC2RGBA8UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_4x4:
+            return wgpu::TextureFormat::ASTC4x4Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_4x4:
+            return wgpu::TextureFormat::ASTC4x4UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_5x4:
+            return wgpu::TextureFormat::ASTC5x4Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_5x4:
+            return wgpu::TextureFormat::ASTC5x4UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_5x5:
+            return wgpu::TextureFormat::ASTC5x5Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_5x5:
+            return wgpu::TextureFormat::ASTC5x5UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_6x5:
+            return wgpu::TextureFormat::ASTC6x5Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_6x5:
+            return wgpu::TextureFormat::ASTC6x5UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_6x6:
+            return wgpu::TextureFormat::ASTC6x6Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_6x6:
+            return wgpu::TextureFormat::ASTC6x6UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_8x5:
+            return wgpu::TextureFormat::ASTC8x5Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_8x5:
+            return wgpu::TextureFormat::ASTC8x5UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_8x6:
+            return wgpu::TextureFormat::ASTC8x6Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_8x6:
+            return wgpu::TextureFormat::ASTC8x6UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_8x8:
+            return wgpu::TextureFormat::ASTC8x8Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_8x8:
+            return wgpu::TextureFormat::ASTC8x8UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_10x5:
+            return wgpu::TextureFormat::ASTC10x5Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_10x5:
+            return wgpu::TextureFormat::ASTC10x5UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_10x6:
+            return wgpu::TextureFormat::ASTC10x6Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_10x6:
+            return wgpu::TextureFormat::ASTC10x6UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_10x8:
+            return wgpu::TextureFormat::ASTC10x8Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_10x8:
+            return wgpu::TextureFormat::ASTC10x8UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_10x10:
+            return wgpu::TextureFormat::ASTC10x10Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_10x10:
+            return wgpu::TextureFormat::ASTC10x10UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_12x10:
+            return wgpu::TextureFormat::ASTC12x10Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_12x10:
+            return wgpu::TextureFormat::ASTC12x10UnormSrgb;
+        case filament::backend::TextureFormat::RGBA_ASTC_12x12:
+            return wgpu::TextureFormat::ASTC12x12Unorm;
+        case filament::backend::TextureFormat::SRGB8_ALPHA8_ASTC_12x12:
+            return wgpu::TextureFormat::ASTC12x12UnormSrgb;
+        case filament::backend::TextureFormat::RED_RGTC1:
+            return wgpu::TextureFormat::BC4RUnorm;
+        case filament::backend::TextureFormat::SIGNED_RED_RGTC1:
+            return wgpu::TextureFormat::BC4RSnorm;
+        case filament::backend::TextureFormat::RED_GREEN_RGTC2:
+            return wgpu::TextureFormat::BC5RGUnorm;
+        case filament::backend::TextureFormat::SIGNED_RED_GREEN_RGTC2:
+            return wgpu::TextureFormat::BC5RGSnorm;
+        case filament::backend::TextureFormat::RGB_BPTC_UNSIGNED_FLOAT:
+            return wgpu::TextureFormat::BC6HRGBUfloat;
+        case filament::backend::TextureFormat::RGB_BPTC_SIGNED_FLOAT:
+            return wgpu::TextureFormat::BC6HRGBFloat;
+        case filament::backend::TextureFormat::RGBA_BPTC_UNORM:
+            return wgpu::TextureFormat::BC7RGBAUnorm;
+        case filament::backend::TextureFormat::SRGB_ALPHA_BPTC_UNORM:
+            return wgpu::TextureFormat::BC7RGBAUnormSrgb;
+        case filament::backend::TextureFormat::RGB565:
+            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
+            // and discard the alpha and lower precision.
+            return wgpu::TextureFormat::Undefined;
+        case filament::backend::TextureFormat::RGB9_E5:
+            return wgpu::TextureFormat::RGB9E5Ufloat;
+        case filament::backend::TextureFormat::RGB5_A1:
+            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
+            // and handle the packing/unpacking in shaders.
+            return wgpu::TextureFormat::Undefined;
+        case filament::backend::TextureFormat::RGBA4:
+            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
+            // and handle the packing/unpacking in shaders.
+            return wgpu::TextureFormat::Undefined;
+        case filament::backend::TextureFormat::RGB8:
+            // No direct sRGB equivalent in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA8Unorm;
+        case filament::backend::TextureFormat::SRGB8:
+            // No direct sRGB equivalent in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA8UnormSrgb;
+        case filament::backend::TextureFormat::RGB8_SNORM:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA8Snorm;
+        case filament::backend::TextureFormat::RGB8UI:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA8Uint;
+        case filament::backend::TextureFormat::RGB8I:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA8Sint;
+        case filament::backend::TextureFormat::R11F_G11F_B10F:
+            return wgpu::TextureFormat::RG11B10Ufloat;
+        case filament::backend::TextureFormat::UNUSED:
+            return wgpu::TextureFormat::Undefined;
+        case filament::backend::TextureFormat::RGB10_A2:
+            return wgpu::TextureFormat::RGB10A2Unorm;
+        case filament::backend::TextureFormat::RGB16F:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA16Float;
+        case filament::backend::TextureFormat::RGB16UI:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA16Uint;
+        case filament::backend::TextureFormat::RGB16I:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA16Sint;
+        case filament::backend::TextureFormat::RGB32F:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA32Float;
+        case filament::backend::TextureFormat::RGB32UI:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA32Uint;
+        case filament::backend::TextureFormat::RGB32I:
+            // No direct mapping in wgpu without alpha.
+            return wgpu::TextureFormat::RGBA32Sint;
+        case filament::backend::TextureFormat::DXT1_RGB:
+            return wgpu::TextureFormat::BC1RGBAUnorm;
+        case filament::backend::TextureFormat::DXT1_RGBA:
+            return wgpu::TextureFormat::BC1RGBAUnorm;
+        case filament::backend::TextureFormat::DXT3_RGBA:
+            return wgpu::TextureFormat::BC2RGBAUnorm;
+        case filament::backend::TextureFormat::DXT5_RGBA:
+            return wgpu::TextureFormat::BC3RGBAUnorm;
+        case filament::backend::TextureFormat::DXT1_SRGB:
+            return wgpu::TextureFormat::BC1RGBAUnormSrgb;
+        case filament::backend::TextureFormat::DXT1_SRGBA:
+            return wgpu::TextureFormat::BC1RGBAUnormSrgb;
+        case filament::backend::TextureFormat::DXT3_SRGBA:
+            return wgpu::TextureFormat::BC2RGBAUnormSrgb;
+        case filament::backend::TextureFormat::DXT5_SRGBA:
+            return wgpu::TextureFormat::BC3RGBAUnormSrgb;
+    }
+}
+
+wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fUsage,
+        TextureFormat const& fFormat) {
+
+    const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
+    const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
+    const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
+    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+
+    if (isDepth && !isColor && !isStencil) {
+        return wgpu::TextureAspect::DepthOnly;
+    }
+
+    if (isStencil && !isColor && !isDepth) {
+        return wgpu::TextureAspect::StencilOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::DEPTH32F ||
+            fFormat == filament::backend::TextureFormat::DEPTH24 ||
+            fFormat == filament::backend::TextureFormat::DEPTH16) {
+        return wgpu::TextureAspect::DepthOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::STENCIL8) {
+        return wgpu::TextureAspect::StencilOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::DEPTH24_STENCIL8 ||
+            fFormat == filament::backend::TextureFormat::DEPTH32F_STENCIL8) {
+        if (isSample) {
+            return wgpu::TextureAspect::DepthOnly;
+        }
+    }
+
+    return wgpu::TextureAspect::All;
+}
+
+wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+        SamplerType target) {
+
+    wgpu::TextureViewDescriptor textureViewDescriptor{
+        .label = getUserTextureViewLabel(target),
+        .format = mFormat,
+        .baseMipLevel = baseLevel,
+        .mipLevelCount = levelCount,
+        // TODO: check if this baseArrayLayer assumption is correct
+        .baseArrayLayer = 0,
+        .arrayLayerCount = mArrayLayerCount,
+        .aspect = mAspect,
+        .usage = mUsage
+    };
+
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
+            break;
+        case SamplerType::SAMPLER_2D_ARRAY:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2DArray;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::Cube;
+            break;
+        case SamplerType::SAMPLER_EXTERNAL:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
+            break;
+        case SamplerType::SAMPLER_3D:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::e3D;
+            break;
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            textureViewDescriptor.dimension = wgpu::TextureViewDimension::CubeArray;
+            break;
+    }
+    wgpu::TextureView textureView = mTexture.CreateView(&textureViewDescriptor);
+    FILAMENT_CHECK_POSTCONDITION(textureView)
+            << "Failed to create texture view " << textureViewDescriptor.label;
+    return textureView;
+}
+
+WGPURenderTarget::Attachment WGPURenderTarget::getDrawColorAttachment(size_t index) {
+    assert_invariant( index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+    auto result = color[index];
+    if (index == 0 && defaultRenderTarget) {
+
+    }
+
+    return result;
+}
+
+wgpu::LoadOp WGPURenderTarget::getLoadOperation(RenderPassParams const& params,
+                                             TargetBufferFlags buffer) {
+    auto clearFlags = params.flags.clear;
+    auto discardStartFlags = params.flags.discardStart;
+    if (any(clearFlags & buffer)) {
+        return wgpu::LoadOp::Clear;
+    } else if (any(discardStartFlags & buffer)) {
+        return wgpu::LoadOp::Clear;
+    }
+    return wgpu::LoadOp::Load;
+}
+
+wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params,
+                                               TargetBufferFlags buffer) {
+    const auto discardEndFlags = params.flags.discardEnd;
+    if (any(discardEndFlags & buffer)) {
+        return wgpu::StoreOp::Discard;
+    }
+    return wgpu::StoreOp::Store;
+}
+void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
+        wgpu::TextureView const& textureView, RenderPassParams const& params) {
+    // auto discardFlags = params.flags.discardEnd;
+    // (void) discardFlags;
+    // std::vector<wgpu::RenderPassColorAttachment> colorAttachments;
+    colorAttachments.clear();
+    for (size_t i = 0; i < 1/*MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT*/; i++) {
+        // auto attachment = getDrawColorAttachment(i);
+        // if (attachment) {
+            wgpu::RenderPassColorAttachment colorAttachment;
+            colorAttachment.view = textureView;
+            colorAttachment.loadOp  = getLoadOperation(params, getTargetBufferFlagsAt(i));
+            colorAttachment.storeOp = getStoreOperation(params, getTargetBufferFlagsAt(i));
+            colorAttachment.clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a };
+            colorAttachments.emplace_back(colorAttachment);
+        // }
+    }
+    descriptor.colorAttachments = colorAttachments.data();
+    descriptor.colorAttachmentCount = colorAttachments.size();
+    descriptor.depthStencilAttachment = nullptr;
+    descriptor.timestampWrites = nullptr;
+}
+
+
 }// namespace filament::backend

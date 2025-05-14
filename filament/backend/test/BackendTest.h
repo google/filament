@@ -38,6 +38,9 @@ public:
     static OperatingSystem sOperatingSystem;
     static bool sIsMobilePlatform;
 
+    // Takes the name of the image that wasn't correct, without the .png suffix
+    static void markImageAsFailure(std::string failedImageName);
+
 protected:
 
     BackendTest();
@@ -73,8 +76,13 @@ protected:
 
     static bool matchesEnvironment(Backend backend);
     static bool matchesEnvironment(OperatingSystem operatingSystem);
-    static bool matchesEnvironment(OperatingSystem operatingSystem, Backend backend);
 private:
+    // Adds all the images that failed an ImageExpectation to the XML metadata for the current tests
+    // case. Add --gtest_output=xml as a command line argument to generate a test_detail.xml file in
+    // the directory where the tests are run.
+    static void recordFailedImages();
+
+    static std::vector<std::string> sFailedImages;
 
     filament::backend::Driver* driver = nullptr;
     filament::backend::CommandBufferQueue commandBufferQueue;

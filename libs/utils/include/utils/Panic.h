@@ -353,7 +353,7 @@ public:
  * The TPanic<> class implements the std::exception protocol as well as the Panic
  * interface common to all exceptions thrown by the framework.
  */
-template <typename T>
+template <typename>
 class UTILS_PUBLIC TPanic : public Panic {
 public:
     // std::exception protocol
@@ -398,12 +398,11 @@ public:
      * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
      * @see setMode()
      */
-    static inline void panic(
+    static void panic(
             char const* function, char const* file, int line, char const* literal,
             std::string reason) UTILS_NORETURN;
 
-protected:
-
+private:
     /**
      * Creates a Panic with extra information about the error-site.
      * @param function the name of the function where the error was detected
@@ -415,11 +414,14 @@ protected:
     TPanic(char const* function, char const* file, int line, char const* literal,
             std::string reason);
 
+    friend class PreconditionPanic;
+    friend class PostconditionPanic;
+    friend class ArithmeticPanic;
+
+protected:
     ~TPanic() override;
 
 private:
-    void buildMessage();
-
     char const* const mFile = nullptr;      // file where the panic happened
     char const* const mFunction = nullptr;  // function where the panic happened
     int const mLine = -1;                   // line where the panic happened
@@ -443,7 +445,7 @@ void panicLog(
  * ASSERT_PRECONDITION uses this Panic to report a precondition failure.
  * @see ASSERT_PRECONDITION
  */
-class UTILS_PUBLIC PreconditionPanic : public TPanic<PreconditionPanic> {
+class UTILS_PUBLIC PreconditionPanic final : public TPanic<PreconditionPanic> {
     // Programming error, can be avoided
     // e.g.: invalid arguments
     using TPanic<PreconditionPanic>::TPanic;
@@ -457,9 +459,9 @@ class UTILS_PUBLIC PreconditionPanic : public TPanic<PreconditionPanic> {
  * ASSERT_POSTCONDITION uses this Panic to report a postcondition failure.
  * @see ASSERT_POSTCONDITION
  */
-class UTILS_PUBLIC PostconditionPanic : public TPanic<PostconditionPanic> {
+class UTILS_PUBLIC PostconditionPanic final : public TPanic<PostconditionPanic> {
     // Usually only detectable at runtime
-    // e.g.: dead-lock would occur, arithmetic errors
+    // e.g.: deadlock would occur, arithmetic errors
     using TPanic<PostconditionPanic>::TPanic;
     friend class TPanic<PostconditionPanic>;
     constexpr static auto type = "Postcondition";
@@ -471,7 +473,7 @@ class UTILS_PUBLIC PostconditionPanic : public TPanic<PostconditionPanic> {
  * ASSERT_ARITHMETIC uses this Panic to report an arithmetic (postcondition) failure.
  * @see ASSERT_ARITHMETIC
  */
-class UTILS_PUBLIC ArithmeticPanic : public TPanic<ArithmeticPanic> {
+class UTILS_PUBLIC ArithmeticPanic final : public TPanic<ArithmeticPanic> {
     // A common case of post-condition error
     // e.g.: underflow, overflow, internal computations errors
     using TPanic<ArithmeticPanic>::TPanic;
@@ -519,11 +521,11 @@ public:
 
     PanicStream& operator<<(const void* value) noexcept;
 
-    PanicStream& operator<<(const char* string) noexcept;
-    PanicStream& operator<<(const unsigned char* string) noexcept;
+    PanicStream& operator<<(const char* value) noexcept;
+    PanicStream& operator<<(const unsigned char* value) noexcept;
 
-    PanicStream& operator<<(std::string const& s) noexcept;
-    PanicStream& operator<<(std::string_view const& s) noexcept;
+    PanicStream& operator<<(std::string const& value) noexcept;
+    PanicStream& operator<<(std::string_view const& value) noexcept;
 
 protected:
     io::sstream mStream;

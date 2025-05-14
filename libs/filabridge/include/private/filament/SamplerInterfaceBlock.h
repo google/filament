@@ -23,6 +23,8 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <private/filament/DescriptorSets.h>
+
 #include <initializer_list>
 #include <unordered_map>
 #include <string_view>
@@ -50,6 +52,7 @@ public:
     using Precision = backend::Precision;
     using SamplerParams = backend::SamplerParams;
     using Binding = backend::descriptor_binding_t;
+    using ShaderStageFlags = backend::ShaderStageFlags;
 
     struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
         utils::CString name;        // name of this sampler
@@ -59,6 +62,7 @@ public:
         Format format;              // format of this sampler
         Precision precision;        // precision of this sampler
         bool multisample;           // multisample capable
+        ShaderStageFlags stages;    // stages the sampler can be accessed from
     };
 
     using SamplerInfoList = utils::FixedCapacityVector<SamplerInfo>;
@@ -80,6 +84,8 @@ public:
             Format format;                  // format of this sampler
             Precision precision;            // precision of this sampler
             bool multisample = false;       // multisample capable
+            ShaderStageFlags stages =
+                    ShaderStageFlags::ALL_SHADER_STAGE_FLAGS; // shader stages using this sampler
         };
 
         // Give a name to this sampler interface block
@@ -89,8 +95,8 @@ public:
 
         // Add a sampler
         Builder& add(std::string_view samplerName, Binding binding, Type type, Format format,
-                Precision precision = Precision::MEDIUM,
-                bool multisample = false) noexcept;
+                Precision precision = Precision::MEDIUM, bool multisample = false,
+                ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) noexcept;
 
         // Add multiple samplers
         Builder& add(std::initializer_list<ListEntry> list) noexcept;
@@ -127,6 +133,9 @@ public:
     bool isEmpty() const noexcept { return mSamplersInfoList.empty(); }
 
     static utils::CString generateUniformName(const char* group, const char* sampler) noexcept;
+
+    static SamplerInfoList filterSamplerList(SamplerInfoList list,
+            backend::DescriptorSetLayout const& descriptorSetLayout);
 
 private:
     friend class Builder;

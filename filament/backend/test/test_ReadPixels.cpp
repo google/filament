@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -74,6 +75,8 @@ public:
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Two cases fail, see b/417255941 and b/417255943");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU

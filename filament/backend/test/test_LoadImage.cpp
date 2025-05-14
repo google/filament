@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -46,7 +47,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 1) uniform {samplerType} test_tex;
+layout(location = 0, set = 0) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -64,7 +65,7 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 1) uniform {samplerType} test_tex;
+layout(location = 0, set = 0) uniform {samplerType} test_tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
@@ -85,7 +86,7 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 1) uniform sampler2D test_tex;
+layout(location = 0, set = 0) uniform sampler2D test_tex;
 
 void main() {
     vec2 fbsize = vec2(512);
@@ -211,6 +212,7 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
 }
 
 TEST_F(LoadImageTest, UpdateImage2D) {
+    FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 3644679986;
@@ -334,9 +336,9 @@ TEST_F(LoadImageTest, UpdateImage2D) {
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
-        renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+        renderTriangle({{ shader.getDescriptorSetLayout() }},
                 defaultRenderTarget, swapChain, shader.getProgram());
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
@@ -409,9 +411,9 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+    renderTriangle({{ shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
@@ -468,9 +470,9 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
 
-    api.bindDescriptorSet(descriptorSet, 1, {});
+    api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() }},
+    renderTriangle({{ shader.getDescriptorSetLayout() }},
             defaultRenderTarget, swapChain, shader.getProgram());
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
@@ -483,6 +485,9 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
+            "see b/417254499");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -539,9 +544,9 @@ TEST_F(LoadImageTest, UpdateImage3D) {
                 { .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
-        api.bindDescriptorSet(descriptorSet, 1, {});
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
-        renderTriangle({ { DescriptorSetLayoutHandle{}, shader.getDescriptorSetLayout() } },
+        renderTriangle({ { shader.getDescriptorSetLayout() } },
                 defaultRenderTarget, swapChain, shader.getProgram());
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),

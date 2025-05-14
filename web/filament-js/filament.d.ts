@@ -1176,10 +1176,10 @@ export interface View$DynamicResolutionOptions {
     /**
      * Upscaling quality
      * LOW:    bilinear filtered blit. Fastest, poor quality
-     * MEDIUM: AMD FidelityFX FSR1 w/ mobile optimizations
+     * MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0
      * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
      * ULTRA:  AMD FidelityFX FSR1
-     *      FSR1 require a well anti-aliased (MSAA or TAA), noise free scene.
+     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
      *
      * The default upscaling quality is set to LOW.
      */
@@ -1675,7 +1675,7 @@ export enum View$TemporalAntiAliasingOptions$JitterPattern {
  */
 export interface View$TemporalAntiAliasingOptions {
     /**
-     * reconstruction filter width typically between 0.2 (sharper, aliased) and 1.5 (smoother)
+     * reconstruction filter width typically between 1 (sharper) and 2 (smoother)
      */
     filterWidth?: number;
     /**

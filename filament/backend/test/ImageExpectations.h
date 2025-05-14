@@ -35,6 +35,8 @@ do {                                                                \
         screenshotParams);                                          \
 } while (0)
 
+namespace test {
+
 /**
  * Stores user-provided configuration values for an image expectation
  */
@@ -54,6 +56,7 @@ public:
     static std::string expectedDirectoryPath();
     std::string expectedFileName() const;
     std::string expectedFilePath() const;
+    const std::string filePrefix() const;
 
 private:
     int mWidth;
@@ -82,6 +85,12 @@ public:
      * @return The hash of the stored bytes.
      */
     uint32_t hash() const;
+    /**
+     * Gets the bytes of the render target. The hash should usually be preferable for comparisons
+     * but this is available for debugging.
+     * @return The stored bytes.
+     */
+    const std::vector<unsigned char>& bytes() const;
     /**
      * Thread safe as this is backed by an atomic.
      * Once this returns true it will never return false.
@@ -152,5 +161,7 @@ private:
     // Store expectations in unique pointers because they are self referential.
     std::vector<std::unique_ptr<ImageExpectation>> mExpectations;
 };
+
+} // namespace test
 
 #endif //TNT_IMAGE_EXPECTATIONS_H

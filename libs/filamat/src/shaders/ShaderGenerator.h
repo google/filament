@@ -88,13 +88,6 @@ public:
             MaterialBuilder::FeatureLevel featureLevel,
             MaterialInfo const& material) noexcept;
 
-    static filament::backend::DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
-            filament::Variant variant,
-            filament::UserVariantFilterMask variantFilter,
-            bool isLit,
-            filament::ReflectionMode reflectionMode,
-            filament::RefractionMode refractionMode);
-
 private:
     static void generateVertexDomainDefines(utils::io::sstream& out,
             filament::VertexDomain domain) noexcept;
