@@ -16,7 +16,9 @@
 
 # Sets up the environment for scripts in test/renderdiff/
 
-OUTPUT_DIR="$(pwd)/out/renderdiff_tests"
+RENDER_OUTPUT_DIR="$(pwd)/out/renderdiff/renders"
+DIFF_OUTPUT_DIR="$(pwd)/out/renderdiff/diffs"
+GOLDEN_OUTPUT_DIR="$(pwd)/out/renderdiff/goldens"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
 MESA_DIR="$(pwd)/mesa/out/"
 VENV_DIR="$(pwd)/venv"
@@ -33,6 +35,7 @@ else
 fi
 
 function start_() {
+    mkdir -p ${RENDER_OUTPUT_DIR} ${DIFF_OUTPUT_DIR} ${GOLDEN_OUTPUT_DIR}
     if [[ "$GITHUB_WORKFLOW" ]]; then
         set -ex
     fi
