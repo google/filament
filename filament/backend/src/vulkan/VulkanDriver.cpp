@@ -1223,7 +1223,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands.buffer(), p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -1238,7 +1238,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -1249,7 +1249,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
