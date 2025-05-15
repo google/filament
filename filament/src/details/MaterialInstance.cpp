@@ -50,6 +50,8 @@
 #include <string_view>
 #include <utility>
 
+#include <stddef.h>
+
 using namespace filament::math;
 using namespace utils;
 
@@ -60,7 +62,7 @@ using namespace backend;
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
                                      const char* name) noexcept
         : mMaterial(material),
-          mDescriptorSet(material->getDescriptorSetLayout()),
+          mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
           mShadowCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
@@ -74,12 +76,13 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    // even if the material doesn't have any parameters, we allocate a small UBO because it's
+    // expected by the per-material descriptor-set layout
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
@@ -123,7 +126,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
-          mDescriptorSet(other->mDescriptorSet.duplicate(mMaterial->getDescriptorSetLayout())),
+          mDescriptorSet(other->mDescriptorSet.duplicate(
+                "MaterialInstance", mMaterial->getDescriptorSetLayout())),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -143,12 +147,11 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms.setUniforms(other->getUniformBuffer());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),
@@ -208,6 +211,12 @@ void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driv
         if (descriptor.mStreams.size() > 0) {
             driver.registerBufferObjectStreams(mUbHandle, std::move(descriptor));
         }
+    }
+}
+
+void FMaterialInstance::commit(FEngine& engine) const {
+    if (UTILS_LIKELY(mMaterial->getMaterialDomain() != MaterialDomain::SURFACE)) {
+        commit(engine.getDriverApi());
     }
 }
 

@@ -279,6 +279,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
 
     for (size_t i = 0; i < 2; i++) {
         mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        mi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -328,6 +329,7 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
     MaterialInstance* const mi = mKernelMaterial->createInstance();
     mi->setParameter("size", uint2{ 1, mSampleCount });
     mi->setParameter("sampleCount", float(mSampleCount));
+    mi->commit(engine);
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -448,6 +450,7 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
 
     for (size_t i = 0; i < 2; i++) {
         mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        mi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -537,6 +540,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     mi->setParameter("size", uint2{ mLevelCount, mSampleCount });
     mi->setParameter("sampleCount", float(mSampleCount));
     mi->setParameter("roughness", roughnessArray, 16);
+    mi->commit(engine);
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -701,6 +705,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
 
         for (size_t i = 0; i < 2; i++) {
             mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+            mi->commit(engine);
 
             builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                    .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])

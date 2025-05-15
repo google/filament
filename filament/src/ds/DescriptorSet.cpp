@@ -29,6 +29,8 @@
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
+#include <utils/ostream.h>
+#include <utils/StaticString.h>
 
 #include <utility>
 #include <limits>
@@ -37,6 +39,8 @@
 
 namespace filament {
 
+using namespace utils;
+
 DescriptorSet::DescriptorSet() noexcept = default;
 
 DescriptorSet::~DescriptorSet() noexcept {
@@ -44,10 +48,11 @@ DescriptorSet::~DescriptorSet() noexcept {
     assert_invariant(!mDescriptorSetHandle);
 }
 
-DescriptorSet::DescriptorSet(DescriptorSetLayout const& descriptorSetLayout) noexcept
+DescriptorSet::DescriptorSet(StaticString const name, DescriptorSetLayout const& descriptorSetLayout) noexcept
         : mDescriptors(descriptorSetLayout.getMaxDescriptorBinding() + 1),
           mDirty(std::numeric_limits<uint64_t>::max()),
-          mSetAfterCommitWarning(false) {
+          mSetAfterCommitWarning(false),
+          mName(name) {
 }
 
 DescriptorSet::DescriptorSet(DescriptorSet&& rhs) noexcept = default;
@@ -87,6 +92,7 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     mValid.forEachSetBit([&layout, &driver,
             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
             (backend::descriptor_binding_t const binding) {
+        assert_invariant(layout.isValid(binding));
         if (layout.isSampler(binding)) {
             driver.updateDescriptorSetTexture(dsh, binding,
                     descriptors[binding].texture.th,
@@ -98,6 +104,15 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
                     descriptors[binding].buffer.size);
         }
     });
+
+    auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
+    if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty())) {
+        unsetValidDescriptors.forEachSetBit([&](auto i) {
+            slog.w << (layout.isSampler(i) ? "Sampler" : "Buffer")
+                    << " descriptor " << i << " of " << mName.c_str() << " is not set. "
+                       "Please report this issue." << io::endl;
+        });
+    }
 }
 
 void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints const set) const noexcept {
@@ -114,7 +129,7 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     // within the renderpass. We have to comment the assert out since it crashed a client's debug
     // build.
     // assert_invariant(mDirty.none());
-    if (mDirty.any() && !mSetAfterCommitWarning) {
+    if (UTILS_VERY_UNLIKELY(mDirty.any() && !mSetAfterCommitWarning)) {
         mDirty.forEachSetBit([&](uint8_t const binding) {
             utils::slog.w << "Descriptor set (handle=" << mDescriptorSetHandle.getId()
                           << ") binding=" << (int) binding
@@ -174,10 +189,11 @@ void DescriptorSet::setSampler(
     mValid.set(binding, bool(th));
 }
 
-DescriptorSet DescriptorSet::duplicate(DescriptorSetLayout const& layout) const noexcept {
-    DescriptorSet set{layout};
+DescriptorSet DescriptorSet::duplicate(
+        StaticString const name, DescriptorSetLayout const& layout) const noexcept {
+    DescriptorSet set{ name, layout };
     set.mDescriptors = mDescriptors; // Use the vector's assignment operator
-    set.mDirty = mDirty;
+    set.mDirty = mValid | mDirty;    // Dirty all valid descriptors so they're updated during commit
     set.mValid = mValid;
     return set;
 }

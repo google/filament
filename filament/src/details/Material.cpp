@@ -39,7 +39,6 @@
 #endif
 
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/MaterialChunk.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/CallbackHandler.h>
@@ -61,6 +60,7 @@
 #include <array>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <optional>
 #include <string>
@@ -412,6 +412,23 @@ void FMaterial::terminate(FEngine& engine) {
     mDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
 }
 
+filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
+        Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
+    if (Variant::isValidDepthVariant(variant)) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+    }
+    if (Variant::isSSRVariant(variant)) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
+    }
+    if (useVsmDescriptorSetLayout) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mPerViewDescriptorSetLayoutVsm;
+    }
+    return mPerViewDescriptorSetLayout;
+}
+
 void FMaterial::compile(CompilerPriorityQueue const priority,
         UserVariantFilterMask variantSpec,
         CallbackHandler* handler,
@@ -448,7 +465,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
             }
         };
         auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
-        mEngine.getDriverApi().compilePrograms(priority, handler, &Callback::func, static_cast<void*>(user));
+        mEngine.getDriverApi().compilePrograms(priority, handler, &Callback::func, user);
     } else {
         mEngine.getDriverApi().compilePrograms(priority, nullptr, nullptr, nullptr);
     }
@@ -764,6 +781,29 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pActiveVariants) {
 
 #endif // FILAMENT_ENABLE_MATDBG
 
+[[nodiscard]] Handle<HwProgram> FMaterial::getProgramWithMATDBG(Variant const variant) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+    assert_invariant((size_t)variant.key < VARIANT_COUNT);
+    std::unique_lock lock(mActiveProgramsLock);
+    if (getMaterialDomain() == MaterialDomain::SURFACE) {
+        auto vert = Variant::filterVariantVertex(variant);
+        auto frag = Variant::filterVariantFragment(variant);
+        mActivePrograms.set(vert.key);
+        mActivePrograms.set(frag.key);
+    } else {
+        mActivePrograms.set(variant.key);
+    }
+    lock.unlock();
+    if (isSharedVariant(variant)) {
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (pDefaultMaterial && pDefaultMaterial->mCachedPrograms[variant.key]) {
+            return pDefaultMaterial->getProgram(variant);
+        }
+    }
+#endif
+    assert_invariant(mCachedPrograms[variant.key]);
+    return mCachedPrograms[variant.key];
+}
 
 void FMaterial::destroyPrograms(FEngine& engine,
         Variant::type_t const variantMask, Variant::type_t const variantValue) {

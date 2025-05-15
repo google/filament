@@ -57,8 +57,16 @@ public:
         return mMaxDescriptorBinding;
     }
 
+    bool isValid(backend::descriptor_binding_t const binding) const noexcept {
+        return mSamplers[binding] || mUniformBuffers[binding];
+    }
+
     bool isSampler(backend::descriptor_binding_t const binding) const noexcept {
         return mSamplers[binding];
+    }
+
+    utils::bitset64 getValidDescriptors() const noexcept {
+        return mSamplers | mUniformBuffers;
     }
 
     utils::bitset64 getSamplerDescriptors() const noexcept {
