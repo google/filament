@@ -16,7 +16,7 @@
 
 #include "fg/details/DependencyGraph.h"
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
 
 #include <iterator>
 
@@ -103,7 +103,7 @@ DependencyGraph::Node* DependencyGraph::getNode(NodeID const id) noexcept {
 
 void DependencyGraph::cull() noexcept {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     auto& nodes = mNodes;
     auto& edges = mEdges;

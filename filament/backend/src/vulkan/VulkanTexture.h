@@ -145,8 +145,14 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     VkImageSubresourceRange const& getPrimaryViewRange() const { return mPrimaryViewRange; }
 
-    VulkanLayout getPrimaryImageLayout() const {
-        return getLayout(mPrimaryViewRange.baseArrayLayer, mPrimaryViewRange.baseMipLevel);
+    VulkanLayout getSamplerLayout() const {
+        if (!isSampleable()) {
+            return VulkanLayout::UNDEFINED;
+        }
+        if (mState->mUsage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            return VulkanLayout::DEPTH_SAMPLER;
+        }
+        return VulkanLayout::FRAG_READ;
     }
 
     // Returns the layout for the intended use of this texture (and not the expected layout at the
@@ -178,6 +184,10 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
 
     bool isTransientAttachment() const {
         return mState->mUsage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    }
+
+    bool isSampleable() const {
+        return mState->mUsage & VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
     bool getIsProtected() const {

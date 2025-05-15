@@ -29,6 +29,7 @@
 #include <utils/compiler.h>
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/StaticString.h>
 
 #include <stdint.h>
 
@@ -37,7 +38,7 @@ namespace filament {
 class DescriptorSet {
 public:
     DescriptorSet() noexcept;
-    explicit DescriptorSet(DescriptorSetLayout const& descriptorSetLayout) noexcept;
+    explicit DescriptorSet(utils::StaticString name, DescriptorSetLayout const& descriptorSetLayout) noexcept;
     DescriptorSet(DescriptorSet const&) = delete;
     DescriptorSet(DescriptorSet&& rhs) noexcept;
     DescriptorSet& operator=(DescriptorSet const&) = delete;
@@ -62,17 +63,19 @@ public:
             backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept;
 
     // sets a ubo/ssbo descriptor
-    void setBuffer(backend::descriptor_binding_t binding,
+    void setBuffer(DescriptorSetLayout const& layout,
+            backend::descriptor_binding_t binding,
             backend::Handle<backend::HwBufferObject> boh,
-            uint32_t offset, uint32_t size) noexcept;
+            uint32_t offset, uint32_t size);
 
     // sets a sampler descriptor
-    void setSampler(backend::descriptor_binding_t binding,
+    void setSampler(DescriptorSetLayout const& layout,
+            backend::descriptor_binding_t binding,
             backend::Handle<backend::HwTexture> th,
-            backend::SamplerParams params) noexcept;
+            backend::SamplerParams params);
 
     // Used for duplicating material
-    DescriptorSet duplicate(DescriptorSetLayout const& layout) const noexcept;
+    DescriptorSet duplicate(utils::StaticString name, DescriptorSetLayout const& layout) const noexcept;
 
     backend::DescriptorSetHandle getHandle() const noexcept {
         return mDescriptorSetHandle;
@@ -81,6 +84,9 @@ public:
     utils::bitset64 getValidDescriptors() const noexcept {
         return mValid;
     }
+
+    static bool isTextureCompatibleWithDescriptor(
+        backend::TextureType t, backend::DescriptorType d) noexcept;
 
 private:
     struct Desc {
@@ -104,6 +110,7 @@ private:
     mutable utils::bitset64 mValid;                         //  8
     backend::DescriptorSetHandle mDescriptorSetHandle;      //  4
     mutable bool mSetAfterCommitWarning = false;            //  1
+    utils::StaticString mName;                              // 16
 };
 
 } // namespace filament

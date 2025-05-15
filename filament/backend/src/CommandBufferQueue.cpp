@@ -18,12 +18,13 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/CommandStream.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/Mutex.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/debug.h>
 
 #include <algorithm>
@@ -79,7 +80,7 @@ bool CommandBufferQueue::isExitRequested() const {
 
 
 void CommandBufferQueue::flush() noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     CircularBuffer& circularBuffer = mCircularBuffer;
     if (circularBuffer.empty()) {
@@ -129,7 +130,7 @@ void CommandBufferQueue::flush() noexcept {
         mHighWatermark = std::max(mHighWatermark, totalUsed);
 #endif
 
-        SYSTRACE_NAME("waiting: CircularBuffer::flush()");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "waiting: CircularBuffer::flush()");
 
         FILAMENT_CHECK_POSTCONDITION(!mPaused) <<
                 "CommandStream is full, but since the rendering thread is paused, "

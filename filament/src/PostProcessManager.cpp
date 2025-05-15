@@ -247,7 +247,7 @@ PostProcessManager::~PostProcessManager() noexcept = default;
 void PostProcessManager::setFrameUniforms(DriverApi& driver,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
-    mSsrPassDescriptorSet.setFrameUniforms(uniforms);
+    mSsrPassDescriptorSet.setFrameUniforms(mEngine, uniforms);
 }
 
 void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const noexcept {
@@ -521,6 +521,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.picking) {
+                    // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
                             .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
@@ -670,7 +671,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     options, passBuilder = passBuilder]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
-                mSsrPassDescriptorSet.prepareStructure(data.structure ?
+                mSsrPassDescriptorSet.prepareStructure(mEngine, data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
@@ -681,7 +682,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // the history sampler is a regular texture2D
                 TextureHandle const history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                mSsrPassDescriptorSet.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
+                mSsrPassDescriptorSet.prepareHistorySSR(mEngine, history, reprojection, uvFromViewMatrix, options);
 
                 mSsrPassDescriptorSet.commit(mEngine);
 
