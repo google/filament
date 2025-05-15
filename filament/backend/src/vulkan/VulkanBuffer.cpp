@@ -15,6 +15,7 @@
  */
 
 #include "VulkanBuffer.h"
+#include "VulkanCommands.h"
 #include "VulkanMemory.h"
 
 #include <utils/Panic.h>
@@ -49,14 +50,13 @@ VulkanBuffer::~VulkanBuffer() {
     vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
 }
 
-void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
-        uint32_t numBytes) {
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
-    void* mapped;
-    vmaMapMemory(mAllocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(mAllocator, stage->memory);
-    vmaFlushAllocation(mAllocator, stage->memory, byteOffset, numBytes);
+void VulkanBuffer::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
+        uint32_t byteOffset, uint32_t numBytes) {
+    // Note: this should be stored within the command buffer before going out of
+    // scope, so that the command buffer can manage its lifecycle.
+    std::unique_ptr<VulkanStage::Block> stageBlock = mStagePool.acquireStage(numBytes);
+    memcpy(stageBlock->mapping(), cpuData, numBytes);
+    vmaFlushAllocation(mAllocator, stageBlock->memory(), stageBlock->offset(), numBytes);
 
     // If there was a previous update, then we need to make sure the following write is properly
     // synced with the previous read.
@@ -84,18 +84,22 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
 			.offset = mUpdatedOffset,
             .size = mUpdatedBytes,
         };
-        vkCmdPipelineBarrier(cmdbuf, srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
-                &barrier, 0, nullptr);
+        vkCmdPipelineBarrier(commands.buffer(), srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+                nullptr, 1, &barrier, 0, nullptr);
     }
 
-    VkBufferCopy region {
-            .srcOffset = 0,
-            .dstOffset = byteOffset,
-            .size = numBytes,
+    VkBufferCopy region{
+        .srcOffset = stageBlock->offset(),
+        .dstOffset = byteOffset,
+        .size = numBytes,
     };
-    vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
+    vkCmdCopyBuffer(commands.buffer(), stageBlock->buffer(), mGpuBuffer, 1, &region);
 
-	mUpdatedOffset = byteOffset;
+    // We no longer need to reference the stage block - stash it in the command
+    // buffer.
+    commands.trackStageBlock(std::move(stageBlock));
+
+    mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
 
     // Firstly, ensure that the copy finishes before the next draw call.
@@ -129,8 +133,8 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         .size = VK_WHOLE_SIZE,
     };
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
-            &barrier, 0, nullptr);
+    vkCmdPipelineBarrier(commands.buffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0,
+            nullptr, 1, &barrier, 0, nullptr);
 }
 
 } // namespace filament::backend

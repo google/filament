@@ -29,7 +29,7 @@ public:
     VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool, VkBufferUsageFlags usage,
             uint32_t numBytes);
     ~VulkanBuffer();
-    void loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
+    void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes);
     VkBuffer getGpuBuffer() const {
         return mGpuBuffer;

@@ -28,12 +28,80 @@ namespace filament::backend {
 
 class VulkanCommands;
 
-// Immutable POD representing a shared CPU-GPU staging area.
-struct VulkanStage {
-    VmaAllocation memory;
-    VkBuffer buffer;
-    uint32_t capacity;
-    mutable uint64_t lastAccessed;
+// Object representing a shared CPU-GPU staging area, which can be subdivided
+// into smaller buffers as needed.
+class VulkanStage {
+public:
+    VulkanStage(VmaAllocation memory, VkBuffer buffer, uint32_t capacity, void* mapping)
+        : mMemory(memory),
+          mBuffer(buffer),
+          mCapacity(capacity),
+          mMapping(mapping) {}
+
+    class Block {
+    public:
+        Block(VulkanStage* parentStage, uint32_t capacity, uint32_t offset)
+            : mParentStage(parentStage),
+              mCapacity(capacity),
+              mOffset(offset) {
+            mParentStage->mStageBlocks.insert({ mOffset, this });
+        }
+
+        ~Block() { mParentStage->mStageBlocks.erase(offset()); }
+
+        // Should not be copying this around.
+        Block(const Block& other) = delete;
+        Block(Block&& other) = delete;
+        Block& operator=(const Block& other) = delete;
+        Block& operator=(Block&& other) = delete;
+
+        inline VulkanStage* parentStage() const { return mParentStage; }
+        inline VkBuffer buffer() const { return parentStage()->buffer(); }
+        inline VmaAllocation memory() const { return parentStage()->memory(); }
+        inline uint32_t capacity() const { return mCapacity; }
+        inline uint32_t offset() const { return mOffset; }
+
+        inline void* mapping() {
+            return reinterpret_cast<void*>(
+                    reinterpret_cast<char*>(mParentStage->mapping()) + offset());
+        }
+
+    private:
+        VulkanStage* const mParentStage;
+        const uint32_t mCapacity;
+        const uint32_t mOffset;
+    };
+
+    inline VmaAllocation memory() const { return mMemory; }
+    inline VkBuffer buffer() const { return mBuffer; }
+    inline uint32_t capacity() const { return mCapacity; }
+    inline void* mapping() const { return mMapping; }
+
+    inline uint32_t& currentOffset() { return mCurrentOffset; }
+
+    inline bool isSafeToReset() const { return mStageBlocks.empty(); }
+
+    inline void reset() { mCurrentOffset = 0; }
+
+    inline std::unique_ptr<Block> acquireBlock(uint32_t numBytes) {
+        auto block = std::make_unique<Block>(this, numBytes, currentOffset());
+        currentOffset() += numBytes;
+        return block;
+    }
+
+private:
+    const VmaAllocation mMemory;
+    const VkBuffer mBuffer;
+    const uint32_t mCapacity;
+
+    void* mMapping;
+
+    uint32_t mCurrentOffset = 0;
+
+    // Maps the start offset of a vulkan stage block to the stage block,
+    // for easy deletions later. This is managed by the blocks themselves, in an
+    // RAII pattern, during construction and destruction.
+    std::unordered_map<uint32_t, const Block*> mStageBlocks;
 };
 
 struct VulkanStageImage {
@@ -51,9 +119,15 @@ class VulkanStagePool {
 public:
     VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands);
 
-    // Finds or creates a stage whose capacity is at least the given number of bytes.
-    // The stage is automatically released back to the pool after TIME_BEFORE_EVICTION frames.
-    VulkanStage const* acquireStage(uint32_t numBytes);
+    // Finds or creates a stage block whose capacity is at least the given
+    // number of bytes. Internally, creates and manages and subdivides large
+    // buffers so that we have less objects around that we have to keep track
+    // of.
+    // This function is NOT thread-safe.
+    // Note: the unqiue pointer returned from this function should be kept alive
+    // until the block is no longer in use. This is how we know when it's safe
+    // to reuse the block of memory.
+    std::unique_ptr<VulkanStage::Block> acquireStage(uint32_t numBytes);
 
     // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,
@@ -70,11 +144,21 @@ private:
     VmaAllocator mAllocator;
     VulkanCommands* mCommands;
 
-    // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
-    std::multimap<uint32_t, VulkanStage const*> mFreeStages;
+    // Allocates a new stage buffer, and optionally subdivides it into stage
+    // blocks. If subdivideBlocks is true, predefined divisions will be used.
+    // Otherwise, it's expected that capacity is defined to a value, and that
+    // is the size that will be used for the buffer (as well as the only block
+    // being created).
+    VulkanStage* allocateNewStage(uint32_t capacity);
 
-    // Simple unordered set for stashing a list of in-use stages that can be reclaimed later.
-    std::vector<VulkanStage const*> mUsedStages;
+    // Performs any bookkeeping required to delete a VulkanStage object; namely,
+    // unmapping memory, freeing the allocation, and deleting the VulkanStage
+    // object. Note: takes an r-value because after this call, `stage` won't
+    // exist.
+    void destroyStage(VulkanStage const*&& stage);
+
+    // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
+    std::multimap<uint32_t, VulkanStage*> mStages;
 
     std::unordered_set<VulkanStageImage const*> mFreeImages;
     std::vector<VulkanStageImage const*> mUsedImages;
