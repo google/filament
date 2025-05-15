@@ -173,6 +173,14 @@ public:
         Builder& levels(uint8_t levels) noexcept;
 
         /**
+         * Specifies the numbers of samples used for MSAA (Multisample Anti-Aliasing).
+         * If this is invoked for array textures, we assume this is used for multiview.
+         * @param samples Number of samples for this texture.
+         * @return This Builder, for chaining calls.
+         */
+        Builder& samples(uint8_t samples) noexcept;
+
+        /**
          * Specifies the type of sampler to use.
          * @param target Sampler type
          * @return This Builder, for chaining calls.

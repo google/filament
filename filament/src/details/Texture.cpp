@@ -78,6 +78,7 @@ struct Texture::BuilderDetails {
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     uint8_t mLevels = 1;
+    uint8_t mSamples = 1;
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::NONE;
@@ -115,6 +116,11 @@ Texture::Builder& Texture::Builder::depth(uint32_t const depth) noexcept {
 
 Texture::Builder& Texture::Builder::levels(uint8_t const levels) noexcept {
     mImpl->mLevels = std::max(uint8_t(1), levels);
+    return *this;
+}
+
+Texture::Builder& Texture::Builder::samples(uint8_t const samples) noexcept {
+    mImpl->mSamples = std::max(uint8_t(1), samples);
     return *this;
 }
 
@@ -286,6 +292,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
+    mSampleCount = builder->mSamples;
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
     mHasBlitSrc = builder->mHasBlitSrc;
