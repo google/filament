@@ -1069,97 +1069,98 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
     desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
     desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
     desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
-    switch (params.filterMag) {
-        case SamplerMagFilter::NEAREST: {
-            desc.magFilter = wgpu::FilterMode::Nearest;
-            break;
+    if (params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE) {
+        switch (params.filterMag) {
+            case SamplerMagFilter::NEAREST: {
+                desc.magFilter = wgpu::FilterMode::Nearest;
+                break;
+            }
+            case SamplerMagFilter::LINEAR: {
+                desc.magFilter = wgpu::FilterMode::Linear;
+                break;
+            }
         }
-        case SamplerMagFilter::LINEAR: {
-            desc.magFilter = wgpu::FilterMode::Linear;
-            break;
-        }
-    }
-    switch (params.filterMin) {
-        case SamplerMinFilter::NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
-            // suffice
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
-            // suffice
+        switch (params.filterMin) {
+            case SamplerMinFilter::NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+                // suffice
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+                break;
+            }
+            case SamplerMinFilter::LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
+                // suffice
 
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+                break;
+            }
+            case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+                break;
+            }
+            case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
 
-            break;
-        }
-        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+                break;
+            }
+            case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
 
-            break;
+                break;
+            }
+            case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+                break;
+            }
         }
-        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
-            break;
-        }
-    }
-    switch (params.compareFunc) {
-        case SamplerCompareFunc::LE: {
-            desc.compare = wgpu::CompareFunction::LessEqual;
-            break;
-        }
-        case SamplerCompareFunc::GE: {
-            desc.compare = wgpu::CompareFunction::GreaterEqual;
-            break;
-        }
-        case SamplerCompareFunc::L: {
-            desc.compare = wgpu::CompareFunction::Less;
-            break;
-        }
-        case SamplerCompareFunc::G: {
-            desc.compare = wgpu::CompareFunction::Greater;
-            break;
-        }
-        case SamplerCompareFunc::E: {
-            desc.compare = wgpu::CompareFunction::Equal;
-            break;
-        }
-        case SamplerCompareFunc::NE: {
-            desc.compare = wgpu::CompareFunction::NotEqual;
-            break;
-        }
-        case SamplerCompareFunc::A: {
-            desc.compare = wgpu::CompareFunction::Always;
-            break;
-        }
-        case SamplerCompareFunc::N: {
-            desc.compare = wgpu::CompareFunction::Never;
-            break;
+        switch (params.compareFunc) {
+            case SamplerCompareFunc::LE: {
+                desc.compare = wgpu::CompareFunction::LessEqual;
+                break;
+            }
+            case SamplerCompareFunc::GE: {
+                desc.compare = wgpu::CompareFunction::GreaterEqual;
+                break;
+            }
+            case SamplerCompareFunc::L: {
+                desc.compare = wgpu::CompareFunction::Less;
+                break;
+            }
+            case SamplerCompareFunc::G: {
+                desc.compare = wgpu::CompareFunction::Greater;
+                break;
+            }
+            case SamplerCompareFunc::E: {
+                desc.compare = wgpu::CompareFunction::Equal;
+                break;
+            }
+            case SamplerCompareFunc::NE: {
+                desc.compare = wgpu::CompareFunction::NotEqual;
+                break;
+            }
+            case SamplerCompareFunc::A: {
+                desc.compare = wgpu::CompareFunction::Always;
+                break;
+            }
+            case SamplerCompareFunc::N: {
+                desc.compare = wgpu::CompareFunction::Never;
+                break;
+            }
         }
     }
 
     desc.maxAnisotropy = 1u << params.anisotropyLog2;
 
 
-    // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
+    // Unused: WGPU lodMinClamp/lodMaxClamp
 
-    //TODO Once we can properly map to descriptorsetlayout use the sampler.
-    return mDevice.CreateSampler(/*&desc*/);
+    return mDevice.CreateSampler(&desc);
 }
 wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
     switch (fWrapMode) {
