@@ -247,16 +247,17 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
-    : mSurface(surface),
-      mType(SwapChainType::SURFACE),
-      mHeadlessWidth(0),
-      mHeadlessHeight(0),
-      mDevice(device),
+    : mDevice(device),
+      mSurface(surface),
       mNeedStencil((flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0),
       mDepthFormat(selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
               mNeedStencil)),
-      mDepthTexture(createDepthTexture(device, surfaceSize, mDepthFormat)),
-      mDepthTextureView(createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)) {
+      mDepthTexture(createDepthTexture(device, extent, mDepthFormat)),
+      mDepthTextureView(createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)),
+      mType(SwapChainType::SURFACE),
+      mHeadlessWidth(0),
+      mHeadlessHeight(0) {
+
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
         FWGPU_LOGW << "Failed to get WebGPU surface capabilities";
@@ -276,21 +277,21 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     mSurface.Configure(&mConfig);
 }
 
-WebGPUSwapChain::~WebGPUSwapChain() {
-    mSurface.Unconfigure();
-}
-
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
     : mType(SwapChainType::HEADLESS),
       mHeadlessWidth(extent.width),
       mHeadlessHeight(extent.height){
 
-    //TODO: review these initializations as webgpu pipeline gets mature
-    const wgpu::TextureFormat renderTargetFormat = wgpu::TextureFormat::RGBA8Unorm;
-    const wgpu::TextureDescriptor textureDescriptor = createRenderTargetDescriptor(mHeadlessWidth, mHeadlessHeight,  renderTargetFormat);
+    const wgpu::TextureDescriptor textureDescriptor = {
+        .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
+        .dimension = wgpu::TextureDimension::e2D,
+        .size = { mHeadlessWidth, mHeadlessHeight, 1 },
+        .format = wgpu::TextureFormat::RGBA8Unorm,
+        .mipLevelCount = 1,
+        .sampleCount = 1,
+    };
 
-    //TODO: eventually merge with handles
      mRenderTargetTextures.fill(nullptr);
      mRenderTargetViews.fill(nullptr);
 
@@ -338,12 +339,7 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent, wgpu::Device const& device) {
-
-     if(isHeadless()){
-        return mRenderTargetViews[mHeadlessBufferIndex];
-    }
-
+wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent) {
     setExtent(extent);
     wgpu::SurfaceTexture surfaceTexture;
     mSurface.GetCurrentTexture(&surfaceTexture);
@@ -364,16 +360,8 @@ wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& 
     return surfaceTexture.texture.CreateView(&textureViewDescriptor);
 }
 
-wgpu::TextureDescriptor WebGPUSwapChain::createRenderTargetDescriptor(uint32_t width,
-        uint32_t height, wgpu::TextureFormat format) {
-    wgpu::TextureDescriptor desc;
-    desc.size = { width, height, 1 };
-    desc.format = format;
-    desc.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
-    desc.mipLevelCount = 1;
-    desc.sampleCount = 1;
-    desc.dimension = wgpu::TextureDimension::e2D;
-    return desc;
+wgpu::TextureView WebGPUSwapChain::getCurrentTextureView() {
+    return mRenderTargetViews[mHeadlessBufferIndex];
 }
 
 void WebGPUSwapChain::present() {
