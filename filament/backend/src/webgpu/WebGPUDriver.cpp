@@ -721,17 +721,20 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUIndexBuffer>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUIndexBuffer>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh,
         BufferDescriptor&& p, uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
@@ -743,8 +746,8 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
     auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    assert_invariant(bufferObject->buffer.GetUsage() & wgpu::BufferUsage::Vertex);
-    vertexBuffer->buffers[index] = bufferObject->buffer;
+    assert_invariant(bufferObject->getBuffer().GetUsage() & wgpu::BufferUsage::Vertex);
+    vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -976,7 +979,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
         mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
     }
 
-    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->buffer,
+    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
             renderPrimitive->indexBuffer->indexFormat);
 }
 
@@ -1013,7 +1016,7 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
     if (!bindGroup->getIsLocked()) {
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
-            .buffer = buffer->buffer,
+            .buffer = buffer->getBuffer(),
             .offset = offset,
             .size = size };
         bindGroup->addEntry(entry.binding, std::move(entry));
