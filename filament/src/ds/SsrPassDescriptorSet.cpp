@@ -41,7 +41,8 @@ SsrPassDescriptorSet::SsrPassDescriptorSet() noexcept = default;
 
 void SsrPassDescriptorSet::init(FEngine& engine) noexcept {
     // create the descriptor-set from the layout
-    mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutSsrVariant() };
+    mDescriptorSet = DescriptorSet{
+            "SsrPassDescriptorSet", engine.getPerViewDescriptorSetLayoutSsrVariant() };
 
     // create a dummy Shadow UBO (see comment in setFrameUniforms() below)
     mShadowUbh = engine.getDriverApi().createBufferObject(sizeof(ShadowUib),

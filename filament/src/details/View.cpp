@@ -64,7 +64,8 @@ static constexpr float PID_CONTROLLER_Ki = 0.002f;
 static constexpr float PID_CONTROLLER_Kd = 0.0f;
 
 FView::FView(FEngine& engine)
-        : mCommonRenderableDescriptorSet(engine.getPerRenderableDescriptorSetLayout()),
+        : mCommonRenderableDescriptorSet("mCommonRenderableDescriptorSet",
+                engine.getPerRenderableDescriptorSetLayout()),
           mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
@@ -74,6 +75,30 @@ FView::FView(FEngine& engine)
                 { engine, true, mUniforms } }
 {
     DriverApi& driver = engine.getDriverApi();
+
+    auto const& layout = engine.getPerRenderableDescriptorSetLayout();
+
+    // initialize the common descriptor set with dummy descriptors
+    mCommonRenderableDescriptorSet.setBuffer(layout,
+            +PerRenderableBindingPoints::BONES_UNIFORMS,
+            engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableBoneUib));
+
+    mCommonRenderableDescriptorSet.setBuffer(layout,
+            +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+            engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
+
+    mCommonRenderableDescriptorSet.setSampler(layout,
+            +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+            engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
+
+    mCommonRenderableDescriptorSet.setSampler(layout,
+            +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+            engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
+
+    mCommonRenderableDescriptorSet.setSampler(layout,
+            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
+            engine.getZeroTextureArray(), {});
+
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
 
@@ -747,7 +772,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
                 // initialize the descriptor set the first time it's needed
                 if (UTILS_UNLIKELY(!descriptorSet.getHandle())) {
-                    descriptorSet = DescriptorSet{ layout };
+                    descriptorSet = DescriptorSet{ "FView::descriptorSet", layout };
                 }
 
                 descriptorSet.setBuffer(layout,
@@ -755,8 +780,27 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                         instance.handle ? instance.handle : mRenderableUbh,
                         0, sizeof(PerRenderableUib));
 
-                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
+                descriptorSet.setBuffer(layout,
+                        +PerRenderableBindingPoints::BONES_UNIFORMS,
+                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableBoneUib));
 
+                descriptorSet.setBuffer(layout,
+                        +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                        engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
+
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                        engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
+
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,
+                        engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
+
+                descriptorSet.setSampler(layout,
+                        +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
+                        engine.getZeroTextureArray(), {});
+
+                if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                     descriptorSet.setBuffer(layout,
                             +PerRenderableBindingPoints::BONES_UNIFORMS,
                             skinning.handle, 0, sizeof(PerRenderableBoneUib));
@@ -781,7 +825,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 descriptorSet.commit(layout, driver);
 
                 // write the descriptor-set handle to the sceneData array for access later
-                sceneData.elementAt<FScene::DESCRIPTOR_SET_HANDLE>(i) = descriptorSet.getHandle();
+                sceneData.elementAt<FScene::DESCRIPTOR_SET_HANDLE>(i) =
+                        descriptorSet.getHandle();
             } else {
                 // use the shared descriptor-set
                 sceneData.elementAt<FScene::DESCRIPTOR_SET_HANDLE>(i) =
@@ -931,20 +976,21 @@ void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
     }
 }
 
-void FView::prepareShadowMapping(bool const highPrecision) const noexcept {
+void FView::prepareShadowMapping(FEngine const& engine, bool const highPrecision) const noexcept {
+    BufferObjectHandle ubo{ engine.getDummyUniformBuffer() };
     if (mHasShadowing) {
         assert_invariant(mShadowMapManager);
-        getColorPassDescriptorSet().prepareShadowMapping(
-                mShadowMapManager->getShadowUniformsHandle(), highPrecision);
+        ubo = mShadowMapManager->getShadowUniformsHandle();
     }
+    getColorPassDescriptorSet().prepareShadowMapping(ubo, highPrecision);
 }
 
 void FView::commitUniformsAndSamplers(DriverApi& driver) const noexcept {
     getColorPassDescriptorSet().commit(driver);
 }
 
-void FView::unbindSamplers(DriverApi& driver) noexcept {
-    getColorPassDescriptorSet().unbindSamplers(driver);
+void FView::unbindSamplers(FEngine& engine) noexcept {
+    getColorPassDescriptorSet().unbindSamplers(engine);
 }
 
 void FView::commitFroxels(DriverApi& driverApi) const noexcept {
