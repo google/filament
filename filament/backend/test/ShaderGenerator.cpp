@@ -186,4 +186,16 @@ Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
     return program;
 }
 
+Program ShaderGenerator::getProgramWithPushConstants(filament::backend::DriverApi&,
+        std::array<PushConstants, filament::backend::Program::SHADER_TYPE_COUNT> constants) {
+    Program program;
+    program.shaderLanguage(mShaderLanguage);
+    program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
+    program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
+    for (auto const stage : {ShaderStage::VERTEX, ShaderStage::FRAGMENT }) {
+        program.pushConstants(stage, constants[uint8_t(stage)]);
+    }
+    return program;
+}
+
 } // namespace test
