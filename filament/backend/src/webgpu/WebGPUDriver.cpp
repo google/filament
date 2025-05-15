@@ -995,8 +995,13 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     auto swapChain = handleCast<WebGPUSwapChain>(drawSch);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mTextureView = mSwapChain->getCurrentTextureView(surfaceSize, mDevice);
+    if(!mSwapChain->isHeadless()){
+         wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+         mTextureView = mSwapChain->getCurrentTextureView(extent);
+    } else {
+        mTextureView = mSwapChain->getCurrentTextureView();
+    }
+
     assert_invariant(mTextureView);
 
     assert_invariant(mDefaultRenderTarget);
