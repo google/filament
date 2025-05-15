@@ -35,9 +35,14 @@ namespace filament {
 void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
         FRenderableManager::Entry const& entry) noexcept {
 
+#if !defined(FILAMENT_TRIM_DEFAULT_MATERIAL)
     assert_invariant(entry.materialInstance);
-
     mMaterialInstance = downcast(entry.materialInstance);
+#else
+    if (entry.materialInstance) {
+        mMaterialInstance = downcast(entry.materialInstance);
+    }
+#endif
     mBlendOrder = entry.blendOrder;
 
     if (entry.indices && entry.vertices) {

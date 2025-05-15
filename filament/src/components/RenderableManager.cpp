@@ -468,12 +468,16 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         auto& entry = mImpl->mEntries[i];
 
         // entry.materialInstance must be set to something even if indices/vertices are null
-        FMaterial const* material;
-        if (!entry.materialInstance) {
+        FMaterial const* material = nullptr;
+        if (entry.materialInstance) {
+            material = downcast(entry.materialInstance->getMaterial());
+        } else {
+#if defined(FILAMENT_TRIM_DEFAULT_MATERIAL)
+            continue;
+#else
             material = downcast(engine.getDefaultMaterial());
             entry.materialInstance = material->getDefaultInstance();
-        } else {
-            material = downcast(entry.materialInstance->getMaterial());
+#endif
         }
 
         // primitives without indices or vertices will be ignored
@@ -700,7 +704,7 @@ void FRenderableManager::create(
                     primitives[i].setMorphingBufferOffset(morphing.offset);
                 }
             }
-            
+
             // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
             // morphWeights uniform array to avoid crash on adreno gpu.
             if (UTILS_UNLIKELY(targetCount == 0 &&

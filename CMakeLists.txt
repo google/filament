@@ -45,6 +45,10 @@ option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 
+option(FILAMENT_TRIM_DEFAULT_MATERIAL "Trim default material for Filament" OFF)
+
+option(FILAMENT_TRIM_SKYBOX_MATERIAL "Trim skybox material for Filament" OFF)
+
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)

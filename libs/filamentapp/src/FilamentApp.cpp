@@ -571,7 +571,7 @@ void FilamentApp::loadIBL(std::string_view path) {
         }
     }
 
-    if (mIBL != nullptr) {
+    if (mIBL != nullptr && mIBL->getSkybox()) {
         mIBL->getSkybox()->setLayerMask(0x7, 0x4);
         mScene->setSkybox(mIBL->getSkybox());
         mScene->setIndirectLight(mIBL->getIndirectLight());
