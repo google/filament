@@ -70,6 +70,9 @@ PFNGLMAXSHADERCOMPILERTHREADSKHRPROC glMaxShaderCompilerThreadsKHR;
 #ifdef GL_OVR_multiview
 PFNGLFRAMEBUFFERTEXTUREMULTIVIEWOVRPROC glFramebufferTextureMultiviewOVR;
 #endif
+#ifdef GL_OVR_multiview_multisampled_render_to_texture
+PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC glFramebufferTextureMultisampleMultiviewOVR;
+#endif
 
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
 // On Android, If we want to support a build system less than ANDROID_API 21, we need to
@@ -122,6 +125,9 @@ void importGLESExtensionsEntryPoints() {
 #endif
 #ifdef GL_OVR_multiview
         getProcAddress(glFramebufferTextureMultiviewOVR, "glFramebufferTextureMultiviewOVR");
+#endif
+#ifdef GL_OVR_multiview_multisampled_render_to_texture
+        getProcAddress(glFramebufferTextureMultisampleMultiviewOVR, "glFramebufferTextureMultisampleMultiviewOVR");
 #endif
 #if defined(__ANDROID__) && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
         getProcAddress(glDispatchCompute, "glDispatchCompute");
