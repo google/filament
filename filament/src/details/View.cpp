@@ -64,7 +64,8 @@ static constexpr float PID_CONTROLLER_Ki = 0.002f;
 static constexpr float PID_CONTROLLER_Kd = 0.0f;
 
 FView::FView(FEngine& engine)
-        : mCommonRenderableDescriptorSet(engine.getPerRenderableDescriptorSetLayout()),
+        : mCommonRenderableDescriptorSet("mCommonRenderableDescriptorSet",
+                engine.getPerRenderableDescriptorSetLayout()),
           mFroxelizer(engine),
           mFogEntity(engine.getEntityManager().create()),
           mIsStereoSupported(engine.getDriverApi().isStereoSupported()),
@@ -771,7 +772,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
                 // initialize the descriptor set the first time it's needed
                 if (UTILS_UNLIKELY(!descriptorSet.getHandle())) {
-                    descriptorSet = DescriptorSet{ layout };
+                    descriptorSet = DescriptorSet{ "FView::descriptorSet", layout };
                 }
 
                 descriptorSet.setBuffer(layout,

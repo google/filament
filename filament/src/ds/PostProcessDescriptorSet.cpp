@@ -42,7 +42,7 @@ void PostProcessDescriptorSet::init(FEngine& engine) noexcept {
             engine.getDriverApi(), descriptor_sets::getPostProcessLayout() };
 
     // create the descriptor-set from the layout
-    mDescriptorSet = DescriptorSet{ mDescriptorSetLayout };
+    mDescriptorSet = DescriptorSet{ "PostProcessDescriptorSet", mDescriptorSetLayout };
 }
 
 void PostProcessDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, DriverApi& driver) {

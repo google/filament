@@ -43,7 +43,8 @@ ShadowMapDescriptorSet::ShadowMapDescriptorSet(FEngine& engine) noexcept {
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     // create the descriptor-set from the layout
-    mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutDepthVariant() };
+    mDescriptorSet = DescriptorSet{
+            "ShadowMapDescriptorSet", engine.getPerViewDescriptorSetLayoutDepthVariant() };
 
     // initialize the descriptor-set
     mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutDepthVariant(),

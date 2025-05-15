@@ -101,7 +101,8 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine, bool const vsm,
                         descriptor_sets::getPerViewDescriptorSetLayout(
                                 MaterialDomain::SURFACE, lit, ssr, fog, vsm)
                 };
-                mDescriptorSet[index] = DescriptorSet{ mDescriptorSetLayout[index] };
+                mDescriptorSet[index] = DescriptorSet{
+                        "ColorPassDescriptorSet", mDescriptorSetLayout[index] };
             }
         }
     }

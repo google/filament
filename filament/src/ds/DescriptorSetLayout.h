@@ -65,6 +65,10 @@ public:
         return mSamplers[binding];
     }
 
+    utils::bitset64 getValidDescriptors() const noexcept {
+        return mSamplers | mUniformBuffers;
+    }
+
     utils::bitset64 getSamplerDescriptors() const noexcept {
         return mSamplers;
     }
