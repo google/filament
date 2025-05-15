@@ -369,7 +369,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_CUBE_FLOAT:
             case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
             case DescriptorType::SAMPLER_3D_FLOAT:
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+                wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
                 break;
             case DescriptorType::SAMPLER_2D_INT:
             case DescriptorType::SAMPLER_2D_ARRAY_INT:
@@ -390,8 +390,8 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_CUBE_DEPTH:
             case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
                 //Dummies complain if you set this correctly without having an associated dummy
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
-                sEntry->sampler.type = wgpu::SamplerBindingType::Filtering;
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
+                sEntry->sampler.type = wgpu::SamplerBindingType::Comparison;
                 break;
             default:
                 break;
@@ -523,29 +523,29 @@ std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedB
         entry.binding = entryInfo.binding;
         switch (entryInfo.type) {
             case WebGPUDescriptorSetLayout::BindGroupEntryType::UNIFORM_BUFFER:
-                entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
+                //entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
                 break;
             case WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER:
-                entry.sampler = WebGPUDescriptorSet::sDummySampler;
+               // entry.sampler = WebGPUDescriptorSet::sDummySampler;
                 break;
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2D:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2D];
+              //  entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2D];
                 break;
 
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_2DA:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray];
+             //   entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e2DArray];
                 break;
 
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBE:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::Cube];
+            //    entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::Cube];
                 break;
 
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_CUBEA:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::CubeArray];
+             //   entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::CubeArray];
                 break;
 
             case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW_3D:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e3D];
+               // entry.textureView = WebGPUDescriptorSet::sDummyTextureViewMap[wgpu::TextureViewDimension::e3D];
                 break;
             default: break;
         }
