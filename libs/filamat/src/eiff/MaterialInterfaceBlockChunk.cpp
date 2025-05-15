@@ -27,7 +27,10 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/compiler.h>
+#include <utils/CString.h>
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <utility>
 
@@ -194,11 +197,7 @@ void MaterialDescriptorBindingsChuck::flatten(Flattener& f) {
     // all the material's sampler descriptors
     for (auto const& entry: mSamplerInterfaceBlock.getSamplerInfoList()) {
         f.writeString({ entry.uniformName.data(), entry.uniformName.size() });
-        if (entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER_EXTERNAL));
-        } else {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER));
-        }
+        f.writeUint8(uint8_t(descriptor_sets::getDescriptorType(entry.type, entry.format)));
         f.writeUint8(entry.binding);
     }
 }
@@ -228,12 +227,8 @@ void MaterialDescriptorSetLayoutChunk::flatten(Flattener& f) {
 
     // all the material's sampler descriptors
     for (auto const& entry: mSamplerInterfaceBlock.getSamplerInfoList()) {
-        if (entry.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER_EXTERNAL));
-        } else {
-            f.writeUint8(uint8_t(DescriptorType::SAMPLER));
-        }
-        f.writeUint8(uint8_t(ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT));
+        f.writeUint8(uint8_t(descriptor_sets::getDescriptorType(entry.type, entry.format)));
+        f.writeUint8(uint8_t(entry.stages));
         f.writeUint8(entry.binding);
         f.writeUint8(uint8_t(DescriptorFlags::NONE));
         f.writeUint16(0);

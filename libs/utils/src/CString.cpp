@@ -20,27 +20,30 @@
 #include <utils/ostream.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
+
 
 namespace utils {
 
 UTILS_NOINLINE
-CString::CString(const char* cstr, size_t length) {
+CString::CString(const char* cstr, size_t const length) {
     if (length && cstr) {
-        Data* p = (Data*)malloc(sizeof(Data) + length + 1);
-        p->length = (size_type)length;
-        mCStr = (value_type*)(p + 1);
+
+        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
+        p->length = size_type(length);
+        mCStr = reinterpret_cast<value_type*>(p + 1);
         // we don't use memcpy here to avoid a call to libc, the generated code is pretty good.
         std::uninitialized_copy_n(cstr, length, mCStr);
         mCStr[length] = '\0';
     }
 }
 
-CString::CString(size_t length) {
+CString::CString(size_t const length) {
     if (length) {
-        Data* p = (Data*)malloc(sizeof(Data) + length + 1);
-        p->length = (size_type)length;
-        mCStr = (value_type*)(p + 1);
+        Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
+        p->length = size_type(length);
+        mCStr = reinterpret_cast<value_type*>(p + 1);
         std::fill_n(mCStr, length, 0);
         mCStr[length] = '\0';
     }
@@ -58,24 +61,30 @@ CString& CString::operator=(const CString& rhs) {
     if (this != &rhs) {
         auto *const p = mData ? mData - 1 : nullptr;
         new(this) CString(rhs);
-        free(p);
+        std::free(p);
     }
     return *this;
 }
 
-CString& CString::replace(size_type pos, size_type len, const CString& str) noexcept {
+CString::~CString() noexcept {
+    if (mData) {
+        std::free(mData - 1);
+    }
+}
+
+CString& CString::replace(size_type const pos, size_type len, char const* str, size_t const l) & noexcept {
     assert(pos <= size());
 
     len = std::min(len, size() - pos);
 
     // The new size of the string, after the replacement.
-    const size_type newSize = size() - len + str.size();
+    const size_type newSize = size() - len + l;
 
     // Allocate enough memory to hold the new string.
-    Data* p = (Data*) malloc(sizeof(Data) + newSize + 1);
+    Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + newSize + 1));
     assert(p);
     p->length = newSize;
-    value_type* newStr = (value_type*) (p + 1);
+    value_type* newStr = reinterpret_cast<value_type*>(p + 1);
 
     const value_type* beginning = mCStr;
     const value_type* replacementStart = mCStr + pos;
@@ -84,7 +93,7 @@ CString& CString::replace(size_type pos, size_type len, const CString& str) noex
 
     value_type* ptr = newStr;
     ptr = std::uninitialized_copy(beginning, replacementStart, ptr);
-    ptr = std::uninitialized_copy_n(str.c_str_safe(), str.length(), ptr);
+    ptr = std::uninitialized_copy_n(str, l, ptr);
     ptr = std::uninitialized_copy(replacementEnd, end, ptr);
 
     // null-terminator
@@ -92,14 +101,14 @@ CString& CString::replace(size_type pos, size_type len, const CString& str) noex
 
     std::swap(mCStr, newStr);
     if (newStr) {
-        free((Data*) newStr - 1);
+        std::free(reinterpret_cast<Data*>(newStr) - 1);
     }
 
     return *this;
 }
 
 #if !defined(NDEBUG)
-io::ostream& operator<<(io::ostream& out, const utils::CString& rhs) {
+io::ostream& operator<<(io::ostream& out, const CString& rhs) {
     return out << rhs.c_str_safe();
 }
 #endif

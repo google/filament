@@ -672,22 +672,8 @@ void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
     // nothing to do, timer query was constructed in createTimerQueryS
 }
 
-const char* toString(DescriptorType type) {
-    switch (type) {
-        case DescriptorType::UNIFORM_BUFFER:
-            return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER:
-            return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER:
-            return "SAMPLER";
-        case DescriptorType::INPUT_ATTACHMENT:
-            return "INPUT_ATTACHMENT";
-        case DescriptorType::SAMPLER_EXTERNAL:
-            return "SAMPLER_EXTERNAL";
-    }
-}
-
-const char* toString(ShaderStageFlags flags) {
+UTILS_UNUSED
+static const char* toString(ShaderStageFlags flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
         stages.push_back("VERTEX");
@@ -721,15 +707,25 @@ const char* toString(DescriptorFlags flags) {
 
 void MetalDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> dslh, DescriptorSetLayout&& info) {
+#if FILAMENT_METAL_DEBUG_LOG == 1
+    const char* labelStr = "";
+    std::visit([&labelStr](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, utils::CString> || std::is_same_v<T, utils::StaticString>) {
+            labelStr = arg.c_str();
+        }
+    }, info.label);
     std::sort(info.bindings.begin(), info.bindings.end(),
             [](const auto& a, const auto& b) { return a.binding < b.binding; });
-    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = {\n", dslh.getId());
+    DEBUG_LOG("createDescriptorSetLayoutR(dslh = %d, info = { label = %s,\n", dslh.getId(),
+            labelStr);
     for (size_t i = 0; i < info.bindings.size(); i++) {
         DEBUG_LOG("    {binding = %d, type = %s, count = %d, stage = %s, flags = %s},\n",
                 info.bindings[i].binding, toString(info.bindings[i].type), info.bindings[i].count,
                 toString(info.bindings[i].stageFlags), toString(info.bindings[i].flags));
     }
     DEBUG_LOG("})\n");
+#endif
     construct_handle<MetalDescriptorSetLayout>(dslh, std::move(info));
 }
 

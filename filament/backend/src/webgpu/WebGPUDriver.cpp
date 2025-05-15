@@ -981,13 +981,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
-    // Calling DrawIndexed with "firstInstance = 0" results in a NON spinning triangle
-    //    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
-    // Calling DrawIndexed with "firstInstance = 1" results in a spinning triangle
-    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 1);
-    // Calling Draw with "firstInstance = 0" results in a NON spinning triangle
-    // Calling Draw with "firstInstance = 1" results in a spinning triangle
-    //    mRenderPassEncoder.Draw(indexCount, instanceCount, 0, 1);
+    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
 void WebGPUDriver::draw(PipelineState, Handle<HwRenderPrimitive>, uint32_t indexOffset,
@@ -1051,13 +1045,8 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
     assert_invariant(mRenderPassEncoder);
-    // TODO is this how we should be getting the dynamic offsets?
-    //      should we add offsets for unused entries or is the input already have them?
-    //      this implementation assumes unused entries are not provided, and adds dummy values.
-    //      The count also includes unused entities, as not doing so produces errors
     const size_t dynamicOffsetCount = bindGroup->countEntitiesWithDynamicOffsets();
-    uint32_t const* const dynamicOffsetsWithUnused = bindGroup->setDynamicOffsets(offsets.data());
-    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, dynamicOffsetsWithUnused);
+    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, offsets.data());
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {

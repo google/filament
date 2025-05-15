@@ -6,18 +6,6 @@ set(PUBLIC_HDR_DIR include)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
 # ==================================================================================================
-# Compilation options
-# ==================================================================================================
-#
-set(BACKEND_SANITIZATION "" CACHE STRING "Sanitization option")
-set_property(CACHE BACKEND_SANITIZATION PROPERTY STRINGS ";ASAN")
-
-set(BACKEND_SANITIZERS)
-if (BACKEND_SANITIZATION STREQUAL "ASAN")
-    set(BACKEND_SANITIZERS -fsanitize=address)
-endif()
-
-# ==================================================================================================
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
@@ -303,12 +291,6 @@ if (ANDROID)
 endif()
 
 # ==================================================================================================
-# Definitions
-# ==================================================================================================
-# "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
-add_definitions(-DSYSTRACE_TAG=2 )
-
-# ==================================================================================================
 # Includes & target definition
 # ==================================================================================================
 # specify where our headers are
@@ -484,7 +466,6 @@ target_compile_options(${TARGET} PRIVATE
         ${OSMESA_COMPILE_FLAGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
-        ${BACKEND_SANITIZERS}
 )
 
 if (FILAMENT_SUPPORTS_METAL)
@@ -494,8 +475,6 @@ endif()
 if (FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
-
-target_link_options(${TARGET} PRIVATE ${BACKEND_SANITIZERS})
 
 target_link_libraries(${TARGET} PRIVATE
         ${OSMESA_LINKER_FLAGS}
@@ -566,8 +545,6 @@ if (APPLE AND NOT IOS)
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
-    target_compile_options(backend_test PRIVATE ${BACKEND_SANITIZERS})
-    target_link_options(backend_test PRIVATE ${BACKEND_SANITIZERS})
 
     set(BACKEND_TEST_DEPS
             OSDependent
@@ -606,7 +583,6 @@ if (APPLE AND NOT IOS)
        # linker from removing "unused" symbols.
        target_link_libraries(backend_test_mac PRIVATE -force_load backend_test)
        set_target_properties(backend_test_mac PROPERTIES FOLDER Tests)
-       target_link_options(backend_test_mac PRIVATE ${BACKEND_SANITIZERS})
 
        # This is needed after XCode 15.3
        set_target_properties(backend_test_mac PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
@@ -616,8 +592,6 @@ endif()
 
 if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
-    target_compile_options(backend_test_linux PRIVATE ${BACKEND_SANITIZERS})
-    target_link_options(backend_test_linux PRIVATE ${BACKEND_SANITIZERS})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
 endif()

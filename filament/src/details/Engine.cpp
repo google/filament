@@ -50,6 +50,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
@@ -59,7 +61,6 @@
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
-#include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
 
 #include <math/vec3.h>
@@ -105,8 +106,8 @@ struct Engine::BuilderDetails {
 };
 
 Engine* FEngine::create(Builder const& builder) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -169,8 +170,8 @@ Engine* FEngine::create(Builder const& builder) {
 #if UTILS_HAS_THREADING
 
 void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -300,7 +301,7 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
  */
 
 void FEngine::init() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // this must be first.
     assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
@@ -361,8 +362,6 @@ void FEngine::init() {
     }
 
     // initialize the dummy textures so that their contents are not undefined
-    static constexpr uint32_t zeroes[6] = {};
-    static constexpr uint32_t ones = 0xffffffff;
 
     mDefaultIblTexture = downcast(Texture::Builder()
             .width(1).height(1).levels(1)
@@ -371,7 +370,8 @@ void FEngine::init() {
             .build(*this));
 
     driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
-            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 6>{}.data(), 6,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
     // 3 bands = 9 float3
     constexpr float sh[9 * 3] = { 0.0f };
@@ -393,10 +393,12 @@ void FEngine::init() {
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
-            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
-            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { std::array<uint8_t, 4>{}.data(), 4,
+                Texture::Format::RGBA, Texture::Type::UBYTE });
 
 
     mPerViewDescriptorSetLayoutSsrVariant = {
@@ -451,14 +453,23 @@ void FEngine::init() {
         mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+        mDummyOneTextureArrayDepth = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                TextureFormat::DEPTH32F, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
         mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
         driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
+                    Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        driverApi.update3DImage(mDummyOneTextureArrayDepth, 0, 0, 0, 0, 1, 1, 1,
+                { std::array<float, 1>{1.0f}.data(), 4,
+                    Texture::Format::DEPTH_COMPONENT, Texture::Type::FLOAT });
 
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { std::array<uint8_t, 4>{}.data(), 4,
+                    Texture::Format::RGBA, Texture::Type::UBYTE });
 
         mLightManager.init(*this);
         mDFG.init(*this);
@@ -502,7 +513,7 @@ void FEngine::init() {
 }
 
 FEngine::~FEngine() noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(!mResourceAllocatorDisposer);
     delete mDriver;
     if (mOwnPlatform) {
@@ -511,7 +522,7 @@ FEngine::~FEngine() noexcept {
 }
 
 void FEngine::shutdown() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // by construction this should never be nullptr
     assert_invariant(mResourceAllocatorDisposer);
@@ -645,7 +656,7 @@ void FEngine::shutdown() {
 }
 
 void FEngine::prepare() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
@@ -712,8 +723,7 @@ int FEngine::loop() {
     if (mPlatform == nullptr) {
         mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
-        const char* const backend = backendToString(mBackend);
-        slog.i << "FEngine resolved backend: " << backend << io::endl;
+        slog.i << "FEngine resolved backend: " << to_string(mBackend) << io::endl;
         if (mPlatform == nullptr) {
             slog.e << "Selected backend not supported in this build." << io::endl;
             mDriverBarrier.latch();

@@ -106,3 +106,13 @@ def mkdir_p(path_str):
 def mv_f(src_str, dst_str):
   src = pathlib.Path(src_str)
   src.replace(dst_str)
+
+def important_print(msg):
+  lines = msg.split('\n')
+  max_len = max([len(l) for l in lines])
+  print('-' * (max_len + 8))
+  for line in lines:
+    diff = max_len - len(line)
+    information = f'--- {line} ' + (' ' * diff) + '---'
+    print(information)
+  print('-' * (max_len + 8))

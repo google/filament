@@ -129,7 +129,7 @@ def _remove_comments_from_json_txt(json_txt):
     res.append(line)
   return '\n'.join(res)
 
-def parse_test_config_from_path(config_path):
+def parse_from_path(config_path):
   with open(config_path, 'r') as f:
     json_txt = json.loads(_remove_comments_from_json_txt(f.read()))
     return RenderTestConfig(json_txt)

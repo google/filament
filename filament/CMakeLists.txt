@@ -318,8 +318,6 @@ endif()
 # Definitions
 # ==================================================================================================
 
-# "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
-add_definitions(-DSYSTRACE_TAG=2)
 add_definitions(-DFILAMENT_DFG_LUT_SIZE=${DFG_LUT_SIZE})
 add_definitions(
     -DFILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB=${FILAMENT_PER_RENDER_PASS_ARENA_SIZE_IN_MB}

@@ -21,7 +21,6 @@
 
 #include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
-#include <backend/PresentCallable.h>
 
 #include <utils/compiler.h>
 #include <utils/Invocable.h>
@@ -35,7 +34,7 @@ class Engine;
 /**
  * A swap chain represents an Operating System's *native* renderable surface.
  *
- * Typically it's a native window or a view. Because a SwapChain is initialized from a
+ * Typically, it's a native window or a view. Because a SwapChain is initialized from a
  * native object, it is given to filament as a `void *`, which must be of the proper type
  * for each platform filament is running on.
  *
@@ -158,7 +157,7 @@ public:
     /**
      * Requests a SwapChain with an alpha channel.
      */
-    static const uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    static constexpr uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
 
     /**
      * This flag indicates that the swap chain may be used as a source surface
@@ -168,13 +167,13 @@ public:
      * @see
      * Renderer.copyFrame()
      */
-    static const uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
+    static constexpr uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
 
     /**
      * Indicates that the native X11 window is an XCB window rather than an XLIB window.
      * This is ignored on non-Linux platforms and in builds that support only one X11 API.
      */
-    static const uint64_t CONFIG_ENABLE_XCB = backend::SWAP_CHAIN_CONFIG_ENABLE_XCB;
+    static constexpr uint64_t CONFIG_ENABLE_XCB = backend::SWAP_CHAIN_CONFIG_ENABLE_XCB;
 
     /**
      * Indicates that the native window is a CVPixelBufferRef.
@@ -186,7 +185,7 @@ public:
      * Filament. Filament will call CVPixelBufferRetain during Engine::createSwapChain, and
      * CVPixelBufferRelease when the swap chain is destroyed.
      */
-    static const uint64_t CONFIG_APPLE_CVPIXELBUFFER =
+    static constexpr uint64_t CONFIG_APPLE_CVPIXELBUFFER =
             backend::SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER;
 
     /**
@@ -303,6 +302,7 @@ public:
      *
      * @param handler     Handler to dispatch the callback or nullptr for the default handler.
      * @param callback    Callback called when the frame is scheduled.
+     * @param flags
      *
      * @remark Only Filament's Metal backend supports PresentCallables and frame callbacks. Other
      * backends ignore the callback (which will never be called) and proceed normally.
@@ -314,7 +314,7 @@ public:
             FrameScheduledCallback&& callback = {}, uint64_t flags = 0);
 
     /**
-     * Returns whether or not this SwapChain currently has a FrameScheduledCallback set.
+     * Returns whether this SwapChain currently has a FrameScheduledCallback set.
      *
      * @return true, if the last call to setFrameScheduledCallback set a callback
      *

@@ -18,7 +18,6 @@
 
 #include <filament/ColorGrading.h>
 #include <filament/ToneMapper.h>
-#include <memory>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -68,9 +67,8 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_ColorGrading_nBuilderToneMapper(JNIEnv*, jclass,
         jlong nativeBuilder, jlong toneMapper_) {
     ColorGrading::Builder* builder = (ColorGrading::Builder*) nativeBuilder;
-    ToneMapper* toneMapper = reinterpret_cast<ToneMapper*>(toneMapper_);
-    std::shared_ptr<ToneMapper> toneMapperCopy(toneMapper->clone());
-    builder->toneMapper(toneMapperCopy);
+    const ToneMapper* toneMapper = (const ToneMapper*) toneMapper_;
+    builder->toneMapper(toneMapper);
 }
 
 #pragma clang diagnostic push

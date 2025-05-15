@@ -212,7 +212,7 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
 }
 
 TEST_F(LoadImageTest, UpdateImage2D) {
-    FAIL_IF(Backend::VULKAN, "Multiple test cases crash");
+    FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 3644679986;
@@ -308,7 +308,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         Shader shader(api, cleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
-           .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+           .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
         });
 
         // Create a Texture.
@@ -372,7 +372,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             getSamplerTypeName(textureFormat), fragmentTemplate);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
-            "test_tex", DescriptorType::SAMPLER, samplerInfo
+            "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
@@ -447,7 +447,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
     });
 
     // Create a texture with 3 mip levels.
@@ -485,6 +485,9 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
+            "see b/417254499");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -508,7 +511,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_ARRAY_FLOAT, samplerInfo}}
     });
 
     // Create a texture.
