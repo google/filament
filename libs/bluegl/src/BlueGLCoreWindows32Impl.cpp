@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14651,6 +14651,12 @@ extern void* __blue_glCore_glFramebufferTextureMultiviewOVR;
 void APIENTRY bluegl_glFramebufferTextureMultiviewOVR (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint baseViewIndex, GLsizei numViews) {
     typedef void (APIENTRYP PFN_glFramebufferTextureMultiviewOVR) (GLenum target, GLenum attachment, GLuint texture, GLint level, GLint baseViewIndex, GLsizei numViews);
     return ((PFN_glFramebufferTextureMultiviewOVR)__blue_glCore_glFramebufferTextureMultiviewOVR)(target, attachment, texture, level, baseViewIndex, numViews);
+}
+
+extern void* __blue_glCore_glFramebufferTextureMultisampleMultiviewOVR;
+void APIENTRY bluegl_glFramebufferTextureMultisampleMultiviewOVR (GLenum target, GLenum attachment, GLuint texture, GLint level, GLsizei samples, GLint baseViewIndex, GLsizei numViews) {
+    typedef void (APIENTRYP PFN_glFramebufferTextureMultisampleMultiviewOVR) (GLenum target, GLenum attachment, GLuint texture, GLint level, GLsizei samples, GLint baseViewIndex, GLsizei numViews);
+    return ((PFN_glFramebufferTextureMultisampleMultiviewOVR)__blue_glCore_glFramebufferTextureMultisampleMultiviewOVR)(target, attachment, texture, level, samples, baseViewIndex, numViews);
 }
 
 extern void* __blue_glCore_glHintPGI;
