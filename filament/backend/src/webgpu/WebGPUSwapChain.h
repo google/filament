@@ -40,17 +40,16 @@ public:
 
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
-    [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent, wgpu::Device const& device );
-
-    [[nodiscard]] wgpu::TextureDescriptor createRenderTargetDescriptor(uint32_t width, uint32_t height, wgpu::TextureFormat format);
+    [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent);
+    [[nodiscard]] wgpu::TextureView getCurrentTextureView();
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
+
+    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
     void present();
 
 private:
-
-    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
     void setExtent(wgpu::Extent2D const&);
 
@@ -71,7 +70,7 @@ private:
     const uint32_t mHeadlessHeight;
 
     ///TODO: eventually config for double or triple buffering
-    const uint32_t mHeadlessBufferCount = 3;
+    static constexpr uint32_t mHeadlessBufferCount = 3;
     uint32_t mHeadlessBufferIndex = 0;
     std::array<wgpu::Texture, 3> mRenderTargetTextures;
     std::array<wgpu::TextureView, 3> mRenderTargetViews;
