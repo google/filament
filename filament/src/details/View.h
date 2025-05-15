@@ -440,7 +440,9 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    ColorPassDescriptorSet& getColorPassDescriptorSet() noexcept { return mColorPassDescriptorSet; }
+    ColorPassDescriptorSet& getColorPassDescriptorSet() const noexcept {
+            return mColorPassDescriptorSet[mShadowType == ShadowType::PCF ? 0 : 1];
+    }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -587,7 +589,7 @@ private:
     RenderQuality mRenderQuality;
 
     mutable TypedUniformBuffer<PerViewUib> mUniforms;
-    mutable ColorPassDescriptorSet mColorPassDescriptorSet;
+    mutable ColorPassDescriptorSet mColorPassDescriptorSet[2];
 
     mutable FrameHistory mFrameHistory{};
 

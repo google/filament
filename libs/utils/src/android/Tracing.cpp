@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
-#define TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
-
+#include <utils/compiler.h>
 #include <private/utils/Tracing.h>
 
-#define PROFILE_SCOPE(marker)       SYSTRACE_NAME(marker)
+#include <perfetto/perfetto.h>
 
-#define PROFILE_NAME_BEGINFRAME    "backend::beginFrame"
-#define PROFILE_NAME_ENDFRAME      "backend::endFrame"
+PERFETTO_TRACK_EVENT_STATIC_STORAGE_IN_NAMESPACE(tracing);
 
-#endif // TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
+namespace {
+
+class SystraceStaticInitialization {
+public:
+    SystraceStaticInitialization() {
+        perfetto::TracingInitArgs args;
+        args.backends |= perfetto::kSystemBackend;
+        perfetto::Tracing::Initialize(args);
+        tracing::TrackEvent::Register();
+    }
+};
+
+UTILS_UNUSED SystraceStaticInitialization sTracingStaticInitialization{};
+
+}
 

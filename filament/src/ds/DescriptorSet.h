@@ -62,14 +62,16 @@ public:
             backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept;
 
     // sets a ubo/ssbo descriptor
-    void setBuffer(backend::descriptor_binding_t binding,
+    void setBuffer(DescriptorSetLayout const& layout,
+            backend::descriptor_binding_t binding,
             backend::Handle<backend::HwBufferObject> boh,
-            uint32_t offset, uint32_t size) noexcept;
+            uint32_t offset, uint32_t size);
 
     // sets a sampler descriptor
-    void setSampler(backend::descriptor_binding_t binding,
+    void setSampler(DescriptorSetLayout const& layout,
+            backend::descriptor_binding_t binding,
             backend::Handle<backend::HwTexture> th,
-            backend::SamplerParams params) noexcept;
+            backend::SamplerParams params);
 
     // Used for duplicating material
     DescriptorSet duplicate(DescriptorSetLayout const& layout) const noexcept;
@@ -81,6 +83,9 @@ public:
     utils::bitset64 getValidDescriptors() const noexcept {
         return mValid;
     }
+
+    static bool isTextureCompatibleWithDescriptor(
+        backend::TextureType t, backend::DescriptorType d) noexcept;
 
 private:
     struct Desc {

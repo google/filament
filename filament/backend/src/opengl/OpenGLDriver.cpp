@@ -44,6 +44,8 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/DriverApi.h"
 
+#include <private/utils/Tracing.h>
+
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
 #include <utils/FixedCapacityVector.h>
@@ -51,7 +53,6 @@
 #include <utils/Invocable.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -98,13 +99,13 @@
 
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
+#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (perfetto)
 #define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (perfetto)
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (perfetto)
 #define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
@@ -248,8 +249,8 @@ OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string)
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -265,8 +266,8 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -3348,8 +3349,8 @@ void OpenGLDriver::pushGroupMarker(char const* string) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -3365,8 +3366,8 @@ void OpenGLDriver::popGroupMarker(int) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -3685,7 +3686,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     gl.depthFunc(GL_LESS);
     gl.disable(GL_SCISSOR_TEST);
 #endif
-    //SYSTRACE_NAME("glFinish");
+    //FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glFinish");
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
