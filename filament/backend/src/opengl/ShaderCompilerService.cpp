@@ -28,6 +28,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/debug.h>
@@ -36,7 +38,6 @@
 #include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 
 #include <algorithm>
 #include <array>
@@ -367,7 +368,7 @@ void ShaderCompilerService::notifyWhenAllProgramsAreReady(
 
 GLuint ShaderCompilerService::initialize(program_token_t& token) {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     assert_invariant(token);// This function should be called when the token is still alive.
 
@@ -454,8 +455,8 @@ void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
             });
     ops.emplace(pos, priority, token, std::move(job));
 
-    SYSTRACE_CONTEXT();
-    SYSTRACE_VALUE32("ShaderCompilerService Jobs", mRunAtNextTickOps.size());
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "ShaderCompilerService Jobs", mRunAtNextTickOps.size());
 }
 
 bool ShaderCompilerService::cancelTickOp(program_token_t const& token) noexcept {
@@ -468,8 +469,8 @@ bool ShaderCompilerService::cancelTickOp(program_token_t const& token) noexcept 
         ops.erase(pos);
         return true;
     }
-    SYSTRACE_CONTEXT();
-    SYSTRACE_VALUE32("ShaderCompilerService Jobs", ops.size());
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "ShaderCompilerService Jobs", ops.size());
     return false;
 }
 
@@ -485,15 +486,15 @@ void ShaderCompilerService::executeTickOps() noexcept {
             ++it;
         }
     }
-    SYSTRACE_CONTEXT();
-    SYSTRACE_VALUE32("ShaderCompilerService Jobs", ops.size());
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "ShaderCompilerService Jobs", ops.size());
 }
 
 /* static */ void ShaderCompilerService::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
         bool multiview, program_token_t const& token) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     auto const appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
         s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
@@ -616,7 +617,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 }
 
 /* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
@@ -639,7 +640,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
 /* static */ void ShaderCompilerService::linkProgram(OpenGLContext const& context,
         program_token_t const& token) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // Shader compilation should be completed by now. Check the status and log errors on failure.
     checkCompileStatus(token);
@@ -675,7 +676,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
 /* static */ bool ShaderCompilerService::checkLinkStatusAndCleanupShaders(
         program_token_t const& token) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(token->gl.program);
 
     bool linked = true;

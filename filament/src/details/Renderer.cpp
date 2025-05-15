@@ -50,12 +50,13 @@
 #include <math/vec3.h>
 #include <math/mat4.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/debug.h>
 
 #include <chrono>
@@ -243,7 +244,7 @@ void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
 }
 
 void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FILAMENT_CHECK_PRECONDITION(!mSwapChain) <<
             "skipFrame() can't be called between beginFrame() and endFrame()";
@@ -278,7 +279,7 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
 #if 0 && defined(__ANDROID__)
     char scratch[PROP_VALUE_MAX + 1];
@@ -309,7 +310,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     mFrameId++;
     mViewRenderedCount = 0;
 
-    SYSTRACE_FRAME_ID(mFrameId);
+    FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
 
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -391,7 +392,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 }
 
 void FRenderer::endFrame() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         mBeginFrameInternal();
@@ -473,7 +474,7 @@ void FRenderer::readPixels(FRenderTarget* renderTarget,
 
 void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
         filament::Viewport const& srcViewport, CopyFrameFlag const flags) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     assert_invariant(mSwapChain);
     assert_invariant(dstSwapChain);
@@ -520,7 +521,7 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 void FRenderer::renderStandaloneView(FView const* view) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     using namespace std::chrono;
 
@@ -558,7 +559,7 @@ void FRenderer::renderStandaloneView(FView const* view) {
 }
 
 void FRenderer::render(FView const* view) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
         // this should not happen, the user should not call render() if we returned false from

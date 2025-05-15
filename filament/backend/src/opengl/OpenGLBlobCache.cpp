@@ -21,7 +21,7 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
 
 namespace filament::backend {
 
@@ -36,7 +36,7 @@ OpenGLBlobCache::OpenGLBlobCache(OpenGLContext& gl) noexcept
 
 GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
         Program const& program) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (!mCachingSupported || !platform.hasRetrieveBlobFunc()) {
         // the key is never updated in that case
         return 0;
@@ -68,7 +68,7 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
         programId = glCreateProgram();
 
         { // scope for systrace
-            SYSTRACE_NAME("glProgramBinary");
+            FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glProgramBinary");
             glProgramBinary(programId, blob->format, blob->data, programBinarySize);
         }
 
@@ -90,7 +90,7 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
 
 void OpenGLBlobCache::insert(Platform& platform,
         BlobCacheKey const& key, GLuint program) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (!mCachingSupported || !platform.hasInsertBlobFunc()) {
         // the key is never updated in that case
         return;
@@ -100,7 +100,7 @@ void OpenGLBlobCache::insert(Platform& platform,
     GLenum format;
     GLint programBinarySize = 0;
     { // scope for systrace
-        SYSTRACE_NAME("glGetProgramiv");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glGetProgramiv");
         glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &programBinarySize);
     }
     if (programBinarySize) {
@@ -108,7 +108,7 @@ void OpenGLBlobCache::insert(Platform& platform,
         std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
         if (UTILS_LIKELY(blob)) {
             { // scope for systrace
-                SYSTRACE_NAME("glGetProgramBinary");
+                FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glGetProgramBinary");
                 glGetProgramBinary(program, programBinarySize,
                         &programBinarySize, &format, blob->data);
             }

@@ -25,12 +25,13 @@
 #include <backend/Program.h>
 #include <backend/Handle.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/Systrace.h>
 
 #include <algorithm>
 #include <array>
@@ -96,8 +97,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
 }
 
 void OpenGLProgram::initialize(OpenGLDriver& gld) {
-
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     assert_invariant(gl.program == 0);
     assert_invariant(mToken);
@@ -122,8 +122,7 @@ void OpenGLProgram::initialize(OpenGLDriver& gld) {
  */
 void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint program,
         LazyInitializationData& lazyInitializationData) noexcept {
-
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // from the pipeline layout we compute a mapping from {set, binding} to {binding}
     // for both buffers and textures

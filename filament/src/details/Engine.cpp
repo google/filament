@@ -50,6 +50,8 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
@@ -59,7 +61,6 @@
 #include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
-#include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
 
 #include <math/vec3.h>
@@ -105,8 +106,8 @@ struct Engine::BuilderDetails {
 };
 
 Engine* FEngine::create(Builder const& builder) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -169,8 +170,8 @@ Engine* FEngine::create(Builder const& builder) {
 #if UTILS_HAS_THREADING
 
 void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -300,7 +301,7 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
  */
 
 void FEngine::init() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // this must be first.
     assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
@@ -512,7 +513,7 @@ void FEngine::init() {
 }
 
 FEngine::~FEngine() noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(!mResourceAllocatorDisposer);
     delete mDriver;
     if (mOwnPlatform) {
@@ -521,7 +522,7 @@ FEngine::~FEngine() noexcept {
 }
 
 void FEngine::shutdown() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // by construction this should never be nullptr
     assert_invariant(mResourceAllocatorDisposer);
@@ -655,7 +656,7 @@ void FEngine::shutdown() {
 }
 
 void FEngine::prepare() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.

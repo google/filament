@@ -32,10 +32,11 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 
 #include <math/scalar.h>
 #include <math/vec4.h>
@@ -215,7 +216,7 @@ IBLPrefilterContext::EquirectangularToCubemap::operator=(
 
 Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         Texture const* equirect, Texture* outCube) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
     const TextureCubemapFace faces[2][3] = {
@@ -302,7 +303,7 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
         : mContext(context),
          mSampleCount(std::min(config.sampleCount, uint16_t(2048))) {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
     Engine& engine = mContext.mEngine;
@@ -379,7 +380,7 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
         IBLPrefilterContext::IrradianceFilter::Options options,
         filament::Texture const* environmentCubemap, filament::Texture* outIrradianceTexture) {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
     FILAMENT_CHECK_PRECONDITION(environmentCubemap != nullptr) << "environmentCubemap is null!";
@@ -500,7 +501,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
         return (lod != 0.0f) ? saturate((sqrt(a * a + 4.0f * b * lod) - a) / (2.0f * b)) : 0.0f;
     };
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
     Engine& engine = mContext.mEngine;
@@ -612,7 +613,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         IBLPrefilterContext::SpecularFilter::Options options,
         Texture const* environmentCubemap, Texture* outReflectionsTexture) {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
 
     FILAMENT_CHECK_PRECONDITION(environmentCubemap != nullptr) << "environmentCubemap is null!";
@@ -680,7 +681,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
            .texture(RenderTarget::AttachmentPoint::COLOR2, outReflectionsTexture);
 
     for (size_t lod = 0; lod < levels; lod++) {
-        SYSTRACE_NAME("executeFilterLOD");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "executeFilterLOD");
 
         mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
         mi->setParameter("attachmentLevel", uint32_t(lod));
