@@ -672,7 +672,7 @@ void FEngine::prepare() {
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
-            // post-process materials isntances must be commited explicitly because their
+            // post-process materials instances must be commited explicitly because their
             // parameters are typically not set at this point in time.
             if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
                 item->commitStreamUniformAssociations(driver);
