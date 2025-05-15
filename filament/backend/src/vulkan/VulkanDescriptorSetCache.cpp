@@ -358,12 +358,11 @@ void VulkanDescriptorSetCache::updateSamplerImpl(VkDescriptorSet vkset, uint8_t 
         range.levelCount = 1;
         range.layerCount = 1;
     }
-    VkDescriptorImageInfo info{
+    VkDescriptorImageInfo info = {
         .sampler = sampler,
         .imageView = texture->getView(range),
-        .imageLayout = fvkutils::getVkLayout(texture->getDefaultLayout()),
+        .imageLayout = fvkutils::getVkLayout(texture->getSamplerLayout()),
     };
-
     VkWriteDescriptorSet descriptorWrite = {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,
