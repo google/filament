@@ -37,28 +37,26 @@ import java.nio.Buffer;
  */
 public class Animator {
     private long mNativeObject;
-    private Boolean mIsOwner = false;
+    private boolean mIsOwner = false;
 
     Animator(long nativeObject) {
         mNativeObject = nativeObject;
     }
 
+    /**
+     * Creates an Animator that can manipulate animations in the provided FilamentAsset.
+     * <p>
+     * <strong>Important:</strong> This Animator manages native resources that must be 
+     * explicitly freed by calling {@link #destroy()} when no longer needed. Failing to 
+     * call {@link #destroy()} will result in native memory leaks.
+     * </p>
+     *
+     * @param asset The FilamentAsset containing the animations
+     * @param instance The FilamentInstance to animate
+     */
     public Animator(FilamentAsset asset, FilamentInstance instance) {
         mNativeObject = nCreateAnimatorFromAssetAndInstance(asset.getNativeObject(), instance.getNativeObject());
         mIsOwner = true;
-    }
-    
-    @Override
-    public void finalize() {
-        try {
-            super.finalize();
-        } catch (Throwable t) { // Ignore
-        } finally {
-            if (mIsOwner) {
-                nDestroyAnimator(mNativeObject);
-                mNativeObject = 0;
-            }
-        }
     }
 
     /**
@@ -143,6 +141,19 @@ public class Animator {
      */
     public String getAnimationName(@IntRange(from = 0) int animationIndex) {
         return nGetAnimationName(getNativeObject(), animationIndex);
+    }
+
+    /**
+     * Explicitly destroys this Animator and frees all its associated native resources.
+     * The object will be unusable after this call.
+     */
+    public void destroy() {
+        if (mNativeObject != 0) {
+            if (mIsOwner) {
+                nDestroyAnimator(mNativeObject);
+            }
+            mNativeObject = 0;
+        }
     }
 
     long getNativeObject() {
