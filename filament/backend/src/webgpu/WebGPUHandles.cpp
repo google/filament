@@ -497,25 +497,6 @@ void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& en
     mEntriesByBindingAdded[index] = true;
 }
 
-uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
-    // mDynamicOffsets already reserves enough memory for the number of entries in the set
-    mDynamicOffsets.clear();
-    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
-    // unused entries TODO: is this necessary?
-    size_t inputIndex = 0;
-    size_t outputIndex = 0;
-    for (auto const& entry : mEntriesSortedByBinding) {
-        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
-            if (mEntriesByBindingAdded[entry.binding]) {
-                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
-            } else {
-                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
-            }
-        }
-    }
-    return mDynamicOffsets.data();
-}
-
 size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesByBindingWithDynamicOffsets.count();
 }
