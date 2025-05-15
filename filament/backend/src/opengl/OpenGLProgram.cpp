@@ -193,6 +193,12 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
                 case DescriptorType::SAMPLER_3D_FLOAT:
                 case DescriptorType::SAMPLER_3D_INT:
                 case DescriptorType::SAMPLER_3D_UINT:
+                case DescriptorType::SAMPLER_2D_MS_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_INT:
+                case DescriptorType::SAMPLER_2D_MS_UINT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
                 case DescriptorType::SAMPLER_EXTERNAL: {
                     if (!entry.name.empty()) {
                         GLint const loc = glGetUniformLocation(program, entry.name.c_str());
