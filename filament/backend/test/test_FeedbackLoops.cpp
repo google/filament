@@ -120,7 +120,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         Shader shader = Shader(api, cleanup, ShaderConfig {
             .vertexShader = fullscreenVs,
             .fragmentShader = fullscreenFs,
-            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}, {"Params"}}
         });
 
         TrianglePrimitive const triangle(getDriverApi());

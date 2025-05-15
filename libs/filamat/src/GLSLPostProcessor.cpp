@@ -22,7 +22,6 @@
 #include <spirv_glsl.hpp>
 #include <spirv_msl.hpp>
 
-#include "backend/DriverEnums.h"
 #include "private/filament/DescriptorSets.h"
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
@@ -44,9 +43,14 @@
 #include <algorithm>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #ifdef FILAMENT_SUPPORTS_WEBGPU
 #include <tint/tint.h>
@@ -70,22 +74,7 @@ using BindingIndexMap = std::unordered_map<std::string, uint16_t>;
 #define DEBUG_LOG_DESCRIPTOR_SETS 0
 #endif
 
-const char* toString(DescriptorType type) {
-    switch (type) {
-        case DescriptorType::UNIFORM_BUFFER:
-            return "UNIFORM_BUFFER";
-        case DescriptorType::SHADER_STORAGE_BUFFER:
-            return "SHADER_STORAGE_BUFFER";
-        case DescriptorType::SAMPLER:
-            return "SAMPLER";
-        case DescriptorType::INPUT_ATTACHMENT:
-            return "INPUT_ATTACHMENT";
-        case DescriptorType::SAMPLER_EXTERNAL:
-            return "SAMPLER_EXTERNAL";
-    }
-}
-
-const char* toString(ShaderStageFlags flags) {
+static const char* toString(ShaderStageFlags const flags) {
     std::vector<const char*> stages;
     if (any(flags & ShaderStageFlags::VERTEX)) {
         stages.push_back("VERTEX");
@@ -110,14 +99,14 @@ const char* toString(ShaderStageFlags flags) {
     return buffer;
 }
 
-const char* prettyDescriptorFlags(DescriptorFlags flags) {
+static const char* prettyDescriptorFlags(DescriptorFlags const flags) {
     if (flags == DescriptorFlags::DYNAMIC_OFFSET) {
         return "DYNAMIC_OFFSET";
     }
     return "NONE";
 }
 
-const char* prettyPrintSamplerType(SamplerType type) {
+static const char* prettyPrintSamplerType(SamplerType const type) {
     switch (type) {
         case SamplerType::SAMPLER_2D:
             return "SAMPLER_2D";
@@ -145,11 +134,16 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
             +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
 
     for (auto const& sampler: samplers) {
-        layout.bindings.push_back(DescriptorSetLayoutBinding{
-            (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)
-                    ? DescriptorType::SAMPLER_EXTERNAL
-                    : DescriptorType::SAMPLER,
-            sampler.stages, sampler.binding, DescriptorFlags::NONE, 0 });
+        DescriptorSetLayoutBinding layoutBinding{
+            DescriptorType::SAMPLER_EXTERNAL,
+            sampler.stages, sampler.binding,
+            DescriptorFlags::NONE,
+            0
+        };
+        if (sampler.type != SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) {
+            layoutBinding.type = descriptor_sets::getDescriptorType(sampler.type, sampler.format);
+        }
+        layout.bindings.push_back(layoutBinding);
     }
 
     return layout;
@@ -163,11 +157,12 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
     DescriptorSetLayout const descriptorSetLayout = [&] {
         switch (set) {
             case DescriptorSetBindingPoints::PER_VIEW: {
+                bool const isLit = material.isLit || material.hasShadowMultiplier;
+                bool const isSSR = material.reflectionMode == ReflectionMode::SCREEN_SPACE ||
+                        material.refractionMode == RefractionMode::SCREEN_SPACE;
+                bool const hasFog = !(config.variantFilter & UserVariantFilterMask(UserVariantFilterBit::FOG));
                 return descriptor_sets::getPerViewDescriptorSetLayoutWithVariant(
-                        config.variant, config.domain, config.variantFilter,
-                        material.isLit || material.hasShadowMultiplier,
-                        material.reflectionMode,
-                        material.refractionMode);
+                        config.variant, config.domain, isLit, isSSR, hasFog);
             }
             case DescriptorSetBindingPoints::PER_RENDERABLE:
                 return descriptor_sets::getPerRenderableLayout();
@@ -209,17 +204,16 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
         return descriptor_sets::getDescriptorName(set, binding);
     };
 
-    for (auto descriptor : descriptorSetLayout.bindings) {
-        descriptor_binding_t binding = descriptor.binding;
+    for (auto const& layoutBinding : descriptorSetLayout.bindings) {
+        descriptor_binding_t binding = layoutBinding.binding;
         auto name = getDescriptorName(binding);
-        if (descriptor.type == DescriptorType::SAMPLER ||
-            descriptor.type == DescriptorType::SAMPLER_EXTERNAL) {
-            auto pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
+        if (DescriptorSetLayoutBinding::isSampler(layoutBinding.type)) {
+            auto const pos = std::find_if(descriptorSetSamplerList.begin(), descriptorSetSamplerList.end(),
                     [&](const auto& entry) { return entry.binding == binding; });
             assert_invariant(pos != descriptorSetSamplerList.end());
-            descriptors.emplace_back(name, descriptor, *pos);
+            descriptors.emplace_back(name, layoutBinding, *pos);
         } else {
-            descriptors.emplace_back(name, descriptor, std::nullopt);
+            descriptors.emplace_back(name, layoutBinding, std::nullopt);
         }
     }
 
@@ -228,8 +222,8 @@ static void collectDescriptorsForSet(DescriptorSetBindingPoints set,
     });
 }
 
-void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
-    auto getName = [](uint8_t set) {
+static void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) noexcept {
+    auto getName = [](uint8_t const set) {
         switch (set) {
             case +DescriptorSetBindingPoints::PER_VIEW:
                 return "perViewDescriptorSetLayout";
@@ -246,18 +240,23 @@ void prettyPrintDescriptorSetInfoVector(DescriptorSets const& sets) {
         printf("[DS] info (%s) = [\n", getName(setIndex));
         for (auto const& descriptor : descriptors) {
             auto const& [name, info, sampler] = descriptor;
-            if (info.type == DescriptorType::SAMPLER ||
-                info.type == DescriptorType::SAMPLER_EXTERNAL) {
+        if (DescriptorSetLayoutBinding::isSampler(info.type)) {
                 assert_invariant(sampler.has_value());
-                printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
+                printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s, samplerType = %s}",
-                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        name.c_str_safe(), info.binding,
+                        int(to_string(info.type).size()),
+                        to_string(info.type).data(),
+                        info.count,
                         toString(info.stageFlags), prettyDescriptorFlags(info.flags),
                         prettyPrintSamplerType(sampler->type));
             } else {
-                printf("    {name = %s, binding = %d, type = %s, count = %d, stage = %s, flags = "
+                printf("    {name = %s, binding = %d, type = %.*s, count = %d, stage = %s, flags = "
                        "%s}",
-                        name.c_str_safe(), info.binding, toString(info.type), info.count,
+                        name.c_str_safe(), info.binding,
+                        int(to_string(info.type).size()),
+                        to_string(info.type).data(),
+                        info.count,
                         toString(info.stageFlags), prettyDescriptorFlags(info.flags));
             }
             printf(",\n");
@@ -455,7 +454,25 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                     break;
                 }
 
-                case DescriptorType::SAMPLER:
+                case DescriptorType::SAMPLER_2D_FLOAT:
+                case DescriptorType::SAMPLER_2D_INT:
+                case DescriptorType::SAMPLER_2D_UINT:
+                case DescriptorType::SAMPLER_2D_DEPTH:
+                case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_2D_ARRAY_INT:
+                case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+                case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+                case DescriptorType::SAMPLER_CUBE_FLOAT:
+                case DescriptorType::SAMPLER_CUBE_INT:
+                case DescriptorType::SAMPLER_CUBE_UINT:
+                case DescriptorType::SAMPLER_CUBE_DEPTH:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+                case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+                case DescriptorType::SAMPLER_3D_FLOAT:
+                case DescriptorType::SAMPLER_3D_INT:
+                case DescriptorType::SAMPLER_3D_UINT:
                 case DescriptorType::SAMPLER_EXTERNAL: {
                     assert_invariant(sampler.has_value());
                     const std::string samplerName = std::string(name.c_str()) + "Smplr";
@@ -551,7 +568,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     //After splitting the image samplers, we need to remap the bindings to separate them.
     rebindImageSamplerForWGSL(*spirv);
 
-    //Allow non-uniform derivitives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
+    //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
     tint::wgsl::writer::Options writerOpts{};
 
@@ -590,7 +607,9 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
     *outWsl = wgslOut->wgsl;
     return true;
 #else
-    slog.i << "Trying to emit WGSL without including WebGPU dependencies, please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU" << io::endl;
+    slog.i << "Trying to emit WGSL without including WebGPU dependencies,"
+            " please set CMake arg FILAMENT_SUPPORTS_WEBGPU and FILAMENT_SUPPORTS_WEBGPU"
+            << io::endl;
     return false;
 #endif
 
