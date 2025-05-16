@@ -246,6 +246,7 @@ struct TSampler {   // misnomer now; includes images, textures without sampler, 
         case EbtInt:    s.append("i");   break;
         case EbtUint:   s.append("u");   break;
         case EbtFloat16: s.append("f16"); break;
+        case EbtBFloat16: s.append("bf16"); break;
         case EbtInt8:   s.append("i8");  break;
         case EbtUint16: s.append("u8");  break;
         case EbtInt16:  s.append("i16"); break;
@@ -1854,7 +1855,7 @@ public:
     virtual void updateImplicitArraySize(int size) { assert(isArray()); arraySizes->updateImplicitSize(size); }
     virtual void setImplicitlySized(bool isImplicitSized) { arraySizes->setImplicitlySized(isImplicitSized); }
     virtual bool isStruct() const { return basicType == EbtStruct || basicType == EbtBlock; }
-    virtual bool isFloatingDomain() const { return basicType == EbtFloat || basicType == EbtDouble || basicType == EbtFloat16; }
+    virtual bool isFloatingDomain() const { return basicType == EbtFloat || basicType == EbtDouble || basicType == EbtFloat16 || basicType == EbtBFloat16; }
     virtual bool isIntegerDomain() const
     {
         switch (basicType) {
@@ -1960,6 +1961,7 @@ public:
             case EbtFloat:
             case EbtDouble:
             case EbtFloat16:
+            case EbtBFloat16:
             case EbtInt8:
             case EbtUint8:
             case EbtInt16:
@@ -1991,6 +1993,10 @@ public:
     bool contains16BitFloat() const
     {
         return containsBasicType(EbtFloat16);
+    }
+    bool containsBFloat16() const
+    {
+        return containsBasicType(EbtBFloat16);
     }
     bool contains64BitInt() const
     {
@@ -2113,6 +2119,7 @@ public:
         case EbtVoid:              return "void";
         case EbtDouble:            return "double";
         case EbtFloat16:           return "float16_t";
+        case EbtBFloat16:          return "bfloat16_t";
         case EbtInt8:              return "int8_t";
         case EbtUint8:             return "uint8_t";
         case EbtInt16:             return "int16_t";
@@ -2791,8 +2798,8 @@ public:
             else
                 rv = false;
         } else if (isCoopMatKHR() && right.isCoopMatKHR()) {
-            if (getBasicType() == EbtFloat || getBasicType() == EbtFloat16)
-                rv = right.getBasicType() == EbtFloat || right.getBasicType() == EbtFloat16 || right.getBasicType() == EbtCoopmat;
+            if (getBasicType() == EbtFloat || getBasicType() == EbtFloat16 || getBasicType() == EbtBFloat16)
+                rv = right.getBasicType() == EbtFloat || right.getBasicType() == EbtFloat16 || right.getBasicType() == EbtBFloat16 || right.getBasicType() == EbtCoopmat;
             else if (getBasicType() == EbtUint || getBasicType() == EbtUint8 || getBasicType() == EbtUint16)
                 rv = right.getBasicType() == EbtUint || right.getBasicType() == EbtUint8 || right.getBasicType() == EbtUint16 || right.getBasicType() == EbtCoopmat;
             else if (getBasicType() == EbtInt || getBasicType() == EbtInt8 || getBasicType() == EbtInt16)

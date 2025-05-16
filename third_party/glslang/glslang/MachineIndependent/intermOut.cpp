@@ -625,6 +625,10 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpConstructBMat4x2: out.debug << "Construct bmat4x2"; break;
     case EOpConstructBMat4x3: out.debug << "Construct bmat4x3"; break;
     case EOpConstructBMat4x4: out.debug << "Construct bmat4";   break;
+    case EOpConstructBFloat16:  out.debug << "Construct bfloat16_t"; break;
+    case EOpConstructBF16Vec2:  out.debug << "Construct bf16vec2";   break;
+    case EOpConstructBF16Vec3:  out.debug << "Construct bf16vec3";   break;
+    case EOpConstructBF16Vec4:  out.debug << "Construct bf16vec4";   break;
     case EOpConstructFloat16:   out.debug << "Construct float16_t"; break;
     case EOpConstructF16Vec2:   out.debug << "Construct f16vec2";   break;
     case EOpConstructF16Vec3:   out.debug << "Construct f16vec3";   break;
@@ -1159,6 +1163,7 @@ static void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const 
         case EbtFloat:
         case EbtDouble:
         case EbtFloat16:
+        case EbtBFloat16:
             OutputDouble(out, constUnion[i].getDConst(), extra);
             out.debug << "\n";
             break;

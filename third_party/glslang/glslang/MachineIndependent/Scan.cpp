@@ -537,6 +537,11 @@ const std::unordered_map<const char*, int, str_hash, str_eq> KeywordMap {
     {"f16mat4x3",F16MAT4X3},
     {"f16mat4x4",F16MAT4X4},
 
+    {"bfloat16_t",BFLOAT16_T},
+    {"bf16vec2",BF16VEC2},
+    {"bf16vec3",BF16VEC3},
+    {"bf16vec4",BF16VEC4},
+
     {"float32_t",FLOAT32_T},
     {"f32vec2",F32VEC2},
     {"f32vec3",F32VEC3},
@@ -1450,6 +1455,17 @@ int TScanContext::tokenizeIdentifier()
             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types) ||
             parseContext.extensionTurnedOn(E_GL_EXT_shader_explicit_arithmetic_types_float16))
+            return keyword;
+
+        return identifierOrType();
+
+    case BFLOAT16_T:
+    case BF16VEC2:
+    case BF16VEC3:
+    case BF16VEC4:
+        afterType = true;
+        if (parseContext.symbolTable.atBuiltInLevel() ||
+            parseContext.extensionTurnedOn(E_GL_EXT_bfloat16))
             return keyword;
 
         return identifierOrType();

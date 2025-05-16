@@ -91,7 +91,7 @@ public:
 #include <set>
 #include <cassert>
 
-#include "spirv.hpp"
+#include "spirv.hpp11"
 
 namespace spv {
 

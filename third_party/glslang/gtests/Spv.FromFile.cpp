@@ -644,6 +644,9 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.vulkan110.storageBuffer.vert",
 
         // These tests use the Vulkan memory model.
+        "spv.bfloat16.comp",
+        "spv.bfloat16_error.comp",
+        "spv.bfloat16_error.frag",
         "spv.bufferhandle1.frag",
         "spv.bufferhandle10.frag",
         "spv.coopmat.comp",
@@ -786,7 +789,8 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.coopmat2_constructor.comp",
         "spv.coopmat2_error.comp",
         "spv.coopmat2_tensor.comp",
-        "spv.1.6.nontemporalimage.frag"
+        "spv.1.6.nontemporalimage.frag",
+        "spv.noexplicitlayout.comp",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -1007,6 +1011,8 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.debuginfo.include.glsl.frag",
         "spv.debuginfo.multiline.glsl.frag",
         "spv.debuginfo.implicit_br.glsl.frag",
+        "spv.debuginfo.non_ascii.glsl.frag",
+        "spv.debuginfo.continued.glsl.vert",
     })),
     FileNameAsCustomTestSuffix
 );
