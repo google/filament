@@ -73,20 +73,14 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
             1,                                  // depth
             usage));                             // usage
 
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
     RenderPassParams params = {};
     fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
     params.clearColor = { 0.f, 1.f, 0.f, 1.f };
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
-
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
@@ -179,20 +173,14 @@ TEST_F(BackendTest, RenderExternalImage) {
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);
 
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
     RenderPassParams params = {};
     fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
     params.clearColor = { 0.f, 1.f, 0.f, 1.f };
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
-
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     api.startCapture(0);
     api.makeCurrent(swapChain, swapChain);

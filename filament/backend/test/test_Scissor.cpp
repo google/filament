@@ -80,8 +80,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         });
 
         // Create source color and depth textures.
-        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kNumLevels,
-                kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+                kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
                 TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
         Handle<HwTexture> depthTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::DEPTH16, 1, 512, 512, 1,
@@ -104,12 +104,12 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
         Handle<HwRenderTarget> srcRenderTarget = cleanup.add(api.createRenderTarget(
-                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {}));
+                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1,
+                0, { srcTexture, kSrcLevel, 0 }, { depthTexture, 0, 0 }, {}));
 
-        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {}, {}));
+        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(
+                api.createRenderTarget(TargetBufferFlags::COLOR, kSrcTexHeight >> kSrcLevel,
+                        kSrcTexWidth >> kSrcLevel, 1, 0, {srcTexture, kSrcLevel, 0}, {}, {}));
 
         TrianglePrimitive triangle(api);
 
@@ -121,10 +121,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
-        PipelineState ps = {};
-        ps.program = shader.getProgram();
-        ps.rasterState.colorWrite = true;
-        ps.rasterState.depthWrite = false;
+        PipelineState ps = getColorWritePipelineState();
+        shader.addProgramToPipelineState(ps);
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -203,10 +201,8 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
 
-        PipelineState ps = {};
-        ps.program = shader.getProgram();
-        ps.rasterState.colorWrite = true;
-        ps.rasterState.depthWrite = false;
+        PipelineState ps = getColorWritePipelineState();
+        shader.addProgramToPipelineState(ps);
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
