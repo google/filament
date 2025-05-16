@@ -548,6 +548,8 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
 
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     mTexture = src->mTexture;
+    mAspect = src->mAspect;
+
     mTexView = makeTextureView(baseLevel, levelCount, target);
 }
 

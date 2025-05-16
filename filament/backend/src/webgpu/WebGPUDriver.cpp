@@ -762,9 +762,17 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
         data = &reshapedData;
     }
     auto texture = handleCast<WGPUTexture>(th);
+
+    // TODO: Writing to a depth texture is illegal and errors. I'm not sure why Filament is trying
+    // to do so, but early returning is working?
+    if(texture->getAspect() == wgpu::TextureAspect::DepthOnly){
+        scheduleDestroy(std::move(p));
+        return;
+    }
     auto copyInfo = wgpu::TexelCopyTextureInfo{ .texture = texture->getTexture(),
         .mipLevel = level,
-        .origin = { .x = xoffset, .y = yoffset, .z = zoffset } };
+        .origin = { .x = xoffset, .y = yoffset, .z = zoffset },
+        .aspect = texture->getAspect() };
     uint32_t bytesPerRow = static_cast<uint32_t>(
             PixelBufferDescriptor::computePixelSize(data->format, data->type) * width);
     auto extent = wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth };

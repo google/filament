@@ -161,6 +161,7 @@ public:
             wgpu::Device const& device) noexcept;
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    wgpu::TextureAspect getAspect() const { return mAspect; }
 
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTexView() const { return mTexView; }
