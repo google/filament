@@ -172,6 +172,8 @@ void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= buffer.GetSize())
             << "Attempting to copy " << bufferDescriptor.size << " bytes into a buffer of size "
             << buffer.GetSize() << " at offset " << byteOffset;
+    FILAMENT_CHECK_PRECONDITION(byteOffset % 4 == 0)
+            << "Byte offset must be a multiple of 4 but is " << byteOffset;
 
     // TODO: All buffer objects are created with CopyDst usage.
     // This may have some performance implications. That should be investigated later.

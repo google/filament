@@ -234,6 +234,9 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
     printAdapterDetails(mAdapter);
 #endif
     mDevice = mPlatform.requestDevice(mAdapter);
+    wgpu::Limits supportedLimits{};
+    mDevice.GetLimits(&supportedLimits);
+    mMinUniformBufferOffsetAlignment = supportedLimits.minUniformBufferOffsetAlignment;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printDeviceDetails(mDevice);
 #endif
@@ -1015,6 +1018,9 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
         // TODO making assumptions that size and offset mean the same thing here.
+        FILAMENT_CHECK_PRECONDITION(offset % mMinUniformBufferOffsetAlignment == 0)
+                << "Binding offset must be multiple of " << mMinUniformBufferOffsetAlignment
+                << "But requested offset is " << offset;
         wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
             .buffer = buffer->getBuffer(),
             .offset = offset,
