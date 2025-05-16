@@ -138,13 +138,12 @@ TEST_F(BackendTest, TextureViewLod) {
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {}));
         {
-            RenderPassParams params = {};
-            fullViewport(params);
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardStart = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
             PipelineState state = getColorWritePipelineState();
             whiteShader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
+            params.viewport = getFullViewport();
+
             api.beginRenderPass(renderTarget, params);
             api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
             api.endRenderPass();
@@ -153,14 +152,11 @@ TEST_F(BackendTest, TextureViewLod) {
         backend::Handle<HwRenderTarget> defaultRenderTarget =
                 cleanup.add(api.createDefaultRenderTarget(0));
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 0.f, 0.5f, 1.f};
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);
+
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {
