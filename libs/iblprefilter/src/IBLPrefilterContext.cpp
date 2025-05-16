@@ -99,7 +99,7 @@ IBLPrefilterContext::IBLPrefilterContext(Engine& engine)
     mVertexBuffer = VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0,
+            .attribute(POSITION, 0,
                     VertexBuffer::AttributeType::FLOAT4, 0)
             .build(engine);
 
@@ -180,7 +180,7 @@ IBLPrefilterContext& IBLPrefilterContext::operator=(IBLPrefilterContext&& rhs) n
 
 IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
         IBLPrefilterContext& context,
-        IBLPrefilterContext::EquirectangularToCubemap::Config const& config)
+        Config const& config)
         : mContext(context), mConfig(config) {
     Engine& engine = mContext.mEngine;
     mEquirectMaterial = Material::Builder().package(
@@ -198,7 +198,7 @@ IBLPrefilterContext::EquirectangularToCubemap::~EquirectangularToCubemap() noexc
 }
 
 IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
-        IBLPrefilterContext::EquirectangularToCubemap&& rhs) noexcept
+        EquirectangularToCubemap&& rhs) noexcept
         : mContext(rhs.mContext) {
     using std::swap;
     swap(mEquirectMaterial, rhs.mEquirectMaterial);
@@ -206,7 +206,7 @@ IBLPrefilterContext::EquirectangularToCubemap::EquirectangularToCubemap(
 
 IBLPrefilterContext::EquirectangularToCubemap&
 IBLPrefilterContext::EquirectangularToCubemap::operator=(
-        IBLPrefilterContext::EquirectangularToCubemap&& rhs) noexcept {
+        EquirectangularToCubemap&& rhs) noexcept {
     using std::swap;
     if (this != &rhs) {
         swap(mEquirectMaterial, rhs.mEquirectMaterial);
@@ -300,7 +300,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
 // ------------------------------------------------------------------------------------------------
 
 IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& context,
-        IBLPrefilterContext::IrradianceFilter::Config config)
+        Config config)
         : mContext(context),
          mSampleCount(std::min(config.sampleCount, uint16_t(2048))) {
 
@@ -362,13 +362,13 @@ IBLPrefilterContext::IrradianceFilter::~IrradianceFilter() noexcept {
 }
 
 IBLPrefilterContext::IrradianceFilter::IrradianceFilter(
-        IBLPrefilterContext::IrradianceFilter&& rhs) noexcept
+        IrradianceFilter&& rhs) noexcept
         : mContext(rhs.mContext) {
     this->operator=(std::move(rhs));
 }
 
 IBLPrefilterContext::IrradianceFilter& IBLPrefilterContext::IrradianceFilter::operator=(
-        IBLPrefilterContext::IrradianceFilter&& rhs) noexcept {
+        IrradianceFilter&& rhs) noexcept {
     using std::swap;
     if (this != & rhs) {
         swap(mKernelMaterial, rhs.mKernelMaterial);
@@ -378,9 +378,8 @@ IBLPrefilterContext::IrradianceFilter& IBLPrefilterContext::IrradianceFilter::op
     return *this;
 }
 
-filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
-        IBLPrefilterContext::IrradianceFilter::Options options,
-        filament::Texture const* environmentCubemap, filament::Texture* outIrradianceTexture) {
+Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
+        Texture const* environmentCubemap, Texture* outIrradianceTexture) {
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     using namespace backend;
@@ -470,12 +469,12 @@ filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
 }
 
 UTILS_NOINLINE
-filament::Texture* IBLPrefilterContext::IrradianceFilter::operator()(
-        filament::Texture const* environmentCubemap, filament::Texture* outIrradianceTexture) {
+Texture* IBLPrefilterContext::IrradianceFilter::operator()(
+        Texture const* environmentCubemap, Texture* outIrradianceTexture) {
     return operator()({}, environmentCubemap, outIrradianceTexture);
 }
 
-filament::Texture* IBLPrefilterContext::IrradianceFilter::createIrradianceTexture() {
+Texture* IBLPrefilterContext::IrradianceFilter::createIrradianceTexture() {
     Engine& engine = mContext.mEngine;
 
     Texture* const outCubemap = Texture::Builder()
@@ -614,7 +613,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
 }
 
 Texture* IBLPrefilterContext::SpecularFilter::operator()(
-        IBLPrefilterContext::SpecularFilter::Options options,
+        Options options,
         Texture const* environmentCubemap, Texture* outReflectionsTexture) {
 
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);

@@ -267,7 +267,7 @@ private:
     void getPostProcessProgramSlow(Variant variant,
             CompilerPriorityQueue priorityQueue) const noexcept;
     backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const noexcept;
+            Variant vertexVariant, Variant fragmentVariant) const;
 
     void processBlendingMode(MaterialParser const* parser);
 

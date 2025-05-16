@@ -1017,7 +1017,7 @@ public:
      *
      * @see setPaused
      */
-    bool isPaused() const noexcept;
+    bool isPaused() const noexcept(UTILS_HAS_THREADING);
 
     /**
      * Pause or resume rendering thread.
