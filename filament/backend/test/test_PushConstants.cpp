@@ -21,10 +21,15 @@
 #include "ShaderGenerator.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
+#include "backend/DriverEnums.h"
+#include "backend/Handle.h"
 
 #include <utils/Hash.h>
 
 namespace test {
+
+static ShaderGenerator::PushConstants gVertConstants;
+static ShaderGenerator::PushConstants gFragConstants;
 
 using namespace filament;
 using namespace filament::backend;
@@ -79,9 +84,29 @@ void main() {
     fragColor = vec4(pushConstants.red, pushConstants.green, pushConstants.blue, 1.0);
 })";
 
+void initPushConstants() {
+    // TODO: move this initialization to a more appropriate place.
+    gVertConstants.clear();
+    gFragConstants.clear();
+
+    gVertConstants.reserve(4);
+    gVertConstants.resize(4);
+    gVertConstants[pushConstantIndex.TRIANGLE_HIDE] = {"hideTriangle", backend::ConstantType::BOOL};
+    gVertConstants[pushConstantIndex.TRIANGLE_SCALE] = {"triangleScale", backend::ConstantType::FLOAT};
+    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_X] = {"triangleOffsetX", backend::ConstantType::FLOAT};
+    gVertConstants[pushConstantIndex.TRIANGLE_OFFSET_Y] = {"triangleOffsetY", backend::ConstantType::FLOAT};
+
+    gFragConstants.reserve(4);
+    gFragConstants.resize(4);
+    gFragConstants[pushConstantIndex.RED] = {"red", backend::ConstantType::FLOAT};
+    gFragConstants[pushConstantIndex.GREEN] = {"green", backend::ConstantType::FLOAT};
+    gFragConstants[pushConstantIndex.BLUE] = {"blue", backend::ConstantType::FLOAT};
+}
+
 TEST_F(BackendTest, PushConstants) {
     SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
-    FAIL_IF(Backend::VULKAN, "Crashing due to no program set when setting push constants");
+
+    initPushConstants();
 
     auto& api = getDriverApi();
 
@@ -97,7 +122,8 @@ TEST_F(BackendTest, PushConstants) {
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
-        Program p = shaderGen.getProgram(api);
+        Program p =
+                shaderGen.getProgramWithPushConstants(api, { gVertConstants, gFragConstants, {} });
         ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
 
         Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
@@ -113,6 +139,7 @@ TEST_F(BackendTest, PushConstants) {
 
         PipelineState ps = {};
         ps.program = program;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
 
@@ -120,6 +147,8 @@ TEST_F(BackendTest, PushConstants) {
         api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(renderTarget, params);
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
 
         // Set the push constants to scale the triangle in half
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_HIDE, false);
@@ -129,7 +158,7 @@ TEST_F(BackendTest, PushConstants) {
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.RED, 0.25f);
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.GREEN, 0.5f);
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.BLUE, 1.0f);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.draw2(0, 3, 1);
 
         // Draw another triangle, transposed to the upper-right.
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_OFFSET_X, 0.5f);
@@ -139,7 +168,7 @@ TEST_F(BackendTest, PushConstants) {
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.GREEN, 0.5f);
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.BLUE, 0.25f);
 
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.draw2(0, 3, 1);
 
         // Draw a final triangle, transposed to the lower-left.
         api.setPushConstant(ShaderStage::VERTEX, pushConstantIndex.TRIANGLE_OFFSET_X, -0.5f);
@@ -149,7 +178,7 @@ TEST_F(BackendTest, PushConstants) {
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.GREEN, 0.25f);
         api.setPushConstant(ShaderStage::FRAGMENT, pushConstantIndex.BLUE, 1.00f);
 
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        api.draw2(0, 3, 1);
 
         api.endRenderPass();
 

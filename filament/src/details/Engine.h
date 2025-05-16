@@ -486,10 +486,29 @@ public:
         return mPerRenderableDescriptorSetLayout;
     }
 
-    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
-    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
-    backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTexture() const {
+        return mDummyOneTexture;
+    }
+
+    backend::Handle<backend::HwTexture> getOneTextureArray() const {
+        return mDummyOneTextureArray;
+    }
+
+    backend::Handle<backend::HwTexture> getOneTextureArrayDepth() const {
+        return mDummyOneTextureArrayDepth;
+    }
+
+    backend::Handle<backend::HwTexture> getZeroTexture() const {
+        return mDummyZeroTexture;
+    }
+
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const {
+        return mDummyZeroTextureArray;
+    }
+
+    backend::Handle<backend::HwBufferObject> getDummyUniformBuffer() const {
+        return mDummyUniformBuffer;
+    }
 
     static constexpr size_t MiB = 1024u * 1024u;
     size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
@@ -628,8 +647,10 @@ private:
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArrayDepth;
     backend::Handle<backend::HwTexture> mDummyZeroTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
+    backend::Handle<backend::HwBufferObject> mDummyUniformBuffer;
 
     std::thread::id mMainThreadId{};
 

@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 #include <utils/Hash.h>
@@ -30,6 +31,8 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, ScissorViewportRegion) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Affected area in wrong corner, see b/417229118");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 1024;

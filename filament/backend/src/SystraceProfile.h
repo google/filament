@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
 #define TNT_FILAMENT_BACKEND_SYSTRACEPROFILE_H
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
 
 #define PROFILE_SCOPE(marker)       SYSTRACE_NAME(marker)
 

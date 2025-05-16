@@ -26,6 +26,7 @@
 
 #include <utils/FixedCapacityVector.h>
 #include <utils/memalign.h>
+#include <utils/Panic.h>
 
 #include <uberz/ReadableArchive.h>
 #include <uberz/WritableArchive.h>

@@ -373,18 +373,30 @@ struct RenderQuality {
  * @see setAmbientOcclusionOptions()
  */
 struct AmbientOcclusionOptions {
+    enum class AmbientOcclusionType : uint8_t {
+        SAO,        //!< use Scalable Ambient Occlusion
+        GTAO,       //!< use Ground Truth-Based Ambient Occlusion
+    };
+
+    AmbientOcclusionType aoType = AmbientOcclusionType::SAO;//!< Type of ambient occlusion algorithm.
     float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
     float power = 1.0f;     //!< Controls ambient occlusion's contrast. Must be positive.
-    float bias = 0.0005f;   //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+
+    /**
+     * Self-occlusion bias in meters. Use to avoid self-occlusion.
+     * Between 0 and a few mm. No effect when aoType set to GTAO
+     */
+    float bias = 0.0005f;
+
     float resolution = 0.5f;//!< How each dimension of the AO buffer is scaled. Must be either 0.5 or 1.0.
     float intensity = 1.0f; //!< Strength of the Ambient Occlusion effect.
     float bilateralThreshold = 0.05f; //!< depth distance that constitute an edge for filtering
-    QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO.
-    QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness
+    QualityLevel quality = QualityLevel::LOW; //!< affects # of samples used for AO and params for filtering
+    QualityLevel lowPassFilter = QualityLevel::MEDIUM; //!< affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
     QualityLevel upsampling = QualityLevel::LOW; //!< affects AO buffer upsampling quality
     bool enabled = false;    //!< enables or disables screen-space ambient occlusion
     bool bentNormals = false; //!< enables bent normals computation from AO, and specular AO
-    float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider
+    float minHorizonAngleRad = 0.0f;  //!< min angle in radian to consider. No effect when aoType set to GTAO.
     /**
      * Screen Space Cone Tracing (SSCT) options
      * Ambient shadows from dominant light
@@ -402,6 +414,16 @@ struct AmbientOcclusionOptions {
         bool enabled = false;            //!< enables or disables SSCT
     };
     Ssct ssct;                           // %codegen_skip_javascript% %codegen_java_flatten%
+
+    /**
+     * Ground Truth-base Ambient Occlusion (GTAO) options
+     */
+    struct Gtao {
+        uint8_t sampleSliceCount = 4;     //!< # of slices. Higher value makes less noise.
+        uint8_t sampleStepsPerSlice = 3;  //!< # of steps the radius is divided into for integration. Higher value makes less bias.
+        float thicknessHeuristic = 0.004f; //!< thickness heuristic, should be closed to 0
+    };
+    Gtao gtao;                           // %codegen_skip_javascript% %codegen_java_flatten%
 };
 
 /**

@@ -19,6 +19,7 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/Panic.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -254,8 +255,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return fEntry.type == DescriptorType::SAMPLER ||
-                       fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
+                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
             });
 
 
@@ -271,8 +271,26 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         entryInfo.binding = wEntry.binding;
 
         switch (fEntry.type) {
-            case DescriptorType::SAMPLER_EXTERNAL:
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_EXTERNAL: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
@@ -479,30 +497,10 @@ void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& en
     mEntriesByBindingAdded[index] = true;
 }
 
-uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
-    // mDynamicOffsets already reserves enough memory for the number of entries in the set
-    mDynamicOffsets.clear();
-    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
-    // unused entries TODO: is this necessary?
-    size_t inputIndex = 0;
-    size_t outputIndex = 0;
-    for (auto const& entry : mEntriesSortedByBinding) {
-        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
-            if (mEntriesByBindingAdded[entry.binding]) {
-                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
-            } else {
-                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
-            }
-        }
-    }
-    return mDynamicOffsets.data();
-}
-
 size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesByBindingWithDynamicOffsets.count();
 }
 
-// From createTextureR
 WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
         uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
@@ -516,6 +514,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     // First, the texture aspect, starting with the defaults/basic configuration
     mUsage = fToWGPUTextureUsage(usage);
     mFormat = fToWGPUTextureFormat(format);
+    mAspect = fToWGPUTextureViewAspect(usage, format);
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
         .usage = mUsage,
@@ -560,13 +559,12 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mTexView = makeTextureView(0, levels, target);
 }
 
-// From createTextureViewR
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     mTexture = src->mTexture;
     mTexView = makeTextureView(baseLevel, levelCount, target);
 }
 
-wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) {
+wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
 
     // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
@@ -614,8 +612,9 @@ wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(const TextureUsage& fUsage) 
     //  PROTECTED
     return retUsage;
 }
-wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsage) {
-    switch (fUsage) {
+
+wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {
+    switch (fFormat) {
         case filament::backend::TextureFormat::R8:
             return wgpu::TextureFormat::R8Unorm;
         case filament::backend::TextureFormat::R8_SNORM:
@@ -854,24 +853,57 @@ wgpu::TextureFormat WGPUTexture::fToWGPUTextureFormat(const TextureFormat& fUsag
     }
 }
 
+wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fUsage,
+        TextureFormat const& fFormat) {
+
+    const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
+    const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
+    const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
+    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+
+    if (isDepth && !isColor && !isStencil) {
+        return wgpu::TextureAspect::DepthOnly;
+    }
+
+    if (isStencil && !isColor && !isDepth) {
+        return wgpu::TextureAspect::StencilOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::DEPTH32F ||
+            fFormat == filament::backend::TextureFormat::DEPTH24 ||
+            fFormat == filament::backend::TextureFormat::DEPTH16) {
+        return wgpu::TextureAspect::DepthOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::STENCIL8) {
+        return wgpu::TextureAspect::StencilOnly;
+    }
+
+    if (fFormat == filament::backend::TextureFormat::DEPTH24_STENCIL8 ||
+            fFormat == filament::backend::TextureFormat::DEPTH32F_STENCIL8) {
+        if (isSample) {
+            return wgpu::TextureAspect::DepthOnly;
+        }
+    }
+
+    return wgpu::TextureAspect::All;
+}
+
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
         SamplerType target) {
-    // starting with the defaults/basic configuration
+
     wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mFormat,
-        // dimension depends on target and is set below
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
-        // baseArrayLayer is required, making a guess
+        // TODO: check if this baseArrayLayer assumption is correct
         .baseArrayLayer = 0,
         .arrayLayerCount = mArrayLayerCount,
-        // Have not found an analog to aspect in other drivers, but ALL should be unrestrictive.
-        // TODO Can we make this better?
-        .aspect = wgpu::TextureAspect::All,
+        .aspect = mAspect,
         .usage = mUsage
     };
-    // adjust for specific cases
+
     switch (target) {
         case SamplerType::SAMPLER_2D:
             textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;

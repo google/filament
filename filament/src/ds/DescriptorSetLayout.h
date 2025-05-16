@@ -23,6 +23,7 @@
 #include <backend/Handle.h>
 
 #include <utils/bitset.h>
+#include <utils/FixedCapacityVector.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -56,8 +57,16 @@ public:
         return mMaxDescriptorBinding;
     }
 
+    bool isValid(backend::descriptor_binding_t const binding) const noexcept {
+        return mSamplers[binding] || mUniformBuffers[binding];
+    }
+
     bool isSampler(backend::descriptor_binding_t const binding) const noexcept {
         return mSamplers[binding];
+    }
+
+    utils::bitset64 getValidDescriptors() const noexcept {
+        return mSamplers | mUniformBuffers;
     }
 
     utils::bitset64 getSamplerDescriptors() const noexcept {
@@ -68,11 +77,17 @@ public:
         return mUniformBuffers;
     }
 
+    backend::DescriptorType getDescriptorType(
+        backend::descriptor_binding_t const binding) const noexcept {
+        return mDescriptorTypes[binding];
+    }
+
 private:
     backend::DescriptorSetLayoutHandle mDescriptorSetLayoutHandle;
     utils::bitset64 mSamplers;
     utils::bitset64 mUniformBuffers;
     uint8_t mMaxDescriptorBinding = 0;
+    utils::FixedCapacityVector<backend::DescriptorType> mDescriptorTypes;
 };
 
 

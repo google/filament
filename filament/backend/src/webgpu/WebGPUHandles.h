@@ -74,8 +74,8 @@ public:
 
 private:
     // TODO: can we do better in terms on heap management.
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout {};
-    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes {};
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout{};
+    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes{};
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
@@ -142,11 +142,10 @@ public:
 
     wgpu::BindGroup lockAndReturn(wgpu::Device const&);
     void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
-    [[nodiscard]] uint32_t const* setDynamicOffsets(uint32_t const* offsets);
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
-private:
 
+private:
     static wgpu::Buffer sDummyUniformBuffer;
     static wgpu::Texture sDummyTexture;
     static wgpu::TextureView sDummyTextureView;
@@ -161,10 +160,10 @@ private:
     // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
-    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding {};
+    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
     std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets {};
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded {};
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets{};
+    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded{};
     std::vector<uint32_t> mDynamicOffsets;
     wgpu::BindGroup mBindGroup = nullptr;
 };
@@ -177,11 +176,14 @@ public:
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
-    const wgpu::Texture& getTexture() const { return mTexture; }
-    const wgpu::TextureView& getTexView() const { return mTexView; }
+    [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
+    [[nodiscard]] const wgpu::TextureView& getTexView() const { return mTexView; }
 
-    // Public to allow checking for support of a texture format
-    static wgpu::TextureFormat fToWGPUTextureFormat(const filament::backend::TextureFormat& fUsage);
+    static wgpu::TextureFormat fToWGPUTextureFormat(
+            filament::backend::TextureFormat const& fFormat);
+    static wgpu::TextureAspect fToWGPUTextureViewAspect(
+            filament::backend::TextureUsage const& fUsage,
+            filament::backend::TextureFormat const& fFormat);
 
 private:
     wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
@@ -192,9 +194,10 @@ private:
     wgpu::Texture mTexture = nullptr;
     wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
     wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
+    wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
     uint32_t mArrayLayerCount = 1;
     wgpu::TextureView mTexView = nullptr;
-    wgpu::TextureUsage fToWGPUTextureUsage(const filament::backend::TextureUsage& fUsage);
+    wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
@@ -252,7 +255,7 @@ private:
 
     Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
     math::uint2 attachmentSize = {};
-    std::vector<wgpu::RenderPassColorAttachment> colorAttachments {};
+    std::vector<wgpu::RenderPassColorAttachment> colorAttachments{};
 };
 
 }// namespace filament::backend

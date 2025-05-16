@@ -99,6 +99,8 @@ struct MaterialParams {
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Image is unexpectedly darker, see b/417226296");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
             "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
             "data");
@@ -118,7 +120,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         Shader shader = Shader(api, cleanup, ShaderConfig {
             .vertexShader = fullscreenVs,
             .fragmentShader = fullscreenFs,
-            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}, {"Params"}}
         });
 
         TrianglePrimitive const triangle(getDriverApi());

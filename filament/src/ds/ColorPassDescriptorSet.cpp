@@ -79,7 +79,7 @@ uint8_t ColorPassDescriptorSet::getIndex(
         index |= 0x2;
     }
 
-    if (!fog) {
+    if (fog) {
         // this will remove samplers needed for fog
         index |= 0x4;
     }
@@ -88,29 +88,21 @@ uint8_t ColorPassDescriptorSet::getIndex(
     return index;
 }
 
-
-ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
+ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine, bool const vsm,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept
-        : mUniforms(uniforms) {
-
-    constexpr UserVariantFilterMask filterFog = UserVariantFilterMask(UserVariantFilterBit::FOG);
-    constexpr UserVariantFilterMask keepFog = UserVariantFilterMask(0);
-
+    : mUniforms(uniforms), mIsVsm(vsm) {
     for (bool const lit: { false, true }) {
         for (bool const ssr: { false, true }) {
             for (bool const fog: { false, true }) {
-                auto index = getIndex(lit, ssr, fog);
+                auto const index = getIndex(lit, ssr, fog);
                 mDescriptorSetLayout[index] = {
                         engine.getDescriptorSetLayoutFactory(),
                         engine.getDriverApi(),
                         descriptor_sets::getPerViewDescriptorSetLayout(
-                                MaterialDomain::SURFACE,
-                                fog ? keepFog : filterFog,
-                                lit,
-                                ssr ? ReflectionMode::SCREEN_SPACE : ReflectionMode::DEFAULT,
-                                ssr ? RefractionMode::SCREEN_SPACE : RefractionMode::NONE)
+                                MaterialDomain::SURFACE, lit, ssr, fog, vsm)
                 };
-                mDescriptorSet[index] = DescriptorSet{ mDescriptorSetLayout[index] };
+                mDescriptorSet[index] = DescriptorSet{
+                        "ColorPassDescriptorSet", mDescriptorSetLayout[index] };
             }
         }
     }
@@ -118,11 +110,11 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
     setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
             uniforms.getUboHandle(), 0, uniforms.getSize());
 
-    if (engine.getDFG().isValid()) {
-        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
-        setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
-                engine.getDFG().getTexture(), sampler.getSamplerParams());
-    }
+    setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
+            engine.getDFG().isValid() ?
+                    engine.getDFG().getTexture() : engine.getZeroTexture(), {
+                    .filterMag = SamplerMagFilter::LINEAR
+            });
 }
 
 void ColorPassDescriptorSet::init(
@@ -130,12 +122,14 @@ void ColorPassDescriptorSet::init(
         BufferObjectHandle lights,
         BufferObjectHandle recordBuffer,
         BufferObjectHandle froxelBuffer) noexcept {
-    for (auto&& descriptorSet: mDescriptorSet) {
-        descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        auto& descriptorSet = mDescriptorSet[i];
+        auto const& layout = mDescriptorSetLayout[i];
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::LIGHTS,
                 lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER,
                 recordBuffer, 0, sizeof(FroxelRecordUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::FROXEL_BUFFER,
                 froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }
 }
@@ -305,6 +299,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
 
 void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
         AmbientOcclusionOptions const& options) noexcept {
+
     // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
     // least set to high and of course only if upsampling is needed.
     const bool highQualitySampling = options.upsampling >= QualityLevel::HIGH
@@ -537,20 +532,28 @@ void ColorPassDescriptorSet::commit(DriverApi& driver) noexcept {
         driver.updateBufferObject(mUniforms.getUboHandle(),
                 mUniforms.toBufferDescriptor(driver), 0);
     }
+
+
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         mDescriptorSet[i].commit(mDescriptorSetLayout[i], driver);
     }
 }
 
-void ColorPassDescriptorSet::unbindSamplers(DriverApi&) noexcept {
+void ColorPassDescriptorSet::unbindSamplers(FEngine& engine) noexcept {
     // this needs to reset the sampler that are only set in RendererUtils::colorPass(), because
     // this descriptor-set is also used for ssr/picking/structure and these could be stale
     // it would be better to use a separate descriptor-set for those two cases so that we don't
     // have to do this
-    setSampler(+PerViewBindingPoints::STRUCTURE, {}, {});
-    setSampler(+PerViewBindingPoints::SHADOW_MAP, {}, {});
-    setSampler(+PerViewBindingPoints::SSAO, {}, {});
-    setSampler(+PerViewBindingPoints::SSR, {}, {});
+    setBuffer(+PerViewBindingPoints::SHADOWS,
+            engine.getDummyUniformBuffer(), 0, sizeof(ShadowUib));
+    setSampler(+PerViewBindingPoints::STRUCTURE,
+            engine.getZeroTexture(), {});
+    setSampler(+PerViewBindingPoints::SHADOW_MAP,
+            engine.getOneTextureArrayDepth(), {});
+    setSampler(+PerViewBindingPoints::SSAO,
+            engine.getZeroTextureArray(), {});
+    setSampler(+PerViewBindingPoints::SSR,
+            engine.getZeroTextureArray(), {});
 }
 
 void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
@@ -558,7 +561,7 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
         if (samplers[binding]) {
-            mDescriptorSet[i].setSampler(binding, th, params);
+            mDescriptorSet[i].setSampler(mDescriptorSetLayout[i], binding, th, params);
         }
     }
 }
@@ -566,9 +569,10 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
 void ColorPassDescriptorSet::setBuffer(descriptor_binding_t const binding,
         BufferObjectHandle boh, uint32_t const offset, uint32_t const size) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
-        auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();
+        auto const& layout = mDescriptorSetLayout[i];
+        auto ubos = layout.getUniformBufferDescriptors();
         if (ubos[binding]) {
-            mDescriptorSet[i].setBuffer(binding, boh, offset, size);
+            mDescriptorSet[i].setBuffer(layout, binding, boh, offset, size);
         }
     }
 }

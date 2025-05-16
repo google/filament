@@ -19,6 +19,8 @@
 
 #include "MetalContext.h"
 
+#include <utils/Panic.h>
+
 namespace filament {
 namespace backend {
 

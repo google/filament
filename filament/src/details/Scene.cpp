@@ -28,10 +28,11 @@
 
 #include "BufferPoolAllocator.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
 #include <utils/Range.h>
-#include <utils/Systrace.h>
 
 #include <math/quat.h>
 
@@ -59,9 +60,9 @@ void FScene::prepare(JobSystem& js,
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    SYSTRACE_CONTEXT();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // This will reset the allocator upon exiting
     ArenaScope<RootArenaScope::Arena> localArenaScope(rootArenaScope.getArena());
@@ -90,7 +91,7 @@ void FScene::prepare(JobSystem& js,
     LightInstanceContainer lightInstances{
             LightInstanceContainer::with_capacity(entities.size(), localArenaScope.getArena()) };
 
-    SYSTRACE_NAME_BEGIN("InstanceLoop");
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "InstanceLoop");
 
     // find the max intensity directional light index in our local array
     float maxIntensity = 0.0f;
@@ -124,7 +125,7 @@ void FScene::prepare(JobSystem& js,
         }
     }
 
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     /*
      * Evaluate the capacity needed for the renderable and light SoAs
@@ -172,7 +173,7 @@ void FScene::prepare(JobSystem& js,
 
     auto renderableWork = [first = renderableInstances.data(), &rcm, &tcm, &worldTransform,
                  &sceneData, shadowReceiversAreCasters](auto* p, auto c) {
-        SYSTRACE_NAME("renderableWork");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "renderableWork");
 
         for (size_t i = 0; i < c; i++) {
             auto [ri, ti] = p[i];
@@ -220,7 +221,7 @@ void FScene::prepare(JobSystem& js,
 
     auto lightWork = [first = lightInstances.data(), &lcm, &tcm, &worldTransform,
             &lightData](auto* p, auto c) {
-        SYSTRACE_NAME("lightWork");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "lightWork");
         for (size_t i = 0; i < c; i++) {
             auto [li, ti] = p[i];
             // this is where we go from double to float for our transforms
@@ -242,7 +243,7 @@ void FScene::prepare(JobSystem& js,
     };
 
 
-    SYSTRACE_NAME_BEGIN("Renderable and Light jobs");
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "Renderable and Light jobs");
 
     JobSystem::Job* rootJob = js.createJob();
 
@@ -323,11 +324,11 @@ void FScene::prepare(JobSystem& js,
 
     js.runAndWait(rootJob);
 
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 }
 
 void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     RenderableSoa& sceneData = mRenderableData;
     FRenderableManager const& rcm = mEngine.getRenderableManager();
 
@@ -385,7 +386,7 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
 void FScene::updateUBOs(
         Range<uint32_t> visibleRenderables,
         Handle<HwBufferObject> renderableUbh) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     FEngine::DriverApi& driver = mEngine.getDriverApi();
 
     // don't allocate more than 16 KiB directly into the render stream

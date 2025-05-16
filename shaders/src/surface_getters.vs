@@ -24,7 +24,7 @@ float getObjectUserData() {
 #if __VERSION__ >= 300
 /** @public-api */
 int getVertexIndex() {
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     return gl_VertexIndex;
 #else
     return gl_VertexID;

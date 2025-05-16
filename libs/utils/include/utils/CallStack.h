@@ -23,9 +23,11 @@
 
 #include <utils/CString.h>
 #include <utils/compiler.h>
-#include <utils/ostream.h>
 
 namespace utils {
+namespace io {
+class ostream;
+}
 
 /**
  * CallStack captures the current's thread call stack.
@@ -88,23 +90,23 @@ public:
 
     bool operator <(const CallStack& rhs) const;
 
-    inline bool operator >(const CallStack& rhs) const {
+    bool operator >(const CallStack& rhs) const {
         return rhs < *this;
     }
 
-    inline bool operator !=(const CallStack& rhs) const {
+    bool operator !=(const CallStack& rhs) const {
         return *this < rhs || rhs < *this;
     }
 
-    inline bool operator >=(const CallStack& rhs) const {
+    bool operator >=(const CallStack& rhs) const {
         return !operator <(rhs);
     }
 
-    inline bool operator <=(const CallStack& rhs) const {
+    bool operator <=(const CallStack& rhs) const {
         return !operator >(rhs);
     }
 
-    inline bool operator ==(const CallStack& rhs) const {
+    bool operator ==(const CallStack& rhs) const {
         return !operator !=(rhs);
     }
 
