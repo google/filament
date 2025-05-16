@@ -648,6 +648,15 @@ enum class BufferObjectBinding : uint8_t {
     SHADER_STORAGE
 };
 
+constexpr std::string_view to_string(BufferObjectBinding type) noexcept {
+    switch (type) {
+        case BufferObjectBinding::VERTEX:           return "VERTEX";
+        case BufferObjectBinding::UNIFORM:          return "UNIFORM";
+        case BufferObjectBinding::SHADER_STORAGE:   return "SHADER_STORAGE";
+    }
+    return "UNKNOWN";
+}
+
 //! Face culling Mode
 enum class CullingMode : uint8_t {
     NONE,               //!< No culling, front and back faces are visible
