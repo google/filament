@@ -64,6 +64,7 @@ private:
     WebGPUPlatform& mPlatform;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
+    uint32_t mMinUniformBufferOffsetAlignment;
     wgpu::Queue mQueue = nullptr;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
