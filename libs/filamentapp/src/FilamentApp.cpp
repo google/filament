@@ -887,8 +887,8 @@ void FilamentApp::Window::resize() {
         resizeMetalLayer(nativeWindow);
     }
 
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-    if (mBackend == filament::Engine::Backend::VULKAN) {
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) || defined(FILAMENT_SUPPORTS_WEBGPU)
+    if (mBackend == filament::Engine::Backend::VULKAN || mBackend == filament::Engine::Backend::WEBGPU) {
         resizeMetalLayer(nativeWindow);
     }
 #endif

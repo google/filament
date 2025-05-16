@@ -82,7 +82,7 @@ TEST_F(BackendTest, TextureViewLod) {
            .vertexShader = vertexShader,
            .fragmentShader = fragmentTexturedLod,
            .uniforms = {{
-               "backend_test_sib_tex", DescriptorType::SAMPLER, samplerInfo
+               "backend_test_sib_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
            }}
         });
 

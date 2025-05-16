@@ -29,11 +29,12 @@
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Entity.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -1200,7 +1201,7 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF,
 template<typename Casters, typename Receivers>
 void ShadowMap::visitScene(const FScene& scene, uint32_t const visibleLayers,
         Casters casters, Receivers receivers) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     using State = FRenderableManager::Visibility;
     FScene::RenderableSoa const& soa = scene.getRenderableData();

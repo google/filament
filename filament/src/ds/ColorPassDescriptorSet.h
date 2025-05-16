@@ -66,16 +66,16 @@ class ColorPassDescriptorSet {
     using LightManagerInstance = utils::EntityInstance<LightManager>;
     using TextureHandle = backend::Handle<backend::HwTexture>;
 
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCF   = 0u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_EVSM  = 1u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_DPCF  = 2u;
-    static constexpr uint32_t const SHADOW_SAMPLING_RUNTIME_PCSS  = 3u;
+    static constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF   = 0u;
+    static constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM  = 1u;
+    static constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF  = 2u;
+    static constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS  = 3u;
 
 public:
 
     static uint8_t getIndex(bool lit, bool ssr, bool fog)  noexcept;
 
-    ColorPassDescriptorSet(FEngine& engine,
+    ColorPassDescriptorSet(FEngine& engine, bool vsm,
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
 
     void init(
@@ -153,12 +153,14 @@ public:
     // update local data into GPU UBO
     void commit(backend::DriverApi& driver) noexcept;
 
-    void unbindSamplers(backend::DriverApi& driver) noexcept;
+    void unbindSamplers(FEngine& engine) noexcept;
 
     // bind this UBO
     void bind(backend::DriverApi& driver, uint8_t const index) const noexcept {
         mDescriptorSet[index].bind(driver, DescriptorSetBindingPoints::PER_VIEW);
     }
+
+    bool isVSM() const noexcept { return mIsVsm; }
 
 private:
     static constexpr size_t DESCRIPTOR_LAYOUT_COUNT = 8;
@@ -169,11 +171,13 @@ private:
     void setBuffer(backend::descriptor_binding_t binding,
             backend::BufferObjectHandle boh, uint32_t offset, uint32_t size) noexcept;
 
+    static void prepareShadowSampling(PerViewUib& uniforms,
+            ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
+
     TypedUniformBuffer<PerViewUib>& mUniforms;
     std::array<DescriptorSetLayout, DESCRIPTOR_LAYOUT_COUNT> mDescriptorSetLayout;
     std::array<DescriptorSet, DESCRIPTOR_LAYOUT_COUNT> mDescriptorSet;
-    static void prepareShadowSampling(PerViewUib& uniforms,
-            ShadowMappingUniforms const& shadowMappingUniforms) noexcept;
+    bool const mIsVsm;
 };
 
 } // namespace filament

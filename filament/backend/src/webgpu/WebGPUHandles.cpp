@@ -255,8 +255,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return fEntry.type == DescriptorType::SAMPLER ||
-                       fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
+                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
             });
 
 
@@ -272,8 +271,32 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         entryInfo.binding = wEntry.binding;
 
         switch (fEntry.type) {
-            case DescriptorType::SAMPLER_EXTERNAL:
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            case DescriptorType::SAMPLER_EXTERNAL: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
@@ -478,25 +501,6 @@ void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& en
     entry.binding = index;
     mEntriesSortedByBinding[entryIndex] = std::move(entry);
     mEntriesByBindingAdded[index] = true;
-}
-
-uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
-    // mDynamicOffsets already reserves enough memory for the number of entries in the set
-    mDynamicOffsets.clear();
-    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
-    // unused entries TODO: is this necessary?
-    size_t inputIndex = 0;
-    size_t outputIndex = 0;
-    for (auto const& entry : mEntriesSortedByBinding) {
-        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
-            if (mEntriesByBindingAdded[entry.binding]) {
-                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
-            } else {
-                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
-            }
-        }
-    }
-    return mDynamicOffsets.data();
 }
 
 size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {

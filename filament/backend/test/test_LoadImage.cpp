@@ -52,7 +52,7 @@ layout(location = 0, set = 0) uniform {samplerType} test_tex;
 void main() {
     vec2 fbsize = vec2(512);
     vec2 uv = gl_FragCoord.xy / fbsize;
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
     fragColor = vec4(texture(test_tex, uv).rgb, 1.0f);
@@ -73,7 +73,7 @@ float getLayer(in sampler2DArray s) { return 2.0f; }
 void main() {
     vec2 fbsize = vec2(512);
     vec2 uv = gl_FragCoord.xy / fbsize;
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
     fragColor = vec4(texture(test_tex, vec3(uv, getLayer(test_tex))).rgb, 1.0f);
@@ -91,7 +91,7 @@ layout(location = 0, set = 0) uniform sampler2D test_tex;
 void main() {
     vec2 fbsize = vec2(512);
     vec2 uv = gl_FragCoord.xy / fbsize;
-#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
 #endif
     fragColor = vec4(textureLod(test_tex, uv, 1.0f).rgb, 1.0f);
@@ -308,7 +308,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         Shader shader(api, cleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
-           .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+           .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
         });
 
         // Create a Texture.
@@ -372,7 +372,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             getSamplerTypeName(textureFormat), fragmentTemplate);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
-            "test_tex", DescriptorType::SAMPLER, samplerInfo
+            "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
@@ -447,7 +447,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
     });
 
     // Create a texture with 3 mip levels.
@@ -511,7 +511,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
-        .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}}
+        .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_ARRAY_FLOAT, samplerInfo}}
     });
 
     // Create a texture.

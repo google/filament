@@ -125,7 +125,7 @@ inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
         return VulkanLayout::COLOR_ATTACHMENT;
     }
     // Finally, the layout for an immutable texture is optimal read-only.
-    return VulkanLayout::READ_ONLY;
+    return VulkanLayout::FRAG_READ;
 }
 
 inline VulkanLayout getDefaultLayoutImpl(VkImageUsageFlags vkusage) {
@@ -187,7 +187,7 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, vkFormat, &props);
             if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-                FVK_LOGW << "Texture usage is SAMPLEABLE but format " << mState->mVkFormat << " is not "
+                FVK_LOGW << "Texture usage is SAMPLEABLE but format " << vkFormat << " is not "
                         "sampleable with optimal tiling." << utils::io::endl;
             }
         }
@@ -691,6 +691,7 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
                  << " is skipped because of no change in layout" << utils::io::endl;
 #endif
     }
+
     return hasTransitions;
 }
 
@@ -700,16 +701,15 @@ void VulkanTexture::samplerToAttachmentBarrier(VulkanCommandBuffer* commands,
     VkImageLayout const layout =
             fvkutils::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
     VkImageMemoryBarrier barrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
-            .dstAccessMask =
-                    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .oldLayout = layout,
-            .newLayout = layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = mState->mTextureImage,
-            .subresourceRange = range,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = layout,
+        .newLayout = layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = mState->mTextureImage,
+        .subresourceRange = range,
     };
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
@@ -723,15 +723,15 @@ void VulkanTexture::attachmentToSamplerBarrier(VulkanCommandBuffer* commands,
     VkImageLayout const layout
             = fvkutils::getVkLayout(getLayout(range.baseArrayLayer, range.baseMipLevel));
     VkImageMemoryBarrier barrier = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-            .oldLayout = layout,
-            .newLayout = layout,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = mState->mTextureImage,
-            .subresourceRange = range,
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+        .oldLayout = layout,
+        .newLayout = layout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = mState->mTextureImage,
+        .subresourceRange = range,
     };
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);

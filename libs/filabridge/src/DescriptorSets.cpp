@@ -24,21 +24,28 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/CString.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <initializer_list>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
 
 namespace filament::descriptor_sets {
 
 using namespace backend;
 
+// used for post-processing passes
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> postProcessDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
 
+// used to generate shadow-maps
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
 };
@@ -51,32 +58,88 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> depthVariantD
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> ssrVariantDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
 };
 
+// Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
+// expanded to 8 different layouts, based on variants.
+//
+// Note about the SHADOW_MAP binding points:
+// This descriptor can either be a SAMPLER_FLOAT or a SAMPLER_DEPTH,
+// and there are 3 cases to consider:
+//
+//          | TextureType | CompareMode | Filtered | SamplerType | Variant |
+// ---------+-------------+-------------+----------+-------------+---------+
+//  PCF     |    DEPTH    |    COMPARE  |   Yes    |    DEPTH    |    -    |
+//  VSM     |    FLOAT    |     NONE    |   Yes    |    FLOAT    |   VSM   |
+//  OTHER   |    DEPTH    |     NONE    |   No     |    FLOAT    |   VSM   |
+//
+// The SamplerType to use depends on the Variant. Variant::VSM is set for all cases except PCM.
+//
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> perViewDescriptorSetLayoutList = {
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
     { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOWS        },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::LIGHTS         },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RECORD_BUFFER  },
     { DescriptorType::UNIFORM_BUFFER,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FROXEL_BUFFER  },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP     },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT    },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR   },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
-    { DescriptorType::SAMPLER,                                   ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
+    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::STRUCTURE      },
+    { DescriptorType::SAMPLER_2D_ARRAY_DEPTH,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SHADOW_MAP     },
+    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_DFG_LUT    },
+    { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::IBL_SPECULAR   },
+    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
+    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+    { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
 };
 
 static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderableDescriptorSetLayoutList = {
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
-    { DescriptorType::UNIFORM_BUFFER, ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
-    { DescriptorType::SAMPLER,        ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
+    { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::OBJECT_UNIFORMS, DescriptorFlags::DYNAMIC_OFFSET },
+    { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::BONES_UNIFORMS,  DescriptorFlags::DYNAMIC_OFFSET },
+    { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
+    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS    },
+    { DescriptorType::SAMPLER_2D_ARRAY_INT,     ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
+    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
+};
+
+struct PairSamplerTypeFormatHasher {
+    std::size_t operator()(const std::pair<SamplerType, SamplerFormat>& p) const {
+        using UnderlyingSamplerType = std::underlying_type_t<SamplerType>;
+        using UnderlyingSamplerFormat = std::underlying_type_t<SamplerFormat>;
+        std::size_t seed = 0;
+        std::size_t const hash1 = std::hash<UnderlyingSamplerType>{}(
+            static_cast<UnderlyingSamplerType>(p.first)
+        );
+        std::size_t const hash2 = std::hash<UnderlyingSamplerFormat>{}(
+            static_cast<UnderlyingSamplerFormat>(p.second)
+        );
+        seed ^= hash1 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        seed ^= hash2 + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        return seed;
+    }
+};
+
+static const std::unordered_map<
+    std::pair<SamplerType, SamplerFormat>, DescriptorType, PairSamplerTypeFormatHasher> sDescriptorTypeMap{
+        {{ SamplerType::SAMPLER_2D, SamplerFormat::INT }, DescriptorType::SAMPLER_2D_INT },
+        {{ SamplerType::SAMPLER_2D, SamplerFormat::UINT }, DescriptorType::SAMPLER_2D_UINT },
+        {{ SamplerType::SAMPLER_2D, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_2D_FLOAT },
+        {{ SamplerType::SAMPLER_2D, SamplerFormat::SHADOW }, DescriptorType::SAMPLER_2D_DEPTH },
+        {{ SamplerType::SAMPLER_2D_ARRAY, SamplerFormat::INT }, DescriptorType::SAMPLER_2D_ARRAY_INT },
+        {{ SamplerType::SAMPLER_2D_ARRAY, SamplerFormat::UINT }, DescriptorType::SAMPLER_2D_ARRAY_UINT },
+        {{ SamplerType::SAMPLER_2D_ARRAY, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_2D_ARRAY_FLOAT },
+        {{ SamplerType::SAMPLER_2D_ARRAY, SamplerFormat::SHADOW }, DescriptorType::SAMPLER_2D_ARRAY_DEPTH },
+        {{ SamplerType::SAMPLER_CUBEMAP, SamplerFormat::INT }, DescriptorType::SAMPLER_CUBE_INT },
+        {{ SamplerType::SAMPLER_CUBEMAP, SamplerFormat::UINT }, DescriptorType::SAMPLER_CUBE_UINT },
+        {{ SamplerType::SAMPLER_CUBEMAP, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_CUBE_FLOAT },
+        {{ SamplerType::SAMPLER_CUBEMAP, SamplerFormat::SHADOW }, DescriptorType::SAMPLER_CUBE_DEPTH },
+        {{ SamplerType::SAMPLER_CUBEMAP_ARRAY, SamplerFormat::INT }, DescriptorType::SAMPLER_CUBE_ARRAY_INT },
+        {{ SamplerType::SAMPLER_CUBEMAP_ARRAY, SamplerFormat::UINT }, DescriptorType::SAMPLER_CUBE_ARRAY_UINT },
+        {{ SamplerType::SAMPLER_CUBEMAP_ARRAY, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT },
+        {{ SamplerType::SAMPLER_CUBEMAP_ARRAY, SamplerFormat::SHADOW }, DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH },
+        {{ SamplerType::SAMPLER_3D, SamplerFormat::INT }, DescriptorType::SAMPLER_3D_INT },
+        {{ SamplerType::SAMPLER_3D, SamplerFormat::UINT }, DescriptorType::SAMPLER_3D_UINT },
+        {{ SamplerType::SAMPLER_3D, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_3D_FLOAT },
+        {{ SamplerType::SAMPLER_EXTERNAL, SamplerFormat::FLOAT }, DescriptorType::SAMPLER_EXTERNAL }
 };
 
 // used for post-processing passes
@@ -146,12 +209,12 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
 
     switch (set) {
         case DescriptorSetBindingPoints::PER_VIEW: {
-            auto pos = set0.find(binding);
+            auto const pos = set0.find(binding);
             assert_invariant(pos != set0.end());
             return { pos->second.data(), pos->second.size() };
         }
         case DescriptorSetBindingPoints::PER_RENDERABLE: {
-            auto pos = set1.find(binding);
+            auto const pos = set1.find(binding);
             assert_invariant(pos != set1.end());
             return { pos->second.data(), pos->second.size() };
         }
@@ -160,17 +223,13 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
             return "MaterialParams";
         }
     }
+    return "Unknown";
 }
 
 DescriptorSetLayout getPerViewDescriptorSetLayout(
         MaterialDomain const domain,
-        UserVariantFilterMask const variantFilter,
-        bool const isLit,
-        ReflectionMode const reflectionMode,
-        RefractionMode const refractionMode) noexcept {
-
-    bool const ssr = reflectionMode == ReflectionMode::SCREEN_SPACE ||
-                     refractionMode == RefractionMode::SCREEN_SPACE;
+        bool const isLit, bool const isSSR, bool const hasFog,
+        bool const isVSM) noexcept {
 
     switch (domain) {
         case MaterialDomain::SURFACE: {
@@ -189,7 +248,7 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                         layout.bindings.end());
             }
             // remove descriptors not needed for SSRs
-            if (!ssr) {
+            if (!isSSR) {
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {
@@ -199,13 +258,24 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
 
             }
             // remove fog descriptor if filtered out
-            if (variantFilter & (UserVariantFilterMask)UserVariantFilterBit::FOG) {
+            if (!hasFog) {
                 layout.bindings.erase(
                         std::remove_if(layout.bindings.begin(), layout.bindings.end(),
                                 [](auto const& entry) {
                                     return entry.binding == PerViewBindingPoints::FOG;
                                 }),
                         layout.bindings.end());
+            }
+
+            // change the SHADOW_MAP descriptor type for VSM
+            if (isVSM) {
+                auto const pos = std::find_if(layout.bindings.begin(), layout.bindings.end(),
+                        [](auto const& v) {
+                            return v.binding == PerViewBindingPoints::SHADOW_MAP;
+                        });
+                if (pos != layout.bindings.end()) {
+                    pos->type = DescriptorType::SAMPLER_2D_ARRAY_FLOAT;
+                }
             }
             return layout;
         }
@@ -219,11 +289,8 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
 
 DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         Variant const variant,
-        MaterialDomain domain,
-        UserVariantFilterMask const variantFilter,
-        bool const isLit,
-        ReflectionMode const reflectionMode,
-        RefractionMode const refractionMode) noexcept {
+        MaterialDomain const domain,
+        bool const isLit, bool const isSSR, bool const hasFog) noexcept {
     if (Variant::isValidDepthVariant(variant)) {
         return depthVariantDescriptorSetLayout;
     }
@@ -231,11 +298,17 @@ DescriptorSetLayout getPerViewDescriptorSetLayoutWithVariant(
         return ssrVariantDescriptorSetLayout;
     }
     // We need to filter out all the descriptors not included in the "resolved" layout below
-    return getPerViewDescriptorSetLayout(domain, variantFilter,
-            isLit, reflectionMode, refractionMode);
+    return getPerViewDescriptorSetLayout(domain, isLit, isSSR, hasFog,
+            Variant::isVSMVariant(variant));
 }
 
-
+DescriptorType getDescriptorType(SamplerType const type, SamplerFormat const format) {
+    auto const pos = sDescriptorTypeMap.find({ type, format });
+    FILAMENT_CHECK_PRECONDITION(pos != sDescriptorTypeMap.end())
+            << "Incompatible Sampler Format " << to_string(format)
+            << " and Type " << to_string(type);
+    return pos->second;
+}
 
 template<class ITERATOR, class PREDICATE>
 constexpr static ITERATOR find_if(ITERATOR first, ITERATOR last, PREDICATE pred) {

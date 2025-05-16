@@ -19,7 +19,7 @@
 
 #include <filament/FilamentAPI.h>
 #include <filament/Color.h>
-
+#include <filament/Engine.h>
 #include <filament/MaterialEnums.h>
 
 #include <backend/DriverEnums.h>
@@ -528,6 +528,13 @@ public:
      */
     void setStencilWriteMask(uint8_t writeMask,
             StencilFace face = StencilFace::FRONT_AND_BACK) noexcept;
+
+    /**
+     * PostProcess and compute domain material instance must be commited manually. This call has
+     * no effect on surface domain materials.
+     * @param engine Filament engine
+     */
+    void commit(Engine& engine) const;
 
 protected:
     // prevent heap allocation
