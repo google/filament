@@ -269,6 +269,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
         wEntry.binding = fEntry.binding * 2;
         entryInfo.binding = wEntry.binding;
+        wgpu::BindGroupLayoutEntry* sEntry;
 
         switch (fEntry.type) {
             case DescriptorType::SAMPLER_2D_FLOAT:
@@ -289,26 +290,16 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
             case DescriptorType::SAMPLER_3D_FLOAT:
             case DescriptorType::SAMPLER_3D_INT:
-            case DescriptorType::SAMPLER_3D_UINT:
-            case DescriptorType::SAMPLER_EXTERNAL: {
+            case DescriptorType::SAMPLER_3D_UINT: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
+                sEntry = &samplerEntry;
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntryInfo.binding = samplerEntry.binding;
                 samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
                 samplerEntry.visibility = wEntry.visibility;
                 // We are simply hoping that undefined and defaults suffices here.
                 samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
-                // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
-                if (baseLabel.find("Skybox") != std::string::npos ||
-                        (baseLabel == "Filament Default Material_perView" && wEntry.binding == 22)) {
-                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
-                } else {
-                    wEntry.texture.viewDimension =
-                            wgpu::TextureViewDimension::e2D;// Example default
-                }
-                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
@@ -319,15 +310,53 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // TODO: Ideally we fill minBindingSize
                 break;
             }
-
             case DescriptorType::INPUT_ATTACHMENT: {
                 PANIC_POSTCONDITION("Input Attachment is not supported");
-                break;
             }
             case DescriptorType::SHADER_STORAGE_BUFFER: {
                 PANIC_POSTCONDITION("Shader storage is not supported");
-                break;
             }
+            case DescriptorType::SAMPLER_EXTERNAL: {
+                PANIC_POSTCONDITION("External Sampler is not supported");
+            }
+        }
+        if (isDepthDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
+            sEntry->sampler.type = wgpu::SamplerBindingType::Comparison;
+        }
+        else if (isFloatDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+        }
+        else if (isIntDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
+        }
+        else if (isUnsgignedIntDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
+        }
+
+        if (is3dTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e3D;
+        }
+        else if (is2dTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
+        }
+        else if (is2dArrayTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
+        }
+        else if (isCubeTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+        }
+        else if (isCubeArrayTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
         }
         // fEntry.count is unused currently
     }
@@ -342,97 +371,16 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
-wgpu::Buffer WebGPUDescriptorSet::sDummyUniformBuffer = nullptr;
-wgpu::Texture WebGPUDescriptorSet::sDummyTexture = nullptr;
-wgpu::TextureView WebGPUDescriptorSet::sDummyTextureView = nullptr;
-wgpu::Sampler WebGPUDescriptorSet::sDummySampler = nullptr;
-
-void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device const& device,
-        wgpu::TextureFormat aColorFormat) {
-    if (!sDummyUniformBuffer) {
-        wgpu::BufferDescriptor bufferDescriptor{
-            .label = "dummy_uniform_not_to_be_used",
-            .usage = wgpu::BufferUsage::Uniform,
-            .size = 4
-        };
-        sDummyUniformBuffer = device.CreateBuffer(&bufferDescriptor);
-        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
-                << "Failed to create dummy uniform buffer?";
-    }
-    if (!sDummyTexture || !sDummyTextureView) {
-        wgpu::TextureDescriptor textureDescriptor{
-            .label = "dummy_texture_not_to_be_used",
-            .usage = wgpu::TextureUsage::TextureBinding,
-            .dimension = wgpu::TextureDimension::e2D,
-            .size = wgpu::Extent3D{ .width = 4, .height = 4, .depthOrArrayLayers = 1 },
-            .format = aColorFormat,
-        };
-        if (!sDummyTexture) {
-            sDummyTexture = device.CreateTexture(&textureDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy texture?";
-        }
-        if (!sDummyTextureView) {
-            wgpu::TextureViewDescriptor textureViewDescriptor{
-                .label = "dummy_texture_view_not_to_be_used"
-            };
-            sDummyTextureView = sDummyTexture.CreateView(&textureViewDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
-                    << "Failed to create dummy texture view?";
-        }
-    }
-    if (!sDummySampler) {
-        wgpu::SamplerDescriptor samplerDescriptor{
-            .label = "dummy_sampler_not_to_be_used"
-        };
-        sDummySampler = device.CreateSampler(&samplerDescriptor);
-        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy sampler?";
-    }
-}
-
-std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedByBinding(
-        std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&
-                bindGroupEntries) {
-    assert_invariant(WebGPUDescriptorSet::sDummyUniformBuffer &&
-                     "Dummy uniform buffer must have been created before "
-                     "creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummyTexture &&
-            "Dummy texture must have been created before creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummyTextureView &&
-            "Dummy texture view must have been created before creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummySampler &&
-            "Dummy sampler must have been created before creating dummy bind group entries.");
-    using filament::backend::WebGPUDescriptorSetLayout;
-    std::vector<wgpu::BindGroupEntry> entries;
-    entries.reserve(bindGroupEntries.size());
-    for (auto const& entryInfo: bindGroupEntries) {
-        auto& entry = entries.emplace_back();
-        entry.binding = entryInfo.binding;
-        switch (entryInfo.type) {
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::UNIFORM_BUFFER:
-                entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
-                break;
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureView;
-                break;
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER:
-                entry.sampler = WebGPUDescriptorSet::sDummySampler;
-                break;
-        }
-    }
-    std::sort(entries.begin(), entries.end(),
-            [](wgpu::BindGroupEntry const& a, wgpu::BindGroupEntry const& b) {
-                return a.binding < b.binding;
-            });
-    return entries;
-}
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
-    : mLayout(layout),
-      mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
+    : mLayout(layout)
+    {
+       mEntriesSortedByBinding.reserve(bindGroupEntries.size());
+    for (auto const& entryInfo: bindGroupEntries) {
+        wgpu::BindGroupEntry& entry = mEntriesSortedByBinding.emplace_back();
+        entry.binding = entryInfo.binding;
+    }
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
     for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {

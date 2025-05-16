@@ -292,29 +292,112 @@ constexpr std::string_view to_string(TextureType type) noexcept {
  };
 
 constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
-     switch (type) {
-         case DescriptorType::SAMPLER_2D_DEPTH:
-         case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
-         case DescriptorType::SAMPLER_CUBE_DEPTH:
-         case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
-             return true;
-         default: ;
-     }
-     return false;
- }
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+    default: ;
+    }
+    return false;
+}
 
 constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
-     switch (type) {
-         case DescriptorType::SAMPLER_2D_FLOAT:
-         case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
-         case DescriptorType::SAMPLER_CUBE_FLOAT:
-         case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
-         case DescriptorType::SAMPLER_3D_FLOAT:
-             return true;
-         default: ;
-     }
-     return false;
- }
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isUnsgignedIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is3dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_3D_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
 
 constexpr std::string_view to_string(DescriptorType type) noexcept {
     #define DESCRIPTOR_TYPE_CASE(TYPE)  case DescriptorType::TYPE: return #TYPE;

@@ -106,7 +106,6 @@ public:
 
     enum class BindGroupEntryType : uint8_t {
         UNIFORM_BUFFER,
-        TEXTURE_VIEW,
         SAMPLER
     };
 
@@ -125,7 +124,7 @@ public:
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
-    // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
+    // Convert Filament Shader Stage Flags bitmask to webgpu equivalent
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
@@ -133,8 +132,6 @@ private:
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
-            wgpu::TextureFormat aColorFormat);
 
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
@@ -146,13 +143,6 @@ public:
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
 private:
-    static wgpu::Buffer sDummyUniformBuffer;
-    static wgpu::Texture sDummyTexture;
-    static wgpu::TextureView sDummyTextureView;
-    static wgpu::Sampler sDummySampler;
-
-    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
-            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
 
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
