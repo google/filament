@@ -269,7 +269,6 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
         wEntry.binding = fEntry.binding * 2;
         entryInfo.binding = wEntry.binding;
-        wgpu::BindGroupLayoutEntry* sEntry;
 
         switch (fEntry.type) {
             case DescriptorType::SAMPLER_2D_FLOAT:
@@ -293,13 +292,17 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_3D_UINT: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
-                sEntry = &samplerEntry;
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntryInfo.binding = samplerEntry.binding;
                 samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
                 samplerEntry.visibility = wEntry.visibility;
-                // We are simply hoping that undefined and defaults suffices here.
-                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
+                // TODO: Set once we have the filtering values
+                if (isDepthDescriptor(fEntry.type)) {
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::Comparison;
+                } else {
+                    samplerEntry.sampler.type =
+                            wgpu::SamplerBindingType::NonFiltering;
+                }
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
@@ -323,17 +326,17 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         if (isDepthDescriptor(fEntry.type))
         {
             wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
-            sEntry->sampler.type = wgpu::SamplerBindingType::Comparison;
         }
         else if (isFloatDescriptor(fEntry.type))
         {
+            // TODO: Set once we have the filtering values
             wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
         }
         else if (isIntDescriptor(fEntry.type))
         {
             wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
         }
-        else if (isUnsgignedIntDescriptor(fEntry.type))
+        else if (isUnsignedIntDescriptor(fEntry.type))
         {
             wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
         }
@@ -374,12 +377,11 @@ WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
-    : mLayout(layout)
-    {
-       mEntriesSortedByBinding.reserve(bindGroupEntries.size());
-    for (auto const& entryInfo: bindGroupEntries) {
-        wgpu::BindGroupEntry& entry = mEntriesSortedByBinding.emplace_back();
-        entry.binding = entryInfo.binding;
+    : mLayout(layout) {
+
+    mEntriesSortedByBinding.resize(bindGroupEntries.size());
+    for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
+        mEntriesSortedByBinding[i].binding = bindGroupEntries[i].binding;
     }
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());

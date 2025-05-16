@@ -1030,7 +1030,7 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
-    wgpu::SamplerDescriptor desc;
+    wgpu::SamplerDescriptor desc{};
 
     desc.label = "TODO";
     desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
@@ -1127,12 +1127,15 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     switch (fWrapMode) {
         case SamplerWrapMode::CLAMP_TO_EDGE: {
             return wgpu::AddressMode::ClampToEdge;
+            break;
         }
         case SamplerWrapMode::REPEAT: {
             return wgpu::AddressMode::Repeat;
+            break;
         }
         case SamplerWrapMode::MIRRORED_REPEAT: {
             return wgpu::AddressMode::MirrorRepeat;
+            break;
         }
     }
     return wgpu::AddressMode::Undefined;

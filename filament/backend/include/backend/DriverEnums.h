@@ -322,18 +322,20 @@ constexpr bool isIntDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_2D_ARRAY_INT:
         case DescriptorType::SAMPLER_CUBE_INT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
             return true;
         default: ;
     }
     return false;
 }
 
-constexpr bool isUnsgignedIntDescriptor(DescriptorType const type) noexcept {
+constexpr bool isUnsignedIntDescriptor(DescriptorType const type) noexcept {
     switch (type) {
         case DescriptorType::SAMPLER_2D_UINT:
         case DescriptorType::SAMPLER_2D_ARRAY_UINT:
         case DescriptorType::SAMPLER_CUBE_UINT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
             return true;
         default: ;
     }
