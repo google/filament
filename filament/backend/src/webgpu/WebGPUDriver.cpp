@@ -26,7 +26,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
-
+#include <private/backend/BackendUtils.h>
 #include <math/mat3.h>
 #include <utils/CString.h>
 #include <utils/Panic.h>
@@ -752,11 +752,26 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void WebGPUDriver::update3DImage(Handle<HwTexture> th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& data) {
-    scheduleDestroy(std::move(data));
+void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
+        uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& p) {
+    PixelBufferDescriptor* data = &p;
+    PixelBufferDescriptor reshapedData;
+    if (reshape(p, reshapedData)) {
+        data = &reshapedData;
+    }
+    auto texture = handleCast<WGPUTexture>(th);
+    auto copyInfo = wgpu::TexelCopyTextureInfo{ .texture = texture->getTexture(),
+        .mipLevel = level,
+        .origin = { .x = xoffset, .y = yoffset, .z = zoffset } };
+    auto layout = wgpu::TexelCopyBufferLayout{
+        .bytesPerRow = static_cast<uint32_t>(
+                PixelBufferDescriptor::computePixelSize(data->format, data->type) * width),
+        .rowsPerImage = height
+    };
+    auto extent = wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth };
+    mQueue.WriteTexture(&copyInfo, data->buffer, data->size, &layout, &extent);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
