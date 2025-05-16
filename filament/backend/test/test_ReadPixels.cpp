@@ -279,14 +279,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         TrianglePrimitive const triangle(api);
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
-        params.viewport.height = t.getRenderTargetSize();
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
         params.viewport.width = t.getRenderTargetSize();
+        params.viewport.height = t.getRenderTargetSize();
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -399,14 +394,10 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = renderTargetSize;
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
     params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
 
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
 

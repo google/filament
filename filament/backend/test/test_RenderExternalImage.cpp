@@ -75,12 +75,9 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+    params.viewport = getFullViewport();
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
@@ -175,12 +172,9 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+    params.viewport = getFullViewport();
 
     api.startCapture(0);
     api.makeCurrent(swapChain, swapChain);

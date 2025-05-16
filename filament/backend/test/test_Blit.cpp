@@ -305,11 +305,7 @@ TEST_F(BlitTest, ColorResolve) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.clearColor = float4(1, 1, 0, 1);
+    RenderPassParams params = getClearColorRenderPass(float4(1, 1, 0, 1));
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
 

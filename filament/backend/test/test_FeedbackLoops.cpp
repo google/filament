@@ -161,11 +161,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (int frame = 0; frame < kNumFrames; frame++) {
 
             // Prep for rendering.
-            RenderPassParams params = {};
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
             PipelineState state = getColorWritePipelineState();
             shader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
