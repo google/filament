@@ -258,5 +258,23 @@ private:
     std::vector<wgpu::RenderPassColorAttachment> colorAttachments{};
 };
 
+class WGPUTimerQuery : public HwTimerQuery {
+public:
+    WGPUTimerQuery()
+        : status(std::make_shared<Status>()) {}
+
+    void beginTimeElapsedQuery();
+    void endTimeElapsedQuery();
+    bool getQueryResult(uint64_t* outElapsedTimeNanoseconds);
+
+private:
+    struct Status {
+        std::atomic<uint64_t> elapsedNanoseconds{ 0 };
+        std::atomic<uint64_t> previousElapsed{ 0 };
+    };
+
+    std::shared_ptr<Status> status;
+};
+
 }// namespace filament::backend
 #endif// TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
