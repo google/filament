@@ -590,15 +590,15 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 }
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-        uint32_t byteCount, BufferObjectBinding bindingType)
+        VulkanMemoryPool& memoryPool, uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
-      buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
+      buffer(allocator, stagePool, memoryPool, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
 
 VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
         fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
         fvkmemory::resource_ptr<VulkanIndexBuffer> ib)
-    : HwRenderPrimitive{.type = pt},
+    : HwRenderPrimitive{ .type = pt },
       vertexBuffer(vb),
       indexBuffer(ib) {}
 

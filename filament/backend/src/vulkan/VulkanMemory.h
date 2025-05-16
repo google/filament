@@ -32,9 +32,55 @@
 #endif
 
 #include "vk_mem_alloc.h"
+#include "vulkan/memory/Resource.h"
+
+#include <functional>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaAllocation)
 VK_DEFINE_HANDLE(VmaPool)
+
+namespace filament::backend {
+
+enum class VulkanBufferUsage : uint8_t {
+    UNKNOWN,
+    VERTEX,
+    INDEX,
+    UNIFORM,
+    SHADER_STORAGE,
+};
+
+struct VulkanMemoryPoolAllocation {
+    VkBuffer vkbuffer = VK_NULL_HANDLE;
+    VmaAllocation vmaAllocation = VK_NULL_HANDLE;
+    VmaAllocationInfo allocationInfo;
+    uint32_t numBytes = 0;
+    VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
+};
+
+struct VulkanBufferMemory : public fvkmemory::Resource {
+public:
+    // Because we need to recycle the unused allocation, we allow for a callback that the "Pool"
+    // can use to acquire the allocation back.
+    using OnRecycle = std::function<void(VulkanMemoryPoolAllocation const*)>;
+
+    VulkanBufferMemory(VulkanMemoryPoolAllocation const* allocation, OnRecycle&& onRecycleFn)
+        : mAllocation(allocation),
+          mOnRecycleFn(onRecycleFn) {}
+
+    ~VulkanBufferMemory() {
+        if (mOnRecycleFn) {
+            mOnRecycleFn(mAllocation);
+        }
+    }
+
+    VulkanMemoryPoolAllocation const* getAllocation() const { return mAllocation; }
+
+private:
+    VulkanMemoryPoolAllocation const* mAllocation;
+    OnRecycle mOnRecycleFn;
+};
+
+} // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H

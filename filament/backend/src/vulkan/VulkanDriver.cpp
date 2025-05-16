@@ -24,6 +24,7 @@
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
+#include "VulkanMemoryPool.h"
 #include "VulkanTexture.h"
 #include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourceManager.h"
@@ -210,6 +211,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mCommands),
+      mMemoryPool(context, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
@@ -339,6 +341,11 @@ void VulkanDriver::terminate() {
     // Before terminating ResourceManager, we must make sure all of the resource_ptrs have been unset.
     mResourceManager.terminate();
 
+    // Must come after `mResourceManager`.
+    // Before terminating the memory pool, we must make sure all the VulkanBufferMemory are yielded
+    // back to the pool.
+    mMemoryPool.terminate();
+
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
 #endif
@@ -371,6 +378,7 @@ void VulkanDriver::collectGarbage() {
     mCommands.gc();
     mDescriptorSetCache.gc();
     mStagePool.gc();
+    mMemoryPool.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
 
@@ -514,7 +522,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
     FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
-            elementSize, indexCount);
+            mMemoryPool, elementSize, indexCount);
     ib.inc();
 }
 
@@ -531,7 +539,7 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
         BufferObjectBinding bindingType, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
-            byteCount, bindingType);
+            mMemoryPool, byteCount, bindingType);
     bo.inc();
 }
 

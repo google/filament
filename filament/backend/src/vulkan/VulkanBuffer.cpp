@@ -17,37 +17,18 @@
 #include "VulkanBuffer.h"
 #include "VulkanMemory.h"
 
-#include <utils/Panic.h>
-
 using namespace bluevk;
 
 namespace filament::backend {
 
 VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VkBufferUsageFlags usage, uint32_t numBytes)
+        VulkanMemoryPool& memoryPool, VulkanBufferUsage usage, uint32_t numBytes)
     : mAllocator(allocator),
       mStagePool(stagePool),
-      mUsage(usage),
+      mMemoryPool(memoryPool),
+      mGpuMemory(mMemoryPool.acquire(usage, numBytes)),
       mUpdatedOffset(0),
-      mUpdatedBytes(0) {
-    // for now make sure that only 1 bit is set in usage
-    // (because loadFromCpu() assumes that somewhat)
-    assert_invariant(usage && !(usage & (usage - 1)));
-
-    // Create the VkBuffer.
-    VkBufferCreateInfo bufferInfo {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = numBytes,
-        .usage = usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-    };
-
-    VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_GPU_ONLY };
-    vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
-}
-
-VulkanBuffer::~VulkanBuffer() {
-    vmaDestroyBuffer(mAllocator, mGpuBuffer, mGpuMemory);
-}
+      mUpdatedBytes(0) {}
 
 void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
         uint32_t numBytes) {
@@ -64,13 +45,13 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             (byteOffset >= mUpdatedOffset && byteOffset <= (mUpdatedOffset + mUpdatedBytes))) {
         VkAccessFlags srcAccess = 0;
         VkPipelineStageFlags srcStage = 0;
-        if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+        if (getUsage() == VulkanBufferUsage::UNIFORM) {
             srcAccess = VK_ACCESS_SHADER_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        } else if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+        } else if (getUsage() == VulkanBufferUsage::VERTEX) {
             srcAccess = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-        } else if (mUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
+        } else if (getUsage() == VulkanBufferUsage::INDEX) {
             srcAccess = VK_ACCESS_INDEX_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
         }
@@ -81,7 +62,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .buffer = mGpuBuffer,
+            .buffer = getGpuBuffer(),
             .offset = byteOffset,
             .size = numBytes,
         };
@@ -94,7 +75,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         .dstOffset = byteOffset,
         .size = numBytes,
     };
-    vkCmdCopyBuffer(cmdbuf, stage->buffer, mGpuBuffer, 1, &region);
+    vkCmdCopyBuffer(cmdbuf, stage->buffer, getGpuBuffer(), 1, &region);
 
     mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
@@ -106,16 +87,16 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
     VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-    if (mUsage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT) {
+    if (getUsage() == VulkanBufferUsage::VERTEX) {
         dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    } else if (mUsage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT) {
+    } else if (getUsage() == VulkanBufferUsage::INDEX) {
         dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    } else if (mUsage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
+    } else if (getUsage() == VulkanBufferUsage::UNIFORM) {
         dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-    } else if (mUsage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) {
+    } else if (getUsage() == VulkanBufferUsage::SHADER_STORAGE) {
         // TODO: implement me
     }
 
@@ -125,13 +106,21 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         .dstAccessMask = dstAccessMask,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = mGpuBuffer,
+        .buffer = getGpuBuffer(),
         .offset = byteOffset,
         .size = numBytes,
     };
 
     vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
             &barrier, 0, nullptr);
+}
+
+VkBuffer VulkanBuffer::getGpuBuffer() const noexcept {
+    return mGpuMemory->getAllocation()->vkbuffer;
+}
+
+VulkanBufferUsage VulkanBuffer::getUsage() const noexcept {
+    return mGpuMemory->getAllocation()->usage;
 }
 
 } // namespace filament::backend
