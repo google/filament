@@ -79,12 +79,8 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+        params.viewport = getFullViewport();
 
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
@@ -157,6 +153,9 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "All values including alpha are written as 0, see b/417254943");
+    constexpr int kTexWidth = 512;
+    constexpr int kTexHeight = 512;
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -177,9 +176,9 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
     // Create a render target.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
+            TextureFormat::RGBA8, 1, kTexWidth, kTexHeight, 1, TextureUsage::COLOR_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{ colorTexture }}, {}, {}));
+            TargetBufferFlags::COLOR0, kTexWidth, kTexHeight, 1, 0, {{ colorTexture }}, {}, {}));
 
     // Upload uniforms for the first triangle.
     // Upload the uniform, but with an offset to accommodate the padding in the shader's
@@ -190,13 +189,9 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = 512;
-    params.viewport.width = 512;
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+    params.viewport.height = kTexWidth;
+    params.viewport.width = kTexHeight;
     renderTriangle({ { shader.getDescriptorSetLayout() } }, renderTarget, swapChain,
             shader.getProgram(), params);
 
@@ -221,7 +216,7 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "BufferObjectUpdateWithOffset", 91322442));
+            ScreenshotParams(kTexWidth, kTexHeight, "BufferObjectUpdateWithOffset", 91322442));
 
     api.flush();
     api.commit(swapChain);

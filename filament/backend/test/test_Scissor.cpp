@@ -114,12 +114,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
         params.viewport = srcRect;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = getColorWritePipelineState();
         shader.addProgramToPipelineState(ps);
@@ -194,12 +190,8 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
         params.viewport = bottomLeftViewport;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = getColorWritePipelineState();
         shader.addProgramToPipelineState(ps);
