@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2458,6 +2458,7 @@ void* __blue_glCore_glVideoCaptureStreamParameterivNV;
 void* __blue_glCore_glVideoCaptureStreamParameterfvNV;
 void* __blue_glCore_glVideoCaptureStreamParameterdvNV;
 void* __blue_glCore_glFramebufferTextureMultiviewOVR;
+void* __blue_glCore_glFramebufferTextureMultisampleMultiviewOVR;
 void* __blue_glCore_glHintPGI;
 void* __blue_glCore_glDetailTexFuncSGIS;
 void* __blue_glCore_glGetDetailTexFuncSGIS;
@@ -5044,6 +5045,7 @@ struct {
     { &__blue_glCore_glVideoCaptureStreamParameterfvNV, "glVideoCaptureStreamParameterfvNV" },
     { &__blue_glCore_glVideoCaptureStreamParameterdvNV, "glVideoCaptureStreamParameterdvNV" },
     { &__blue_glCore_glFramebufferTextureMultiviewOVR, "glFramebufferTextureMultiviewOVR" },
+    { &__blue_glCore_glFramebufferTextureMultisampleMultiviewOVR, "glFramebufferTextureMultisampleMultiviewOVR" },
     { &__blue_glCore_glHintPGI, "glHintPGI" },
     { &__blue_glCore_glDetailTexFuncSGIS, "glDetailTexFuncSGIS" },
     { &__blue_glCore_glGetDetailTexFuncSGIS, "glGetDetailTexFuncSGIS" },
@@ -5181,5 +5183,5 @@ struct {
     { &__blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN, "glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fSUN" },
     { &__blue_glCore_glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN, "glReplacementCodeuiTexCoord2fColor4fNormal3fVertex3fvSUN" },
 };
-size_t blueCoreNumFunctions = 2574;
+size_t blueCoreNumFunctions = 2575;
 } // namespace bluegl
