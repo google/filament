@@ -1181,7 +1181,7 @@ struct SamplerParams {             // NOLINT
             assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
+            return *pLhs < *pRhs;
         }
     };
 
