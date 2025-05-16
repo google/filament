@@ -39,6 +39,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <sstream>
 #include <string_view>
 #include <utility>
@@ -764,13 +765,37 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto copyInfo = wgpu::TexelCopyTextureInfo{ .texture = texture->getTexture(),
         .mipLevel = level,
         .origin = { .x = xoffset, .y = yoffset, .z = zoffset } };
-    auto layout = wgpu::TexelCopyBufferLayout{
-        .bytesPerRow = static_cast<uint32_t>(
-                PixelBufferDescriptor::computePixelSize(data->format, data->type) * width),
-        .rowsPerImage = height
-    };
+    uint32_t bytesPerRow = static_cast<uint32_t>(
+            PixelBufferDescriptor::computePixelSize(data->format, data->type) * width);
     auto extent = wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth };
-    mQueue.WriteTexture(&copyInfo, data->buffer, data->size, &layout, &extent);
+
+    const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
+    size_t dataSize = data->size;
+    std::unique_ptr<uint8_t[]> paddedBuffer;
+
+    if (bytesPerRow % 256 != 0) {
+        uint32_t padding = 256 - (bytesPerRow % 256);
+        uint32_t paddedBytesPerRow = bytesPerRow + padding;
+
+        size_t paddedBufferSize = static_cast<size_t>(paddedBytesPerRow) * height * depth;
+        paddedBuffer = std::make_unique<uint8_t[]>(paddedBufferSize);
+        uint8_t* dest = paddedBuffer.get();
+
+        for (uint32_t z = 0; z < depth; ++z) {
+            for (uint32_t y = 0; y < height; ++y) {
+                std::memcpy(dest, dataBuff, bytesPerRow);
+                dest += paddedBytesPerRow;
+                dataBuff += bytesPerRow;
+            }
+        }
+        dataBuff = paddedBuffer.get();
+        dataSize = paddedBufferSize;
+        bytesPerRow = paddedBytesPerRow;
+    }
+
+    auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
+
+    mQueue.WriteTexture(&copyInfo, dataBuff, dataSize, &layout, &extent);
     scheduleDestroy(std::move(p));
 }
 
