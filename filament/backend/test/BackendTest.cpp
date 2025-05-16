@@ -144,7 +144,7 @@ void BackendTest::renderTriangle(
         Handle<filament::backend::HwRenderTarget> renderTarget,
         Handle<filament::backend::HwSwapChain> swapChain,
         Handle<filament::backend::HwProgram> program) {
-    RenderPassParams params = getClearColorRenderPass(float4(0.f, 0.f, 1.f, 1.f));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = 512;
     params.viewport.height = 512;
     renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);

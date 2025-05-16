@@ -76,7 +76,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport = getFullViewport();
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
@@ -173,7 +173,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport = getFullViewport();
 
     api.startCapture(0);

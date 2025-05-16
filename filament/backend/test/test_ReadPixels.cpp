@@ -279,7 +279,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         TrianglePrimitive const triangle(api);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport.width = t.getRenderTargetSize();
         params.viewport.height = t.getRenderTargetSize();
 
@@ -395,7 +395,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = renderTargetSize;
     params.viewport.height = renderTargetSize;
 

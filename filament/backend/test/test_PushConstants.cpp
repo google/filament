@@ -130,7 +130,7 @@ TEST_F(BackendTest, PushConstants) {
 
         TrianglePrimitive triangle(api);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = getFullViewport();
 
         PipelineState ps = {};

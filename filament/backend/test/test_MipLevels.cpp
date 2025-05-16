@@ -155,7 +155,7 @@ TEST_F(BackendTest, TextureViewLod) {
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 0.5, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
