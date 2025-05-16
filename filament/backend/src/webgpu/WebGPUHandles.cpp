@@ -41,15 +41,6 @@ constexpr wgpu::BufferUsage getBufferObjectUsage(
     }
 }
 
-wgpu::Buffer createBuffer(wgpu::Device const& device, wgpu::BufferUsage usage, uint32_t size,
-        char const* label) {
-    wgpu::BufferDescriptor descriptor{ .label = label,
-        .usage = usage,
-        .size = size,
-        .mappedAtCreation = false };
-    return device.CreateBuffer(&descriptor);
-}
-
 wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool normalized, bool integer) {
     using ElementType = filament::backend::ElementType;
     using VertexFormat = wgpu::VertexFormat;
@@ -162,6 +153,49 @@ wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) 
 
 namespace filament::backend {
 
+void WGPUBufferBase::createBuffer(const wgpu::Device& device, wgpu::BufferUsage usage,
+        uint32_t size, const char* label) {
+    // Write size must be divisible by 4. If the whole buffer is written to as is common, so must
+    // the buffer size.
+    size += (4 - (size % 4)) % 4;
+    wgpu::BufferDescriptor descriptor{ .label = label,
+        .usage = usage,
+        .size = size,
+        .mappedAtCreation = false };
+    buffer = device.CreateBuffer(&descriptor);
+}
+
+void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_t byteOffset,
+        wgpu::Queue queue) {
+    FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
+            << "copyIntoBuffer called with a null buffer";
+    FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= buffer.GetSize())
+            << "Attempting to copy " << bufferDescriptor.size << " bytes into a buffer of size "
+            << buffer.GetSize() << " at offset " << byteOffset;
+    FILAMENT_CHECK_PRECONDITION(byteOffset % 4 == 0)
+            << "Byte offset must be a multiple of 4 but is " << byteOffset;
+
+    // TODO: All buffer objects are created with CopyDst usage.
+    // This may have some performance implications. That should be investigated later.
+    assert_invariant(buffer.GetUsage() & wgpu::BufferUsage::CopyDst);
+
+    size_t remainder = bufferDescriptor.size % 4;
+
+    // WriteBuffer is an async call. But cpu buffer data is already written to the staging
+    // buffer on return from the WriteBuffer.
+    auto legalSize = bufferDescriptor.size - remainder;
+    queue.WriteBuffer(buffer, byteOffset, bufferDescriptor.buffer, legalSize);
+    if (remainder != 0) {
+        const uint8_t* remainderStart =
+                static_cast<const uint8_t*>(bufferDescriptor.buffer) + legalSize;
+        memcpy(mRemainderChunk.data(), remainderStart, remainder);
+        // Pad the remainder with zeros to ensure deterministic behavior, though GPU shouldn't
+        // access this
+        std::memset(mRemainderChunk.data() + remainder, 0, 4 - remainder);
+
+        queue.WriteBuffer(buffer, byteOffset + legalSize, &mRemainderChunk, 4);
+    }
+}
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
         AttributeArray const& attributes)
     : HwVertexBufferInfo(bufferCount, attributeCount),
@@ -204,9 +238,10 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
 
 WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
         uint32_t indexCount)
-    : buffer(createBuffer(device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-              elementSize * indexCount, "index_buffer")),
-      indexFormat(elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32) {}
+    : indexFormat(elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32) {
+    createBuffer(device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
+            elementSize * indexCount, "index_buffer");
+}
 
 
 WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const& device, uint32_t vertexCount,
@@ -217,10 +252,10 @@ WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const& device, uint32_t vertexCo
 
 WGPUBufferObject::WGPUBufferObject(wgpu::Device const& device, BufferObjectBinding bindingType,
         uint32_t byteCount)
-    : HwBufferObject(byteCount),
-      buffer(createBuffer(device, wgpu::BufferUsage::CopyDst | getBufferObjectUsage(bindingType),
-              byteCount, "buffer_object")),
-      bufferObjectBinding(bindingType) {}
+    : HwBufferObject(byteCount) {
+    createBuffer(device, wgpu::BufferUsage::CopyDst | getBufferObjectUsage(bindingType), byteCount,
+            "buffer_object");
+}
 
 wgpu::ShaderStage WebGPUDescriptorSetLayout::filamentStageToWGPUStage(ShaderStageFlags fFlags) {
     wgpu::ShaderStage retStages = wgpu::ShaderStage::None;
