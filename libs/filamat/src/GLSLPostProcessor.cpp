@@ -473,6 +473,12 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
                 case DescriptorType::SAMPLER_3D_FLOAT:
                 case DescriptorType::SAMPLER_3D_INT:
                 case DescriptorType::SAMPLER_3D_UINT:
+                case DescriptorType::SAMPLER_2D_MS_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_INT:
+                case DescriptorType::SAMPLER_2D_MS_UINT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+                case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
                 case DescriptorType::SAMPLER_EXTERNAL: {
                     assert_invariant(sampler.has_value());
                     const std::string samplerName = std::string(name.c_str()) + "Smplr";

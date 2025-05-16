@@ -255,6 +255,7 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareB
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
         auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
     }

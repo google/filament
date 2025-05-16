@@ -378,6 +378,7 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_EXT_texture_array]               = EBhDisable;
     extensionBehavior[E_GL_EXT_texture_offset_non_const]    = EBhDisable;
     extensionBehavior[E_GL_EXT_nontemporal_keyword]         = EBhDisable;
+    extensionBehavior[E_GL_EXT_bfloat16]                    = EBhDisable;
 
     // OVR extensions
     extensionBehavior[E_GL_OVR_multiview]                = EBhDisable;
@@ -612,6 +613,7 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_EXT_control_flow_attributes2 1\n"
 
             "#define GL_EXT_integer_dot_product 1\n"
+            "#define GL_EXT_bfloat16 1\n"
             ;
 
         if (spvVersion.spv == 0) {
@@ -1272,6 +1274,16 @@ void TParseVersions::float16ScalarVectorCheck(const TSourceLoc& loc, const char*
                                            E_GL_EXT_shader_16bit_storage,
                                            E_GL_EXT_shader_explicit_arithmetic_types,
                                            E_GL_EXT_shader_explicit_arithmetic_types_float16};
+        requireExtensions(loc, sizeof(extensions)/sizeof(extensions[0]), extensions, op);
+    }
+}
+
+void TParseVersions::bfloat16ScalarVectorCheck(const TSourceLoc& loc, const char* op, bool builtIn)
+{
+    if (!builtIn) {
+        const char* const extensions[] = {
+                                           E_GL_EXT_bfloat16,
+                                         };
         requireExtensions(loc, sizeof(extensions)/sizeof(extensions[0]), extensions, op);
     }
 }

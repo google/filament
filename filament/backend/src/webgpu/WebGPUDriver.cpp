@@ -1119,7 +1119,7 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
 
     desc.maxAnisotropy = 1u << params.anisotropyLog2;
 
-    // Unused: WGPU lodMinClamp/lodMaxClamp
+    // Unused: WGPU lodMinClamp/lodMaxClamp unnecessary
 
     return mDevice.CreateSampler(&desc);
 }
