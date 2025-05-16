@@ -305,7 +305,7 @@ TEST_F(BlitTest, ColorResolve) {
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
 
-    RenderPassParams params = getClearColorRenderPass(float4(1, 1, 0, 1));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
 
@@ -333,7 +333,7 @@ TEST_F(BlitTest, ColorResolve) {
             SamplerMagFilter::NEAREST);
 
     EXPECT_IMAGE(dstRenderTarget, getExpectations(),
-            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 0xebfac2ef));
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687));
 }
 
 TEST_F(BlitTest, Blit2DTextureArray) {

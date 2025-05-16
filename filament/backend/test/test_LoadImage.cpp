@@ -215,7 +215,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
-    static const uint32_t expectedHash = 3644679986;
+    static const uint32_t expectedHash = 1875922935;
 
     struct TestCase {
         const char* name;
@@ -417,7 +417,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
             defaultRenderTarget, swapChain, shader.getProgram());
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageSRGB", 359858623));
+            ScreenshotParams(512, 512, "UpdateImageSRGB", 3300305265));
 
     api.commit(swapChain);
     api.endFrame(0);
@@ -476,7 +476,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
             defaultRenderTarget, swapChain, shader.getProgram());
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageMipLevel", 3644679986));
+            ScreenshotParams(512, 512, "UpdateImageMipLevel", 1875922935));
 
     api.commit(swapChain);
     api.endFrame(0);
@@ -550,7 +550,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
                 defaultRenderTarget, swapChain, shader.getProgram());
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "UpdateImage3D", 3644679986));
+                ScreenshotParams(512, 512, "UpdateImage3D", 1875922935));
     }
 
     api.stopCapture();

@@ -58,7 +58,7 @@ protected:
     filament::backend::Viewport getFullViewport() const;
     // If color is unset this defaults to using opaque cyan
     static filament::backend::RenderPassParams getClearColorRenderPass(
-            std::optional<filament::math::float4> color = std::nullopt);
+            filament::math::float4 color = filament::math::float4(0, 1, 1, 1));
     static filament::backend::RenderPassParams getNoClearRenderPass();
 
     void renderTriangle(

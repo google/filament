@@ -114,7 +114,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = srcRect;
 
         PipelineState ps = getColorWritePipelineState();
@@ -129,7 +129,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.endRenderPass();
 
         EXPECT_IMAGE(fullRenderTarget, getExpectations(),
-                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 0xAB3D1C53));
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.commit(swapChain);
         api.endFrame(0);
@@ -190,7 +190,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = bottomLeftViewport;
 
         PipelineState ps = getColorWritePipelineState();
@@ -213,7 +213,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 0x6BF00F31));
+                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.commit(swapChain);
         api.endFrame(0);

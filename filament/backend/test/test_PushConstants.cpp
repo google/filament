@@ -130,7 +130,7 @@ TEST_F(BackendTest, PushConstants) {
 
         TrianglePrimitive triangle(api);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = getFullViewport();
 
         PipelineState ps = {};
@@ -180,7 +180,7 @@ TEST_F(BackendTest, PushConstants) {
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
                 ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",
-                        1957275826));
+                        3575588741));
 
         api.commit(swapChain);
         api.endFrame(0);

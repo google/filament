@@ -151,3 +151,6 @@ if __name__ == "__main__":
             results.show_images(file_prefix)
     else:
         results.batch_move(args.batch)
+    print("--------------------------------------------------------")
+    print("REMEMBER TO RESYNC CMAKE AND UPDATE HASHES IN TEST FILES")
+    print("--------------------------------------------------------")

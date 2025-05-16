@@ -125,13 +125,12 @@ filament::backend::Viewport BackendTest::getFullViewport() const {
    };
 }
 
-filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(
-        std::optional<float4> color) {
+filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(float4 color) {
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.clearColor = color.value_or(float4(0, 1, 1, 1));
+    params.clearColor = color;
     return params;
 }
 
@@ -144,7 +143,7 @@ void BackendTest::renderTriangle(
         Handle<filament::backend::HwRenderTarget> renderTarget,
         Handle<filament::backend::HwSwapChain> swapChain,
         Handle<filament::backend::HwProgram> program) {
-    RenderPassParams params = getClearColorRenderPass(float4(0.f, 0.f, 1.f, 1.f));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = 512;
     params.viewport.height = 512;
     renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);

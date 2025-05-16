@@ -79,7 +79,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = getClearColorRenderPass(math::float4(0, 1, 0, 1));
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = getFullViewport();
 
         // Create a uniform buffer.
@@ -189,7 +189,7 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
-    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.height = kTexWidth;
     params.viewport.width = kTexHeight;
     renderTriangle({ { shader.getDescriptorSetLayout() } }, renderTarget, swapChain,
@@ -216,7 +216,7 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(kTexWidth, kTexHeight, "BufferObjectUpdateWithOffset", 91322442));
+            ScreenshotParams(kTexWidth, kTexHeight, "BufferObjectUpdateWithOffset", 2320747245));
 
     api.flush();
     api.commit(swapChain);
