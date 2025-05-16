@@ -151,9 +151,8 @@ private:
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
-    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    std::vector<wgpu::BindGroupEntry> mEntries;
     std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets{};
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded{};
     std::vector<uint32_t> mDynamicOffsets;
     wgpu::BindGroup mBindGroup = nullptr;
 };

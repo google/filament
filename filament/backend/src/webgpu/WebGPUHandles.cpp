@@ -295,14 +295,17 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
             case DescriptorType::SAMPLER_2D_MS_UINT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
             case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
-            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
-            case DescriptorType::SAMPLER_EXTERNAL: {
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntryInfo.binding = samplerEntry.binding;
                 samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
                 samplerEntry.visibility = wEntry.visibility;
+                if (isMultiSampledTypeDescriptor(fEntry.type))
+                {
+                    wEntry.texture.multisampled = true;
+                }
                 // TODO: Set once we have the filtering values
                 if (isDepthDescriptor(fEntry.type)) {
                     samplerEntry.sampler.type = wgpu::SamplerBindingType::Comparison;
@@ -386,17 +389,17 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
     : mLayout(layout) {
 
-    mEntriesSortedByBinding.resize(bindGroupEntries.size());
+    mEntries.resize(bindGroupEntries.size());
     for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
-        mEntriesSortedByBinding[i].binding = bindGroupEntries[i].binding;
+        mEntries[i].binding = bindGroupEntries[i].binding;
     }
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
     for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {
         mEntryIndexByBinding[i] = INVALID_INDEX;
     }
-    for (size_t index = 0; index < mEntriesSortedByBinding.size(); index++) {
-        wgpu::BindGroupEntry const& entry = mEntriesSortedByBinding[index];
+    for (size_t index = 0; index < mEntries.size(); index++) {
+        wgpu::BindGroupEntry const& entry = mEntries[index];
         assert_invariant(entry.binding < mEntryIndexByBinding.size());
         mEntryIndexByBinding[entry.binding] = static_cast<uint8_t>(index);
     }
@@ -406,7 +409,7 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             mEntriesByBindingWithDynamicOffsets[entry.binding] = true;
         }
     }
-    mDynamicOffsets.reserve(mEntriesSortedByBinding.size());
+    mDynamicOffsets.reserve(mEntries.size());
 }
 
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
@@ -421,15 +424,15 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     // TODO label? Should we just copy layout label?
     wgpu::BindGroupDescriptor desc{
         .layout = mLayout,
-        .entryCount = mEntriesSortedByBinding.size(),
-        .entries = mEntriesSortedByBinding.data()
+        .entryCount = mEntries.size(),
+        .entries = mEntries.data()
     };
     mBindGroup = device.CreateBindGroup(&desc);
     FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
     // once we have created the bind group itself we should no longer need any other state
     mLayout = nullptr;
-    mEntriesSortedByBinding.clear();
-    mEntriesSortedByBinding.shrink_to_fit();
+    mEntries.clear();
+    mEntries.shrink_to_fit();
     return mBindGroup;
 }
 
@@ -447,11 +450,10 @@ void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& en
             << index;
     uint8_t entryIndex = mEntryIndexByBinding[index];
     FILAMENT_CHECK_POSTCONDITION(
-            entryIndex != INVALID_INDEX && entryIndex < mEntriesSortedByBinding.size())
+            entryIndex != INVALID_INDEX && entryIndex < mEntries.size())
             << "Invalid binding " << index;
     entry.binding = index;
-    mEntriesSortedByBinding[entryIndex] = std::move(entry);
-    mEntriesByBindingAdded[index] = true;
+    mEntries[entryIndex] = std::move(entry);
 }
 
 size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
