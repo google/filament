@@ -306,7 +306,7 @@ constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_CUBE_DEPTH:
         case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
             return true;
-    default: ;
+        default: ;
     }
     return false;
 }
@@ -318,6 +318,8 @@ constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_CUBE_FLOAT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
         case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
             return true;
         default: ;
     }
@@ -331,6 +333,8 @@ constexpr bool isIntDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_CUBE_INT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
         case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
             return true;
         default: ;
     }
@@ -344,6 +348,8 @@ constexpr bool isUnsignedIntDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_CUBE_UINT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
         case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             return true;
         default: ;
     }
@@ -367,6 +373,9 @@ constexpr bool is2dTypeDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_2D_INT:
         case DescriptorType::SAMPLER_2D_UINT:
         case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
             return true;
         default: ;
     }
@@ -379,6 +388,9 @@ constexpr bool is2dArrayTypeDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_2D_ARRAY_INT:
         case DescriptorType::SAMPLER_2D_ARRAY_UINT:
         case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             return true;
         default: ;
     }
@@ -403,6 +415,20 @@ constexpr bool isCubeArrayTypeDescriptor(DescriptorType const type) noexcept {
         case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isMultiSampledTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             return true;
         default: ;
     }

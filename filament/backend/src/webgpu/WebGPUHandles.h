@@ -28,7 +28,6 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <array>
-#include <bitset>
 #include <cstdint>
 #include <vector>
 
@@ -104,14 +103,8 @@ struct WGPUBufferObject : HwBufferObject {
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
 
-    enum class BindGroupEntryType : uint8_t {
-        UNIFORM_BUFFER,
-        SAMPLER
-    };
-
     struct BindGroupEntryInfo final {
         uint8_t binding = 0;
-        BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
         bool hasDynamicOffset = false;
     };
 
@@ -143,18 +136,11 @@ public:
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
 private:
-
-    // TODO: Consider storing what we used to make the layout. However we need to essentially
-    // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
-    // there isn't a mismatch may be easiest.
-    // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
-    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets{};
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded{};
-    std::vector<uint32_t> mDynamicOffsets;
+    std::vector<wgpu::BindGroupEntry> mEntries;
+    const size_t mEntriesWithDynamicOffsetsCount;
     wgpu::BindGroup mBindGroup = nullptr;
 };
 
