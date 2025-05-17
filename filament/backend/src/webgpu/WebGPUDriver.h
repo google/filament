@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "WebGPUHandles.h"
-#include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -41,6 +39,8 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WGPURenderTarget;
+class WGPUTimerQuery;
 
 /**
  * WebGPU backend (driver) implementation
@@ -74,6 +74,7 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WGPUTimerQuery* mTimerQuery = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
     /*
@@ -108,6 +109,11 @@ private:
     template<typename D, typename B, typename... ARGS>
     D* constructHandle(Handle<B>& handle, ARGS&&... args) noexcept {
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
+    }
+
+    template<typename D, typename B, typename... ARGS>
+    Handle<B> allocAndConstructHandle(ARGS&&... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
     }
 
     template<typename D, typename B>

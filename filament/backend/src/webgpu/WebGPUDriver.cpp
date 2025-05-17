@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 #include <utils/Hash.h>
+#include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUDriver.h"
+#include "WebGPUHandles.h"
 
 #include "WebGPUPipelineCreation.h"
 #include "WebGPUSwapChain.h"
@@ -43,7 +45,7 @@
 #include <string_view>
 #include <utility>
 #include <variant>
-
+#include <iostream>
 namespace filament::backend {
 
 namespace {
@@ -314,13 +316,13 @@ void WebGPUDriver::finish(int /* dummy */) {
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
-   if (rph) {
+    if (rph) {
         destructHandle<WGPURenderPrimitive>(rph);
     }
 }
 
 void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
-   if (vbih) {
+    if (vbih) {
         destructHandle<WGPUVertexBufferInfo>(vbih);
     }
 }
@@ -362,11 +364,7 @@ void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     mSwapChain = nullptr;
 }
 
-void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
-}
-
-void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
-}
+void WebGPUDriver::destroyStream(Handle<HwStream> sh) {}
 
 void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
     if (tqh) {
@@ -403,7 +401,36 @@ Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
 }
 
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
-    return Handle<HwTimerQuery>((Handle<HwTimerQuery>::HandleId) mNextFakeHandle++);
+    // The handle must be constructed here, as a synchronous call to getTimerQueryValue might happen
+    // before createTimerQueryR is executed.
+    return allocAndConstructHandle<WGPUTimerQuery, HwTimerQuery>();
+}
+
+void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int /* dummy */) {
+    // nothing to do, timer query was constructed in createTimerQueryS
+}
+
+void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
+    if (tqh) {
+        destructHandle<WGPUTimerQuery>(tqh);
+    }
+}
+
+void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
+    std::cout << "WebGPUDriver::beginTimerQuery" <<std::endl;
+    mTimerQuery = handleCast<WGPUTimerQuery>(tqh);
+}
+
+void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
+    std::cout << "WebGPUDriver::endTimerQuery" <<std::endl;
+    mTimerQuery = handleCast<WGPUTimerQuery>(tqh);
+}
+
+TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
+    std::cout << "WebGPUDriver::getTimerQueryValue" <<std::endl;
+    auto* tq = handleCast<WGPUTimerQuery>(tqh);
+    return tq->getQueryResult(elapsedTime) ? TimerQueryResult::AVAILABLE
+                                               : TimerQueryResult::NOT_READY;
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
@@ -584,7 +611,6 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferF
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 
-void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
         backend::DescriptorSetLayout&& info) {
@@ -763,17 +789,14 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th,
 void WebGPUDriver::setupExternalImage(void* image) {
 }
 
-TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return TimerQueryResult::ERROR;
-}
-
 void WebGPUDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
 }
 
 void WebGPUDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
-void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) { }
+void WebGPUDriver::generateMipmaps(Handle<HwTexture> th) {
+}
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
         CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
@@ -815,6 +838,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
         red = 1.0f;
     }
     assert_invariant(mTextureView);
+
     wgpu::RenderPassColorAttachment renderPassColorAttachment = {
         .view = mTextureView,
         // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
@@ -861,12 +885,29 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 }
 
 void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
+//    mTimerQuery->beginTimeElapsedQuery();
     wgpu::CommandBufferDescriptor commandBufferDescriptor{
         .label = "command_buffer",
     };
     mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
     assert_invariant(mCommandBuffer);
     mCommandEncoder = nullptr;
+    assert_invariant(mCommandBuffer);
+    mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
+            [this](auto const& status) {
+            std::cout << "OnSubmittedWorkDone called " << std::endl;
+            if (status == wgpu::QueueWorkDoneStatus::Success) {
+                if (mTimerQuery) {
+                        mTimerQuery->endTimeElapsedQuery();
+                }
+            }
+            else
+            {
+                std::cout << "NOT SUCCESS" << std::endl;
+            }
+    });
+
+    mTimerQuery->beginTimeElapsedQuery();
     mQueue.Submit(1, &mCommandBuffer);
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
@@ -1002,14 +1043,8 @@ void WebGPUDriver::scissor(
         Viewport scissor) {
 }
 
-void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
-}
 
-void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
-}
-
-void WebGPUDriver::resetState(int) {
-}
+void WebGPUDriver::resetState(int) {}
 
 void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
         backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
@@ -1176,6 +1211,5 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     }
     return wgpu::AddressMode::Undefined;
 }
-
 
 } // namespace filament
