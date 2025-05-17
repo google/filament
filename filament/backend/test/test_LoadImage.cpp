@@ -289,15 +289,19 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
     api.startCapture();
 
+    Cleanup cleanup(api);
+    cleanup.addPostCall([&]() { api.finish(); });
+    cleanup.addPostCall([&]() { api.stopCapture(); });
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
-        Cleanup cleanup(api);
+        Cleanup caseCleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = caseCleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = caseCleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -305,7 +309,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         std::string const fragment = stringReplace("{samplerType}",
                 getSamplerTypeName(t.textureFormat), fragmentTemplate);
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, caseCleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
@@ -313,7 +317,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> const texture = caseCleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 t.textureFormat, 1, 512, 512, 1u, usage));
 
         // Upload some pixel data.
@@ -347,14 +351,13 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.commit(swapChain);
         api.endFrame(0);
     }
-
-    api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
     PixelDataType const pixelType = PixelDataType::UBYTE;
@@ -402,33 +405,33 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({{ shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageSRGB", 359858623));
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "UpdateImageSRGB", 359858623));
 
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture();
+        api.commit(swapChain);
+    }
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::HALF;
@@ -461,27 +464,26 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, 512, 512, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+        renderTriangle({{ shader.getDescriptorSetLayout() }},
+                defaultRenderTarget, swapChain, shader.getProgram());
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageMipLevel", 3644679986));
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "UpdateImageMipLevel", 3644679986));
 
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture();
+        api.commit(swapChain);
+    }
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
@@ -491,6 +493,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::FLOAT;
@@ -552,8 +555,6 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
                 ScreenshotParams(512, 512, "UpdateImage3D", 3644679986));
     }
-
-    api.stopCapture();
 }
 
 } // namespace test
