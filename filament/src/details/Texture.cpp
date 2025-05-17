@@ -384,7 +384,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
 
-    uint32_t effectiveTextureDepthOrLayers;
+    uint32_t effectiveTextureDepthOrLayers = 0;
     switch (mTarget) {
         case SamplerType::SAMPLER_EXTERNAL:
             // can't happen by construction, fallthrough...
@@ -447,6 +447,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
         }
+        return false;
     };
 
     // this should have been validated already

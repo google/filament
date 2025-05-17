@@ -76,7 +76,7 @@ public:
 
     // all commands buffers (Slices) written to this point are returned by waitForCommand(). This
     // call blocks until the CircularBuffer has at least mRequiredSize bytes available.
-    void flush() noexcept;
+    void flush();
 
     // returns from waitForCommands() immediately.
     void requestExit();
