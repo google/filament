@@ -100,19 +100,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
     }
 
     if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT &&
-        size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
-
-#ifndef NDEBUG
-        if (byteOffset & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteOffset not multiple of 4" << utils::io::endl;
-        }
-        if (byteStride & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteStride not multiple of 4" << utils::io::endl;
-        }
-#endif
-
+            size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
         auto& entry = mImpl->mAttributes[attribute];
         entry.buffer = bufferIndex;
         entry.offset = byteOffset;
@@ -169,9 +157,15 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     auto const& attributes = mImpl->mAttributes;
     utils::bitset32 attributedBuffers;
 
-    declaredAttributes.forEachSetBit([&](size_t const j){
-        // update set of used buffers
-        attributedBuffers.set(attributes[j].buffer);
+    declaredAttributes.forEachSetBit([&](size_t const j) {
+
+        FILAMENT_CHECK_PRECONDITION((attributes[j].offset & 0x3u) == 0)
+                << "attribute " << j << " offset=" << attributes[j].offset
+                << " is not multiple of 4";
+
+        FILAMENT_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0)
+                << "attribute " << j << " stride=" << attributes[j].stride
+                << " is not multiple of 4";
 
         if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
             FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))
@@ -190,9 +184,13 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                     (1 << int(ET::HALF2)) |
                     (1 << int(ET::HALF3)) |
                     (1 << int(ET::HALF4));
+
             FILAMENT_CHECK_PRECONDITION(!(invalidIntegerTypes & (1 << int(attributes[j].type))))
                     << "invalid integer vertex attribute type " << int(attributes[j].type);
         }
+
+        // update set of used buffers
+        attributedBuffers.set(attributes[j].buffer);
     });
 
     FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
