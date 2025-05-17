@@ -116,7 +116,6 @@ public:
 
     enum class BindGroupEntryType : uint8_t {
         UNIFORM_BUFFER,
-        TEXTURE_VIEW,
         SAMPLER
     };
 
@@ -135,7 +134,7 @@ public:
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
-    // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
+    // Convert Filament Shader Stage Flags bitmask to webgpu equivalent
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
@@ -143,8 +142,6 @@ private:
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
-            wgpu::TextureFormat aColorFormat);
 
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
@@ -156,13 +153,6 @@ public:
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
 private:
-    static wgpu::Buffer sDummyUniformBuffer;
-    static wgpu::Texture sDummyTexture;
-    static wgpu::TextureView sDummyTextureView;
-    static wgpu::Sampler sDummySampler;
-
-    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
-            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
 
     // TODO: Consider storing what we used to make the layout. However we need to essentially
     // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
@@ -171,9 +161,8 @@ private:
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
-    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
+    std::vector<wgpu::BindGroupEntry> mEntries;
     std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets{};
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded{};
     std::vector<uint32_t> mDynamicOffsets;
     wgpu::BindGroup mBindGroup = nullptr;
 };
