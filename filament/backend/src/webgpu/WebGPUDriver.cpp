@@ -26,7 +26,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
-
+#include <private/backend/BackendUtils.h>
 #include <math/mat3.h>
 #include <utils/CString.h>
 #include <utils/Panic.h>
@@ -753,11 +753,72 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
-void WebGPUDriver::update3DImage(Handle<HwTexture> th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& data) {
-    scheduleDestroy(std::move(data));
+void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
+        uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& p) {
+    PixelBufferDescriptor* data = &p;
+    PixelBufferDescriptor reshapedData;
+    if (reshape(p, reshapedData)) {
+        data = &reshapedData;
+    }
+    auto texture = handleCast<WGPUTexture>(th);
+
+    // TODO: Writing to a depth texture is illegal and errors. I'm not sure why Filament is trying
+    // to do so, but early returning is working?
+    if(texture->getAspect() == wgpu::TextureAspect::DepthOnly){
+        scheduleDestroy(std::move(p));
+        return;
+    }
+    size_t blockWidth = texture->getBlockWidth();
+    size_t blockHeight = texture->getBlockHeight();
+    // WebGPU specification requires that for compressed textures, the x and y offsets
+    // must be a multiple of the compressed texture format's block width and height.
+    // See: https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gputexelcopytextureinfo
+    if (blockWidth > 1 || blockHeight > 1) {
+        FILAMENT_CHECK_PRECONDITION(xoffset % blockWidth == 0)
+                << "xoffset must be aligned to blockwidth, but offset is " << blockWidth
+                << "and offset is " << xoffset;
+        FILAMENT_CHECK_PRECONDITION(yoffset % blockHeight == 0)
+                << "yoffset must be aligned to blockHeight, but offset is " << blockHeight
+                << "and offset is " << yoffset;
+    }
+
+    auto copyInfo = wgpu::TexelCopyTextureInfo{ .texture = texture->getTexture(),
+        .mipLevel = level,
+        .origin = { xoffset, yoffset, zoffset },
+        .aspect = texture->getAspect() };
+    uint32_t bytesPerRow = static_cast<uint32_t>(
+            PixelBufferDescriptor::computePixelSize(data->format, data->type) * width);
+    auto extent = wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth };
+
+    const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
+    size_t dataSize = data->size;
+    std::unique_ptr<uint8_t[]> paddedBuffer;
+
+    if (bytesPerRow % 256 != 0) {
+        uint32_t padding = 256 - (bytesPerRow % 256);
+        uint32_t paddedBytesPerRow = bytesPerRow + padding;
+
+        size_t paddedBufferSize = static_cast<size_t>(paddedBytesPerRow) * height * depth;
+        paddedBuffer = std::make_unique<uint8_t[]>(paddedBufferSize);
+        uint8_t* dest = paddedBuffer.get();
+
+        for (uint32_t z = 0; z < depth; ++z) {
+            for (uint32_t y = 0; y < height; ++y) {
+                std::memcpy(dest, dataBuff, bytesPerRow);
+                dest += paddedBytesPerRow;
+                dataBuff += bytesPerRow;
+            }
+        }
+        dataBuff = paddedBuffer.get();
+        dataSize = paddedBufferSize;
+        bytesPerRow = paddedBytesPerRow;
+    }
+
+    auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
+
+    mQueue.WriteTexture(&copyInfo, dataBuff, dataSize, &layout, &extent);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
