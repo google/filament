@@ -162,6 +162,8 @@ public:
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
     wgpu::TextureAspect getAspect() const { return mAspect; }
+    size_t getBlockWidth() const { return mBlockWidth; }
+    size_t getBlockHeight() const { return mBlockHeight; }
 
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTexView() const { return mTexView; }
@@ -185,6 +187,8 @@ private:
     uint32_t mArrayLayerCount = 1;
     wgpu::TextureView mTexView = nullptr;
     wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+    size_t mBlockWidth;
+    size_t mBlockHeight;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
