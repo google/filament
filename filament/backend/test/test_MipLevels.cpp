@@ -143,12 +143,10 @@ TEST_F(BackendTest, TextureViewLod) {
             params.flags.clear = TargetBufferFlags::NONE;
             params.flags.discardStart = TargetBufferFlags::NONE;
             params.flags.discardEnd = TargetBufferFlags::NONE;
-            PipelineState ps = {};
-            ps.program = whiteShader.getProgram();
-            ps.rasterState.colorWrite = true;
-            ps.rasterState.depthWrite = false;
+            PipelineState state = getColorWritePipelineState();
+            whiteShader.addProgramToPipelineState(state);
             api.beginRenderPass(renderTarget, params);
-            api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
             api.endRenderPass();
         }
 
@@ -161,14 +159,8 @@ TEST_F(BackendTest, TextureViewLod) {
         params.clearColor = {0.f, 0.f, 0.5f, 1.f};
         params.flags.discardStart = TargetBufferFlags::ALL;
         params.flags.discardEnd = TargetBufferFlags::NONE;
-
-        PipelineState state;
-        state.program = texturedShader.getProgram();
-        state.pipelineLayout.setLayout = { texturedShader.getDescriptorSetLayout() };
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = SamplerCompareFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
+        PipelineState state = getColorWritePipelineState();
+        texturedShader.addProgramToPipelineState(state);
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {

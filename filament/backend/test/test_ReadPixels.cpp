@@ -294,15 +294,12 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Render a white triangle over blue.
         api.beginRenderPass(renderTarget, params);
 
-        PipelineState state;
-        state.program = floatShader.getProgram();
+        PipelineState state = getColorWritePipelineState();
         if (isUnsignedIntFormat(t.textureFormat)) {
-            state.program = uintShader.getProgram();
+            uintShader.addProgramToPipelineState(state);
+        } else {
+            floatShader.addProgramToPipelineState(state);
         }
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = RasterState::DepthFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
         api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
         api.endRenderPass();
@@ -400,6 +397,8 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     TrianglePrimitive triangle(api);
 
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
     RenderPassParams params = {};
     fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
@@ -410,13 +409,6 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     params.viewport.width = renderTargetSize;
 
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
-
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     for (int iteration = 0; iteration < iterationCount; ++iteration) {
         readPixelsFinished = false;

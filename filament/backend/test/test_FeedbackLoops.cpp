@@ -164,12 +164,8 @@ TEST_F(BackendTest, FeedbackLoops) {
             RenderPassParams params = {};
             params.flags.clear = TargetBufferFlags::NONE;
             params.flags.discardEnd = TargetBufferFlags::NONE;
-            PipelineState state;
-            state.rasterState.colorWrite = true;
-            state.rasterState.depthWrite = false;
-            state.rasterState.depthFunc = RasterState::DepthFunc::A;
-            state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
+            PipelineState state = getColorWritePipelineState();
+            shader.addProgramToPipelineState(state);
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);

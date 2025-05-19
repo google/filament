@@ -52,6 +52,8 @@ protected:
 
     filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain();
 
+    static filament::backend::PipelineState getColorWritePipelineState();
+
     // Helper methods to set the viewport to the full extent of the swap chain.
     static void fullViewport(filament::backend::RenderPassParams& params);
     static void fullViewport(filament::backend::Viewport& viewport);
