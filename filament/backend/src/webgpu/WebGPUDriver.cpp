@@ -769,6 +769,20 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
         scheduleDestroy(std::move(p));
         return;
     }
+    size_t blockWidth = texture->getBlockWidth();
+    size_t blockHeight = texture->getBlockHeight();
+    // WebGPU specification requires that for compressed textures, the x and y offsets
+    // must be a multiple of the compressed texture format's block width and height.
+    // See: https://www.w3.org/TR/webgpu/#abstract-opdef-validating-gputexelcopytextureinfo
+    if (blockWidth > 1 || blockHeight > 1) {
+        FILAMENT_CHECK_PRECONDITION(xoffset % blockWidth == 0)
+                << "xoffset must be aligned to blockwidth, but offset is " << blockWidth
+                << "and offset is " << xoffset;
+        FILAMENT_CHECK_PRECONDITION(yoffset % blockHeight == 0)
+                << "yoffset must be aligned to blockHeight, but offset is " << blockHeight
+                << "and offset is " << yoffset;
+    }
+
     auto copyInfo = wgpu::TexelCopyTextureInfo{ .texture = texture->getTexture(),
         .mipLevel = level,
         .origin = { .x = xoffset, .y = yoffset, .z = zoffset },

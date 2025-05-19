@@ -20,7 +20,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/Panic.h>
-
+#include <private/backend/BackendUtils.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
@@ -502,6 +502,8 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mUsage = fToWGPUTextureUsage(usage);
     mFormat = fToWGPUTextureFormat(format);
     mAspect = fToWGPUTextureViewAspect(usage, format);
+    mBlockWidth = filament::backend::getBlockWidth(format);
+    mBlockHeight = filament::backend::getBlockHeight(format);
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
         .usage = mUsage,
@@ -549,6 +551,8 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     mTexture = src->mTexture;
     mAspect = src->mAspect;
+    mBlockWidth = src->mBlockWidth;
+    mBlockHeight = src->mBlockHeight;
 
     mTexView = makeTextureView(baseLevel, levelCount, target);
 }
