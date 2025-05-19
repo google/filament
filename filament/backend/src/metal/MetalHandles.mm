@@ -1375,6 +1375,12 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
             case DescriptorType::SAMPLER_3D_FLOAT:
             case DescriptorType::SAMPLER_3D_INT:
             case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             case DescriptorType::SAMPLER_EXTERNAL: {
                 MTLArgumentDescriptor* textureArgument = [MTLArgumentDescriptor argumentDescriptor];
                 textureArgument.index = binding.binding * 2;
@@ -1515,6 +1521,12 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
             case DescriptorType::SAMPLER_3D_FLOAT:
             case DescriptorType::SAMPLER_3D_INT:
             case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             case DescriptorType::SAMPLER_EXTERNAL: {
                 auto found = textures.find(binding.binding);
                 if (found == textures.end()) {

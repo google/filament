@@ -207,6 +207,8 @@ bool DescriptorSet::isTextureCompatibleWithDescriptor(
         case DescriptorType::SAMPLER_CUBE_FLOAT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
         case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
             // DEPTH_STENCIL is treated as accessing the depth component. OpenGL 4.3
             // allows to specify which one, but not filament.
             // Depth textures can be used as an unfiltered float sampler
@@ -217,6 +219,8 @@ bool DescriptorSet::isTextureCompatibleWithDescriptor(
         case DescriptorType::SAMPLER_CUBE_INT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
         case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
             return t == TextureType::INT;
 
         case DescriptorType::SAMPLER_2D_UINT:
@@ -224,6 +228,8 @@ bool DescriptorSet::isTextureCompatibleWithDescriptor(
         case DescriptorType::SAMPLER_CUBE_UINT:
         case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
         case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             return t == TextureType::UINT;
 
         case DescriptorType::SAMPLER_2D_DEPTH:

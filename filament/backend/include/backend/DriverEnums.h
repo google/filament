@@ -285,6 +285,14 @@ constexpr std::string_view to_string(TextureType type) noexcept {
      SAMPLER_3D_INT,
      SAMPLER_3D_UINT,
 
+     SAMPLER_2D_MS_FLOAT,
+     SAMPLER_2D_MS_INT,
+     SAMPLER_2D_MS_UINT,
+
+     SAMPLER_2D_MS_ARRAY_FLOAT,
+     SAMPLER_2D_MS_ARRAY_INT,
+     SAMPLER_2D_MS_ARRAY_UINT,
+
      SAMPLER_EXTERNAL,
      UNIFORM_BUFFER,
      SHADER_STORAGE_BUFFER,
@@ -338,6 +346,12 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_FLOAT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_INT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_UINT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_EXTERNAL)
         DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
         DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
@@ -647,6 +661,15 @@ enum class BufferObjectBinding : uint8_t {
     UNIFORM,
     SHADER_STORAGE
 };
+
+constexpr std::string_view to_string(BufferObjectBinding type) noexcept {
+    switch (type) {
+        case BufferObjectBinding::VERTEX:           return "VERTEX";
+        case BufferObjectBinding::UNIFORM:          return "UNIFORM";
+        case BufferObjectBinding::SHADER_STORAGE:   return "SHADER_STORAGE";
+    }
+    return "UNKNOWN";
+}
 
 //! Face culling Mode
 enum class CullingMode : uint8_t {
@@ -1181,7 +1204,7 @@ struct SamplerParams {             // NOLINT
             assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
+            return *pLhs < *pRhs;
         }
     };
 
