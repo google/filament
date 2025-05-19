@@ -63,4 +63,13 @@
     #define FWGPU_LOGI (utils::slog.i)
 #endif
 
+constexpr uint64_t REQUEST_ADAPTER_TIMEOUT_NANOSECONDS =
+        /* milliseconds */ 1000u * /* converted to ns */ 1000000u;
+
+constexpr uint64_t REQUEST_DEVICE_TIMEOUT_NANOSECONDS =
+        /* milliseconds */ 1000u * /* converted to ns */ 1000000u;
+
+constexpr uint64_t SHADER_COMPILATION_TIMEOUT_NANOSECONDS =
+        /* milliseconds */ 1000u * /* converted to ns */ 1000000u;
+
 #endif// TNT_FILAMENT_BACKEND_WEBGPUCONSTANTS_H
