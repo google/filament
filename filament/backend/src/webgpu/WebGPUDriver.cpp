@@ -472,9 +472,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
-    FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
-                  "background components have been instantiated/selected, such as surface/screen, "
-                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
+    FWGPU_LOGW << "WebGPU support is highly experimental, in development, and tested for only a "
+                  "small set of simple samples (e.g. hellotriangle and texturedquad), thus issues "
+                  "are likely to be encountered at this stage."
                << utils::io::endl;
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
     FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
