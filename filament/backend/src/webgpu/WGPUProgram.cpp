@@ -36,6 +36,9 @@ namespace filament::backend {
 
 namespace {
 
+constexpr uint64_t SHADER_COMPILATION_TIMEOUT_NANOSECONDS =
+        /* milliseconds */ 1000u * /* converted to ns */ 1000000u;
+
 [[nodiscard]] constexpr std::string_view toString(ShaderStage stage) {
     switch (stage) {
         case ShaderStage::VERTEX:
@@ -119,10 +122,12 @@ namespace {
                                     << ":\n"
                                     << errorStream.str();
                         }
+#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
                         FWGPU_LOGD << descriptor.label << " compiled successfully"
                                    << utils::io::endl;
+#endif
                     }),
-            UINT16_MAX);
+            SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
     return module;
 }
 

@@ -22,6 +22,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <vector>
 
 namespace filament::backend {
 
@@ -56,6 +57,10 @@ protected:
             const Platform::DriverConfig& driverConfig) noexcept override;
 
 private:
+    // returns adapter request option variations applicable for the particular
+    // platform
+    [[nodiscard]] static std::vector<wgpu::RequestAdapterOptions> getAdapterOptions();
+
     // we may consider having the driver own this in the future
     wgpu::Instance mInstance;
 };
