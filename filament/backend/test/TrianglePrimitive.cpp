@@ -113,4 +113,15 @@ TrianglePrimitive::PrimitiveHandle TrianglePrimitive::getRenderPrimitive() const
     return mRenderPrimitive;
 }
 
+void TrianglePrimitive::bindWithPipelineState(DriverApi& api, PipelineState state) const {
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = getVertexBufferInfo();
+    api.bindPipeline(state);
+    api.bindRenderPrimitive(getRenderPrimitive());
+}
+
+void TrianglePrimitive::draw(DriverApi& api) const {
+    api.draw2(0, 3, 1);
+}
+
 } // namespae test

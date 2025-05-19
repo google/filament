@@ -57,6 +57,10 @@ public:
 
     VertexInfoHandle getVertexBufferInfo() const { return mVertexBufferInfo; }
 
+    void bindWithPipelineState(filament::backend::DriverApi& api,
+            filament::backend::PipelineState state) const;
+    void draw(filament::backend::DriverApi& api) const;
+
 private:
 
     size_t mVertexCount = 3;
