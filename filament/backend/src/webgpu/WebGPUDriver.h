@@ -58,32 +58,13 @@ private:
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
-    template<typename GPUBufferObject>
-    void updateGPUBuffer(GPUBufferObject* gpuBufferObject, BufferDescriptor&& bufferDescriptor,
-            uint32_t byteOffset) {
-        FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
-                << "copyIntoBuffer called with a null buffer";
-        FILAMENT_CHECK_PRECONDITION(
-                bufferDescriptor.size + byteOffset <= gpuBufferObject->buffer.GetSize())
-                << "Attempting to copy " << bufferDescriptor.size << " bytes into a buffer of size "
-                << gpuBufferObject->buffer.GetSize() << " at offset " << byteOffset;
-
-        // TODO: All buffer objects are created with CopyDst usage.
-        // This may have some performance implications. That should be investigated later.
-        assert_invariant(gpuBufferObject->buffer.GetUsage() & wgpu::BufferUsage::CopyDst);
-
-        // WriteBuffer is an async call. But cpu buffer data is already written to the staging
-        // buffer on return from the WriteBuffer.
-        mQueue.WriteBuffer(gpuBufferObject->buffer, byteOffset, bufferDescriptor.buffer,
-                bufferDescriptor.size);
-        scheduleDestroy(std::move(bufferDescriptor));
-    }
 
     // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform
     WebGPUPlatform& mPlatform;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
+    uint32_t mMinUniformBufferOffsetAlignment;
     wgpu::Queue mQueue = nullptr;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;

@@ -43,7 +43,6 @@ public:
     std::vector<wgpu::ConstantEntry> constants;
 };
 
-struct WGPUBufferObject;
 
 // VertexBufferInfo contains layout info for Vertex Buffer based on WebGPU structs. In WebGPU each
 // VertexBufferLayout is associated with a single vertex buffer. So number of mVertexBufferLayout
@@ -85,19 +84,30 @@ struct WGPUVertexBuffer : public HwVertexBuffer {
     utils::FixedCapacityVector<wgpu::Buffer> buffers;
 };
 
-struct WGPUIndexBuffer : public HwIndexBuffer {
+class WGPUBufferBase {
+public:
+    void createBuffer(wgpu::Device const& device, wgpu::BufferUsage usage, uint32_t size,
+            char const* label);
+    void updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_t byteOffset,
+            wgpu::Queue queue);
+    const wgpu::Buffer& getBuffer() const { return buffer; }
+protected:
+    wgpu::Buffer buffer;
+private:
+    // 4 bytes to hold any extra chunk we need.
+    std::array<uint8_t,4> mRemainderChunk;
+};
+
+class WGPUIndexBuffer : public HwIndexBuffer, public WGPUBufferBase {
+public:
     WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize,
                     uint32_t indexCount);
-
-    wgpu::Buffer buffer;
     wgpu::IndexFormat indexFormat;
 };
 
-struct WGPUBufferObject : HwBufferObject {
+class WGPUBufferObject : public HwBufferObject, public WGPUBufferBase {
+public:
     WGPUBufferObject(wgpu::Device const &device, BufferObjectBinding bindingType, uint32_t byteCount);
-
-    wgpu::Buffer buffer = nullptr;
-    const BufferObjectBinding bufferObjectBinding;
 };
 
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {

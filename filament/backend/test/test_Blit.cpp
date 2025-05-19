@@ -302,6 +302,9 @@ TEST_F(BlitTest, ColorResolve) {
             {{ dstColorTexture }}, {}, {}));
 
     // Prep for rendering.
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::COLOR;
     params.flags.discardStart = TargetBufferFlags::ALL;
@@ -309,14 +312,6 @@ TEST_F(BlitTest, ColorResolve) {
     params.clearColor = float4(1, 1, 0, 1);
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
-
-    PipelineState state = {};
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     auto ubuffer = mCleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
@@ -328,7 +323,6 @@ TEST_F(BlitTest, ColorResolve) {
     });
     shader.bindUniform<SimpleMaterialParams>(api, ubuffer);
 
-    // FIXME: on Metal this triangle is not drawn. Can't understand why.
     {
         RenderFrame frame(api);
         api.beginRenderPass(srcRenderTarget, params);

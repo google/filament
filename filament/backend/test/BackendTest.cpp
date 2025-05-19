@@ -106,6 +106,14 @@ Handle<HwSwapChain> BackendTest::createSwapChain() {
     return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
+PipelineState BackendTest::getColorWritePipelineState() {
+    PipelineState result;
+    result.rasterState.colorWrite = true;
+    result.rasterState.depthWrite = false;
+    result.rasterState.depthFunc = RasterState::DepthFunc::A;
+    return result;
+}
+
 void BackendTest::fullViewport(RenderPassParams& params) {
     fullViewport(params.viewport);
 }
