@@ -792,19 +792,11 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
     //     FWGPU_LOGW << "Non Default render target"
     //                << utils::io::endl;
     // }
-    wgpu::RenderPassDescriptor renderPassDescriptor;
-    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = mSwapChain->getDepthTextureView(),
-        .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
-        .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
-        .depthClearValue = static_cast<float>(params.clearDepth),
-        .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
-        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
-        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
-        .stencilClearValue = params.clearStencil,
-        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
-    };
+    wgpu::RenderPassDescriptor renderPassDescriptor{};
     renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
+
+    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment =
+            WGPURenderTarget::getDepthStencilAttachment(mSwapChain->getDepthTextureView(), params);
     renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
 
     assert_invariant(mTextureView);

@@ -947,6 +947,7 @@ wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params
     }
     return wgpu::StoreOp::Store;
 }
+
 void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
         wgpu::TextureView const& textureView, RenderPassParams const& params) {
     // auto discardFlags = params.flags.discardEnd;
@@ -970,5 +971,18 @@ void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& de
     descriptor.timestampWrites = nullptr;
 }
 
+wgpu::RenderPassDepthStencilAttachment WGPURenderTarget::getDepthStencilAttachment(
+        wgpu::TextureView const& textureView, RenderPassParams const& params) {
+    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{ .view = textureView,
+        .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
+        .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
+        .depthClearValue = static_cast<float>(params.clearDepth),
+        .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
+        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+        .stencilClearValue = params.clearStencil,
+        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0 };
+    return depthStencilAttachment;
+}
 
 }// namespace filament::backend

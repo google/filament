@@ -225,6 +225,9 @@ public:
     void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
             wgpu::TextureView const& textureView, RenderPassParams const& params);
 
+    static wgpu::RenderPassDepthStencilAttachment getDepthStencilAttachment(
+            wgpu::TextureView const& textureView, RenderPassParams const& params);
+
     math::uint2 getAttachmentSize() noexcept;
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
