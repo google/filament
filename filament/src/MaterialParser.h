@@ -79,6 +79,7 @@ public:
     bool getShaderModels(uint32_t* value) const noexcept;
     bool getMaterialProperties(uint64_t* value) const noexcept;
     bool getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
+    bool getMutableConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
     bool getPushConstants(utils::CString* structVarName,
             utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept;
 
@@ -235,6 +236,13 @@ struct ChunkMaterialConstants {
             utils::FixedCapacityVector<MaterialConstant>* materialConstants);
     using Container = utils::FixedCapacityVector<MaterialConstant>;
     static filamat::ChunkType const tag = filamat::MaterialConstants;
+};
+
+struct ChunkMaterialMutableConstants {
+    static bool unflatten(filaflat::Unflattener& unflattener,
+            utils::FixedCapacityVector<MaterialConstant>* materialConstants);
+    using Container = utils::FixedCapacityVector<MaterialConstant>;
+    static filamat::ChunkType const tag = filamat::MaterialMutableConstants;
 };
 
 struct ChunkMaterialPushConstants {

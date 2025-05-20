@@ -232,6 +232,52 @@ template UTILS_PUBLIC mat3f MaterialInstance::getParameter<mat3f>      (const ch
 
 // ------------------------------------------------------------------------------------------------
 
+// We could just accept a variant as an argument to this function, but eventually, when we implement
+// ubershaders, we'll want to set uniforms here in addition to updating the constants map. So in the
+// meantime, keep this function specialized.
+template<typename T>
+inline void FMaterialInstance::setConstantImpl(std::string_view const name, T const& value) {
+    std::optional<uint32_t> id = mMaterial->getMutableConstantId(name);
+    FILAMENT_CHECK_PRECONDITION(id.has_value()) << "No mutable constant with name " << name;
+    FILAMENT_CHECK_PRECONDITION(std::holds_alternative<T>(mConstants[*id]))
+            << "Mutable constant " << name << " has incompatible type";
+    mConstants[*id] = value;
+}
+
+template<typename T, typename>
+void MaterialInstance::setConstant(const char* name, size_t nameLength, T const& value) {
+    downcast(this)->setConstantImpl({ name, nameLength }, value);
+}
+
+// explicit template instantiation of our supported types
+template UTILS_PUBLIC void MaterialInstance::setConstant<bool>   (const char* name, size_t nameLength, bool const&    v);
+template UTILS_PUBLIC void MaterialInstance::setConstant<float>  (const char* name, size_t nameLength, float const&   v);
+template UTILS_PUBLIC void MaterialInstance::setConstant<int32_t>(const char* name, size_t nameLength, int32_t const& v);
+
+// ------------------------------------------------------------------------------------------------
+
+template<typename T>
+inline T FMaterialInstance::getConstantImpl(std::string_view const name) const {
+    std::optional<uint32_t> id = mMaterial->getMutableConstantId(name);
+    FILAMENT_CHECK_PRECONDITION(id.has_value()) << "No mutable constant with name " << name;
+    auto value = mConstants[*id];
+    FILAMENT_CHECK_PRECONDITION(std::holds_alternative<T>(value))
+            << "Mutable constant " << name << " has incompatible type";
+    return std::get<T>(value);
+}
+
+template<typename T, typename>
+T MaterialInstance::getConstant(const char* name, size_t nameLength) const {
+    return downcast(this)->getConstantImpl<T>({ name, nameLength });
+}
+
+// explicit template instantiation of our supported types
+template UTILS_PUBLIC bool MaterialInstance::getConstant<bool>      (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC float MaterialInstance::getConstant<float>    (const char* name, size_t nameLength) const;
+template UTILS_PUBLIC int32_t MaterialInstance::getConstant<int32_t>(const char* name, size_t nameLength) const;
+
+// ------------------------------------------------------------------------------------------------
+
 Material const* MaterialInstance::getMaterial() const noexcept {
     return downcast(this)->getMaterial();
 }

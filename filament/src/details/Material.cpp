@@ -338,6 +338,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder,
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
+    processMutableSpecializationConstants(engine, builder, parser);
     processPushConstants(engine, parser);
     processDescriptorSets(engine, parser);
     precacheDepthVariants(engine);
@@ -448,7 +449,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
         for (auto const variant: variants) {
             if (!variantFilter || variant == Variant::filterUserVariant(variant, variantFilter)) {
                 if (hasVariant(variant)) {
-                    prepareProgram(variant, priority);
+                    prepareProgram(variant, mDefaultMutableSpecConstants, priority); // TODO(exv): fix this
                 }
             }
         }
@@ -529,14 +530,15 @@ bool FMaterial::hasVariant(Variant const variant) const noexcept {
 }
 
 void FMaterial::prepareProgramSlow(Variant const variant,
+        const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mEngine.hasFeatureLevel(mFeatureLevel));
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
-            getSurfaceProgramSlow(variant, priorityQueue);
+            getSurfaceProgramSlow(variant, mutableSpecConstants, priorityQueue);
             break;
         case MaterialDomain::POST_PROCESS:
-            getPostProcessProgramSlow(variant, priorityQueue);
+            getPostProcessProgramSlow(variant, mutableSpecConstants, priorityQueue);
             break;
         case MaterialDomain::COMPUTE:
             // TODO: implement MaterialDomain::COMPUTE
@@ -545,6 +547,7 @@ void FMaterial::prepareProgramSlow(Variant const variant,
 }
 
 void FMaterial::getSurfaceProgramSlow(Variant const variant,
+        const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
         CompilerPriorityQueue const priorityQueue) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
@@ -555,7 +558,7 @@ void FMaterial::getSurfaceProgramSlow(Variant const variant,
     Variant const vertexVariant   = Variant::filterVariantVertex(variant);
     Variant const fragmentVariant = Variant::filterVariantFragment(variant);
 
-    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
+    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant, mutableSpecConstants) };
     pb.priorityQueue(priorityQueue);
     pb.multiview(
             mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
@@ -564,16 +567,16 @@ void FMaterial::getSurfaceProgramSlow(Variant const variant,
 }
 
 void FMaterial::getPostProcessProgramSlow(Variant const variant,
+        const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
         CompilerPriorityQueue const priorityQueue) const noexcept {
-    Program pb{ getProgramWithVariants(variant, variant, variant) };
+    Program pb{ getProgramWithVariants(variant, variant, variant, mutableSpecConstants) };
     pb.priorityQueue(priorityQueue);
     createAndCacheProgram(std::move(pb), variant);
 }
 
-Program FMaterial::getProgramWithVariants(
-        Variant variant,
-        Variant vertexVariant,
-        Variant fragmentVariant) const noexcept {
+Program FMaterial::getProgramWithVariants(Variant variant,
+        Variant vertexVariant, Variant fragmentVariant,
+        const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants) const noexcept {
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;
@@ -721,6 +724,14 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
     }
 
     return count;
+}
+
+std::optional<uint32_t> FMaterial::getMutableConstantId(std::string_view name) const noexcept {
+    auto const pos = mMutableSpecializationConstantsNameToIndex.find(name);
+    if (pos != mMutableSpecializationConstantsNameToIndex.end()) {
+        return pos->second;
+    }
+    return std::nullopt;
 }
 
 #if FILAMENT_ENABLE_MATDBG
@@ -1107,6 +1118,34 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     }
 }
 
+void FMaterial::processMutableSpecializationConstants(FEngine& engine, Builder const& builder,
+        MaterialParser const* const parser) {
+    // Older materials won't have a mutable constants chunk, but that's okay.
+    parser->getMutableConstants(&mMaterialMutableConstants);
+    for (size_t i = 0, c = mMaterialMutableConstants.size(); i < c; i++) {
+        auto& item = mMaterialMutableConstants[i];
+        // the key can be a string_view because mMaterialMutableConstants owns the CString
+        std::string_view const key{ item.name.data(), item.name.size() };
+        mMutableSpecializationConstantsNameToIndex[key] = i;
+    }
+
+    // Initialize default values.
+    mDefaultMutableSpecConstants.reserve(mMaterialMutableConstants.size());
+    for (uint32_t i = 0; i < mMaterialMutableConstants.size(); i++) {
+        switch (mMaterialMutableConstants[i].type) {
+            case ConstantType::INT:
+                mDefaultMutableSpecConstants[i] = 0;
+                break;
+            case ConstantType::FLOAT:
+                mDefaultMutableSpecConstants[i] = 0.0f;
+                break;
+            case ConstantType::BOOL:
+                mDefaultMutableSpecConstants[i] = false;
+                break;
+        }
+    }
+}
+
 void FMaterial::processPushConstants(FEngine&, MaterialParser const* parser) {
     FixedCapacityVector<Program::PushConstant>& vertexConstants =
             mPushConstants[uint8_t(ShaderStage::VERTEX)];
@@ -1162,7 +1201,8 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
-                prepareProgram(variant);
+                // TODO(exv): verify that it's okay to ignore mutable spec constants here.
+                prepareProgram(variant, mDefaultMutableSpecConstants);
             }
         }
         return;

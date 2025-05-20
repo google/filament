@@ -56,6 +56,8 @@ public:
         Type value;     // value and type
     };
 
+    using MutableSpecConstant = std::variant<int32_t, float, bool>;
+
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
         uint16_t offset;        // offset in 'uint32_t' into the uniform buffer
@@ -66,6 +68,7 @@ public:
     using DescriptorBindingsInfo = utils::FixedCapacityVector<Descriptor>;
     using DescriptorSetInfo = std::array<DescriptorBindingsInfo, MAX_DESCRIPTOR_SET_COUNT>;
     using SpecializationConstantsInfo = utils::FixedCapacityVector<SpecializationConstant>;
+    using MutableSpecConstantsInfo = utils::FixedCapacityVector<MutableSpecConstant>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 

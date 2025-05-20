@@ -154,7 +154,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         std::cerr << "parameters: name value must be STRING." << std::endl;
         return false;
     }
-    
+
     const JsonishValue* transformNameValue = jsonObject.getValue("transformName");
     if (transformNameValue && transformNameValue->getType() != JsonishValue::STRING) {
         std::cerr << "parameters: transformName value must be STRING." << std::endl;
@@ -307,7 +307,8 @@ static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
     return ok;
 }
 
-static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonObject,
+        bool isMutable) noexcept {
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
         std::cerr << "constants: entry without key 'type'." << std::endl;
@@ -346,7 +347,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     // FIXME: Jsonish doesn't distinguish between integers and floats.
                     intDefault = (int32_t)defaultValue->toJsonNumber()->getFloat();
                 }
-                builder.constant(nameString.c_str(), type, intDefault);
+                builder.constant(nameString.c_str(), type, isMutable, intDefault);
                 break;
             }
             case ConstantType::FLOAT: {
@@ -359,7 +360,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     }
                     floatDefault = defaultValue->toJsonNumber()->getFloat();
                 }
-                builder.constant(nameString.c_str(), type, floatDefault);
+                builder.constant(nameString.c_str(), type, isMutable, floatDefault);
                 break;
             }
             case ConstantType::BOOL:
@@ -372,7 +373,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     }
                     boolDefault = defaultValue->toJsonBool()->getBool();
                 }
-                builder.constant(nameString.c_str(), type, boolDefault);
+                builder.constant(nameString.c_str(), type, isMutable, boolDefault);
                 break;
         }
     } else {
@@ -385,19 +386,27 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
     return true;
 }
 
-static bool processConstants(MaterialBuilder& builder, const JsonishValue& v) {
+static bool processConstants(MaterialBuilder& builder, const JsonishValue& v, bool isMutable) {
     auto jsonArray = v.toJsonArray();
 
     bool ok = true;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processConstant(builder, *value->toJsonObject());
+            ok &= processConstant(builder, *value->toJsonObject(), isMutable);
             continue;
         }
         std::cerr << "constants must be an array of OBJECTs." << std::endl;
         return false;
     }
     return ok;
+}
+
+static bool processImmutableConstants(MaterialBuilder& builder, const JsonishValue& v) {
+    return processConstants(builder, v, /*isMutable=*/false);
+}
+
+static bool processMutableConstants(MaterialBuilder& builder, const JsonishValue& v) {
+    return processConstants(builder, v, /*isMutable=*/true);
 }
 
 static bool processBufferField(filament::BufferInterfaceBlock::Builder& builder,
@@ -1331,7 +1340,8 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["name"]                          = { &processName, Type::STRING };
     mParameters["interpolation"]                 = { &processInterpolation, Type::STRING };
     mParameters["parameters"]                    = { &processParameters, Type::ARRAY };
-    mParameters["constants"]                     = { &processConstants, Type::ARRAY };
+    mParameters["constants"]                     = { &processImmutableConstants, Type::ARRAY };
+    mParameters["mutableConstants"]              = { &processMutableConstants, Type::ARRAY };
     mParameters["buffers"]                       = { &processBuffers, Type::ARRAY };
     mParameters["subpasses"]                     = { &processSubpasses, Type::ARRAY };
     mParameters["variables"]                     = { &processVariables, Type::ARRAY };

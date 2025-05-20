@@ -122,7 +122,8 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
+    bool isCached(Variant const variant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants) const noexcept {
         return bool(mCachedPrograms[variant.key]);
     }
 
@@ -132,10 +133,11 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
             backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
+        if (UTILS_UNLIKELY(!isCached(variant, mutableSpecConstants))) {
+            prepareProgramSlow(variant, mutableSpecConstants, priorityQueue);
         }
     }
 
@@ -208,6 +210,11 @@ public:
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
+    size_t getMutableConstantCount() const noexcept { return mMaterialMutableConstants.size(); }
+    const backend::Program::MutableSpecConstantsInfo&
+    getDefaultMutableSpecConstants() const noexcept { return mDefaultMutableSpecConstants; }
+    std::optional<uint32_t> getMutableConstantId(std::string_view name) const noexcept;
+
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
     void destroyPrograms(FEngine& engine,
@@ -261,17 +268,24 @@ public:
 private:
     bool hasVariant(Variant variant) const noexcept;
     void prepareProgramSlow(Variant variant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     void getSurfaceProgramSlow(Variant variant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     void getPostProcessProgramSlow(Variant variant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const noexcept;
+            Variant vertexVariant, Variant fragmentVariant,
+            const backend::Program::MutableSpecConstantsInfo& mutableSpecConstants) const noexcept;
 
     void processBlendingMode(MaterialParser const* parser);
 
     void processSpecializationConstants(FEngine& engine, Builder const& builder,
+            MaterialParser const* parser);
+
+    void processMutableSpecializationConstants(FEngine& engine, Builder const& builder,
             MaterialParser const* parser);
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
@@ -347,6 +361,15 @@ private:
     std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+
+    // Mutable constants defined by this Material.
+    utils::FixedCapacityVector<MaterialConstant> mMaterialMutableConstants;
+    // A map from the Constant name to the mMutableMaterialConstant index
+    std::unordered_map<std::string_view, uint32_t> mMutableSpecializationConstantsNameToIndex;
+    // Default specialization constants. This is later copied to each MaterialInstance, and used for
+    // API backwards-compatibility if Material::compile() is called without specifying a list of
+    // mutable spec constants.
+    backend::Program::MutableSpecConstantsInfo mDefaultMutableSpecConstants;
 
     // current push constants for the HwProgram
     std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,

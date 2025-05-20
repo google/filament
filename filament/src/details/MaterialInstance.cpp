@@ -63,6 +63,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
                                      const char* name) noexcept
         : mMaterial(material),
           mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
+          mConstants(material->getDefaultMutableSpecConstants()),
           mCulling(CullingMode::BACK),
           mShadowCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),

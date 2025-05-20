@@ -91,6 +91,20 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
+class MaterialMutableConstantParametersChunk final : public Chunk {
+public:
+    explicit MaterialMutableConstantParametersChunk(
+            FixedCapacityVector<filament::MaterialConstant> constants);
+    ~MaterialMutableConstantParametersChunk() override = default;
+
+private:
+    void flatten(Flattener&) override;
+
+    FixedCapacityVector<filament::MaterialConstant> mConstants;
+};
+
+// ------------------------------------------------------------------------------------------------
+
 class MaterialPushConstantParametersChunk final : public Chunk {
 public:
     explicit MaterialPushConstantParametersChunk(CString const& structVarName,

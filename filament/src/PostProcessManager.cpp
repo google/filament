@@ -187,7 +187,9 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) });
+    // TODO: we need to move away from the default instance
+    FMaterialInstance* instance = const_cast<FMaterial *>(mMaterial)->getDefaultInstance();
+    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) }, instance->getMutableSpecConstants());
     return mMaterial;
 }
 
