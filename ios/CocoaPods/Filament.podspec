@@ -1,12 +1,12 @@
 Pod::Spec.new do |spec|
   spec.name = "Filament"
-  spec.version = "1.60.1"
+  spec.version = "1.61.0"
   spec.license = { :type => "Apache 2.0", :file => "LICENSE" }
   spec.homepage = "https://google.github.io/filament"
   spec.authors = "Google LLC."
   spec.summary = "Filament is a real-time physically based rendering engine for Android, iOS, Windows, Linux, macOS, and WASM/WebGL."
   spec.platform = :ios, "11.0"
-  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.60.1/filament-v1.60.1-ios.tgz" }
+  spec.source = { :http => "https://github.com/google/filament/releases/download/v1.61.0/filament-v1.61.0-ios.tgz" }
 
   # Fix linking error with Xcode 12; we do not yet support the simulator on Apple silicon.
   spec.pod_target_xcconfig = {
