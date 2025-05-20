@@ -295,7 +295,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         } else {
             floatShader.addProgramToPipelineState(state);
         }
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
 
         api.endRenderPass();
 
@@ -413,7 +417,11 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
         // Render some content, just so we don't read back uninitialized data.
         api.beginRenderPass(renderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,

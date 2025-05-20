@@ -91,7 +91,11 @@ public:
         api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         // Step 2: Render a larger triangle with the stencil test enabled.
@@ -104,7 +108,11 @@ public:
         ps.stencilState.front.ref = 0u;
 
         api.beginRenderPass(renderTarget, params);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         api.commit(mSwapChain);
@@ -222,7 +230,11 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.beginFrame(0, 0, 0);
 
     api.beginRenderPass(renderTarget0, params);
-    api.draw(ps, smallTriangle.getRenderPrimitive(), 0, 3, 1);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
+    api.bindPipeline(ps);
+    api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
     api.endRenderPass();
 
     // Step 2: Render a larger triangle with the stencil test enabled.
@@ -237,7 +249,11 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.stencilState.front.ref = 0u;
 
     api.beginRenderPass(renderTarget1, params);
-    api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+    ps.primitiveType = PrimitiveType::TRIANGLES;
+    ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+    api.bindPipeline(ps);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
     api.endRenderPass();
 
     api.commit(mSwapChain);

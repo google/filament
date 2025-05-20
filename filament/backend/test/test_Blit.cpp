@@ -322,7 +322,11 @@ TEST_F(BlitTest, ColorResolve) {
     {
         RenderFrame frame(api);
         api.beginRenderPass(srcRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
     }
 

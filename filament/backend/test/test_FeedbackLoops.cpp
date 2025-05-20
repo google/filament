@@ -197,7 +197,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -230,7 +234,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 
