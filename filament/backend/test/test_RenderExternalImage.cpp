@@ -75,12 +75,9 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    RenderPassParams params = getClearColorRenderPass();
+    params.viewport = getFullViewport();
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
@@ -175,12 +172,9 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+
+    RenderPassParams params = getClearColorRenderPass();
+    params.viewport = getFullViewport();
 
     api.startCapture(0);
     api.makeCurrent(swapChain, swapChain);
@@ -198,7 +192,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.commit(swapChain);
     api.endFrame(0);
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "RenderExternalImage", 267229901));
+            ScreenshotParams(512, 512, "RenderExternalImage", 1206264951));
 
     api.stopCapture(0);
     api.finish();

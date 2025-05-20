@@ -54,9 +54,12 @@ protected:
 
     static filament::backend::PipelineState getColorWritePipelineState();
 
-    // Helper methods to set the viewport to the full extent of the swap chain.
-    static void fullViewport(filament::backend::RenderPassParams& params);
-    static void fullViewport(filament::backend::Viewport& viewport);
+    // Gets the full back buffer's viewport
+    filament::backend::Viewport getFullViewport() const;
+    // If color is unset this defaults to using opaque cyan
+    static filament::backend::RenderPassParams getClearColorRenderPass(
+            filament::math::float4 color = filament::math::float4(0, 1, 1, 1));
+    static filament::backend::RenderPassParams getNoClearRenderPass();
 
     void renderTriangle(
             filament::backend::PipelineLayout const& pipelineLayout,
