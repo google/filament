@@ -7,7 +7,3 @@ for next branch cut* header.
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- materials: sampler now export their type in the material binary [⚠️ **New Material Version**]
-- samples/texturedquad.cpp now has CLI to select backend api
-- samples/hellopbr.cpp CLI now allows for selecting webgpu
