@@ -116,13 +116,23 @@ if __name__ == "__main__":
                                                  'Remember to sync CMake after running this to '
                                                  'move the new expected images to the binary '
                                                  'directory.')
-    parser.add_argument('-r', '--results_path')
-    parser.add_argument('-s', '--source_expected_path', default="./expected_images")
+    parser.add_argument('-r', '--results_path',
+                        help='The path with the generated images directory, which should be where '
+                             'the test binary was run.')
+    parser.add_argument('-s', '--source_expected_path', default="./expected_images",
+                        help='The directory that updated expected images should be written to, '
+                             'which should be the source directory copy.')
     # The mutually exclusive options for how to process the actual images
-    parser.add_argument('-b', '--batch', action='extend', nargs='*')
-    parser.add_argument('-a', '--all', action='store_true')
-    parser.add_argument('-t', '--tests', action='store_true')
-    parser.add_argument('-c', '--compare', action='extend', nargs='*')
+    parser.add_argument('-b', '--batch', action='extend', nargs='*',
+                        help='If true copy all actual images to the source expected image '
+                             'directory.')
+    parser.add_argument('-a', '--all', action='store_true',
+                        help='If true, visually compare all generated images.')
+    parser.add_argument('-t', '--tests', action='store_true',
+                        help='If true use a test_detail.xml file that exists in the results_path '
+                             'directory to visually compare all images that failed a test.')
+    parser.add_argument('-c', '--compare', action='extend', nargs='*',
+                        help='A list of image names to visually compare (without the .png suffix).')
 
     args = parser.parse_args()
     if not args.results_path:

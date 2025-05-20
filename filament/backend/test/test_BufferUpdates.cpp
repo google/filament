@@ -20,6 +20,7 @@
 #include "Lifetimes.h"
 #include "Shader.h"
 #include "SharedShaders.h"
+#include "Skip.h"
 #include "TrianglePrimitive.h"
 
 namespace test {
@@ -159,6 +160,8 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "All values including alpha are written as 0, see b/417254943");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 

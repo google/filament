@@ -149,13 +149,6 @@ public:
          *      - PlatformEGLAndroid
          */
         bool assertNativeWindowIsValid = false;
-
-        /**
-         * The action to take if a Drawable cannot be acquired. If true, the
-         * frame is aborted instead of panic. This is only supported for:
-         *      - PlatformMetal
-         */
-        bool metalDisablePanicOnDrawableFailure = false;
     };
 
     Platform() noexcept;

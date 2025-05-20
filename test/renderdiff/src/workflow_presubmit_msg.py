@@ -17,19 +17,29 @@ from utils import execute
 def get_last_commit():
   res, o = execute('git log -1')
   commit, author, date, _, title, *desc = o.split('\n')
+  commit = commit.split(' ')[1]
+  title = title.strip()
 
   desc = [l.strip() for l in desc[1:]]
-  if len(desc) > 0 and len(desc[0]) == 0:
+  while len(desc) > 0 and len(desc[0]) == 0:
     desc = desc[1:]
 
   return (
-    commit.split(' ')[1],
-    title.strip(),
+    commit,
+    title,
     desc
   )
 
 def sanitized_split(line, split_atom='\n'):
-  return list(filter(lambda x: len(x) > 0, map(lambda x: x.strip(), line.split(split_atom))))
+  return list(
+    filter(
+      lambda x: len(x) > 0,
+      map(
+        lambda x: x.strip(),
+        line.split(split_atom)
+      )
+    )
+  )
 
 RDIFF_UPDATE_GOLDEN_STR = 'RDIFF_UPDATE_GOLDEN'
 

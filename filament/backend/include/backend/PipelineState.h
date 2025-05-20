@@ -20,11 +20,13 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/ostream.h>
-
 #include <array>
 
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 

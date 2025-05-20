@@ -260,6 +260,8 @@ TEST_F(BlitTest, ColorMinify) {
 }
 
 TEST_F(BlitTest, ColorResolve) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Nothing is drawn, see b/417229577");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 256;
@@ -490,7 +492,7 @@ TEST_F(BlitTest, BlitRegion) {
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
-    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment");
+    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment, see b/417481493");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 

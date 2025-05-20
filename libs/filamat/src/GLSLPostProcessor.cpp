@@ -144,12 +144,12 @@ DescriptorSetLayout getPerMaterialDescriptorSet(SamplerInterfaceBlock const& sib
             ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,
             +PerMaterialBindingPoints::MATERIAL_PARAMS, DescriptorFlags::NONE, 0 });
 
-    for (auto const& sampler : samplers) {
-        layout.bindings.push_back(DescriptorSetLayoutBinding {
-                (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL) ?
-                        DescriptorType::SAMPLER_EXTERNAL : DescriptorType::SAMPLER,
-                ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT, sampler.binding,
-                DescriptorFlags::NONE, 0 });
+    for (auto const& sampler: samplers) {
+        layout.bindings.push_back(DescriptorSetLayoutBinding{
+            (sampler.type == SamplerInterfaceBlock::Type::SAMPLER_EXTERNAL)
+                    ? DescriptorType::SAMPLER_EXTERNAL
+                    : DescriptorType::SAMPLER,
+            sampler.stages, sampler.binding, DescriptorFlags::NONE, 0 });
     }
 
     return layout;

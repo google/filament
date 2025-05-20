@@ -27,8 +27,11 @@
 #include <utils/Hash.h>
 #include <utils/PrivateImplementation.h>
 
+#include <cstddef>
+#include <functional>
 #include <tuple>
 #include <unordered_set>
+#include <string>
 
 #include <stddef.h>
 #include <stdint.h>

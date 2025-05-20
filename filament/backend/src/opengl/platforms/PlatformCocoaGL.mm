@@ -54,7 +54,7 @@ struct PlatformCocoaGLImpl {
     CVOpenGLTextureCacheRef mTextureCache = nullptr;
     std::unique_ptr<CocoaExternalImage::SharedGl> mExternalImageSharedGl;
     void updateOpenGLContext(NSView *nsView, bool resetView, bool clearView);
-    struct ExternalImageCocoaGL : public Platform::ExternalImage {
+    struct ExternalImageCocoaGL final : public Platform::ExternalImage {
         CVPixelBufferRef cvBuffer;
     protected:
         ~ExternalImageCocoaGL() noexcept final;
