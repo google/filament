@@ -322,7 +322,8 @@ TEST_F(BlitTest, ColorResolve) {
     {
         RenderFrame frame(api);
         api.beginRenderPass(srcRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        triangle.bindWithPipelineState(api, state);
+        triangle.draw(api);
         api.endRenderPass();
     }
 

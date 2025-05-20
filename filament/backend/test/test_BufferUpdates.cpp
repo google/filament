@@ -163,6 +163,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
+    TrianglePrimitive const triangle(api);
+
     // Create a program.
     Shader shader = createShader();
 
@@ -189,30 +191,46 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
-    RenderPassParams params = getClearColorRenderPass();
-    params.viewport.height = kTexWidth;
-    params.viewport.width = kTexHeight;
-    renderTriangle({ { shader.getDescriptorSetLayout() } }, renderTarget, swapChain,
-            shader.getProgram(), params);
+    {
+        RenderFrame frame(api);
 
-    // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
-    // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
-    const UniformBindingConfig partialBindingConfig = {
-            .dataSize = sizeof(float) * 8,
-            .bufferSize = sizeof(SimpleMaterialParams) + 64,
-            .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b)
-    };
-    shader.uploadUniform(api, ubuffer, partialBindingConfig,
-            std::array<float, 8>{
-                    1.0f, 1.0f, // color.b, color.a
-                    0.0f, 0.0f, 0.0f, 0.0f, // scale
-                    0.5f, 0.5f // offset.x, offset.y
-            });
+        RenderPassParams clearParams = getClearColorRenderPass();
+        clearParams.viewport.height = kTexWidth;
+        clearParams.viewport.width = kTexHeight;
+        api.beginRenderPass(renderTarget, clearParams);
 
-    params.flags.clear = TargetBufferFlags::NONE;
-    params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            renderTarget, swapChain, shader.getProgram(), params);
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+
+        triangle.bindWithPipelineState(api, state);
+        triangle.draw(api);
+
+        api.endRenderPass();
+
+        // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
+        // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
+        const UniformBindingConfig partialBindingConfig = {
+                .dataSize = sizeof(float) * 8,
+                .bufferSize = sizeof(SimpleMaterialParams) + 64,
+                .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b)
+        };
+        shader.uploadUniform(api, ubuffer, partialBindingConfig,
+                std::array<float, 8>{
+                        1.0f, 1.0f, // color.b, color.a
+                        0.0f, 0.0f, 0.0f, 0.0f, // scale
+                        0.5f, 0.5f // offset.x, offset.y
+                });
+
+        RenderPassParams noClearParams = getNoClearRenderPass();
+        noClearParams.viewport.height = kTexWidth;
+        noClearParams.viewport.width = kTexHeight;
+        api.beginRenderPass(renderTarget, noClearParams);
+
+        triangle.bindWithPipelineState(api, state);
+        triangle.draw(api);
+
+        api.endRenderPass();
+    }
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
