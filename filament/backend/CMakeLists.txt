@@ -198,12 +198,12 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanExternalImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
+            src/vulkan/VulkanGpuBufferCache.h
+            src/vulkan/VulkanGpuBufferCache.cpp
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
             src/vulkan/VulkanMemory.cpp
             src/vulkan/VulkanMemory.h
-            src/vulkan/VulkanMemoryPool.h
-            src/vulkan/VulkanMemoryPool.cpp
             src/vulkan/VulkanPipelineCache.cpp
             src/vulkan/VulkanPipelineCache.h
             src/vulkan/VulkanPipelineLayoutCache.cpp

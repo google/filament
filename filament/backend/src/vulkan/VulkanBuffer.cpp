@@ -22,11 +22,11 @@ using namespace bluevk;
 namespace filament::backend {
 
 VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VulkanMemoryPool& memoryPool, VulkanBufferUsage usage, uint32_t numBytes)
+        VulkanGpuBufferCache& gpuBufferCache, VulkanBufferUsage usage, uint32_t numBytes)
     : mAllocator(allocator),
       mStagePool(stagePool),
-      mMemoryPool(memoryPool),
-      mGpuMemory(mMemoryPool.acquire(usage, numBytes)),
+      mGpuBufferCache(gpuBufferCache),
+      mGpuBufferHolder(mGpuBufferCache.acquire(usage, numBytes)),
       mUpdatedOffset(0),
       mUpdatedBytes(0) {}
 
@@ -62,7 +62,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .buffer = getGpuBuffer(),
+            .buffer = getVkBuffer(),
             .offset = byteOffset,
             .size = numBytes,
         };
@@ -75,7 +75,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         .dstOffset = byteOffset,
         .size = numBytes,
     };
-    vkCmdCopyBuffer(cmdbuf, stage->buffer, getGpuBuffer(), 1, &region);
+    vkCmdCopyBuffer(cmdbuf, stage->buffer, getVkBuffer(), 1, &region);
 
     mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
@@ -106,7 +106,7 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
         .dstAccessMask = dstAccessMask,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = getGpuBuffer(),
+        .buffer = getVkBuffer(),
         .offset = byteOffset,
         .size = numBytes,
     };
@@ -115,12 +115,12 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             &barrier, 0, nullptr);
 }
 
-VkBuffer VulkanBuffer::getGpuBuffer() const noexcept {
-    return mGpuMemory->getAllocation()->vkbuffer;
+VkBuffer VulkanBuffer::getVkBuffer() const noexcept {
+    return mGpuBufferHolder->getGpuBuffer()->vkbuffer;
 }
 
 VulkanBufferUsage VulkanBuffer::getUsage() const noexcept {
-    return mGpuMemory->getAllocation()->usage;
+    return mGpuBufferHolder->getGpuBuffer()->usage;
 }
 
 } // namespace filament::backend

@@ -22,9 +22,9 @@
 #include "VulkanBuffer.h"
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
+#include "VulkanGpuBufferCache.h"
 #include "VulkanHandles.h"
 #include "VulkanMemory.h"
-#include "VulkanMemoryPool.h"
 #include "VulkanTexture.h"
 #include "vulkan/VulkanSamplerCache.h"
 #include "vulkan/memory/ResourceManager.h"
@@ -211,7 +211,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mCommands),
-      mMemoryPool(context, mResourceManager, mAllocator),
+      mGpuBufferCache(context, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
@@ -344,7 +344,7 @@ void VulkanDriver::terminate() {
     // Must come after `mResourceManager`.
     // Before terminating the memory pool, we must make sure all the VulkanBufferMemory are yielded
     // back to the pool.
-    mMemoryPool.terminate();
+    mGpuBufferCache.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
@@ -378,7 +378,7 @@ void VulkanDriver::collectGarbage() {
     mCommands.gc();
     mDescriptorSetCache.gc();
     mStagePool.gc();
-    mMemoryPool.gc();
+    mGpuBufferCache.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
 
@@ -522,7 +522,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
     FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
-            mMemoryPool, elementSize, indexCount);
+            mGpuBufferCache, elementSize, indexCount);
     ib.inc();
 }
 
@@ -539,7 +539,7 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
         BufferObjectBinding bindingType, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
-            mMemoryPool, byteCount, bindingType);
+            mGpuBufferCache, byteCount, bindingType);
     bo.inc();
 }
 
@@ -1906,7 +1906,7 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
     vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getGpuBuffer(), 0,
+    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getVkBuffer(), 0,
             prim->indexBuffer->indexType);
 }
 

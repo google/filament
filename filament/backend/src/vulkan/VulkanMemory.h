@@ -50,7 +50,7 @@ enum class VulkanBufferUsage : uint8_t {
     SHADER_STORAGE,
 };
 
-struct VulkanMemoryPoolAllocation {
+struct VulkanGpuBuffer {
     VkBuffer vkbuffer = VK_NULL_HANDLE;
     VmaAllocation vmaAllocation = VK_NULL_HANDLE;
     VmaAllocationInfo allocationInfo;
@@ -58,26 +58,26 @@ struct VulkanMemoryPoolAllocation {
     VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
 };
 
-struct VulkanBufferMemory : public fvkmemory::Resource {
+struct VulkanGpuBufferHolder : public fvkmemory::Resource {
 public:
-    // Because we need to recycle the unused allocation, we allow for a callback that the "Pool"
-    // can use to acquire the allocation back.
-    using OnRecycle = std::function<void(VulkanMemoryPoolAllocation const*)>;
+    // Because we need to recycle the unused `VulkanGpuBuffer`, we allow for a callback that the "Pool"
+    // can use to acquire the buffer back.
+    using OnRecycle = std::function<void(VulkanGpuBuffer const*)>;
 
-    VulkanBufferMemory(VulkanMemoryPoolAllocation const* allocation, OnRecycle&& onRecycleFn)
-        : mAllocation(allocation),
+    VulkanGpuBufferHolder(VulkanGpuBuffer const* gpuBuffer, OnRecycle&& onRecycleFn)
+        : mGpuBuffer(gpuBuffer),
           mOnRecycleFn(onRecycleFn) {}
 
-    ~VulkanBufferMemory() {
+    ~VulkanGpuBufferHolder() {
         if (mOnRecycleFn) {
-            mOnRecycleFn(mAllocation);
+            mOnRecycleFn(mGpuBuffer);
         }
     }
 
-    VulkanMemoryPoolAllocation const* getAllocation() const { return mAllocation; }
+    VulkanGpuBuffer const* getGpuBuffer() const { return mGpuBuffer; }
 
 private:
-    VulkanMemoryPoolAllocation const* mAllocation;
+    VulkanGpuBuffer const* mGpuBuffer;
     OnRecycle mOnRecycleFn;
 };
 

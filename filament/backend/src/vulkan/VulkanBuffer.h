@@ -18,8 +18,8 @@
 #define TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 
 #include "VulkanContext.h"
+#include "VulkanGpuBufferCache.h"
 #include "VulkanMemory.h"
-#include "VulkanMemoryPool.h"
 #include "VulkanStagePool.h"
 
 namespace filament::backend {
@@ -27,22 +27,22 @@ namespace filament::backend {
 // Encapsulates a Vulkan buffer, its attached DeviceMemory and a staging area.
 class VulkanBuffer {
 public:
-    VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool, VulkanMemoryPool& memoryPool,
-            VulkanBufferUsage usage, uint32_t numBytes);
+    VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
+            VulkanGpuBufferCache& gpuBufferCache, VulkanBufferUsage usage, uint32_t numBytes);
 
     void loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes);
 
-    VkBuffer getGpuBuffer() const noexcept;
+    VkBuffer getVkBuffer() const noexcept;
 
     VulkanBufferUsage getUsage() const noexcept;
 
 private:
     VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
-    VulkanMemoryPool& mMemoryPool;
+    VulkanGpuBufferCache& mGpuBufferCache;
 
-    fvkmemory::resource_ptr<VulkanBufferMemory> mGpuMemory;
+    fvkmemory::resource_ptr<VulkanGpuBufferHolder> mGpuBufferHolder;
     uint32_t mUpdatedOffset = 0;
     uint32_t mUpdatedBytes = 0;
 };

@@ -23,7 +23,7 @@
 #include "VulkanAsyncHandles.h"
 #include "VulkanBuffer.h"
 #include "VulkanFboCache.h"
-#include "VulkanMemoryPool.h"
+#include "VulkanGpuBufferCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 #include "vulkan/memory/Resource.h"
@@ -430,9 +430,9 @@ private:
 
 struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
     VulkanIndexBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanMemoryPool& memoryPool, uint8_t elementSize, uint32_t indexCount)
+            VulkanGpuBufferCache& bufferCache, uint8_t elementSize, uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
-          buffer(allocator, stagePool, memoryPool, VulkanBufferUsage::INDEX,
+          buffer(allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
                   elementSize * indexCount),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
 
@@ -442,7 +442,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
 
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
     VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanMemoryPool& memoryPool, uint32_t byteCount, BufferObjectBinding bindingType);
+            VulkanGpuBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType);
 
     VulkanBuffer buffer;
     const BufferObjectBinding bindingType;
