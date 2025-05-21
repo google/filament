@@ -52,30 +52,40 @@ class WGPUVertexBufferInfo : public HwVertexBufferInfo {
 public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
-    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
-        return mVertexBufferLayout.data();
+
+    // Returns the WebGPU native vertex buffer layouts
+    inline wgpu::VertexBufferLayout const* getWebGPULayouts() const {
+        return mActualWebGPULayouts.data();
     }
 
-    inline uint32_t getVertexBufferLayoutSize() const {
-        return mVertexBufferLayout.size();
+    // Returns the count of WebGPU native vertex buffer layouts
+    inline uint32_t getWebGPULayoutCount() const {
+        return mActualWebGPULayouts.size();
     }
 
-    inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].data();
-    }
-
-    inline uint32_t getVertexAttributeSize(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].size();
+    // Returns the Filament buffer index for a given WebGPU layout slot
+    inline uint8_t getFilamentBufferIndexForSlot(uint32_t webgpuSlotIndex) const {
+        assert_invariant(webgpuSlotIndex < mSlotMappings.size());
+        return mSlotMappings[webgpuSlotIndex].filamentBufferIndex;
     }
 
 private:
-    // TODO: can we do better in terms on heap management.
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout{};
-    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes{};
-};
+    // Stores the final WebGPU vertex buffer layouts
+    std::vector<wgpu::VertexBufferLayout> mActualWebGPULayouts;
+    // Stores attributes per WebGPU layout, parallel to mActualWebGPULayouts.
+    // Each wgpu::VertexBufferLayout in mActualWebGPULayouts will point to its attributes here.
+    std::vector<std::vector<wgpu::VertexAttribute>> mActualWebGPUAttributes;
 
+    struct SlotMapping {
+        uint8_t filamentBufferIndex; // Original Filament buffer index for this WebGPU slot
+    };
+    // Maps a WebGPU slot index to its original Filament buffer index
+    std::vector<SlotMapping> mSlotMappings;
+
+    // Remove or comment out old members if they were similarly named:
+    // std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout {}; // OLD
+    // std::vector<std::vector<wgpu::VertexAttribute>> mAttributes {}; // OLD
+};
 struct WGPUVertexBuffer : public HwVertexBuffer {
     WGPUVertexBuffer(wgpu::Device const &device, uint32_t vertexCount, uint32_t bufferCount,
                      Handle<HwVertexBufferInfo> vbih);

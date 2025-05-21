@@ -52,6 +52,8 @@ private:
     wgpu::TextureFormat mDepthFormat = wgpu::TextureFormat::Undefined;
     wgpu::Texture mDepthTexture = nullptr;
     wgpu::TextureView mDepthTextureView = nullptr;
+    wgpu::Texture mCurrentSurfaceTexture = nullptr; // To hold the texture from getCurrentTexture()
+
 };
 
 } // namespace filament::backend

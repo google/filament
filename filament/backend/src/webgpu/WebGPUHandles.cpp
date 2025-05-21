@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -196,43 +197,77 @@ void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_
         queue.WriteBuffer(buffer, byteOffset + legalSize, &mRemainderChunk, 4);
     }
 }
+
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
         AttributeArray const& attributes)
-    : HwVertexBufferInfo(bufferCount, attributeCount),
-      mVertexBufferLayout(bufferCount),
-      mAttributes(bufferCount) {
+    : HwVertexBufferInfo(bufferCount, attributeCount) { // Base class constructor
+
     assert_invariant(attributeCount > 0);
-    assert_invariant(bufferCount > 0);
+    // bufferCount is Filament's buffer count. The number of WebGPU slots might differ.
+
+    struct LayoutKey {
+        uint8_t filamentBufferIndex;
+        uint16_t stride;
+        bool operator<(const LayoutKey& other) const {
+            if (filamentBufferIndex != other.filamentBufferIndex) {
+                return filamentBufferIndex < other.filamentBufferIndex;
+            }
+            return stride < other.stride;
+        }
+    };
+    std::map<LayoutKey, uint32_t> layoutKeyToWebGPUSlot;
+    uint32_t nextWebGPUSlot = 0;
+
     for (uint32_t attribIndex = 0; attribIndex < attributes.size(); attribIndex++) {
         Attribute const& attrib = attributes[attribIndex];
-        // Ignore the attributes which are not bind to vertex buffers.
+        // Ignore attributes not bound to any vertex buffer.
         if (attrib.buffer == Attribute::BUFFER_UNUSED) {
             continue;
         }
 
-        assert_invariant(attrib.buffer < bufferCount);
+        assert_invariant(attrib.buffer < bufferCount); // Ensure Filament buffer index is valid
+
+        LayoutKey key = {attrib.buffer, attrib.stride};
+        uint32_t currentWebGPUSlot;
+
+        auto it = layoutKeyToWebGPUSlot.find(key);
+        if (it == layoutKeyToWebGPUSlot.end()) {
+            currentWebGPUSlot = nextWebGPUSlot++;
+            layoutKeyToWebGPUSlot[key] = currentWebGPUSlot;
+
+            mActualWebGPULayouts.emplace_back();
+            mActualWebGPULayouts.back().arrayStride = attrib.stride;
+            mActualWebGPULayouts.back().stepMode = wgpu::VertexStepMode::Vertex;
+            // .attributes and .attributeCount will be set later
+
+            mSlotMappings.emplace_back(SlotMapping{attrib.buffer});
+            mActualWebGPUAttributes.emplace_back(); // Add a new vector for this slot's attributes
+        } else {
+            currentWebGPUSlot = it->second;
+            // Sanity check: if we found an existing slot for this key, its stride should match.
+            assert_invariant(mActualWebGPULayouts[currentWebGPUSlot].arrayStride == attrib.stride);
+        }
+
         bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
         wgpu::VertexFormat vertexFormat = getVertexFormat(attrib.type, isNormalized, isInteger);
 
-        // Attributes are sequential per buffer
-        mAttributes[attrib.buffer].push_back({
+        mActualWebGPUAttributes[currentWebGPUSlot].push_back({
             .format = vertexFormat,
             .offset = attrib.offset,
-            .shaderLocation = attribIndex,
+            .shaderLocation = attribIndex, // Use original attribIndex as shaderLocation
         });
-
-        mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
-        if (mVertexBufferLayout[attrib.buffer].arrayStride == 0) {
-            mVertexBufferLayout[attrib.buffer].arrayStride = attrib.stride;
-        } else {
-            assert_invariant(mVertexBufferLayout[attrib.buffer].arrayStride == attrib.stride);
-        }
     }
 
-    for (uint32_t bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
-        mVertexBufferLayout[bufferIndex].attributeCount = mAttributes[bufferIndex].size();
-        mVertexBufferLayout[bufferIndex].attributes = mAttributes[bufferIndex].data();
+    // Finalize attribute pointers and counts in mActualWebGPULayouts
+    for (uint32_t slot = 0; slot < mActualWebGPULayouts.size(); ++slot) {
+        if (!mActualWebGPUAttributes[slot].empty()) {
+            mActualWebGPULayouts[slot].attributeCount = mActualWebGPUAttributes[slot].size();
+            mActualWebGPULayouts[slot].attributes = mActualWebGPUAttributes[slot].data();
+        } else {
+            mActualWebGPULayouts[slot].attributeCount = 0;
+            mActualWebGPULayouts[slot].attributes = nullptr;
+        }
     }
 }
 

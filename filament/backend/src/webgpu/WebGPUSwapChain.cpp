@@ -320,11 +320,14 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
+
+    mCurrentSurfaceTexture = nullptr;
+    mCurrentSurfaceTexture = surfaceTexture.texture;
     // Create a view for this surface texture
     // TODO: review these initiliazations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "surface_texture_view",
-        .format = surfaceTexture.texture.GetFormat(),
+        .format = mCurrentSurfaceTexture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
@@ -337,6 +340,7 @@ wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
 void WebGPUSwapChain::present() {
     assert_invariant(mSurface);
     mSurface.Present();
+    mCurrentSurfaceTexture = nullptr;
 }
 
 }// namespace filament::backend
