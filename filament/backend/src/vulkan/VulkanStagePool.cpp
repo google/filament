@@ -22,7 +22,6 @@
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Image.h"
 
-#include <optional>
 #include <utils/Panic.h>
 
 static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
@@ -32,17 +31,35 @@ namespace filament::backend {
 namespace {
 
 // Note: these are temporary values, they will be configurable.
-static constexpr uint32_t MAX_EMPTY_BLOCKS_TO_RETAIN = 1;
+static constexpr uint32_t MAX_EMPTY_STAGES_TO_RETAIN = 1;
 constexpr uint32_t STAGE_SIZE = 1048576;
 
 }// namespace
 
-VulkanStagePool::VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands)
+VulkanStage::~VulkanStage() {
+    for (auto pair : mSegments) {
+        pair.second->clearRecycleFn();
+    }
+}
+
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
+        fvkmemory::ResourceManager* resManager, uint32_t numBytes) {
+    auto segment = fvkmemory::resource_ptr<Segment>::construct(
+        resManager, this, numBytes, mCurrentOffset, [this](uint32_t offset) {
+            mSegments.erase(offset);
+    });
+    mSegments.insert({mCurrentOffset, segment.get()});
+    mCurrentOffset += numBytes;
+    return segment;
+}
+
+VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager, VulkanCommands* commands)
     : mAllocator(allocator),
+      mResManager(resManager),
       mCommands(commands) {}
 
-std::unique_ptr<VulkanStage::Block> VulkanStagePool::acquireStage(uint32_t numBytes) {
-    // First check if a stage block exists whose capacity is greater than or
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint32_t numBytes) {
+    // First check if a stage segment exists whose capacity is greater than or
     // equal to the requested size.
     auto iter = mStages.lower_bound(numBytes);
 
@@ -54,16 +71,16 @@ std::unique_ptr<VulkanStage::Block> VulkanStagePool::acquireStage(uint32_t numBy
         pStage = allocateNewStage(std::max(numBytes, STAGE_SIZE));
     }
 
-    // Note: this allocation updates `currentOffset` and `stageBlocks` within
-    // the parent stage. When destroyed, it will update `stageBlocks`.
-    std::unique_ptr<VulkanStage::Block> pStageBlock = pStage->acquireBlock(numBytes);
+    // Note: this allocation updates `currentOffset` and `segments` within
+    // the parent stage. When destroyed, it will update `segments`.
+    fvkmemory::resource_ptr<VulkanStage::Segment> pSegment = pStage->acquireSegment(mResManager, numBytes);
 
-    // Update the stage's metadata, and reinsert it with the remaining block
+    // Update the stage's metadata, and reinsert it with the remaining segment
     // capacity.
     uint32_t spaceRemaining = pStage->capacity() - pStage->currentOffset();
     mStages.insert({ spaceRemaining, pStage });
 
-    return pStageBlock;
+    return pSegment;
 }
 
 VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
@@ -179,11 +196,11 @@ void VulkanStagePool::gc() noexcept {
 
     decltype(mStages) freeStages;
     freeStages.swap(mStages);
-    uint8_t freeBlockCount = 0;// Assuming we'll never have > 255 free blocks
+    uint8_t freeStageCount = 0;  // Assuming we'll never have > 255 free stages
     for (auto pair : freeStages) {
-        // First, find any blocks that have no stageBlocks within them.
+        // First, find any stages that have no segments within them.
         if (pair.second->isSafeToReset()) {
-            if (++freeBlockCount > MAX_EMPTY_BLOCKS_TO_RETAIN) {
+            if (++freeStageCount > MAX_EMPTY_STAGES_TO_RETAIN) {
 #if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
                 FVK_LOGD << "Destroying a staging buffer with hndl " << pair.second->buffer()
                          << utils::io::endl;
@@ -199,7 +216,7 @@ void VulkanStagePool::gc() noexcept {
             }
 #endif
 
-            // Note - this block is free, make sure the structure is cleared
+            // Note - this segment is free, make sure the structure is cleared
             // and reinsert it into our free stage list.
             pair.second->reset();
             mStages.insert({ pair.second->capacity(), pair.second });
@@ -235,7 +252,7 @@ void VulkanStagePool::gc() noexcept {
 }
 
 void VulkanStagePool::terminate() noexcept {
-    for (auto pair: mStages) {
+    for (auto pair : mStages) {
         destroyStage(std::move(pair.second));
     }
     mStages.clear();

@@ -38,9 +38,11 @@ void VulkanBuffer::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuDat
         uint32_t byteOffset, uint32_t numBytes) {
     // Note: this should be stored within the command buffer before going out of
     // scope, so that the command buffer can manage its lifecycle.
-    std::unique_ptr<VulkanStage::Block> stageBlock = mStagePool.acquireStage(numBytes);
-    memcpy(stageBlock->mapping(), cpuData, numBytes);
-    vmaFlushAllocation(mAllocator, stageBlock->memory(), stageBlock->offset(), numBytes);
+    fvkmemory::resource_ptr<VulkanStage::Segment> stage = mStagePool.acquireStage(numBytes);
+    assert_invariant(stage->memory());
+    commands.acquire(stage);
+    memcpy(stage->mapping(), cpuData, numBytes);
+    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
 
     // If there was a previous update, then we need to make sure the following write is properly
     // synced with the previous read.
@@ -74,15 +76,11 @@ void VulkanBuffer::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuDat
     }
 
     VkBufferCopy region = {
-        .srcOffset = stageBlock->offset(),
+        .srcOffset = stage->offset(),
         .dstOffset = byteOffset,
         .size = numBytes,
     };
-    vkCmdCopyBuffer(commands.buffer(), stageBlock->buffer(), mGpuBuffer, 1, &region);
-
-    // We no longer need to reference the stage block - stash it in the command
-    // buffer.
-    commands.trackStageBlock(std::move(stageBlock));
+    vkCmdCopyBuffer(commands.buffer(), stage->buffer(), mGpuBuffer, 1, &region);
 
     mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;

@@ -23,7 +23,6 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
-#include "VulkanStagePool.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
 
@@ -35,7 +34,6 @@
 
 #include <chrono>
 #include <list>
-#include <memory>
 #include <string>
 #include <utility>
 
@@ -77,12 +75,6 @@ struct VulkanCommandBuffer {
     inline void acquire(fvkmemory::resource_ptr<fvkmemory::Resource> resource) {
         mResources.push_back(resource);
     }
-
-    inline void trackStageBlock(std::unique_ptr<VulkanStage::Block> stageBlock) {
-        mStageBlocks.push_back(std::move(stageBlock));
-    }
-
-    inline void releaseStageBlocks() { mStageBlocks.clear(); }
 
     void reset() noexcept;
 
@@ -129,7 +121,6 @@ private:
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
-    std::vector<std::unique_ptr<VulkanStage::Block>> mStageBlocks;
 };
 
 struct CommandBufferPool {
