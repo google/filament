@@ -197,57 +197,66 @@ struct WGPURenderPrimitive : public HwRenderPrimitive {
     WGPUIndexBuffer* indexBuffer = nullptr;
 };
 
+
+
 class WGPURenderTarget : public HwRenderTarget {
 public:
-    class Attachment {
-    public:
-        friend class WGPURenderTarget;
-
-        Attachment() = default;
-        Attachment(WGPUTexture* gpuTexture, uint8_t level = 0, uint16_t layer = 0)
-            : level(level),
-              layer(layer),
-              texture(gpuTexture->getTexture()),
-              mWGPUTexture(gpuTexture) {}
-        operator bool() const {
-            return mWGPUTexture != nullptr;
-        }
-
-        uint8_t level = 0;
-        uint16_t layer = 0;
-
-    private:
-        wgpu::Texture texture = nullptr;
-        WGPUTexture* mWGPUTexture = nullptr;
-    };
+    using Attachment = TargetBufferInfo; // Using TargetBufferInfo directly for attachments
 
     WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
-            Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]);
+            const MRT& colorAttachments,
+            const Attachment& depthAttachment,
+            const Attachment& stencilAttachment);
+
+    // Default constructor for the default render target
     WGPURenderTarget()
         : HwRenderTarget(0, 0),
-          defaultRenderTarget(true) {}
+          defaultRenderTarget(true),
+          samples(1) {}
 
-    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
-            wgpu::TextureView const& textureView, RenderPassParams const& params);
+    // Updated signature: takes resolved views for custom RTs, and default views for default RT
+    void setUpRenderPassAttachments(
+            wgpu::RenderPassDescriptor& descriptor,
+            RenderPassParams const& params,
+            // For default render target:
+            wgpu::TextureView const& defaultColorTextureView,
+            wgpu::TextureView const& defaultDepthStencilTextureView,
+            // For custom render targets:
+            wgpu::TextureView const* customColorTextureViews, // Array of views
+            uint32_t customColorTextureViewCount,
+            wgpu::TextureView const& customDepthTextureView,
+            wgpu::TextureView const& customStencilTextureView);
 
-    math::uint2 getAttachmentSize() noexcept;
+
+    math::uint2 getAttachmentSize() const noexcept;
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return samples; }
 
-    Attachment getDrawColorAttachment(size_t index);
-    Attachment getReadColorAttachment(size_t index);
+    // Accessors for the driver to get stored attachment info
+    const MRT& getColorAttachmentInfos() const { return mColorAttachments; }
+    const Attachment& getDepthAttachmentInfo() const { return mDepthAttachment; }
+    const Attachment& getStencilAttachmentInfo() const { return mStencilAttachment; }
 
+    // Static helpers for load/store operations
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
+
 private:
+    // Helper to map MRT index to TargetBufferFlags
+    static TargetBufferFlags getTargetBufferFlagsAt(int mrtIndex);
+
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
 
-    Attachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
-    math::uint2 attachmentSize = {};
-    std::vector<wgpu::RenderPassColorAttachment> colorAttachments{};
-};
+    MRT mColorAttachments{};
+    Attachment mDepthAttachment{};
+    Attachment mStencilAttachment{};
 
+    // Cached descriptors for the render pass
+    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDescriptors;
+    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};
+    bool mHasDepthStencilAttachment = false;
+};
 }// namespace filament::backend
 #endif// TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
