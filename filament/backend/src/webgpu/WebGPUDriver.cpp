@@ -354,6 +354,17 @@ void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
+    if (rth) {
+        WGPURenderTarget* rt = handleCast<WGPURenderTarget>(rth);
+        if (rt == mDefaultRenderTarget) {
+            mDefaultRenderTarget = nullptr;
+        }
+        // WGPURenderTarget destructor is trivial.
+        // The HwTexture handles stored within WGPURenderTarget (via MRT, TargetBufferInfo)
+        // are not owned by WGPURenderTarget, so they are not destroyed here.
+        // They are destroyed via WebGPUDriver::destroyTexture.
+        destructHandle<WGPURenderTarget>(rth);
+    }
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
@@ -580,7 +591,21 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
-        TargetBufferInfo depth, TargetBufferInfo stencil) {}
+        TargetBufferInfo depth, TargetBufferInfo stencil) {
+    // The `targets` flags indicate which of the `color`, `depth`, `stencil` TargetBufferInfo
+    // are actually active for this render target.
+    // We'll pass all TargetBufferInfo to WGPURenderTarget; it will use them if their handles are valid.
+
+    // Ensure that textures intended for use as attachments were created with
+    // wgpu::TextureUsage::RenderAttachment. This check should ideally be in createTextureR
+    // or validated here if possible.
+
+    // The `layerCount` parameter might be for creating array textures that this RT targets.
+    // Individual attachments (color[i].layer, depth.layer, stencil.layer) specify which layer
+    // of an array texture to bind. For now, we assume textures are pre-configured.
+
+    constructHandle<WGPURenderTarget>(rth, width, height, samples, color, depth, stencil);
+}
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 
@@ -845,35 +870,74 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams const& params) {
     assert_invariant(mCommandEncoder);
-
     auto* renderTarget = handleCast<WGPURenderTarget>(rth);
-    // if (renderTarget == mDefaultRenderTarget) {
-    //     FWGPU_LOGW << "Default render target"
-    //                << utils::io::endl;
-    // } else {
-    //     FWGPU_LOGW << "Non Default render target"
-    //                << utils::io::endl;
-    // }
-    wgpu::RenderPassDescriptor renderPassDescriptor;
-    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = mSwapChain->getDepthTextureView(),
-        .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
-        .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
-        .depthClearValue = static_cast<float>(params.clearDepth),
-        .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
-        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
-        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
-        .stencilClearValue = params.clearStencil,
-        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
-    };
-    renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
-    renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
 
-    assert_invariant(mTextureView);
+    wgpu::RenderPassDescriptor renderPassDescriptor{};
+    wgpu::TextureView defaultColorView = nullptr;
+    wgpu::TextureView defaultDepthStencilView = nullptr;
+
+    std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
+    uint32_t customColorViewCount = 0;
+    wgpu::TextureView customDepthView = nullptr;
+    wgpu::TextureView customStencilView = nullptr;
+
+    if (renderTarget->isDefaultRenderTarget()) {
+        assert_invariant(mSwapChain && mTextureView);
+        defaultColorView = mTextureView;
+        defaultDepthStencilView = mSwapChain->getDepthTextureView();
+    } else {
+        // Resolve views for custom render target
+        const auto& colorInfos = renderTarget->getColorAttachmentInfos();
+        for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+            if (colorInfos[i].handle) {
+                auto* hwTexture = handleCast<WGPUTexture>(colorInfos[i].handle);
+                if (hwTexture) {
+                    // TODO: Consider colorInfos[i].level and colorInfos[i].layer for view creation
+                    // if WGPUTexture::getTexView() isn't sufficient or needs parameters.
+                    customColorViews[customColorViewCount++] = hwTexture->getTexView();
+                }
+            }
+        }
+
+        const auto& depthInfo = renderTarget->getDepthAttachmentInfo();
+        if (depthInfo.handle) {
+            auto* hwTexture = handleCast<WGPUTexture>(depthInfo.handle);
+            if (hwTexture) {
+                customDepthView = hwTexture->getTexView();
+            }
+        }
+
+        const auto& stencilInfo = renderTarget->getStencilAttachmentInfo();
+        if (stencilInfo.handle) {
+            // If depth and stencil use the same texture handle, this will re-cast but that's fine.
+            auto* hwTexture = handleCast<WGPUTexture>(stencilInfo.handle);
+            if (hwTexture) {
+                customStencilView = hwTexture->getTexView();
+            }
+        }
+    }
+
+    renderTarget->setUpRenderPassAttachments(renderPassDescriptor,
+            params,
+            defaultColorView,
+            defaultDepthStencilView,
+            customColorViews.data(),
+            customColorViewCount,
+            customDepthView,
+            customStencilView);
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
-    mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
-            params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
+    // Ensure viewport dimensions are positive
+    uint32_t viewportWidth = params.viewport.width > 0 ? params.viewport.width : 1;
+    uint32_t viewportHeight = params.viewport.height > 0 ? params.viewport.height : 1;
+
+    mRenderPassEncoder.SetViewport(
+            static_cast<float>(params.viewport.left),
+            static_cast<float>(params.viewport.bottom),
+            static_cast<float>(viewportWidth),
+            static_cast<float>(viewportHeight),
+            params.depthRange.near,
+            params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {

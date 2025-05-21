@@ -958,58 +958,147 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
     return textureView;
 }
 
-WGPURenderTarget::Attachment WGPURenderTarget::getDrawColorAttachment(size_t index) {
-    assert_invariant( index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
-    auto result = color[index];
-    if (index == 0 && defaultRenderTarget) {
-
-    }
-
-    return result;
+WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+        const MRT& colorAttachmentsMRT,
+        const Attachment& depthAttachmentInfo,
+        const Attachment& stencilAttachmentInfo)
+    : HwRenderTarget(width, height),
+      defaultRenderTarget(false),
+      samples(samples),
+      mColorAttachments(colorAttachmentsMRT),
+      mDepthAttachment(depthAttachmentInfo),
+      mStencilAttachment(stencilAttachmentInfo) {
+    mColorAttachmentDescriptors.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
+// Static helper to map MRT index to TargetBufferFlags
+TargetBufferFlags WGPURenderTarget::getTargetBufferFlagsAt(int mrtIndex) {
+    if (mrtIndex < 0 || mrtIndex >= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT) {
+        return TargetBufferFlags::NONE;
+    }
+    // This mapping assumes TargetBufferFlags::COLOR_0, COLOR_1 etc. are contiguous
+    return static_cast<TargetBufferFlags>(
+            static_cast<uint32_t>(TargetBufferFlags::COLOR0) << mrtIndex);
+}
+
+// Corrected getLoadOperation
 wgpu::LoadOp WGPURenderTarget::getLoadOperation(RenderPassParams const& params,
-                                             TargetBufferFlags buffer) {
-    auto clearFlags = params.flags.clear;
-    auto discardStartFlags = params.flags.discardStart;
-    if (any(clearFlags & buffer)) {
+                                                TargetBufferFlags bufferToOperateOn) {
+    if (any(params.flags.clear & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear;
-    } else if (any(discardStartFlags & buffer)) {
-        return wgpu::LoadOp::Clear;
+    }
+    if (any(params.flags.discardStart & bufferToOperateOn)) {
+        return wgpu::LoadOp::Clear; // Or wgpu::LoadOp::Undefined if clear is not desired on discard
     }
     return wgpu::LoadOp::Load;
 }
 
+// Corrected getStoreOperation
 wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params,
-                                               TargetBufferFlags buffer) {
-    const auto discardEndFlags = params.flags.discardEnd;
-    if (any(discardEndFlags & buffer)) {
+                                                  TargetBufferFlags bufferToOperateOn) {
+    if (any(params.flags.discardEnd & bufferToOperateOn)) {
         return wgpu::StoreOp::Discard;
     }
     return wgpu::StoreOp::Store;
 }
-void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
-        wgpu::TextureView const& textureView, RenderPassParams const& params) {
-    // auto discardFlags = params.flags.discardEnd;
-    // (void) discardFlags;
-    // std::vector<wgpu::RenderPassColorAttachment> colorAttachments;
-    colorAttachments.clear();
-    for (size_t i = 0; i < 1/*MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT*/; i++) {
-        // auto attachment = getDrawColorAttachment(i);
-        // if (attachment) {
-            wgpu::RenderPassColorAttachment colorAttachment;
-            colorAttachment.view = textureView;
-            colorAttachment.loadOp  = getLoadOperation(params, getTargetBufferFlagsAt(i));
-            colorAttachment.storeOp = getStoreOperation(params, getTargetBufferFlagsAt(i));
-            colorAttachment.clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a };
-            colorAttachments.emplace_back(colorAttachment);
-        // }
+
+void WGPURenderTarget::setUpRenderPassAttachments(
+        wgpu::RenderPassDescriptor& descriptor,
+        RenderPassParams const& params,
+        wgpu::TextureView const& defaultColorTextureView,
+        wgpu::TextureView const& defaultDepthStencilTextureView,
+        wgpu::TextureView const* customColorTextureViews,
+        uint32_t customColorTextureViewCount,
+        wgpu::TextureView const& customDepthTextureView,
+        wgpu::TextureView const& customStencilTextureView) {
+    mColorAttachmentDescriptors.clear();
+    mHasDepthStencilAttachment = false;
+
+    if (defaultRenderTarget) {
+        assert_invariant(defaultColorTextureView);
+        wgpu::RenderPassColorAttachment colorAttDesc{};
+        colorAttDesc.view = defaultColorTextureView;
+        colorAttDesc.resolveTarget = nullptr;
+        colorAttDesc.loadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0);
+        colorAttDesc.storeOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0);
+        colorAttDesc.clearValue = {params.clearColor.r, params.clearColor.g,
+                                   params.clearColor.b, params.clearColor.a};
+        mColorAttachmentDescriptors.push_back(colorAttDesc);
+
+        if (defaultDepthStencilTextureView) {
+            mDepthStencilAttachmentDescriptor = {
+                .view = defaultDepthStencilTextureView,
+                .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
+                .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
+                .depthClearValue = static_cast<float>(params.clearDepth),
+                .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+                .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
+                .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+                .stencilClearValue = params.clearStencil,
+                .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0,
+            };
+            mHasDepthStencilAttachment = true;
+        }
+    } else { // Custom Render Target
+        for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
+            if (customColorTextureViews[i]) {
+                wgpu::RenderPassColorAttachment colorAttDesc{};
+                colorAttDesc.view = customColorTextureViews[i];
+                colorAttDesc.resolveTarget = nullptr; // TODO: MSAA resolve for custom RT
+                colorAttDesc.loadOp = WGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i));
+                colorAttDesc.storeOp = WGPURenderTarget::getStoreOperation(params, getTargetBufferFlagsAt(i));
+                colorAttDesc.clearValue = {params.clearColor.r, params.clearColor.g,
+                                           params.clearColor.b, params.clearColor.a};
+                mColorAttachmentDescriptors.push_back(colorAttDesc);
+            }
+        }
+
+        wgpu::TextureView combinedDsView = customDepthTextureView ? customDepthTextureView : customStencilTextureView;
+
+        if (combinedDsView) {
+            mDepthStencilAttachmentDescriptor = {};
+            mDepthStencilAttachmentDescriptor.view = combinedDsView;
+
+            if (customDepthTextureView) {
+                mDepthStencilAttachmentDescriptor.depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDescriptor.depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDescriptor.depthClearValue = static_cast<float>(params.clearDepth);
+                mDepthStencilAttachmentDescriptor.depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+            } else {
+                mDepthStencilAttachmentDescriptor.depthLoadOp = wgpu::LoadOp::Undefined;
+                mDepthStencilAttachmentDescriptor.depthStoreOp = wgpu::StoreOp::Undefined;
+                mDepthStencilAttachmentDescriptor.depthReadOnly = true;
+            }
+
+            if (customStencilTextureView) {
+                mDepthStencilAttachmentDescriptor.stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDescriptor.stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDescriptor.stencilClearValue = params.clearStencil;
+                mDepthStencilAttachmentDescriptor.stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
+            } else {
+                mDepthStencilAttachmentDescriptor.stencilLoadOp = wgpu::LoadOp::Undefined;
+                mDepthStencilAttachmentDescriptor.stencilStoreOp = wgpu::StoreOp::Undefined;
+                mDepthStencilAttachmentDescriptor.stencilReadOnly = true;
+            }
+            mHasDepthStencilAttachment = true;
+        }
     }
-    descriptor.colorAttachments = colorAttachments.data();
-    descriptor.colorAttachmentCount = colorAttachments.size();
-    descriptor.depthStencilAttachment = nullptr;
-    descriptor.timestampWrites = nullptr;
+
+    descriptor.colorAttachmentCount = mColorAttachmentDescriptors.size();
+    descriptor.colorAttachments = mColorAttachmentDescriptors.data();
+    descriptor.depthStencilAttachment = mHasDepthStencilAttachment ? &mDepthStencilAttachmentDescriptor : nullptr;
+    // descriptor.sampleCount was removed from the core spec. If your webgpu.h still has it,
+    // and your Dawn version expects it, you might need to set it here based on this->samples.
+    // e.g., descriptor.sampleCount = this->samples;
 }
 
+math::uint2 WGPURenderTarget::getAttachmentSize() const noexcept {
+    if (!defaultRenderTarget) {
+        return {width, height};
+    }
+    // For default RT, size is dynamic and usually obtained from the swapchain.
+    // The caller (WebGPUDriver::beginRenderPass) should know the current swapchain size.
+    return {0,0};
+}
 
 }// namespace filament::backend
