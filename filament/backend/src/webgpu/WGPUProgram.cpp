@@ -28,7 +28,9 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
+#include <regex>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -127,42 +129,51 @@ namespace {
 }
 
 // This is a 1 to 1 mapping of the ReservedSpecializationConstants enum in EngineEnums.h
-// The _hack is a workaround until https://issues.chromium.org/issues/42250586 is resolved
-// This workaround is the same one being used on the generateSpecializationConstant() function
-wgpu::StringView getSpecConstantStringId(uint32_t id) {
+std::string getSpecConstantStringId(uint32_t id) {
     switch (id) {
         case 0:
-            return "0";// BACKEND_FEATURE_LEVEL_hack
+            return "BACKEND_FEATURE_LEVEL";
         case 1:
-            return "1";// CONFIG_MAX_INSTANCES_hack
+            return "CONFIG_MAX_INSTANCES";
         case 2:
-            return "2";// ONFIG_STATIC_TEXTURE_TARGET_WORKAROUND_hack
+            return "CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND";
         case 3:
-            return "3";// CONFIG_SRGB_SWAPCHAIN_EMULATION_hack
+            return "CONFIG_SRGB_SWAPCHAIN_EMULATION";
         case 4:
-            return "4";// CONFIG_FROXEL_BUFFER_HEIGHT_hack
+            return "CONFIG_FROXEL_BUFFER_HEIGHT";
         case 5:
-            return "5";// CONFIG_POWER_VR_SHADER_WORKAROUNDS_hack
+            return "CONFIG_POWER_VR_SHADER_WORKAROUNDS";
         case 6:
-            return "6";// CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP_hack
+            return "CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP";
         case 7:
-            return "7";// CONFIG_DEBUG_FROXEL_VISUALIZATION_hack
+            return "CONFIG_DEBUG_FROXEL_VISUALIZATION";
         case 8:
-            return "8";// CONFIG_STEREO_EYE_COUNT_hack
+            return "CONFIG_STEREO_EYE_COUNT";
         case 9:
-            return "9";// CONFIG_SH_BANDS_COUNT_hack
+            return "CONFIG_SH_BANDS_COUNT";
         case 10:
-            return "10";// CONFIG_SHADOW_SAMPLING_METHOD_hack
+            return "CONFIG_SHADOW_SAMPLING_METHOD";
         default:
             PANIC_POSTCONDITION("Unknown/unhandled spec constant key/id: %d", id);
     }
 }
 
-std::vector<wgpu::ConstantEntry> convertConstants(
+void addPadding(std::string& shaderSource, size_t paddingSize) {
+    for (size_t i = 0; i < paddingSize; i++) {
+        shaderSource += " ";
+    }
+}
+
+void replaceSpecConstant(std::string& shaderSource,
         utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
                 constantsInfo) {
+    std::string regexPattern;
+    std::string replaceValue;
     std::vector<wgpu::ConstantEntry> constants;
+    size_t originalSize = shaderSource.length();
+
     constants.reserve(constantsInfo.size());
+
     for (filament::backend::Program::SpecializationConstant const& constant: constantsInfo) {
         // CONFIG_MAX_INSTANCES (1) and CONFIG_FROXEL_BUFFER_HEIGHT (4) will not be present
         // as constant overrides in the generated WGSL, because WGSL doesn't support specialization
@@ -177,27 +188,56 @@ std::vector<wgpu::ConstantEntry> convertConstants(
         double value = 0.0;
         if (auto* v = std::get_if<int32_t>(&constant.value)) {
             value = static_cast<double>(*v);
+            replaceValue = std::to_string(static_cast<int32_t>(value)) + "i";
+            regexPattern = R"((-?\d+)i)";
         } else if (auto* f = std::get_if<float>(&constant.value)) {
             value = static_cast<double>(*f);
+            replaceValue = std::to_string(value);
+            regexPattern = R"((-?\d+)f)";
         } else if (auto* b = std::get_if<bool>(&constant.value)) {
             value = *b ? 0.0 : 1.0;
+            replaceValue = value == 0 ? "false" : "true";
+            regexPattern = R"((true|false))";
         }
-        constants.push_back(
-                wgpu::ConstantEntry{ .key = getSpecConstantStringId(constant.id), .value = value });
+
+        // Construct the full regex pattern:
+        // constantName followed by ' = ', then the value (captured), and then ';'
+
+        std::regex pattern(getSpecConstantStringId(constant.id) + R"( = )" + regexPattern + R"(;)");
+
+        // Construct the replacement string using the captured group
+        // replacement_str represents the entire matched string (constantName = value;)
+        // We want to replace it with constantName = newValue;
+        std::string replacement_str =
+                getSpecConstantStringId(constant.id) + " = " + replaceValue + ";";
+        shaderSource = std::regex_replace(shaderSource, pattern, replacement_str);
     }
-    return constants;
+    size_t newSize = shaderSource.length();
+    addPadding(shaderSource, (originalSize - newSize));
+}
+
+wgpu::ShaderModule setShaderModule(wgpu::Device& device, Program& program,
+        backend::ShaderStage shaderStage) {
+
+    const char* programName = program.getName().c_str_safe();
+    auto& shaderSource = program.getShadersSource();
+    if (shaderStage != ShaderStage::COMPUTE) {
+        auto& src = program.getShadersSource();
+        utils::FixedCapacityVector<uint8_t>& sourceBytes = src[static_cast<size_t>(shaderStage)];
+        std::string shaderSourceString = reinterpret_cast<const char*>(sourceBytes.data());
+        replaceSpecConstant(shaderSourceString, program.getSpecializationConstants());
+        sourceBytes.resize(shaderSourceString.length());
+        std::memcpy(sourceBytes.data(), shaderSourceString.data(), shaderSourceString.length());
+    }
+    return createShaderModule(device, programName, shaderSource, shaderStage);
 }
 
 }// namespace
 
 WGPUProgram::WGPUProgram(wgpu::Device& device, Program& program)
     : HwProgram(program.getName()),
-      vertexShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::VERTEX)),
-      fragmentShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::FRAGMENT)),
-      computeShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::COMPUTE)),
-      constants(convertConstants(program.getSpecializationConstants())) {}
+      vertexShaderModule(setShaderModule(device, program, ShaderStage::VERTEX)),
+      fragmentShaderModule(setShaderModule(device, program, ShaderStage::FRAGMENT)),
+      computeShaderModule(setShaderModule(device, program, ShaderStage::COMPUTE)) {}
 
 }// namespace filament::backend
