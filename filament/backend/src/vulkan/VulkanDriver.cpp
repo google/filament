@@ -209,7 +209,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
-      mStagePool(mAllocator, &mCommands),
+      mStagePool(mAllocator, &mResourceManager, &mCommands),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),

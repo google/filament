@@ -111,7 +111,6 @@ void VulkanCommandBuffer::reset() noexcept {
     mMarkerCount = 0;
     mResources.clear();
     mWaitSemaphores.clear();
-    releaseStageBlocks();
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually

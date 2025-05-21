@@ -77,6 +77,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::SWAP_CHAIN:
             destruct<VulkanSwapChain>(Handle<VulkanSwapChain>(id));
             break;
+        case ResourceType::STAGE_SEGMENT:
+            destruct<VulkanStage::Segment>(Handle<VulkanStage::Segment>(id));
+            break;
         case ResourceType::RENDER_PRIMITIVE:
             destruct<VulkanRenderPrimitive>(Handle<VulkanRenderPrimitive>(id));
             break;

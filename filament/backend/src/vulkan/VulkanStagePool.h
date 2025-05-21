@@ -17,8 +17,11 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 #define TNT_FILAMENT_BACKEND_VULKANSTAGEPOOL_H
 
-#include "backend/DriverEnums.h"
 #include "VulkanMemory.h"
+#include "backend/DriverEnums.h"
+#include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourceManager.h"
+#include "vulkan/memory/ResourcePointer.h"
 
 #include <map>
 #include <unordered_set>
@@ -38,22 +41,34 @@ public:
           mCapacity(capacity),
           mMapping(mapping) {}
 
-    class Block {
+    ~VulkanStage();
+    VulkanStage(const VulkanStage& other) = delete;
+    VulkanStage(VulkanStage&& other) = delete;
+    VulkanStage& operator=(const VulkanStage& other) = delete;
+    VulkanStage& operator=(VulkanStage&& other) = delete;
+
+    class Segment : public fvkmemory::Resource {
     public:
-        Block(VulkanStage* parentStage, uint32_t capacity, uint32_t offset)
+        using OnRecycle = std::function<void(uint32_t offset)>;
+
+        Segment(VulkanStage* parentStage, uint32_t capacity, uint32_t offset,
+                OnRecycle&& onRecycleFn)
             : mParentStage(parentStage),
               mCapacity(capacity),
-              mOffset(offset) {
-            mParentStage->mStageBlocks.insert({ mOffset, this });
+              mOffset(offset),
+              mOnRecycleFn(onRecycleFn) {}
+
+        ~Segment() {
+            if (mOnRecycleFn) {
+                mOnRecycleFn(offset());
+            }
         }
 
-        ~Block() { mParentStage->mStageBlocks.erase(offset()); }
-
         // Should not be copying this around.
-        Block(const Block& other) = delete;
-        Block(Block&& other) = delete;
-        Block& operator=(const Block& other) = delete;
-        Block& operator=(Block&& other) = delete;
+        Segment(const Segment& other) = delete;
+        Segment(Segment&& other) = delete;
+        Segment& operator=(const Segment& other) = delete;
+        Segment& operator=(Segment&& other) = delete;
 
         inline VulkanStage* parentStage() const { return mParentStage; }
         inline VkBuffer buffer() const { return parentStage()->buffer(); }
@@ -61,15 +76,23 @@ public:
         inline uint32_t capacity() const { return mCapacity; }
         inline uint32_t offset() const { return mOffset; }
 
-        inline void* mapping() {
+        inline void* mapping() const {
             return reinterpret_cast<void*>(
                     reinterpret_cast<char*>(mParentStage->mapping()) + offset());
         }
 
     private:
+        // When the application terminates, the recycle function is no longer
+        // useful, and should be discarded to avoid potential memory faults.
+        inline void clearRecycleFn() const { mOnRecycleFn = nullptr; }
+
+        // Ensure parent class can access the terminate method.
+        friend class VulkanStage;
+
         VulkanStage* const mParentStage;
         const uint32_t mCapacity;
         const uint32_t mOffset;
+        mutable OnRecycle mOnRecycleFn;
     };
 
     inline VmaAllocation memory() const { return mMemory; }
@@ -77,17 +100,14 @@ public:
     inline uint32_t capacity() const { return mCapacity; }
     inline void* mapping() const { return mMapping; }
 
-    inline uint32_t& currentOffset() { return mCurrentOffset; }
+    inline uint32_t currentOffset() { return mCurrentOffset; }
 
-    inline bool isSafeToReset() const { return mStageBlocks.empty(); }
+    inline bool isSafeToReset() const { return mSegments.empty(); }
 
     inline void reset() { mCurrentOffset = 0; }
 
-    inline std::unique_ptr<Block> acquireBlock(uint32_t numBytes) {
-        auto block = std::make_unique<Block>(this, numBytes, currentOffset());
-        currentOffset() += numBytes;
-        return block;
-    }
+    fvkmemory::resource_ptr<Segment> acquireSegment(fvkmemory::ResourceManager* resManager,
+            uint32_t numBytes);
 
 private:
     const VmaAllocation mMemory;
@@ -101,7 +121,7 @@ private:
     // Maps the start offset of a vulkan stage block to the stage block,
     // for easy deletions later. This is managed by the blocks themselves, in an
     // RAII pattern, during construction and destruction.
-    std::unordered_map<uint32_t, const Block*> mStageBlocks;
+    std::unordered_map<uint32_t, const Segment*> mSegments;
 };
 
 struct VulkanStageImage {
@@ -117,17 +137,15 @@ struct VulkanStageImage {
 // This class manages two types of host-mappable staging areas: buffer stages and image stages.
 class VulkanStagePool {
 public:
-    VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands);
+    VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
+            VulkanCommands* commands);
 
     // Finds or creates a stage block whose capacity is at least the given
     // number of bytes. Internally, creates and manages and subdivides large
     // buffers so that we have less objects around that we have to keep track
     // of.
     // This function is NOT thread-safe.
-    // Note: the unqiue pointer returned from this function should be kept alive
-    // until the block is no longer in use. This is how we know when it's safe
-    // to reuse the block of memory.
-    std::unique_ptr<VulkanStage::Block> acquireStage(uint32_t numBytes);
+    fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes);
 
     // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,
@@ -142,6 +160,7 @@ public:
 
 private:
     VmaAllocator mAllocator;
+    fvkmemory::ResourceManager* mResManager;
     VulkanCommands* mCommands;
 
     // Allocates a new stage buffer, and optionally subdivides it into stage

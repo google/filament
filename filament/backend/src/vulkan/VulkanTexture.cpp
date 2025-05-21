@@ -483,18 +483,18 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Note: the following stageBlock must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
     // staging buffer pool.
-    std::unique_ptr<VulkanStage::Block> stageBlock =
+    fvkmemory::resource_ptr<VulkanStage::Segment> stage =
             mState->mStagePool.acquireStage(hostData->size);
-    assert_invariant(stageBlock->memory());
-    memcpy(stageBlock->mapping(), hostData->buffer, hostData->size);
-    vmaFlushAllocation(mState->mAllocator, stageBlock->memory(), stageBlock->offset(),
-            hostData->size);
+    assert_invariant(stage->memory());
+    memcpy(stage->mapping(), hostData->buffer, hostData->size);
+    vmaFlushAllocation(mState->mAllocator, stage->memory(), stage->offset(), hostData->size);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stage);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
-    VkBufferImageCopy copyRegion = { .bufferOffset = stageBlock->offset(),
+    VkBufferImageCopy copyRegion = { .bufferOffset = stage->offset(),
         .bufferRowLength = {},
         .bufferImageHeight = {},
         .imageSubresource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -534,9 +534,8 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     transitionLayout(&commands, transitionRange, newLayout);
 
-    vkCmdCopyBufferToImage(cmdbuf, stageBlock->buffer(), mState->mTextureImage, newVkLayout, 1,
+    vkCmdCopyBufferToImage(cmdbuf, stage->buffer(), mState->mTextureImage, newVkLayout, 1,
             &copyRegion);
-    commands.trackStageBlock(std::move(stageBlock));
 
     transitionLayout(&commands, transitionRange, nextLayout);
 }
