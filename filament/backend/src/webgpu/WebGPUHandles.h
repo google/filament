@@ -40,7 +40,6 @@ public:
     wgpu::ShaderModule vertexShaderModule = nullptr;
     wgpu::ShaderModule fragmentShaderModule = nullptr;
     wgpu::ShaderModule computeShaderModule = nullptr;
-    std::vector<wgpu::ConstantEntry> constants;
 };
 
 
