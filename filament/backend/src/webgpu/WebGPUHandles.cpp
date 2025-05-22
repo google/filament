@@ -68,7 +68,7 @@ wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool nor
             case ElementType::BYTE4: return VertexFormat::Snorm8x4;
             case ElementType::UBYTE4: return VertexFormat::Unorm8x4;
             case ElementType::SHORT4: return VertexFormat::Snorm16x4;
-            case ElementType::USHORT4: return VertexFormat::Unorm8x4;
+            case ElementType::USHORT4: return VertexFormat::Unorm16x4;
             default:
                 FILAMENT_CHECK_POSTCONDITION(false) << "Normalized format does not exist.";
                 return VertexFormat::Float32x3;
