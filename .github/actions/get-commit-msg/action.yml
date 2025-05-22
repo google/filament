@@ -1,0 +1,33 @@
+name: 'Get commit message'
+outputs:
+  msg:
+    value: ${{ steps.action_output.outputs.msg }}
+runs:
+  using: "composite"
+  steps:
+    - name: Find commit message (on push)
+      if: github.event_name == 'push'
+      shell: bash
+      run: |
+        echo "${{ github.event.head_commit.message }}" >> /tmp/commit_msg.txt
+    - name: Checkout code
+      shell: bash
+      id: checkout_code
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        git checkout ${{ github.event.pull_request.head.ref }}
+        COMMIT_MESSAGE=$(git log -1)
+        echo "${COMMIT_MESSAGE}" >> /tmp/commit_msg.txt
+    - shell: bash
+      id: action_output
+      run: |
+        DELIMITER="EOF_FILE_CONTENT_$(date +%s)" # Using timestamp to make it more unique
+        echo "msg<<$DELIMITER" >> "$GITHUB_OUTPUT"
+        cat /tmp/commit_msg.txt >> "$GITHUB_OUTPUT"
+        echo "$DELIMITER" >> "$GITHUB_OUTPUT"
+    - name: Uncheckout code
+      shell: bash
+      if: github.event_name == 'pull_request'
+      run: |
+        git checkout ${{ steps.checkout.outputs.hash }}
