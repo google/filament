@@ -196,43 +196,90 @@ void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_
         queue.WriteBuffer(buffer, byteOffset + legalSize, &mRemainderChunk, 4);
     }
 }
+
+static constexpr uint32_t DUMMY_WEBGPU_SLOT = 0;
+
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
         AttributeArray const& attributes)
     : HwVertexBufferInfo(bufferCount, attributeCount),
-      mVertexBufferLayout(bufferCount),
-      mAttributes(bufferCount) {
-    assert_invariant(attributeCount > 0);
-    assert_invariant(bufferCount > 0);
-    for (uint32_t attribIndex = 0; attribIndex < attributes.size(); attribIndex++) {
-        Attribute const& attrib = attributes[attribIndex];
-        // Ignore the attributes which are not bind to vertex buffers.
-        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
+      // TODO: max limits may not be supported by webgpu driver. This should be addressed in the
+      // hardening part.
+      mVertexBufferLayouts(MAX_VERTEX_BUFFER_COUNT),
+      mVertexAttributes(MAX_VERTEX_BUFFER_COUNT) {
+
+    // It starts from 1 because slot 0 is now reserved for the dummy.
+    uint32_t currentWebGPUSlotIndex = 1;
+    // A reasonable dummy stride (e.g., for vec4)
+    const uint32_t DUMMY_STRIDE = 16;
+
+    // Initialize the layout for the dummy slot (slot 0)
+    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].arrayStride = DUMMY_STRIDE;
+    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].stepMode = wgpu::VertexStepMode::Vertex;
+    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount = 0;
+
+    mWebGPUSlotBindingInfos.push_back({
+        .sourceBuffer = 0,
+        .slot = DUMMY_WEBGPU_SLOT,
+        .bufferOffset = 0,
+        .stride = DUMMY_STRIDE,
+    });
+
+    for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
+        const auto& attribute = attributes[attributeIndex];
+
+        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
+        wgpu::VertexFormat vertexFormat = getVertexFormat(attribute.type, isNormalized, isInteger);
+
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            // Use some dummy format
+            vertexFormat = isInteger ? wgpu::VertexFormat::Uint8x4 : wgpu::VertexFormat::Unorm8x4;
+            mVertexAttributes[DUMMY_WEBGPU_SLOT].push_back({
+                .format = vertexFormat,
+                .offset = 0,
+                .shaderLocation = attributeIndex,
+            });
+            mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount++;
             continue;
         }
 
-        assert_invariant(attrib.buffer < bufferCount);
-        bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
-        bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
-        wgpu::VertexFormat vertexFormat = getVertexFormat(attrib.type, isNormalized, isInteger);
+        auto it = std::find_if(mWebGPUSlotBindingInfos.begin(), mWebGPUSlotBindingInfos.end(),
+                [&](const auto& info) {
+                    return info.sourceBuffer == attribute.buffer && info.stride == attribute.stride;
+                });
 
-        // Attributes are sequential per buffer
-        mAttributes[attrib.buffer].push_back({
-            .format = vertexFormat,
-            .offset = attrib.offset,
-            .shaderLocation = attribIndex,
-        });
-
-        mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
-        if (mVertexBufferLayout[attrib.buffer].arrayStride == 0) {
-            mVertexBufferLayout[attrib.buffer].arrayStride = attrib.stride;
+        uint32_t assignedSlot;
+        if (it != mWebGPUSlotBindingInfos.end()) {
+            assignedSlot = it->slot;
         } else {
-            assert_invariant(mVertexBufferLayout[attrib.buffer].arrayStride == attrib.stride);
+            // New combination, allocate a new WebGPU slot
+            assert_invariant(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT);
+            assignedSlot = currentWebGPUSlotIndex++;
+
+            mWebGPUSlotBindingInfos.push_back({
+                .sourceBuffer = attribute.buffer,
+                .slot = assignedSlot,
+                .bufferOffset = attribute.offset - (attribute.offset % attribute.stride),
+                .stride = attribute.stride,
+            });
+
+            mVertexBufferLayouts[assignedSlot].arrayStride = attribute.stride;
+            mVertexBufferLayouts[assignedSlot].stepMode = wgpu::VertexStepMode::Vertex;
+            mVertexBufferLayouts[assignedSlot].attributeCount = 0;
         }
+
+        mVertexAttributes[assignedSlot].push_back({
+            .format = vertexFormat,
+            .offset = attribute.offset % attribute.stride,
+            .shaderLocation = attributeIndex,
+        });
+        mVertexBufferLayouts[assignedSlot].attributeCount++;
     }
 
-    for (uint32_t bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
-        mVertexBufferLayout[bufferIndex].attributeCount = mAttributes[bufferIndex].size();
-        mVertexBufferLayout[bufferIndex].attributes = mAttributes[bufferIndex].data();
+    mVertexBufferLayouts.resize(currentWebGPUSlotIndex);
+
+    for (const auto& info: mWebGPUSlotBindingInfos) {
+        mVertexBufferLayouts[info.slot].attributes = mVertexAttributes[info.slot].data();
     }
 }
 

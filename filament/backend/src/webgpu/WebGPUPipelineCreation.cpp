@@ -191,8 +191,8 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             .entryPoint = "main",
             .constantCount = program.constants.size(),
             .constants = program.constants.data(),
-            .bufferCount = vertexBufferInfo.getVertexBufferLayoutSize(),
-            .buffers = vertexBufferInfo.getVertexBufferLayout()
+            .bufferCount = vertexBufferInfo.getVertexBufferLayoutCount(),
+            .buffers = vertexBufferInfo.getVertexBufferLayouts()
         },
         .primitive = {
             .topology = toWebGPU(primitiveType),

@@ -846,14 +846,11 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
-
-    // This *must* match the WGPUVertexBufferInfo that was bound in bindPipeline(). But we want
-    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
     auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
-    assert_invariant(
-            vbi->getVertexBufferLayoutSize() == renderPrimitive->vertexBuffer->buffers.size());
-    for (uint32_t i = 0; i < vbi->getVertexBufferLayoutSize(); i++) {
-        mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
+    for (const auto& webGPUSlotBindings: vbi->getWebGPUSlotBindingInfos()) {
+        mRenderPassEncoder.SetVertexBuffer(webGPUSlotBindings.slot,
+                renderPrimitive->vertexBuffer->buffers[webGPUSlotBindings.sourceBuffer],
+                webGPUSlotBindings.bufferOffset);
     }
 
     mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
