@@ -44,36 +44,46 @@ public:
 };
 
 
-// VertexBufferInfo contains layout info for Vertex Buffer based on WebGPU structs. In WebGPU each
-// VertexBufferLayout is associated with a single vertex buffer. So number of mVertexBufferLayout
-// is equal to bufferCount. Each VertexBufferLayout can contain multiple VertexAttribute. Bind index
-// of vertex buffer is implicitly calculated by the position of VertexBufferLayout in an array.
+// WGPUVertexBufferInfo maps Filament vertex attributes to WebGPU buffer binding model.
 class WGPUVertexBufferInfo : public HwVertexBufferInfo {
 public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
-    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
-        return mVertexBufferLayout.data();
+
+    inline wgpu::VertexBufferLayout const* getVertexBufferLayouts() const {
+        return mVertexBufferLayouts.data();
+    }
+    inline uint32_t getVertexBufferLayoutCount() const {
+        return static_cast<uint32_t>(mVertexBufferLayouts.size());
     }
 
-    inline uint32_t getVertexBufferLayoutSize() const {
-        return mVertexBufferLayout.size();
+    inline wgpu::VertexAttribute const* getVertexAttributes(uint32_t i) const {
+        return mVertexAttributes[i].data();
+    }
+    inline uint32_t getVertexAttributeCount(uint32_t i) const {
+        return static_cast<uint32_t>(mVertexAttributes[i].size());
     }
 
-    inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].data();
-    }
-
-    inline uint32_t getVertexAttributeSize(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].size();
+    struct WebGPUSlotBindingInfo {
+        uint8_t sourceBuffer;
+        uint32_t slot;
+        uint64_t bufferOffset;
+        uint32_t stride;
+    };
+    inline const std::vector<WebGPUSlotBindingInfo>& getWebGPUSlotBindingInfos() const {
+        return mWebGPUSlotBindingInfos;
     }
 
 private:
-    // TODO: can we do better in terms on heap management.
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout{};
-    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes{};
+    // This stores the final wgpu::VertexBufferLayout objects, one per WebGPU slot.
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayouts;
+
+    // This stores all wgpu::VertexAttribute structs, indexed by their original
+    // Filament attributeIndex.
+    std::vector<std::vector<wgpu::VertexAttribute>> mVertexAttributes;
+
+    // Stores information for the driver to perform setVertexBuffer calls
+    std::vector<WebGPUSlotBindingInfo> mWebGPUSlotBindingInfos;
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
