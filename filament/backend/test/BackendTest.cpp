@@ -138,44 +138,6 @@ filament::backend::RenderPassParams BackendTest::getNoClearRenderPass() {
     return RenderPassParams{};
 }
 
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<filament::backend::HwRenderTarget> renderTarget,
-        Handle<filament::backend::HwSwapChain> swapChain,
-        Handle<filament::backend::HwProgram> program) {
-    RenderPassParams params = getClearColorRenderPass();
-    params.viewport.width = 512;
-    params.viewport.height = 512;
-    renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);
-}
-
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<HwRenderTarget> renderTarget,
-        Handle<HwSwapChain> swapChain,
-        Handle<HwProgram> program,
-        const RenderPassParams& params) {
-    auto& api = getDriverApi();
-
-    TrianglePrimitive triangle(api);
-
-    api.makeCurrent(swapChain, swapChain);
-
-    api.beginRenderPass(renderTarget, params);
-
-    PipelineState state;
-    state.program = program;
-    state.pipelineLayout = pipelineLayout;
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
-
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-
-    api.endRenderPass();
-}
-
 bool BackendTest::matchesEnvironment(Backend backend) {
     return sBackend == backend;
 }

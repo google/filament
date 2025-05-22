@@ -125,7 +125,11 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 
         api.beginRenderPass(srcRenderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         EXPECT_IMAGE(fullRenderTarget, getExpectations(),
@@ -201,7 +205,11 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
 
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         params.viewport = topLeftViewport;
@@ -209,7 +217,11 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
