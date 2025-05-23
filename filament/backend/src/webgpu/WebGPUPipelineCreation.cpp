@@ -189,8 +189,8 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         .vertex = {
             .module = program.vertexShaderModule,
             .entryPoint = "main",
-            .constantCount = program.constants.size(),
-            .constants = program.constants.data(),
+            .constantCount = 0,
+            .constants = nullptr,
             .bufferCount = vertexBufferInfo.getVertexBufferLayoutSize(),
             .buffers = vertexBufferInfo.getVertexBufferLayout()
         },
@@ -232,8 +232,6 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
     if (program.fragmentShaderModule != nullptr) {
         fragmentState.module = program.fragmentShaderModule;
         fragmentState.entryPoint = "main";
-        fragmentState.constantCount = program.constants.size(),
-        fragmentState.constants = program.constants.data(),
         fragmentState.targetCount = 1; // TODO need to get this from the render target
         fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);

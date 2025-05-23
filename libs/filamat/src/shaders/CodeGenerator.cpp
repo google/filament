@@ -939,9 +939,7 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     // Spec constants aren't fully supported in Tint,
     //  workaround until https://issues.chromium.org/issues/42250586 is resolved
     if (mTargetApi == TargetApi::WEBGPU) {
-        out << "layout (constant_id = " << id << ") const "
-                << types[value.index()] << " " << name << "_hack = " << constantString << ";\n"
-                << types[value.index()] << " " << name << " = " << name << "_hack;\n";
+        out << types[value.index()] << " " << name << " =  " << constantString << ";\n";
         return out;
     }
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
