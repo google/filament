@@ -34,7 +34,6 @@ function start_render_() {
             fi
         done
     fi
-    mkdir -p ${OUTPUT_DIR}
     CXX=`which clang++` CC=`which clang` ./build.sh -f -X ${MESA_DIR} -p desktop debug gltf_viewer
 }
 
@@ -54,6 +53,6 @@ start_render_ && \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --test=${RENDERDIFF_TEST_DIR}/tests/presubmit.json \
-            --output_dir=${OUTPUT_DIR} \
+            --output_dir=${RENDER_OUTPUT_DIR} \
             --opengl_lib=${MESA_LIB_DIR} && \
     end_render_
