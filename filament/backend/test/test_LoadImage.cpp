@@ -25,6 +25,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include "TrianglePrimitive.h"
 #include "private/filament/SamplerInterfaceBlock.h"
 
 #include <vector>
@@ -107,12 +108,13 @@ template<typename componentType> inline componentType getMaxValue();
 
 class LoadImageTest : public BackendTest {
 public:
-    LoadImageTest() {
+    LoadImageTest() : mTriangle(getDriverApi()) {
         mVertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
                 ShaderUniformType::None);
     }
 
     std::string mVertexShader;
+    TrianglePrimitive mTriangle;
 };
 
 
@@ -338,8 +340,18 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        renderTriangle({{ shader.getDescriptorSetLayout() }},
-                defaultRenderTarget, swapChain, shader.getProgram());
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport.width = 512;
+        params.viewport.height = 512;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
                 ScreenshotParams(512, 512, t.name, expectedHash));
@@ -413,8 +425,18 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+    RenderPassParams params = getClearColorRenderPass();
+    params.viewport.width = 512;
+    params.viewport.height = 512;
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
+    api.beginRenderPass(defaultRenderTarget, params);
+    api.bindPipeline(state);
+    api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
+    api.endRenderPass();
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
             ScreenshotParams(512, 512, "UpdateImageSRGB", 3300305265));
@@ -472,8 +494,21 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 
     api.bindDescriptorSet(descriptorSet, 0, {});
 
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            defaultRenderTarget, swapChain, shader.getProgram());
+    {
+        RenderFrame frame(api);
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport.width = 512;
+        params.viewport.height = 512;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+    }
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
             ScreenshotParams(512, 512, "UpdateImageMipLevel", 1875922935));
@@ -546,8 +581,18 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
-        renderTriangle({ { shader.getDescriptorSetLayout() } },
-                defaultRenderTarget, swapChain, shader.getProgram());
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport.width = 512;
+        params.viewport.height = 512;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
                 ScreenshotParams(512, 512, "UpdateImage3D", 1875922935));
