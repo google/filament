@@ -43,7 +43,7 @@ struct RenderTarget::BuilderDetails {
     FRenderTarget::Attachment mAttachments[FRenderTarget::ATTACHMENT_COUNT] = {};
     uint32_t mWidth{};
     uint32_t mHeight{};
-    uint8_t mSamples = 1;   // currently not settable in the public facing API
+    uint8_t mSamples = 1;
     // The number of layers for the render target. The value should be 1 except for multiview.
     // If multiview is enabled, this value is appropriately updated based on the layerCount value
     // from each attachment. Hence, #>1 means using multiview
@@ -85,6 +85,10 @@ RenderTarget::Builder& RenderTarget::Builder::multiview(AttachmentPoint pt, uint
     return *this;
 }
 
+RenderTarget::Builder& RenderTarget::Builder::samples(uint8_t samples) noexcept {
+    mImpl->mSamples = samples;
+    return *this;
+}
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
