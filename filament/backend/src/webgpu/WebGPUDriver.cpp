@@ -854,18 +854,31 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
     //     FWGPU_LOGW << "Non Default render target"
     //                << utils::io::endl;
     // }
+    wgpu::TextureView depthTextureView = mSwapChain->getDepthTextureView();
+    wgpu::TextureFormat depthTextureFormat = mSwapChain->getDepthFormat();
+    wgpu::LoadOp stencilLoadOpValue;
+    wgpu::StoreOp stencilStoreOpValue;
+
+    if (depthTextureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+            depthTextureFormat == wgpu::TextureFormat::Depth32FloatStencil8
+    ) {
+        stencilLoadOpValue = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
+        stencilStoreOpValue = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
+    } else {
+        stencilLoadOpValue = wgpu::LoadOp::Undefined;
+        stencilStoreOpValue = wgpu::StoreOp::Undefined;
+    }
+
     wgpu::RenderPassDescriptor renderPassDescriptor;
-    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = mSwapChain->getDepthTextureView(),
+    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{ .view = depthTextureView,
         .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
         .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
         .depthClearValue = static_cast<float>(params.clearDepth),
         .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
-        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
-        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+        .stencilLoadOp = stencilLoadOpValue,
+        .stencilStoreOp = stencilStoreOpValue,
         .stencilClearValue = params.clearStencil,
-        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
-    };
+        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0 };
     renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
     renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
 
@@ -873,7 +886,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
     mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
-            params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
+            params.viewport.width, params.viewport.height, params.depthRange.near,
+            params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {
