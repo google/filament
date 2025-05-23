@@ -299,7 +299,8 @@ void WebGPUDriver::flush(int) {
 void WebGPUDriver::finish(int /* dummy */) {
     if (mCommandEncoder != nullptr) {
         // submit the command buffer thus far...
-        assert_invariant(mRenderPassEncoder == nullptr);
+        assert_invariant(mRenderPassEncoder);
+        mRenderPassEncoder = nullptr;
         wgpu::CommandBufferDescriptor commandBufferDescriptor{
             .label = "command_buffer",
         };
@@ -942,7 +943,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {
     mRenderPassEncoder.End();
-    mRenderPassEncoder = nullptr;
+    // mRenderPassEncoder = nullptr;
 }
 
 void WebGPUDriver::nextSubpass(int) {
