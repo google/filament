@@ -289,7 +289,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v,
 }
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, size_t size, UniformType type,
-        ParameterPrecision precision) noexcept {
+        ParameterPrecision precision) {
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
@@ -303,7 +303,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
         SamplerFormat format, ParameterPrecision precision, bool multisample,
-        const char* transformName, ShaderStageFlags stages) noexcept {
+        const char* transformName, ShaderStageFlags stages) {
     FILAMENT_CHECK_PRECONDITION(!multisample ||
             (format != SamplerFormat::SHADOW &&
                     (samplerType == SamplerType::SAMPLER_2D ||
@@ -364,14 +364,14 @@ template MaterialBuilder& MaterialBuilder::constant<float>(
 template MaterialBuilder& MaterialBuilder::constant<bool>(
         const char* name, ConstantType type, bool defaultValue);
 
-MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
+MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) {
     FILAMENT_CHECK_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT) << "Too many buffers";
     mBuffers.emplace_back(std::make_unique<BufferInterfaceBlock>(std::move(bib)));
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
-        ParameterPrecision precision, const char* name) noexcept {
+        ParameterPrecision precision, const char* name) {
     FILAMENT_CHECK_PRECONDITION(format == SamplerFormat::FLOAT)
             << "Subpass parameters must have FLOAT format.";
 
@@ -381,16 +381,16 @@ MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, SamplerFormat const format,
-        const char* name) noexcept {
+        const char* name) {
     return subpass(subpassType, format, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, ParameterPrecision const precision,
-        const char* name) noexcept {
+        const char* name) {
     return subpass(subpassType, SamplerFormat::FLOAT, precision, name);
 }
 
-MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, const char* name) noexcept {
+MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, const char* name) {
     return subpass(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
@@ -1191,7 +1191,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 }
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
-        Precision precision, OutputType type, const char* name, int location) noexcept {
+        Precision precision, OutputType type, const char* name, int location) {
     FILAMENT_CHECK_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT)
             << "Depth outputs must be of type FLOAT.";
     FILAMENT_CHECK_PRECONDITION(

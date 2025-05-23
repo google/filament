@@ -747,22 +747,22 @@ void TangentSpaceMesh::getQuats(quath* out, size_t stride) const noexcept {
 }
 
 template void TangentSpaceMesh::getAux<float2>(AuxAttribute attribute, float2* out,
-        size_t stride) const noexcept;
+        size_t stride) const;
 
 template void TangentSpaceMesh::getAux<float3>(AuxAttribute attribute, float3* out,
-        size_t stride) const noexcept;
+        size_t stride) const;
 
 template void TangentSpaceMesh::getAux<float4>(AuxAttribute attribute, float4* out,
-        size_t stride) const noexcept;
+        size_t stride) const;
 
 template void TangentSpaceMesh::getAux<ushort3>(AuxAttribute attribute, ushort3* out,
-        size_t stride) const noexcept;
+        size_t stride) const;
 
 template void TangentSpaceMesh::getAux<ushort4>(AuxAttribute attribute, ushort4* out,
-        size_t stride) const noexcept;
+        size_t stride) const;
 
 template<typename T, typename>
-void TangentSpaceMesh::getAux(AuxAttribute attribute, T* out, size_t stride) const noexcept {
+void TangentSpaceMesh::getAux(AuxAttribute attribute, T* out, size_t stride) const {
     AttributeImpl attrib = static_cast<AttributeImpl>(attribute);
     auto inAux = mInput->data<T>(attrib);
     FILAMENT_CHECK_PRECONDITION(inAux) << "Must provide input auxilliary attribute";

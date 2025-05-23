@@ -413,7 +413,7 @@ private:
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
             "ThreadState doesn't align to a cache line");
 
-    ThreadState& getState() noexcept;
+    ThreadState& getState();
 
     static void incRef(Job const* job) noexcept;
     void decRef(Job const* job) noexcept;
@@ -426,12 +426,12 @@ private:
     bool exitRequested() const noexcept;
     bool hasActiveJobs() const noexcept;
 
-    void loop(ThreadState* state) noexcept;
+    void loop(ThreadState* state);
     bool execute(ThreadState& state) noexcept;
     Job* steal(ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
-    void put(WorkQueue& workQueue, Job* job) noexcept;
+    void put(WorkQueue& workQueue, Job const* job) noexcept;
     Job* pop(WorkQueue& workQueue) noexcept;
     Job* steal(WorkQueue& workQueue) noexcept;
 

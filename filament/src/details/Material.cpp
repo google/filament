@@ -94,7 +94,7 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
             }
         }
 
-        FILAMENT_CHECK_PRECONDITION(
+        FILAMENT_CHECK_POSTCONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
                 << "the material was not built for any of the " << to_string(backend)
                 << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
@@ -104,12 +104,12 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
         return materialParser;
     }
 
-    FILAMENT_CHECK_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
+    FILAMENT_CHECK_POSTCONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
             << "could not parse the material package";
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
-    FILAMENT_CHECK_PRECONDITION(version == MATERIAL_VERSION)
+    FILAMENT_CHECK_POSTCONDITION(version == MATERIAL_VERSION)
             << "Material version mismatch. Expected " << MATERIAL_VERSION << " but received "
             << version << ".";
 
@@ -573,7 +573,7 @@ void FMaterial::getPostProcessProgramSlow(Variant const variant,
 Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
-        Variant fragmentVariant) const noexcept {
+        Variant fragmentVariant) const {
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;

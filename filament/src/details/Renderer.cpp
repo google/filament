@@ -447,11 +447,12 @@ void FRenderer::endFrame() {
 
 void FRenderer::readPixels(uint32_t const xoffset, uint32_t const yoffset, uint32_t const width, uint32_t const height,
         PixelBufferDescriptor&& buffer) {
-#ifndef NDEBUG
+
     const bool withinFrame = mSwapChain != nullptr;
-    FILAMENT_CHECK_PRECONDITION(withinFrame) << "readPixels() on a SwapChain must be called after"
-                                                " beginFrame() and before endFrame().";
-#endif
+    FILAMENT_CHECK_PRECONDITION(withinFrame)
+            << "readPixels() on a SwapChain must be called after "
+               "beginFrame() and before endFrame().";
+
     RendererUtils::readPixels(mEngine.getDriverApi(), mRenderTargetHandle,
             xoffset, yoffset, width, height, std::move(buffer));
 }

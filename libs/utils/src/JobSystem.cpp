@@ -244,7 +244,7 @@ void JobSystem::decRef(Job const* job) noexcept {
     // Similarly, we need to guarantee that no read/write are reordered before the last decref,
     // or some other thread could see a destroyed object before the ref-count is 0. This is done
     // with memory_order_acquire.
-    auto c = job->refCount.fetch_sub(1, std::memory_order_acq_rel);
+    auto const c = job->refCount.fetch_sub(1, std::memory_order_acq_rel);
     assert(c > 0);
     if (c == 1) {
         // This was the last reference, it's safe to destroy the job.
@@ -254,7 +254,7 @@ void JobSystem::decRef(Job const* job) noexcept {
 
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
-    std::lock_guard<Mutex> const lock(mWaiterLock);
+    std::lock_guard const lock(mWaiterLock);
     mWaiterCondition.notify_all();
 }
 
@@ -322,9 +322,9 @@ void JobSystem::wakeOne() noexcept {
     mWaiterCondition.notify_one();
 }
 
-inline JobSystem::ThreadState& JobSystem::getState() noexcept {
-    std::lock_guard<Mutex> const lock(mThreadMapLock);
-    auto iter = mThreadMap.find(std::this_thread::get_id());
+inline JobSystem::ThreadState& JobSystem::getState() {
+    std::lock_guard const lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(std::this_thread::get_id());
     FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
     return *iter->second;
 }
@@ -333,10 +333,11 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
     return mJobPool.make<Job>();
 }
 
-void JobSystem::put(WorkQueue& workQueue, Job* job) noexcept {
+void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     assert(job);
+    assert(job >= mJobStorageBase && job < mJobStorageBase + MAX_JOB_COUNT);
+
     size_t const index = job - mJobStorageBase;
-    assert(index >= 0 && index < MAX_JOB_COUNT);
 
     // put the job into the queue
     workQueue.push(uint16_t(index + 1));
@@ -435,12 +436,12 @@ bool JobSystem::execute(ThreadState& state) noexcept {
     return job != nullptr;
 }
 
-void JobSystem::loop(ThreadState* state) noexcept {
+void JobSystem::loop(ThreadState* state) {
     setThreadName("JobSystem::loop");
     setThreadPriority(Priority::DISPLAY);
 
     // record our work queue
-    std::unique_lock<Mutex> lock(mThreadMapLock);
+    std::unique_lock lock(mThreadMapLock);
     bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
     lock.unlock();
 
@@ -449,7 +450,7 @@ void JobSystem::loop(ThreadState* state) noexcept {
     // run our main loop...
     do {
         if (!execute(*state)) {
-            std::unique_lock<Mutex> lock(mWaiterLock);
+            std::unique_lock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
             }
@@ -590,7 +591,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
             // this could take time however, so we will wait with a condition, and
             // continue to handle more jobs, as they get added.
 
-            std::unique_lock<Mutex> lock(mWaiterLock);
+            std::unique_lock lock(mWaiterLock);
             uint32_t const runningJobCount = wait(lock, job);
             // we could be waking up because either:
             // - the job we're waiting on has completed
@@ -625,9 +626,9 @@ void JobSystem::runAndWait(Job*& job) noexcept {
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
 
-    std::unique_lock<Mutex> lock(mThreadMapLock);
-    auto iter = mThreadMap.find(tid);
-    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    std::unique_lock lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(tid);
+    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     lock.unlock();
 
     if (state) {
@@ -658,9 +659,9 @@ void JobSystem::adopt() {
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
-    std::unique_lock<Mutex> const lock(mThreadMapLock);
-    auto iter = mThreadMap.find(tid);
-    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    std::unique_lock const lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(tid);
+    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";
     FILAMENT_CHECK_PRECONDITION(state->js == this) << "this thread is not adopted by us";
     mThreadMap.erase(iter);

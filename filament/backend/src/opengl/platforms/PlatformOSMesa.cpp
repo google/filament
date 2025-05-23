@@ -169,7 +169,7 @@ void PlatformOSMesa::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 bool PlatformOSMesa::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     OSMesaAPI* api = (OSMesaAPI*) mOsMesaApi;
     OSMesaSwapchain* impl = (OSMesaSwapchain*) drawSwapChain;
 

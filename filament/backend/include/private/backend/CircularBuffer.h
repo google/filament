@@ -72,7 +72,7 @@ public:
     Range getBuffer() noexcept;
 
 private:
-    void* alloc(size_t size) noexcept;
+    void* alloc(size_t size);
     void dealloc() noexcept;
 
     // pointer to the beginning of the circular buffer (constant)

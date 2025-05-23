@@ -199,7 +199,7 @@ public:
      */
     virtual bool makeCurrent(ContextType type,
             SwapChain* UTILS_NONNULL drawSwapChain,
-            SwapChain* UTILS_NONNULL readSwapChain) noexcept = 0;
+            SwapChain* UTILS_NONNULL readSwapChain) = 0;
 
     /**
      * Called by the driver to make the OpenGL context active on the calling thread and bind
@@ -219,7 +219,7 @@ public:
             SwapChain* UTILS_NONNULL drawSwapChain,
             SwapChain* UTILS_NONNULL readSwapChain,
             utils::Invocable<void()> preContextChange,
-            utils::Invocable<void(size_t index)> postContextChange) noexcept;
+            utils::Invocable<void(size_t index)> postContextChange);
 
     /**
      * Called by the backend just before calling commit()

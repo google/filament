@@ -577,18 +577,18 @@ OpenGLPlatform::ContextType PlatformEGL::getCurrentContextType() const noexcept 
 }
 
 bool PlatformEGL::makeCurrent(ContextType type,
-        SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
+        SwapChain* drawSwapChain, SwapChain* readSwapChain) {
     SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
     SwapChainEGL const* const rsc = static_cast<SwapChainEGL const*>(readSwapChain);
     EGLContext context = getContextForType(type);
     EGLBoolean const success = egl.makeCurrent(context, dsc->sur, rsc->sur);
-    return success == EGL_TRUE ? true : false;
+    return success == EGL_TRUE;
 }
 
 void PlatformEGL::makeCurrent(SwapChain* drawSwapChain,
         SwapChain* readSwapChain,
         Invocable<void()> preContextChange,
-        Invocable<void(size_t index)> postContextChange) noexcept {
+        Invocable<void(size_t index)> postContextChange) {
 
     assert_invariant(drawSwapChain);
     assert_invariant(readSwapChain);
@@ -796,7 +796,7 @@ void PlatformEGL::Config::erase(EGLint name) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 EGLBoolean PlatformEGL::EGL::makeCurrent(EGLContext context, EGLSurface drawSurface,
-        EGLSurface readSurface) noexcept {
+        EGLSurface readSurface) {
     if (UTILS_UNLIKELY((
             mCurrentContext != context ||
             drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {

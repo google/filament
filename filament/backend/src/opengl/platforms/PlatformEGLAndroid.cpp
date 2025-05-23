@@ -135,7 +135,7 @@ static constexpr const std::string_view kNativeWindowInvalidMsg =
 
 bool PlatformEGLAndroid::makeCurrent(ContextType type,
         SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
 
     // fast & safe path
     if (UTILS_LIKELY(!mAssertNativeWindowIsValid)) {
