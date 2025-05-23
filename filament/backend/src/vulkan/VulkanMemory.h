@@ -58,7 +58,7 @@ struct VulkanGpuBuffer {
     VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
 };
 
-struct VulkanGpuBufferHolder : public fvkmemory::Resource {
+class VulkanGpuBufferHolder : public fvkmemory::Resource {
 public:
     // Because we need to recycle the unused `VulkanGpuBuffer`, we allow for a callback that the "Pool"
     // can use to acquire the buffer back.

@@ -40,9 +40,6 @@ public:
     fvkmemory::resource_ptr<VulkanGpuBufferHolder> acquire(VulkanBufferUsage usage,
             uint32_t numBytes) noexcept;
 
-    // Return a `VulkanGpuBuffer` back to its corresponding pool
-    void yield(VulkanGpuBuffer const* gpuBuffer) noexcept;
-
     // Evicts old unused `VulkanGpuBuffer` and bumps the current frame number
     void gc() noexcept;
 
@@ -57,6 +54,9 @@ private:
     };
 
     using BufferPool = std::multimap<uint32_t, UnusedGpuBuffer>;
+
+    // Return a `VulkanGpuBuffer` back to its corresponding pool
+    void release(VulkanGpuBuffer const* gpuBuffer) noexcept;
 
     // Allocate a new VkBuffer from the VMA pool of the corresponding `numBytes` and `usage`.
     VulkanGpuBuffer const* allocate(VulkanBufferUsage usage, uint32_t numBytes) noexcept;
@@ -78,6 +78,6 @@ private:
     uint64_t mCurrentFrame = 0;
 };
 
-} // namespace filament::backend
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_VULKANGPUBUFFERCACHE_H
+#endif// TNT_FILAMENT_BACKEND_VULKANGPUBUFFERCACHE_H

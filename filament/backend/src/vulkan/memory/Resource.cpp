@@ -82,7 +82,7 @@ ResourceType getTypeEnum() noexcept {
         return ResourceType::FENCE;
     }
     if constexpr (std::is_same_v<D, VulkanGpuBufferHolder>) {
-        return ResourceType::VULKAN_GPU_BUFFER;
+        return ResourceType::VULKAN_GPU_BUFFER_HOLDER;
     }
     return ResourceType::UNDEFINED_TYPE;
 }
@@ -117,8 +117,8 @@ std::string getTypeStr(ResourceType type) {
             return "DescriptorSet";
         case ResourceType::FENCE:
             return "Fence";
-        case ResourceType::VULKAN_GPU_BUFFER:
-            return "VulkanGpuBuffer";
+        case ResourceType::VULKAN_GPU_BUFFER_HOLDER:
+            return "VulkanGpuBufferHolder";
         case ResourceType::UNDEFINED_TYPE:
             return "";
     }

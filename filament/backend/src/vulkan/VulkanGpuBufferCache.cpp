@@ -44,7 +44,7 @@ VkBufferUsageFlags getVkBufferUsage(VulkanBufferUsage usage) {
     return 0;
 }
 
-} // namespace
+}// namespace
 
 VulkanGpuBufferCache::VulkanGpuBufferCache(VulkanContext const& context,
         fvkmemory::ResourceManager& resourceManager, VmaAllocator allocator)
@@ -65,26 +65,14 @@ fvkmemory::resource_ptr<VulkanGpuBufferHolder> VulkanGpuBufferCache::acquire(
         VulkanGpuBuffer const* gpuBuffer = iter->second.gpuBuffer;
         bufferPool.erase(iter);
         return fvkmemory::resource_ptr<VulkanGpuBufferHolder>::construct(&mResourceManager,
-                gpuBuffer, [this](VulkanGpuBuffer const* gpuBuffer) { this->yield(gpuBuffer); });
+                gpuBuffer, [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
     }
 
     // We were not able to find a sufficiently large allocation, so create a new one that is
     // recycled after being yielded.
     VulkanGpuBuffer const* gpuBuffer = allocate(usage, numBytes);
     return fvkmemory::resource_ptr<VulkanGpuBufferHolder>::construct(&mResourceManager, gpuBuffer,
-            [this](VulkanGpuBuffer const* gpuBuffer) { this->yield(gpuBuffer); });
-}
-
-void VulkanGpuBufferCache::yield(VulkanGpuBuffer const* gpuBuffer) noexcept {
-    if (!gpuBuffer) {
-        return;
-    }
-
-    BufferPool& bufferPool = getPool(gpuBuffer->usage);
-    bufferPool.insert(std::make_pair(gpuBuffer->numBytes, UnusedGpuBuffer{
-                                                              .lastAccessed = mCurrentFrame,
-                                                              .gpuBuffer = gpuBuffer,
-                                                          }));
+            [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
 }
 
 void VulkanGpuBufferCache::gc() noexcept {
@@ -106,7 +94,7 @@ void VulkanGpuBufferCache::gc() noexcept {
                 FVK_LOGD << "GpuBufferCache - Destroyed vkBuffer "
                          << poolIter->second.gpuBuffer->vkbuffer << " with usage "
                          << static_cast<int>(poolIter->second.gpuBuffer->usage) << utils::io::endl;
-#endif // FVK_DEBUG_GPU_BUFFER_CACHE
+#endif// FVK_DEBUG_GPU_BUFFER_CACHE
 
                 destroy(poolIter->second.gpuBuffer);
                 poolIter = bufferPool.erase(poolIter);
@@ -126,6 +114,16 @@ void VulkanGpuBufferCache::terminate() noexcept {
         }
         bufferPool.clear();
     }
+}
+
+void VulkanGpuBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
+    assert_invariant(gpuBuffer != nullptr);
+
+    BufferPool& bufferPool = getPool(gpuBuffer->usage);
+    bufferPool.insert(std::make_pair(gpuBuffer->numBytes, UnusedGpuBuffer{
+                                                              .lastAccessed = mCurrentFrame,
+                                                              .gpuBuffer = gpuBuffer,
+                                                          }));
 }
 
 VulkanGpuBuffer const* VulkanGpuBufferCache::allocate(VulkanBufferUsage usage,
@@ -169,7 +167,7 @@ VulkanGpuBuffer const* VulkanGpuBufferCache::allocate(VulkanBufferUsage usage,
                  << numBytes << " and usage = " << static_cast<int>(usage) << "  successfully"
                  << utils::io::endl;
     }
-#endif // FVK_DEBUG_GPU_BUFFER_CACHE
+#endif// FVK_DEBUG_GPU_BUFFER_CACHE
 
     return gpuBuffer;
 }
@@ -205,4 +203,4 @@ VulkanGpuBufferCache::BufferPool& VulkanGpuBufferCache::getPool(VulkanBufferUsag
     return mGpuBufferPools[poolIndex];
 }
 
-} // namespace filament::backend
+}// namespace filament::backend
