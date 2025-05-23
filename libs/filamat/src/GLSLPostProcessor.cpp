@@ -48,7 +48,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
+#include "regex"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -601,7 +601,6 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         return false;
 #endif
     }
-
     tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
     /// An instance of SuccessType that can be used to check a tint Result.
     tint::SuccessType tintSuccess;
@@ -610,7 +609,9 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
         return false;
     }
-    *outWsl = wgslOut->wgsl;
+    //Tint adds some annotations that Dawn complains about and needs removal
+    std::regex stride_regex(R"(@stride\([0-9]+\)\s*@internal\(disable_validation__ignore_stride\))");
+    *outWsl = std::regex_replace(wgslOut->wgsl, stride_regex, "");
     return true;
 #else
     slog.i << "Trying to emit WGSL without including WebGPU dependencies,"
