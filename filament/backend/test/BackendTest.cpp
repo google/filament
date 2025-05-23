@@ -58,6 +58,8 @@ BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
         CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
     mImageExpectations.emplace(getDriverApi());
+    NativeView nativeView = getNativeView();
+    mScreenSize = {nativeView.width, nativeView.height};
 }
 
 BackendTest::~BackendTest() {
@@ -136,6 +138,14 @@ filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(float4 
 
 filament::backend::RenderPassParams BackendTest::getNoClearRenderPass() {
     return RenderPassParams{};
+}
+
+std::size_t BackendTest::screenWidth() const {
+    return mScreenSize[0];
+}
+
+std::size_t BackendTest::screenHeight() const {
+    return mScreenSize[1];
 }
 
 bool BackendTest::matchesEnvironment(Backend backend) {

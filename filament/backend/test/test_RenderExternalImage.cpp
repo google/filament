@@ -200,7 +200,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.commit(swapChain);
     api.endFrame(0);
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "RenderExternalImage", 1206264951));
+            ScreenshotParams(screenWidth(), screenHeight(), "RenderExternalImage", 1206264951));
 
     api.stopCapture(0);
     api.finish();

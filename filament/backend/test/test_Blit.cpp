@@ -493,8 +493,8 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
     constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
-    constexpr int kDstTexWidth = 512;
-    constexpr int kDstTexHeight = 512;
+    const uint32_t kDstTexWidth = screenWidth();
+    const uint32_t kDstTexHeight = screenHeight();
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current.
