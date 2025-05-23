@@ -72,6 +72,12 @@ private:
     wgpu::CommandEncoder mCommandEncoder = nullptr;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
+    struct bgInfo{
+        wgpu::BindGroup bg;
+        size_t dynamicOffsetCount;
+        backend::DescriptorSetOffsetArray offsets;
+    };
+    std::array<bgInfo, MAX_DESCRIPTOR_SET_COUNT> currentDescriptorSets = {};
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
 

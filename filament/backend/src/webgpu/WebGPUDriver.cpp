@@ -582,7 +582,6 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     constructHandle<WGPUProgram>(ph, mDevice, program);
 }
-
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     assert_invariant(!mDefaultRenderTarget);
     mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
@@ -1030,9 +1029,19 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     // VulkanPipelineCache to handle this, may be missing nuance
     static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
     auto hash = pipleineStateHasher(pipelineState);
-    if(mPipelineMap.find(hash) != mPipelineMap.end()){
+    if(mPipelineMap.find(hash) != mPipelineMap.end()) {
         mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
         return;
+    }
+    for (size_t index = 0; index < MAX_DESCRIPTOR_SET_COUNT; ++index) {
+        auto& entry = currentDescriptorSets[index];
+        if (entry.bg != nullptr) {
+            mRenderPassEncoder.SetBindGroup(index, entry.bg, entry.dynamicOffsetCount,
+                    entry.offsets.data());
+            entry.bg = nullptr;
+            entry.dynamicOffsetCount = 0;
+            entry.offsets.clear();
+        }
     }
     const auto* program = handleCast<WGPUProgram>(pipelineState.program);
     assert_invariant(program);
@@ -1163,9 +1172,12 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
         backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
-    assert_invariant(mRenderPassEncoder);
     const size_t dynamicOffsetCount = bindGroup->countEntitiesWithDynamicOffsets();
-    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, offsets.data());
+
+    if(mRenderPassEncoder){
+        mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, offsets.data());
+    }
+    currentDescriptorSets[setIndex] = {wbg, dynamicOffsetCount, std::move(offsets)};
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
