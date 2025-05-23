@@ -154,7 +154,8 @@ std::string getSpecConstantStringId(uint32_t id) {
         case 10:
             return "CONFIG_SHADOW_SAMPLING_METHOD";
         default:
-            PANIC_POSTCONDITION("Unknown/unhandled spec constant key/id: %d", id);
+            return "spec_const" + std::to_string(id);
+            // PANIC_POSTCONDITION("Unknown/unhandled spec constant key/id: %d", id);
     }
 }
 
@@ -182,6 +183,9 @@ void replaceSpecConstant(std::string& shaderSource,
         // CONFIG_SRGB_SWAPCHAIN_EMULATION (3) is being skipped all together since it's only
         // included for the case of mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0, which should
         // not be possible for WebGPU
+        // if (constant.id > 10) {
+        //     printf("Wrong specialization constant id: %d\n", constant.id);
+        // }
         if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
             continue;
         }
