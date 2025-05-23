@@ -705,6 +705,7 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 }
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams const& params) {
+    printf("%s\n", __FUNCTION__);
     assert_invariant(mCommandEncoder);
     auto* renderTarget = handleCast<WGPURenderTarget>(rth);
 
@@ -784,6 +785,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
 }
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {
+    printf("%s\n", __FUNCTION__);
     mRenderPassEncoder.End();
     mRenderPassEncoder = nullptr;
 }
@@ -871,6 +873,7 @@ void WebGPUDriver::blit(
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     // TODO Investigate implications of this hash more closely. Vulkan has a whole class
     // VulkanPipelineCache to handle this, may be missing nuance
+    printf("%s\n", __FUNCTION__);
     static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
     auto hash = pipleineStateHasher(pipelineState);
     if (mPipelineMap.find(hash) != mPipelineMap.end()) {
@@ -964,6 +967,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
+    printf("%s\n", __FUNCTION__);
     auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
     auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
     for (const auto& webGPUSlotBindings: vbi->getWebGPUSlotBindingInfos()) {
@@ -977,6 +981,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    printf("%s\n", __FUNCTION__);
     // We defer actually binding until we actually draw
     for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
         auto& binding = mCurrentDescriptorSets[i];
@@ -1057,6 +1062,7 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
         backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
+    printf("%s\n", __FUNCTION__);
     assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
