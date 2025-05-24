@@ -116,7 +116,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             highp vec3 sampleDelta0 = (samplePos0 - origin);
             highp vec3 sampleDelta1 = (samplePos1 - origin);
-            vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
+            highp vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
             vec2 invSampleDist = rsqrt(sqSampleDist);
 
             // Use the view space radius to calculate the fallOff
