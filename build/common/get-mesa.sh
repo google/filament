@@ -41,6 +41,8 @@ for cmd in "${NEEDED_PYTHON_DEPS[@]}"; do
 done
 deactivate
 
+LOCAL_PKG_CONFIG_PATH=
+
 # Install system deps
 if [[ "$OS_NAME" == "Linux" ]]; then
     if [[ "$GITHUB_WORKFLOW" ]]; then
@@ -82,6 +84,9 @@ elif [[ "$OS_NAME" == "Darwin" ]]; then
         fi
     fi
     HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+
+    # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
+    LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 fi # [[ "$OS_NAME" == x ]]
 
 LOCAL_LDFLAGS=${LDFLAGS}
@@ -134,9 +139,11 @@ fi
 # -Dgallium-drivers=swrast  => builds GL software rasterizer
 # -Dvulkan-drivers=swrast   => builds VK software rasterizer
 # -Dgallium-drivers=llvmpipe is needed for GL >= 4.1 pipe-screen (see src/gallium/auxiliary/target-helpers/inline_sw_helper.h)
-CXX=${LOCAL_CXX} CC=${LOCAL_CC} PATH=${LOCAL_PATH} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
+PKG_CONFIG_PATH=${LOCAL_PKG_CONFIG_PATH} PATH=${LOCAL_PATH} \
+CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
    meson setup --wipe builddir/ -Dprefix="${MESA_DIR}/out" -Dglx=xlib -Dosmesa=true -Dgallium-drivers=llvmpipe,swrast -Dvulkan-drivers=swrast
-CXX=${LOCAL_CXX} CC=${LOCAL_CC} PATH=${LOCAL_PATH} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
+PKG_CONFIG_PATH=${LOCAL_PKG_CONFIG_PATH} PATH=${LOCAL_PATH} \
+CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
    meson install -C builddir/
 
 # Disable python venv

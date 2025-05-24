@@ -65,7 +65,7 @@ class GoldenManager:
     assets_dir = self._assets_dir()
     if not os.path.exists(assets_dir):
       execute(
-          f'git clone --depth=1 {self._get_repo_url()}',
+          f'git clone {self._get_repo_url()}',
           cwd=self.working_dir_,
           capture_output=False
       )
@@ -83,13 +83,26 @@ class GoldenManager:
     self._git_exec('rebase')
 
   def _git_exec(self, cmd):
-    execute(f'git {cmd}', cwd=self._assets_dir(), capture_output=False)
+    return execute(f'git {cmd}', cwd=self._assets_dir(), capture_output=False)
 
-  def merge_to_main(self, branch, push_to_remote=False):
+  # tag represent a hash in the filament repo that this merge is associated with
+  def merge_to_main(self, branch, tag, push_to_remote=False):
     self.update()
     assets_dir = self._assets_dir()
+
+    # Update commit message
+    self._git_exec(f'checkout {branch}')
+    code, old_commit = execute(f'git log --format=%B -n 1', cwd=assets_dir)
+    if tag and len(tag) > 0:
+      old_commit += f'\nFILAMENT={tag}'
+      COMMIT_FILE = '/tmp/golden_commit.txt'
+      with open(COMMIT_FILE, 'w') as f:
+        f.write(old_commit)
+      self._git_exec(f'commit --amend -F {COMMIT_FILE}')
+
+    # Do the actual merge
     self._git_exec(f'checkout main')
-    self._git_exec(f'merge --no-ff {branch}')
+    self._git_exec(f'merge --no-ff --no-edit {branch}')
     if push_to_remote and \
        (self.access_token_ or self.access_type_ == ACCESS_TYPE_SSH):
       self._git_exec(f'push origin main')
@@ -109,7 +122,7 @@ class GoldenManager:
       self._git_exec(f'add {GOLDENS_DIR}')
     else:
       for f in deletes:
-        self._git_exec(f'remove {os.path.join(GOLDENS_DIR, f)}')
+        self._git_exec(f'rm {os.path.join(GOLDENS_DIR, f)}')
       for f in updates:
         shutil.copy2(
           os.path.join(src_dir, f),
