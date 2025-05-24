@@ -35,6 +35,7 @@ template ResourceType getTypeEnum<VulkanVertexBufferInfo>() noexcept;
 template ResourceType getTypeEnum<VulkanDescriptorSetLayout>() noexcept;
 template ResourceType getTypeEnum<VulkanDescriptorSet>() noexcept;
 template ResourceType getTypeEnum<VulkanFence>() noexcept;
+template ResourceType getTypeEnum<VulkanGpuBufferHolder>() noexcept;
 
 template<typename D>
 ResourceType getTypeEnum() noexcept {
@@ -80,6 +81,9 @@ ResourceType getTypeEnum() noexcept {
     if constexpr (std::is_same_v<D, VulkanFence>) {
         return ResourceType::FENCE;
     }
+    if constexpr (std::is_same_v<D, VulkanGpuBufferHolder>) {
+        return ResourceType::VULKAN_GPU_BUFFER_HOLDER;
+    }
     return ResourceType::UNDEFINED_TYPE;
 }
 
@@ -113,6 +117,8 @@ std::string getTypeStr(ResourceType type) {
             return "DescriptorSet";
         case ResourceType::FENCE:
             return "Fence";
+        case ResourceType::VULKAN_GPU_BUFFER_HOLDER:
+            return "VulkanGpuBufferHolder";
         case ResourceType::UNDEFINED_TYPE:
             return "";
     }

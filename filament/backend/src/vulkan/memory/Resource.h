@@ -49,7 +49,8 @@ enum class ResourceType : uint8_t {
     DESCRIPTOR_SET_LAYOUT = 11,
     DESCRIPTOR_SET = 12,
     FENCE = 13,
-    UNDEFINED_TYPE = 14,    // Must be the last enum because we use it for iterating over the enums.
+    VULKAN_GPU_BUFFER_HOLDER = 14,
+    UNDEFINED_TYPE = 15,    // Must be the last enum because we use it for iterating over the enums.
 };
 
 template<typename D>

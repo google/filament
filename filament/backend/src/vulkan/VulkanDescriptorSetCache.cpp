@@ -320,7 +320,7 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
     VkDescriptorBufferInfo const info = {
-        .buffer = bufferObject->buffer.getGpuBuffer(),
+        .buffer = bufferObject->buffer.getVkBuffer(),
         .offset = offset,
         .range = size,
     };
