@@ -76,9 +76,6 @@ public:
 
     void generateMipmaps(FEngine& engine) const noexcept;
 
-    void setSampleCount(size_t const sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
-    size_t getSampleCount() const noexcept { return mSampleCount; }
-    bool isMultisample() const noexcept { return mSampleCount > 1; }
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
