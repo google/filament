@@ -66,6 +66,9 @@ protected:
 
     ImageExpectations& getExpectations() { return *mImageExpectations; }
 
+    std::size_t screenWidth() const;
+    std::size_t screenHeight() const;
+
     static bool matchesEnvironment(Backend backend);
     static bool matchesEnvironment(OperatingSystem operatingSystem);
 private:
@@ -85,6 +88,8 @@ private:
     // This isn't truly optional, it just needs to delay construction until after the driver has
     // been initialized
     std::optional<ImageExpectations> mImageExpectations;
+
+    std::array<size_t, 2> mScreenSize;
 };
 
 } // namespace test

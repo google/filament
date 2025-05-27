@@ -157,8 +157,6 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "All values including alpha are written as 0, see b/417254943");
-    constexpr int kTexWidth = 512;
-    constexpr int kTexHeight = 512;
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
@@ -181,10 +179,11 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
-    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, kTexWidth, kTexHeight, 1, TextureUsage::COLOR_ATTACHMENT));
-    auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0, kTexWidth, kTexHeight, 1, 0, {{ colorTexture }}, {}, {}));
+    auto colorTexture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+                    screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
+    auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0, screenWidth(),
+            screenHeight(), 1, 0, { { colorTexture } }, {}, {}));
 
     // Upload uniforms for the first triangle.
     // Upload the uniform, but with an offset to accommodate the padding in the shader's
@@ -204,8 +203,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
         RenderFrame frame(api);
 
         RenderPassParams clearParams = getClearColorRenderPass();
-        clearParams.viewport.height = kTexWidth;
-        clearParams.viewport.width = kTexHeight;
+        clearParams.viewport.height = screenWidth();
+        clearParams.viewport.width = screenHeight();
 
         api.beginRenderPass(renderTarget, clearParams);
         api.bindPipeline(state);
@@ -227,8 +226,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
                 });
 
         RenderPassParams noClearParams = getNoClearRenderPass();
-        noClearParams.viewport.height = kTexWidth;
-        noClearParams.viewport.width = kTexHeight;
+        noClearParams.viewport.height = screenWidth();
+        noClearParams.viewport.width = screenHeight();
 
         api.beginRenderPass(renderTarget, noClearParams);
         api.bindPipeline(state);
@@ -239,7 +238,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(kTexWidth, kTexHeight, "BufferObjectUpdateWithOffset", 2320747245));
+            ScreenshotParams(screenWidth(), screenHeight(), "BufferObjectUpdateWithOffset",
+                    2320747245));
 
     api.flush();
     api.commit(swapChain);

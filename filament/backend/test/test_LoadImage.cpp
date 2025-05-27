@@ -51,7 +51,7 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 0, set = 0) uniform {samplerType} test_tex;
 
 void main() {
-    vec2 fbsize = vec2(512);
+    vec2 fbsize = vec2({texSize});
     vec2 uv = gl_FragCoord.xy / fbsize;
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
@@ -72,7 +72,7 @@ float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
 
 void main() {
-    vec2 fbsize = vec2(512);
+    vec2 fbsize = vec2({texSize});
     vec2 uv = gl_FragCoord.xy / fbsize;
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
@@ -90,7 +90,7 @@ layout(location = 0) out vec4 fragColor;
 layout(location = 0, set = 0) uniform sampler2D test_tex;
 
 void main() {
-    vec2 fbsize = vec2(512);
+    vec2 fbsize = vec2({texSize});
     vec2 uv = gl_FragCoord.xy / fbsize;
 #if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     uv.y = 1.0 - uv.y;
@@ -105,18 +105,6 @@ void main() {
 namespace test {
 
 template<typename componentType> inline componentType getMaxValue();
-
-class LoadImageTest : public BackendTest {
-public:
-    LoadImageTest() : mTriangle(getDriverApi()) {
-        mVertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
-                ShaderUniformType::None);
-    }
-
-    std::string mVertexShader;
-    TrianglePrimitive mTriangle;
-};
-
 
 inline std::string stringReplace(const std::string& find, const std::string& replace,
         std::string source) {
@@ -213,6 +201,35 @@ static SamplerFormat getSamplerFormat(TextureFormat textureFormat) {
     }
 }
 
+class LoadImageTest : public BackendTest {
+public:
+    LoadImageTest() : mTriangle(getDriverApi()) {
+        mVertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
+                ShaderUniformType::None);
+
+        // Checkerboard utils require square textures
+        EXPECT_THAT(screenWidth(), testing::Eq(screenWidth()));
+    }
+
+    uint32_t kTexSize = screenWidth();
+    uint32_t kHalfTexSize = kTexSize / 2;
+    uint32_t kDoubleTexSize = kTexSize * 2;
+    std::string mVertexShader;
+    TrianglePrimitive mTriangle;
+
+    std::string getFormattedFragment(const std::string& fragment, TextureFormat textureFormat) {
+        std::string withSampler =
+                stringReplace("{samplerType}", getSamplerTypeName(textureFormat), fragment);
+        return stringReplace("{texSize}", std::to_string(kTexSize), withSampler);
+    }
+
+    std::string getFormattedFragment(const std::string& fragment, SamplerType samplerType) {
+        std::string withSampler =
+                stringReplace("{samplerType}", getSamplerTypeName(samplerType), fragment);
+        return stringReplace("{texSize}", std::to_string(kTexSize), withSampler);
+    }
+};
+
 TEST_F(LoadImageTest, UpdateImage2D) {
     FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
@@ -305,8 +322,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
             SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
 
-        std::string const fragment = stringReplace("{samplerType}",
-                getSamplerTypeName(t.textureFormat), fragmentTemplate);
+        std::string const fragment = getFormattedFragment(fragmentTemplate, t.textureFormat);
         Shader shader(api, cleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
@@ -316,21 +332,26 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
         Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-                t.textureFormat, 1, 512, 512, 1u, usage));
+                t.textureFormat, 1, kTexSize, kTexSize, 1u, usage));
 
         // Upload some pixel data.
         if (t.uploadSubregions) {
-            api.update3DImage(texture, 0,   0,   0, 0, 256, 256, 1,
-                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 256, t.bufferPadding));
-            api.update3DImage(texture, 0, 256,   0, 0, 256, 256, 1,
-                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 256, t.bufferPadding));
-            api.update3DImage(texture, 0,   0, 256, 0, 256, 256, 1,
-                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 256, t.bufferPadding));
-            api.update3DImage(texture, 0, 256, 256, 0, 256, 256, 1,
-                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 256, t.bufferPadding));
+            api.update3DImage(texture, 0, 0, 0, 0, kHalfTexSize, kHalfTexSize, 1,
+                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, kHalfTexSize,
+                            t.bufferPadding));
+            api.update3DImage(texture, 0, kHalfTexSize, 0, 0, kHalfTexSize, kHalfTexSize, 1,
+                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, kHalfTexSize,
+                            t.bufferPadding));
+            api.update3DImage(texture, 0, 0, kHalfTexSize, 0, kHalfTexSize, kHalfTexSize, 1,
+                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, kHalfTexSize,
+                            t.bufferPadding));
+            api.update3DImage(texture, 0, kHalfTexSize, kHalfTexSize, 0, kHalfTexSize, kHalfTexSize,
+                    1,
+                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, kHalfTexSize,
+                            t.bufferPadding));
         } else {
-            api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1,
-                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, 512, t.bufferPadding));
+            api.update3DImage(texture, 0, 0, 0, 0, kTexSize, kTexSize, 1,
+                    checkerboardPixelBuffer(t.pixelFormat, t.pixelType, kTexSize, t.bufferPadding));
         }
 
         DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
@@ -341,8 +362,8 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.bindDescriptorSet(descriptorSet, 0, {});
 
         RenderPassParams params = getClearColorRenderPass();
-        params.viewport.width = 512;
-        params.viewport.height = 512;
+        params.viewport.width = kTexSize;
+        params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
         state.primitiveType = PrimitiveType::TRIANGLES;
@@ -354,7 +375,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.endRenderPass();
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-                ScreenshotParams(512, 512, t.name, expectedHash));
+                ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
 
         api.commit(swapChain);
         api.endFrame(0);
@@ -380,39 +401,39 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    std::string const fragment = stringReplace("{samplerType}",
-            getSamplerTypeName(textureFormat), fragmentTemplate);
+    std::string const fragment = getFormattedFragment(fragmentTemplate, textureFormat);
     Shader shader(api, cleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
             "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
-    Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            textureFormat, 1, 512, 512, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
+    Handle<HwTexture> const texture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, textureFormat, 1, kTexSize,
+                    kTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
     size_t components; int bpp;
     getPixelInfo(pixelFormat, pixelType, components, bpp);
-    size_t bpl = 512 * 512 * bpp;
+    size_t bpl = kTexSize * kTexSize * bpp;
     size_t bufferSize = bpl;
     void* buffer = calloc(1, bufferSize);
     PixelBufferDescriptor descriptor(buffer, bufferSize, pixelFormat, pixelType,
-            1, 0, 0, 512, [](void* buffer, size_t size, void* user) {
+            1, 0, 0, kTexSize, [](void* buffer, size_t size, void* user) {
                 free(buffer);
             }, nullptr);
 
     // Add a gradient.
     uint8_t* pixel = (uint8_t*) buffer;
-    for (int r = 0; r < 512; r++) {
-        for (int c = 0; c < 512; c++) {
+    for (int r = 0; r < kTexSize; r++) {
+        for (int c = 0; c < kTexSize; c++) {
             for (int n = 0; n < components; n++) {
-                *pixel++ = (c / 512.0f) * 255;
+                *pixel++ = (c / static_cast<float>(kTexSize)) * 255;
             }
         }
     }
 
-    api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 1, std::move(descriptor));
+    api.update3DImage(texture, 0, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
     api.beginFrame(0, 0, 0);
 
@@ -426,8 +447,8 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.bindDescriptorSet(descriptorSet, 0, {});
 
     RenderPassParams params = getClearColorRenderPass();
-    params.viewport.width = 512;
-    params.viewport.height = 512;
+    params.viewport.width = kTexSize;
+    params.viewport.height = kTexSize;
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
     state.primitiveType = PrimitiveType::TRIANGLES;
@@ -439,7 +460,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.endRenderPass();
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageSRGB", 3300305265));
+            ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
 
     api.commit(swapChain);
     api.endFrame(0);
@@ -464,8 +485,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    std::string const fragment = stringReplace("{samplerType}",
-            getSamplerTypeName(textureFormat), fragmentUpdateImageMip);
+    std::string const fragment = getFormattedFragment(fragmentUpdateImageMip, textureFormat);
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
@@ -476,12 +496,13 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     // Base level: 1024
     // Level 1:     512     <-- upload data and sample from this level
     // Level 2:     256
-    Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 3,
-            textureFormat, 1, 1024, 1024, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
+    Handle<HwTexture> texture = cleanup.add(
+            api.createTexture(SamplerType::SAMPLER_2D, 3, textureFormat, 1, kDoubleTexSize,
+                    kDoubleTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
-    PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, 512);
-    api.update3DImage(texture, /* level*/ 1, 0, 0, 0, 512, 512, 1, std::move(descriptor));
+    PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, kTexSize);
+    api.update3DImage(texture, /* level*/ 1, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
     api.beginFrame(0, 0, 0);
 
@@ -497,8 +518,8 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     {
         RenderFrame frame(api);
         RenderPassParams params = getClearColorRenderPass();
-        params.viewport.width = 512;
-        params.viewport.height = 512;
+        params.viewport.width = kTexSize;
+        params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
         state.primitiveType = PrimitiveType::TRIANGLES;
@@ -511,7 +532,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     }
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "UpdateImageMipLevel", 1875922935));
+            ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
 
     api.commit(swapChain);
     api.endFrame(0);
@@ -541,8 +562,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
-    std::string fragment = stringReplace("{samplerType}",
-            getSamplerTypeName(samplerType), fragmentUpdateImage3DTemplate);
+    std::string fragment = getFormattedFragment(fragmentUpdateImage3DTemplate, samplerType);
     Shader shader(api, cleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
@@ -551,24 +571,24 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
     // Create a texture.
     Handle<HwTexture> texture = cleanup.add(api.createTexture(samplerType, 1,
-            textureFormat, 1, 512, 512, 4, usage));
+            textureFormat, 1, kTexSize, kTexSize, 4, usage));
 
     // Create image data for all 4 layers.
     size_t components; int bpp;
     getPixelInfo(pixelFormat, pixelType, components, bpp);
-    size_t bpl = 512 * 512 * bpp;
+    size_t bpl = kTexSize * kTexSize * bpp;
     size_t bufferSize = bpl * 4;
     void* buffer = calloc(1, bufferSize);
     PixelBufferDescriptor descriptor(buffer, bufferSize, pixelFormat, pixelType,
-            1, 0, 0, 512, [](void* buffer, size_t size, void* user) {
+            1, 0, 0, kTexSize, [](void* buffer, size_t size, void* user) {
                 free(buffer);
             }, nullptr);
 
     // Only add checkerboard data to the 3rd layer, which we'll sample from.
     uint8_t* thirdLayer = (uint8_t*) buffer + (bpl * 2);
-    fillCheckerboard<float>(thirdLayer, 512, 512, components, 1.0f);
+    fillCheckerboard<float>(thirdLayer, kTexSize, kTexSize, components, 1.0f);
 
-    api.update3DImage(texture, 0, 0, 0, 0, 512, 512, 4, std::move(descriptor));
+    api.update3DImage(texture, 0, 0, 0, 0, kTexSize, kTexSize, 4, std::move(descriptor));
 
     {
         RenderFrame frame(api);
@@ -582,8 +602,8 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.bindDescriptorSet(descriptorSet, 0, {});
 
         RenderPassParams params = getClearColorRenderPass();
-        params.viewport.width = 512;
-        params.viewport.height = 512;
+        params.viewport.width = kTexSize;
+        params.viewport.height = kTexSize;
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
         state.primitiveType = PrimitiveType::TRIANGLES;
@@ -595,7 +615,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.endRenderPass();
 
         EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "UpdateImage3D", 1875922935));
+                ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
     }
 
     api.stopCapture();
