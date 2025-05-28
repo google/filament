@@ -147,29 +147,28 @@ void adjustPaddingValue(std::string& shaderSource, size_t desiredZeroCount) {
     }
 }
 
-void changeConstOverrideById(std::string& shader_code_str, uint32_t id,
-        const std::string& new_value_str) {
-    // Regex pattern to match the specific override line:
-    // Group 1: Everything before the current value (e.g., "@id(0) override VAR : TYPE = ")
-    // Group 2: The current value (e.g., "1i", "true", "false")
-    // Group 3: The semicolon (";")
-    std::string pattern_str =
-            R"((@id\()" + std::to_string(id) + R"(\)\s+override\s+\w+\s*:\s*\w+\s*=\s*)(.*?)(;))";
-    std::regex pattern(pattern_str);
-
+void replaceFilamentSpecConstValue(std::string& sourceString, const std::string& idToFind,
+        const std::string& newValue) {
+    std::string patternStr = "FILAMENT_SPEC_CONST_" + idToFind + R"(_\w+\s*=\s*([^;]+);)";
+    std::regex regexPattern(patternStr);
     std::smatch match;
-    if (std::regex_search(shader_code_str, match, pattern)) {
-
-        // Construct the replacement string using the captured groups.
-        // match[1] corresponds to $1 in std::regex_replace.
-        // match[2] corresponds to the old value.
-        // match[3] corresponds to $3.
-        std::string replacement_str = match[1].str() + new_value_str + match[3].str();
-
-        shader_code_str = std::regex_replace(shader_code_str, pattern, replacement_str);
-
-    } 
+    if (std::regex_search(sourceString, match, regexPattern)) {
+        // match[0] is the whole matched string
+        // match[1] is the captured group (the current value)
+        std::string fullMatch = match[0].str();
+        std::string oldValue = match[1].str();
+        // Construct the replacement string
+        // This takes the part before the value, inserts the newValue, and then adds the semicolon.
+        std::string replacement = fullMatch;
+        size_t valueStart = fullMatch.find(oldValue);
+        if (valueStart != std::string::npos) {
+            replacement.replace(valueStart, oldValue.length(), newValue);
+            // Replace the original line with the modified line
+            sourceString.replace(sourceString.find(fullMatch), fullMatch.length(), replacement);
+        }
+    }
 }
+
 
 void replaceSpecConstant(std::string& shaderSource,
         utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
@@ -191,21 +190,15 @@ void replaceSpecConstant(std::string& shaderSource,
         if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
             continue;
         }
-        double value = 0.0;
         if (auto* v = std::get_if<int32_t>(&constant.value)) {
-            value = static_cast<double>(*v);
-            replaceValue = std::to_string(value) + "i";
+            replaceValue = std::to_string(*v) + "i";
         } else if (auto* f = std::get_if<float>(&constant.value)) {
-            value = static_cast<double>(*f);
-            replaceValue = std::to_string(value) + "f";
+            replaceValue = std::to_string(*f) + "f";// std::to_string(float) is sufficient
         } else if (auto* b = std::get_if<bool>(&constant.value)) {
-            value = static_cast<double>(*b);
-            replaceValue = (value == 1) ? "true" : "false";
+            replaceValue = (*b) ? "true" : "false";
         }
-        
-        changeConstOverrideById(shaderSource, constant.id, replaceValue);
+        replaceFilamentSpecConstValue(shaderSource, std::to_string(constant.id), replaceValue);
     }
-
     if (shaderSource.length() < originalSize) {
         adjustPaddingValue(shaderSource, (originalSize - shaderSource.length()));
     }
