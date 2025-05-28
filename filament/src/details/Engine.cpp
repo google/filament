@@ -67,6 +67,7 @@
 #include <math/vec4.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <initializer_list>
 #include <memory>
@@ -369,9 +370,13 @@ void FEngine::init() {
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
             .build(*this));
 
+    static constexpr std::array<uint8_t, 6> zeroCubemap{};
+    static constexpr std::array<uint8_t, 4> zeroRGBA{};
+    static constexpr std::array<uint8_t, 4> oneRGBA{ 0xff, 0xff, 0xff, 0xff };
+    static constexpr std::array<float, 1> oneFloat{ 1.0f };
+
     driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
-            { std::array<uint8_t, 6>{}.data(), 6,
-                Texture::Format::RGBA, Texture::Type::UBYTE });
+            { zeroCubemap.data(), 6, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     // 3 bands = 9 float3
     constexpr float sh[9 * 3] = { 0.0f };
@@ -393,12 +398,10 @@ void FEngine::init() {
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
-            { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
-                Texture::Format::RGBA, Texture::Type::UBYTE });
+            { oneRGBA.data(), 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
-            { std::array<uint8_t, 4>{}.data(), 4,
-                Texture::Format::RGBA, Texture::Type::UBYTE });
+            { zeroRGBA.data(), 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
 
     mPerViewDescriptorSetLayoutSsrVariant = {
@@ -463,16 +466,13 @@ void FEngine::init() {
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
         driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { std::array<uint8_t, 4>{0xff, 0xff, 0xff, 0xff}.data(), 4,
-                    Texture::Format::RGBA, Texture::Type::UBYTE });
+                { oneRGBA.data(), 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
         driverApi.update3DImage(mDummyOneTextureArrayDepth, 0, 0, 0, 0, 1, 1, 1,
-                { std::array<float, 1>{1.0f}.data(), 4,
-                    Texture::Format::DEPTH_COMPONENT, Texture::Type::FLOAT });
+                { oneFloat.data(), 4, Texture::Format::DEPTH_COMPONENT, Texture::Type::FLOAT });
 
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { std::array<uint8_t, 4>{}.data(), 4,
-                    Texture::Format::RGBA, Texture::Type::UBYTE });
+                { zeroRGBA.data(), 4, Texture::Format::RGBA, Texture::Type::UBYTE });
 
         mDummyUniformBuffer = driverApi.createBufferObject(CONFIG_MINSPEC_UBO_SIZE,
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
