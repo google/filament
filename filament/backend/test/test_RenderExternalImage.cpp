@@ -90,7 +90,11 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = triangle.getVertexBufferInfo();
+    api.bindPipeline(state);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
     api.endRenderPass();
 
     api.flush();
@@ -185,14 +189,18 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     // Render a triangle.
     api.beginRenderPass(defaultRenderTarget, params);
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = triangle.getVertexBufferInfo();
+    api.bindPipeline(state);
+    api.bindRenderPrimitive(triangle.getRenderPrimitive());
+    api.draw2(0, 3, 1);
     api.endRenderPass();
 
     api.flush();
     api.commit(swapChain);
     api.endFrame(0);
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "RenderExternalImage", 1206264951));
+            ScreenshotParams(screenWidth(), screenHeight(), "RenderExternalImage", 1206264951));
 
     api.stopCapture(0);
     api.finish();
