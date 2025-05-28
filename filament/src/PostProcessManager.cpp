@@ -304,8 +304,10 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
+#ifndef FILAMENT_DISABLE_GTAO
         { "gtao",                       MATERIAL(GTAO) },
         { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
+#endif
         { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
@@ -874,20 +876,25 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 }};
 
                 std::string_view materialName;
-                if (options.aoType ==
+                auto aoType = options.aoType;
+#ifdef FILAMENT_DISABLE_GTAO
+                materialName = computeBentNormals ? "saoBentNormals" : "sao";
+                aoType = AmbientOcclusionOptions::AmbientOcclusionType::SAO;
+#else
+                if (aoType ==
                         AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
                     materialName = computeBentNormals ? "gtaoBentNormals" : "gtao";
                 } else {
                     materialName = computeBentNormals ? "saoBentNormals" : "sao";
                 }
-
+#endif
                 auto& material = getPostProcessMaterial(materialName);
 
                 FMaterial const * const ma = material.getMaterial(mEngine);
                 FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
 
                 // Set AO type specific material parameters
-                switch (options.aoType) {
+                switch (aoType) {
                     case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
                         // Where the falloff function peaks
                         const float peak = 0.1f * options.radius;
