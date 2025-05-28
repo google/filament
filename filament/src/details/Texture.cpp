@@ -175,6 +175,13 @@ Texture* Texture::Builder::build(Engine& engine) {
                 << "Texture has invalid dimensions: (" << mImpl->mWidth << ", " << mImpl->mHeight
                 << "), texture name=" << getNameOrDefault().c_str_safe();
     }
+
+    if (mImpl->mSamples > 1) {
+        FILAMENT_CHECK_PRECONDITION(any(mImpl->mUsage & Texture::Usage::SAMPLEABLE))
+                << "Multisample (" << unsigned(mImpl->mSamples)
+                << ") texture is not sampleable, texture name=" << getNameOrDefault().c_str_safe();
+    }
+
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();
     const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
@@ -375,6 +382,9 @@ void FTexture::setImage(FEngine& engine, size_t const level,
 
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Texture not supported for this operation.";
+
+    FILAMENT_CHECK_PRECONDITION(any(mUsage & Texture::Usage::UPLOADABLE))
+            << "Texture is not uploadable.";
 
     FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
                                                    << unsigned(mSampleCount) << ") texture.";
