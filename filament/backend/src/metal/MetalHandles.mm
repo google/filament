@@ -943,7 +943,7 @@ void MetalTexture::loadWithBlit(uint32_t level, uint32_t slice, MTLRegion region
     }
 
     MetalBlitter::BlitArgs args{};
-    args.filter = SamplerMagFilter::NEAREST;
+    args.filter = SamplerMagFilter::LINEAR;
     args.source.level = 0;
     args.source.slice = 0;
     args.source.region = sourceRegion;

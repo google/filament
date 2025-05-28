@@ -348,7 +348,7 @@ constexpr inline MTLSamplerMinMagFilter getFilter(SamplerMinFilter filter) noexc
         case SamplerMinFilter::NEAREST:
         case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
         case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
-            return MTLSamplerMinMagFilterNearest;
+            return MTLSamplerMinMagFilterLinear;
         case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
         case SamplerMinFilter::LINEAR:
         case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
@@ -359,7 +359,7 @@ constexpr inline MTLSamplerMinMagFilter getFilter(SamplerMinFilter filter) noexc
 constexpr inline MTLSamplerMinMagFilter getFilter(SamplerMagFilter filter) noexcept {
     switch (filter) {
         case SamplerMagFilter::NEAREST:
-            return MTLSamplerMinMagFilterNearest;
+            return MTLSamplerMinMagFilterLinear;
         case SamplerMagFilter::LINEAR:
             return MTLSamplerMinMagFilterLinear;
     }
@@ -369,10 +369,10 @@ constexpr inline MTLSamplerMipFilter getMipFilter(SamplerMinFilter filter) noexc
     switch (filter) {
         case SamplerMinFilter::NEAREST:
         case SamplerMinFilter::LINEAR:
-            return MTLSamplerMipFilterNotMipmapped;
+            return MTLSamplerMipFilterLinear;
         case SamplerMinFilter::NEAREST_MIPMAP_NEAREST:
         case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:
-            return MTLSamplerMipFilterNearest;
+            return MTLSamplerMipFilterLinear;
         case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:
         case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:
             return MTLSamplerMipFilterLinear;

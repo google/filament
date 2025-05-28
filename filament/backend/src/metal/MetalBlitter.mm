@@ -218,11 +218,11 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, const BlitArgs
     }
     [encoder setFragmentTexture:srcTextureColor atIndex:0];
 
-    SamplerMinFilter filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+    SamplerMinFilter filterMin = SamplerMinFilter::LINEAR;
     if (args.filter == SamplerMagFilter::NEAREST) {
-        filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST;
+        filterMin = SamplerMinFilter::LINEAR;
     } else if (args.filter == SamplerMagFilter::LINEAR) {
-        filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST;
+        filterMin = SamplerMinFilter::LINEAR;
     }
 
     SamplerState const s {

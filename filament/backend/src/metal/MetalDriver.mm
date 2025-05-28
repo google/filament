@@ -1533,7 +1533,7 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
     id<MTLTexture> readPixelsTexture = [mContext->device newTextureWithDescriptor:textureDescriptor];
 
     MetalBlitter::BlitArgs args{};
-    args.filter = SamplerMagFilter::NEAREST;
+    args.filter = SamplerMagFilter::LINEAR;
     args.source.level = miplevel;
     args.source.region = MTLRegionMake2D(0, 0, srcTexture.width >> miplevel, srcTexture.height >> miplevel);
     args.source.texture = srcTexture;
@@ -1650,7 +1650,7 @@ void MetalDriver::blit(
             << "Metal does not support blitting to/from non-2D textures.";
 
     MetalBlitter::BlitArgs args{};
-    args.filter = SamplerMagFilter::NEAREST;
+    args.filter = SamplerMagFilter::LINEAR;
     args.source.region = MTLRegionMake2D(
             (NSUInteger)srcOrigin.x,
             std::max(srcTexture->height - (int64_t)srcOrigin.y - size.y, (int64_t)0),
