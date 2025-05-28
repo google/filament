@@ -21,8 +21,10 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #if defined(__linux__) || defined(__FreeBSD__)
     #define LINUX_OR_FREEBSD 1
@@ -78,6 +80,33 @@
  */
 
 namespace filament::backend {
+
+std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
+    constexpr std::array powerPreferences = {
+        wgpu::PowerPreference::HighPerformance,
+        wgpu::PowerPreference::LowPower };
+    constexpr std::array backendTypes = {
+        wgpu::BackendType::Vulkan,
+        wgpu::BackendType::OpenGL,
+        wgpu::BackendType::OpenGLES };
+    constexpr std::array forceFallbackAdapters = { false, true };
+    constexpr size_t totalCombinations =
+            powerPreferences.size() * backendTypes.size() * forceFallbackAdapters.size();
+    std::vector<wgpu::RequestAdapterOptions> requests;
+    requests.reserve(totalCombinations);
+    for (auto powerPreference: powerPreferences) {
+        for (auto backendType: backendTypes) {
+            for (auto forceFallbackAdapter: forceFallbackAdapters) {
+                requests.emplace_back(
+                        wgpu::RequestAdapterOptions{
+                            .powerPreference = powerPreference,
+                            .forceFallbackAdapter = forceFallbackAdapter,
+                            .backendType = backendType });
+            }
+        }
+    }
+    return requests;
+}
 
 wgpu::Extent2D WebGPUPlatform::getSurfaceExtent(void* nativeWindow) const {
     auto surfaceExtent = wgpu::Extent2D{};

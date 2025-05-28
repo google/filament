@@ -74,7 +74,8 @@ public:
         // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
         RenderPassParams params = {};
         params.flags.clear = TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL;
-        params.viewport = { 0, 0, 512, 512 };
+        params.viewport = { 0, 0, static_cast<uint32_t>(screenWidth()),
+            static_cast<uint32_t>(screenHeight()) };
         params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
         params.clearStencil = 0u;
         params.flags.discardStart = TargetBufferFlags::ALL;
@@ -131,18 +132,20 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
     Cleanup cleanup(api);
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
-    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
-    auto stencilTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::STENCIL8, 1, 512, 512, 1, TextureUsage::STENCIL_ATTACHMENT));
-    auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
-            {{ colorTexture }}, {}, {{ stencilTexture }}));
+    auto colorTexture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+                    screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
+    auto stencilTexture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::STENCIL8, 1,
+                    screenWidth(), screenHeight(), 1, TextureUsage::STENCIL_ATTACHMENT));
+    auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0 |
+                                                                   TargetBufferFlags::STENCIL,
+            screenWidth(), screenHeight(), 1, 0, { { colorTexture } }, {}, { { stencilTexture } }));
 
     RunTest(renderTarget);
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "StencilBuffer", 0x3B1AEF0F));
+            ScreenshotParams(screenWidth(), screenHeight(), "StencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
     getDriver().purge();
@@ -155,19 +158,20 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     Cleanup cleanup(api);
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
-    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
+    auto colorTexture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+                    screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
     auto depthStencilTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::DEPTH24_STENCIL8, 1, 512, 512, 1,
+            TextureFormat::DEPTH24_STENCIL8, 1, screenWidth(), screenHeight(), 1,
             TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
     auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, 512, 512, 1, 0,
-            {{ colorTexture }}, { depthStencilTexture }, {{ depthStencilTexture }}));
+            TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, screenWidth(), screenHeight(),
+            1, 0, { { colorTexture } }, { depthStencilTexture }, { { depthStencilTexture } }));
 
     RunTest(renderTarget);
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "DepthAndStencilBuffer", 0x3B1AEF0F));
+            ScreenshotParams(screenWidth(), screenHeight(), "DepthAndStencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
     getDriver().purge();
@@ -186,17 +190,18 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     // Pass 1: Render a triangle into (an auto-created) MSAA color buffer using the stencil test.
     //         Performs an auto-resolve on the color.
     auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1,
+            TextureFormat::RGBA8, 1, screenWidth(), screenHeight(), 1,
             TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
     auto depthStencilTextureMSAA = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::DEPTH24_STENCIL8, 4, 512, 512, 1,
+            TextureFormat::DEPTH24_STENCIL8, 4, screenWidth(), screenHeight(), 1,
             TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
     auto renderTarget0 = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
+            TargetBufferFlags::DEPTH_AND_STENCIL, screenWidth(), screenHeight(), 4, 0,
             {{}}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
-    auto renderTarget1 = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL, 512, 512, 4, 0,
-            {{ colorTexture }}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
+    auto renderTarget1 = cleanup.add(
+            api.createRenderTarget(TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL,
+                    screenWidth(), screenHeight(), 4, 0, { { colorTexture } },
+                    { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
 
     api.startCapture(0);
 
@@ -214,7 +219,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     // Render a small triangle only to the stencil buffer, increasing the stencil buffer to 1.
     RenderPassParams params = {};
     params.flags.clear = TargetBufferFlags::STENCIL;
-    params.viewport = { 0, 0, 512, 512 };
+    params.viewport = { 0, 0, static_cast<uint32_t>(screenWidth()),
+        static_cast<uint32_t>(screenHeight()) };
     params.clearStencil = 0u;
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
@@ -261,7 +267,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.endFrame(0);
 
     EXPECT_IMAGE(renderTarget1, getExpectations(),
-            ScreenshotParams(512, 512, "StencilBufferAutoResolve", 3353562179));
+            ScreenshotParams(screenWidth(), screenHeight(), "StencilBufferAutoResolve",
+                    3353562179));
 
     flushAndWait();
     getDriver().purge();

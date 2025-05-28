@@ -32,7 +32,6 @@
 #include <utils/Panic.h>
 #include <utils/ostream.h>
 
-#include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
@@ -41,178 +40,9 @@
 #include <cstdint>
 #include <memory>
 #include <sstream>
-#include <string_view>
 #include <utility>
-#include <variant>
 
 namespace filament::backend {
-
-namespace {
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printInstanceDetails(wgpu::Instance const& instance) {
-    wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
-    if (!instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures)) {
-        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features"
-                   << utils::io::endl;
-    } else {
-        FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
-                   << supportedWGSLLanguageFeatures.featureCount << "):" << utils::io::endl;
-        if (supportedWGSLLanguageFeatures.featureCount > 0 &&
-                supportedWGSLLanguageFeatures.features != nullptr) {
-            std::for_each(supportedWGSLLanguageFeatures.features,
-                    supportedWGSLLanguageFeatures.features +
-                            supportedWGSLLanguageFeatures.featureCount,
-                    [](wgpu::WGSLLanguageFeatureName const featureName) {
-                        std::stringstream nameStream{};
-                        nameStream << featureName;
-                        FWGPU_LOGI << "  " << nameStream.str() << utils::io::endl;
-                    });
-        }
-    }
-}
-#endif
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> value) {
-    FWGPU_LOGI << "  " << name.data() << ": ";
-    bool undefined = true;
-    if (std::holds_alternative<uint32_t>(value)) {
-        if (std::get<uint32_t>(value) != WGPU_LIMIT_U32_UNDEFINED) {
-            undefined = false;
-            FWGPU_LOGI << std::get<uint32_t>(value);
-        }
-    } else if (std::holds_alternative<uint64_t>(value)) {
-        if (std::get<uint64_t>(value) != WGPU_LIMIT_U64_UNDEFINED) {
-            undefined = false;
-            FWGPU_LOGI << std::get<uint64_t>(value);
-        }
-    }
-    if (undefined) {
-        FWGPU_LOGI << "UNDEFINED";
-    }
-    FWGPU_LOGI << utils::io::endl;
-}
-#endif
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printLimits(wgpu::Limits const& limits) {
-    printLimit("maxTextureDimension1D", limits.maxTextureDimension1D);
-    printLimit("maxTextureDimension2D", limits.maxTextureDimension2D);
-    printLimit("maxTextureDimension3D", limits.maxTextureDimension3D);
-    printLimit("maxTextureArrayLayers", limits.maxTextureArrayLayers);
-    printLimit("maxBindGroups", limits.maxBindGroups);
-    printLimit("maxBindGroupsPlusVertexBuffers", limits.maxBindGroupsPlusVertexBuffers);
-    printLimit("maxBindingsPerBindGroup", limits.maxBindingsPerBindGroup);
-    printLimit("maxDynamicUniformBuffersPerPipelineLayout",
-            limits.maxDynamicUniformBuffersPerPipelineLayout);
-    printLimit("maxDynamicStorageBuffersPerPipelineLayout",
-            limits.maxDynamicStorageBuffersPerPipelineLayout);
-    printLimit("maxSampledTexturesPerShaderStage", limits.maxSampledTexturesPerShaderStage);
-    printLimit("maxSamplersPerShaderStage", limits.maxSamplersPerShaderStage);
-    printLimit("maxStorageBuffersPerShaderStage", limits.maxStorageBuffersPerShaderStage);
-    printLimit("maxStorageTexturesPerShaderStage", limits.maxStorageTexturesPerShaderStage);
-    printLimit("maxUniformBuffersPerShaderStage", limits.maxUniformBuffersPerShaderStage);
-    printLimit("maxUniformBufferBindingSize", limits.maxUniformBufferBindingSize);
-    printLimit("maxStorageBufferBindingSize", limits.maxStorageBufferBindingSize);
-    printLimit("minUniformBufferOffsetAlignment", limits.minUniformBufferOffsetAlignment);
-    printLimit("minStorageBufferOffsetAlignment", limits.minStorageBufferOffsetAlignment);
-    printLimit("maxVertexBuffers", limits.maxVertexBuffers);
-    printLimit("maxBufferSize", limits.maxBufferSize);
-    printLimit("maxVertexAttributes", limits.maxVertexAttributes);
-    printLimit("maxVertexBufferArrayStride", limits.maxVertexBufferArrayStride);
-    printLimit("maxInterStageShaderVariables", limits.maxInterStageShaderVariables);
-    printLimit("maxColorAttachments", limits.maxColorAttachments);
-    printLimit("maxColorAttachmentBytesPerSample", limits.maxColorAttachmentBytesPerSample);
-    printLimit("maxComputeWorkgroupStorageSize", limits.maxComputeWorkgroupStorageSize);
-    printLimit("maxComputeInvocationsPerWorkgroup", limits.maxComputeInvocationsPerWorkgroup);
-    printLimit("maxComputeWorkgroupSizeX", limits.maxComputeWorkgroupSizeX);
-    printLimit("maxComputeWorkgroupSizeY", limits.maxComputeWorkgroupSizeY);
-    printLimit("maxComputeWorkgroupSizeZ", limits.maxComputeWorkgroupSizeZ);
-    printLimit("maxComputeWorkgroupsPerDimension", limits.maxComputeWorkgroupsPerDimension);
-    printLimit("maxStorageBuffersInVertexStage", limits.maxStorageBuffersInVertexStage);
-    printLimit("maxStorageTexturesInVertexStage", limits.maxStorageTexturesInVertexStage);
-    printLimit("maxStorageBuffersInFragmentStage", limits.maxStorageBuffersInFragmentStage);
-    printLimit("maxStorageTexturesInFragmentStage", limits.maxStorageTexturesInFragmentStage);
-}
-#endif
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printAdapterDetails(wgpu::Adapter const& adapter) {
-    wgpu::DawnAdapterPropertiesPowerPreference powerPreferenceProperties{};
-    wgpu::AdapterInfo adapterInfo{};
-    adapterInfo.nextInChain = &powerPreferenceProperties;
-    if (!adapter.GetInfo(&adapterInfo)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter info" << utils::io::endl;
-    } else {
-        std::stringstream backendTypeStream{};
-        backendTypeStream << adapterInfo.backendType;
-        std::stringstream adapterTypeStream{};
-        adapterTypeStream << adapterInfo.adapterType;
-        std::stringstream powerPreferenceStream{};
-        powerPreferenceStream << powerPreferenceProperties.powerPreference;
-        FWGPU_LOGI << "WebGPU adapter info:" << utils::io::endl;
-        FWGPU_LOGI << "  vendor: " << adapterInfo.vendor.data << utils::io::endl;
-        FWGPU_LOGI << "  architecture: " << adapterInfo.architecture.data << utils::io::endl;
-        FWGPU_LOGI << "  device: " << adapterInfo.device.data << utils::io::endl;
-        FWGPU_LOGI << "  description: " << adapterInfo.description.data << utils::io::endl;
-        FWGPU_LOGI << "  backend type: " << backendTypeStream.str().data() << utils::io::endl;
-        FWGPU_LOGI << "  adapter type: " << adapterTypeStream.str().data() << utils::io::endl;
-        FWGPU_LOGI << "  device ID: " << adapterInfo.deviceID << utils::io::endl;
-        FWGPU_LOGI << "  vendor ID: " << adapterInfo.vendorID << utils::io::endl;
-        FWGPU_LOGI << "  subgroup min size: " << adapterInfo.subgroupMinSize << utils::io::endl;
-        FWGPU_LOGI << "  subgroup max size: " << adapterInfo.subgroupMaxSize << utils::io::endl;
-        FWGPU_LOGI << "  power preference: " << powerPreferenceStream.str() << utils::io::endl;
-    }
-    wgpu::SupportedFeatures supportedFeatures{};
-    adapter.GetFeatures(&supportedFeatures);
-    FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
-    if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
-        std::for_each(supportedFeatures.features,
-                supportedFeatures.features + supportedFeatures.featureCount,
-                [](wgpu::FeatureName const name) {
-                    std::stringstream nameStream{};
-                    nameStream << name;
-                    FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
-                });
-    }
-    wgpu::Limits supportedLimits{};
-    if (!adapter.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits" << utils::io::endl;
-    } else {
-        FWGPU_LOGI << "WebGPU adapter supported limits:" << utils::io::endl;
-        printLimits(supportedLimits);
-    }
-}
-#endif
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-void printDeviceDetails(wgpu::Device const& device) {
-    wgpu::SupportedFeatures supportedFeatures{};
-    device.GetFeatures(&supportedFeatures);
-    FWGPU_LOGI << "WebGPU device supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
-    if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
-        std::for_each(supportedFeatures.features,
-                supportedFeatures.features + supportedFeatures.featureCount,
-                [](wgpu::FeatureName const name) {
-                    std::stringstream nameStream{};
-                    nameStream << name;
-                    FWGPU_LOGI << "  " << nameStream.str().data() << utils::io::endl;
-                });
-    }
-    wgpu::Limits supportedLimits{};
-    if (!device.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU supported device limits" << utils::io::endl;
-    } else {
-        FWGPU_LOGI << "WebGPU device supported limits:" << utils::io::endl;
-        printLimits(supportedLimits);
-    }
-}
-#endif
-
-}// namespace
 
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
     constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
@@ -221,26 +51,16 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverCon
     return new WebGPUDriver(platform, validConfig);
 }
 
-WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept
+WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
+        const Platform::DriverConfig& driverConfig) noexcept
     : mPlatform(platform),
-      mHandleAllocator("Handles",
-              driverConfig.handleArenaSize,
-              driverConfig.disableHandleUseAfterFreeCheck,
-              driverConfig.disableHeapHandleTags) {
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printInstanceDetails(mPlatform.getInstance());
-#endif
+      mHandleAllocator("Handles", driverConfig.handleArenaSize,
+              driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags) {
     mAdapter = mPlatform.requestAdapter(nullptr);
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printAdapterDetails(mAdapter);
-#endif
     mDevice = mPlatform.requestDevice(mAdapter);
     wgpu::Limits supportedLimits{};
     mDevice.GetLimits(&supportedLimits);
     mMinUniformBufferOffsetAlignment = supportedLimits.minUniformBufferOffsetAlignment;
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    printDeviceDetails(mDevice);
-#endif
     mQueue = mDevice.GetQueue();
 }
 
@@ -854,18 +674,31 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
     //     FWGPU_LOGW << "Non Default render target"
     //                << utils::io::endl;
     // }
+    wgpu::TextureView depthTextureView = mSwapChain->getDepthTextureView();
+    wgpu::TextureFormat depthTextureFormat = mSwapChain->getDepthFormat();
+    wgpu::LoadOp stencilLoadOpValue;
+    wgpu::StoreOp stencilStoreOpValue;
+
+    if (depthTextureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+            depthTextureFormat == wgpu::TextureFormat::Depth32FloatStencil8
+    ) {
+        stencilLoadOpValue = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
+        stencilStoreOpValue = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
+    } else {
+        stencilLoadOpValue = wgpu::LoadOp::Undefined;
+        stencilStoreOpValue = wgpu::StoreOp::Undefined;
+    }
+
     wgpu::RenderPassDescriptor renderPassDescriptor;
-    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = mSwapChain->getDepthTextureView(),
+    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{ .view = depthTextureView,
         .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
         .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
         .depthClearValue = static_cast<float>(params.clearDepth),
         .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
-        .stencilLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
-        .stencilStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+        .stencilLoadOp = stencilLoadOpValue,
+        .stencilStoreOp = stencilStoreOpValue,
         .stencilClearValue = params.clearStencil,
-        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
-    };
+        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0 };
     renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
     renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
 
@@ -873,7 +706,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
     mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
-            params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
+            params.viewport.width, params.viewport.height, params.depthRange.near,
+            params.depthRange.far);
 }
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {
