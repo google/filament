@@ -524,7 +524,7 @@ bool WebGPUDriver::isAutoDepthResolveSupported() {
 }
 
 bool WebGPUDriver::isSRGBSwapChainSupported() {
-    return false;
+    return true;
 }
 
 bool WebGPUDriver::isProtectedContentSupported() {
