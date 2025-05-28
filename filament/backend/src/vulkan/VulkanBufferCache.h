@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_BACKEND_VULKANGPUBUFFERCACHE_H
-#define TNT_FILAMENT_BACKEND_VULKANGPUBUFFERCACHE_H
+#ifndef TNT_FILAMENT_BACKEND_VULKANBUFFERCACHE_H
+#define TNT_FILAMENT_BACKEND_VULKANBUFFERCACHE_H
 
+#include "VulkanBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanMemory.h"
 #include "memory/Resource.h"
@@ -26,18 +27,18 @@
 
 namespace filament::backend {
 
-class VulkanGpuBufferCache {
+class VulkanBufferCache {
 public:
-    VulkanGpuBufferCache(VulkanContext const& context, fvkmemory::ResourceManager& resourceManager,
+    VulkanBufferCache(VulkanContext const& context, fvkmemory::ResourceManager& resourceManager,
             VmaAllocator allocator);
 
-    // `VulkanGpuBufferCache` is not copyable.
-    VulkanGpuBufferCache(const VulkanGpuBufferCache&) = delete;
-    VulkanGpuBufferCache& operator=(const VulkanGpuBufferCache&) = delete;
+    // `VulkanBufferCache` is not copyable.
+    VulkanBufferCache(const VulkanBufferCache&) = delete;
+    VulkanBufferCache& operator=(const VulkanBufferCache&) = delete;
 
     // Allocates or reuse a new VkBuffer that is device local.
     // In the case of Unified memory architecture, uniform buffers are also host visible.
-    fvkmemory::resource_ptr<VulkanGpuBufferHolder> acquire(VulkanBufferUsage usage,
+    fvkmemory::resource_ptr<VulkanBuffer> acquire(VulkanBufferUsage usage,
             uint32_t numBytes) noexcept;
 
     // Evicts old unused `VulkanGpuBuffer` and bumps the current frame number
@@ -80,4 +81,4 @@ private:
 
 }// namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_VULKANGPUBUFFERCACHE_H
+#endif// TNT_FILAMENT_BACKEND_VULKANBUFFERCACHE_H

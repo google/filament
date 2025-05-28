@@ -58,29 +58,6 @@ struct VulkanGpuBuffer {
     VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
 };
 
-class VulkanGpuBufferHolder : public fvkmemory::Resource {
-public:
-    // Because we need to recycle the unused `VulkanGpuBuffer`, we allow for a callback that the "Pool"
-    // can use to acquire the buffer back.
-    using OnRecycle = std::function<void(VulkanGpuBuffer const*)>;
-
-    VulkanGpuBufferHolder(VulkanGpuBuffer const* gpuBuffer, OnRecycle&& onRecycleFn)
-        : mGpuBuffer(gpuBuffer),
-          mOnRecycleFn(onRecycleFn) {}
-
-    ~VulkanGpuBufferHolder() {
-        if (mOnRecycleFn) {
-            mOnRecycleFn(mGpuBuffer);
-        }
-    }
-
-    VulkanGpuBuffer const* getGpuBuffer() const { return mGpuBuffer; }
-
-private:
-    VulkanGpuBuffer const* mGpuBuffer;
-    OnRecycle mOnRecycleFn;
-};
-
 } // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H

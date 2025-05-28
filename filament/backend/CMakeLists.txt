@@ -180,8 +180,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
-            src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
+            src/vulkan/VulkanBufferCache.h
+            src/vulkan/VulkanBufferCache.cpp
+            src/vulkan/VulkanBufferProxy.h
+            src/vulkan/VulkanBufferProxy.cpp
             src/vulkan/VulkanCommands.cpp
             src/vulkan/VulkanCommands.h
             src/vulkan/VulkanConstants.h
@@ -198,8 +201,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanExternalImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
-            src/vulkan/VulkanGpuBufferCache.h
-            src/vulkan/VulkanGpuBufferCache.cpp
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
             src/vulkan/VulkanMemory.cpp

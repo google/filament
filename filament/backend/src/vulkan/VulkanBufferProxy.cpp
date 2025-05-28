@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
-#include "VulkanBuffer.h"
+#include "VulkanBufferProxy.h"
+
+#include "VulkanBufferCache.h"
 #include "VulkanMemory.h"
 
 using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VulkanGpuBufferCache& gpuBufferCache, VulkanBufferUsage usage, uint32_t numBytes)
+VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& stagePool,
+        VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes)
     : mAllocator(allocator),
       mStagePool(stagePool),
-      mGpuBufferCache(gpuBufferCache),
-      mGpuBufferHolder(mGpuBufferCache.acquire(usage, numBytes)),
+      mBufferCache(bufferCache),
+      mBuffer(mBufferCache.acquire(usage, numBytes)),
       mUpdatedOffset(0),
       mUpdatedBytes(0) {}
 
-void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
-        uint32_t numBytes) {
+void VulkanBufferProxy::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData,
+        uint32_t byteOffset, uint32_t numBytes) {
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
     vmaMapMemory(mAllocator, stage->memory, &mapped);
@@ -115,12 +117,12 @@ void VulkanBuffer::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint
             &barrier, 0, nullptr);
 }
 
-VkBuffer VulkanBuffer::getVkBuffer() const noexcept {
-    return mGpuBufferHolder->getGpuBuffer()->vkbuffer;
+VkBuffer VulkanBufferProxy::getVkBuffer() const noexcept {
+    return mBuffer->getGpuBuffer()->vkbuffer;
 }
 
-VulkanBufferUsage VulkanBuffer::getUsage() const noexcept {
-    return mGpuBufferHolder->getGpuBuffer()->usage;
+VulkanBufferUsage VulkanBufferProxy::getUsage() const noexcept {
+    return mBuffer->getGpuBuffer()->usage;
 }
 
-} // namespace filament::backend
+}// namespace filament::backend

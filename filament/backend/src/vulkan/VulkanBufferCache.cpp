@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include "VulkanGpuBufferCache.h"
+#include "VulkanBufferCache.h"
 
+#include "VulkanBuffer.h"
 #include "VulkanConstants.h"
 #include "VulkanMemory.h"
 #include "memory/Resource.h"
@@ -46,14 +47,14 @@ VkBufferUsageFlags getVkBufferUsage(VulkanBufferUsage usage) {
 
 }// namespace
 
-VulkanGpuBufferCache::VulkanGpuBufferCache(VulkanContext const& context,
+VulkanBufferCache::VulkanBufferCache(VulkanContext const& context,
         fvkmemory::ResourceManager& resourceManager, VmaAllocator allocator)
     : mContext(context),
       mResourceManager(resourceManager),
       mAllocator(allocator) {}
 
-fvkmemory::resource_ptr<VulkanGpuBufferHolder> VulkanGpuBufferCache::acquire(
-        VulkanBufferUsage usage, uint32_t numBytes) noexcept {
+fvkmemory::resource_ptr<VulkanBuffer> VulkanBufferCache::acquire(VulkanBufferUsage usage,
+        uint32_t numBytes) noexcept {
     assert_invariant(usage != VulkanBufferUsage::UNKNOWN);
 
     BufferPool& bufferPool = getPool(usage);
@@ -64,20 +65,20 @@ fvkmemory::resource_ptr<VulkanGpuBufferHolder> VulkanGpuBufferCache::acquire(
     if (iter != bufferPool.end()) {
         VulkanGpuBuffer const* gpuBuffer = iter->second.gpuBuffer;
         bufferPool.erase(iter);
-        return fvkmemory::resource_ptr<VulkanGpuBufferHolder>::construct(&mResourceManager,
-                gpuBuffer, [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
+        return fvkmemory::resource_ptr<VulkanBuffer>::construct(&mResourceManager, gpuBuffer,
+                [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
     }
 
     // We were not able to find a sufficiently large allocation, so create a new one that is
     // recycled after being yielded.
     VulkanGpuBuffer const* gpuBuffer = allocate(usage, numBytes);
-    return fvkmemory::resource_ptr<VulkanGpuBufferHolder>::construct(&mResourceManager, gpuBuffer,
+    return fvkmemory::resource_ptr<VulkanBuffer>::construct(&mResourceManager, gpuBuffer,
             [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
 }
 
-void VulkanGpuBufferCache::gc() noexcept {
+void VulkanBufferCache::gc() noexcept {
     FVK_SYSTRACE_CONTEXT();
-    FVK_SYSTRACE_START("VulkanGpuBufferCache::gc");
+    FVK_SYSTRACE_START("VulkanBufferCache::gc");
 
     // If this is one of the first few frames, return early to avoid wrapping unsigned integers.
     constexpr uint32_t TIME_BEFORE_EVICTION = 3;
@@ -90,11 +91,11 @@ void VulkanGpuBufferCache::gc() noexcept {
     for (auto& bufferPool: mGpuBufferPools) {
         for (auto poolIter = bufferPool.begin(); poolIter != bufferPool.end();) {
             if (poolIter->second.lastAccessed < evictionTime) {
-#if FVK_ENABLED(FVK_DEBUG_GPU_BUFFER_CACHE)
-                FVK_LOGD << "GpuBufferCache - Destroyed vkBuffer "
+#if FVK_ENABLED(FVK_DEBUG_VULKAN_BUFFER_CACHE)
+                FVK_LOGD << "VulkanBufferCache - Destroyed vkBuffer "
                          << poolIter->second.gpuBuffer->vkbuffer << " with usage "
                          << static_cast<int>(poolIter->second.gpuBuffer->usage) << utils::io::endl;
-#endif// FVK_DEBUG_GPU_BUFFER_CACHE
+#endif// FVK_DEBUG_VULKAN_BUFFER_CACHE
 
                 destroy(poolIter->second.gpuBuffer);
                 poolIter = bufferPool.erase(poolIter);
@@ -107,7 +108,7 @@ void VulkanGpuBufferCache::gc() noexcept {
     FVK_SYSTRACE_END();
 }
 
-void VulkanGpuBufferCache::terminate() noexcept {
+void VulkanBufferCache::terminate() noexcept {
     for (auto& bufferPool: mGpuBufferPools) {
         for (auto& poolEntry: bufferPool) {
             destroy(poolEntry.second.gpuBuffer);
@@ -116,7 +117,7 @@ void VulkanGpuBufferCache::terminate() noexcept {
     }
 }
 
-void VulkanGpuBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
+void VulkanBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
     assert_invariant(gpuBuffer != nullptr);
 
     BufferPool& bufferPool = getPool(gpuBuffer->usage);
@@ -126,7 +127,7 @@ void VulkanGpuBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
                                                           }));
 }
 
-VulkanGpuBuffer const* VulkanGpuBufferCache::allocate(VulkanBufferUsage usage,
+VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferUsage usage,
         uint32_t numBytes) noexcept {
     VkBufferCreateInfo const bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -157,28 +158,28 @@ VulkanGpuBuffer const* VulkanGpuBufferCache::allocate(VulkanBufferUsage usage,
     UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo,
             &gpuBuffer->vkbuffer, &gpuBuffer->vmaAllocation, &gpuBuffer->allocationInfo);
 
-#if FVK_ENABLED(FVK_DEBUG_GPU_BUFFER_CACHE)
+#if FVK_ENABLED(FVK_DEBUG_VULKAN_BUFFER_CACHE)
     if (result != VK_SUCCESS) {
-        FVK_LOGE << "GpuBufferCache - failed to allocate a new vkBuffer of size " << numBytes
+        FVK_LOGE << "VulkanBufferCache - failed to allocate a new vkBuffer of size " << numBytes
                  << " and usage " << static_cast<int>(usage) << ", error: " << result
                  << utils::io::endl;
     } else {
-        FVK_LOGD << "GpuBufferCache - allocated a vkBuffer " << gpuBuffer->vkbuffer << " of size "
-                 << numBytes << " and usage = " << static_cast<int>(usage) << "  successfully"
-                 << utils::io::endl;
+        FVK_LOGD << "VulkanBufferCache - allocated a vkBuffer " << gpuBuffer->vkbuffer
+                 << " of size " << numBytes << " and usage = " << static_cast<int>(usage)
+                 << "  successfully" << utils::io::endl;
     }
-#endif// FVK_DEBUG_GPU_BUFFER_CACHE
+#endif// FVK_DEBUG_VULKAN_BUFFER_CACHE
 
     return gpuBuffer;
 }
 
-void VulkanGpuBufferCache::destroy(VulkanGpuBuffer const* gpuBuffer) noexcept {
+void VulkanBufferCache::destroy(VulkanGpuBuffer const* gpuBuffer) noexcept {
     vmaDestroyBuffer(mAllocator, gpuBuffer->vkbuffer, gpuBuffer->vmaAllocation);
     delete gpuBuffer;
     gpuBuffer = nullptr;
 }
 
-VulkanGpuBufferCache::BufferPool& VulkanGpuBufferCache::getPool(VulkanBufferUsage usage) noexcept {
+VulkanBufferCache::BufferPool& VulkanBufferCache::getPool(VulkanBufferUsage usage) noexcept {
 
     int poolIndex = -1;
     switch (usage) {

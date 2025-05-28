@@ -17,36 +17,33 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 #define TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 
-#include "VulkanContext.h"
-#include "VulkanGpuBufferCache.h"
 #include "VulkanMemory.h"
-#include "VulkanStagePool.h"
 
 namespace filament::backend {
 
-// Encapsulates a Vulkan buffer, its attached DeviceMemory and a staging area.
-class VulkanBuffer {
+class VulkanBuffer : public fvkmemory::Resource {
 public:
-    VulkanBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanGpuBufferCache& gpuBufferCache, VulkanBufferUsage usage, uint32_t numBytes);
+    // Because we need to recycle the unused `VulkanGpuBuffer`, we allow for a callback that the
+    // "Pool" can use to acquire the buffer back.
+    using OnRecycle = std::function<void(VulkanGpuBuffer const*)>;
 
-    void loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes);
+    VulkanBuffer(VulkanGpuBuffer const* gpuBuffer, OnRecycle&& onRecycleFn)
+        : mGpuBuffer(gpuBuffer),
+          mOnRecycleFn(onRecycleFn) {}
 
-    VkBuffer getVkBuffer() const noexcept;
+    ~VulkanBuffer() {
+        if (mOnRecycleFn) {
+            mOnRecycleFn(mGpuBuffer);
+        }
+    }
 
-    VulkanBufferUsage getUsage() const noexcept;
+    VulkanGpuBuffer const* getGpuBuffer() const { return mGpuBuffer; }
 
 private:
-    VmaAllocator mAllocator;
-    VulkanStagePool& mStagePool;
-    VulkanGpuBufferCache& mGpuBufferCache;
-
-    fvkmemory::resource_ptr<VulkanGpuBufferHolder> mGpuBufferHolder;
-    uint32_t mUpdatedOffset = 0;
-    uint32_t mUpdatedBytes = 0;
+    VulkanGpuBuffer const* mGpuBuffer;
+    OnRecycle mOnRecycleFn;
 };
 
-} // namespace filament::backend
+}// namespace filament::backend
 
-#endif // TNT_FILAMENT_BACKEND_VULKANBUFFER_H
+#endif// TNT_FILAMENT_BACKEND_VULKANBUFFER_H
