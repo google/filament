@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
                 .samples(sampleCount)
                 .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                 .format(Texture::InternalFormat::DEPTH32F)
-                .usage(Texture::Usage::DEPTH_ATTACHMENT)
+                .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
                 .build(*engine);
         app.stereoRenderTarget = RenderTarget::Builder()
                 .texture(RenderTarget::AttachmentPoint::COLOR, app.stereoColorTexture)

@@ -17,6 +17,7 @@
 #include "WebGPUHandles.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPUStrings.h"
 
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
@@ -36,17 +37,6 @@ namespace filament::backend {
 
 namespace {
 
-[[nodiscard]] constexpr std::string_view toString(ShaderStage stage) {
-    switch (stage) {
-        case ShaderStage::VERTEX:
-            return "vertex";
-        case ShaderStage::FRAGMENT:
-            return "fragment";
-        case ShaderStage::COMPUTE:
-            return "compute";
-    }
-}
-
 [[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device& device, const char* programName,
         std::array<utils::FixedCapacityVector<uint8_t>, Program::SHADER_TYPE_COUNT> const&
                 shaderSource,
@@ -59,7 +49,7 @@ namespace {
     wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
     wgslDescriptor.code = wgpu::StringView(reinterpret_cast<const char*>(sourceBytes.data()));
     std::stringstream labelStream;
-    labelStream << programName << " " << toString(stage) << " shader";
+    labelStream << programName << " " << filamentShaderStageToString(stage) << " shader";
     auto label = labelStream.str();
     wgpu::ShaderModuleDescriptor descriptor{
         .nextInChain = &wgslDescriptor,
@@ -119,10 +109,12 @@ namespace {
                                     << ":\n"
                                     << errorStream.str();
                         }
+#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
                         FWGPU_LOGD << descriptor.label << " compiled successfully"
                                    << utils::io::endl;
+#endif
                     }),
-            UINT16_MAX);
+            SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
     return module;
 }
 
