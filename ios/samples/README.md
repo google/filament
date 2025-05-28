@@ -47,7 +47,7 @@ build Filament in Release mode, replace `debug` with `release` in the above `bui
 
 If you also want to be able to run on the iOS simulator, add the `-s` flag to the `build.sh`
 command. For example, the following command will build for both devices (ARM64) and the simulator
-(x86_64) in Debug mode:
+(x86_64/ARM64) in Debug mode:
 
 ```
 $ ./build.sh -s -p ios -i debug
