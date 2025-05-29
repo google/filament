@@ -883,8 +883,13 @@ void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
-void WebGPUDriver::draw(PipelineState, Handle<HwRenderPrimitive>, uint32_t indexOffset,
+void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph, uint32_t indexOffset,
         uint32_t indexCount, uint32_t instanceCount) {
+    WGPURenderPrimitive const* const renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+    pipelineState.primitiveType = renderPrimitive->type;
+    pipelineState.vertexBufferInfo = renderPrimitive->vertexBuffer->vbih;
+    bindPipeline(pipelineState);
+    bindRenderPrimitive(rph);
     draw2(indexOffset, indexCount, instanceCount);
 }
 
