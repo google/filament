@@ -238,11 +238,11 @@ protected:
         default_random_engine& rng = mRng;
         UTILS_NOUNROLL
         while (count && aliveInARow < ratio) {
-            assert_invariant(count == getComponentCount());
+            assert(count == getComponentCount());
             // note: using the modulo favorizes lower number
             size_t const i = rng() % count;
             Entity const entity = pEntities[i];
-            assert_invariant(entity);
+            assert(entity);
             if (UTILS_LIKELY(em.isAlive(entity))) {
                 ++aliveInARow;
                 continue;
