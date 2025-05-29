@@ -155,6 +155,9 @@ public:
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
+    // May be nullptr. Use lockAndReturn to create the bind group when appropriate
+    [[nodiscard]] const wgpu::BindGroup& getBindGroup() const { return mBindGroup; }
+
 private:
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
