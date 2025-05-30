@@ -21,20 +21,21 @@
 #include "DriverBase.h"
 
 #include "VulkanAsyncHandles.h"
-#include "VulkanBuffer.h"
+#include "VulkanBufferCache.h"
+#include "VulkanBufferProxy.h"
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 #include "vulkan/memory/Resource.h"
-#include "vulkan/utils/StaticVector.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/StaticVector.h"
 
 #include <backend/Program.h>
 
-#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
+#include <utils/bitset.h>
 
 #include <array>
 
@@ -428,21 +429,22 @@ private:
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
-    VulkanIndexBuffer(VmaAllocator allocator, VulkanStagePool& stagePool, uint8_t elementSize,
-            uint32_t indexCount)
+    VulkanIndexBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
+            VulkanBufferCache& bufferCache, uint8_t elementSize, uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
-          buffer(allocator, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
+          buffer(allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
+                  elementSize * indexCount),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
 
-    VulkanBuffer buffer;
+    VulkanBufferProxy buffer;
     const VkIndexType indexType;
 };
 
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
-    VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool, uint32_t byteCount,
-            BufferObjectBinding bindingType);
+    VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
+            VulkanBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType);
 
-    VulkanBuffer buffer;
+    VulkanBufferProxy buffer;
     const BufferObjectBinding bindingType;
 };
 
@@ -455,18 +457,19 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
     fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
 };
 
-inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
-        BufferObjectBinding bindingType) noexcept {
-    switch(bindingType) {
+inline constexpr VulkanBufferUsage getBufferObjectUsage(BufferObjectBinding bindingType) noexcept {
+    switch (bindingType) {
         case BufferObjectBinding::VERTEX:
-            return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            return VulkanBufferUsage::VERTEX;
         case BufferObjectBinding::UNIFORM:
-            return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            return VulkanBufferUsage::UNIFORM;
         case BufferObjectBinding::SHADER_STORAGE:
-            return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
-        // if necessary.
+            return VulkanBufferUsage::SHADER_STORAGE;
+            // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
+            // if necessary.
     }
+
+    return VulkanBufferUsage::UNKNOWN;
 }
 
 } // namespace filament::backend

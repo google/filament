@@ -37,4 +37,24 @@ VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaAllocation)
 VK_DEFINE_HANDLE(VmaPool)
 
+namespace filament::backend {
+
+enum class VulkanBufferUsage : uint8_t {
+    UNKNOWN,
+    VERTEX,
+    INDEX,
+    UNIFORM,
+    SHADER_STORAGE,
+};
+
+struct VulkanGpuBuffer {
+    VkBuffer vkbuffer = VK_NULL_HANDLE;
+    VmaAllocation vmaAllocation = VK_NULL_HANDLE;
+    VmaAllocationInfo allocationInfo;
+    uint32_t numBytes = 0;
+    VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
+};
+
+} // namespace filament::backend
+
 #endif // TNT_FILAMENT_BACKEND_VULKANMEMORY_H
