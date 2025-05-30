@@ -1,0 +1,41 @@
+material {
+    name : BakedColorWithMutableConstants,
+    requires : [
+        color
+    ],
+    constants : [
+        {
+            name: swizzle,
+            type: bool,
+            mutable: true,
+            default: true,
+        },
+        {
+            name: darken,
+            type: bool,
+            mutable: true,
+        },
+        {
+            // This offsets the ID of the mutable constants by one,
+            // and is included here purely for testing purposes.
+            name: dummy,
+            type: bool,
+        }
+    ],
+    shadingModel : unlit,
+    culling : none,
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        if (materialConstants_swizzle) {
+            material.baseColor = getColor().gbra;
+        } else {
+            material.baseColor = getColor();
+        }
+        if (materialConstants_darken) {
+            material.baseColor.rgb *= 0.5;
+        }
+    }
+}
