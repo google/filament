@@ -174,6 +174,20 @@ void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
+    if (rth) {
+        WGPURenderTarget* rt = handleCast<WGPURenderTarget>(rth);
+        if (rt == mDefaultRenderTarget) {
+            mDefaultRenderTarget = nullptr;
+        }
+        if (rt == mCurrentRenderTarget) {
+            mCurrentRenderTarget = nullptr;
+        }
+        // WGPURenderTarget destructor is trivial.
+        // The HwTexture handles stored within WGPURenderTarget (via MRT, TargetBufferInfo)
+        // are not owned by WGPURenderTarget, so they are not destroyed here.
+        // They are destroyed via WebGPUDriver::destroyTexture.
+        destructHandle<WGPURenderTarget>(rth);
+    }
 }
 
 void WebGPUDriver::destroySwapChain(Handle<HwSwapChain> sch) {
@@ -413,7 +427,21 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
-        TargetBufferInfo depth, TargetBufferInfo stencil) {}
+        TargetBufferInfo depth, TargetBufferInfo stencil) {
+    // The `targets` flags indicate which of the `color`, `depth`, `stencil` TargetBufferInfo
+    // are actually active for this render target.
+    // We'll pass all TargetBufferInfo to WGPURenderTarget; it will use them if their handles are valid.
+
+    // Ensure that textures intended for use as attachments were created with
+    // wgpu::TextureUsage::RenderAttachment. This check should ideally be in createTextureR
+    // or validated here if possible.
+
+    // The `layerCount` parameter might be for creating array textures that this RT targets.
+    // Individual attachments (color[i].layer, depth.layer, stencil.layer) specify which layer
+    // of an array texture to bind. For now, we assume textures are pre-configured.
+
+    constructHandle<WGPURenderTarget>(rth, width, height, samples, color, depth, stencil);
+}
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {}
 
@@ -678,48 +706,80 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams const& params) {
     assert_invariant(mCommandEncoder);
-
     auto* renderTarget = handleCast<WGPURenderTarget>(rth);
-    // if (renderTarget == mDefaultRenderTarget) {
-    //     FWGPU_LOGW << "Default render target"
-    //                << utils::io::endl;
-    // } else {
-    //     FWGPU_LOGW << "Non Default render target"
-    //                << utils::io::endl;
-    // }
-    wgpu::TextureView depthTextureView = mSwapChain->getDepthTextureView();
-    wgpu::TextureFormat depthTextureFormat = mSwapChain->getDepthFormat();
-    wgpu::LoadOp stencilLoadOpValue;
-    wgpu::StoreOp stencilStoreOpValue;
 
-    if (depthTextureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-            depthTextureFormat == wgpu::TextureFormat::Depth32FloatStencil8
-    ) {
-        stencilLoadOpValue = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
-        stencilStoreOpValue = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
+    wgpu::TextureView defaultColorView = nullptr;
+    wgpu::TextureView defaultDepthStencilView = nullptr;
+
+    std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
+    uint32_t customColorViewCount = 0;
+    wgpu::TextureView customDepthView = nullptr;
+    wgpu::TextureFormat customDepthFormat = wgpu::TextureFormat::Undefined;
+    wgpu::TextureFormat customStencilFormat = wgpu::TextureFormat::Undefined;
+    wgpu::TextureView customStencilView = nullptr;
+
+    mCurrentRenderTarget = renderTarget;
+    if (renderTarget->isDefaultRenderTarget()) {
+        assert_invariant(mSwapChain && mTextureView);
+        defaultColorView = mTextureView;
+        defaultDepthStencilView = mSwapChain->getDepthTextureView();
     } else {
-        stencilLoadOpValue = wgpu::LoadOp::Undefined;
-        stencilStoreOpValue = wgpu::StoreOp::Undefined;
+        // Resolve views for custom render target
+        const auto& colorInfos = renderTarget->getColorAttachmentInfos();
+        for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+            if (colorInfos[i].handle) {
+                auto* hwTexture = handleCast<WGPUTexture>(colorInfos[i].handle);
+                if (hwTexture) {
+                    // TODO: Consider colorInfos[i].level and colorInfos[i].layer for view creation
+                    // if WGPUTexture::getTextureView() isn't sufficient or needs parameters.
+                    customColorViews[customColorViewCount++] = hwTexture->getTextureView();
+                }
+            }
+        }
+
+        const auto& depthInfo = renderTarget->getDepthAttachmentInfo();
+        if (depthInfo.handle) {
+            auto* hwTexture = handleCast<WGPUTexture>(depthInfo.handle);
+            if (hwTexture) {
+                customDepthView = hwTexture->getTextureView();
+                customDepthFormat = hwTexture->getFormat();
+            }
+        }
+
+        const auto& stencilInfo = renderTarget->getStencilAttachmentInfo();
+        if (stencilInfo.handle) {
+            // If depth and stencil use the same texture handle, this will re-cast but that's fine.
+            auto* hwTexture = handleCast<WGPUTexture>(stencilInfo.handle);
+            if (hwTexture) {
+                customStencilView = hwTexture->getTextureView();
+                customStencilFormat = hwTexture->getFormat();
+            }
+        }
     }
-
-    wgpu::RenderPassDescriptor renderPassDescriptor;
-    wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{ .view = depthTextureView,
-        .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
-        .depthStoreOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
-        .depthClearValue = static_cast<float>(params.clearDepth),
-        .depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
-        .stencilLoadOp = stencilLoadOpValue,
-        .stencilStoreOp = stencilStoreOpValue,
-        .stencilClearValue = params.clearStencil,
-        .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0 };
-    renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
-    renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
-
-    assert_invariant(mTextureView);
+    wgpu::RenderPassDescriptor renderPassDescriptor{};
+    renderTarget->setUpRenderPassAttachments(renderPassDescriptor,
+            params,
+            defaultColorView,
+            defaultDepthStencilView,
+            customColorViews.data(),
+            customColorViewCount,
+            customDepthView,
+            customStencilView,
+            customDepthFormat,
+            customStencilFormat);
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
-    mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
-            params.viewport.width, params.viewport.height, params.depthRange.near,
+
+    // Ensure viewport dimensions are not 0
+    FILAMENT_CHECK_POSTCONDITION(params.viewport.width > 0) << "viewport width is 0?";
+    FILAMENT_CHECK_POSTCONDITION(params.viewport.height > 0) << "viewport height is 0?";
+
+    mRenderPassEncoder.SetViewport(
+            static_cast<float>(params.viewport.left),
+            static_cast<float>(params.viewport.bottom),
+            static_cast<float>(params.viewport.width),
+            static_cast<float>(params.viewport.height),
+            params.depthRange.near,
             params.depthRange.far);
 }
 
@@ -813,7 +873,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     // VulkanPipelineCache to handle this, may be missing nuance
     static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
     auto hash = pipleineStateHasher(pipelineState);
-    if(mPipelineMap.find(hash) != mPipelineMap.end()){
+    if (mPipelineMap.find(hash) != mPipelineMap.end()) {
         mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
         return;
     }
@@ -849,10 +909,56 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             << layoutDescriptor.label;
     auto const* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(pipelineState.vertexBufferInfo);
     assert_invariant(vertexBufferInfo);
-    const wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program,
-            *vertexBufferInfo, layout, pipelineState.rasterState, pipelineState.stencilState,
-            pipelineState.polygonOffset, pipelineState.primitiveType, mSwapChain->getColorFormat(),
-            mSwapChain->getDepthFormat());
+
+    std::vector<wgpu::TextureFormat> pipelineColorFormats;
+    wgpu::TextureFormat pipelineDepthFormat = wgpu::TextureFormat::Undefined;
+    uint8_t pipelineSamples = 1;
+
+    if (mCurrentRenderTarget->isDefaultRenderTarget()) {
+        pipelineColorFormats.push_back(mSwapChain->getColorFormat());
+        pipelineDepthFormat = mSwapChain->getDepthFormat();
+        pipelineSamples =
+                mCurrentRenderTarget->getSamples();// Default RT should have samples (usually 1)
+    } else {
+        const auto& mrtColorAttachments = mCurrentRenderTarget->getColorAttachmentInfos();
+        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+            if (mrtColorAttachments[i].handle) {
+                const auto* colorTexture = handleCast<WGPUTexture>(mrtColorAttachments[i].handle);
+                if (colorTexture) {
+                    pipelineColorFormats.push_back(colorTexture->getTexture().GetFormat());
+                }
+            }
+        }
+
+        const auto& depthInfo = mCurrentRenderTarget->getDepthAttachmentInfo();
+        const auto& stencilInfo = mCurrentRenderTarget->getStencilAttachmentInfo();
+        if (depthInfo.handle) {
+            FILAMENT_CHECK_POSTCONDITION(!stencilInfo.handle)
+                    << "depth and stencil attachments cannot both be provided for WebGPU";
+            const auto* dfTexture = handleCast<WGPUTexture>(depthInfo.handle);
+            if (dfTexture) pipelineDepthFormat = dfTexture->getTexture().GetFormat();
+        } else {
+            if (stencilInfo.handle) {
+                const auto* sfTexture = handleCast<WGPUTexture>(stencilInfo.handle);
+                // Assuming combined depth/stencil format if only stencil is present
+                if (sfTexture) {
+                    pipelineDepthFormat = sfTexture->getTexture().GetFormat();
+                }
+            }
+        }
+        pipelineSamples = mCurrentRenderTarget->getSamples();
+    }
+
+    if (program->fragmentShaderModule != nullptr) {
+        FILAMENT_CHECK_POSTCONDITION(!pipelineColorFormats.empty())
+                << "Render pipeline with fragment shader must have at least one color target "
+                   "format.";
+    }
+    wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program, *vertexBufferInfo,
+            layout, pipelineState.rasterState, pipelineState.stencilState,
+            pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
+            pipelineDepthFormat, pipelineSamples);
+    assert_invariant(pipeline);
     mPipelineMap[hash] = pipeline;
     mRenderPassEncoder.SetPipeline(pipeline);
 }
@@ -883,13 +989,15 @@ void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
     mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
-void WebGPUDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph, uint32_t indexOffset,
-        uint32_t indexCount, uint32_t instanceCount) {
-    WGPURenderPrimitive const* const renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
+void WebGPUDriver::draw(PipelineState pipelineState,
+        Handle<HwRenderPrimitive> renderPrimitiveHandle, uint32_t indexOffset, uint32_t indexCount,
+        uint32_t instanceCount) {
+    WGPURenderPrimitive const* const renderPrimitive =
+            handleCast<WGPURenderPrimitive>(renderPrimitiveHandle);
     pipelineState.primitiveType = renderPrimitive->type;
     pipelineState.vertexBufferInfo = renderPrimitive->vertexBuffer->vbih;
     bindPipeline(pipelineState);
-    bindRenderPrimitive(rph);
+    bindRenderPrimitive(renderPrimitiveHandle);
     draw2(indexOffset, indexCount, instanceCount);
 }
 
@@ -938,7 +1046,7 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         auto sampler = makeSampler(params);
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->getTexView() };
+            .textureView = texture->getTextureView() };
         bindGroup->addEntry(tEntry.binding, std::move(tEntry));
 
         wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),
@@ -960,6 +1068,7 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
+
 wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
     wgpu::SamplerDescriptor desc{};
 

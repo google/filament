@@ -74,6 +74,7 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WGPURenderTarget* mCurrentRenderTarget = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 
