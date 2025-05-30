@@ -18,6 +18,9 @@
 #define TNT_FILAMENT_BACKEND_VULKANBUFFER_H
 
 #include "VulkanMemory.h"
+#include "memory/Resource.h"
+
+#include <functional>
 
 namespace filament::backend {
 

@@ -32,9 +32,6 @@
 #endif
 
 #include "vk_mem_alloc.h"
-#include "vulkan/memory/Resource.h"
-
-#include <functional>
 
 VK_DEFINE_HANDLE(VmaAllocator)
 VK_DEFINE_HANDLE(VmaAllocation)
