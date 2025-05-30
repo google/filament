@@ -53,8 +53,10 @@ namespace filament::backend {
 
 namespace {
 
-constexpr std::array REQUIRED_FEATURES = {
-    wgpu::FeatureName::TransientAttachments };
+constexpr std::array REQUIRED_FEATURES = { wgpu::FeatureName::TransientAttachments,
+    /*To make filtering assumptions like we want while waiting for Filament to provide that info,
+       float 32 needs to be filterable*/
+    wgpu::FeatureName::Float32Filterable };
 
 constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::DepthClipControl,

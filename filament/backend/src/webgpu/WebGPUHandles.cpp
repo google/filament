@@ -387,9 +387,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // TODO: Set once we have the filtering values
                 if (isDepthDescriptor(fEntry.type)) {
                     samplerEntry.sampler.type = wgpu::SamplerBindingType::Comparison;
+                } else if (isIntDescriptor(fEntry.type)) {
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
                 } else {
-                    samplerEntry.sampler.type =
-                            wgpu::SamplerBindingType::NonFiltering;
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::Filtering;
                 }
                 break;
             }
@@ -421,7 +422,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         else if (isFloatDescriptor(fEntry.type))
         {
             // TODO: Set once we have the filtering values
-            wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
         }
         else if (isIntDescriptor(fEntry.type))
         {
