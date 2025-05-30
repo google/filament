@@ -97,6 +97,10 @@ Make sure you've installed the following dependencies:
 - `libxcomposite-dev` (`libXcomposite-devel` on Fedora)
 - `libxxf86vm-dev` (`libXxf86vm-devel` on Fedora)
 
+```shell
+sudo apt install clang-14 libglu1-mesa-dev libc++-14-dev libc++abi-14-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
+```
+
 After dependencies have been installed, we highly recommend using the [easy build](#easy-build)
 script.
 
