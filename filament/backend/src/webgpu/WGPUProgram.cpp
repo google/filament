@@ -17,6 +17,7 @@
 #include "WebGPUHandles.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPUStrings.h"
 
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
@@ -36,17 +37,6 @@ namespace filament::backend {
 
 namespace {
 
-[[nodiscard]] constexpr std::string_view toString(ShaderStage stage) {
-    switch (stage) {
-        case ShaderStage::VERTEX:
-            return "vertex";
-        case ShaderStage::FRAGMENT:
-            return "fragment";
-        case ShaderStage::COMPUTE:
-            return "compute";
-    }
-}
-
 [[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device& device, const char* programName,
         std::array<utils::FixedCapacityVector<uint8_t>, Program::SHADER_TYPE_COUNT> const&
                 shaderSource,
@@ -59,7 +49,7 @@ namespace {
     wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
     wgslDescriptor.code = wgpu::StringView(reinterpret_cast<const char*>(sourceBytes.data()));
     std::stringstream labelStream;
-    labelStream << programName << " " << toString(stage) << " shader";
+    labelStream << programName << " " << filamentShaderStageToString(stage) << " shader";
     auto label = labelStream.str();
     wgpu::ShaderModuleDescriptor descriptor{
         .nextInChain = &wgslDescriptor,
@@ -119,10 +109,12 @@ namespace {
                                     << ":\n"
                                     << errorStream.str();
                         }
+#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
                         FWGPU_LOGD << descriptor.label << " compiled successfully"
                                    << utils::io::endl;
+#endif
                     }),
-            UINT16_MAX);
+            SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
     return module;
 }
 
@@ -171,7 +163,7 @@ std::vector<wgpu::ConstantEntry> convertConstants(
         // CONFIG_SRGB_SWAPCHAIN_EMULATION (3) is being skipped all together since it's only
         // included for the case of mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0, which should
         // not be possible for WebGPU
-        if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
+        if (constant.id == 1 || constant.id == 3 || constant.id == 4 || constant.id > 10 ) {
             continue;
         }
         double value = 0.0;

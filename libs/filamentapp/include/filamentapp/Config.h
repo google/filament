@@ -35,6 +35,7 @@ struct Config {
     bool resizeable = true;
     bool headless = false;
     int stereoscopicEyeCount = 2;
+    uint8_t samples = 1;
 
     // Provided to indicate GPU preference for vulkan
     std::string vulkanGPUHint;

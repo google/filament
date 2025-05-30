@@ -16,6 +16,7 @@
 
 #include "TangentSpaceMeshWrapper.h"
 
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 #include <memory>

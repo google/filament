@@ -58,6 +58,8 @@ BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
         CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
     mImageExpectations.emplace(getDriverApi());
+    NativeView nativeView = getNativeView();
+    mScreenSize = {nativeView.width, nativeView.height};
 }
 
 BackendTest::~BackendTest() {
@@ -138,42 +140,12 @@ filament::backend::RenderPassParams BackendTest::getNoClearRenderPass() {
     return RenderPassParams{};
 }
 
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<filament::backend::HwRenderTarget> renderTarget,
-        Handle<filament::backend::HwSwapChain> swapChain,
-        Handle<filament::backend::HwProgram> program) {
-    RenderPassParams params = getClearColorRenderPass();
-    params.viewport.width = 512;
-    params.viewport.height = 512;
-    renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);
+std::size_t BackendTest::screenWidth() const {
+    return mScreenSize[0];
 }
 
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<HwRenderTarget> renderTarget,
-        Handle<HwSwapChain> swapChain,
-        Handle<HwProgram> program,
-        const RenderPassParams& params) {
-    auto& api = getDriverApi();
-
-    TrianglePrimitive triangle(api);
-
-    api.makeCurrent(swapChain, swapChain);
-
-    api.beginRenderPass(renderTarget, params);
-
-    PipelineState state;
-    state.program = program;
-    state.pipelineLayout = pipelineLayout;
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
-
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-
-    api.endRenderPass();
+std::size_t BackendTest::screenHeight() const {
+    return mScreenSize[1];
 }
 
 bool BackendTest::matchesEnvironment(Backend backend) {
