@@ -246,7 +246,8 @@ void RenderPass::appendCommands(FEngine const& engine,
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
             auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(first->info.materialVariant);
+            ma->prepareProgram(first->info.materialVariant,
+                    first->info.mi->getMutableSpecConstants());
         }
     }
 }
@@ -1098,7 +1099,8 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                 }
 
                 assert_invariant(ma);
-                pipeline.program = ma->getProgram(info.materialVariant);
+                pipeline.program = ma->getProgram(info.materialVariant,
+                        info.mi->getMutableSpecConstants());
 
                 if (UTILS_UNLIKELY(memcmp(&pipeline, &currentPipeline, sizeof(PipelineState)) != 0)) {
                     currentPipeline = pipeline;

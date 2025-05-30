@@ -283,10 +283,17 @@ void ShaderGenerator::appendShader(io::sstream& ss,
     }
 }
 
-void ShaderGenerator::generateUserSpecConstants(
-        const CodeGenerator& cg, io::sstream& fs, MaterialBuilder::ConstantList const& constants) {
+void ShaderGenerator::generateAllUserSpecConstants(const CodeGenerator& cg, io::sstream& fs,
+        MaterialBuilder::ConstantList const& constants,
+        MaterialBuilder::ConstantList const& mutableConstants) {
+    generateUserSpecConstants(cg, fs, constants, 0);
+    generateUserSpecConstants(cg, fs, mutableConstants, constants.size());
+}
+
+void ShaderGenerator::generateUserSpecConstants(const CodeGenerator& cg, io::sstream& fs,
+        MaterialBuilder::ConstantList const& constants, size_t offset) {
     // Constants 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1 are reserved by Filament.
-    size_t index = CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    size_t index = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + offset;
     for (const auto& constant : constants) {
         std::string const fullName = std::string("materialConstants_") + constant.name.c_str();
         switch (constant.type) {
@@ -314,6 +321,7 @@ ShaderGenerator::ShaderGenerator(
         MaterialBuilder::OutputList const& outputs,
         MaterialBuilder::PreprocessorDefineList const& defines,
         MaterialBuilder::ConstantList const& constants,
+        MaterialBuilder::ConstantList const& mutableConstants,
         MaterialBuilder::PushConstantList const& pushConstants,
         CString const& materialCode, size_t const lineOffset,
         CString const& materialVertexCode, size_t const vertexLineOffset,
@@ -336,6 +344,7 @@ ShaderGenerator::ShaderGenerator(
     mMaterialDomain = materialDomain;
     mDefines = defines;
     mConstants = constants;
+    mMutableConstants = mutableConstants;
     mPushConstants = pushConstants;
 
     if (mMaterialFragmentCode.empty()) {
@@ -392,7 +401,7 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
 
     cg.generateCommonProlog(vs, ShaderStage::VERTEX, material, variant);
 
-    generateUserSpecConstants(cg, vs, mConstants);
+    generateAllUserSpecConstants(cg, vs, mConstants, mMutableConstants);
 
     // note: even if the user vertex shader is empty, we can't use the "optimized" version if
     // we're in masked mode because fragment shader needs the color varyings
@@ -525,7 +534,7 @@ std::string ShaderGenerator::createSurfaceFragmentProgram(ShaderModel const shad
     io::sstream fs;
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, variant);
 
-    generateUserSpecConstants(cg, fs, mConstants);
+    generateAllUserSpecConstants(cg, fs, mConstants, mMutableConstants);
 
     generateSurfaceMaterialVariantDefines(
             fs, ShaderStage::FRAGMENT, featureLevel, material, variant);
@@ -681,7 +690,7 @@ std::string ShaderGenerator::createSurfaceComputeProgram(ShaderModel const shade
 
     cg.generateCommonProlog(s, ShaderStage::COMPUTE, material, {});
 
-    generateUserSpecConstants(cg, s, mConstants);
+    generateAllUserSpecConstants(cg, s, mConstants, mMutableConstants);
 
     CodeGenerator::generateSurfaceTypes(s, ShaderStage::COMPUTE);
 
@@ -721,7 +730,7 @@ std::string ShaderGenerator::createPostProcessVertexProgram(ShaderModel const sm
     io::sstream vs;
     cg.generateCommonProlog(vs, ShaderStage::VERTEX, material, {});
 
-    generateUserSpecConstants(cg, vs, mConstants);
+    generateAllUserSpecConstants(cg, vs, mConstants, mMutableConstants);
 
     CodeGenerator::generateDefine(vs, "LOCATION_POSITION", uint32_t(POSITION));
 
@@ -765,7 +774,7 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const 
     io::sstream fs;
     cg.generateCommonProlog(fs, ShaderStage::FRAGMENT, material, {});
 
-    generateUserSpecConstants(cg, fs, mConstants);
+    generateAllUserSpecConstants(cg, fs, mConstants, mMutableConstants);
 
     generatePostProcessMaterialVariantDefines(fs, PostProcessVariant(variant));
 
