@@ -628,6 +628,7 @@ void FEngine::shutdown() {
     driver.destroyTexture(std::move(mDummyOneTextureArray));
     driver.destroyTexture(std::move(mDummyZeroTexture));
     driver.destroyTexture(std::move(mDummyZeroTextureArray));
+    driver.destroyTexture(std::move(mDummyOneTextureArrayDepth));
 
     driver.destroyBufferObject(std::move(mDummyUniformBuffer));
 
