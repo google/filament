@@ -2514,10 +2514,28 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
             [this]() {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        mPlatform.detach(t->hwStream->stream);
+                    }
+                }
                 // OpenGL context is about to change, unbind everything
                 mContext.unbindEverything();
             },
             [this](size_t index) {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        glGenTextures(1, &t->gl.id);
+                        mPlatform.attach(t->hwStream->stream, t->gl.id);
+                        mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
+                    }
+                }
+
+                // force invalidation of all bound descriptor sets
+                decltype(mInvalidDescriptorSetBindings) changed;
+                changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+                mInvalidDescriptorSetBindings |= changed;
+
                 // OpenGL context has changed, resynchronize the state with the cache
                 mContext.synchronizeStateAndCache(index);
                 slog.d << "*** OpenGL context change : " << (index ? "protected" : "default") << io::endl;
@@ -3708,8 +3726,7 @@ void OpenGLDriver::updateDescriptorSetTexture(
         TextureHandle th,
         SamplerParams params) {
     GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
-    GLTexture* t = th ? handle_cast<GLTexture*>(th) : nullptr;
-    ds->update(mContext, binding, t, params);
+    ds->update(mContext, mHandleAllocator, binding, th, params);
 }
 
 void OpenGLDriver::flush(int) {
