@@ -232,6 +232,46 @@ template UTILS_PUBLIC mat3f MaterialInstance::getParameter<mat3f>      (const ch
 
 // ------------------------------------------------------------------------------------------------
 
+template<>
+inline void FMaterialInstance::setConstantImpl<bool>(std::string_view const name, bool const& value) {
+    std::optional<uint32_t> id = mMaterial->getMutableConstantId(name);
+    FILAMENT_CHECK_PRECONDITION(id.has_value()) << "No mutable constant with name " << name;
+    mConstants.set(*id, value);
+}
+
+template<typename T, typename>
+void MaterialInstance::setConstant(const char* name, size_t nameLength, T const& value) {
+    downcast(this)->setConstantImpl({ name, nameLength }, value);
+}
+
+// Explicit template instantiation of our supported types.
+//
+// Mutable spec constants will probably only ever allow bools, but it's nice to keep the API
+// forwards-compatible.
+template UTILS_PUBLIC void MaterialInstance::setConstant<bool>(const char* name, size_t nameLength, bool const& v);
+
+// ------------------------------------------------------------------------------------------------
+
+template<>
+inline bool FMaterialInstance::getConstantImpl<bool>(std::string_view const name) const {
+    std::optional<uint32_t> id = mMaterial->getMutableConstantId(name);
+    FILAMENT_CHECK_PRECONDITION(id.has_value()) << "No mutable constant with name " << name;
+    return mConstants[*id];
+}
+
+template<typename T, typename>
+T MaterialInstance::getConstant(const char* name, size_t nameLength) const {
+    return downcast(this)->getConstantImpl<T>({ name, nameLength });
+}
+
+// Explicit template instantiation of our supported types.
+//
+// Mutable spec constants will probably only ever allow bools, but it's nice to keep the API
+// forwards-compatible.
+template UTILS_PUBLIC bool MaterialInstance::getConstant<bool>(const char* name, size_t nameLength) const;
+
+// ------------------------------------------------------------------------------------------------
+
 Material const* MaterialInstance::getMaterial() const noexcept {
     return downcast(this)->getMaterial();
 }
