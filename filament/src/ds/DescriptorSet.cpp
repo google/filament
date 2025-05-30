@@ -241,6 +241,8 @@ bool DescriptorSet::isTextureCompatibleWithDescriptor(
             return t == TextureType::DEPTH || t == TextureType::DEPTH_STENCIL;
 
         case DescriptorType::SAMPLER_EXTERNAL:
+            return true;
+
         case DescriptorType::UNIFORM_BUFFER:
         case DescriptorType::SHADER_STORAGE_BUFFER:
         case DescriptorType::INPUT_ATTACHMENT:

@@ -49,6 +49,10 @@ option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filamen
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 
+# This is to disable GTAO for the short-term while we investigate a way to better manage size increases.
+# On the regular filament build (where size is of less concern), we enable GTAO by default.
+option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
+
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
 )

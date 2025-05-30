@@ -163,7 +163,7 @@ std::vector<wgpu::ConstantEntry> convertConstants(
         // CONFIG_SRGB_SWAPCHAIN_EMULATION (3) is being skipped all together since it's only
         // included for the case of mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0, which should
         // not be possible for WebGPU
-        if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
+        if (constant.id == 1 || constant.id == 3 || constant.id == 4 || constant.id > 10 ) {
             continue;
         }
         double value = 0.0;

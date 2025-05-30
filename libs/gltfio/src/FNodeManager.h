@@ -22,6 +22,7 @@
 #include <gltfio/NodeManager.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Entity.h>
 #include <utils/Slice.h>

@@ -196,6 +196,19 @@ void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh)
 }
 
 void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
+    auto* bindGroup = handleCast<WebGPUDescriptorSet>(tqh);
+    assert_invariant(bindGroup);
+    if (bindGroup->getBindGroup() != nullptr) {
+        for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+            if (mCurrentDescriptorSets[i].bindGroup != nullptr &&
+                    bindGroup->getBindGroup().Get() == mCurrentDescriptorSets[i].bindGroup.Get()) {
+                // Clear this from our current entries
+                mCurrentDescriptorSets[i].bindGroup = nullptr;
+                mCurrentDescriptorSets[i].offsets.clear();
+                mCurrentDescriptorSets[i].offsetCount = 0;
+            }
+        }
+    }
     if (tqh) {
         destructHandle<WebGPUDescriptorSet>(tqh);
     }
@@ -846,14 +859,11 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
-
-    // This *must* match the WGPUVertexBufferInfo that was bound in bindPipeline(). But we want
-    // to allow to call this before bindPipeline(), so the validation can only happen in draw()
     auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
-    assert_invariant(
-            vbi->getVertexBufferLayoutSize() == renderPrimitive->vertexBuffer->buffers.size());
-    for (uint32_t i = 0; i < vbi->getVertexBufferLayoutSize(); i++) {
-        mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
+    for (const auto& webGPUSlotBindings: vbi->getWebGPUSlotBindingInfos()) {
+        mRenderPassEncoder.SetVertexBuffer(webGPUSlotBindings.slot,
+                renderPrimitive->vertexBuffer->buffers[webGPUSlotBindings.sourceBuffer],
+                webGPUSlotBindings.bufferOffset);
     }
 
     mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
@@ -861,6 +871,15 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+    // We defer actually binding until we actually draw
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        auto& binding = mCurrentDescriptorSets[i];
+        if (binding.bindGroup) {
+            mRenderPassEncoder.SetBindGroup(i, binding.bindGroup, binding.offsetCount,
+                    binding.offsets.data());
+        }
+    }
+
     mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
@@ -925,11 +944,13 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
         backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
+    assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
-    assert_invariant(mRenderPassEncoder);
-    const size_t dynamicOffsetCount = bindGroup->countEntitiesWithDynamicOffsets();
-    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, offsets.data());
+
+    mCurrentDescriptorSets[setIndex] = { .bindGroup = wbg,
+        .offsetCount = bindGroup->countEntitiesWithDynamicOffsets(),
+        .offsets = std::move(offsets) };
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
