@@ -147,8 +147,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
-    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
-    mUniforms = UniformBuffer(uboSize);
+    mUniforms.setUniforms(other->getUniformBuffer());
     mUbHandle = driver.createBufferObject(mUniforms.getSize(),
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
     driver.setDebugTag(mUbHandle.getId(), material->getName());
