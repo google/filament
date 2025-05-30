@@ -154,6 +154,14 @@ public:
         Builder& multiview(AttachmentPoint attachment, uint8_t layerCount, uint8_t baseLayer = 0) noexcept;
 
         /**
+         * Sets the number of samples used for MSAA (Multisample Anti-Aliasing).
+         *
+         * @param samples The number of samples used for multisampling.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& samples(uint8_t samples) noexcept;
+
+        /**
          * Creates the RenderTarget object and returns a pointer to it.
          *
          * @return pointer to the newly created object.

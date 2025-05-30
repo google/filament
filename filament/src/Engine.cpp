@@ -387,7 +387,7 @@ JobSystem& Engine::getJobSystem() noexcept {
     return downcast(this)->getJobSystem();
 }
 
-bool Engine::isPaused() const noexcept {
+bool Engine::isPaused() const noexcept(UTILS_HAS_THREADING) {
     FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING)
             << "Pause is meant for multi-threaded platforms.";
     return downcast(this)->isPaused();

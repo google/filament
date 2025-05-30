@@ -262,7 +262,7 @@ void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 bool PlatformWGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
                                   "PlatformWGL does not support distinct draw/read swap chains.");
 

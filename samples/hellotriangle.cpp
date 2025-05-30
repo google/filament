@@ -35,6 +35,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <string>// for printing usage/help
 
 
 #include "generated/resources/resources.h"
@@ -78,10 +79,6 @@ static void printUsage(char* name) {
             "       Prints this message\n\n"
             "   --api, -a\n"
             "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
-            "       (note: webgpu is a no-op for now, printing backend\n"
-            "        component info if FILAMENT_BACKEND_DEBUG_FLAG, \n"
-            "        set at build time, includes the \n"
-            "        FWGPU_PRINT_SYSTEM bit flag 0x2)\n"
     );
     const std::string from("HELLOTRIANGLE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {

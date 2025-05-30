@@ -155,7 +155,7 @@ uint32_t PlatformCocoaTouchGL::getDefaultFramebufferObject() noexcept {
 }
 
 bool PlatformCocoaTouchGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "PlatformCocoaTouchGL does not support using distinct draw/read swap chains.");
     CAEAGLLayer* const glLayer = (__bridge CAEAGLLayer*) drawSwapChain;

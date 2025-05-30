@@ -138,29 +138,29 @@ TEST_F(BackendTest, TextureViewLod) {
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {}));
         {
-            RenderPassParams params = {};
-            fullViewport(params);
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardStart = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
             PipelineState state = getColorWritePipelineState();
             whiteShader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
+            params.viewport = getFullViewport();
+
             api.beginRenderPass(renderTarget, params);
-            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            state.primitiveType = PrimitiveType::TRIANGLES;
+            state.vertexBufferInfo = triangle.getVertexBufferInfo();
+            api.bindPipeline(state);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
             api.endRenderPass();
         }
 
         backend::Handle<HwRenderTarget> defaultRenderTarget =
                 cleanup.add(api.createDefaultRenderTarget(0));
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 0.f, 0.5f, 1.f};
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);
+
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {
@@ -174,7 +174,11 @@ TEST_F(BackendTest, TextureViewLod) {
         // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
         api.scissor(params.viewport);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         // Adjust the base mip to 2.
@@ -199,7 +203,11 @@ TEST_F(BackendTest, TextureViewLod) {
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(defaultRenderTarget, params);
         api.scissor(params.viewport);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         api.commit(swapChain);

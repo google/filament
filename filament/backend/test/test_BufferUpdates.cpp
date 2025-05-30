@@ -79,12 +79,8 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport = getFullViewport();
 
         // Create a uniform buffer.
         // We use STATIC here, even though the buffer is updated, to force the Metal backend to use
@@ -136,7 +132,11 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
             }
 
             api.beginRenderPass(defaultRenderTarget, params);
-            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            state.primitiveType = PrimitiveType::TRIANGLES;
+            state.vertexBufferInfo = triangle.getVertexBufferInfo();
+            api.bindPipeline(state);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
             api.endRenderPass();
 
             triangleIndex++;
@@ -157,8 +157,11 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "All values including alpha are written as 0, see b/417254943");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
+
+    const TrianglePrimitive triangle(api);
 
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(createSwapChain());
@@ -176,10 +179,11 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
-    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
-            TextureFormat::RGBA8, 1, 512, 512, 1, TextureUsage::COLOR_ATTACHMENT));
-    auto renderTarget = cleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR0, 512, 512, 1, 0, {{ colorTexture }}, {}, {}));
+    auto colorTexture =
+            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+                    screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
+    auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0, screenWidth(),
+            screenHeight(), 1, 0, { { colorTexture } }, {}, {}));
 
     // Upload uniforms for the first triangle.
     // Upload the uniform, but with an offset to accommodate the padding in the shader's
@@ -190,38 +194,52 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
             .offset = { 0.0f, 0.0f, 0.0f, 0.0f }
     });
 
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = 512;
-    params.viewport.width = 512;
-    renderTriangle({ { shader.getDescriptorSetLayout() } }, renderTarget, swapChain,
-            shader.getProgram(), params);
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+    state.primitiveType = PrimitiveType::TRIANGLES;
+    state.vertexBufferInfo = triangle.getVertexBufferInfo();
 
-    // Upload uniforms for the second triangle. To test partial buffer updates, we'll only update
-    // color.b, color.a, scaleMinusOne, offset.x, and offset.y.
-    const UniformBindingConfig partialBindingConfig = {
-            .dataSize = sizeof(float) * 8,
-            .bufferSize = sizeof(SimpleMaterialParams) + 64,
-            .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b)
-    };
-    shader.uploadUniform(api, ubuffer, partialBindingConfig,
-            std::array<float, 8>{
-                    1.0f, 1.0f, // color.b, color.a
-                    0.0f, 0.0f, 0.0f, 0.0f, // scale
-                    0.5f, 0.5f // offset.x, offset.y
-            });
+    {
+        RenderFrame frame(api);
 
-    params.flags.clear = TargetBufferFlags::NONE;
-    params.flags.discardStart = TargetBufferFlags::NONE;
-    renderTriangle({{ shader.getDescriptorSetLayout() }},
-            renderTarget, swapChain, shader.getProgram(), params);
+        RenderPassParams clearParams = getClearColorRenderPass();
+        clearParams.viewport.height = screenWidth();
+        clearParams.viewport.width = screenHeight();
+
+        api.beginRenderPass(renderTarget, clearParams);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+
+        // Upload uniforms for the second triangle. To test partial buffer updates, we'll only
+        // update color.b, color.a, scaleMinusOne, offset.x, and offset.y.
+        const UniformBindingConfig partialBindingConfig = {
+                .dataSize = sizeof(float) * 8,
+                .bufferSize = sizeof(SimpleMaterialParams) + 64,
+                .byteOffset = 64 + offsetof(SimpleMaterialParams, color.b) };
+        shader.uploadUniform(api, ubuffer, partialBindingConfig,
+                std::array<float, 8>{
+                        1.0f, 1.0f, // color.b, color.a
+                        0.0f, 0.0f, 0.0f, 0.0f, // scale
+                        0.5f, 0.5f // offset.x, offset.y
+                });
+
+        RenderPassParams noClearParams = getNoClearRenderPass();
+        noClearParams.viewport.height = screenWidth();
+        noClearParams.viewport.width = screenHeight();
+
+        api.beginRenderPass(renderTarget, noClearParams);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
+    }
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "BufferObjectUpdateWithOffset", 91322442));
+            ScreenshotParams(screenWidth(), screenHeight(), "BufferObjectUpdateWithOffset",
+                    2320747245));
 
     api.flush();
     api.commit(swapChain);

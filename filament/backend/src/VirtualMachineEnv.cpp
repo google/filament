@@ -50,7 +50,7 @@ JavaVM* VirtualMachineEnv::getVirtualMachine() {
  */
 UTILS_PUBLIC
 UTILS_NOINLINE
-jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) noexcept {
+jint VirtualMachineEnv::JNI_OnLoad(JavaVM* vm) {
     std::lock_guard const lock(sLock);
     if (sVirtualMachine) {
         // It doesn't make sense for JNI_OnLoad() to be called more than once
@@ -77,7 +77,7 @@ VirtualMachineEnv& VirtualMachineEnv::get() noexcept {
 }
 
 UTILS_NOINLINE
-JNIEnv* VirtualMachineEnv::getThreadEnvironment() noexcept {
+JNIEnv* VirtualMachineEnv::getThreadEnvironment() {
     JavaVM* const vm = getVirtualMachine();
     JNIEnv* env = nullptr;
     jint const result = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
@@ -101,7 +101,7 @@ VirtualMachineEnv::~VirtualMachineEnv() noexcept {
 }
 
 UTILS_NOINLINE
-JNIEnv* VirtualMachineEnv::getEnvironmentSlow() noexcept {
+JNIEnv* VirtualMachineEnv::getEnvironmentSlow() {
     FILAMENT_CHECK_PRECONDITION(mVirtualMachine)
             << "JNI_OnLoad() has not been called";
 

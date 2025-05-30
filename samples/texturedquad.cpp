@@ -34,9 +34,12 @@
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 
+#include <getopt/getopt.h>
+
 #include <stb_image.h>
 
 #include <iostream> // for cerr
+#include <string>   // for printing usage/help
 
 #include "generated/resources/resources.h"
 
@@ -76,9 +79,63 @@ static constexpr uint16_t QUAD_INDICES[6] = {
     3, 2, 1,
 };
 
+static void printUsage(char* name) {
+    std::string exec_name(utils::Path(name).getName());
+    std::string usage("TEXTUREDQUAD renders a textured quad moving back and forth in a loop\n"
+                      "Usage:\n"
+                      "    TEXTUREDQUAD [options]\n"
+                      "Options:\n"
+                      "   --help, -h\n"
+                      "       Prints this message\n\n"
+                      "   --api, -a\n"
+                      "       Specify the backend API: opengl, vulkan, metal, or webgpu\n");
+    const std::string from("TEXTUREDQUAD");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
+
+static int handleCommandLineArguments(int argc, char* argv[], Config& config) {
+    static constexpr const char* OPTSTR = "ha:";
+    static const struct option OPTIONS[] = {
+        { "help", no_argument, nullptr, 'h' },
+        { "api", required_argument, nullptr, 'a' },
+        { nullptr, 0, nullptr, 0 }
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    config.backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    config.backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    config.backend = Engine::Backend::METAL;
+                } else if (arg == "webgpu") {
+                    config.backend = Engine::Backend::WEBGPU;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be "
+                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
+                    exit(1);
+                }
+                break;
+        }
+    }
+    return optind;
+}
+
 int main(int argc, char** argv) {
     Config config;
     config.title = "texturedquad";
+    handleCommandLineArguments(argc, argv, config);
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {

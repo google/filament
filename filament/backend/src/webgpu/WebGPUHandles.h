@@ -28,7 +28,6 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <array>
-#include <bitset>
 #include <cstdint>
 #include <vector>
 
@@ -45,36 +44,46 @@ public:
 };
 
 
-// VertexBufferInfo contains layout info for Vertex Buffer based on WebGPU structs. In WebGPU each
-// VertexBufferLayout is associated with a single vertex buffer. So number of mVertexBufferLayout
-// is equal to bufferCount. Each VertexBufferLayout can contain multiple VertexAttribute. Bind index
-// of vertex buffer is implicitly calculated by the position of VertexBufferLayout in an array.
+// WGPUVertexBufferInfo maps Filament vertex attributes to WebGPU buffer binding model.
 class WGPUVertexBufferInfo : public HwVertexBufferInfo {
 public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
             AttributeArray const& attributes);
-    inline  wgpu::VertexBufferLayout const* getVertexBufferLayout() const {
-        return mVertexBufferLayout.data();
+
+    inline wgpu::VertexBufferLayout const* getVertexBufferLayouts() const {
+        return mVertexBufferLayouts.data();
+    }
+    inline uint32_t getVertexBufferLayoutCount() const {
+        return static_cast<uint32_t>(mVertexBufferLayouts.size());
     }
 
-    inline uint32_t getVertexBufferLayoutSize() const {
-        return mVertexBufferLayout.size();
+    inline wgpu::VertexAttribute const* getVertexAttributes(uint32_t i) const {
+        return mVertexAttributes[i].data();
+    }
+    inline uint32_t getVertexAttributeCount(uint32_t i) const {
+        return static_cast<uint32_t>(mVertexAttributes[i].size());
     }
 
-    inline wgpu::VertexAttribute const* getVertexAttributeForIndex(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].data();
-    }
-
-    inline uint32_t getVertexAttributeSize(uint32_t index) const {
-        assert_invariant(index < mAttributes.size());
-        return mAttributes[index].size();
+    struct WebGPUSlotBindingInfo {
+        uint8_t sourceBuffer;
+        uint32_t slot;
+        uint64_t bufferOffset;
+        uint32_t stride;
+    };
+    inline const std::vector<WebGPUSlotBindingInfo>& getWebGPUSlotBindingInfos() const {
+        return mWebGPUSlotBindingInfos;
     }
 
 private:
-    // TODO: can we do better in terms on heap management.
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayout{};
-    std::vector<std::vector<wgpu::VertexAttribute>> mAttributes{};
+    // This stores the final wgpu::VertexBufferLayout objects, one per WebGPU slot.
+    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayouts;
+
+    // This stores all wgpu::VertexAttribute structs, indexed by their original
+    // Filament attributeIndex.
+    std::vector<std::vector<wgpu::VertexAttribute>> mVertexAttributes;
+
+    // Stores information for the driver to perform setVertexBuffer calls
+    std::vector<WebGPUSlotBindingInfo> mWebGPUSlotBindingInfos;
 };
 
 struct WGPUVertexBuffer : public HwVertexBuffer {
@@ -114,15 +123,8 @@ public:
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
 
-    enum class BindGroupEntryType : uint8_t {
-        UNIFORM_BUFFER,
-        TEXTURE_VIEW,
-        SAMPLER
-    };
-
     struct BindGroupEntryInfo final {
         uint8_t binding = 0;
-        BindGroupEntryType type = BindGroupEntryType::UNIFORM_BUFFER;
         bool hasDynamicOffset = false;
     };
 
@@ -135,7 +137,7 @@ public:
 
 private:
     // TODO: If this is useful elsewhere, remove it from this class
-    // Convert Filament Shader Stage Flags bitmask to webgpu equivilant
+    // Convert Filament Shader Stage Flags bitmask to webgpu equivalent
     static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout;
@@ -143,8 +145,6 @@ private:
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    static void initializeDummyResourcesIfNotAlready(wgpu::Device const&,
-            wgpu::TextureFormat aColorFormat);
 
     WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
@@ -155,26 +155,15 @@ public:
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
     [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
 
+    // May be nullptr. Use lockAndReturn to create the bind group when appropriate
+    [[nodiscard]] const wgpu::BindGroup& getBindGroup() const { return mBindGroup; }
+
 private:
-    static wgpu::Buffer sDummyUniformBuffer;
-    static wgpu::Texture sDummyTexture;
-    static wgpu::TextureView sDummyTextureView;
-    static wgpu::Sampler sDummySampler;
-
-    static std::vector<wgpu::BindGroupEntry> createDummyEntriesSortedByBinding(
-            std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
-
-    // TODO: Consider storing what we used to make the layout. However we need to essentially
-    // Recreate some of the info (Sampler in slot X with the actual sampler) so letting Dawn confirm
-    // there isn't a mismatch may be easiest.
-    // Also storing the wgpu ObjectBase takes care of ownership challenges in theory
     wgpu::BindGroupLayout mLayout = nullptr;
     static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
-    std::vector<wgpu::BindGroupEntry> mEntriesSortedByBinding;
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingWithDynamicOffsets{};
-    std::bitset<MAX_DESCRIPTOR_COUNT> mEntriesByBindingAdded{};
-    std::vector<uint32_t> mDynamicOffsets;
+    std::vector<wgpu::BindGroupEntry> mEntries;
+    const size_t mEntriesWithDynamicOffsetsCount;
     wgpu::BindGroup mBindGroup = nullptr;
 };
 
@@ -185,6 +174,9 @@ public:
             wgpu::Device const& device) noexcept;
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+    wgpu::TextureAspect getAspect() const { return mAspect; }
+    size_t getBlockWidth() const { return mBlockWidth; }
+    size_t getBlockHeight() const { return mBlockHeight; }
 
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTexView() const { return mTexView; }
@@ -208,6 +200,8 @@ private:
     uint32_t mArrayLayerCount = 1;
     wgpu::TextureView mTexView = nullptr;
     wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+    size_t mBlockWidth;
+    size_t mBlockHeight;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {

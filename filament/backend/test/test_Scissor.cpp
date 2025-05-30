@@ -114,12 +114,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = srcRect;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = getColorWritePipelineState();
         shader.addProgramToPipelineState(ps);
@@ -129,11 +125,15 @@ TEST_F(BackendTest, ScissorViewportRegion) {
 
         api.beginRenderPass(srcRenderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         EXPECT_IMAGE(fullRenderTarget, getExpectations(),
-                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 0xAB3D1C53));
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.commit(swapChain);
         api.endFrame(0);
@@ -194,12 +194,8 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = bottomLeftViewport;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
         PipelineState ps = getColorWritePipelineState();
         shader.addProgramToPipelineState(ps);
@@ -209,7 +205,11 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
 
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         params.viewport = topLeftViewport;
@@ -217,11 +217,15 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(renderTarget, params);
         api.scissor(scissor);
-        api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 0x6BF00F31));
+                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.commit(swapChain);
         api.endFrame(0);

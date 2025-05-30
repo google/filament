@@ -17,11 +17,11 @@
 #ifndef TNT_UTILS_JOBSYSTEM_H
 #define TNT_UTILS_JOBSYSTEM_H
 
+#include <utility>
 #include <utils/Allocator.h>
 #include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/Condition.h>
-#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 #include <utils/Slice.h>
@@ -189,7 +189,7 @@ public:
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T* data) noexcept {
         Job* job = create(parent, +[](void* storage, JobSystem& js, Job* job) {
-            T* const that = static_cast<T*>(reinterpret_cast<void**>(storage)[0]);
+            T* const that = static_cast<T*>(static_cast<void**>(storage)[0]);
             (that->*method)(js, job);
         });
         if (job) {
@@ -308,7 +308,7 @@ public:
      * The job can't be used after this call.
      */
     void run(Job*& job, ThreadId id) noexcept;
-    void run(Job*&& job, ThreadId id) noexcept { // allows run(createJob(...));
+    void run(Job*&& job, ThreadId const id) noexcept { // allows run(createJob(...));
         Job* p = job;
         run(p, id);
     }
@@ -371,7 +371,7 @@ public:
     // returns the current ThreadId, which can be used with run(). This method can only be
     // called from a job's function.
     static ThreadId getThreadId(Job const* job) noexcept {
-        assert_invariant(job->id != invalidThreadId);
+        assert(job->id != invalidThreadId);
         return job->id;
     }
 
@@ -391,10 +391,11 @@ private:
             return m - 1;
         }
 
-        inline constexpr explicit default_random_engine(uint32_t seed = 1u) noexcept
+        constexpr explicit default_random_engine(uint32_t const seed = 1u) noexcept
                 : mState(((seed % m) == 0u) ? 1u : seed % m) {
         }
-        inline uint32_t operator()() noexcept {
+
+        uint32_t operator()() noexcept {
             return mState = uint32_t((uint64_t(mState) * 48271u) % m);
         }
     };
@@ -413,7 +414,7 @@ private:
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
             "ThreadState doesn't align to a cache line");
 
-    ThreadState& getState() noexcept;
+    ThreadState& getState();
 
     static void incRef(Job const* job) noexcept;
     void decRef(Job const* job) noexcept;
@@ -426,12 +427,12 @@ private:
     bool exitRequested() const noexcept;
     bool hasActiveJobs() const noexcept;
 
-    void loop(ThreadState* state) noexcept;
+    void loop(ThreadState* state);
     bool execute(ThreadState& state) noexcept;
     Job* steal(ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
-    void put(WorkQueue& workQueue, Job* job) noexcept;
+    void put(WorkQueue& workQueue, Job const* job) noexcept;
     Job* pop(WorkQueue& workQueue) noexcept;
     Job* steal(WorkQueue& workQueue) noexcept;
 
@@ -520,7 +521,7 @@ struct ParallelForJobData {
     using JobData = ParallelForJobData;
     using size_type = uint32_t;
 
-    ParallelForJobData(size_type start, size_type count, uint8_t splits,
+    ParallelForJobData(size_type const start, size_type const count, uint8_t const splits,
             Functor functor,
             const SplitterType& splitter) noexcept
             : start(start), count(count),
@@ -604,7 +605,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
 template<size_t COUNT, size_t MAX_SPLITS = 12>
 class CountSplitter {
 public:
-    bool split(size_t splits, size_t count) const noexcept {
+    bool split(size_t const splits, size_t const count) const noexcept {
         return (splits < MAX_SPLITS && count >= COUNT * 2);
     }
 };
