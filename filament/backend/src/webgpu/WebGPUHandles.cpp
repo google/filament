@@ -903,7 +903,7 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
     const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
     const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
-    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+    const bool isSample = any(fUsage & TextureUsage::SAMPLEABLE);
 
     if (isDepth && !isColor && !isStencil) {
         return wgpu::TextureAspect::DepthOnly;
