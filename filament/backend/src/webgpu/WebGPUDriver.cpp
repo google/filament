@@ -733,6 +733,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
                     // TODO: Consider colorInfos[i].level and colorInfos[i].layer for view creation
                     // if WGPUTexture::getTextureView() isn't sufficient or needs parameters.
                     customColorViews[customColorViewCount++] = hwTexture->getTextureView();
+
                 }
             }
         }
@@ -1076,51 +1077,51 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
     desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
     desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
     desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
+
+    switch (params.filterMag) {
+        case SamplerMagFilter::NEAREST: {
+            desc.magFilter = wgpu::FilterMode::Nearest;
+            break;
+        }
+        case SamplerMagFilter::LINEAR: {
+            desc.magFilter = wgpu::FilterMode::Linear;
+            break;
+        }
+    }
+
+    switch (params.filterMin) {
+        case SamplerMinFilter::NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+            break;
+        }
+        case SamplerMinFilter::LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+            break;
+        }
+        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Nearest;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+            break;
+        }
+        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
+            desc.minFilter = wgpu::FilterMode::Linear;
+            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+            break;
+        }
+    }
     if (params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE) {
-        switch (params.filterMag) {
-            case SamplerMagFilter::NEAREST: {
-                desc.magFilter = wgpu::FilterMode::Nearest;
-                break;
-            }
-            case SamplerMagFilter::LINEAR: {
-                desc.magFilter = wgpu::FilterMode::Linear;
-                break;
-            }
-        }
-        switch (params.filterMin) {
-            case SamplerMinFilter::NEAREST: {
-                desc.minFilter = wgpu::FilterMode::Nearest;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
-                break;
-            }
-            case SamplerMinFilter::LINEAR: {
-                desc.minFilter = wgpu::FilterMode::Linear;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
-                break;
-            }
-            case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
-                desc.minFilter = wgpu::FilterMode::Nearest;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-                break;
-            }
-            case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
-                desc.minFilter = wgpu::FilterMode::Linear;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-
-                break;
-            }
-            case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
-                desc.minFilter = wgpu::FilterMode::Nearest;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
-
-                break;
-            }
-            case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
-                desc.minFilter = wgpu::FilterMode::Linear;
-                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
-                break;
-            }
-        }
         switch (params.compareFunc) {
             case SamplerCompareFunc::LE: {
                 desc.compare = wgpu::CompareFunction::LessEqual;
