@@ -20,7 +20,16 @@ from utils import execute, ArgParseImpl
 RDIFF_UPDATE_GOLDEN_STR = 'RDIFF_BRANCH'
 
 def _parse_commit(commit_str):
-  commit, author, date, _, title, *desc = commit_str.split('\n')
+  lines = commit_str.split('\n')
+  if len(lines) >= 4:
+    commit, author, date, _, title, *desc = lines
+  else:
+    print(commit_str, file=sys.stderr)
+    return (
+      lines[0],
+      lines[1],
+      '',
+    )
   commit = commit.split(' ')[1]
   title = title.strip()
 
