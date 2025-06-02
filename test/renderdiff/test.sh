@@ -16,13 +16,11 @@
 
 source `dirname $0`/src/preamble.sh
 
-GOLDEN_DIR=$(pwd)/golden_images
-
 start_ && \
     bash `dirname $0`/generate.sh && \
-    mkdir -p ${GOLDEN_DIR} && \
-    python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py --output=${GOLDEN_DIR} && \
+    python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py --output=${GOLDEN_OUTPUT_DIR} && \
     python3 ${RENDERDIFF_TEST_DIR}/src/compare.py \
-            --src=${GOLDEN_DIR} \
-            --dest=${OUTPUT_DIR} && \
+            --src=${GOLDEN_OUTPUT_DIR} \
+            --dest=${RENDER_OUTPUT_DIR} \
+            --out=${DIFF_OUTPUT_DIR} && \
     end_

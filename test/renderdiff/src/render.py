@@ -102,7 +102,7 @@ if __name__ == "__main__":
                         vk_icd=args.vk_icd)
 
   with open(f'{output_dir}/render_results.json', 'w') as f:
-    f.write(json.dumps(results))
+    f.write(json.dumps(results, indent=2))
 
   shutil.copy2(args.test, f'{output_dir}/test.json')
 
