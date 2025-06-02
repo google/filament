@@ -2525,7 +2525,12 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
             [this](size_t index) {
                 for (auto t: mTexturesWithStreamsAttached) {
                     if (t->hwStream->streamType == StreamType::NATIVE) {
-                        glGenTextures(1, &t->gl.id);
+                        if (t->externalTexture) {
+                            glGenTextures(1, &t->externalTexture->id);
+                            t->gl.id = t->externalTexture->id;
+                        } else {
+                            glGenTextures(1, &t->gl.id);
+                        }
                         mPlatform.attach(t->hwStream->stream, t->gl.id);
                         mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
                     }
@@ -3010,6 +3015,7 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     switch (hwStream->streamType) {
         case StreamType::NATIVE:
             mPlatform.attach(hwStream->stream, t->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
             break;
         case StreamType::ACQUIRED:
             break;
@@ -3038,7 +3044,12 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
             break;
     }
 
-    glGenTextures(1, &t->gl.id);
+    if (t->externalTexture) {
+        glGenTextures(1, &t->externalTexture->id);
+        t->gl.id = t->externalTexture->id;
+    } else {
+        glGenTextures(1, &t->gl.id);
+    }
 
     t->hwStream = nullptr;
 }
@@ -3062,8 +3073,14 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 
     switch (newStream->streamType) {
         case StreamType::NATIVE:
-            glGenTextures(1, &texture->gl.id);
+            if (texture->externalTexture) {
+                glGenTextures(1, &texture->externalTexture->id);
+                texture->gl.id = texture->externalTexture->id;
+            } else {
+                glGenTextures(1, &texture->gl.id);
+            }
             mPlatform.attach(newStream->stream, texture->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, texture->gl.id);
             break;
         case StreamType::ACQUIRED:
             // Just re-use the old texture id.
