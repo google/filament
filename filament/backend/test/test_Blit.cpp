@@ -302,21 +302,12 @@ TEST_F(BlitTest, ColorResolve) {
             {{ dstColorTexture }}, {}, {}));
 
     // Prep for rendering.
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.clearColor = float4(1, 1, 0, 1);
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = kSrcTexWidth;
     params.viewport.height = kSrcTexHeight;
-
-    PipelineState state = {};
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     auto ubuffer = mCleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
@@ -328,11 +319,14 @@ TEST_F(BlitTest, ColorResolve) {
     });
     shader.bindUniform<SimpleMaterialParams>(api, ubuffer);
 
-    // FIXME: on Metal this triangle is not drawn. Can't understand why.
     {
         RenderFrame frame(api);
         api.beginRenderPass(srcRenderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
     }
 
@@ -343,7 +337,7 @@ TEST_F(BlitTest, ColorResolve) {
             SamplerMagFilter::NEAREST);
 
     EXPECT_IMAGE(dstRenderTarget, getExpectations(),
-            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 0xebfac2ef));
+            ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687));
 }
 
 TEST_F(BlitTest, Blit2DTextureArray) {
@@ -499,8 +493,8 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     constexpr int kSrcTexWidth = 1024;
     constexpr int kSrcTexHeight = 1024;
     constexpr auto kSrcTexFormat = TextureFormat::RGBA8;
-    constexpr int kDstTexWidth = 512;
-    constexpr int kDstTexHeight = 512;
+    const uint32_t kDstTexWidth = screenWidth();
+    const uint32_t kDstTexHeight = screenHeight();
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current.

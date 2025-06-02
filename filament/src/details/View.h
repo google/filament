@@ -178,11 +178,11 @@ public:
             ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
     void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMapping(bool highPrecision) const noexcept;
+    void prepareShadowMapping(FEngine const& engine, bool highPrecision) const noexcept;
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
     void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
-    void unbindSamplers(backend::DriverApi& driver) noexcept;
+    void unbindSamplers(FEngine& engine) noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -440,7 +440,9 @@ public:
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
             Frustum const& frustum, size_t bit) noexcept;
 
-    ColorPassDescriptorSet& getColorPassDescriptorSet() noexcept { return mColorPassDescriptorSet; }
+    ColorPassDescriptorSet& getColorPassDescriptorSet() const noexcept {
+            return mColorPassDescriptorSet[mShadowType == ShadowType::PCF ? 0 : 1];
+    }
 
     // Returns the frame history FIFO. This is typically used by the FrameGraph to access
     // previous frame data.
@@ -587,7 +589,7 @@ private:
     RenderQuality mRenderQuality;
 
     mutable TypedUniformBuffer<PerViewUib> mUniforms;
-    mutable ColorPassDescriptorSet mColorPassDescriptorSet;
+    mutable ColorPassDescriptorSet mColorPassDescriptorSet[2];
 
     mutable FrameHistory mFrameHistory{};
 

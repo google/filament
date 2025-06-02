@@ -8,7 +8,7 @@
 
 void main() {
 #if defined(FILAMENT_HAS_FEATURE_INSTANCING)
-#   if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT)
+#   if defined(TARGET_METAL_ENVIRONMENT) || defined(TARGET_VULKAN_ENVIRONMENT) || defined(TARGET_WEBGPU_ENVIRONMENT)
     instance_index = gl_InstanceIndex;
 #   else
     // PowerVR drivers don't initialize gl_InstanceID correctly if it's assigned to the varying

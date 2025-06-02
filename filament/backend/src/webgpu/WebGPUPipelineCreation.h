@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUPIPELINECREATION_H
 
 #include <cstdint>
+#include <vector>
 
 namespace wgpu {
 class Device;
@@ -38,8 +39,9 @@ class WGPUProgram;
 
 [[nodiscard]] wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const&,
         WGPUProgram const&, WGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
-        RasterState const&, StencilState const&, PolygonOffset const&, PrimitiveType,
-        wgpu::TextureFormat colorFormat, wgpu::TextureFormat depthFormat);
+        RasterState const&, StencilState const&, PolygonOffset const&, PrimitiveType primitiveType,
+        std::vector<wgpu::TextureFormat> const& colorFormats,
+        wgpu::TextureFormat depthFormat, uint8_t samplesCount);
 
 }// namespace filament::backend
 

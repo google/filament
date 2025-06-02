@@ -14,23 +14,21 @@
  * limitations under the License.
  */
 
-// Note: The overhead of SYSTRACE_TAG_JOBSYSTEM is not negligible especially with parallel_for().
-#ifndef SYSTRACE_TAG
-//#define SYSTRACE_TAG SYSTRACE_TAG_JOBSYSTEM
-#define SYSTRACE_TAG SYSTRACE_TAG_NEVER
-#endif
+// Note: The overhead of TRACING is not negligible especially with parallel_for().
+#define FILAMENT_TRACING_ENABLED false
 
-// when SYSTRACE_TAG_JOBSYSTEM is used, enables even heavier systraces
-#define HEAVY_SYSTRACE  0
+// when FILAMENT_TRACING_ENABLED is true, enables even heavier tracing
+#define HEAVY_TRACING  0
 
 #include <utils/JobSystem.h>
+
+#include <private/utils/Tracing.h>
 
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 
 #include <algorithm>
 #include <atomic>
@@ -80,14 +78,14 @@
 #    define gettid() syscall(SYS_gettid)
 #endif
 
-#if HEAVY_SYSTRACE
-#   define HEAVY_SYSTRACE_CALL()            SYSTRACE_CALL()
-#   define HEAVY_SYSTRACE_NAME(name)        SYSTRACE_NAME(name)
-#   define HEAVY_SYSTRACE_VALUE32(name, v)  SYSTRACE_VALUE32(name, v)
+#if HEAVY_TRACING
+#   define HEAVY_FILAMENT_TRACING_CALL(tag)              FILAMENT_TRACING_CALL(tag)
+#   define HEAVY_FILAMENT_TRACING_NAME(tag, name)        FILAMENT_TRACING_NAME(tag, name)
+#   define HEAVY_FILAMENT_TRACING_VALUE(tag, name, v)    FILAMENT_TRACING_VALUE(tag, name, v)
 #else
-#   define HEAVY_SYSTRACE_CALL()
-#   define HEAVY_SYSTRACE_NAME(name)
-#   define HEAVY_SYSTRACE_VALUE32(name, v)
+#   define HEAVY_FILAMENT_TRACING_CALL(tag)
+#   define HEAVY_FILAMENT_TRACING_NAME(tag, name)
+#   define HEAVY_FILAMENT_TRACING_VALUE(tag, name, v)
 #endif
 
 namespace utils {
@@ -174,7 +172,7 @@ JobSystem::JobSystem(const size_t userThreadCount, const size_t adoptableThreads
     : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
       mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
 {
-    SYSTRACE_ENABLE();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     unsigned int threadPoolCount = userThreadCount;
     if (threadPoolCount == 0) {
@@ -246,7 +244,7 @@ void JobSystem::decRef(Job const* job) noexcept {
     // Similarly, we need to guarantee that no read/write are reordered before the last decref,
     // or some other thread could see a destroyed object before the ref-count is 0. This is done
     // with memory_order_acquire.
-    auto c = job->refCount.fetch_sub(1, std::memory_order_acq_rel);
+    auto const c = job->refCount.fetch_sub(1, std::memory_order_acq_rel);
     assert(c > 0);
     if (c == 1) {
         // This was the last reference, it's safe to destroy the job.
@@ -256,7 +254,7 @@ void JobSystem::decRef(Job const* job) noexcept {
 
 void JobSystem::requestExit() noexcept {
     mExitRequested.store(true);
-    std::lock_guard<Mutex> const lock(mWaiterLock);
+    std::lock_guard const lock(mWaiterLock);
     mWaiterCondition.notify_all();
 }
 
@@ -274,12 +272,12 @@ inline bool JobSystem::hasJobCompleted(Job const* job) noexcept {
 }
 
 inline void JobSystem::wait(std::unique_lock<Mutex>& lock) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterCondition.wait(lock);
 }
 
 inline uint32_t JobSystem::wait(std::unique_lock<Mutex>& lock, Job* const job) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     // signal we are waiting
 
     if (hasActiveJobs() || exitRequested()) {
@@ -304,7 +302,7 @@ inline uint32_t JobSystem::wait(std::unique_lock<Mutex>& lock, Job* const job) n
 UTILS_NOINLINE
 void JobSystem::wakeAll() noexcept {
     // wakeAll() is called when a job finishes (to wake up any thread that might be waiting on it)
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_all() happens
     // either before the condition is checked, or after the condition variable sleeps.
@@ -315,7 +313,7 @@ void JobSystem::wakeAll() noexcept {
 
 void JobSystem::wakeOne() noexcept {
     // wakeOne() is called when a new job is added to a queue
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     mWaiterLock.lock();
     // this empty critical section is needed -- it guarantees that notify_one() happens
     // either before the condition is checked, or after the condition variable sleeps.
@@ -324,9 +322,9 @@ void JobSystem::wakeOne() noexcept {
     mWaiterCondition.notify_one();
 }
 
-inline JobSystem::ThreadState& JobSystem::getState() noexcept {
-    std::lock_guard<Mutex> const lock(mThreadMapLock);
-    auto iter = mThreadMap.find(std::this_thread::get_id());
+inline JobSystem::ThreadState& JobSystem::getState() {
+    std::lock_guard const lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(std::this_thread::get_id());
     FILAMENT_CHECK_PRECONDITION(iter != mThreadMap.end()) << "This thread has not been adopted.";
     return *iter->second;
 }
@@ -335,10 +333,11 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
     return mJobPool.make<Job>();
 }
 
-void JobSystem::put(WorkQueue& workQueue, Job* job) noexcept {
+void JobSystem::put(WorkQueue& workQueue, Job const* job) noexcept {
     assert(job);
+    assert(job >= mJobStorageBase && job < mJobStorageBase + MAX_JOB_COUNT);
+
     size_t const index = job - mJobStorageBase;
-    assert(index >= 0 && index < MAX_JOB_COUNT);
 
     // put the job into the queue
     workQueue.push(uint16_t(index + 1));
@@ -397,7 +396,7 @@ inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(ThreadState& state
 }
 
 JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     Job* job = nullptr;
     do {
         ThreadState* const stateToStealFrom = getStateToStealFrom(state);
@@ -411,7 +410,7 @@ JobSystem::Job* JobSystem::steal(ThreadState& state) noexcept {
 }
 
 bool JobSystem::execute(ThreadState& state) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     Job* job = pop(state.workQueue);
 
@@ -427,7 +426,7 @@ bool JobSystem::execute(ThreadState& state) noexcept {
     if (UTILS_LIKELY(job)) {
         assert((job->runningJobCount.load(std::memory_order_relaxed) & JOB_COUNT_MASK) >= 1);
         if (UTILS_LIKELY(job->function)) {
-            HEAVY_SYSTRACE_NAME("job->function");
+            HEAVY_FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_JOBSYSTEM, "job->function");
             job->id = std::distance(mThreadStates.data(), &state);
             job->function(job->storage, *this, job);
             job->id = invalidThreadId;
@@ -437,12 +436,12 @@ bool JobSystem::execute(ThreadState& state) noexcept {
     return job != nullptr;
 }
 
-void JobSystem::loop(ThreadState* state) noexcept {
+void JobSystem::loop(ThreadState* state) {
     setThreadName("JobSystem::loop");
     setThreadPriority(Priority::DISPLAY);
 
     // record our work queue
-    std::unique_lock<Mutex> lock(mThreadMapLock);
+    std::unique_lock lock(mThreadMapLock);
     bool const inserted = mThreadMap.emplace(std::this_thread::get_id(), state).second;
     lock.unlock();
 
@@ -451,7 +450,7 @@ void JobSystem::loop(ThreadState* state) noexcept {
     // run our main loop...
     do {
         if (!execute(*state)) {
-            std::unique_lock<Mutex> lock(mWaiterLock);
+            std::unique_lock lock(mWaiterLock);
             while (!exitRequested() && !hasActiveJobs()) {
                 wait(lock);
             }
@@ -461,7 +460,7 @@ void JobSystem::loop(ThreadState* state) noexcept {
 
 UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     bool notify = false;
 
@@ -541,7 +540,7 @@ void JobSystem::release(Job*& job) noexcept {
 }
 
 void JobSystem::run(Job*& job) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     ThreadState& state(getState());
 
@@ -552,7 +551,7 @@ void JobSystem::run(Job*& job) noexcept {
 }
 
 void JobSystem::run(Job*& job, uint8_t id) noexcept {
-    HEAVY_SYSTRACE_CALL();
+    HEAVY_FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     ThreadState& state = mThreadStates[id];
     assert_invariant(&state == &getState());
@@ -570,7 +569,7 @@ JobSystem::Job* JobSystem::runAndRetain(Job* job) noexcept {
 }
 
 void JobSystem::waitAndRelease(Job*& job) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
 
     assert(job);
     assert(job->refCount.load(std::memory_order_relaxed) >= 1);
@@ -592,7 +591,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
             // this could take time however, so we will wait with a condition, and
             // continue to handle more jobs, as they get added.
 
-            std::unique_lock<Mutex> lock(mWaiterLock);
+            std::unique_lock lock(mWaiterLock);
             uint32_t const runningJobCount = wait(lock, job);
             // we could be waking up because either:
             // - the job we're waiting on has completed
@@ -619,7 +618,7 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
 }
 
 void JobSystem::runAndWait(Job*& job) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_JOBSYSTEM);
     runAndRetain(job);
     waitAndRelease(job);
 }
@@ -627,9 +626,9 @@ void JobSystem::runAndWait(Job*& job) noexcept {
 void JobSystem::adopt() {
     const auto tid = std::this_thread::get_id();
 
-    std::unique_lock<Mutex> lock(mThreadMapLock);
-    auto iter = mThreadMap.find(tid);
-    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    std::unique_lock lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(tid);
+    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     lock.unlock();
 
     if (state) {
@@ -660,9 +659,9 @@ void JobSystem::adopt() {
 
 void JobSystem::emancipate() {
     const auto tid = std::this_thread::get_id();
-    std::unique_lock<Mutex> const lock(mThreadMapLock);
-    auto iter = mThreadMap.find(tid);
-    ThreadState* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
+    std::unique_lock const lock(mThreadMapLock);
+    auto const iter = mThreadMap.find(tid);
+    ThreadState const* const state = iter ==  mThreadMap.end() ? nullptr : iter->second;
     FILAMENT_CHECK_PRECONDITION(state) << "this thread is not an adopted thread";
     FILAMENT_CHECK_PRECONDITION(state->js == this) << "this thread is not adopted by us";
     mThreadMap.erase(iter);

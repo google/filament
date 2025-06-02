@@ -57,9 +57,12 @@ namespace glslang {
 //
 // Link-time error emitter.
 //
-void TIntermediate::error(TInfoSink& infoSink, const char* message, EShLanguage unitStage)
+void TIntermediate::error(TInfoSink& infoSink, const TSourceLoc* loc, EShMessages messages, const char* message,
+                          EShLanguage unitStage)
 {
     infoSink.info.prefix(EPrefixError);
+    if (loc)
+        infoSink.info.location(*loc, messages & EShMsgAbsolutePath, messages & EShMsgDisplayErrorColumn);
     if (unitStage == EShLangCount)
         infoSink.info << "Linking " << StageName(language) << " stage: " << message << "\n";
     else if (language == EShLangCount)
@@ -71,9 +74,12 @@ void TIntermediate::error(TInfoSink& infoSink, const char* message, EShLanguage 
 }
 
 // Link-time warning.
-void TIntermediate::warn(TInfoSink& infoSink, const char* message, EShLanguage unitStage)
+void TIntermediate::warn(TInfoSink& infoSink, const TSourceLoc* loc, EShMessages messages, const char* message,
+                         EShLanguage unitStage)
 {
     infoSink.info.prefix(EPrefixWarning);
+    if (loc)
+        infoSink.info.location(*loc, messages & EShMsgAbsolutePath, messages & EShMsgDisplayErrorColumn);
     if (unitStage == EShLangCount)
         infoSink.info << "Linking " << StageName(language) << " stage: " << message << "\n";
     else if (language == EShLangCount)
@@ -143,10 +149,43 @@ static bool isSameSymbol(TIntermSymbol* symbol1, TIntermSymbol* symbol2) {
         return true;
     return false;
 }
+
+//
+// merge implicit array sizes for uniform/buffer objects
+//
+void TIntermediate::mergeImplicitArraySizes(TInfoSink&, TIntermediate& unit) {
+    if (unit.treeRoot == nullptr || treeRoot == nullptr)
+        return;
+
+    // Get the linker-object lists
+    TIntermSequence& linkerObjects = findLinkerObjects()->getSequence();
+    TIntermSequence unitLinkerObjects = unit.findLinkerObjects()->getSequence();
+
+    // filter unitLinkerObjects to only contain uniforms
+    auto end = std::remove_if(unitLinkerObjects.begin(), unitLinkerObjects.end(),
+        [](TIntermNode* node) {return node->getAsSymbolNode()->getQualifier().storage != EvqUniform &&
+                                      node->getAsSymbolNode()->getQualifier().storage != EvqBuffer; });
+    unitLinkerObjects.resize(end - unitLinkerObjects.begin());
+
+    std::size_t initialNumLinkerObjects = linkerObjects.size();
+    for (unsigned int unitLinkObj = 0; unitLinkObj < unitLinkerObjects.size(); ++unitLinkObj) {
+        for (std::size_t linkObj = 0; linkObj < initialNumLinkerObjects; ++linkObj) {
+            TIntermSymbol* symbol = linkerObjects[linkObj]->getAsSymbolNode();
+            TIntermSymbol* unitSymbol = unitLinkerObjects[unitLinkObj]->getAsSymbolNode();
+            assert(symbol && unitSymbol);
+
+            if (isSameSymbol(symbol, unitSymbol)) {
+                // Update implicit array sizes
+                mergeImplicitArraySizes(symbol->getWritableType(), unitSymbol->getType());
+            }
+        }
+    }
+}
+
 //
 // do error checking on the shader boundary in / out vars
 //
-void TIntermediate::checkStageIO(TInfoSink& infoSink, TIntermediate& unit) {
+void TIntermediate::checkStageIO(TInfoSink& infoSink, TIntermediate& unit, EShMessages messages) {
     if (unit.treeRoot == nullptr || treeRoot == nullptr)
         return;
 
@@ -167,7 +206,171 @@ void TIntermediate::checkStageIO(TInfoSink& infoSink, TIntermediate& unit) {
     // do matching and error checking
     mergeLinkerObjects(infoSink, linkerObjects, unitLinkerObjects, unit.getStage());
 
-    // TODO: final check; make sure that any statically used `in` have matching `out` written to
+    if ((messages & EShMsgValidateCrossStageIO) == 0)
+        return;
+
+    // The OpenGL Shading Language, Version 4.60.8 (https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf)
+    // 4.3.4 Input Variables
+    // Only the input variables that are statically read need to be written by the previous stage; it is
+    // allowed to have superfluous declarations of input variables. This is shown in the following table.
+    // +------------------------------------------------------------------------------------------------+
+    // | Treatment of Mismatched Input        | Consuming Shader (input variables)                      |
+    // | Variables                            |---------------------------------------------------------|
+    // |                                      | No          | Declared but no | Declared and Static Use |
+    // |                                      | Declaration | Static Use      |                         |
+    // |--------------------------------------+-------------+-----------------+-------------------------|
+    // | Generating Shader  | No Declaration  | Allowed     | Allowed         | Link-Time Error         |
+    // | (output variables) |-----------------+-------------+-----------------+-------------------------|
+    // |                    | Declared but no | Allowed     | Allowed         | Allowed (values are     |
+    // |                    | Static Use      |             |                 | undefined)              |
+    // |                    |-----------------+-------------+-----------------+-------------------------|
+    // |                    | Declared and    | Allowed     | Allowed         | Allowed (values are     |
+    // |                    | Static Use      |             |                 | potentially undefined)  |
+    // +------------------------------------------------------------------------------------------------+
+    // Consumption errors are based on static use only. Compilation may generate a warning, but not an
+    // error, for any dynamic use the compiler can deduce that might cause consumption of undefined values.
+
+    // TODO: implement support for geometry passthrough
+    if (getGeoPassthroughEXT()) {
+        unit.warn(infoSink, "GL_NV_geometry_shader_passthrough is enabled, skipping cross-stage IO validation",
+                  getStage());
+        return;
+    }
+
+    class TIOTraverser : public TLiveTraverser {
+    public:
+        TIOTraverser(TIntermediate& i, bool all, TIntermSequence& sequence, TStorageQualifier storage)
+            : TLiveTraverser(i, all, true, false, false), sequence(sequence), storage(storage)
+        {
+        }
+
+        virtual void visitSymbol(TIntermSymbol* symbol)
+        {
+            if (symbol->getQualifier().storage == storage)
+                sequence.push_back(symbol);
+        }
+
+    private:
+        TIntermSequence& sequence;
+        TStorageQualifier storage;
+    };
+
+    // live symbols only
+    TIntermSequence unitLiveInputs;
+
+    TIOTraverser unitTraverser(unit, false, unitLiveInputs, EvqVaryingIn);
+    unitTraverser.pushFunction(unit.getEntryPointMangledName().c_str());
+    while (! unitTraverser.destinations.empty()) {
+        TIntermNode* destination = unitTraverser.destinations.back();
+        unitTraverser.destinations.pop_back();
+        destination->traverse(&unitTraverser);
+    }
+
+    // all symbols
+    TIntermSequence allOutputs;
+
+    TIOTraverser traverser(*this, true, allOutputs, EvqVaryingOut);
+    getTreeRoot()->traverse(&traverser);
+
+    std::unordered_set<int> outputLocations;
+    for (auto& output : allOutputs) {
+        if (output->getAsSymbolNode()->getBasicType() == EbtBlock) {
+            int lastLocation = -1;
+            if (output->getAsSymbolNode()->getQualifier().hasLocation())
+                lastLocation = output->getAsSymbolNode()->getQualifier().layoutLocation;
+            const TTypeList* members = output->getAsSymbolNode()->getType().getStruct();
+            for (auto& member : *members) {
+                int location = lastLocation;
+                if (member.type->getQualifier().hasLocation())
+                    location = member.type->getQualifier().layoutLocation;
+                if (location != -1) {
+                    int locationSize = TIntermediate::computeTypeLocationSize(*member.type, getStage());
+                    for (int i = 0; i < locationSize; ++i)
+                        outputLocations.insert(location + i);
+                    lastLocation = location + locationSize;
+                }
+            }
+        } else {
+            int locationSize = TIntermediate::computeTypeLocationSize(output->getAsSymbolNode()->getType(), getStage());
+            for (int i = 0; i < locationSize; ++i)
+                outputLocations.insert(output->getAsSymbolNode()->getQualifier().layoutLocation + i);
+        }
+    }
+
+    // remove unitStage inputs with matching outputs in the current stage
+    auto liveEnd = std::remove_if(
+        unitLiveInputs.begin(), unitLiveInputs.end(), [this, &allOutputs, &outputLocations](TIntermNode* input) {
+            // ignore built-ins
+            if (input->getAsSymbolNode()->getAccessName().compare(0, 3, "gl_") == 0)
+                return true;
+            // try to match by location
+            if (input->getAsSymbolNode()->getQualifier().hasLocation() &&
+                outputLocations.find(input->getAsSymbolNode()->getQualifier().layoutLocation) != outputLocations.end())
+                return true;
+            if (input->getAsSymbolNode()->getBasicType() == EbtBlock) {
+                int lastLocation = -1;
+                if (input->getAsSymbolNode()->getQualifier().hasLocation())
+                    lastLocation = input->getAsSymbolNode()->getQualifier().layoutLocation;
+                const TTypeList* members = input->getAsSymbolNode()->getType().getStruct();
+                for (auto& member : *members) {
+                    int location = lastLocation;
+                    if (member.type->getQualifier().hasLocation())
+                        location = member.type->getQualifier().layoutLocation;
+                    if (location != -1) {
+                        int locationSize = TIntermediate::computeTypeLocationSize(*member.type, getStage());
+                        for (int i = 0; i < locationSize; ++i)
+                            if (outputLocations.find(location + i) != outputLocations.end())
+                                return true;
+                        lastLocation = location + locationSize;
+                    }
+                }
+            }
+            // otherwise, try to match by name
+            return std::any_of(allOutputs.begin(), allOutputs.end(), [input](TIntermNode* output) {
+                return output->getAsSymbolNode()->getAccessName() == input->getAsSymbolNode()->getAccessName();
+            });
+        });
+    unitLiveInputs.resize(liveEnd - unitLiveInputs.begin());
+
+    // check remaining loose unitStage inputs for a matching output block member
+    liveEnd = std::remove_if(unitLiveInputs.begin(), unitLiveInputs.end(), [&allOutputs](TIntermNode* input) {
+        return std::any_of(allOutputs.begin(), allOutputs.end(), [input](TIntermNode* output) {
+            if (output->getAsSymbolNode()->getBasicType() != EbtBlock)
+                return false;
+            const TTypeList* members = output->getAsSymbolNode()->getType().getStruct();
+            return std::any_of(members->begin(), members->end(), [input](TTypeLoc type) {
+                return type.type->getFieldName() == input->getAsSymbolNode()->getName();
+            });
+        });
+    });
+    unitLiveInputs.resize(liveEnd - unitLiveInputs.begin());
+
+    // finally, check remaining unitStage block inputs for a matching loose output
+    liveEnd = std::remove_if(
+        unitLiveInputs.begin(), unitLiveInputs.end(), [&allOutputs](TIntermNode* input) {
+            if (input->getAsSymbolNode()->getBasicType() != EbtBlock)
+                return false;
+            // liveness isn't tracked per member so finding any one live member is the best we can do
+            const TTypeList* members = input->getAsSymbolNode()->getType().getStruct();
+            return std::any_of(members->begin(), members->end(), [allOutputs](TTypeLoc type) {
+                return std::any_of(allOutputs.begin(), allOutputs.end(), [&type](TIntermNode* output) {
+                    return type.type->getFieldName() == output->getAsSymbolNode()->getName();
+                });
+            });
+        });
+    unitLiveInputs.resize(liveEnd - unitLiveInputs.begin());
+
+    // any remaining unitStage inputs have no matching output
+    std::for_each(unitLiveInputs.begin(), unitLiveInputs.end(), [&](TIntermNode* input) {
+        unit.error(infoSink, &input->getLoc(), messages,
+                   "Preceding stage has no matching declaration for statically used input:", getStage());
+        infoSink.info << "    "
+                      << input->getAsSymbolNode()->getType().getCompleteString(
+                             true, true, false, true, input->getAsSymbolNode()->getAccessName())
+                      << "\n";
+    });
+
+    // TODO: warn about statically read inputs with outputs declared but not written to
 }
 
 void TIntermediate::optimizeStageIO(TInfoSink&, TIntermediate& unit)
@@ -859,11 +1062,32 @@ void TIntermediate::mergeLinkerObjects(TInfoSink& infoSink, TIntermSequence& lin
                 }
                 else if (symbol->getWritableType().isImplicitlySizedArray() && unitSymbol->getType().isSizedArray()) {
                     if (symbol->getWritableType().getImplicitArraySize() > unitSymbol->getType().getOuterArraySize())
-                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.");
+                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.", unitStage);
                 }
                 else if (unitSymbol->getType().isImplicitlySizedArray() && symbol->getWritableType().isSizedArray()) {
                     if (unitSymbol->getType().getImplicitArraySize() > symbol->getWritableType().getOuterArraySize())
-                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.");
+                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.", unitStage);
+                }
+
+                if (symbol->getType().isStruct() && unitSymbol->getType().isStruct() &&
+                    symbol->getType().getStruct()->size() == unitSymbol->getType().getStruct()->size()) {
+                    for (int i = 0; i < (int)symbol->getType().getStruct()->size(); ++i) {
+                        auto& type = (*symbol->getWritableType().getStruct())[i];
+                        auto& unitType = (*unitSymbol->getWritableType().getStruct())[i];
+
+                        if (type.type->isImplicitlySizedArray() && unitType.type->isImplicitlySizedArray()) {
+                            if (unitType.type->getImplicitArraySize() > type.type->getImplicitArraySize())
+                                type.type->updateImplicitArraySize(unitType.type->getImplicitArraySize());
+                        }
+                        else if (type.type->isImplicitlySizedArray() && unitType.type->isSizedArray()) {
+                            if (type.type->getImplicitArraySize() > unitType.type->getOuterArraySize())
+                                error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.", unitStage);
+                        }
+                        else if (type.type->isSizedArray() && unitType.type->isImplicitlySizedArray()) {
+                            if (type.type->getOuterArraySize() < unitType.type->getImplicitArraySize())
+                                error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.", unitStage);
+                        }
+                    }
                 }
 
                 // Update implicit array sizes
@@ -1316,7 +1540,8 @@ void TIntermediate::sharedBlockCheck(TInfoSink& infoSink)
 // Do final link-time error checking of a complete (merged) intermediate representation.
 // (Much error checking was done during merging).
 //
-// Also, lock in defaults of things not set, including array sizes.
+// Also, lock in defaults of things not set.
+// Defer adopting implicit array sizes to later, after all stages are merged.
 //
 void TIntermediate::finalCheck(TInfoSink& infoSink, bool keepUncalled)
 {
@@ -1477,23 +1702,6 @@ void TIntermediate::finalCheck(TInfoSink& infoSink, bool keepUncalled)
         error(infoSink, "Unknown Stage.");
         break;
     }
-
-    // Process the tree for any node-specific work.
-    class TFinalLinkTraverser : public TIntermTraverser {
-    public:
-        TFinalLinkTraverser() { }
-        virtual ~TFinalLinkTraverser() { }
-
-        virtual void visitSymbol(TIntermSymbol* symbol)
-        {
-            // Implicitly size arrays.
-            // If an unsized array is left as unsized, it effectively
-            // becomes run-time sized.
-            symbol->getWritableType().adoptImplicitArraySizes(false);
-        }
-    } finalLinkTraverser;
-
-    treeRoot->traverse(&finalLinkTraverser);
 }
 
 //
@@ -2176,6 +2384,7 @@ int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size)
     case EbtUint64:
     case EbtDouble:  size = 8; return 8;
     case EbtFloat16: size = 2; return 2;
+    case EbtBFloat16: size = 2; return 2;
     case EbtInt8:
     case EbtUint8:   size = 1; return 1;
     case EbtInt16:

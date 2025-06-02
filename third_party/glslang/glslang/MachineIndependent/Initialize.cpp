@@ -3866,6 +3866,31 @@ void TBuiltIns::initialize(int version, EProfile profile, const SpvVersion& spvV
             "bvec3 notEqual(f16vec3, f16vec3);"
             "bvec4 notEqual(f16vec4, f16vec4);"
 
+            "bfloat16_t dot(bfloat16_t, bfloat16_t);"
+            "bfloat16_t dot(bf16vec2,   bf16vec2);"
+            "bfloat16_t dot(bf16vec3,   bf16vec3);"
+            "bfloat16_t dot(bf16vec4,   bf16vec4);"
+
+            "int16_t  bfloat16BitsToIntEXT(bfloat16_t value);"
+            "i16vec2  bfloat16BitsToIntEXT(bf16vec2 value);"
+            "i16vec3  bfloat16BitsToIntEXT(bf16vec3 value);"
+            "i16vec4  bfloat16BitsToIntEXT(bf16vec4 value);"
+
+            "uint16_t bfloat16BitsToUintEXT(bfloat16_t value);"
+            "u16vec2  bfloat16BitsToUintEXT(bf16vec2 value);"
+            "u16vec3  bfloat16BitsToUintEXT(bf16vec3 value);"
+            "u16vec4  bfloat16BitsToUintEXT(bf16vec4 value);"
+
+            "bfloat16_t intBitsToBFloat16EXT(int16_t value);"
+            "bf16vec2   intBitsToBFloat16EXT(i16vec2 value);"
+            "bf16vec3   intBitsToBFloat16EXT(i16vec3 value);"
+            "bf16vec4   intBitsToBFloat16EXT(i16vec4 value);"
+
+            "bfloat16_t uintBitsToBFloat16EXT(uint16_t value);"
+            "bf16vec2   uintBitsToBFloat16EXT(u16vec2 value);"
+            "bf16vec3   uintBitsToBFloat16EXT(u16vec3 value);"
+            "bf16vec4   uintBitsToBFloat16EXT(u16vec4 value);"
+
             "\n");
     }
 
@@ -4618,6 +4643,7 @@ void TBuiltIns::initialize(int version, EProfile profile, const SpvVersion& spvV
             {
                 "float", "vec2", "vec4",
                 "float16_t", "f16vec2", "f16vec4",
+                "bfloat16_t", "bf16vec2", "bf16vec4",
                 "double", "dvec2", "dvec4",
                 "int8_t", "i8vec2", "i8vec4",
                 "int16_t", "i16vec2", "i16vec4",
@@ -9498,6 +9524,14 @@ void TBuiltIns::identifyBuiltIns(int version, EProfile profile, const SpvVersion
             symbolTable.setFunctionExtensions("dotAccSatEXT", 1, &E_GL_EXT_integer_dot_product);
             symbolTable.setFunctionExtensions("dotPacked4x8AccSatEXT", 1, &E_GL_EXT_integer_dot_product);
         }
+
+        {
+            symbolTable.setFunctionExtensions("bfloat16BitsToIntEXT", 1, &E_GL_EXT_bfloat16);
+            symbolTable.setFunctionExtensions("bfloat16BitsToUintEXT", 1, &E_GL_EXT_bfloat16);
+            symbolTable.setFunctionExtensions("intBitsToBFloat16EXT", 1, &E_GL_EXT_bfloat16);
+            symbolTable.setFunctionExtensions("uintBitsToBFloat16EXT", 1, &E_GL_EXT_bfloat16);
+        }
+
         break;
 
     case EShLangRayGen:
@@ -10464,6 +10498,15 @@ void TBuiltIns::identifyBuiltIns(int version, EProfile profile, const SpvVersion
             symbolTable.relateToOperator("dotPacked4x8EXT", EOpDotPackedEXT);
             symbolTable.relateToOperator("dotAccSatEXT", EOpDotAccSatEXT);
             symbolTable.relateToOperator("dotPacked4x8AccSatEXT", EOpDotPackedAccSatEXT);
+        }
+
+        // GL_EXT_bfloat16
+        if ((profile == EEsProfile && version >= 320) ||
+            (profile != EEsProfile && version >= 450)) {
+            symbolTable.relateToOperator("bfloat16BitsToIntEXT",  EOpFloatBitsToInt);
+            symbolTable.relateToOperator("bfloat16BitsToUintEXT", EOpFloatBitsToUint);
+            symbolTable.relateToOperator("intBitsToBFloat16EXT",  EOpIntBitsToFloat);
+            symbolTable.relateToOperator("uintBitsToBFloat16EXT", EOpUintBitsToFloat);
         }
 
         // GL_KHR_shader_subgroup

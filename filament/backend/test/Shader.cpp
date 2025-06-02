@@ -56,26 +56,35 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
     mProgram = cleanup.add(api.createProgram(std::move(prog)));
 
     if (!kLayouts.empty()) {
-        mDescriptorSetLayout =
-                cleanup.add(api.createDescriptorSetLayout(DescriptorSetLayout{ .bindings = kLayouts }));
+        mDescriptorSetLayout = cleanup.add(
+                api.createDescriptorSetLayout(DescriptorSetLayout{ .bindings = kLayouts }));
     }
 }
 
-filament::backend::DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {
+DescriptorSetHandle Shader::createDescriptorSet(DriverApi& api) const {
     return mCleanup.add(api.createDescriptorSet(mDescriptorSetLayout));
 }
 
-filament::backend::ProgramHandle Shader::getProgram() const {
+ProgramHandle Shader::getProgram() const {
     assert(mProgram);
     EXPECT_THAT(mProgram, ::testing::IsTrue())
                         << "Shader program accessed despite being null.";
     return mProgram;
 }
 
-filament::backend::DescriptorSetLayoutHandle Shader::getDescriptorSetLayout() const {
+DescriptorSetLayoutHandle Shader::getDescriptorSetLayout() const {
     EXPECT_THAT(mDescriptorSetLayout, ::testing::IsTrue())
             << "Shader descriptor set layout accessed despite being null.";
     return mDescriptorSetLayout;
+}
+
+void Shader::addProgramToPipelineState(PipelineState& state) const {
+    state.program = getProgram();
+    // In case another shader was set first, clear the set layout and then set this shader's values.
+    state.pipelineLayout.setLayout = PipelineLayout::SetLayout();
+    if (mDescriptorSetLayout) {
+        state.pipelineLayout.setLayout[0] = { getDescriptorSetLayout() };
+    }
 }
 
 } // namespace test

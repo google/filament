@@ -261,6 +261,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WGPUProgram.cpp
@@ -289,12 +290,6 @@ endif()
 if (ANDROID)
     list(APPEND SRCS src/BackendUtilsAndroid.cpp)
 endif()
-
-# ==================================================================================================
-# Definitions
-# ==================================================================================================
-# "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
-add_definitions(-DSYSTRACE_TAG=2 )
 
 # ==================================================================================================
 # Includes & target definition

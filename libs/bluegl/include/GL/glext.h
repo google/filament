@@ -11125,6 +11125,14 @@ GLAPI void APIENTRY glFramebufferTextureMultiviewOVR (GLenum target, GLenum atta
 #define GL_OVR_multiview2 1
 #endif /* GL_OVR_multiview2 */
 
+#ifndef GL_OVR_multiview_multisampled_render_to_texture
+#define GL_OVR_multiview_multisampled_render_to_texture 1
+typedef void (APIENTRYP PFNGLFRAMEBUFFERTEXTUREMULTISAMPLEMULTIVIEWOVRPROC) (GLenum target, GLenum attachment, GLuint texture, GLint level, GLsizei samples, GLint baseViewIndex, GLsizei numViews);
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glFramebufferTextureMultisampleMultiviewOVR (GLenum target, GLenum attachment, GLuint texture, GLint level, GLsizei samples, GLint baseViewIndex, GLsizei numViews);
+#endif
+#endif /* GL_OVR_multiview_multisampled_render_to_texture */
+
 #ifndef GL_PGI_misc_hints
 #define GL_PGI_misc_hints 1
 #define GL_PREFER_DOUBLEBUFFER_HINT_PGI   0x1A1F8

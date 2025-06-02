@@ -135,7 +135,7 @@ static constexpr const std::string_view kNativeWindowInvalidMsg =
 
 bool PlatformEGLAndroid::makeCurrent(ContextType type,
         SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
 
     // fast & safe path
     if (UTILS_LIKELY(!mAssertNativeWindowIsValid)) {
@@ -255,6 +255,7 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareB
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
         auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
     }

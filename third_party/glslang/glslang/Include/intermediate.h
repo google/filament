@@ -611,6 +611,10 @@ enum TOperator {
     EOpConstructF16Mat4x2,
     EOpConstructF16Mat4x3,
     EOpConstructF16Mat4x4,
+    EOpConstructBFloat16,
+    EOpConstructBF16Vec2,
+    EOpConstructBF16Vec3,
+    EOpConstructBF16Vec4,
     EOpConstructStruct,
     EOpConstructTextureSampler,
     EOpConstructNonuniform,     // expected to be transformed away, not present in final AST

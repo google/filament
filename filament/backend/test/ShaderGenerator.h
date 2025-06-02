@@ -48,6 +48,10 @@ public:
 
     filament::backend::Program getProgram(filament::backend::DriverApi&) noexcept;
 
+    using PushConstants = utils::FixedCapacityVector<filament::backend::Program::PushConstant>;
+    filament::backend::Program getProgramWithPushConstants(filament::backend::DriverApi&,
+            std::array<PushConstants, filament::backend::Program::SHADER_TYPE_COUNT> constants);
+
 private:
     using ShaderStage = filament::backend::ShaderStage;
 
