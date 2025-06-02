@@ -20,13 +20,7 @@
 #include <type_traits>
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Slice.h>
-
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <algorithm>
 #include <array>        // note: this is safe, see how std::array is used below (inline / private)
@@ -34,6 +28,12 @@
 #include <iterator>     // for std::random_access_iterator_tag
 #include <tuple>
 #include <utility>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 namespace utils {
 
@@ -557,7 +557,7 @@ private:
     }
 
     inline void resizeNoCheck(size_t needed) noexcept {
-        assert_invariant(mCapacity >= needed);
+        assert(mCapacity >= needed);
         if (needed < mSize) {
             // we shrink the arrays
             destroy_each(needed, mSize);
@@ -590,7 +590,7 @@ private:
             size_t unalignment = (offsets[i - 1] + sizes[i - 1]) % alignments[i];
             size_t alignment = unalignment ? (alignments[i] - unalignment) : 0;
             offsets[i] = offsets[i - 1] + (sizes[i - 1] + alignment);
-            assert_invariant(offsets[i] % alignments[i] == 0);
+            assert(offsets[i] % alignments[i] == 0);
         }
         return offsets;
     }

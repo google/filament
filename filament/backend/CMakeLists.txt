@@ -264,6 +264,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WGPUProgram.cpp

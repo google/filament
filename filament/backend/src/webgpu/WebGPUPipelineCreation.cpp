@@ -154,9 +154,9 @@ constexpr wgpu::BlendFactor toWebGPU(BlendFunction blendFunction) {
 wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         WGPUProgram const& program, WGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
-        StencilState const& stencilState, PolygonOffset const& polygonOffset,
-        PrimitiveType primitiveType, wgpu::TextureFormat colorFormat,
-        wgpu::TextureFormat depthFormat) {
+        StencilState const& stencilState, PolygonOffset const& polygonOffset, PrimitiveType primitiveType,
+        std::vector<wgpu::TextureFormat> const& colorFormats,
+        wgpu::TextureFormat depthFormat, uint8_t samplesCount) {
     assert_invariant(program.vertexShaderModule);
     const wgpu::DepthStencilState depthStencilState {
         .format = depthFormat,
@@ -191,8 +191,8 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             .entryPoint = "main",
             .constantCount = program.constants.size(),
             .constants = program.constants.data(),
-            .bufferCount = vertexBufferInfo.getVertexBufferLayoutSize(),
-            .buffers = vertexBufferInfo.getVertexBufferLayout()
+            .bufferCount = vertexBufferInfo.getVertexBufferLayoutCount(),
+            .buffers = vertexBufferInfo.getVertexBufferLayouts()
         },
         .primitive = {
             .topology = toWebGPU(primitiveType),
@@ -207,9 +207,9 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             .unclippedDepth = !rasterState.depthClamp &&
                               device.HasFeature(wgpu::FeatureName::DepthClipControl)
         },
-        .depthStencil = &depthStencilState,
+        .depthStencil = depthFormat != wgpu::TextureFormat::Undefined ? &depthStencilState: nullptr,
         .multisample = {
-            .count = 1, // TODO need to get this from the render target
+            .count = samplesCount,
             .mask = 0xFFFFFFFF,
             .alphaToCoverageEnabled = rasterState.alphaToCoverage
         },
@@ -234,12 +234,16 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         fragmentState.entryPoint = "main";
         fragmentState.constantCount = program.constants.size(),
         fragmentState.constants = program.constants.data(),
-        fragmentState.targetCount = 1; // TODO need to get this from the render target
+        fragmentState.targetCount = colorFormats.size();
         fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+        // We expect a fragment shader implies at least one color target if it outputs color.
+        // This should be guaranteed by the caller ensuring colorFormats is not empty.
+        // However, this fails on shadowtest.cpp, TODO investigate why
+        // assert_invariant(fragmentState.targetCount > 0);
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             auto& colorTarget = colorTargets[targetIndex];
-            colorTarget.format = colorFormat;
+            colorTarget.format = colorFormats[targetIndex];
             colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
             colorTarget.writeMask =
                     rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;

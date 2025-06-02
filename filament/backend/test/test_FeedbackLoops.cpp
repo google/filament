@@ -161,11 +161,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (int frame = 0; frame < kNumFrames; frame++) {
 
             // Prep for rendering.
-            RenderPassParams params = {};
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
             PipelineState state = getColorWritePipelineState();
             shader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
@@ -198,7 +197,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -231,7 +234,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 

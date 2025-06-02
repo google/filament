@@ -155,15 +155,15 @@ Light getLight(const uint lightIndex) {
     light.channels = int(channels);
     light.contactShadows = bool(typeShadow & 0x10u);
 #if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
-    light.type = (typeShadow & 0x1u);
+    light.lightType = (typeShadow & 0x1u);
 #if defined(VARIANT_HAS_SHADOWING)
     light.shadowIndex = int((typeShadow >>  8u) & 0xFFu);
     light.castsShadows   = bool(channels & 0x10000u);
-    if (light.type == LIGHT_TYPE_SPOT) {
+    if (light.lightType == LIGHT_TYPE_SPOT) {
         light.zLight = dot(shadowUniforms.shadows[light.shadowIndex].lightFromWorldZ, vec4(worldPosition, 1.0));
     }
 #endif
-    if (light.type == LIGHT_TYPE_SPOT) {
+    if (light.lightType == LIGHT_TYPE_SPOT) {
         light.attenuation *= getAngleAttenuation(-direction, light.l, scaleOffset);
     }
 #endif
@@ -211,7 +211,7 @@ void evaluatePunctualLights(const MaterialInputs material,
         if (light.NoL > 0.0) {
             if (light.castsShadows) {
                 int shadowIndex = light.shadowIndex;
-                if (light.type == LIGHT_TYPE_POINT) {
+                if (light.lightType == LIGHT_TYPE_POINT) {
                     // point-light shadows are sampled from a direction
                     highp vec3 r = getWorldPosition() - light.worldPosition;
                     int face = getPointLightFace(r);

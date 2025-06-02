@@ -305,7 +305,7 @@ public:
 
     //! Add a parameter array to this material.
     MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+            ParameterPrecision precision = ParameterPrecision::DEFAULT);
 
     //! Add a constant parameter to this material.
     template<typename T>
@@ -325,9 +325,9 @@ public:
             SamplerFormat format = SamplerFormat::FLOAT,
             ParameterPrecision precision = ParameterPrecision::DEFAULT, bool multisample = false,
             const char* transformName = "",
-            ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) noexcept;
+            ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS);
 
-    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
+    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
@@ -617,7 +617,7 @@ public:
 
     //! Add a new fragment shader output variable. Only valid for materials in the POST_PROCESS domain.
     MaterialBuilder& output(VariableQualifier qualifier, OutputTarget target, Precision precision,
-            OutputType type, const char* name, int location = -1) noexcept;
+            OutputType type, const char* name, int location = -1);
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
@@ -646,12 +646,12 @@ public:
      * Add a subpass parameter to this material.
      */
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, ParameterPrecision precision, const char* name) noexcept;
+            SamplerFormat format, ParameterPrecision precision, const char* name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, const char* name) noexcept;
+            SamplerFormat format, const char* name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            ParameterPrecision precision, const char* name) noexcept;
-    MaterialBuilder& subpass(SubpassType subpassType, const char* name) noexcept;
+            ParameterPrecision precision, const char* name);
+    MaterialBuilder& subpass(SubpassType subpassType, const char* name);
 
     struct Parameter {
         Parameter() noexcept: parameterType(INVALID) {}

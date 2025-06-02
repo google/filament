@@ -74,8 +74,16 @@ private:
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WGPURenderTarget* mCurrentRenderTarget = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
+
+    struct DescriptorSetBindingInfo{
+        wgpu::BindGroup bindGroup;
+        size_t offsetCount;
+        backend::DescriptorSetOffsetArray offsets;
+    };
+    std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
     /*
      * Driver interface
      */

@@ -610,6 +610,14 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
         slog.e << "Tint writer error: " << wgslOut.Failure().reason << io::endl;
         return false;
     }
+    // Tint adds annotations that Dawn complains about when consuming. remove for now
+    // https://dawn.googlesource.com/dawn/+/efb17b02543fb52c0b2e21d6082c0c9fbc2168a9%5E%21/
+    char const* annotationStr = "@stride(16) @internal(disable_validation__ignore_stride)";
+    size_t pos = wgslOut->wgsl.find(annotationStr);
+    while (pos != std::string::npos) {
+        wgslOut->wgsl.erase(pos, strlen(annotationStr));
+        pos = wgslOut->wgsl.find(annotationStr);
+    }
     *outWsl = wgslOut->wgsl;
     return true;
 #else
