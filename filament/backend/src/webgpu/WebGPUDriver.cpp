@@ -58,9 +58,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
               driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags) {
     mAdapter = mPlatform.requestAdapter(nullptr);
     mDevice = mPlatform.requestDevice(mAdapter);
-    wgpu::Limits supportedLimits{};
-    mDevice.GetLimits(&supportedLimits);
-    mMinUniformBufferOffsetAlignment = supportedLimits.minUniformBufferOffsetAlignment;
+    mDevice.GetLimits(&mDeviceLimits);
     mQueue = mDevice.GetQueue();
 }
 
@@ -337,9 +335,10 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {}
 
-void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vbih, uint8_t bufferCount,
-        uint8_t attributeCount, AttributeArray attributes) {
-    constructHandle<WGPUVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        uint8_t bufferCount, uint8_t attributeCount, AttributeArray attributes) {
+    constructHandle<WGPUVertexBufferInfo>(vertexBufferInfoHandle, bufferCount, attributeCount,
+            attributes, mDeviceLimits);
 }
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
@@ -965,15 +964,18 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     mRenderPassEncoder.SetPipeline(pipeline);
 }
 
-void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
-    auto* renderPrimitive = handleCast<WGPURenderPrimitive>(rph);
-    auto vbi = handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
-    for (const auto& webGPUSlotBindings: vbi->getWebGPUSlotBindingInfos()) {
-        mRenderPassEncoder.SetVertexBuffer(webGPUSlotBindings.slot,
-                renderPrimitive->vertexBuffer->buffers[webGPUSlotBindings.sourceBuffer],
-                webGPUSlotBindings.bufferOffset);
+void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitiveHandle) {
+    const auto renderPrimitive = handleCast<WGPURenderPrimitive>(renderPrimitiveHandle);
+    const auto vertexBufferInfo =
+            handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
+    for (size_t slotIndex = 0; slotIndex < vertexBufferInfo->getVertexBufferLayoutCount();
+            slotIndex++) {
+        WGPUVertexBufferInfo::WebGPUSlotBindingInfo const& bindingInfo =
+                vertexBufferInfo->getWebGPUSlotBindingInfos()[slotIndex];
+        mRenderPassEncoder.SetVertexBuffer(slotIndex,
+                renderPrimitive->vertexBuffer->buffers[bindingInfo.sourceBufferIndex],
+                bindingInfo.bufferOffset);
     }
-
     mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
             renderPrimitive->indexBuffer->indexFormat);
 }
@@ -1026,9 +1028,10 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
         // TODO making assumptions that size and offset mean the same thing here.
-        FILAMENT_CHECK_PRECONDITION(offset % mMinUniformBufferOffsetAlignment == 0)
-                << "Binding offset must be multiple of " << mMinUniformBufferOffsetAlignment
-                << "But requested offset is " << offset;
+        FILAMENT_CHECK_PRECONDITION(offset % mDeviceLimits.minUniformBufferOffsetAlignment == 0)
+                << "Binding offset must be multiple of "
+                << mDeviceLimits.minUniformBufferOffsetAlignment << "But requested offset is "
+                << offset;
         wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
             .buffer = buffer->getBuffer(),
             .offset = offset,
