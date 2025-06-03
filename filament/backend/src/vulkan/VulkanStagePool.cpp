@@ -36,12 +36,6 @@ constexpr uint32_t STAGE_SIZE = 1048576;
 
 }// namespace
 
-VulkanStage::~VulkanStage() {
-    for (auto pair : mSegments) {
-        pair.second->clearRecycleFn();
-    }
-}
-
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t numBytes) {
     auto segment = fvkmemory::resource_ptr<Segment>::construct(
@@ -118,6 +112,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
 }
 
 void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
+    assert(stage->isSafeToReset());  // Ensure all segments have been reset already.
     vmaUnmapMemory(mAllocator, stage->memory());
     vmaDestroyBuffer(mAllocator, stage->buffer(), stage->memory());
     delete stage;
@@ -197,7 +192,7 @@ void VulkanStagePool::gc() noexcept {
     decltype(mStages) freeStages;
     freeStages.swap(mStages);
     uint8_t freeStageCount = 0;  // Assuming we'll never have > 255 free stages
-    for (auto pair : freeStages) {
+    for (auto& pair : freeStages) {
         // First, find any stages that have no segments within them.
         if (pair.second->isSafeToReset()) {
             if (++freeStageCount > MAX_EMPTY_STAGES_TO_RETAIN) {
@@ -252,7 +247,7 @@ void VulkanStagePool::gc() noexcept {
 }
 
 void VulkanStagePool::terminate() noexcept {
-    for (auto pair : mStages) {
+    for (auto& pair : mStages) {
         destroyStage(std::move(pair.second));
     }
     mStages.clear();

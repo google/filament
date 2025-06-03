@@ -41,7 +41,7 @@ public:
           mCapacity(capacity),
           mMapping(mapping) {}
 
-    ~VulkanStage();
+    ~VulkanStage() = default;
     VulkanStage(const VulkanStage& other) = delete;
     VulkanStage(VulkanStage&& other) = delete;
     VulkanStage& operator=(const VulkanStage& other) = delete;
@@ -82,17 +82,13 @@ public:
         }
 
     private:
-        // When the application terminates, the recycle function is no longer
-        // useful, and should be discarded to avoid potential memory faults.
-        inline void clearRecycleFn() const { mOnRecycleFn = nullptr; }
-
         // Ensure parent class can access the terminate method.
         friend class VulkanStage;
 
         VulkanStage* const mParentStage;
         const uint32_t mCapacity;
         const uint32_t mOffset;
-        mutable OnRecycle mOnRecycleFn;
+        OnRecycle mOnRecycleFn;
     };
 
     inline VmaAllocation memory() const { return mMemory; }
@@ -121,7 +117,7 @@ private:
     // Maps the start offset of a vulkan stage block to the stage block,
     // for easy deletions later. This is managed by the blocks themselves, in an
     // RAII pattern, during construction and destruction.
-    std::unordered_map<uint32_t, const Segment*> mSegments;
+    std::unordered_map<uint32_t, Segment*> mSegments;
 };
 
 struct VulkanStageImage {
@@ -156,6 +152,9 @@ public:
 
     // Destroys all unused stages and asserts that there are no stages currently in use.
     // This should be called while the context's VkDevice is still alive.
+    // Note: it is expected that all resources have been reclaimed before this
+    // is called. It is also expected that this stage pool does not hold any
+    // resource_ptrs, as this would lead to undefined behavior.
     void terminate() noexcept;
 
 private:

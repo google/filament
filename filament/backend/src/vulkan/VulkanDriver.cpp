@@ -330,7 +330,6 @@ void VulkanDriver::terminate() {
     // descriptorSetLayoutCache
     mExternalImageManager.terminate();
 
-    mStagePool.terminate();
     mPipelineCache.terminate();
     mFramebufferCache.terminate();
     mSamplerCache.terminate();
@@ -345,6 +344,10 @@ void VulkanDriver::terminate() {
     // Before terminating the memory pool, we must make sure all the VulkanBufferMemory are yielded
     // back to the pool.
     mBufferCache.terminate();
+
+    // Before terminating stagePool, we need all resources to have been
+    // reclaimed, as they perform cleanup within the stage pool.
+    mStagePool.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
