@@ -169,8 +169,8 @@ private:
 
 class WGPUTexture : public HwTexture {
 public:
-    WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+    WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
             wgpu::Device const& device) noexcept;
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;

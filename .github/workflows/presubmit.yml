@@ -3,10 +3,10 @@ name: Presubmit
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
     branches:
-    - main
+      - main
 
 jobs:
   build-desktop-mac:
@@ -110,9 +110,9 @@ jobs:
           fetch-depth: 0
       - name: Check for manual edits to /docs
         run: |
-           echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
-           # disable for now
-           # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
+          echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
+          # disable for now
+          # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
 
   test-renderdiff:
     name: test-renderdiff
@@ -121,20 +121,24 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/mac-prereq
       - name: Cache Mesa and deps
-        id: mesa-cache
         uses: actions/cache@v4
         with:
           path: mesa
           key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
       - name: Prerequisites
-        id: prereqs
         run: |
           bash build/common/get-mesa.sh
           pip install tifffile numpy
       - name: Run Test
-        run: bash test/renderdiff/test.sh
+        run: |
+          echo "${{ steps.get_commit_msg.outputs.msg }}" | bash test/renderdiff/test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result

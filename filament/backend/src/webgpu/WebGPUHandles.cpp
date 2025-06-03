@@ -536,8 +536,8 @@ size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesWithDynamicOffsetsCount;
 }
 
-WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+        uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
     assert_invariant(
             samples == 1 ||
@@ -552,6 +552,8 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mAspect = fToWGPUTextureViewAspect(usage, format);
     mBlockWidth = filament::backend::getBlockWidth(format);
     mBlockHeight = filament::backend::getBlockHeight(format);
+    target = samplerTargetType;
+
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
         .usage = mUsage,
@@ -601,6 +603,7 @@ WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount
     mAspect = src->mAspect;
     mBlockWidth = src->mBlockWidth;
     mBlockHeight = src->mBlockHeight;
+    target = src->target;
 
     mTexureView = makeTextureView(baseLevel, levelCount, target);
 }
@@ -900,7 +903,7 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
     const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
     const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
-    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+    const bool isSample = any(fUsage & TextureUsage::SAMPLEABLE);
 
     if (isDepth && !isColor && !isStencil) {
         return wgpu::TextureAspect::DepthOnly;

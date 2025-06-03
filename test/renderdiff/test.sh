@@ -16,11 +16,22 @@
 
 source `dirname $0`/src/preamble.sh
 
-start_ && \
-    bash `dirname $0`/generate.sh && \
-    python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py --output=${GOLDEN_OUTPUT_DIR} && \
+start_
+
+if [[ "$GITHUB_WORKFLOW" ]]; then
+    # The commit message would have been piped as stdin to this script
+    COMMIT_MSG=$(cat)
+    GOLDEN_BRANCH=$(echo "${COMMIT_MSG}" | python3 test/renderdiff/src/commit_msg.py)
+else
+    GOLDEN_BRANCH=$(git log -1 | python3 test/renderdiff/src/commit_msg.py)
+fi
+
+bash `dirname $0`/generate.sh && \
+    python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
+            --branch=${GOLDEN_BRANCH} \
+            --output=${GOLDEN_OUTPUT_DIR} && \
     python3 ${RENDERDIFF_TEST_DIR}/src/compare.py \
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
-            --out=${DIFF_OUTPUT_DIR} && \
-    end_
+            --out=${DIFF_OUTPUT_DIR}
+end_
