@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
+// TODO: Clean-up. We shouldn't need this #ifndef here, but a client has requested that perfetto be
+// disabled due to size increase.  In their case, this flag would be defined across targets. Hence
+// we guard below with an #ifndef.
+#ifndef FILAMENT_TRACING_ENABLED
 // Note: The overhead of TRACING is not negligible especially with parallel_for().
 #define FILAMENT_TRACING_ENABLED false
+#endif
 
 // when FILAMENT_TRACING_ENABLED is true, enables even heavier tracing
 #define HEAVY_TRACING  0
