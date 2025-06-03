@@ -3,44 +3,105 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01DEF0C8AAF14D275D5E731B /* libgeometry.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D3D6EFC9EE7349AC9F4F845A /* libgeometry.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0704BBFECEFCE6618E4A67F7 /* libfilabridge.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 67D8E02D1AF661E4EF7CC2CD /* libfilabridge.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		091D995885B1312DA4322F31 /* libsmol-v.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0DE88103BBBE542FC5D46B1 /* libsmol-v.xcframework */; };
+		11DE997161B2D3272247EE72 /* libbackend.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9E445414106E7103104FC16C /* libbackend.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2956D56161744254E2FFD353 /* libgeometry.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3D6EFC9EE7349AC9F4F845A /* libgeometry.xcframework */; };
+		2B4ED44D08F36953D3D111CF /* libfilaflat.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C9D99ABAB340140BF94D57B3 /* libfilaflat.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4FAC85567A730FCCB7B3B6EC /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */; };
+		50F0F62A949F9DB17E1E102D /* libmeshoptimizer.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */; };
 		5432120E716355C4A519ABC6 /* FilamentArViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = AA47852B486CBD549FA68729 /* FilamentArViewController.mm */; };
+		5FEA2EC1B8A6FECCACA5FAFA /* libutils.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 644F36437FC03CCC25AC6EFC /* libutils.xcframework */; };
 		66754FE8EF26B5335C0CC9FF /* FullScreenTriangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */; };
+		6D2DAB291A29345E5179ECD8 /* libfilament.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 87261693EC970989615C5AE7 /* libfilament.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6DF5D6B097AC3C124C576DD1 /* libfilabridge.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67D8E02D1AF661E4EF7CC2CD /* libfilabridge.xcframework */; };
+		819CEF9004BAA1BD59EB3ADE /* libktxreader.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A8E5A38F197D487277FDED20 /* libktxreader.xcframework */; };
+		84AC34B44E1AEE96BA8C53B0 /* libimage.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 586F9BE85A436EBA56181848 /* libimage.xcframework */; };
+		85C9CA885D3E9BA87AEA24E8 /* libsmol-v.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0DE88103BBBE542FC5D46B1 /* libsmol-v.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		89E16D259F951AA787C3B265 /* libutils.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 644F36437FC03CCC25AC6EFC /* libutils.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9718E9B12B1D353DF9E66311 /* libibl.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D6422176EDC22262D20C51A8 /* libibl.xcframework */; };
 		99BD70EFF08A1419FE539A44 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AE684A73135705C4EDAA7C53 /* Assets.xcassets */; };
 		ACF87F0F3989EF583E90E499 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = B6B92BD0FA8E6F9CFEAE1707 /* main.m */; };
+		AE4035E76423745AFC8CEB58 /* libfilameshio.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AEEFE325E8BDB00E30FDEC93 /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = DD0010D60097DEAA82DAA089 /* Resources.S */; };
 		B28ED2F81785F13E0B9A3607 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = EC652AC3D2C91759215320C3 /* AppDelegate.m */; };
+		B48D41A39CF5F4FDE5CF6770 /* libfilameshio.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */; };
+		B604AB5F246840D2CCF4762B /* libfilaflat.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9D99ABAB340140BF94D57B3 /* libfilaflat.xcframework */; };
 		B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 33B2CBA1A0F654632B39A45D /* ARKit.framework */; };
+		CB7C1B8F335B873B77D15934 /* libmeshoptimizer.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CBBBF68C2F58FF0F4FA81008 /* libimage.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 586F9BE85A436EBA56181848 /* libimage.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CE6AB7B76D5EB580EFD90897 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AFCB91D87494B7FC879A7A5E /* Main.storyboard */; };
+		CFCD1B57C3CDFA2AC3525EF6 /* libfilament.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 87261693EC970989615C5AE7 /* libfilament.xcframework */; };
+		D56834764BC4D127736878DF /* libbackend.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9E445414106E7103104FC16C /* libbackend.xcframework */; };
+		DD6C337BAEC527FA0F5DB4A3 /* libibl.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D6422176EDC22262D20C51A8 /* libibl.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DEF78081F52F6A776242A599 /* FilamentView.m in Sources */ = {isa = PBXBuildFile; fileRef = 53D025A0625708CC50AEA0DB /* FilamentView.m */; };
+		E4C06B048BFA075CD9FB73AD /* libktxreader.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A8E5A38F197D487277FDED20 /* libktxreader.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		F933D6701B0A0E90381E8030 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C88A8BDFC06D144D80EC052B /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AA70CE1AA47836D72F588764 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				11DE997161B2D3272247EE72 /* libbackend.xcframework in Embed Frameworks */,
+				6D2DAB291A29345E5179ECD8 /* libfilament.xcframework in Embed Frameworks */,
+				2B4ED44D08F36953D3D111CF /* libfilaflat.xcframework in Embed Frameworks */,
+				E4C06B048BFA075CD9FB73AD /* libktxreader.xcframework in Embed Frameworks */,
+				0704BBFECEFCE6618E4A67F7 /* libfilabridge.xcframework in Embed Frameworks */,
+				89E16D259F951AA787C3B265 /* libutils.xcframework in Embed Frameworks */,
+				85C9CA885D3E9BA87AEA24E8 /* libsmol-v.xcframework in Embed Frameworks */,
+				01DEF0C8AAF14D275D5E731B /* libgeometry.xcframework in Embed Frameworks */,
+				DD6C337BAEC527FA0F5DB4A3 /* libibl.xcframework in Embed Frameworks */,
+				AE4035E76423745AFC8CEB58 /* libfilameshio.xcframework in Embed Frameworks */,
+				CB7C1B8F335B873B77D15934 /* libmeshoptimizer.xcframework in Embed Frameworks */,
+				CBBBF68C2F58FF0F4FA81008 /* libimage.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FullScreenTriangle.cpp; sourceTree = "<group>"; };
-		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = clear_coat.mat; sourceTree = "<group>"; };
+		16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilameshio.xcframework; path = "$(SRCROOT)/../../../out/ios-release/filament/lib/libfilameshio.xcframework"; sourceTree = "<group>"; };
+		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		2AFF66F1228C5F1079042FE2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		33B2CBA1A0F654632B39A45D /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
+		4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libmeshoptimizer.xcframework; path = "$(SRCROOT)/../../../out/ios-release/filament/lib/libmeshoptimizer.xcframework"; sourceTree = "<group>"; };
 		4F8E6B508F8C5DE284DA2E34 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		53D025A0625708CC50AEA0DB /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
+		586F9BE85A436EBA56181848 /* libimage.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libimage.xcframework; path = "$(SRCROOT)/../../../out/ios-release/filament/lib/libimage.xcframework"; sourceTree = "<group>"; };
 		5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
+		644F36437FC03CCC25AC6EFC /* libutils.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libutils.xcframework; path = "../../../out/ios-release/filament/lib/libutils.xcframework"; sourceTree = "<group>"; };
+		67D8E02D1AF661E4EF7CC2CD /* libfilabridge.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilabridge.xcframework; path = "../../../out/ios-release/filament/lib/libfilabridge.xcframework"; sourceTree = "<group>"; };
 		6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentArViewController.h; sourceTree = "<group>"; };
-		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = camera_feed.mat; sourceTree = "<group>"; };
-		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadow_plane.mat; sourceTree = "<group>"; };
+		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; path = camera_feed.mat; sourceTree = "<group>"; };
+		87261693EC970989615C5AE7 /* libfilament.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilament.xcframework; path = "../../../out/ios-release/filament/lib/libfilament.xcframework"; sourceTree = "<group>"; };
+		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; path = shadow_plane.mat; sourceTree = "<group>"; };
 		973EB840E804440B2AA0F93A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		9E445414106E7103104FC16C /* libbackend.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libbackend.xcframework; path = "../../../out/ios-release/filament/lib/libbackend.xcframework"; sourceTree = "<group>"; };
 		A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenTriangle.h; sourceTree = "<group>"; };
+		A8E5A38F197D487277FDED20 /* libktxreader.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libktxreader.xcframework; path = "../../../out/ios-release/filament/lib/libktxreader.xcframework"; sourceTree = "<group>"; };
 		AA47852B486CBD549FA68729 /* FilamentArViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentArViewController.mm; sourceTree = "<group>"; };
 		AE684A73135705C4EDAA7C53 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AF451D7D0FAAD069F916F51C /* MathHelpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MathHelpers.h; sourceTree = "<group>"; };
 		B6B92BD0FA8E6F9CFEAE1707 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		C9D99ABAB340140BF94D57B3 /* libfilaflat.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libfilaflat.xcframework; path = "../../../out/ios-release/filament/lib/libfilaflat.xcframework"; sourceTree = "<group>"; };
 		CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FilamentApp.cpp; sourceTree = "<group>"; };
 		D0800F9FE0C390D084082637 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
+		D0DE88103BBBE542FC5D46B1 /* libsmol-v.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = "libsmol-v.xcframework"; path = "../../../out/ios-release/filament/lib/libsmol-v.xcframework"; sourceTree = "<group>"; };
+		D3D6EFC9EE7349AC9F4F845A /* libgeometry.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgeometry.xcframework; path = "../../../out/ios-release/filament/lib/libgeometry.xcframework"; sourceTree = "<group>"; };
+		D6422176EDC22262D20C51A8 /* libibl.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libibl.xcframework; path = "../../../out/ios-release/filament/lib/libibl.xcframework"; sourceTree = "<group>"; };
+		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
 		EC652AC3D2C91759215320C3 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		FCF16FE1B4146DE87F2B76F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -50,7 +111,19 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D56834764BC4D127736878DF /* libbackend.xcframework in Frameworks */,
+				CFCD1B57C3CDFA2AC3525EF6 /* libfilament.xcframework in Frameworks */,
+				B604AB5F246840D2CCF4762B /* libfilaflat.xcframework in Frameworks */,
+				819CEF9004BAA1BD59EB3ADE /* libktxreader.xcframework in Frameworks */,
+				6DF5D6B097AC3C124C576DD1 /* libfilabridge.xcframework in Frameworks */,
+				5FEA2EC1B8A6FECCACA5FAFA /* libutils.xcframework in Frameworks */,
+				091D995885B1312DA4322F31 /* libsmol-v.xcframework in Frameworks */,
+				2956D56161744254E2FFD353 /* libgeometry.xcframework in Frameworks */,
+				9718E9B12B1D353DF9E66311 /* libibl.xcframework in Frameworks */,
 				B8934FC46557424E705A2154 /* ARKit.framework in Frameworks */,
+				B48D41A39CF5F4FDE5CF6770 /* libfilameshio.xcframework in Frameworks */,
+				50F0F62A949F9DB17E1E102D /* libmeshoptimizer.xcframework in Frameworks */,
+				84AC34B44E1AEE96BA8C53B0 /* libimage.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +165,18 @@
 			isa = PBXGroup;
 			children = (
 				33B2CBA1A0F654632B39A45D /* ARKit.framework */,
+				9E445414106E7103104FC16C /* libbackend.xcframework */,
+				67D8E02D1AF661E4EF7CC2CD /* libfilabridge.xcframework */,
+				C9D99ABAB340140BF94D57B3 /* libfilaflat.xcframework */,
+				87261693EC970989615C5AE7 /* libfilament.xcframework */,
+				16ED3BF9A0D7194CECB86D55 /* libfilameshio.xcframework */,
+				D3D6EFC9EE7349AC9F4F845A /* libgeometry.xcframework */,
+				D6422176EDC22262D20C51A8 /* libibl.xcframework */,
+				586F9BE85A436EBA56181848 /* libimage.xcframework */,
+				A8E5A38F197D487277FDED20 /* libktxreader.xcframework */,
+				4CA1720B9D4D55AB6B8513B0 /* libmeshoptimizer.xcframework */,
+				D0DE88103BBBE542FC5D46B1 /* libsmol-v.xcframework */,
+				644F36437FC03CCC25AC6EFC /* libutils.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -144,6 +229,7 @@
 				A5598850636B6208AE64E95E /* Sources */,
 				77189A28CB88A4753728F549 /* Resources */,
 				FA9CC5F2D3E84FB632557A2E /* Frameworks */,
+				AA70CE1AA47836D72F588764 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -160,10 +246,13 @@
 		392626AFF36D607FEB6176BE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -257,6 +346,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
@@ -270,24 +364,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-debug/filament/lib/universal",
-				);
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -303,6 +379,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
@@ -316,24 +397,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-release/filament/lib/universal",
-				);
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -411,6 +474,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_METAL=1",
 					"$(inherited)",
@@ -424,24 +492,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-release/filament/lib/universal",
-				);
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -574,6 +624,11 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../../../out/ios-release/filament/lib\"",
+					"\"../../../out/ios-release/filament/lib\"",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
 					"$(inherited)",
@@ -587,24 +642,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
-					"../../../out/ios-debug/filament/lib/universal",
-				);
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lktxreader",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lgeometry",
-					"-libl",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-ar";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";

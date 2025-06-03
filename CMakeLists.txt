@@ -662,7 +662,11 @@ endif()
 string(TOLOWER "${DIST_ARCH}" DIST_ARCH)
 string(REPLACE "amd64" "x86_64" DIST_ARCH "${DIST_ARCH}")
 if (NOT DIST_DIR)
-    set(DIST_DIR "${DIST_ARCH}")
+    if(PLATFORM_NAME)
+        set(DIST_DIR "${DIST_ARCH}-${PLATFORM_NAME}")
+    else()
+        set(DIST_DIR "${DIST_ARCH}")
+    endif()
 endif()
 
 # ==================================================================================================

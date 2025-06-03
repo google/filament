@@ -7,3 +7,4 @@ We are chaning the way Vulkan buffers are handled. We need to switch over to a m
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+- ios: Add support for Apple Silicon (arm64) simulator
