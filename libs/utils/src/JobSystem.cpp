@@ -59,6 +59,7 @@
     // see https://developer.android.com/topic/performance/threads#priority
 #    include <sys/time.h>
 #    include <sys/resource.h>
+#    include <unistd.h>
 #    ifndef ANDROID_PRIORITY_URGENT_DISPLAY
 #        define ANDROID_PRIORITY_URGENT_DISPLAY (-8)
 #    endif
