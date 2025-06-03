@@ -181,6 +181,10 @@ public:
     size_t getBlockWidth() const { return mBlockWidth; }
     size_t getBlockHeight() const { return mBlockHeight; }
 
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+            const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
+            SamplerType target);
+
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTextureView() const { return mTexureView; }
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
@@ -192,21 +196,23 @@ public:
             filament::backend::TextureUsage const& fUsage,
             filament::backend::TextureFormat const& fFormat);
 
+    SamplerType mSamplerType;
+
 private:
-    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
-            SamplerType target);
     // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
     wgpu::Texture mTexture = nullptr;
-    wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
+    wgpu::TextureView mTexureView = nullptr;
     wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
+    wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
     uint32_t mArrayLayerCount = 1;
-    wgpu::TextureView mTexureView = nullptr;
-    wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
     size_t mBlockWidth;
     size_t mBlockHeight;
+
+    wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
@@ -219,7 +225,7 @@ class WGPURenderTarget : public HwRenderTarget {
 public:
     using Attachment = TargetBufferInfo; // Using TargetBufferInfo directly for attachments
 
-    WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+    WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             const MRT& colorAttachments,
             const Attachment& depthAttachment,
             const Attachment& stencilAttachment);
@@ -257,6 +263,8 @@ public:
     // Static helpers for load/store operations
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
+
+    uint8_t mLayerCount = 1;
 
 private:
     bool defaultRenderTarget = false;

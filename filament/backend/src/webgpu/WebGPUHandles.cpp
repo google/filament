@@ -590,9 +590,10 @@ WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureF
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
     // First, the texture aspect, starting with the defaults/basic configuration
-    mUsage = fToWGPUTextureUsage(usage);
     mFormat = fToWGPUTextureFormat(format);
+    mUsage = fToWGPUTextureUsage(usage);
     mAspect = fToWGPUTextureViewAspect(usage, format);
+    mSamplerType = target;
     mBlockWidth = filament::backend::getBlockWidth(format);
     mBlockHeight = filament::backend::getBlockHeight(format);
     target = samplerTargetType;
@@ -638,7 +639,7 @@ WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureF
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
     // Second, the texture view aspect
-    mTexureView = makeTextureView(0, levels, target);
+    mTexureView = makeTextureView(0, levels, 0, mArrayLayerCount, target);
 }
 
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
@@ -646,9 +647,10 @@ WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount
     mAspect = src->mAspect;
     mBlockWidth = src->mBlockWidth;
     mBlockHeight = src->mBlockHeight;
-    target = src->target;
+    mArrayLayerCount = src->mArrayLayerCount;
+    mSamplerType = src->mSamplerType;
 
-    mTexureView = makeTextureView(baseLevel, levelCount, target);
+    mTexureView = makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType);
 }
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
@@ -977,6 +979,7 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
 }
 
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+        const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
         SamplerType target) {
 
     wgpu::TextureViewDescriptor textureViewDescriptor{
@@ -984,9 +987,8 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
         .format = mFormat,
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
-        // TODO: check if this baseArrayLayer assumption is correct
-        .baseArrayLayer = 0,
-        .arrayLayerCount = mArrayLayerCount,
+        .baseArrayLayer = baseArrayLayer,
+        .arrayLayerCount = arrayLayerCount,
         .aspect = mAspect,
         .usage = mUsage
     };
@@ -1017,11 +1019,12 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
     return textureView;
 }
 
-WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
         const MRT& colorAttachmentsMRT,
         const Attachment& depthAttachmentInfo,
         const Attachment& stencilAttachmentInfo)
     : HwRenderTarget(width, height),
+      mLayerCount(layerCount),
       defaultRenderTarget(false),
       samples(samples),
       mColorAttachments(colorAttachmentsMRT),
