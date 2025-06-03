@@ -104,6 +104,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::FENCE:
             destruct<VulkanFence>(Handle<VulkanFence>(id));
             break;
+        case ResourceType::VULKAN_BUFFER:
+            destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
+            break;
         case ResourceType::UNDEFINED_TYPE:
             break;
     }
