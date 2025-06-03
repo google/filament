@@ -222,6 +222,56 @@ public:
         return static_cast<Dp>(p);
     }
 
+    template<typename Dp, typename B>
+    inline std::enable_if_t<
+            std::is_pointer_v<Dp> && std::is_base_of_v<B, std::remove_pointer_t<Dp>>, int16_t>
+    handle_set_value(Handle<B>& handle, uint8_t v) {
+        assert_invariant(handle);
+        auto [p, tag] = handleToPointer(handle.getId());
+
+        if (isPoolHandle(handle.getId())) {
+            // check for pool handle use-after-free
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                auto const pNode = static_cast<typename Allocator::Node*>(p);
+                pNode[-1].test_value = v;
+                return 1;
+            }
+            return 0;
+        } else {
+            // check for heap handle use-after-free
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                return -1;
+            }
+            return -2;
+        }
+    }
+
+    template<typename Dp, typename B>
+    inline std::enable_if_t<
+            std::is_pointer_v<Dp> && std::is_base_of_v<B, std::remove_pointer_t<Dp>>, int16_t>
+    handle_get_value(Handle<B>& handle) {
+        assert_invariant(handle);
+        auto [p, tag] = handleToPointer(handle.getId());
+
+        if (isPoolHandle(handle.getId())) {
+            // check for pool handle use-after-free
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                auto const pNode = static_cast<typename Allocator::Node*>(p);
+                uint8_t age = pNode[-1].age;
+                uint8_t test_value = pNode[-1].test_value;
+                int16_t ret = (int16_t) ((age << 8) | test_value);
+                return ret;
+            }
+            return 0;
+        } else {
+            // check for heap handle use-after-free
+            if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
+                return -1;
+            }
+            return -2;
+        }
+    }
+
     utils::CString getHandleTag(HandleBase::HandleId key) const noexcept;
 
     template<typename B>
@@ -276,7 +326,10 @@ private:
     class Allocator {
         friend class HandleAllocator;
         static constexpr size_t MIN_ALIGNMENT = alignof(std::max_align_t);
-        struct Node { uint8_t age; };
+        struct Node {
+            uint8_t age;
+            uint8_t test_value = 0xff;
+        };
         // Note: using the `extra` parameter of PoolAllocator<>, even with a 1-byte structure,
         // generally increases all pool allocations by 8-bytes because of alignment restrictions.
         template<size_t SIZE>

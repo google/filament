@@ -643,6 +643,25 @@ void OpenGLDriver::createVertexBufferInfoR(
         AttributeArray attributes) {
     DEBUG_MARKER()
     construct<GLVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+
+    // test ----
+    int16_t returned_value = handle_set_value<GLVertexBufferInfo*>(vbih, 90);
+    uint8_t age = (uint8_t) (returned_value >> 8);
+    uint8_t test_value = (returned_value & 0xff);
+    switch (test_value) {
+        case -2:
+        case -1:
+        case 0:
+            utils::slog.w << "@@@ createVertexBufferInfoR: unexpected result, age:" << (int) age
+                          << ", test_value:" << (int) test_value << utils::io::endl;
+            break;
+        default:
+            FILAMENT_CHECK_POSTCONDITION(test_value == 1)
+                    << "@@@ createVertexBufferInfoR: shouldn't happen, age:" << (int) age
+                    << ", test_value:" << (int) test_value << utils::io::endl;
+            break;
+    }
+    //----------
 }
 
 void OpenGLDriver::createVertexBufferR(
@@ -761,6 +780,25 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR(utils::slog.e)
+
+    // test ----
+    int16_t returned_value = handle_set_value<OpenGLProgram*>(ph, 100);
+    uint8_t age = (uint8_t) (returned_value >> 8);
+    uint8_t test_value = (returned_value & 0xff);
+    switch (test_value) {
+        case -2:
+        case -1:
+        case 0:
+            utils::slog.w << "@@@ createProgramR: unexpected result, age:" << (int)age << ", test_value:" << (int)test_value
+                          << utils::io::endl;
+            break;
+        default:
+            FILAMENT_CHECK_POSTCONDITION(test_value == 1)
+                    << "@@@ createProgramR: shouldn't happen, age:" << (int)age
+                    << ", test_value:" << (int)test_value << utils::io::endl;
+            break;
+    }
+    //----------
 }
 
 UTILS_NOINLINE
@@ -1918,6 +1956,25 @@ void OpenGLDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     DEBUG_MARKER()
     if (ph) {
+        // test ----
+        int16_t returned_value = handle_set_value<OpenGLProgram*>(ph, 101);
+        uint8_t age = (uint8_t) (returned_value >> 8);
+        uint8_t test_value = (returned_value & 0xff);
+        switch (test_value) {
+            case -2:
+            case -1:
+            case 0:
+                utils::slog.w << "@@@ destroyProgram: unexpected result, age:" << (int) age
+                              << ", test_value:" << (int) test_value << utils::io::endl;
+                break;
+            default:
+                FILAMENT_CHECK_POSTCONDITION(test_value == 1)
+                        << "@@@ destroyProgram: shouldn't happen, age:" << (int) age
+                        << ", test_value:" << (int) test_value << utils::io::endl;
+                break;
+        }
+        //----------
+
         OpenGLProgram* p = handle_cast<OpenGLProgram*>(ph);
         destruct(ph, p);
     }
@@ -4066,6 +4123,24 @@ void OpenGLDriver::bindPipeline(PipelineState const& state) {
     setRasterState(state.rasterState);
     setStencilState(state.stencilState);
     gl.polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
+    // test ----
+    Handle<HwProgram> pro = state.program;
+    int16_t returned_value = handle_get_value<OpenGLProgram*>(pro);
+    uint8_t age = (uint8_t)(returned_value >> 8);
+    uint8_t test_value = (returned_value & 0xff);
+    switch (test_value) {
+    case -2:
+    case -1:
+    case 0:
+        utils::slog.w << "@@@ bindPipeline: unexpected result, age:" << (int)age << ", test_value:" << (int)test_value << utils::io::endl;
+        break;
+    default:
+        if (test_value != 100) {
+            utils::slog.w << "@@@ bindPipeline: program is not valid OpenGLProgram, age:" << (int)age << ", test_value:" << (int)test_value << utils::io::endl;
+        }
+        break;
+    }
+    //----------
     OpenGLProgram* const p = handle_cast<OpenGLProgram*>(state.program);
     mValidProgram = useProgram(p);
     (*mCurrentPushConstants) = p->getPushConstants();

@@ -282,6 +282,20 @@ private:
         return mHandleAllocator.handle_cast<Dp, B>(handle);
     }
 
+    template<typename Dp, typename B>
+    std::enable_if_t<std::is_pointer_v<Dp> && std::is_base_of_v<B, std::remove_pointer_t<Dp>>,
+            int16_t>
+    handle_set_value(Handle<B>& handle, uint8_t v) {
+        return mHandleAllocator.handle_set_value<Dp, B>(handle, v);
+    }
+
+    template<typename Dp, typename B>
+    std::enable_if_t<std::is_pointer_v<Dp> && std::is_base_of_v<B, std::remove_pointer_t<Dp>>,
+            int16_t>
+    handle_get_value(Handle<B>& handle) {
+        return mHandleAllocator.handle_get_value<Dp, B>(handle);
+    }
+
     friend class OpenGLProgram;
     friend class ShaderCompilerService;
 
