@@ -17,9 +17,8 @@
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/VulkanHandles.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 namespace filament::backend::fvkmemory {
 

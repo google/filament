@@ -20,9 +20,8 @@
 #include "details/Camera.h"
 
 #include <utils/Entity.h>
+#include <utils/Logger.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
 
 using namespace utils;
 using namespace filament::math;

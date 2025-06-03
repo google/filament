@@ -27,12 +27,11 @@
 
 #include "private/backend/BackendUtils.h"
 
-#include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/trap.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
+#include <utils/trap.h>
 
 #include <math/scalar.h>
 

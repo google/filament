@@ -32,12 +32,11 @@
 
 #include <utils/BinaryTreeArray.h>
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
 
 #include <math/fast.h>
 #include <math/mat3.h>

@@ -27,13 +27,12 @@
 
 #include "private/backend/DriverApi.h"
 
+#include <utils/Logger.h>
 #include <utils/algorithm.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #include <array>
 #include <algorithm>

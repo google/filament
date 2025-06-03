@@ -18,14 +18,13 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/CommandStream.h"
 
-#include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
-#include <utils/ostream.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
+#include <utils/ostream.h>
 
 #include <algorithm>
 #include <mutex>

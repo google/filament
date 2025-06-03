@@ -29,11 +29,17 @@
 namespace utils {
 
 // handles utils::bitset
-inline std::ostream& operator<<(std::ostream& o, bitset32 const& s) noexcept {
-    return o << (void*) uintptr_t(s.getValue());
+
+namespace io {
+class ostream;
 }
 
+template<typename S, typename = std::enable_if_t<std::is_same_v<S, std::ostream> ||
+                                                 std::is_same_v<S, io::ostream>>>
+inline S& operator<<(S& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
 }
+}// namespace utils
 
 namespace utils::io {
 

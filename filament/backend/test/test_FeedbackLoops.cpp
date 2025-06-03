@@ -25,8 +25,7 @@
 #include <backend/Handle.h>
 
 #include <utils/Hash.h>
-
-#include <absl/log/log.h>
+#include <utils/Logger.h>
 
 #include <fstream>
 #include <string>

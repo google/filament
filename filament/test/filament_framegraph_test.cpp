@@ -29,7 +29,7 @@
 
 #include "details/Texture.h"
 
-#include <absl/log/log.h>
+#include <utils/Logger.h>
 
 using namespace filament;
 using namespace backend;

@@ -20,10 +20,9 @@
 #include "MetalEnums.h"
 #include "MetalUtils.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
-
-#include <absl/log/log.h>
 
 #define NSERROR_CHECK(message)                                                                     \
     if (error) {                                                                                   \

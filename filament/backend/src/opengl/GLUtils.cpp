@@ -18,16 +18,15 @@
 
 #include "private/backend/Driver.h"
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 #include <utils/trap.h>
 
-#include <absl/log/log.h>
-#include <absl/strings/str_format.h>
-
 #include <string_view>
 
 #include <stddef.h>
+#include <cstdio>
 
 namespace filament::backend {
 
@@ -62,8 +61,10 @@ GLenum checkGLError(const char* function, size_t line) noexcept {
     GLenum const error = glGetError();
     if (UTILS_VERY_UNLIKELY(error != GL_NO_ERROR)) {
         auto const string = getGLErrorString(error);
-        LOG(ERROR) << "OpenGL error " << absl::StrFormat("%#x", error) << " (" << string
-                   << ") in \"" << function << "\" at line " << line;
+        char hexError[16];
+        snprintf(hexError, sizeof(hexError), "%#x", error);
+        LOG(ERROR) << "OpenGL error " << hexError << " (" << string << ") in \"" << function
+                   << "\" at line " << line;
     }
     return error;
 }
@@ -104,8 +105,10 @@ GLenum checkFramebufferStatus(GLenum target, const char* function, size_t line) 
     GLenum const status = glCheckFramebufferStatus(target);
     if (UTILS_VERY_UNLIKELY(status != GL_FRAMEBUFFER_COMPLETE)) {
         auto const string = getFramebufferStatusString(status);
-        LOG(ERROR) << "OpenGL framebuffer error " << absl::StrFormat("%#x", status) << " ("
-                   << string << ") in \"" << function << "\" at line " << line;
+        char hexStatus[16];
+        snprintf(hexStatus, sizeof(hexStatus), "%#x", status);
+        LOG(ERROR) << "OpenGL framebuffer error " << hexStatus << " (" << string << ") in \""
+                   << function << "\" at line " << line;
     }
     return status;
 }

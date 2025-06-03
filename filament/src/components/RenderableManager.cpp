@@ -39,17 +39,15 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/ostream.h>
+#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
-
-#include <utils/Log.h>
-
-#include <absl/log/log.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <math/mat4.h>
 #include <math/scalar.h>

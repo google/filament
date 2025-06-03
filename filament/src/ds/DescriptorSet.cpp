@@ -25,10 +25,9 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
 
 #include <utility>
 #include <limits>

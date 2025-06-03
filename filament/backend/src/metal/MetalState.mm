@@ -18,7 +18,7 @@
 
 #include "MetalEnums.h"
 
-#include <absl/log/log.h>
+#include <utils/Logger.h>
 
 namespace filament {
 namespace backend {

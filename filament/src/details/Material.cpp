@@ -50,14 +50,12 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
-#include <absl/strings/str_format.h>
 
 #include <algorithm>
 #include <array>
@@ -199,10 +197,11 @@ Material* Material::Builder::build(Engine& engine) const {
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
+        char shaderModelsString[16];
+        snprintf(shaderModelsString, sizeof(shaderModelsString), "%#x", shaderModels.getValue());
         LOG(ERROR) << "The material '" << name.c_str_safe() << "' was not built for "
                    << toString(shaderModel) << ".";
-        LOG(ERROR) << "Compiled material contains shader models "
-                   << absl::StrFormat("%#x", shaderModels.getValue()) << ".";
+        LOG(ERROR) << "Compiled material contains shader models " << shaderModelsString << ".";
         return nullptr;
     }
 
@@ -366,9 +365,12 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
         !mHasCustomDepthShader) {
         // it would be unsafe to invalidate any of the cached depth variant
         if (UTILS_UNLIKELY(!((variantMask & Variant::DEP) && !(variantValue & Variant::DEP)))) {
-            LOG(WARNING) << "FMaterial::invalidate(" << absl::StrFormat("%#x", +variantMask) << ", "
-                         << absl::StrFormat("%#x", +variantValue)
-                         << ") would corrupt the depth variant cache";
+            char variantMaskString[16];
+            snprintf(variantMaskString, sizeof(variantMaskString), "%#x", +variantMask);
+            char variantValueString[16];
+            snprintf(variantValueString, sizeof(variantValueString), "%#x", +variantValue);
+            LOG(WARNING) << "FMaterial::invalidate(" << variantMaskString << ", "
+                         << variantValueString << ") would corrupt the depth variant cache";
         }
         variantMask |= Variant::DEP;
         variantValue &= ~Variant::DEP;

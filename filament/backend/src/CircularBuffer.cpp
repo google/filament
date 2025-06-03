@@ -16,14 +16,13 @@
 
 #include "private/backend/CircularBuffer.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/architecture.h>
 #include <utils/ashmem.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #    include <sys/mman.h>

@@ -21,9 +21,8 @@
 #include <backend/Program.h>
 
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
-
-#include <absl/log/log.h>
 
 #include <chrono>
 

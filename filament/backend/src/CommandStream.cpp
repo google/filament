@@ -20,13 +20,12 @@
 #include <utils/CallStack.h>
 #endif
 
+#include <utils/Logger.h>
 #include <utils/Profiler.h>
 #include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 #include <utils/sstream.h>
-
-#include <absl/log/log.h>
 
 #include <cstddef>
 #include <functional>

@@ -16,9 +16,8 @@
 
 #include <backend/platforms/PlatformGLX.h>
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 #include <X11/Xlib.h>
 #include <GL/glx.h>

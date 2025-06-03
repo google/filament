@@ -567,7 +567,10 @@ target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC ibl-lite)
-target_link_libraries(${TARGET} PUBLIC absl::log)
+
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    target_link_libraries(${TARGET} PUBLIC absl::log)
+endif()
 
 if (FILAMENT_ENABLE_FGVIEWER)
     target_link_libraries(${TARGET} PUBLIC fgviewer)

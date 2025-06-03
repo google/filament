@@ -18,10 +18,9 @@
 
 #include "MetalHandles.h"
 
-#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
-
-#include <absl/log/log.h>
+#include <utils/Logger.h>
+#include <utils/debug.h>
 
 #include <utility>
 

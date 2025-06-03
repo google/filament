@@ -52,16 +52,15 @@
 
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Invocable.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
 #include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
-
-#include <absl/log/log.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>

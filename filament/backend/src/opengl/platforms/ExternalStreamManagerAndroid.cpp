@@ -20,11 +20,10 @@
 
 #include <backend/Platform.h>
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #if __has_include(<android/surface_texture.h>)
 #   include <android/surface_texture.h>

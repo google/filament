@@ -23,12 +23,11 @@
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Logger.h>
+#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/Systrace.h>
-
-#include <absl/log/log.h>
 
 #include <math/half.h>
 #include <math/vec2.h>

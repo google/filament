@@ -20,12 +20,11 @@
 
 #include <utils/Allocator.h>
 #include <utils/CString.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #include <algorithm>
 #include <exception>

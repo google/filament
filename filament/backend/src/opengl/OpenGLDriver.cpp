@@ -46,17 +46,16 @@
 
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/Slice.h>
+#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>

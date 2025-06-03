@@ -16,7 +16,7 @@
 
 #include "ResourceList.h"
 
-#include <absl/log/log.h>
+#include <utils/Logger.h>
 
 #include <algorithm>
 

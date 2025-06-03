@@ -38,11 +38,10 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
+#include <utils/Invocable.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/sstream.h>
-#include <utils/Invocable.h>
-
-#include <absl/log/log.h>
 
 #include <algorithm>
 

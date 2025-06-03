@@ -29,15 +29,13 @@
 #include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
-#include <utils/android/PerformanceHintManager.h>
-
-#include <utils/compiler.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
+#include <utils/android/PerformanceHintManager.h>
+#include <utils/compiler.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
+#include <utils/ostream.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>

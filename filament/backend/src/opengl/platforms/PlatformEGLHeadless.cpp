@@ -21,10 +21,9 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
+#include <utils/compiler.h>
 
 using namespace utils;
 

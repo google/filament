@@ -18,10 +18,9 @@
 
 #include "MetalContext.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/trap.h>
-
-#include <absl/log/log.h>
 
 #include <thread>
 #include <chrono>

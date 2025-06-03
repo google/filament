@@ -35,8 +35,6 @@
 #include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
-#include "absl/strings/str_format.h"
-
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -473,8 +471,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "background components have been instantiated/selected, such as surface/screen, "
                   "graphics device/GPU, etc.), thus nothing is being drawn to the screen.";
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
-    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the "
-               << absl::StrFormat("%#x", FWGPU_PRINT_SYSTEM)
+    char printSystemHex[16];
+    snprintf(printSystemHex, sizeof(printSystemHex), "%#x", FWGPU_PRINT_SYSTEM);
+    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << printSystemHex
                << " bit flag on during build time the application would print system details "
                   "about the selected graphics device, surface, etc. To see this try "
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "

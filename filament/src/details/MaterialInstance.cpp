@@ -35,13 +35,12 @@
 #include <backend/Handle.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/CString.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 #include <math/scalar.h>
 

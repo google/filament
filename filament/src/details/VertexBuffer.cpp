@@ -27,15 +27,14 @@
 #include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
 
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
-#include <utils/CString.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 #include <algorithm>
 #include <array>

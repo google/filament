@@ -23,11 +23,10 @@
 
 #include <filament/LightManager.h>
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
 
 #include <math/fast.h>
 #include <math/scalar.h>

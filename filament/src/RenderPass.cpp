@@ -40,13 +40,13 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/CommandStream.h"
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
+#include <utils/Range.h>
 #include <utils/Slice.h>
 #include <utils/Systrace.h>
-#include <utils/Range.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 
 #include <algorithm>
 #include <functional>

@@ -19,9 +19,8 @@
 #include "MetalContext.h"
 #include "MetalUtils.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 namespace filament::backend {
 

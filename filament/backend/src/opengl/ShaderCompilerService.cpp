@@ -28,16 +28,15 @@
 #include <backend/DriverEnums.h>
 #include <backend/Program.h>
 
-#include <utils/compiler.h>
 #include <utils/CString.h>
-#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
-
-#include <absl/log/log.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <algorithm>
 #include <array>

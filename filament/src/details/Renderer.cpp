@@ -50,14 +50,13 @@
 #include <math/vec3.h>
 #include <math/mat4.h>
 
-#include <utils/compiler.h>
 #include <utils/JobSystem.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
-
-#include <absl/log/log.h>
+#include <utils/ostream.h>
 
 #include <chrono>
 #include <limits>

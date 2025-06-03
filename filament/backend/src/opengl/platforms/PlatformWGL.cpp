@@ -32,9 +32,8 @@
 #include "GL/glext.h"
 #include "GL/wglext.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
 
 namespace {
 

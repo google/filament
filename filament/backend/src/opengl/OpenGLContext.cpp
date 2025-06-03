@@ -22,12 +22,10 @@
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
-
-#include <absl/log/log.h>
-#include <absl/base/log_severity.h>
 
 #include <functional>
 #include <string_view>
@@ -226,11 +224,11 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     if (ext.KHR_debug) {
         auto cb = +[](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
                 const GLchar* message, const void *) {
-            absl::LogSeverity abslSeverity;
+            auto logSeverity = utils::LogSeverity::kInfo;
             switch (severity) {
-                case GL_DEBUG_SEVERITY_HIGH:    abslSeverity = absl::LogSeverity::kError;   break;
-                case GL_DEBUG_SEVERITY_MEDIUM:  abslSeverity = absl::LogSeverity::kWarning; break;
-                case GL_DEBUG_SEVERITY_LOW:     abslSeverity = absl::LogSeverity::kInfo;    break;
+                case GL_DEBUG_SEVERITY_HIGH:    logSeverity = utils::LogSeverity::kError;   break;
+                case GL_DEBUG_SEVERITY_MEDIUM:  logSeverity = utils::LogSeverity::kWarning; break;
+                case GL_DEBUG_SEVERITY_LOW:     logSeverity = utils::LogSeverity::kInfo;    break;
                 case GL_DEBUG_SEVERITY_NOTIFICATION:
                 default: break;
             }
@@ -245,7 +243,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
                 case GL_DEBUG_TYPE_MARKER:              level = "MARKER: ";              break;
                 default: break;
             }
-            LOG(LEVEL(abslSeverity)) << "KHR_debug " << level << std::string_view{ message, size_t(length) };
+            LOG(LEVEL(logSeverity)) << "KHR_debug " << level << std::string_view{ message, size_t(length) };
         };
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);

@@ -25,10 +25,9 @@
 #include "vulkan/utils/Helper.h"
 
 #include <bluevk/BlueVK.h>
-#include <utils/PrivateImplementation-impl.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-
-#include <absl/log/log.h>
+#include <utils/PrivateImplementation-impl.h>
 
 #define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
     if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \

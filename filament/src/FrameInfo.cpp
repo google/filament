@@ -20,13 +20,12 @@
 
 #include <backend/DriverEnums.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/Logger.h>
+#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/ostream.h>
-#include <utils/Systrace.h>
-
-#include <absl/log/log.h>
 
 #include <algorithm>
 #include <atomic>

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
 #define TNT_FILAMENT_BACKEND_VULKANCONSTANTS_H
 
-#include <absl/log/log.h>
+#include <utils/Logger.h>
 
 #include <stdint.h>
 
