@@ -139,7 +139,8 @@ public:
         }
     }
 
-    // getProgram returns the backend program for the material's given variant.
+    // getProgram returns the backend program for the material's given variant and set of mutable
+    // spec constants.
     // Must be called after prepareProgram().
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgram(Variant const variant,
@@ -311,7 +312,6 @@ private:
     }
 
     // try to order by frequency of use
-    size_t mVariantBits;
     mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     DescriptorSetLayout mPerViewDescriptorSetLayout;
     DescriptorSetLayout mPerViewDescriptorSetLayoutVsm;
@@ -348,6 +348,7 @@ private:
     bool mHasCustomDepthShader = false;
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
+    uint8_t mVariantBits;
 
     // reserve some space to construct the default material instance
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
