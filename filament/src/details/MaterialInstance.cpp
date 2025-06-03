@@ -429,7 +429,7 @@ void FMaterialInstance::fixMissingSamplers() const {
                 FEngine const& engine = mMaterial->getEngine();
                 filament::DescriptorSetLayout const& layout = mMaterial->getDescriptorSetLayout();
 
-                if (pos->format != SamplerFormat::FLOAT) {
+                if (pos->format == SamplerFormat::FLOAT) {
                     // TODO: we only handle missing samplers that are FLOAT
                     switch (pos->type) {
                         case SamplerType::SAMPLER_2D:
