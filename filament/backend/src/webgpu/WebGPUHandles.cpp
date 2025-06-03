@@ -197,89 +197,127 @@ void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_
     }
 }
 
-static constexpr uint32_t DUMMY_WEBGPU_SLOT = 0;
-
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-        AttributeArray const& attributes)
-    : HwVertexBufferInfo(bufferCount, attributeCount),
-      // TODO: max limits may not be supported by webgpu driver. This should be addressed in the
-      // hardening part.
-      mVertexBufferLayouts(MAX_VERTEX_BUFFER_COUNT),
-      mVertexAttributes(MAX_VERTEX_BUFFER_COUNT) {
-
-    // It starts from 1 because slot 0 is now reserved for the dummy.
-    uint32_t currentWebGPUSlotIndex = 1;
-    // A reasonable dummy stride (e.g., for vec4)
-    const uint32_t DUMMY_STRIDE = 16;
-
-    // Initialize the layout for the dummy slot (slot 0)
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].arrayStride = DUMMY_STRIDE;
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].stepMode = wgpu::VertexStepMode::Vertex;
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount = 0;
-
-    mWebGPUSlotBindingInfos.push_back({
-        .sourceBuffer = 0,
-        .slot = DUMMY_WEBGPU_SLOT,
-        .bufferOffset = 0,
-        .stride = DUMMY_STRIDE,
-    });
-
+        AttributeArray const& attributes, wgpu::Limits const& deviceLimits)
+    : HwVertexBufferInfo(bufferCount, attributeCount) {
+    FILAMENT_CHECK_PRECONDITION(attributeCount <= MAX_VERTEX_ATTRIBUTE_COUNT &&
+                                attributeCount <= deviceLimits.maxVertexAttributes)
+            << "The number of vertex attributes requested (" << attributeCount
+            << ") exceeds Filament's MAX_VERTEX_ATTRIBUTE_COUNT limit ("
+            << MAX_VERTEX_ATTRIBUTE_COUNT << ") and/or the device's limit ("
+            << deviceLimits.maxVertexAttributes << ")";
+    mVertexAttributes.reserve(attributeCount);
+    if (attributeCount == 0) {
+        mVertexBufferLayouts.resize(0);
+        mWebGPUSlotBindingInfos.resize(0);
+        return; // should not be possible, but being defensive. nothing to do otherwise
+    }
+    // populate mWebGPUSlotBindingInfos and attribute info (slot + attribute) by going through each
+    // attribute...
+    constexpr uint32_t IMPOSSIBLE_SLOT_INDEX = MAX_VERTEX_BUFFER_COUNT;
+    struct AttributeInfo final {
+        uint8_t slot = IMPOSSIBLE_SLOT_INDEX;
+        wgpu::VertexAttribute attribute = {};
+    };
+    std::array<AttributeInfo, MAX_VERTEX_ATTRIBUTE_COUNT> attributeInfos{};
+    uint8_t currentWebGPUSlotIndex = 0;
+    uint8_t currentAttributeIndex = 0;
+    mVertexBufferLayouts.reserve(MAX_VERTEX_BUFFER_COUNT);
+    mWebGPUSlotBindingInfos.reserve(mVertexBufferLayouts.capacity());
     for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
         const auto& attribute = attributes[attributeIndex];
-
-        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
-        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
-        wgpu::VertexFormat vertexFormat = getVertexFormat(attribute.type, isNormalized, isInteger);
-
         if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            // Use some dummy format
-            vertexFormat = isInteger ? wgpu::VertexFormat::Uint8x4 : wgpu::VertexFormat::Unorm8x4;
-            mVertexAttributes[DUMMY_WEBGPU_SLOT].push_back({
-                .format = vertexFormat,
-                .offset = 0,
-                .shaderLocation = attributeIndex,
-            });
-            mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount++;
+            // We ignore "unused" attributes, ones not associated with a buffer. If a shader
+            // references such an attribute we have a bug one way or another. Either the API/CPU
+            // will produce an error (best case scenario), where an attribute is referenced in the
+            // shader but not provided by the backend API (CPU-side), or the shader would be getting
+            // junk/undefined data from the GPU, since we do not have a valid buffer of data to
+            // provide to the shader/GPU.
             continue;
         }
-
-        auto it = std::find_if(mWebGPUSlotBindingInfos.begin(), mWebGPUSlotBindingInfos.end(),
-                [&](const auto& info) {
-                    return info.sourceBuffer == attribute.buffer && info.stride == attribute.stride;
-                });
-
-        uint32_t assignedSlot;
-        if (it != mWebGPUSlotBindingInfos.end()) {
-            assignedSlot = it->slot;
-        } else {
-            // New combination, allocate a new WebGPU slot
-            assert_invariant(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT);
-            assignedSlot = currentWebGPUSlotIndex++;
-
-            mWebGPUSlotBindingInfos.push_back({
-                .sourceBuffer = attribute.buffer,
-                .slot = assignedSlot,
-                .bufferOffset = attribute.offset - (attribute.offset % attribute.stride),
-                .stride = attribute.stride,
-            });
-
-            mVertexBufferLayouts[assignedSlot].arrayStride = attribute.stride;
-            mVertexBufferLayouts[assignedSlot].stepMode = wgpu::VertexStepMode::Vertex;
-            mVertexBufferLayouts[assignedSlot].attributeCount = 0;
+        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
+        wgpu::VertexFormat const vertexFormat =
+                getVertexFormat(attribute.type, isNormalized, isInteger);
+        uint8_t existingSlot = IMPOSSIBLE_SLOT_INDEX;
+        for (uint32_t slot = 0; slot < currentWebGPUSlotIndex; slot++) {
+            WebGPUSlotBindingInfo const& info = mWebGPUSlotBindingInfos[slot];
+            // We consider attributes to be in the same slot/layout only if they belong to the
+            // same buffer and are interleaved; they cannot belong to separate partitions in the
+            // same buffer, for example.
+            // For the attributes to be interleaved, the stride must match (among other things).
+            // The attribute offset being less than the slot's/layout's buffer offset indicates
+            // that it is in a separate partition before this slot/layout, thus not part of it.
+            // The difference from the attribute's offset and this slot's/layout's buffer offset
+            // being greater than the stride indicates it is in a separate partition after this
+            // slot/layout, thus not part of it.
+            if (info.sourceBufferIndex == attribute.buffer && info.stride == attribute.stride &&
+                    attribute.offset >= info.bufferOffset &&
+                    ((attribute.offset - info.bufferOffset) < attribute.stride)) {
+                existingSlot = slot;
+                break;
+            }
         }
-
-        mVertexAttributes[assignedSlot].push_back({
-            .format = vertexFormat,
-            .offset = attribute.offset % attribute.stride,
-            .shaderLocation = attributeIndex,
-        });
-        mVertexBufferLayouts[assignedSlot].attributeCount++;
+        if (existingSlot == IMPOSSIBLE_SLOT_INDEX) {
+            // New combination, use a new WebGPU slot
+            FILAMENT_CHECK_PRECONDITION(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT &&
+                                        currentWebGPUSlotIndex < deviceLimits.maxVertexBuffers)
+                    << "Number of vertex buffer layouts must not exceed MAX_VERTEX_BUFFER_COUNT ("
+                    << MAX_VERTEX_BUFFER_COUNT << ") or the device limit ("
+                    << deviceLimits.maxVertexBuffers << ")";
+            existingSlot = currentWebGPUSlotIndex++;
+            mWebGPUSlotBindingInfos.push_back({
+                .sourceBufferIndex = attribute.buffer,
+                .bufferOffset = attribute.offset,
+                .stride = attribute.stride
+            });
+            // we need to have a vertex buffer layout for each slot
+            mVertexBufferLayouts.push_back({
+                .stepMode = wgpu::VertexStepMode::Vertex,
+                .arrayStride = attribute.stride
+                // we do not know attributeCount or attributes at this time. We get those
+                // in a subsequent pass over the attributeInfos we collect in this loop.
+            });
+        }
+        attributeInfos[currentAttributeIndex++] = {
+            .slot = existingSlot,
+            .attribute = {
+                .format = vertexFormat,
+                .offset = attribute.offset - mWebGPUSlotBindingInfos[existingSlot].bufferOffset,
+                .shaderLocation = attributeIndex
+            }
+        };
     }
-
-    mVertexBufferLayouts.resize(currentWebGPUSlotIndex);
-
-    for (const auto& info: mWebGPUSlotBindingInfos) {
-        mVertexBufferLayouts[info.slot].attributes = mVertexAttributes[info.slot].data();
+    FILAMENT_CHECK_POSTCONDITION(currentAttributeIndex == attributeCount)
+            << "Using " << currentAttributeIndex << " attributes, but " << attributeCount
+            << " where indicated.";
+    mVertexBufferLayouts.shrink_to_fit();
+    mWebGPUSlotBindingInfos.shrink_to_fit();
+    // sort attribute infos by increasing slot (by increasing offset within each slot).
+    // We do this to ensure that attributes for the same slot/layout are contiguous in
+    // the vector, so the vertex buffer layout associated with these contiguous attributes
+    // can directly reference them in the mVertexAttributes vector below.
+    std::sort(attributeInfos.data(), attributeInfos.data() + attributeCount,
+            [](AttributeInfo const& first, AttributeInfo const& second) {
+                if (first.slot < second.slot) {
+                    return true;
+                }
+                if (first.slot == second.slot) {
+                    if (first.attribute.offset < second.attribute.offset) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+    // populate mVertexAttributes and update mVertexBufferLayouts to reference the correct
+    // attributes in it (which will be contiguous in memory as ensured by the sorting above)...
+    for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; ++attributeIndex) {
+        AttributeInfo const& info = attributeInfos[attributeIndex];
+        mVertexAttributes.push_back(info.attribute);
+        if (mVertexBufferLayouts[info.slot].attributeCount == 0) {
+            mVertexBufferLayouts[info.slot].attributes = &mVertexAttributes[attributeIndex];
+        }
+        mVertexBufferLayouts[info.slot].attributeCount++;
     }
 }
 
