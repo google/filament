@@ -102,6 +102,9 @@ public:
 
     inline void reset() { mCurrentOffset = 0; }
 
+    // Marks a region of the block as "in-use", and provides information about
+    // the allocated region to the caller. Note: this assumes that numBytes
+    // is aligned to the physical device's nonCoherentAtomSize.
     fvkmemory::resource_ptr<Segment> acquireSegment(fvkmemory::ResourceManager* resManager,
             uint32_t numBytes);
 
@@ -134,7 +137,7 @@ struct VulkanStageImage {
 class VulkanStagePool {
 public:
     VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
-            VulkanCommands* commands);
+            VulkanCommands* commands, const VkPhysicalDeviceLimits* deviceLimits);
 
     // Finds or creates a stage block whose capacity is at least the given
     // number of bytes. Internally, creates and manages and subdivides large
@@ -161,6 +164,12 @@ private:
     VmaAllocator mAllocator;
     fvkmemory::ResourceManager* mResManager;
     VulkanCommands* mCommands;
+    const VkPhysicalDeviceLimits* mDeviceLimits;
+
+    // Takes a number of bytes, and aligns it to the non-coherent atom size.
+    // This allows us to ensure that when we flush buffers from the host, we
+    // never flush more atoms than we need to.
+    uint32_t alignToNonCoherentAtomSize(uint32_t numBytes);
 
     // Allocates a new stage buffer, and optionally subdivides it into stage
     // blocks. If subdivideBlocks is true, predefined divisions will be used.

@@ -34,7 +34,7 @@ VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& st
       mUpdatedOffset(0),
       mUpdatedBytes(0) {}
 
-void VulkanBuffer::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
+void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
     // Note: this should be stored within the command buffer before going out of
     // scope, so that the command buffer can manage its lifecycle.
@@ -80,7 +80,7 @@ void VulkanBuffer::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuDat
         .dstOffset = byteOffset,
         .size = numBytes,
     };
-    vkCmdCopyBuffer(commands.buffer(), stage->buffer(), mGpuBuffer, 1, &region);
+    vkCmdCopyBuffer(commands.buffer(), stage->buffer(), getVkBuffer(), 1, &region);
 
     mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
