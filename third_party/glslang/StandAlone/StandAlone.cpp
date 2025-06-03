@@ -112,6 +112,7 @@ enum TOptions : uint64_t {
     EOptionCompileOnly = (1ull << 32),
     EOptionDisplayErrorColumn = (1ull << 33),
     EOptionLinkTimeOptimization = (1ull << 34),
+    EOptionValidateCrossStageIO = (1ull << 35),
 };
 bool targetHlslFunctionality1 = false;
 bool SpvToolsDisassembler = false;
@@ -907,6 +908,8 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                         Options |= EOptionDisplayErrorColumn;
                     } else if (lowerword == "lto") {
                         Options |= EOptionLinkTimeOptimization;
+                    } else if (lowerword == "validate-io") {
+                        Options |= EOptionValidateCrossStageIO;
                     } else if (lowerword == "help") {
                         usage();
                         break;
@@ -1095,6 +1098,10 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
     if ((Options & EOptionLinkTimeOptimization) && !(Options & EOptionLinkProgram))
         Error("link time optimization requires -l for linking");
 
+    // cross stage IO validation makes no sense unless linking
+    if ((Options & EOptionValidateCrossStageIO) && !(Options & EOptionLinkProgram))
+        Error("cross stage IO validation requires -l for linking");
+
     // -o or -x makes no sense if there is no target binary
     if (binaryFileName && (Options & EOptionSpv) == 0)
         Error("no binary generation requested (e.g., -V)");
@@ -1185,6 +1192,8 @@ void SetMessageOptions(EShMessages& messages)
         messages = (EShMessages)(messages | EShMsgDisplayErrorColumn);
     if (Options & EOptionLinkTimeOptimization)
         messages = (EShMessages)(messages | EShMsgLinkTimeOptimization);
+    if (Options & EOptionValidateCrossStageIO)
+        messages = (EShMessages)(messages | EShMsgValidateCrossStageIO);
 }
 
 //
@@ -2154,7 +2163,8 @@ void usage()
            "  --no-link                         Only compile shader; do not link (GLSL-only)\n"
            "                                    NOTE: this option will set the export linkage\n"
            "                                          attribute on all functions\n"
-           "  --lto                             perform link time optimization\n");
+           "  --lto                             perform link time optimization\n"
+           "  --validate-io                     validate cross stage IO\n");
 
     exit(EFailUsage);
 }

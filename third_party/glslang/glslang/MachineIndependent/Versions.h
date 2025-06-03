@@ -356,6 +356,8 @@ const char* const E_GL_EXT_texture_shadow_lod = "GL_EXT_texture_shadow_lod";
 
 const char* const E_GL_EXT_integer_dot_product                    = "GL_EXT_integer_dot_product";
 
+const char* const E_GL_EXT_bfloat16 = "GL_EXT_bfloat16";
+
 // Arrays of extensions for the above AEP duplications
 
 const char* const AEP_geometry_shader[] = { E_GL_EXT_geometry_shader, E_GL_OES_geometry_shader };

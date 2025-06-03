@@ -27,6 +27,9 @@
 
 #include <utils/compiler.h>
 
+#include <array>
+#include <cmath>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -105,18 +108,20 @@ public:
     // Size a of a pixel in bytes for the given format
     static size_t getFormatSize(InternalFormat format) noexcept;
 
+    backend::TextureType getTextureType() const noexcept;
+
     // Returns the with or height for a given mipmap level from the base value.
-    static inline size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
+    static size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
         return std::max(size_t(1), baseLevelValue >> level);
     }
 
     // Returns the max number of levels for a texture of given max dimensions
-    static inline uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
+    static uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
         return std::max(1, std::ilogbf(float(maxDimension)) + 1);
     }
 
     // Returns the max number of levels for a texture of given dimensions
-    static inline uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
+    static uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
         uint32_t const maxDimension = std::max(width, height);
         return maxLevelCount(maxDimension);
     }
@@ -132,7 +137,7 @@ public:
     void updateLodRange(uint8_t level) noexcept;
 
     // TODO: remove in a future filament release.  See below for description.
-    inline bool hasBlitSrcUsage() const noexcept {
+    bool hasBlitSrcUsage() const noexcept {
         return mHasBlitSrc;
     }
 
@@ -166,23 +171,25 @@ private:
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
+
     InternalFormat mFormat = InternalFormat::RGBA8;
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
+
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
-    bool mTextureIsSwizzled;
 
     Usage mUsage = Usage::DEFAULT;
+    backend::TextureType mTextureType;
 
     // TODO: remove in a future filament release.
     // Indicates whether the user has set the TextureUsage::BLIT_SRC usage. This will be used to
     // temporarily validate whether this texture can be used for readPixels.
-    bool mHasBlitSrc = false;
-    bool mExternal = false;
-    // there is 4 bytes of padding here
+    bool mHasBlitSrc        : 1;
+    bool mExternal          : 1;
+    bool mTextureIsSwizzled : 1;
 
     FStream* mStream = nullptr; // only needed for streaming textures
 };

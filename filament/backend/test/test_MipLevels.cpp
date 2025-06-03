@@ -82,7 +82,7 @@ TEST_F(BackendTest, TextureViewLod) {
            .vertexShader = vertexShader,
            .fragmentShader = fragmentTexturedLod,
            .uniforms = {{
-               "backend_test_sib_tex", DescriptorType::SAMPLER, samplerInfo
+               "backend_test_sib_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
            }}
         });
 
@@ -138,37 +138,25 @@ TEST_F(BackendTest, TextureViewLod) {
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {}));
         {
-            RenderPassParams params = {};
-            fullViewport(params);
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardStart = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
-            PipelineState ps = {};
-            ps.program = whiteShader.getProgram();
-            ps.rasterState.colorWrite = true;
-            ps.rasterState.depthWrite = false;
+            PipelineState state = getColorWritePipelineState();
+            whiteShader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
+            params.viewport = getFullViewport();
+
             api.beginRenderPass(renderTarget, params);
-            api.draw(ps, triangle.getRenderPrimitive(), 0, 3, 1);
+            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
             api.endRenderPass();
         }
 
         backend::Handle<HwRenderTarget> defaultRenderTarget =
                 cleanup.add(api.createDefaultRenderTarget(0));
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 0.f, 0.5f, 1.f};
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
+        PipelineState state = getColorWritePipelineState();
+        texturedShader.addProgramToPipelineState(state);
 
-        PipelineState state;
-        state.program = texturedShader.getProgram();
-        state.pipelineLayout.setLayout = { texturedShader.getDescriptorSetLayout() };
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = SamplerCompareFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {

@@ -184,7 +184,7 @@ std::vector<UniformConfig> GetUniformConfig(ShaderUniformType type) {
                     "backend_test", "test_tex", 0,
                     SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
             return {{
-                            "test_tex", DescriptorType::SAMPLER, samplerInfo
+                            "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
                     }};
         }
         default:

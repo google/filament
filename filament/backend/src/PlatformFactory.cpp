@@ -16,7 +16,8 @@
 
 #include <private/backend/PlatformFactory.h>
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
+
 #include <utils/debug.h>
 
 // We need to keep this up top for the linux (X11) name collisions.
@@ -85,7 +86,7 @@ namespace filament::backend {
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
 Platform* PlatformFactory::create(Backend* backend) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(backend);
 
 #if defined(__ANDROID__)

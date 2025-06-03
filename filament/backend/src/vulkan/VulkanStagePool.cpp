@@ -125,7 +125,7 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     fvkutils::transitionLayout(cmdbuffer, {
             .image = image->image,
             .oldLayout = VulkanLayout::UNDEFINED,
-            .newLayout = VulkanLayout::READ_WRITE, // (= VK_IMAGE_LAYOUT_GENERAL)
+            .newLayout = VulkanLayout::STAGING, // (= VK_IMAGE_LAYOUT_GENERAL)
             .subresources = { aspectFlags, 0, 1, 0, 1 },
         });
     return image;

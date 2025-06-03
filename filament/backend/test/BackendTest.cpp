@@ -32,6 +32,7 @@ static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND
 
 using namespace filament;
 using namespace filament::backend;
+using namespace filament::math;
 
 #ifndef FILAMENT_IOS
 #include <imageio/ImageEncoder.h>
@@ -106,16 +107,35 @@ Handle<HwSwapChain> BackendTest::createSwapChain() {
     return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
-void BackendTest::fullViewport(RenderPassParams& params) {
-    fullViewport(params.viewport);
+PipelineState BackendTest::getColorWritePipelineState() {
+    PipelineState result;
+    result.rasterState.colorWrite = true;
+    result.rasterState.depthWrite = false;
+    result.rasterState.depthFunc = RasterState::DepthFunc::A;
+    return result;
 }
 
-void BackendTest::fullViewport(Viewport& viewport) {
-    const NativeView& view = getNativeView();
-    viewport.left = 0;
-    viewport.bottom = 0;
-    viewport.width = view.width;
-    viewport.height = view.height;
+filament::backend::Viewport BackendTest::getFullViewport() const {
+   const NativeView& view = getNativeView();
+   return Viewport {
+       .left = 0,
+       .bottom = 0,
+       .width = static_cast<uint32_t>(view.width),
+       .height = static_cast<uint32_t>(view.height)
+   };
+}
+
+filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(float4 color) {
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::COLOR;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::NONE;
+    params.clearColor = color;
+    return params;
+}
+
+filament::backend::RenderPassParams BackendTest::getNoClearRenderPass() {
+    return RenderPassParams{};
 }
 
 void BackendTest::renderTriangle(
@@ -123,14 +143,9 @@ void BackendTest::renderTriangle(
         Handle<filament::backend::HwRenderTarget> renderTarget,
         Handle<filament::backend::HwSwapChain> swapChain,
         Handle<filament::backend::HwProgram> program) {
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = {0.f, 0.f, 1.f, 1.f};
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = 512;
+    RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = 512;
+    params.viewport.height = 512;
     renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);
 }
 

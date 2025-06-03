@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24397,6 +24397,16 @@ bluegl_glFramebufferTextureMultiviewOVR:
 	ldr	x16, [x16]
 	br	x16
 	.size	bluegl_glFramebufferTextureMultiviewOVR, .-bluegl_glFramebufferTextureMultiviewOVR
+
+	.align	2
+	.global	bluegl_glFramebufferTextureMultisampleMultiviewOVR
+	.type	bluegl_glFramebufferTextureMultisampleMultiviewOVR, %function
+bluegl_glFramebufferTextureMultisampleMultiviewOVR:
+	adrp	x16, :got:__blue_glCore_glFramebufferTextureMultisampleMultiviewOVR
+	ldr	x16, [x16, #:got_lo12:__blue_glCore_glFramebufferTextureMultisampleMultiviewOVR]
+	ldr	x16, [x16]
+	br	x16
+	.size	bluegl_glFramebufferTextureMultisampleMultiviewOVR, .-bluegl_glFramebufferTextureMultisampleMultiviewOVR
 
 	.align	2
 	.global	bluegl_glHintPGI

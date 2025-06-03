@@ -20,8 +20,9 @@
 #include "private/backend/Driver.h"
 #include "private/backend/CommandStream.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
-#include <utils/Systrace.h>
 
 #include <utility>
 
@@ -38,7 +39,7 @@
 #if DEBUG_LEVEL == DEBUG_LEVEL_NONE
 #   define SYSTRACE()
 #elif DEBUG_LEVEL == DEBUG_LEVEL_SYSTRACE
-#   define SYSTRACE() SYSTRACE_CALL();
+#   define SYSTRACE() FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #else
 #   error "invalid debug level"
 #endif

@@ -44,6 +44,8 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/DriverApi.h"
 
+#include <private/utils/Tracing.h>
+
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
 #include <utils/FixedCapacityVector.h>
@@ -51,7 +53,6 @@
 #include <utils/Invocable.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -98,13 +99,13 @@
 
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
+#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (perfetto)
 #define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (perfetto)
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (perfetto)
 #define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
@@ -248,8 +249,8 @@ OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string)
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -265,8 +266,8 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -2513,10 +2514,33 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
             [this]() {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        mPlatform.detach(t->hwStream->stream);
+                    }
+                }
                 // OpenGL context is about to change, unbind everything
                 mContext.unbindEverything();
             },
             [this](size_t index) {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        if (t->externalTexture) {
+                            glGenTextures(1, &t->externalTexture->id);
+                            t->gl.id = t->externalTexture->id;
+                        } else {
+                            glGenTextures(1, &t->gl.id);
+                        }
+                        mPlatform.attach(t->hwStream->stream, t->gl.id);
+                        mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
+                    }
+                }
+
+                // force invalidation of all bound descriptor sets
+                decltype(mInvalidDescriptorSetBindings) changed;
+                changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+                mInvalidDescriptorSetBindings |= changed;
+
                 // OpenGL context has changed, resynchronize the state with the cache
                 mContext.synchronizeStateAndCache(index);
                 slog.d << "*** OpenGL context change : " << (index ? "protected" : "default") << io::endl;
@@ -2991,6 +3015,7 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     switch (hwStream->streamType) {
         case StreamType::NATIVE:
             mPlatform.attach(hwStream->stream, t->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
             break;
         case StreamType::ACQUIRED:
             break;
@@ -3019,7 +3044,12 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
             break;
     }
 
-    glGenTextures(1, &t->gl.id);
+    if (t->externalTexture) {
+        glGenTextures(1, &t->externalTexture->id);
+        t->gl.id = t->externalTexture->id;
+    } else {
+        glGenTextures(1, &t->gl.id);
+    }
 
     t->hwStream = nullptr;
 }
@@ -3043,8 +3073,14 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 
     switch (newStream->streamType) {
         case StreamType::NATIVE:
-            glGenTextures(1, &texture->gl.id);
+            if (texture->externalTexture) {
+                glGenTextures(1, &texture->externalTexture->id);
+                texture->gl.id = texture->externalTexture->id;
+            } else {
+                glGenTextures(1, &texture->gl.id);
+            }
             mPlatform.attach(newStream->stream, texture->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, texture->gl.id);
             break;
         case StreamType::ACQUIRED:
             // Just re-use the old texture id.
@@ -3348,8 +3384,8 @@ void OpenGLDriver::pushGroupMarker(char const* string) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -3365,8 +3401,8 @@ void OpenGLDriver::popGroupMarker(int) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -3685,7 +3721,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     gl.depthFunc(GL_LESS);
     gl.disable(GL_SCISSOR_TEST);
 #endif
-    //SYSTRACE_NAME("glFinish");
+    //FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glFinish");
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
@@ -3707,8 +3743,7 @@ void OpenGLDriver::updateDescriptorSetTexture(
         TextureHandle th,
         SamplerParams params) {
     GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
-    GLTexture* t = th ? handle_cast<GLTexture*>(th) : nullptr;
-    ds->update(mContext, binding, t, params);
+    ds->update(mContext, mHandleAllocator, binding, th, params);
 }
 
 void OpenGLDriver::flush(int) {

@@ -90,7 +90,7 @@ def _interactive_mode(base_golden_dir):
   if prompt_helper(
           f'Generate the new goldens from your local ' \
           f'Filament branch? (branch={cur_branch})') == PROMPT_YES:
-    code, res = execute('bash ./test/renderdiff/test.sh generate',
+    code, res = execute('bash ./test/renderdiff/generate.sh',
             capture_output=False)
     if code != 0:
       print('Failed to generate new goldens')

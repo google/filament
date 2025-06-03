@@ -16,7 +16,7 @@
 
 #include "CompilerThreadPool.h"
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
 
 #include <memory>
 
@@ -41,7 +41,7 @@ void CompilerThreadPool::init(uint32_t threadCount,
 
     for (size_t i = 0; i < threadCount; i++) {
         mCompilerThreads.emplace_back([this, setup, cleanup]() {
-            SYSTRACE_CONTEXT();
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
             (*setup)();
 
@@ -54,7 +54,7 @@ void CompilerThreadPool::init(uint32_t threadCount,
                                     [](auto&& q) { return q.empty(); }));
                 });
 
-                SYSTRACE_VALUE32("CompilerThreadPool Jobs",
+                FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "CompilerThreadPool Jobs",
                         mQueues[0].size() + mQueues[1].size());
 
                 if (UTILS_LIKELY(!mExitRequested)) {

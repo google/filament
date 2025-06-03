@@ -80,8 +80,8 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         });
 
         // Create source color and depth textures.
-        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, kNumLevels,
-                kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+        Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+                kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
                 TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
         Handle<HwTexture> depthTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::DEPTH16, 1, 512, 512, 1,
@@ -104,27 +104,21 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // We purposely set the render target width and height to smaller than the texture, to check
         // that this case is handled correctly.
         Handle<HwRenderTarget> srcRenderTarget = cleanup.add(api.createRenderTarget(
-                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {depthTexture, 0, 0}, {}));
+                TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH, kSrcRtHeight, kSrcRtHeight, 1,
+                0, { srcTexture, kSrcLevel, 0 }, { depthTexture, 0, 0 }, {}));
 
-        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexHeight >> kSrcLevel, kSrcTexWidth >> kSrcLevel, 1, 0,
-                {srcTexture, kSrcLevel, 0}, {}, {}));
+        Handle<HwRenderTarget> fullRenderTarget = cleanup.add(
+                api.createRenderTarget(TargetBufferFlags::COLOR, kSrcTexHeight >> kSrcLevel,
+                        kSrcTexWidth >> kSrcLevel, 1, 0, {srcTexture, kSrcLevel, 0}, {}, {}));
 
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = srcRect;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
-        PipelineState ps = {};
-        ps.program = shader.getProgram();
-        ps.rasterState.colorWrite = true;
-        ps.rasterState.depthWrite = false;
+        PipelineState ps = getColorWritePipelineState();
+        shader.addProgramToPipelineState(ps);
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -135,7 +129,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.endRenderPass();
 
         EXPECT_IMAGE(fullRenderTarget, getExpectations(),
-                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 0xAB3D1C53));
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.commit(swapChain);
         api.endFrame(0);
@@ -196,17 +190,11 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         TrianglePrimitive triangle(api);
 
         // Render a white triangle over blue.
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::COLOR0;
+        RenderPassParams params = getClearColorRenderPass();
         params.viewport = bottomLeftViewport;
-        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
 
-        PipelineState ps = {};
-        ps.program = shader.getProgram();
-        ps.rasterState.colorWrite = true;
-        ps.rasterState.depthWrite = false;
+        PipelineState ps = getColorWritePipelineState();
+        shader.addProgramToPipelineState(ps);
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -225,7 +213,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.endRenderPass();
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 0x6BF00F31));
+                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.commit(swapChain);
         api.endFrame(0);

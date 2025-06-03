@@ -279,14 +279,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         TrianglePrimitive const triangle(api);
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
-        params.viewport.height = t.getRenderTargetSize();
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
         params.viewport.width = t.getRenderTargetSize();
+        params.viewport.height = t.getRenderTargetSize();
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -294,15 +289,12 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Render a white triangle over blue.
         api.beginRenderPass(renderTarget, params);
 
-        PipelineState state;
-        state.program = floatShader.getProgram();
+        PipelineState state = getColorWritePipelineState();
         if (isUnsignedIntFormat(t.textureFormat)) {
-            state.program = uintShader.getProgram();
+            uintShader.addProgramToPipelineState(state);
+        } else {
+            floatShader.addProgramToPipelineState(state);
         }
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = RasterState::DepthFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
         api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
 
         api.endRenderPass();
@@ -400,23 +392,14 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     TrianglePrimitive triangle(api);
 
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = renderTargetSize;
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
     params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
 
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
-
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     for (int iteration = 0; iteration < iterationCount; ++iteration) {
         readPixelsFinished = false;

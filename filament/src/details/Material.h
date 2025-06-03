@@ -93,17 +93,8 @@ public:
         return mPerViewDescriptorSetLayout;
     }
 
-    DescriptorSetLayout const& getPerViewDescriptorSetLayout(Variant const variant) const noexcept {
-        if (Variant::isValidDepthVariant(variant)) {
-            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
-            return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
-        }
-        if (Variant::isSSRVariant(variant)) {
-            assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
-            return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
-        }
-        return mPerViewDescriptorSetLayout;
-    }
+    DescriptorSetLayout const& getPerViewDescriptorSetLayout(
+            Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
     DescriptorSetLayout const& getDescriptorSetLayout() const noexcept {
         return mDescriptorSetLayout;
@@ -150,30 +141,17 @@ public:
 
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
-    [[nodiscard]] backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
+    [[nodiscard]]
+    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        assert_invariant((size_t)variant.key < VARIANT_COUNT);
-        std::unique_lock<utils::Mutex> lock(mActiveProgramsLock);
-        if (getMaterialDomain() == MaterialDomain::SURFACE) {
-            auto vert = Variant::filterVariantVertex(variant);
-            auto frag = Variant::filterVariantFragment(variant);
-            mActivePrograms.set(vert.key);
-            mActivePrograms.set(frag.key);
-        } else {
-            mActivePrograms.set(variant.key);
-        }
-        lock.unlock();
-
-        if (isSharedVariant(variant)) {
-            FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
-            if (pDefaultMaterial && pDefaultMaterial->mCachedPrograms[variant.key]) {
-                return pDefaultMaterial->getProgram(variant);
-            }
-        }
+        return getProgramWithMATDBG(variant);
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
     }
+
+    [[nodiscard]]
+    backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
@@ -312,6 +290,7 @@ private:
     // try to order by frequency of use
     mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
     DescriptorSetLayout mPerViewDescriptorSetLayout;
+    DescriptorSetLayout mPerViewDescriptorSetLayoutVsm;
     DescriptorSetLayout mDescriptorSetLayout;
     backend::Program::DescriptorSetInfo mProgramDescriptorBindings;
 

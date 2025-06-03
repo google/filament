@@ -102,19 +102,11 @@ TEST_F(BackendTest, MRT) {
                 {},                                        // depth
                 {}));                                       // stencil
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = {0.f, 1.f, 0.f, 1.f};
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
 
-        PipelineState state;
-        state.program = shader.getProgram();
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = RasterState::DepthFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport = getFullViewport();
 
         api.startCapture(0);
 

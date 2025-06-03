@@ -50,6 +50,8 @@
 #include <string_view>
 #include <utility>
 
+#include <stddef.h>
+
 using namespace filament::math;
 using namespace utils;
 
@@ -60,7 +62,7 @@ using namespace backend;
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
                                      const char* name) noexcept
         : mMaterial(material),
-          mDescriptorSet(material->getDescriptorSetLayout()),
+          mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
           mCulling(CullingMode::BACK),
           mShadowCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
@@ -74,15 +76,17 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
 
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    // even if the material doesn't have any parameters, we allocate a small UBO because it's
+    // expected by the per-material descriptor-set layout
+    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
+    mUniforms = UniformBuffer(uboSize);
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
-    mDescriptorSet.setBuffer(0, mUbHandle, 0, mUniforms.getSize());
+    mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
+        0, mUbHandle, 0, mUniforms.getSize());
 
     const RasterState& rasterState = material->getRasterState();
     // At the moment, only MaterialInstances have a stencil state, but in the future it should be
@@ -122,7 +126,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         FMaterialInstance const* other, const char* name)
         : mMaterial(other->mMaterial),
           mTextureParameters(other->mTextureParameters),
-          mDescriptorSet(other->mDescriptorSet.duplicate(mMaterial->getDescriptorSetLayout())),
+          mDescriptorSet(other->mDescriptorSet.duplicate(
+                "MaterialInstance", mMaterial->getDescriptorSetLayout())),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -142,15 +147,14 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
-    if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms.setUniforms(other->getUniformBuffer());
-        mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-        driver.setDebugTag(mUbHandle.getId(), material->getName());
-    }
+    mUniforms.setUniforms(other->getUniformBuffer());
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
+            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    driver.setDebugTag(mUbHandle.getId(), material->getName());
 
     // set the UBO, always descriptor 0
-    mDescriptorSet.setBuffer(0, mUbHandle, 0, mUniforms.getSize());
+    mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),
+            0, mUbHandle, 0, mUniforms.getSize());
 
     if (material->hasDoubleSidedCapability()) {
         setDoubleSided(mIsDoubleSided);
@@ -209,6 +213,12 @@ void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driv
     }
 }
 
+void FMaterialInstance::commit(FEngine& engine) const {
+    if (UTILS_LIKELY(mMaterial->getMaterialDomain() != MaterialDomain::SURFACE)) {
+        commit(engine.getDriverApi());
+    }
+}
+
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
@@ -223,7 +233,8 @@ void FMaterialInstance::commit(DriverApi& driver) const {
                     << "Invalid texture still bound to MaterialInstance: '" << getName() << "'\n";
             Handle<HwTexture> const handle = p.texture->getHwHandleForSampling();
             assert_invariant(handle);
-            mDescriptorSet.setSampler(binding, handle, p.params);
+            mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+                binding, handle, p.params);
         }
     }
 
@@ -239,7 +250,9 @@ void FMaterialInstance::commit(DriverApi& driver) const {
 void FMaterialInstance::setParameter(std::string_view const name,
         Handle<HwTexture> texture, SamplerParams const params) {
     auto const binding = mMaterial->getSamplerBinding(name);
-    mDescriptorSet.setSampler(binding, texture, params);
+
+    mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+        binding, texture, params);
 }
 
 void FMaterialInstance::setParameterImpl(std::string_view const name,
@@ -266,6 +279,21 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
 #endif
 
     auto const binding = mMaterial->getSamplerBinding(name);
+
+    if (texture) {
+        auto const& descriptorSetLayout = mMaterial->getDescriptorSetLayout();
+        DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
+        TextureType const textureType = texture->getTextureType();
+
+        FILAMENT_CHECK_PRECONDITION(
+                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, descriptorType))
+                << "Texture format " << int(texture->getFormat())
+                << " of type " << to_string(textureType)
+                << " is not compatible with material \"" << getMaterial()->getName().c_str() << "\""
+                << " parameter \"" << name << "\""
+                << " of type " << to_string(descriptorType);
+    }
+
     if (texture && texture->textureHandleCanMutate()) {
         mTextureParameters[binding] = { texture, sampler.getSamplerParams() };
     } else {
@@ -278,7 +306,8 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
             handle = texture->getHwHandleForSampling();
             assert_invariant(handle == texture->getHwHandle());
         }
-        mDescriptorSet.setSampler(binding, handle, sampler.getSamplerParams());
+        mDescriptorSet.setSampler(mMaterial->getDescriptorSetLayout(),
+            binding, handle, sampler.getSamplerParams());
     }
 }
 
@@ -395,29 +424,30 @@ void FMaterialInstance::fixMissingSamplers() const {
             auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                 return item.binding == binding;
             });
-
-            FEngine const& engine = mMaterial->getEngine();
-
             // just safety-check, should never fail
             if (UTILS_LIKELY(pos != list.end())) {
-                switch (pos->type) {
-                    case SamplerType::SAMPLER_2D:
-                        mDescriptorSet.setSampler(binding,
-                                engine.getZeroTexture(), {});
-                        break;
-                    case SamplerType::SAMPLER_2D_ARRAY:
-                        mDescriptorSet.setSampler(binding,
-                                engine.getZeroTextureArray(), {});
-                        break;
-                    case SamplerType::SAMPLER_CUBEMAP:
-                        mDescriptorSet.setSampler(binding,
-                                engine.getDummyCubemap()->getHwHandle(), {});
-                        break;
-                    case SamplerType::SAMPLER_EXTERNAL:
-                    case SamplerType::SAMPLER_3D:
-                    case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-                        // we're currently not able to fix-up those
-                        break;
+                FEngine const& engine = mMaterial->getEngine();
+                filament::DescriptorSetLayout const& layout = mMaterial->getDescriptorSetLayout();
+
+                if (pos->format == SamplerFormat::FLOAT) {
+                    // TODO: we only handle missing samplers that are FLOAT
+                    switch (pos->type) {
+                        case SamplerType::SAMPLER_2D:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getZeroTexture(), {});
+                            break;
+                        case SamplerType::SAMPLER_2D_ARRAY:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getZeroTextureArray(), {});
+                            break;
+                        case SamplerType::SAMPLER_CUBEMAP:
+                            mDescriptorSet.setSampler(layout,
+                                    binding, engine.getDummyCubemap()->getHwHandle(), {});
+                            break;
+                        default:
+                            // we're currently not able to fix-up other sampler types
+                            break;
+                    }
                 }
             }
         });

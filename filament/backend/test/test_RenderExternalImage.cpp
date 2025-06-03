@@ -73,20 +73,11 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
             1,                                  // depth
             usage));                             // usage
 
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
 
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
+    RenderPassParams params = getClearColorRenderPass();
+    params.viewport = getFullViewport();
 
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
@@ -179,20 +170,11 @@ TEST_F(BackendTest, RenderExternalImage) {
     // We're now free to release the buffer.
     CVBufferRelease(pixBuffer);
 
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 1.f, 0.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
 
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
+    RenderPassParams params = getClearColorRenderPass();
+    params.viewport = getFullViewport();
 
     api.startCapture(0);
     api.makeCurrent(swapChain, swapChain);
@@ -210,7 +192,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     api.commit(swapChain);
     api.endFrame(0);
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(512, 512, "RenderExternalImage", 267229901));
+            ScreenshotParams(512, 512, "RenderExternalImage", 1206264951));
 
     api.stopCapture(0);
     api.finish();

@@ -234,6 +234,9 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfi
     printAdapterDetails(mAdapter);
 #endif
     mDevice = mPlatform.requestDevice(mAdapter);
+    wgpu::Limits supportedLimits{};
+    mDevice.GetLimits(&supportedLimits);
+    mMinUniformBufferOffsetAlignment = supportedLimits.minUniformBufferOffsetAlignment;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printDeviceDetails(mDevice);
 #endif
@@ -468,11 +471,10 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
-    WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(mDevice,
-            mSwapChain->getColorFormat());
-    FWGPU_LOGW << "WebGPU support is still essentially a no-op at this point in development (only "
-                  "background components have been instantiated/selected, such as surface/screen, "
-                  "graphics device/GPU, etc.), thus nothing is being drawn to the screen."
+
+    FWGPU_LOGW << "WebGPU support is highly experimental, in development, and tested for only a "
+                  "small set of simple samples (e.g. hellotriangle and texturedquad), thus issues "
+                  "are likely to be encountered at this stage."
                << utils::io::endl;
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
     FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
@@ -721,17 +723,20 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUIndexBuffer>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUIndexBuffer>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh,
         BufferDescriptor&& p, uint32_t byteOffset) {
-    updateGPUBuffer(handleCast<WGPUBufferObject>(ibh), std::move(p), byteOffset);
+    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
+    scheduleDestroy(std::move(p));
 }
 
 void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
@@ -743,8 +748,8 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t in
     auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
     auto* bufferObject = handleCast<WGPUBufferObject>(boh);
     assert_invariant(index < vertexBuffer->buffers.size());
-    assert_invariant(bufferObject->buffer.GetUsage() & wgpu::BufferUsage::Vertex);
-    vertexBuffer->buffers[index] = bufferObject->buffer;
+    assert_invariant(bufferObject->getBuffer().GetUsage() & wgpu::BufferUsage::Vertex);
+    vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
 void WebGPUDriver::update3DImage(Handle<HwTexture> th,
@@ -787,7 +792,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
     //     FWGPU_LOGW << "Non Default render target"
     //                << utils::io::endl;
     // }
-    wgpu::RenderPassDescriptor renderPassDescriptor2;
+    wgpu::RenderPassDescriptor renderPassDescriptor;
     wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
         .view = mSwapChain->getDepthTextureView(),
         .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
@@ -799,33 +804,12 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
         .stencilClearValue = params.clearStencil,
         .stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0
     };
-    renderTarget->setUpRenderPassAttachments(renderPassDescriptor2, mTextureView, params);
-    renderPassDescriptor2.depthStencilAttachment = &depthStencilAttachment;
-    // TODO: Remove this code once WebGPU pipeline is implemented
-    static float red = 1.0f;
-    if (red - 0.01 > 0) {
-        red -= 0.01;
-    } else {
-        red = 1.0f;
-    }
+    renderTarget->setUpRenderPassAttachments(renderPassDescriptor, mTextureView, params);
+    renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
+
     assert_invariant(mTextureView);
-    wgpu::RenderPassColorAttachment renderPassColorAttachment = {
-        .view = mTextureView,
-        // TODO: remove this code once WebGPU Pipeline is implemented with render targets, pipeline and buffers.
-        .depthSlice = wgpu::kDepthSliceUndefined,
-        .loadOp = wgpu::LoadOp::Clear,
-        .storeOp = wgpu::StoreOp::Store,
-        .clearValue = wgpu::Color{red, 0 , 0 , 1},
-    };
 
-    wgpu::RenderPassDescriptor renderPassDescriptor = {
-        .colorAttachmentCount = 1,
-        .colorAttachments = &renderPassColorAttachment,
-        .depthStencilAttachment = nullptr,
-        .timestampWrites = nullptr,
-    };
-
-    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor2);
+    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
     mRenderPassEncoder.SetViewport(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height, params.depthRange.near, params.depthRange.far);
 }
@@ -976,18 +960,12 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
         mRenderPassEncoder.SetVertexBuffer(i, renderPrimitive->vertexBuffer->buffers[i]);
     }
 
-    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->buffer,
+    mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
             renderPrimitive->indexBuffer->indexFormat);
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
-    // Calling DrawIndexed with "firstInstance = 0" results in a NON spinning triangle
-    //    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
-    // Calling DrawIndexed with "firstInstance = 1" results in a spinning triangle
-    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 1);
-    // Calling Draw with "firstInstance = 0" results in a NON spinning triangle
-    // Calling Draw with "firstInstance = 1" results in a spinning triangle
-    //    mRenderPassEncoder.Draw(indexCount, instanceCount, 0, 1);
+    mRenderPassEncoder.DrawIndexed(indexCount, instanceCount, indexOffset, 0, 0);
 }
 
 void WebGPUDriver::draw(PipelineState, Handle<HwRenderPrimitive>, uint32_t indexOffset,
@@ -1018,8 +996,11 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
     auto buffer = handleCast<WGPUBufferObject>(boh);
     if (!bindGroup->getIsLocked()) {
         // TODO making assumptions that size and offset mean the same thing here.
+        FILAMENT_CHECK_PRECONDITION(offset % mMinUniformBufferOffsetAlignment == 0)
+                << "Binding offset must be multiple of " << mMinUniformBufferOffsetAlignment
+                << "But requested offset is " << offset;
         wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
-            .buffer = buffer->buffer,
+            .buffer = buffer->getBuffer(),
             .offset = offset,
             .size = size };
         bindGroup->addEntry(entry.binding, std::move(entry));
@@ -1051,115 +1032,105 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
     assert_invariant(mRenderPassEncoder);
-    // TODO is this how we should be getting the dynamic offsets?
-    //      should we add offsets for unused entries or is the input already have them?
-    //      this implementation assumes unused entries are not provided, and adds dummy values.
-    //      The count also includes unused entities, as not doing so produces errors
     const size_t dynamicOffsetCount = bindGroup->countEntitiesWithDynamicOffsets();
-    uint32_t const* const dynamicOffsetsWithUnused = bindGroup->setDynamicOffsets(offsets.data());
-    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, dynamicOffsetsWithUnused);
+    mRenderPassEncoder.SetBindGroup(setIndex, wbg, dynamicOffsetCount, offsets.data());
 }
 
 void WebGPUDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
-    wgpu::SamplerDescriptor desc;
+    wgpu::SamplerDescriptor desc{};
 
     desc.label = "TODO";
     desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
     desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
     desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
-    switch (params.filterMag) {
-        case SamplerMagFilter::NEAREST: {
-            desc.magFilter = wgpu::FilterMode::Nearest;
-            break;
+    if (params.compareMode == SamplerCompareMode::COMPARE_TO_TEXTURE) {
+        switch (params.filterMag) {
+            case SamplerMagFilter::NEAREST: {
+                desc.magFilter = wgpu::FilterMode::Nearest;
+                break;
+            }
+            case SamplerMagFilter::LINEAR: {
+                desc.magFilter = wgpu::FilterMode::Linear;
+                break;
+            }
         }
-        case SamplerMagFilter::LINEAR: {
-            desc.magFilter = wgpu::FilterMode::Linear;
-            break;
-        }
-    }
-    switch (params.filterMin) {
-        case SamplerMinFilter::NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
-            // suffice
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            // Metal Driver uses an explicit not-mipmapped value webgpu lacks. Nearest should
-            // suffice
+        switch (params.filterMin) {
+            case SamplerMinFilter::NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+                break;
+            }
+            case SamplerMinFilter::LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Undefined;
+                break;
+            }
+            case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+                break;
+            }
+            case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
 
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
-            break;
-        }
-        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Nearest;
+                break;
+            }
+            case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Nearest;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
 
-            break;
+                break;
+            }
+            case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
+                desc.minFilter = wgpu::FilterMode::Linear;
+                desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+                break;
+            }
         }
-        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Nearest;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
-
-            break;
-        }
-        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR: {
-            desc.minFilter = wgpu::FilterMode::Linear;
-            desc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
-            break;
-        }
-    }
-    switch (params.compareFunc) {
-        case SamplerCompareFunc::LE: {
-            desc.compare = wgpu::CompareFunction::LessEqual;
-            break;
-        }
-        case SamplerCompareFunc::GE: {
-            desc.compare = wgpu::CompareFunction::GreaterEqual;
-            break;
-        }
-        case SamplerCompareFunc::L: {
-            desc.compare = wgpu::CompareFunction::Less;
-            break;
-        }
-        case SamplerCompareFunc::G: {
-            desc.compare = wgpu::CompareFunction::Greater;
-            break;
-        }
-        case SamplerCompareFunc::E: {
-            desc.compare = wgpu::CompareFunction::Equal;
-            break;
-        }
-        case SamplerCompareFunc::NE: {
-            desc.compare = wgpu::CompareFunction::NotEqual;
-            break;
-        }
-        case SamplerCompareFunc::A: {
-            desc.compare = wgpu::CompareFunction::Always;
-            break;
-        }
-        case SamplerCompareFunc::N: {
-            desc.compare = wgpu::CompareFunction::Never;
-            break;
+        switch (params.compareFunc) {
+            case SamplerCompareFunc::LE: {
+                desc.compare = wgpu::CompareFunction::LessEqual;
+                break;
+            }
+            case SamplerCompareFunc::GE: {
+                desc.compare = wgpu::CompareFunction::GreaterEqual;
+                break;
+            }
+            case SamplerCompareFunc::L: {
+                desc.compare = wgpu::CompareFunction::Less;
+                break;
+            }
+            case SamplerCompareFunc::G: {
+                desc.compare = wgpu::CompareFunction::Greater;
+                break;
+            }
+            case SamplerCompareFunc::E: {
+                desc.compare = wgpu::CompareFunction::Equal;
+                break;
+            }
+            case SamplerCompareFunc::NE: {
+                desc.compare = wgpu::CompareFunction::NotEqual;
+                break;
+            }
+            case SamplerCompareFunc::A: {
+                desc.compare = wgpu::CompareFunction::Always;
+                break;
+            }
+            case SamplerCompareFunc::N: {
+                desc.compare = wgpu::CompareFunction::Never;
+                break;
+            }
         }
     }
 
     desc.maxAnisotropy = 1u << params.anisotropyLog2;
 
+    // Unused: WGPU lodMinClamp/lodMaxClamp unnecessary
 
-    // Unused: Filament's compareMode, WGPU lodMinClamp/lodMaxClamp
-
-    //TODO Once we can properly map to descriptorsetlayout use the sampler.
-    return mDevice.CreateSampler(/*&desc*/);
+    return mDevice.CreateSampler(&desc);
 }
 wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& fWrapMode) {
     switch (fWrapMode) {
@@ -1178,6 +1149,5 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     }
     return wgpu::AddressMode::Undefined;
 }
-
 
 } // namespace filament

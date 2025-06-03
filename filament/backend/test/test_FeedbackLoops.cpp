@@ -120,7 +120,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         Shader shader = Shader(api, cleanup, ShaderConfig {
             .vertexShader = fullscreenVs,
             .fragmentShader = fullscreenFs,
-            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}, {"Params"}}
         });
 
         TrianglePrimitive const triangle(getDriverApi());
@@ -161,15 +161,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (int frame = 0; frame < kNumFrames; frame++) {
 
             // Prep for rendering.
-            RenderPassParams params = {};
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
-            PipelineState state;
-            state.rasterState.colorWrite = true;
-            state.rasterState.depthWrite = false;
-            state.rasterState.depthFunc = RasterState::DepthFunc::A;
-            state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
+            PipelineState state = getColorWritePipelineState();
+            shader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
