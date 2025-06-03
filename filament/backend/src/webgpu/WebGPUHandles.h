@@ -267,7 +267,7 @@ public:
     // Static helpers for load/store operations
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
-    
+
 private:
     bool mDefaultRenderTarget = false;
     uint8_t mSamples = 1;
