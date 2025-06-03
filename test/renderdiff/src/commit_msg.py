@@ -21,15 +21,12 @@ RDIFF_UPDATE_GOLDEN_STR = 'RDIFF_BRANCH'
 
 def _parse_commit(commit_str):
   lines = commit_str.split('\n')
-  if len(lines) >= 4:
+  if len(lines) >= 5:
     commit, author, date, _, title, *desc = lines
   else:
     print(commit_str, file=sys.stderr)
-    return (
-      lines[0],
-      lines[1],
-      '',
-    )
+    return (commit_str, '', '')
+
   commit = commit.split(' ')[1]
   title = title.strip()
 
