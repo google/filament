@@ -184,6 +184,7 @@ public:
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTextureView() const { return mTexureView; }
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
+    [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
 
     static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);

@@ -70,6 +70,7 @@ private:
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
+    std::vector<Handle<HwTexture>> mMipQueue;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
