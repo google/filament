@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
@@ -64,7 +66,7 @@ static void printUsage(char* name) {
             "   --help, -h\n"
             "       Prints this message\n\n"
             "   --api, -a\n"
-            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
+            "       Specify the backend API: opengl (default), vulkan, metal, or webgpu\n"
             "       NOTE that webgpu is not yet functional (it is in development).\n"
     );
     const std::string from("EXEC");
@@ -91,19 +93,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else if (arg == "webgpu") {
-                    app->config.backend = Engine::Backend::WEBGPU;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be "
-                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
-                    exit(1);
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
         }
     }

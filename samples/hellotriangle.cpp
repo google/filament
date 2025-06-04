@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -78,7 +80,7 @@ static void printUsage(char* name) {
             "   --help, -h\n"
             "       Prints this message\n\n"
             "   --api, -a\n"
-            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
+            "       Specify the backend API: opengl (default), vulkan, metal, or webgpu\n"
     );
     const std::string from("HELLOTRIANGLE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -104,19 +106,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else if (arg == "webgpu") {
-                    app->config.backend = Engine::Backend::WEBGPU;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be "
-                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
-                    exit(1);
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
         }
     }

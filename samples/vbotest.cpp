@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
 #include <filament/RenderableManager.h>
@@ -45,6 +47,7 @@ static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
 int main(int argc, char** argv) {
     Config config;
     config.title = "vbotest";
+    config.backend = samples::parseArgumentsForBackend(argc, argv);
 
     // Aggregate positions and colors into a single buffer without interleaving.
     std::vector<uint8_t> vbo(sizeof(POSITIONS) + sizeof(COLORS));

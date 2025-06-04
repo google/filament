@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -107,7 +109,7 @@ static void printUsage(char* name) {
             "   --help, -h\n"
             "       Prints this message\n\n"
             "   --api, -a\n"
-            "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
+            "       Specify the backend API: opengl (default), vulkan, metal or webgpu\n\n"
     );
     const std::string from("HEIGHTFIELD");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -133,16 +135,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    config->backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    config->backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    config->backend = Engine::Backend::METAL;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'."
-                              << std::endl;
-                }
+                config->backend = samples::parseArgumentsForBackend(arg);
                 break;
         }
     }
