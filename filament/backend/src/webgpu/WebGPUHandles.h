@@ -214,9 +214,9 @@ private:
 
     wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
 
-    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+    [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
             const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-            SamplerType samplerType) const;
+            SamplerType samplerType) const noexcept;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {

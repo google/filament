@@ -983,7 +983,7 @@ wgpu::TextureView WGPUTexture::getTextureView(uint8_t mipLevel, uint32_t arrayLa
 
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
         const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-        SamplerType samplerType) const {
+        SamplerType samplerType) const noexcept{
 
     wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
