@@ -2667,8 +2667,9 @@ void PostProcessManager::TaaJitterCamera(
     current.jitter = jitterPosition(previous.frameId);
     float2 jitter = current.jitter;
     switch (mEngine.getBackend()) {
-        case Backend::VULKAN:
         case Backend::METAL:
+        case Backend::VULKAN:
+        case Backend::WEBGPU:
             jitter.y = -jitter.y;
             UTILS_FALLTHROUGH;
         case Backend::OPENGL:
