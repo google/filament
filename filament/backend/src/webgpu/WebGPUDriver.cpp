@@ -163,6 +163,9 @@ void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
 }
 
 void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
+    if (th) {
+        destructHandle<WGPUTexture>(th);
+    }
 }
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
