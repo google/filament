@@ -845,7 +845,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
                         << " layers.";
                 uint8_t stencilMipLevel = stencilInfo.level;
                 uint32_t stencilArrayLayer = stencilInfo.layer;
-                customStencilView = hwTexture->getTextureView(stencilMipLevel,stencilArrayLayer);
+                customStencilView = hwTexture->getTextureView(stencilMipLevel, stencilArrayLayer);
                 customStencilFormat = hwTexture->getFormat();
             }
         }
