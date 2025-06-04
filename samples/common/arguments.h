@@ -23,6 +23,7 @@
 
 namespace samples {
     filament::Engine::Backend parseArgumentsForBackend(int argc, char* argv[]);
-    filament::Engine::Backend parseArgumentsForBackend(std::string backend);
+    filament::Engine::Backend parseArgumentsForBackend(const std::string& backend);
+    std::string getBackendAPIArgumentsUsage();
 }
 #endif //TNT_SAMPLES_ARGUMENTS_H

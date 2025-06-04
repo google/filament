@@ -132,14 +132,17 @@ static void printUsage(char* name) {
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
-        "   --api, -a\n"
-        "       Specify the backend API: opengl (default), vulkan, metal or webgpu\n"
+        "API_USAGE"
         "   --mode, -m\n"
         "       Specify the reflection mode: camera (default), or renderables\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
+    }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }

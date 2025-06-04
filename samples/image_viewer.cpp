@@ -96,8 +96,7 @@ static void printUsage(char* name) {
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
-        "   --api, -a\n"
-        "       Specify the backend API: opengl (default), vulkan, metal or webgpu\n\n"
+        "API_USAGE"
         "   --camera=<camera mode>, -c <camera mode>\n"
         "       Set the camera mode: orbit (default) or flight\n"
         "       Flight mode uses the following controls:\n"
@@ -110,6 +109,10 @@ static void printUsage(char* name) {
     const std::string from("IMAGE_VIEWER");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
+    }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }
