@@ -172,7 +172,7 @@ private:
 
 class WGPUTexture : public HwTexture {
 public:
-    WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+    WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat format,
             uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
             wgpu::Device const& device) noexcept;
 
@@ -181,14 +181,16 @@ public:
     size_t getBlockWidth() const { return mBlockWidth; }
     size_t getBlockHeight() const { return mBlockHeight; }
 
-    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
-            const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-            SamplerType target);
 
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
-    [[nodiscard]] const wgpu::TextureView& getTextureView() const { return mTexureView; }
+
+    [[nodiscard]] wgpu::TextureView getTextureView() const {return mTextureView;}
+    [[nodiscard]] wgpu::TextureView getTextureView(uint8_t mipLevel, uint32_t arrayLayer) const;
+
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
+    [[nodiscard]] filament::backend::SamplerType getSamplerType() const { return mSamplerType; }
+
 
     static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
@@ -196,22 +198,27 @@ public:
             filament::backend::TextureUsage const& fUsage,
             filament::backend::TextureFormat const& fFormat);
 
-    SamplerType mSamplerType;
 
 private:
     // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
     wgpu::Texture mTexture = nullptr;
-    wgpu::TextureView mTexureView = nullptr;
+    wgpu::TextureView mTextureView = nullptr;
     wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
     wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
     uint32_t mArrayLayerCount = 1;
     size_t mBlockWidth;
     size_t mBlockHeight;
+    SamplerType mSamplerType;
+
 
     wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+
+    wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
+            const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
+            SamplerType samplerType) const;
 
 };
 
@@ -234,7 +241,7 @@ public:
     WGPURenderTarget()
         : HwRenderTarget(0, 0),
           defaultRenderTarget(true),
-          samples(1) {}
+          mSamples(1) {}
 
     // Updated signature: takes resolved views for custom RTs, and default views for default RT
     void setUpRenderPassAttachments(
@@ -253,7 +260,8 @@ public:
 
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
-    uint8_t getSamples() const { return samples; }
+    uint8_t getSamples() const { return mSamples; }
+    uint8_t getLayerCount() const { return mLayerCount; }
 
     // Accessors for the driver to get stored attachment info
     const MRT& getColorAttachmentInfos() const { return mColorAttachments; }
@@ -264,11 +272,12 @@ public:
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
 
-    uint8_t mLayerCount = 1;
+
 
 private:
     bool defaultRenderTarget = false;
-    uint8_t samples = 1;
+    uint8_t mSamples = 1;
+    uint8_t mLayerCount = 1;
 
     MRT mColorAttachments{};
     // TODO WebGPU only supports a DepthStencil attachment, should this be just mDepthStencilAttachment?
