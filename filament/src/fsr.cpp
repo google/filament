@@ -47,8 +47,8 @@ void FSR_ScalingSetup(FSRUniforms* outUniforms, FSRScalingConfig config) noexcep
     // in which case it uses the left-bottom offset.
 
     auto yoffset = config.input.bottom;
-    if (config.backend == backend::Backend::METAL ||
-        config.backend == backend::Backend::VULKAN) {
+    if (config.backend == backend::Backend::METAL || config.backend == backend::Backend::VULKAN ||
+            config.backend == backend::Backend::WEBGPU) {
         yoffset = config.inputHeight - (config.input.bottom + config.input.height);
     }
 
