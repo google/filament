@@ -583,22 +583,22 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
-            vkbuffers[attribIndex] = bufferObject->buffer.getGpuBuffer();
+            vkbuffers[attribIndex] = bufferObject->buffer.getVkBuffer();
         }
     }
     mResources.push_back(bufferObject);
 }
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-        uint32_t byteCount, BufferObjectBinding bindingType)
+        VulkanBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
-      buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
+      buffer(allocator, stagePool, bufferCache, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
 
 VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
         fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
         fvkmemory::resource_ptr<VulkanIndexBuffer> ib)
-    : HwRenderPrimitive{.type = pt},
+    : HwRenderPrimitive{ .type = pt },
       vertexBuffer(vb),
       indexBuffer(ib) {}
 

@@ -81,6 +81,8 @@
 // All other debug features must be disabled.
 #define FVK_DEBUG_PROFILING               0x00040000
 
+#define FVK_DEBUG_VULKAN_BUFFER_CACHE     0x00080000
+
 // Useful default combinations
 #define FVK_DEBUG_EVERYTHING              (0xFFFFFFFF & ~FVK_DEBUG_PROFILING)
 #define FVK_DEBUG_PERFORMANCE     \

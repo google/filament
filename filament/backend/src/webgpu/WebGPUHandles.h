@@ -45,44 +45,47 @@ public:
 
 
 // WGPUVertexBufferInfo maps Filament vertex attributes to WebGPU buffer binding model.
-class WGPUVertexBufferInfo : public HwVertexBufferInfo {
+class WGPUVertexBufferInfo final : public HwVertexBufferInfo {
 public:
     WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-            AttributeArray const& attributes);
+            AttributeArray const& attributes, wgpu::Limits const& deviceLimits);
 
-    inline wgpu::VertexBufferLayout const* getVertexBufferLayouts() const {
+    [[nodiscard]] inline wgpu::VertexBufferLayout const* getVertexBufferLayouts() const {
         return mVertexBufferLayouts.data();
     }
-    inline uint32_t getVertexBufferLayoutCount() const {
-        return static_cast<uint32_t>(mVertexBufferLayouts.size());
+
+    [[nodiscard]] inline size_t getVertexBufferLayoutCount() const {
+        return mVertexBufferLayouts.size();
     }
 
-    inline wgpu::VertexAttribute const* getVertexAttributes(uint32_t i) const {
-        return mVertexAttributes[i].data();
-    }
-    inline uint32_t getVertexAttributeCount(uint32_t i) const {
-        return static_cast<uint32_t>(mVertexAttributes[i].size());
-    }
-
-    struct WebGPUSlotBindingInfo {
-        uint8_t sourceBuffer;
-        uint32_t slot;
-        uint64_t bufferOffset;
-        uint32_t stride;
+    struct WebGPUSlotBindingInfo final {
+        uint8_t sourceBufferIndex = 0; // limited by filament::backend::Attribute::buffer
+        uint32_t bufferOffset = 0;     // limited by filament::backend::Attribute::offset
+        uint8_t stride = 0;            // limited by filament::backend::Attribute::stride
     };
-    inline const std::vector<WebGPUSlotBindingInfo>& getWebGPUSlotBindingInfos() const {
+
+    [[nodiscard]] inline std::vector<WebGPUSlotBindingInfo> const&
+    getWebGPUSlotBindingInfos() const {
         return mWebGPUSlotBindingInfos;
     }
 
 private:
     // This stores the final wgpu::VertexBufferLayout objects, one per WebGPU slot.
+    // (this is a vector and not an array due to size limitations of the handle in the handle
+    // allocator)
     std::vector<wgpu::VertexBufferLayout> mVertexBufferLayouts;
 
-    // This stores all wgpu::VertexAttribute structs, indexed by their original
-    // Filament attributeIndex.
-    std::vector<std::vector<wgpu::VertexAttribute>> mVertexAttributes;
+    // This stores all the vertex attributes across all the vertex buffer layouts, where
+    // the attributes are contiguous for each buffer layout.
+    // Each buffer layout references the first in a contiguous group of attributes in this array,
+    // as well as the number of such attributes in this vector.
+    // (this is a vector and not an array due to size limitations of the handle in the handle
+    // allocator)
+    std::vector<wgpu::VertexAttribute> mVertexAttributes;
 
     // Stores information for the driver to perform setVertexBuffer calls
+    // (this is a vector and not an array due to size limitations of the handle in the handle
+    // allocator)
     std::vector<WebGPUSlotBindingInfo> mWebGPUSlotBindingInfos;
 };
 
@@ -169,8 +172,8 @@ private:
 
 class WGPUTexture : public HwTexture {
 public:
-    WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-            uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+    WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+            uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
             wgpu::Device const& device) noexcept;
 
     WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
@@ -181,6 +184,7 @@ public:
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
     [[nodiscard]] const wgpu::TextureView& getTextureView() const { return mTexureView; }
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
+    [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
 
     static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
