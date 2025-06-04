@@ -198,7 +198,6 @@ public:
             filament::backend::TextureUsage const& fUsage,
             filament::backend::TextureFormat const& fFormat);
 
-
 private:
     // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
@@ -213,13 +212,11 @@ private:
     size_t mBlockHeight;
     SamplerType mSamplerType;
 
-
     wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
 
     wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
             const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
             SamplerType samplerType) const;
-
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
@@ -258,7 +255,6 @@ public:
             wgpu::TextureFormat customDepthFormat,
             wgpu::TextureFormat customStencilFormat);
 
-
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
     uint8_t getSamples() const { return mSamples; }
     uint8_t getLayerCount() const { return mLayerCount; }
@@ -271,9 +267,7 @@ public:
     // Static helpers for load/store operations
     static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
-
-
-
+    
 private:
     bool defaultRenderTarget = false;
     uint8_t mSamples = 1;

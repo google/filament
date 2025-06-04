@@ -579,7 +579,7 @@ size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesWithDynamicOffsetsCount;
 }
 
-WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format,
+WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
     assert_invariant(
@@ -593,12 +593,12 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mFormat = fToWGPUTextureFormat(format);
     mUsage = fToWGPUTextureUsage(usage);
     mAspect = fToWGPUTextureViewAspect(usage, format);
-    mSamplerType = target;
+    mSamplerType = samplerType;
     mBlockWidth = filament::backend::getBlockWidth(format);
     mBlockHeight = filament::backend::getBlockHeight(format);
 
     wgpu::TextureDescriptor textureDescriptor{
-        .label = getUserTextureLabel(target),
+        .label = getUserTextureLabel(samplerType),
         .usage = mUsage,
         .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
                                                        : wgpu::TextureDimension::e2D,
@@ -612,7 +612,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
         .viewFormats = nullptr,
     };
 
-    switch (target) {
+    switch (samplerType) {
         case SamplerType::SAMPLER_2D:
             mArrayLayerCount = 1;
             break;
@@ -638,7 +638,7 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
 
-    mTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, target);
+    mTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, samplerType);
 }
 
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
@@ -651,8 +651,6 @@ WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount
 
     mTextureView = makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType);
 }
-
-
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
@@ -982,7 +980,6 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
 wgpu::TextureView WGPUTexture::getTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
     return makeTextureView(mipLevel, 1, arrayLayer, 1, mSamplerType);
 }
-
 
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
         const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
