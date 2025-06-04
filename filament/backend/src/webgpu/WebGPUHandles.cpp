@@ -218,6 +218,12 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
     struct AttributeInfo final {
         uint8_t slot = IMPOSSIBLE_SLOT_INDEX;
         wgpu::VertexAttribute attribute = {};
+        AttributeInfo()
+            : slot(IMPOSSIBLE_SLOT_INDEX),
+              attribute({}) {}
+        AttributeInfo(uint8_t slot, wgpu::VertexAttribute attribute)
+            : slot(slot),
+              attribute(attribute) {}
     };
     std::array<AttributeInfo, MAX_VERTEX_ATTRIBUTE_COUNT> attributeInfos{};
     uint8_t currentWebGPUSlotIndex = 0;
@@ -279,14 +285,13 @@ WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attribut
                 // in a subsequent pass over the attributeInfos we collect in this loop.
             });
         }
-        attributeInfos[currentAttributeIndex++] = {
-            .slot = existingSlot,
-            .attribute = {
+        attributeInfos[currentAttributeIndex++] = AttributeInfo(existingSlot,
+            {
                 .format = vertexFormat,
                 .offset = attribute.offset - mWebGPUSlotBindingInfos[existingSlot].bufferOffset,
                 .shaderLocation = attributeIndex
             }
-        };
+        );
     }
     FILAMENT_CHECK_POSTCONDITION(currentAttributeIndex == attributeCount)
             << "Using " << currentAttributeIndex << " attributes, but " << attributeCount
