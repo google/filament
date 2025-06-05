@@ -226,7 +226,7 @@ jobs:
 
   build-windows:
     name: build-windows
-    runs-on: windows-2019-32core
+    runs-on: windows-2022-32core
     if: github.event_name == 'release' || github.event.inputs.platform == 'windows'
 
     steps:

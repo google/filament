@@ -15,6 +15,8 @@
  */
 
 #include "VulkanBufferProxy.h"
+#include "VulkanCommands.h"
+#include "VulkanMemory.h"
 
 #include "VulkanBufferCache.h"
 #include "VulkanMemory.h"
@@ -32,14 +34,15 @@ VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& st
       mUpdatedOffset(0),
       mUpdatedBytes(0) {}
 
-void VulkanBufferProxy::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData,
+void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
-    void* mapped;
-    vmaMapMemory(mAllocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
-    vmaUnmapMemory(mAllocator, stage->memory);
-    vmaFlushAllocation(mAllocator, stage->memory, 0, numBytes);
+    // Note: this should be stored within the command buffer before going out of
+    // scope, so that the command buffer can manage its lifecycle.
+    fvkmemory::resource_ptr<VulkanStage::Segment> stage = mStagePool.acquireStage(numBytes);
+    assert_invariant(stage->memory());
+    commands.acquire(stage);
+    memcpy(stage->mapping(), cpuData, numBytes);
+    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
 
     // If there was a previous update, then we need to make sure the following write is properly
     // synced with the previous read.
@@ -68,16 +71,16 @@ void VulkanBufferProxy::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData,
             .offset = byteOffset,
             .size = numBytes,
         };
-        vkCmdPipelineBarrier(cmdbuf, srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1,
-                &barrier, 0, nullptr);
+        vkCmdPipelineBarrier(commands.buffer(), srcStage, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+                nullptr, 1, &barrier, 0, nullptr);
     }
 
     VkBufferCopy region = {
-        .srcOffset = 0,
+        .srcOffset = stage->offset(),
         .dstOffset = byteOffset,
         .size = numBytes,
     };
-    vkCmdCopyBuffer(cmdbuf, stage->buffer, getVkBuffer(), 1, &region);
+    vkCmdCopyBuffer(commands.buffer(), stage->buffer(), getVkBuffer(), 1, &region);
 
     mUpdatedOffset = byteOffset;
     mUpdatedBytes = numBytes;
@@ -113,8 +116,8 @@ void VulkanBufferProxy::loadFromCpu(VkCommandBuffer cmdbuf, const void* cpuData,
         .size = numBytes,
     };
 
-    vkCmdPipelineBarrier(cmdbuf, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0, nullptr, 1,
-            &barrier, 0, nullptr);
+    vkCmdPipelineBarrier(commands.buffer(), VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask, 0, 0,
+            nullptr, 1, &barrier, 0, nullptr);
 }
 
 VkBuffer VulkanBufferProxy::getVkBuffer() const noexcept {

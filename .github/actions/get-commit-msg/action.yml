@@ -9,6 +9,13 @@ runs:
       if: github.event_name == 'push'
       shell: bash
       run: |
+        AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
+        AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
+        TSTAMP="${{ github.event.head_commit.timestamp }}"
+        echo "commit ${{ github.event.head_commit.id }}" >> /tmp/commit_msg.txt
+        echo "Author: ${AUTHOR_NAME}<${AUTHOR_EMAIL}>" >> /tmp/commit_msg.txt
+        echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
+        echo "" >> /tmp/commit_msg.txt
         echo "${{ github.event.head_commit.message }}" >> /tmp/commit_msg.txt
     - name: Checkout code
       shell: bash
@@ -18,7 +25,7 @@ runs:
         echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         git checkout ${{ github.event.pull_request.head.ref }}
         COMMIT_MESSAGE=$(git log -1)
-        echo "${COMMIT_MESSAGE}" >> /tmp/commit_msg.txt
+        echo "$(git log -1)" >> /tmp/commit_msg.txt
     - shell: bash
       id: action_output
       run: |
@@ -26,8 +33,11 @@ runs:
         echo "msg<<$DELIMITER" >> "$GITHUB_OUTPUT"
         cat /tmp/commit_msg.txt >> "$GITHUB_OUTPUT"
         echo "$DELIMITER" >> "$GITHUB_OUTPUT"
+        echo "----- got commit message ---"
+        cat /tmp/commit_msg.txt
+        echo "----------------------------"
     - name: Uncheckout code
       shell: bash
       if: github.event_name == 'pull_request'
       run: |
-        git checkout ${{ steps.checkout.outputs.hash }}
+        git checkout ${{ steps.checkout_code.outputs.hash }}
