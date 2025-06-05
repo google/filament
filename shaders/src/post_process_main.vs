@@ -14,13 +14,13 @@ void main() {
     inputs.position.z = inputs.position.z * -0.5 + 0.5;
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, WebGPU and Metal, clip space is Y-up.
     inputs.position.y = -inputs.position.y;
 #endif
 
     // Adjust clip-space
-#if !defined(TARGET_VULKAN_ENVIRONMENT) && !defined(TARGET_METAL_ENVIRONMENT)
-    // This is not needed in Vulkan or Metal because clipControl is always (1, 0)
+#if !defined(TARGET_VULKAN_ENVIRONMENT) && !defined(TARGET_METAL_ENVIRONMENT) && !defined(TARGET_WEBGPU_ENVIRONMENT)
+    // This is not needed in Vulkan, Metal or WebGPU because clipControl is always (1, 0)
     // (We don't use a dot() here because it works around a spirv-opt optimization that in turn
     //  causes a crash on PowerVR, see #5118)
     inputs.position.z = inputs.position.z * frameUniforms.clipControl.x + inputs.position.w * frameUniforms.clipControl.y;

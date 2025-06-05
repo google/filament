@@ -122,6 +122,9 @@ INSTANTIATE_TEST_SUITE_P(
         {"link.vk.multiBlocksValid.0.0.vert", "link.vk.multiBlocksValid.0.1.vert"},
         {"link.vk.multiBlocksValid.1.0.geom", "link.vk.multiBlocksValid.1.1.geom"},
         {"link.vk.inconsistentGLPerVertex.0.vert", "link.vk.inconsistentGLPerVertex.0.geom"},
+        {"link.vk.crossStageIO.0.vert", "link.vk.crossStageIO.0.frag"},
+        {"link.vk.crossStageIO.1.vert", "link.vk.crossStageIO.1.geom", "link.vk.crossStageIO.1.frag"},
+        {"link.vk.missingCrossStageIO.0.vert", "link.vk.missingCrossStageIO.0.frag"},
     }))
 );
 // clang-format on

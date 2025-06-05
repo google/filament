@@ -40,11 +40,12 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/CommandStream.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
 #include <utils/Range.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
@@ -192,11 +193,11 @@ void RenderPass::appendCommands(FEngine const& engine,
         Variant const variant,
         float3 const cameraPosition,
         float3 const cameraForwardVector) const noexcept {
-    SYSTRACE_CALL();
-    SYSTRACE_CONTEXT();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // trace the number of visible renderables
-    SYSTRACE_VALUE32("visibleRenderables", visibleRenderables.size());
+    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "visibleRenderables", visibleRenderables.size());
     if (UTILS_UNLIKELY(visibleRenderables.empty())) {
         // no renderables, we still need the sentinel and the command buffer size should be
         // exactly 1.
@@ -272,7 +273,7 @@ void RenderPass::appendCustomCommand(Command* commands,
 
 RenderPass::Command* RenderPass::sortCommands(
         Command* const begin, Command* const end) noexcept {
-    SYSTRACE_NAME("sort commands");
+    FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "sort commands");
 
     std::sort(begin, end);
 
@@ -289,7 +290,7 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
         DescriptorSetLayoutHandle perRenderableDescriptorSetLayoutHandle,
         Command* curr, Command* const last,
         int32_t const eyeCount) const noexcept {
-    SYSTRACE_NAME("instanceify");
+    FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "instanceify");
 
     // instanceify works by scanning the **sorted** command stream, looking for repeat draw
     // commands. When one is found, it is replaced by an instanced command.
@@ -492,7 +493,7 @@ void RenderPass::generateCommands(CommandTypeFlags commandTypeFlags, Command* co
         float3 const cameraPosition, float3 const cameraForward,
         uint8_t instancedStereoEyeCount) noexcept {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -922,14 +923,14 @@ UTILS_NOINLINE // no need to be inlined
 void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
         Command const* first, Command const* last) const noexcept {
 
-    SYSTRACE_CALL();
-    SYSTRACE_CONTEXT();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     size_t const capacity = engine.getMinCommandBufferSize();
     CircularBuffer const& circularBuffer = driver.getCircularBuffer();
 
     if (first != last) {
-        SYSTRACE_VALUE32("commandCount", last - first);
+        FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "commandCount", last - first);
 
         // The scissor rectangle is associated to a render pass, so the tracking can be local.
         backend::Viewport currentScissor{ 0, 0, INT32_MAX, INT32_MAX };
@@ -941,6 +942,13 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
             currentScissor = mScissor;
             driver.scissor(mScissor);
         }
+
+        // If we have a mColorPassDescriptorSet, we need to use its idea of "VSM" to select
+        // the descriptor set layout. Materials always offer both.
+        // If we don't have a mColorPassDescriptorSet, it doesn't matter because the layout
+        // are chosen via the variant only.
+        bool const useVsmDescriptorSetLayout =
+                mColorPassDescriptorSet ? mColorPassDescriptorSet->isVSM() : false;
 
         bool const polygonOffsetOverride = mPolygonOffsetOverride;
         PipelineState pipeline{
@@ -1051,8 +1059,13 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
                     // Each material has its own version of the per-view descriptor-set layout,
                     // because it depends on the material features (e.g. lit/unlit)
+                    // TODO: QUESTION: are
+                    //      Variant::isValidDepthVariant(info.materialVariant) and
+                    //      Variant::isSSRVariant(info.materialVariant)
+                    //      constant? If so we could precompute ma->getPerViewDescriptorSetLayout()
                     pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_VIEW] =
-                            ma->getPerViewDescriptorSetLayout(info.materialVariant).getHandle();
+                            ma->getPerViewDescriptorSetLayout(info.materialVariant,
+                                    useVsmDescriptorSetLayout).getHandle();
 
                     // Each material has a per-material descriptor-set layout which encodes the
                     // material's parameters (ubo and samplers)

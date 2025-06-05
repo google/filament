@@ -95,7 +95,32 @@ GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle ds
                 }
                 break;
             }
-            case DescriptorType::SAMPLER:
+
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
             case DescriptorType::SAMPLER_EXTERNAL:
                 if (UTILS_UNLIKELY(gl.isES2())) {
                     desc.emplace<SamplerGLES2>();
@@ -137,8 +162,11 @@ void GLDescriptorSet::update(OpenGLContext&,
     }, descriptors[binding].desc);
 }
 
-void GLDescriptorSet::update(OpenGLContext& gl,
-        descriptor_binding_t binding, GLTexture* t, SamplerParams params) noexcept {
+void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocator,
+        descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept {
+
+    GLTexture* t = th ? handleAllocator.handle_cast<GLTexture*>(th) : nullptr;
+
     assert_invariant(binding < descriptors.size());
     std::visit([=, &gl](auto&& arg) mutable {
         using T = std::decay_t<decltype(arg)>;
@@ -171,19 +199,11 @@ void GLDescriptorSet::update(OpenGLContext& gl,
                 }
             }
 
-            arg.target = t ? t->gl.target : 0;
-            arg.id = t ? t->gl.id : 0;
-            arg.external = t ? t->gl.external :  false;
+            arg.handle = th;
             if constexpr (std::is_same_v<T, Sampler> ||
                           std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
                 if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
                     arg.anisotropy = float(1u << params.anisotropyLog2);
-                }
-                if (t) {
-                    arg.ref = t->ref;
-                    arg.baseLevel = t->gl.baseLevel;
-                    arg.maxLevel = t->gl.maxLevel;
-                    arg.swizzle = t->gl.swizzle;
                 }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
                 arg.sampler = gl.getSampler(params);
@@ -200,39 +220,39 @@ void GLDescriptorSet::update(OpenGLContext& gl,
     }, descriptors[binding].desc);
 }
 
-template<typename T>
 void GLDescriptorSet::updateTextureView(OpenGLContext& gl,
-        HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept {
+        HandleAllocatorGL& handleAllocator, GLuint unit, GLTexture const* t) noexcept {
     // The common case is that we don't have a ref handle (we only have one if
     // the texture ever had a View on it).
-    assert_invariant(desc.ref);
-    GLTextureRef* const ref = handleAllocator.handle_cast<GLTextureRef*>(desc.ref);
-    if (UTILS_UNLIKELY((desc.baseLevel != ref->baseLevel || desc.maxLevel != ref->maxLevel))) {
+    assert_invariant(t);
+    assert_invariant(t->ref);
+    GLTextureRef* const ref = handleAllocator.handle_cast<GLTextureRef*>(t->ref);
+    if (UTILS_UNLIKELY((t->gl.baseLevel != ref->baseLevel || t->gl.maxLevel != ref->maxLevel))) {
         // If we have views, then it's still uncommon that we'll switch often
         // handle the case where we reset to the original texture
-        GLint baseLevel = GLint(desc.baseLevel); // NOLINT(*-signed-char-misuse)
-        GLint maxLevel = GLint(desc.maxLevel); // NOLINT(*-signed-char-misuse)
+        GLint baseLevel = GLint(t->gl.baseLevel); // NOLINT(*-signed-char-misuse)
+        GLint maxLevel = GLint(t->gl.maxLevel); // NOLINT(*-signed-char-misuse)
         if (baseLevel > maxLevel) {
             baseLevel = 0;
             maxLevel = 1000; // per OpenGL spec
         }
         // that is very unfortunate that we have to call activeTexture here
         gl.activeTexture(unit);
-        glTexParameteri(desc.target, GL_TEXTURE_BASE_LEVEL, baseLevel);
-        glTexParameteri(desc.target, GL_TEXTURE_MAX_LEVEL,  maxLevel);
-        ref->baseLevel = desc.baseLevel;
-        ref->maxLevel = desc.maxLevel;
+        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, baseLevel);
+        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL,  maxLevel);
+        ref->baseLevel = t->gl.baseLevel;
+        ref->maxLevel = t->gl.maxLevel;
     }
-    if (UTILS_UNLIKELY(desc.swizzle != ref->swizzle)) {
+    if (UTILS_UNLIKELY(t->gl.swizzle != ref->swizzle)) {
         using namespace GLUtils;
         gl.activeTexture(unit);
 #if !defined(__EMSCRIPTEN__)  && !defined(FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2)
-        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_R, (GLint)getSwizzleChannel(desc.swizzle[0]));
-        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_G, (GLint)getSwizzleChannel(desc.swizzle[1]));
-        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_B, (GLint)getSwizzleChannel(desc.swizzle[2]));
-        glTexParameteri(desc.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(desc.swizzle[3]));
+        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_R, (GLint)getSwizzleChannel(t->gl.swizzle[0]));
+        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_G, (GLint)getSwizzleChannel(t->gl.swizzle[1]));
+        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_B, (GLint)getSwizzleChannel(t->gl.swizzle[2]));
+        glTexParameteri(t->gl.target, GL_TEXTURE_SWIZZLE_A, (GLint)getSwizzleChannel(t->gl.swizzle[3]));
 #endif
-        ref->swizzle = desc.swizzle;
+        ref->swizzle = t->gl.swizzle;
     }
 }
 
@@ -285,27 +305,31 @@ void GLDescriptorSet::bind(
                 }
             } else if constexpr (std::is_same_v<T, Sampler>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
-                if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
+
+
+                if (arg.handle) {
+                    GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
+                    gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
                     gl.bindSampler(unit, arg.sampler);
-                    if (UTILS_UNLIKELY(arg.ref)) {
-                        updateTextureView(gl, handleAllocator, unit, arg);
+                    if (UTILS_UNLIKELY(t->ref)) {
+                        updateTextureView(gl, handleAllocator, unit, t);
                     }
                 } else {
                     gl.unbindTextureUnit(unit);
                 }
             } else if constexpr (std::is_same_v<T, SamplerWithAnisotropyWorkaround>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
-                if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
+                if (arg.handle) {
+                    GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
+                    gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
                     gl.bindSampler(unit, arg.sampler);
-                    if (UTILS_UNLIKELY(arg.ref)) {
-                        updateTextureView(gl, handleAllocator, unit, arg);
+                    if (UTILS_UNLIKELY(t->ref)) {
+                        updateTextureView(gl, handleAllocator, unit, t);
                     }
 #if defined(GL_EXT_texture_filter_anisotropic)
                     // Driver claims to support anisotropic filtering, but it fails when set on
                     // the sampler, we have to set it on the texture instead.
-                    glTexParameterf(arg.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                    glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                             std::min(gl.gets.max_anisotropy, float(arg.anisotropy)));
 #endif
                 } else {
@@ -314,19 +338,20 @@ void GLDescriptorSet::bind(
             } else if constexpr (std::is_same_v<T, SamplerGLES2>) {
                 // in ES2 the sampler parameters need to be set on the texture itself
                 GLuint const unit = p.getTextureUnit(set, binding);
-                if (arg.target) {
-                    gl.bindTexture(unit, arg.target, arg.id, arg.external);
+                if (arg.handle) {
+                    GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
+                    gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
                     SamplerParams const params = arg.params;
-                    glTexParameteri(arg.target, GL_TEXTURE_MIN_FILTER,
+                    glTexParameteri(t->gl.target, GL_TEXTURE_MIN_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMin));
-                    glTexParameteri(arg.target, GL_TEXTURE_MAG_FILTER,
+                    glTexParameteri(t->gl.target, GL_TEXTURE_MAG_FILTER,
                             (GLint)GLUtils::getTextureFilter(params.filterMag));
-                    glTexParameteri(arg.target, GL_TEXTURE_WRAP_S,
+                    glTexParameteri(t->gl.target, GL_TEXTURE_WRAP_S,
                             (GLint)GLUtils::getWrapMode(params.wrapS));
-                    glTexParameteri(arg.target, GL_TEXTURE_WRAP_T,
+                    glTexParameteri(t->gl.target, GL_TEXTURE_WRAP_T,
                             (GLint)GLUtils::getWrapMode(params.wrapT));
 #if defined(GL_EXT_texture_filter_anisotropic)
-                    glTexParameterf(arg.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+                    glTexParameterf(t->gl.target, GL_TEXTURE_MAX_ANISOTROPY_EXT,
                             std::min(gl.gets.max_anisotropy, arg.anisotropy));
 #endif
                 } else {

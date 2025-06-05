@@ -65,7 +65,7 @@ CircularBuffer::~CircularBuffer() noexcept {
 // to each others and a special case in circularize()
 
 UTILS_NOINLINE
-void* CircularBuffer::alloc(size_t size) noexcept {
+void* CircularBuffer::alloc(size_t size) {
 #if HAS_MMAP
     void* data = nullptr;
     void* vaddr = MAP_FAILED;

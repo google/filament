@@ -180,8 +180,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
-            src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
+            src/vulkan/VulkanBufferCache.h
+            src/vulkan/VulkanBufferCache.cpp
+            src/vulkan/VulkanBufferProxy.h
+            src/vulkan/VulkanBufferProxy.cpp
             src/vulkan/VulkanCommands.cpp
             src/vulkan/VulkanCommands.h
             src/vulkan/VulkanConstants.h
@@ -261,6 +264,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WGPUProgram.cpp
@@ -289,12 +293,6 @@ endif()
 if (ANDROID)
     list(APPEND SRCS src/BackendUtilsAndroid.cpp)
 endif()
-
-# ==================================================================================================
-# Definitions
-# ==================================================================================================
-# "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
-add_definitions(-DSYSTRACE_TAG=2 )
 
 # ==================================================================================================
 # Includes & target definition

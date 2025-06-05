@@ -30,11 +30,12 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BinaryTreeArray.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
@@ -296,7 +297,7 @@ void Froxelizer::updateBoundingSpheres(
         float4 const* UTILS_RESTRICT planesY,
         float const* UTILS_RESTRICT planesZ) noexcept {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // TODO: this could potentially be parallel_for'ized
 
@@ -577,7 +578,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 void Froxelizer::froxelizeLoop(FEngine& engine,
         const mat4f& UTILS_RESTRICT viewMatrix,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     Slice<FroxelThreadData> froxelThreadData = mFroxelShardedData;
     memset(froxelThreadData.data(), 0, froxelThreadData.sizeInBytes());
@@ -591,7 +592,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
                      spheres, directions, instances, &viewMatrix, &lcm ]
             (size_t const count, size_t const offset, size_t const stride) {
 
-        SYSTRACE_NAME("FroxelizeLoop Job");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FroxelizeLoop Job");
 
         const mat4f& projection = mProjection;
         const mat3f& vn = viewMatrix.upperLeft();
@@ -644,8 +645,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 }
 
 void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
-
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     Slice<FroxelThreadData> const froxelThreadData = mFroxelShardedData;
 

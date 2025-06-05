@@ -114,7 +114,8 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
         : mVertexCount(builder->mVertexCount),
           mCount(builder->mCount) {
 
-    if (UTILS_UNLIKELY(engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)) {
+    if (UTILS_UNLIKELY(engine.getSupportedFeatureLevel() <= FeatureLevel::FEATURE_LEVEL_0)) {
+        // feature level 0 doesn't support morph target buffers
         return;
     }
 
@@ -177,7 +178,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
         float4 const* positions, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
-            << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
+            << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     auto size = getSize<POSITION>(count);
@@ -199,7 +200,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex,
         short4 const* tangents, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
-            << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
+            << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     const auto size = getSize<TANGENTS>(count);

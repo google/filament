@@ -8,7 +8,7 @@ struct Light {
     float zLight;
     bool castsShadows;
     bool contactShadows;
-    uint type;
+    uint lightType;
     int shadowIndex;
     int channels;
 };

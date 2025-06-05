@@ -17,6 +17,7 @@
 #include "WebGPUHandles.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPUStrings.h"
 
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
@@ -29,39 +30,116 @@
 #include <dawn/webgpu_cpp_print.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <sstream>
+#include <string>
 #include <string_view>
-#include <vector>
+#include <unordered_map>
+#include <variant>
 
 namespace filament::backend {
 
 namespace {
 
-[[nodiscard]] constexpr std::string_view toString(ShaderStage stage) {
-    switch (stage) {
-        case ShaderStage::VERTEX:
-            return "vertex";
-        case ShaderStage::FRAGMENT:
-            return "fragment";
-        case ShaderStage::COMPUTE:
-            return "compute";
+[[nodiscard]] std::string replaceSpecConstants(std::string_view shaderLabel,
+        std::string_view shaderSource,
+        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> const&
+                specConstants) {
+    assert_invariant(!specConstants.empty());
+    constexpr std::string_view specConstantPrefix = "FILAMENT_SPEC_CONST_";
+    constexpr size_t specConstantPrefixSize = specConstantPrefix.size();
+    const char* const sourceData = shaderSource.data();
+    std::stringstream processedShaderSourceStr{};
+    size_t pos = 0;
+    while (pos < shaderSource.size()) {
+        const size_t posOfNextSpecConstant = shaderSource.find(specConstantPrefix, pos);
+        if (posOfNextSpecConstant == std::string::npos) {
+            // no more spec constants, so just stream the rest of the source code string
+            processedShaderSourceStr
+                    << std::string_view(sourceData + pos, shaderSource.size() - pos);
+            break;
+        }
+        const size_t posOfId = posOfNextSpecConstant + specConstantPrefixSize;
+        const size_t posAfterId = shaderSource.find('_', posOfId);
+        FILAMENT_CHECK_POSTCONDITION(posAfterId != std::string::npos)
+                << "malformed " << shaderLabel << ". Found spec constant prefix '"
+                << specConstantPrefix << "' without an id or '_' after it.";
+        const std::string_view idStr =
+                std::string_view(sourceData + posOfId, posAfterId - posOfId);
+        const size_t posEndOfStatement = shaderSource.find(';', posAfterId);
+        FILAMENT_CHECK_POSTCONDITION(posEndOfStatement != std::string::npos)
+                << "malformed " << shaderLabel << ". Found spec constant assignment with id "
+                << idStr << " without a terminating ';' character?";
+        const std::string_view statementSegment =
+                std::string_view(sourceData + posAfterId, posEndOfStatement - posAfterId);
+        size_t posOfEqual = statementSegment.find('=');
+        if (posOfEqual == std::string::npos) {
+            // not an assignment statement, so stream to the end of the statement and continue...
+            processedShaderSourceStr
+                    << std::string_view(sourceData + pos, posEndOfStatement + 1 - pos);
+            pos = posEndOfStatement + 1;
+            continue;
+        }
+        posOfEqual += posAfterId; // position in original source, not just the segment
+        int id = 0;
+        try {
+            id = std::stoi(idStr.data());
+        } catch (const std::invalid_argument& e) {
+            PANIC_POSTCONDITION("Invalid spec constant id '%s' in %s (not a valid integer?): %s",
+                    idStr.data(), shaderLabel.data(), e.what());
+        } catch (const std::out_of_range& e) {
+            PANIC_POSTCONDITION(
+                    "Invalid spec constant id '%s' in %s (not an integer? out of range?): %s",
+                    idStr.data(), shaderLabel.data(), e.what());
+        }
+        const auto newValueItr = specConstants.find(static_cast<uint32_t>(id));
+        if (newValueItr == specConstants.end()) {
+            // not going to override the constant (stream to the end of the statement)...
+            processedShaderSourceStr
+                    << std::string_view(sourceData + pos, posEndOfStatement + 1 - pos);
+            pos = posEndOfStatement + 1;
+            continue;
+        }
+        // need to override the constant...
+        const std::variant<int32_t, float, bool> newValue = newValueItr->second;
+        // stream up to the equal sign...
+        processedShaderSourceStr << std::string_view(sourceData + pos, posOfEqual + 1 - pos);
+        // stream the new value...
+        if (auto* v = std::get_if<int32_t>(&newValue)) {
+            processedShaderSourceStr << " " << *v << "i";
+        } else if (auto* f = std::get_if<float>(&newValue)) {
+            processedShaderSourceStr << " " << *f << "f";
+        } else if (auto* b = std::get_if<bool>(&newValue)) {
+            processedShaderSourceStr << " " << ((*b) ? "true" : "false");
+        }
+        processedShaderSourceStr << ";";
+        // and skip to after the end of the statement in the original source...
+        pos = posEndOfStatement + 1;
     }
+    return processedShaderSourceStr.str();
 }
 
-[[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device& device, const char* programName,
-        std::array<utils::FixedCapacityVector<uint8_t>, Program::SHADER_TYPE_COUNT> const&
-                shaderSource,
-        ShaderStage stage) {
+[[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device& device, Program& program,
+        ShaderStage stage,
+        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> const& specConstants) {
+    const char* const programName = program.getName().c_str_safe();
+    std::array<utils::FixedCapacityVector<uint8_t>, Program::SHADER_TYPE_COUNT> const&
+            shaderSource = program.getShadersSource();
     utils::FixedCapacityVector<uint8_t> const& sourceBytes =
             shaderSource[static_cast<size_t>(stage)];
     if (sourceBytes.empty()) {
         return nullptr;// nothing to compile, the shader was not provided
     }
-    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
-    wgslDescriptor.code = wgpu::StringView(reinterpret_cast<const char*>(sourceBytes.data()));
     std::stringstream labelStream;
-    labelStream << programName << " " << toString(stage) << " shader";
+    labelStream << programName << " " << filamentShaderStageToString(stage) << " shader";
     auto label = labelStream.str();
+    const std::string processedShaderSource =
+            specConstants.empty()
+                    ? reinterpret_cast<const char*>(sourceBytes.data())
+                    : replaceSpecConstants(label, reinterpret_cast<const char*>(sourceBytes.data()),
+                              specConstants);
+    wgpu::ShaderModuleWGSLDescriptor wgslDescriptor{};
+    wgslDescriptor.code = wgpu::StringView(processedShaderSource);
     wgpu::ShaderModuleDescriptor descriptor{
         .nextInChain = &wgslDescriptor,
         .label = label.data()
@@ -119,84 +197,32 @@ namespace {
                                     << ":\n"
                                     << errorStream.str();
                         }
+#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
                         FWGPU_LOGD << descriptor.label << " compiled successfully";
+#endif
                     }),
-            UINT16_MAX);
+            SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
     return module;
 }
 
-// This is a 1 to 1 mapping of the ReservedSpecializationConstants enum in EngineEnums.h
-// The _hack is a workaround until https://issues.chromium.org/issues/42250586 is resolved
-// This workaround is the same one being used on the generateSpecializationConstant() function
-wgpu::StringView getSpecConstantStringId(uint32_t id) {
-    switch (id) {
-        case 0:
-            return "0";// BACKEND_FEATURE_LEVEL_hack
-        case 1:
-            return "1";// CONFIG_MAX_INSTANCES_hack
-        case 2:
-            return "2";// ONFIG_STATIC_TEXTURE_TARGET_WORKAROUND_hack
-        case 3:
-            return "3";// CONFIG_SRGB_SWAPCHAIN_EMULATION_hack
-        case 4:
-            return "4";// CONFIG_FROXEL_BUFFER_HEIGHT_hack
-        case 5:
-            return "5";// CONFIG_POWER_VR_SHADER_WORKAROUNDS_hack
-        case 6:
-            return "6";// CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP_hack
-        case 7:
-            return "7";// CONFIG_DEBUG_FROXEL_VISUALIZATION_hack
-        case 8:
-            return "8";// CONFIG_STEREO_EYE_COUNT_hack
-        case 9:
-            return "9";// CONFIG_SH_BANDS_COUNT_hack
-        case 10:
-            return "10";// CONFIG_SHADOW_SAMPLING_METHOD_hack
-        default:
-            PANIC_POSTCONDITION("Unknown/unhandled spec constant key/id: %d", id);
+void toMap(utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants,
+        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>>& constantById) {
+    constantById.reserve(specConstants.size());
+    for (auto const& specConstant: specConstants) {
+        constantById.emplace(specConstant.id, specConstant.value);
     }
-}
-
-std::vector<wgpu::ConstantEntry> convertConstants(
-        utils::FixedCapacityVector<filament::backend::Program::SpecializationConstant> const&
-                constantsInfo) {
-    std::vector<wgpu::ConstantEntry> constants;
-    constants.reserve(constantsInfo.size());
-    for (filament::backend::Program::SpecializationConstant const& constant: constantsInfo) {
-        // CONFIG_MAX_INSTANCES (1) and CONFIG_FROXEL_BUFFER_HEIGHT (4) will not be present
-        // as constant overrides in the generated WGSL, because WGSL doesn't support specialization
-        // constants as an array length
-        // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
-        // CONFIG_SRGB_SWAPCHAIN_EMULATION (3) is being skipped all together since it's only
-        // included for the case of mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0, which should
-        // not be possible for WebGPU
-        if (constant.id == 1 || constant.id == 3 || constant.id == 4) {
-            continue;
-        }
-        double value = 0.0;
-        if (auto* v = std::get_if<int32_t>(&constant.value)) {
-            value = static_cast<double>(*v);
-        } else if (auto* f = std::get_if<float>(&constant.value)) {
-            value = static_cast<double>(*f);
-        } else if (auto* b = std::get_if<bool>(&constant.value)) {
-            value = *b ? 0.0 : 1.0;
-        }
-        constants.push_back(
-                wgpu::ConstantEntry{ .key = getSpecConstantStringId(constant.id), .value = value });
-    }
-    return constants;
 }
 
 }// namespace
 
 WGPUProgram::WGPUProgram(wgpu::Device& device, Program& program)
-    : HwProgram(program.getName()),
-      vertexShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::VERTEX)),
-      fragmentShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::FRAGMENT)),
-      computeShaderModule(createShaderModule(device, name.c_str_safe(), program.getShadersSource(),
-              ShaderStage::COMPUTE)),
-      constants(convertConstants(program.getSpecializationConstants())) {}
+    : HwProgram(program.getName()) {
+    std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> specConstants;
+    toMap(program.getSpecializationConstants(), specConstants);
+    vertexShaderModule = createShaderModule(device, program, ShaderStage::VERTEX, specConstants);
+    fragmentShaderModule =
+            createShaderModule(device, program, ShaderStage::FRAGMENT, specConstants);
+    computeShaderModule = createShaderModule(device, program, ShaderStage::COMPUTE, specConstants);
+}
 
 }// namespace filament::backend

@@ -93,6 +93,16 @@ StructA* chainStruct(StructA* structA, StructB* structB) {
     return structA;
 }
 
+bool shouldSkipFormat(VkFormat format) {
+    // Skip formats that require extensions.
+    for (VkFormat const extFormat: fvkutils::EXT_VK_FORMATS) {
+        if (format == extFormat) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
     if (vkGetPhysicalDeviceProperties2) {
@@ -152,8 +162,14 @@ void printDepthFormats(VkPhysicalDevice device) {
     constexpr VkFormatFeatureFlags required =
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     FVK_LOGI << "Sampleable depth formats: ";
-    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
+    for (VkFormat const format : fvkutils::ALL_VK_FORMATS) {
+        // Skip formats that require extensions.
+        if (shouldSkipFormat(format)) {
+            continue;
+        }
+
         VkFormatProperties props;
+
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
             FVK_LOGI << format << " ";
@@ -618,7 +634,13 @@ fvkutils::VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device)
     std::vector<VkFormat> selectedFormats;
     constexpr VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
-    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
+
+    for (VkFormat const format : fvkutils::ALL_VK_FORMATS) {
+        // Skip formats that require extensions.
+        if (shouldSkipFormat(format)) {
+            continue;
+        }
+
         if (fvkutils::isVkDepthFormat(format)) {
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(device, format, &props);

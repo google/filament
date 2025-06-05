@@ -64,7 +64,7 @@ utils::CString OpenGLPlatform::getRendererString(Driver const* driver) {
 }
 
 void OpenGLPlatform::makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
-        utils::Invocable<void()>, utils::Invocable<void(size_t)>) noexcept {
+        utils::Invocable<void()>, utils::Invocable<void(size_t)>) {
     makeCurrent(getCurrentContextType(), drawSwapChain, readSwapChain);
 }
 

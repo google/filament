@@ -7,6 +7,15 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.61.1
+
+
+## v1.61.0
+
+- materials: sampler now export their type in the material binary [⚠️ **New Material Version**]
+- samples/texturedquad.cpp now has CLI to select backend api
+- samples/hellopbr.cpp CLI now allows for selecting webgpu
+
 ## v1.60.1
 
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -65,6 +67,7 @@ static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 int main(int argc, char** argv) {
     Config config;
     config.title = "animation";
+    config.backend = samples::parseArgumentsForBackend(argc, argv);
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {

@@ -18,10 +18,11 @@
 #include "private/backend/CircularBuffer.h"
 #include "private/backend/CommandStream.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Logger.h>
 #include <utils/Mutex.h>
 #include <utils/Panic.h>
-#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
@@ -52,18 +53,18 @@ CommandBufferQueue::~CommandBufferQueue() {
 }
 
 void CommandBufferQueue::requestExit() {
-    std::lock_guard<utils::Mutex> const lock(mLock);
+    std::lock_guard const lock(mLock);
     mExitRequested = EXIT_REQUESTED;
     mCondition.notify_one();
 }
 
 bool CommandBufferQueue::isPaused() const noexcept {
-    std::lock_guard<utils::Mutex> const lock(mLock);
+    std::lock_guard const lock(mLock);
     return mPaused;
 }
 
 void CommandBufferQueue::setPaused(bool paused) {
-    std::lock_guard<utils::Mutex> const lock(mLock);
+    std::lock_guard const lock(mLock);
     if (paused) {
         mPaused = true;
     } else {
@@ -73,13 +74,13 @@ void CommandBufferQueue::setPaused(bool paused) {
 }
 
 bool CommandBufferQueue::isExitRequested() const {
-    std::lock_guard<utils::Mutex> const lock(mLock);
-    return (bool)mExitRequested;
+    std::lock_guard const lock(mLock);
+    return bool(mExitRequested);
 }
 
 
-void CommandBufferQueue::flush() noexcept {
-    SYSTRACE_CALL();
+void CommandBufferQueue::flush() {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     CircularBuffer& circularBuffer = mCircularBuffer;
     if (circularBuffer.empty()) {
@@ -102,7 +103,7 @@ void CommandBufferQueue::flush() noexcept {
             static_cast<char const*>(begin), static_cast<char const*>(end));
 
 
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::unique_lock lock(mLock);
 
     // circular buffer is too small, we corrupted the stream
     FILAMENT_CHECK_POSTCONDITION(used <= mFreeSpace) <<
@@ -128,7 +129,7 @@ void CommandBufferQueue::flush() noexcept {
         mHighWatermark = std::max(mHighWatermark, totalUsed);
 #endif
 
-        SYSTRACE_NAME("waiting: CircularBuffer::flush()");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "waiting: CircularBuffer::flush()");
 
         FILAMENT_CHECK_POSTCONDITION(!mPaused) <<
                 "CommandStream is full, but since the rendering thread is paused, "
@@ -145,7 +146,7 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
     if (!UTILS_HAS_THREADING) {
         return std::move(mCommandBuffersToExecute);
     }
-    std::unique_lock<utils::Mutex> lock(mLock);
+    std::unique_lock lock(mLock);
     while ((mCommandBuffersToExecute.empty() || mPaused) && !mExitRequested) {
         mCondition.wait(lock);
     }
@@ -155,7 +156,7 @@ std::vector<CommandBufferQueue::Range> CommandBufferQueue::waitForCommands() con
 void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Range const& buffer) {
     size_t const used = std::distance(
             static_cast<char const*>(buffer.begin), static_cast<char const*>(buffer.end));
-    std::lock_guard<utils::Mutex> const lock(mLock);
+    std::lock_guard const lock(mLock);
     mFreeSpace += used;
     mCondition.notify_one();
 }

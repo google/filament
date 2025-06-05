@@ -137,7 +137,7 @@ public:
      * @param buffer A BufferDescriptor representing the data used to initialize the IndexBuffer.
      *               BufferDescriptor points to raw, untyped data that will be interpreted as
      *               either 16-bit or 32-bits indices based on the Type of this IndexBuffer.
-     * @param byteOffset Offset in *bytes* into the IndexBuffer
+     * @param byteOffset Offset in *bytes* into the IndexBuffer. Must be multiple of 4.
      */
     void setBuffer(Engine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 

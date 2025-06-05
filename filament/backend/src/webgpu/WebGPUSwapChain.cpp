@@ -17,34 +17,50 @@
 #include "webgpu/WebGPUSwapChain.h"
 
 #include "webgpu/WebGPUConstants.h"
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#include "webgpu/WebGPUStrings.h"
+#endif
 
 #include "backend/DriverEnums.h"
 
 #include <utils/Panic.h>
 #include <utils/ostream.h>
 
-#include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
 #include <cstdint>
-#include <sstream>
 
 namespace {
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+utils::io::ostream& operator<<(utils::io::ostream& out, const wgpu::TextureFormat format) noexcept {
+    return filament::backend::streamInsertWebGPUPrintable(out, format);
+}
+
+utils::io::ostream& operator<<(utils::io::ostream& out,
+        const wgpu::TextureUsage textureUsage) noexcept {
+    return filament::backend::streamInsertWebGPUPrintable(out, textureUsage);
+}
+
+utils::io::ostream& operator<<(utils::io::ostream& out,
+        const wgpu::PresentMode presentMode) noexcept {
+    return filament::backend::streamInsertWebGPUPrintable(out, presentMode);
+}
+
+utils::io::ostream& operator<<(utils::io::ostream& out,
+        const wgpu::CompositeAlphaMode alphaMode) noexcept {
+    return filament::backend::streamInsertWebGPUPrintable(out, alphaMode);
+}
+
 void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
-    std::stringstream usagesStream{};
-    usagesStream << capabilities.usages;
     FWGPU_LOGI << "WebGPU surface capabilities:";
-    FWGPU_LOGI << "  surface usages: " << usagesStream.str().data();
+    FWGPU_LOGI << "  surface usages: " << capabilities.usages;
     FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):";
     if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
         std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
                 [](wgpu::TextureFormat const format) {
-                    std::stringstream formatStream{};
-                    formatStream << format;
-                    FWGPU_LOGI << "    " << formatStream.str().data();
+                    FWGPU_LOGI << "    " << format;
                 });
     }
     FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount << "):";
@@ -52,9 +68,7 @@ void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabiliti
         std::for_each(capabilities.presentModes,
                 capabilities.presentModes + capabilities.presentModeCount,
                 [](wgpu::PresentMode const presentMode) {
-                    std::stringstream presentModeStream{};
-                    presentModeStream << presentMode;
-                    FWGPU_LOGI << "    " << presentModeStream.str().data();
+                    FWGPU_LOGI << "    " << presentMode;
                 });
     }
     FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount << "):";
@@ -62,46 +76,30 @@ void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabiliti
         std::for_each(capabilities.alphaModes,
                 capabilities.alphaModes + capabilities.alphaModeCount,
                 [](wgpu::CompositeAlphaMode const alphaMode) {
-                    std::stringstream alphaModeStream{};
-                    alphaModeStream << alphaMode;
-                    FWGPU_LOGI << "    " << alphaModeStream.str().data();
+                    FWGPU_LOGI << "    " << alphaMode;
                 });
     }
 }
-#endif
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         wgpu::TextureFormat depthFormat) {
-    std::stringstream formatStream{};
-    formatStream << config.format;
-    std::stringstream usageStream{};
-    usageStream << config.usage;
-    std::stringstream alphaModeStream{};
-    alphaModeStream << config.alphaMode;
-    std::stringstream presentModeStream{};
-    presentModeStream << config.presentMode;
-    std::stringstream depthFormatStream;
-    depthFormatStream << depthFormat;
     FWGPU_LOGI << "WebGPU surface configuration:";
-    FWGPU_LOGI << "  surface format: " << formatStream.str();
-    FWGPU_LOGI << "  surface usage: " << usageStream.str();
+    FWGPU_LOGI << "  surface format: " << config.format;
+    FWGPU_LOGI << "  surface usage: " << config.usage;
     FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):";
     if (config.viewFormatCount > 0 && config.viewFormats != nullptr) {
         std::for_each(config.viewFormats, config.viewFormats + config.viewFormatCount,
                 [](wgpu::TextureFormat const viewFormat) {
-                    std::stringstream viewFormatStream{};
-                    viewFormatStream << viewFormat;
-                    FWGPU_LOGI << "    " << viewFormatStream.str().data();
+                    FWGPU_LOGI << "    " << viewFormat;
                 });
     }
-    FWGPU_LOGI << "  surface alpha mode: " << alphaModeStream.str();
+    FWGPU_LOGI << "  surface alpha mode: " << config.alphaMode;
     FWGPU_LOGI << "  surface width: " << config.width;
     FWGPU_LOGI << "  surface height: " << config.height;
-    FWGPU_LOGI << "  surface present mode: " << presentModeStream.str();
-    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormatStream.str();
+    FWGPU_LOGI << "  surface present mode: " << config.presentMode;
+    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormat;
 }
-#endif
+#endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
 [[nodiscard]] constexpr wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
         wgpu::TextureFormat const* availableFormats, bool useSRGBColorSpace) {

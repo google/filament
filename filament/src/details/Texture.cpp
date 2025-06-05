@@ -64,7 +64,7 @@ using namespace math;
 
 // this is a hack to be able to create a std::function<> with a non-copyable closure
 template<class F>
-auto make_copyable_function(F&& f) {
+static auto make_copyable_function(F&& f) {
     using dF = std::decay_t<F>;
     auto spf = std::make_shared<dF>(std::forward<F>(f));
     return [spf](auto&& ... args) -> decltype(auto) {
@@ -78,6 +78,7 @@ struct Texture::BuilderDetails {
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     uint8_t mLevels = 1;
+    uint8_t mSamples = 1;
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::NONE;
@@ -115,6 +116,11 @@ Texture::Builder& Texture::Builder::depth(uint32_t const depth) noexcept {
 
 Texture::Builder& Texture::Builder::levels(uint8_t const levels) noexcept {
     mImpl->mLevels = std::max(uint8_t(1), levels);
+    return *this;
+}
+
+Texture::Builder& Texture::Builder::samples(uint8_t const samples) noexcept {
+    mImpl->mSamples = std::max(uint8_t(1), samples);
     return *this;
 }
 
@@ -169,6 +175,13 @@ Texture* Texture::Builder::build(Engine& engine) {
                 << "Texture has invalid dimensions: (" << mImpl->mWidth << ", " << mImpl->mHeight
                 << "), texture name=" << getNameOrDefault().c_str_safe();
     }
+
+    if (mImpl->mSamples > 1) {
+        FILAMENT_CHECK_PRECONDITION(any(mImpl->mUsage & Texture::Usage::SAMPLEABLE))
+                << "Multisample (" << unsigned(mImpl->mSamples)
+                << ") texture is not sampleable, texture name=" << getNameOrDefault().c_str_safe();
+    }
+
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();
     const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
@@ -274,7 +287,9 @@ Texture* Texture::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FTexture::FTexture(FEngine& engine, const Builder& builder) {
+FTexture::FTexture(FEngine& engine, const Builder& builder)
+    : mHasBlitSrc(false),
+      mExternal(false) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
@@ -284,10 +299,12 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
+    mSampleCount = builder->mSamples;
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
     mHasBlitSrc = builder->mHasBlitSrc;
     mExternal = builder->mExternal;
+    mTextureType = backend::getTextureType(mFormat);
 
     bool const isImported = builder->mImportedId != 0;
     if (mExternal && !isImported) {
@@ -366,6 +383,9 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Texture not supported for this operation.";
 
+    FILAMENT_CHECK_PRECONDITION(any(mUsage & Texture::Usage::UPLOADABLE))
+            << "Texture is not uploadable.";
+
     FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
                                                    << unsigned(mSampleCount) << ") texture.";
 
@@ -381,7 +401,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
 
-    uint32_t effectiveTextureDepthOrLayers;
+    uint32_t effectiveTextureDepthOrLayers = 0;
     switch (mTarget) {
         case SamplerType::SAMPLER_EXTERNAL:
             // can't happen by construction, fallthrough...
@@ -444,6 +464,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
         }
+        return false;
     };
 
     // this should have been validated already
@@ -714,6 +735,10 @@ size_t FTexture::computeTextureDataSize(Format const format, Type const type,
 
 size_t FTexture::getFormatSize(InternalFormat const format) noexcept {
     return backend::getFormatSize(format);
+}
+
+TextureType FTexture::getTextureType() const noexcept {
+    return mTextureType;
 }
 
 

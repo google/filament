@@ -44,6 +44,8 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/DriverApi.h"
 
+#include <private/utils/Tracing.h>
+
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
@@ -98,13 +100,13 @@
 
 #define DEBUG_GROUP_MARKER_NONE       0x00    // no debug marker
 #define DEBUG_GROUP_MARKER_OPENGL     0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (systrace)
+#define DEBUG_GROUP_MARKER_BACKEND    0x02    // markers on the backend side (perfetto)
 #define DEBUG_GROUP_MARKER_ALL        0xFF    // all markers
 
 #define DEBUG_MARKER_NONE             0x00    // no debug marker
 #define DEBUG_MARKER_OPENGL           0x01    // markers in the gl command queue (req. driver support)
-#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (systrace)
-#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (systrace)
+#define DEBUG_MARKER_BACKEND          0x02    // markers on the backend side (perfetto)
+#define DEBUG_MARKER_PROFILE          0x04    // profiling on the backend side (perfetto)
 #define DEBUG_MARKER_ALL              (0xFF & ~DEBUG_MARKER_PROFILE) // all markers
 
 // set to the desired debug marker level (for user markers [default: All])
@@ -246,8 +248,8 @@ OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string)
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -263,8 +265,8 @@ OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
 #endif
 
 #if DEBUG_MARKER_LEVEL & DEBUG_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -929,7 +931,12 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
-                    t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+                    if (depth <= 1) {
+                        // We forcibly change the target to 2D-multisample only for flat texture.
+                        // A depth value greater than 1 may indicate multiview usage, which requires
+                        // GL_TEXTURE_2D_ARRAY. Also 2D MSAA won't work with non-flat texture anyway.
+                        t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+                    }
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
@@ -1205,7 +1212,12 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
-            t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+            if (depth <= 1) {
+                // We forcibly change the target to 2D-multisample only for flat texture.
+                // A depth value greater than 1 may indicate multiview usage, which requires
+                // GL_TEXTURE_2D_ARRAY. Also 2D MSAA won't work with non-flat texture anyway.
+                t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+            }
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
@@ -1450,8 +1462,15 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 #if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
-                    glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, 0, binfo.layer, layerCount);
+                    if (rt->gl.samples > 1) {
+                        // For MSAA
+                        glFramebufferTextureMultisampleMultiviewOVR(GL_FRAMEBUFFER, attachment,
+                                t->gl.id, 0, rt->gl.samples, binfo.layer, layerCount);
+                    }
+                    else {
+                        glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment, t->gl.id, 0,
+                                binfo.layer, layerCount);
+                    }
                 } else
 #endif // !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 {
@@ -2511,10 +2530,33 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
     mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain,
             [this]() {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        mPlatform.detach(t->hwStream->stream);
+                    }
+                }
                 // OpenGL context is about to change, unbind everything
                 mContext.unbindEverything();
             },
             [this](size_t index) {
+                for (auto t: mTexturesWithStreamsAttached) {
+                    if (t->hwStream->streamType == StreamType::NATIVE) {
+                        if (t->externalTexture) {
+                            glGenTextures(1, &t->externalTexture->id);
+                            t->gl.id = t->externalTexture->id;
+                        } else {
+                            glGenTextures(1, &t->gl.id);
+                        }
+                        mPlatform.attach(t->hwStream->stream, t->gl.id);
+                        mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
+                    }
+                }
+
+                // force invalidation of all bound descriptor sets
+                decltype(mInvalidDescriptorSetBindings) changed;
+                changed.setValue((1 << MAX_DESCRIPTOR_SET_COUNT) - 1);
+                mInvalidDescriptorSetBindings |= changed;
+
                 // OpenGL context has changed, resynchronize the state with the cache
                 mContext.synchronizeStateAndCache(index);
                 DLOG(INFO) << "*** OpenGL context change : " << (index ? "protected" : "default");
@@ -2989,6 +3031,7 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     switch (hwStream->streamType) {
         case StreamType::NATIVE:
             mPlatform.attach(hwStream->stream, t->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, t->gl.id);
             break;
         case StreamType::ACQUIRED:
             break;
@@ -3017,7 +3060,12 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
             break;
     }
 
-    glGenTextures(1, &t->gl.id);
+    if (t->externalTexture) {
+        glGenTextures(1, &t->externalTexture->id);
+        t->gl.id = t->externalTexture->id;
+    } else {
+        glGenTextures(1, &t->gl.id);
+    }
 
     t->hwStream = nullptr;
 }
@@ -3041,8 +3089,14 @@ void OpenGLDriver::replaceStream(GLTexture* texture, GLStream* newStream) noexce
 
     switch (newStream->streamType) {
         case StreamType::NATIVE:
-            glGenTextures(1, &texture->gl.id);
+            if (texture->externalTexture) {
+                glGenTextures(1, &texture->externalTexture->id);
+                texture->gl.id = texture->externalTexture->id;
+            } else {
+                glGenTextures(1, &texture->gl.id);
+            }
             mPlatform.attach(newStream->stream, texture->gl.id);
+            mContext.updateTexImage(GL_TEXTURE_EXTERNAL_OES, texture->gl.id);
             break;
         case StreamType::ACQUIRED:
             // Just re-use the old texture id.
@@ -3346,8 +3400,8 @@ void OpenGLDriver::pushGroupMarker(char const* string) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN(string);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, string);
 #endif
 #endif
 }
@@ -3363,8 +3417,8 @@ void OpenGLDriver::popGroupMarker(int) {
 #endif
 
 #if DEBUG_GROUP_MARKER_LEVEL & DEBUG_GROUP_MARKER_BACKEND
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
 #endif
 #endif
 }
@@ -3683,7 +3737,7 @@ void OpenGLDriver::endFrame(UTILS_UNUSED uint32_t frameId) {
     gl.depthFunc(GL_LESS);
     gl.disable(GL_SCISSOR_TEST);
 #endif
-    //SYSTRACE_NAME("glFinish");
+    //FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glFinish");
     //glFinish();
     mPlatform.endFrame(frameId);
     insertEventMarker("endFrame");
@@ -3705,8 +3759,7 @@ void OpenGLDriver::updateDescriptorSetTexture(
         TextureHandle th,
         SamplerParams params) {
     GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
-    GLTexture* t = th ? handle_cast<GLTexture*>(th) : nullptr;
-    ds->update(mContext, binding, t, params);
+    ds->update(mContext, mHandleAllocator, binding, th, params);
 }
 
 void OpenGLDriver::flush(int) {

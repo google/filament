@@ -23,12 +23,13 @@
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Mutex.h>
-#include <utils/Systrace.h>
 
 #include <atomic>
 #include <memory>
@@ -240,8 +241,8 @@ void TimerQueryFenceFactory::beginTimeElapsedQuery(GLTimerQuery* tq) {
         if (state) {
             platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
             state->then = clock::now().time_since_epoch().count();
-            SYSTRACE_CONTEXT();
-            SYSTRACE_ASYNC_BEGIN("OpenGLTimerQueryFence", intptr_t(state.get()));
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_ASYNC_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, "OpenGLTimerQueryFence", intptr_t(state.get()));
         }
         platform.destroyFence(fence);
     });
@@ -257,8 +258,8 @@ void TimerQueryFenceFactory::endTimeElapsedQuery(OpenGLDriver&, GLTimerQuery* tq
             platform.waitFence(fence, FENCE_WAIT_FOR_EVER);
             int64_t const now = clock::now().time_since_epoch().count();
             state->elapsed.store(now - state->then, std::memory_order_relaxed);
-            SYSTRACE_CONTEXT();
-            SYSTRACE_ASYNC_END("OpenGLTimerQueryFence", intptr_t(state.get()));
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_ASYNC_END(FILAMENT_TRACING_CATEGORY_FILAMENT, "OpenGLTimerQueryFence", intptr_t(state.get()));
         }
         platform.destroyFence(fence);
     });

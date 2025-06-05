@@ -19,7 +19,8 @@
 #include "CommandStreamDispatcher.h"
 #include "SystraceProfile.h"
 #include "VulkanAsyncHandles.h"
-#include "VulkanBuffer.h"
+#include "VulkanBufferCache.h"
+#include "VulkanBufferProxy.h"
 #include "VulkanCommands.h"
 #include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
@@ -207,7 +208,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
-      mStagePool(mAllocator, &mCommands),
+      mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
+      mBufferCache(context, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
@@ -324,7 +326,6 @@ void VulkanDriver::terminate() {
     // descriptorSetLayoutCache
     mExternalImageManager.terminate();
 
-    mStagePool.terminate();
     mPipelineCache.terminate();
     mFramebufferCache.terminate();
     mSamplerCache.terminate();
@@ -334,6 +335,15 @@ void VulkanDriver::terminate() {
 
     // Before terminating ResourceManager, we must make sure all of the resource_ptrs have been unset.
     mResourceManager.terminate();
+
+    // Must come after `mResourceManager`.
+    // Before terminating the memory pool, we must make sure all the VulkanBufferMemory are yielded
+    // back to the pool.
+    mBufferCache.terminate();
+
+    // Before terminating stagePool, we need all resources to have been
+    // reclaimed, as they perform cleanup within the stage pool.
+    mStagePool.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
@@ -367,6 +377,7 @@ void VulkanDriver::collectGarbage() {
     mCommands.gc();
     mDescriptorSetCache.gc();
     mStagePool.gc();
+    mBufferCache.gc();
     mFramebufferCache.gc();
     mPipelineCache.gc();
 
@@ -510,7 +521,7 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
     FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
-            elementSize, indexCount);
+            mBufferCache, elementSize, indexCount);
     ib.inc();
 }
 
@@ -527,7 +538,7 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
         BufferObjectBinding bindingType, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
-            byteCount, bindingType);
+            mBufferCache, byteCount, bindingType);
     bo.inc();
 }
 
@@ -618,7 +629,7 @@ void VulkanDriver::createTextureExternalImage2R(Handle<HwTexture> th, backend::S
     auto& commands = mCommands.get();
     // Unlike uploaded textures or swapchains, we need to explicit transition this
     // texture into the read layout.
-    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::READ_ONLY);
+    texture->transitionLayout(&commands, texture->getPrimaryViewRange(), VulkanLayout::FRAG_READ);
 
     if (imgData.external.valid()) {
         mExternalImageManager.addExternallySampledTexture(texture, externalImage);
@@ -1216,7 +1227,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands.buffer(), p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -1231,7 +1242,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -1242,7 +1253,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -1891,7 +1902,7 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
     vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getGpuBuffer(), 0,
+    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getVkBuffer(), 0,
             prim->indexBuffer->indexType);
 }
 

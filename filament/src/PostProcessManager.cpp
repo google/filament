@@ -100,7 +100,9 @@ using namespace backend;
 static constexpr uint8_t kMaxBloomLevels = 12u;
 static_assert(kMaxBloomLevels >= 3, "We require at least 3 bloom levels");
 
-constexpr static float halton(unsigned int i, unsigned int const b) noexcept {
+namespace {
+
+constexpr float halton(unsigned int i, unsigned int const b) noexcept {
     // skipping a bunch of entries makes the average of the sequence closer to 0.5
     i += 409;
     float f = 1.0f;
@@ -112,6 +114,19 @@ constexpr static float halton(unsigned int i, unsigned int const b) noexcept {
     }
     return r;
 }
+
+template <typename ValueType>
+void setConstantParameter(FMaterial* const material, std::string_view const name,
+        ValueType value, bool& dirty) noexcept {
+    auto id = material->getSpecializationConstantId(name);
+    if (id.has_value()) {
+        if (material->setConstant(id.value(), value)) {
+            dirty = true;
+        }
+    }
+}
+
+} // anonymous
 
 // ------------------------------------------------------------------------------------------------
 
@@ -232,7 +247,7 @@ PostProcessManager::~PostProcessManager() noexcept = default;
 void PostProcessManager::setFrameUniforms(DriverApi& driver,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
     mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
-    mSsrPassDescriptorSet.setFrameUniforms(uniforms);
+    mSsrPassDescriptorSet.setFrameUniforms(mEngine, uniforms);
 }
 
 void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const noexcept {
@@ -289,6 +304,10 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
         { "sao",                        MATERIAL(SAO) },
         { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
+#ifndef FILAMENT_DISABLE_GTAO
+        { "gtao",                       MATERIAL(GTAO) },
+        { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
+#endif
         { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
@@ -504,6 +523,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
 
                 if (config.picking) {
+                    // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
                             .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
@@ -653,7 +673,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                     options, passBuilder = passBuilder]
             (FrameGraphResources const& resources, auto const& data, DriverApi& driver) mutable {
                 // set structure sampler
-                mSsrPassDescriptorSet.prepareStructure(data.structure ?
+                mSsrPassDescriptorSet.prepareStructure(mEngine, data.structure ?
                         resources.getTexture(data.structure) : getOneTexture());
 
                 // set screen-space reflections and screen-space refractions
@@ -664,7 +684,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 // the history sampler is a regular texture2D
                 TextureHandle const history = data.history ?
                         resources.getTexture(data.history) : getZeroTexture();
-                mSsrPassDescriptorSet.prepareHistorySSR(history, reprojection, uvFromViewMatrix, options);
+                mSsrPassDescriptorSet.prepareHistorySSR(mEngine, history, reprojection, uvFromViewMatrix, options);
 
                 mSsrPassDescriptorSet.commit(mEngine);
 
@@ -845,12 +865,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.5f * cameraInfo.projection[0].x * desc.width,
                         0.5f * cameraInfo.projection[1].y * desc.height);
 
-                // Where the falloff function peaks
-                const float peak = 0.1f * options.radius;
-                const float intensity = (f::TAU * peak) * options.intensity;
-                // always square AO result, as it looks much better
-                const float power = options.power * 2.0f;
-
                 const auto invProjection = inverse(cameraInfo.projection);
                 const float inc = (1.0f / (sampleCount - 0.5f)) * spiralTurns * f::TAU;
 
@@ -861,40 +875,80 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         0.0, 0.0, 0.0, 1.0
                 }};
 
-                auto& material = computeBentNormals ?
-                            getPostProcessMaterial("saoBentNormals") :
-                            getPostProcessMaterial("sao");
-                FMaterial const* const ma = material.getMaterial(mEngine);
+                std::string_view materialName;
+                auto aoType = options.aoType;
+#ifdef FILAMENT_DISABLE_GTAO
+                materialName = computeBentNormals ? "saoBentNormals" : "sao";
+                aoType = AmbientOcclusionOptions::AmbientOcclusionType::SAO;
+#else
+                if (aoType ==
+                        AmbientOcclusionOptions::AmbientOcclusionType::GTAO) {
+                    materialName = computeBentNormals ? "gtaoBentNormals" : "gtao";
+                } else {
+                    materialName = computeBentNormals ? "saoBentNormals" : "sao";
+                }
+#endif
+                auto& material = getPostProcessMaterial(materialName);
+
+                FMaterial const * const ma = material.getMaterial(mEngine);
                 FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
-                mi->setParameter("depth", depth, {
-                        .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
+
+                // Set AO type specific material parameters
+                switch (aoType) {
+                    case AmbientOcclusionOptions::AmbientOcclusionType::SAO: {
+                        // Where the falloff function peaks
+                        const float peak = 0.1f * options.radius;
+                        const float intensity = (f::TAU * peak) * options.intensity;
+
+                        // always square AO result, as it looks much better
+                        const float power = options.power * 2.0f;
+
+                        mi->setParameter("minHorizonAngleSineSquared",
+                                std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
+                        mi->setParameter("intensity", intensity / sampleCount);
+                        mi->setParameter("power", power);
+                        mi->setParameter("peak2", peak * peak);
+                        mi->setParameter("bias", options.bias);
+                        mi->setParameter("sampleCount",
+                                float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
+                        mi->setParameter("spiralTurns", spiralTurns);
+                        mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
+                        break;
+                    }
+                    case AmbientOcclusionOptions::AmbientOcclusionType::GTAO: {
+                        const auto sliceCount = static_cast<float>(options.gtao.sampleSliceCount);
+                        mi->setParameter("stepsPerSlice",
+                                static_cast<float>(options.gtao.sampleStepsPerSlice));
+                        mi->setParameter("sliceCount",
+                                float2{ sliceCount, 1.0f / sliceCount });
+                        mi->setParameter("power", options.power);
+                        mi->setParameter("radius", options.radius);
+                        mi->setParameter("intensity", options.intensity);
+                        mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
+
+                        break;
+                    }
+                }
+
+                // Set common material parameters
+                mi->setParameter("invRadiusSquared", 1.0f / (options.radius * options.radius));
+                mi->setParameter("depth", depth,
+                        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("screenFromViewMatrix",
                         mat4f(screenFromClipMatrix * cameraInfo.projection));
                 mi->setParameter("resolution",
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
-                mi->setParameter("invRadiusSquared",
-                        1.0f / (options.radius * options.radius));
-                mi->setParameter("minHorizonAngleSineSquared",
-                        std::pow(std::sin(options.minHorizonAngleRad), 2.0f));
-                mi->setParameter("projectionScale",
-                        projectionScale);
-                mi->setParameter("projectionScaleRadius",
-                        projectionScale * options.radius);
-                mi->setParameter("positionParams", float2{
-                        invProjection[0][0], invProjection[1][1] } * 2.0f);
-                mi->setParameter("peak2", peak * peak);
-                mi->setParameter("bias", options.bias);
-                mi->setParameter("power", power);
-                mi->setParameter("intensity", intensity / sampleCount);
+                mi->setParameter("projectionScale", projectionScale);
+                mi->setParameter("projectionScaleRadius", projectionScale * options.radius);
+                mi->setParameter("positionParams",
+                        float2{ invProjection[0][0], invProjection[1][1] } * 2.0f);
                 mi->setParameter("maxLevel", uint32_t(levelCount - 1));
-                mi->setParameter("sampleCount", float2{ sampleCount, 1.0f / (sampleCount - 0.5f) });
-                mi->setParameter("spiralTurns", spiralTurns);
-                mi->setParameter("angleIncCosSin", float2{ std::cos(inc), std::sin(inc) });
                 mi->setParameter("invFarPlane", 1.0f / -cameraInfo.zf);
-
                 mi->setParameter("ssctShadowDistance", options.ssct.shadowDistance);
-                mi->setParameter("ssctConeAngleTangeant", std::tan(options.ssct.lightConeRad * 0.5f));
-                mi->setParameter("ssctContactDistanceMaxInv", 1.0f / options.ssct.contactDistanceMax);
+                mi->setParameter("ssctConeAngleTangeant",
+                        std::tan(options.ssct.lightConeRad * 0.5f));
+                mi->setParameter("ssctContactDistanceMaxInv",
+                        1.0f / options.ssct.contactDistanceMax);
                 // light direction in view space
                 const mat4f view{ cameraInfo.getUserViewMatrix() };
                 const float3 l = normalize(
@@ -2631,25 +2685,15 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
     bool dirty = false;
 
-    auto setConstantParameter =
-            [&dirty](FMaterial* const material, std::string_view const name, auto value) noexcept {
-        auto id = material->getSpecializationConstantId(name);
-        if (id.has_value()) {
-            if (material->setConstant(id.value(), value)) {
-                dirty = true;
-            }
-        }
-    };
-
-    setConstantParameter(ma, "upscaling", taaOptions.upscaling);
-    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection);
-    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory);
-    setConstantParameter(ma, "filterInput", taaOptions.filterInput);
-    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg);
-    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering);
-    setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType));
-    setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping));
-    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma);
+    setConstantParameter(ma, "upscaling", taaOptions.upscaling, dirty);
+    setConstantParameter(ma, "historyReprojection", taaOptions.historyReprojection, dirty);
+    setConstantParameter(ma, "filterHistory", taaOptions.filterHistory, dirty);
+    setConstantParameter(ma, "filterInput", taaOptions.filterInput, dirty);
+    setConstantParameter(ma, "useYCoCg", taaOptions.useYCoCg, dirty);
+    setConstantParameter(ma, "preventFlickering", taaOptions.preventFlickering, dirty);
+    setConstantParameter(ma, "boxType", int32_t(taaOptions.boxType), dirty);
+    setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping), dirty);
+    setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma, dirty);
     if (dirty) {
         ma->invalidate();
         // TODO: call Material::compile(), we can't do that now because it works only
@@ -2664,18 +2708,8 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
     FMaterial* const ma = material.getMaterial(mEngine);
     bool dirty = false;
 
-    auto setConstantParameter =
-            [&dirty](FMaterial* const material, std::string_view const name, auto value) noexcept {
-        auto id = material->getSpecializationConstantId(name);
-        if (id.has_value()) {
-            if (material->setConstant(id.value(), value)) {
-                dirty = true;
-            }
-        }
-    };
-
-    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional());
-    setConstantParameter(ma, "isLDR", colorGrading->isLDR());
+    setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional(), dirty);
+    setConstantParameter(ma, "isLDR", colorGrading->isLDR(), dirty);
 
     if (dirty) {
         ma->invalidate();

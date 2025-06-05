@@ -20,7 +20,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/Panic.h>
-
+#include <private/backend/BackendUtils.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
@@ -39,15 +39,6 @@ constexpr wgpu::BufferUsage getBufferObjectUsage(
         case filament::backend::BufferObjectBinding::SHADER_STORAGE:
             return wgpu::BufferUsage::Storage;
     }
-}
-
-wgpu::Buffer createBuffer(wgpu::Device const& device, wgpu::BufferUsage usage, uint32_t size,
-        char const* label) {
-    wgpu::BufferDescriptor descriptor{ .label = label,
-        .usage = usage,
-        .size = size,
-        .mappedAtCreation = false };
-    return device.CreateBuffer(&descriptor);
 }
 
 wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool normalized, bool integer) {
@@ -77,7 +68,7 @@ wgpu::VertexFormat getVertexFormat(filament::backend::ElementType type, bool nor
             case ElementType::BYTE4: return VertexFormat::Snorm8x4;
             case ElementType::UBYTE4: return VertexFormat::Unorm8x4;
             case ElementType::SHORT4: return VertexFormat::Snorm16x4;
-            case ElementType::USHORT4: return VertexFormat::Unorm8x4;
+            case ElementType::USHORT4: return VertexFormat::Unorm16x4;
             default:
                 FILAMENT_CHECK_POSTCONDITION(false) << "Normalized format does not exist.";
                 return VertexFormat::Float32x3;
@@ -135,7 +126,7 @@ wgpu::StringView getUserTextureLabel(filament::backend::SamplerType target) {
         case SamplerType::SAMPLER_3D:
             return "a_3D_user_texture";
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            return "a_cube_mape_array_user_texture";
+            return "a_cube_map_array_user_texture";
     }
 }
 
@@ -154,7 +145,7 @@ wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) 
         case SamplerType::SAMPLER_3D:
             return "a_3D_user_texture_view";
         case SamplerType::SAMPLER_CUBEMAP_ARRAY:
-            return "a_cube_mape_array_user_texture_view";
+            return "a_cube_map_array_user_texture_view";
     }
 }
 
@@ -162,51 +153,185 @@ wgpu::StringView getUserTextureViewLabel(filament::backend::SamplerType target) 
 
 namespace filament::backend {
 
+void WGPUBufferBase::createBuffer(const wgpu::Device& device, wgpu::BufferUsage usage,
+        uint32_t size, const char* label) {
+    // Write size must be divisible by 4. If the whole buffer is written to as is common, so must
+    // the buffer size.
+    size += (4 - (size % 4)) % 4;
+    wgpu::BufferDescriptor descriptor{ .label = label,
+        .usage = usage,
+        .size = size,
+        .mappedAtCreation = false };
+    buffer = device.CreateBuffer(&descriptor);
+}
+
+void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_t byteOffset,
+        wgpu::Queue queue) {
+    FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
+            << "copyIntoBuffer called with a null buffer";
+    FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= buffer.GetSize())
+            << "Attempting to copy " << bufferDescriptor.size << " bytes into a buffer of size "
+            << buffer.GetSize() << " at offset " << byteOffset;
+    FILAMENT_CHECK_PRECONDITION(byteOffset % 4 == 0)
+            << "Byte offset must be a multiple of 4 but is " << byteOffset;
+
+    // TODO: All buffer objects are created with CopyDst usage.
+    // This may have some performance implications. That should be investigated later.
+    assert_invariant(buffer.GetUsage() & wgpu::BufferUsage::CopyDst);
+
+    size_t remainder = bufferDescriptor.size % 4;
+
+    // WriteBuffer is an async call. But cpu buffer data is already written to the staging
+    // buffer on return from the WriteBuffer.
+    auto legalSize = bufferDescriptor.size - remainder;
+    queue.WriteBuffer(buffer, byteOffset, bufferDescriptor.buffer, legalSize);
+    if (remainder != 0) {
+        const uint8_t* remainderStart =
+                static_cast<const uint8_t*>(bufferDescriptor.buffer) + legalSize;
+        memcpy(mRemainderChunk.data(), remainderStart, remainder);
+        // Pad the remainder with zeros to ensure deterministic behavior, though GPU shouldn't
+        // access this
+        std::memset(mRemainderChunk.data() + remainder, 0, 4 - remainder);
+
+        queue.WriteBuffer(buffer, byteOffset + legalSize, &mRemainderChunk, 4);
+    }
+}
+
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-        AttributeArray const& attributes)
-    : HwVertexBufferInfo(bufferCount, attributeCount),
-      mVertexBufferLayout(bufferCount),
-      mAttributes(bufferCount) {
-    assert_invariant(attributeCount > 0);
-    assert_invariant(bufferCount > 0);
-    for (uint32_t attribIndex = 0; attribIndex < attributes.size(); attribIndex++) {
-        Attribute const& attrib = attributes[attribIndex];
-        // Ignore the attributes which are not bind to vertex buffers.
-        if (attrib.buffer == Attribute::BUFFER_UNUSED) {
+        AttributeArray const& attributes, wgpu::Limits const& deviceLimits)
+    : HwVertexBufferInfo(bufferCount, attributeCount) {
+    FILAMENT_CHECK_PRECONDITION(attributeCount <= MAX_VERTEX_ATTRIBUTE_COUNT &&
+                                attributeCount <= deviceLimits.maxVertexAttributes)
+            << "The number of vertex attributes requested (" << attributeCount
+            << ") exceeds Filament's MAX_VERTEX_ATTRIBUTE_COUNT limit ("
+            << MAX_VERTEX_ATTRIBUTE_COUNT << ") and/or the device's limit ("
+            << deviceLimits.maxVertexAttributes << ")";
+    mVertexAttributes.reserve(attributeCount);
+    if (attributeCount == 0) {
+        mVertexBufferLayouts.resize(0);
+        mWebGPUSlotBindingInfos.resize(0);
+        return; // should not be possible, but being defensive. nothing to do otherwise
+    }
+    // populate mWebGPUSlotBindingInfos and attribute info (slot + attribute) by going through each
+    // attribute...
+    constexpr uint32_t IMPOSSIBLE_SLOT_INDEX = MAX_VERTEX_BUFFER_COUNT;
+    struct AttributeInfo final {
+        uint8_t slot = IMPOSSIBLE_SLOT_INDEX;
+        wgpu::VertexAttribute attribute = {};
+        AttributeInfo()
+            : slot(IMPOSSIBLE_SLOT_INDEX),
+              attribute({}) {}
+        AttributeInfo(uint8_t slot, wgpu::VertexAttribute attribute)
+            : slot(slot),
+              attribute(attribute) {}
+    };
+    std::array<AttributeInfo, MAX_VERTEX_ATTRIBUTE_COUNT> attributeInfos{};
+    uint8_t currentWebGPUSlotIndex = 0;
+    uint8_t currentAttributeIndex = 0;
+    mVertexBufferLayouts.reserve(MAX_VERTEX_BUFFER_COUNT);
+    mWebGPUSlotBindingInfos.reserve(mVertexBufferLayouts.capacity());
+    for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
+        const auto& attribute = attributes[attributeIndex];
+        if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+            // We ignore "unused" attributes, ones not associated with a buffer. If a shader
+            // references such an attribute we have a bug one way or another. Either the API/CPU
+            // will produce an error (best case scenario), where an attribute is referenced in the
+            // shader but not provided by the backend API (CPU-side), or the shader would be getting
+            // junk/undefined data from the GPU, since we do not have a valid buffer of data to
+            // provide to the shader/GPU.
             continue;
         }
-
-        assert_invariant(attrib.buffer < bufferCount);
-        bool const isInteger = attrib.flags & Attribute::FLAG_INTEGER_TARGET;
-        bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
-        wgpu::VertexFormat vertexFormat = getVertexFormat(attrib.type, isNormalized, isInteger);
-
-        // Attributes are sequential per buffer
-        mAttributes[attrib.buffer].push_back({
-            .format = vertexFormat,
-            .offset = attrib.offset,
-            .shaderLocation = attribIndex,
-        });
-
-        mVertexBufferLayout[attrib.buffer].stepMode = wgpu::VertexStepMode::Vertex;
-        if (mVertexBufferLayout[attrib.buffer].arrayStride == 0) {
-            mVertexBufferLayout[attrib.buffer].arrayStride = attrib.stride;
-        } else {
-            assert_invariant(mVertexBufferLayout[attrib.buffer].arrayStride == attrib.stride);
+        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
+        wgpu::VertexFormat const vertexFormat =
+                getVertexFormat(attribute.type, isNormalized, isInteger);
+        uint8_t existingSlot = IMPOSSIBLE_SLOT_INDEX;
+        for (uint32_t slot = 0; slot < currentWebGPUSlotIndex; slot++) {
+            WebGPUSlotBindingInfo const& info = mWebGPUSlotBindingInfos[slot];
+            // We consider attributes to be in the same slot/layout only if they belong to the
+            // same buffer and are interleaved; they cannot belong to separate partitions in the
+            // same buffer, for example.
+            // For the attributes to be interleaved, the stride must match (among other things).
+            // The attribute offset being less than the slot's/layout's buffer offset indicates
+            // that it is in a separate partition before this slot/layout, thus not part of it.
+            // The difference from the attribute's offset and this slot's/layout's buffer offset
+            // being greater than the stride indicates it is in a separate partition after this
+            // slot/layout, thus not part of it.
+            if (info.sourceBufferIndex == attribute.buffer && info.stride == attribute.stride &&
+                    attribute.offset >= info.bufferOffset &&
+                    ((attribute.offset - info.bufferOffset) < attribute.stride)) {
+                existingSlot = slot;
+                break;
+            }
         }
+        if (existingSlot == IMPOSSIBLE_SLOT_INDEX) {
+            // New combination, use a new WebGPU slot
+            FILAMENT_CHECK_PRECONDITION(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT &&
+                                        currentWebGPUSlotIndex < deviceLimits.maxVertexBuffers)
+                    << "Number of vertex buffer layouts must not exceed MAX_VERTEX_BUFFER_COUNT ("
+                    << MAX_VERTEX_BUFFER_COUNT << ") or the device limit ("
+                    << deviceLimits.maxVertexBuffers << ")";
+            existingSlot = currentWebGPUSlotIndex++;
+            mWebGPUSlotBindingInfos.push_back({
+                .sourceBufferIndex = attribute.buffer,
+                .bufferOffset = attribute.offset,
+                .stride = attribute.stride
+            });
+            // we need to have a vertex buffer layout for each slot
+            mVertexBufferLayouts.push_back({
+                .stepMode = wgpu::VertexStepMode::Vertex,
+                .arrayStride = attribute.stride
+                // we do not know attributeCount or attributes at this time. We get those
+                // in a subsequent pass over the attributeInfos we collect in this loop.
+            });
+        }
+        attributeInfos[currentAttributeIndex++] = AttributeInfo(existingSlot,
+            {
+                .format = vertexFormat,
+                .offset = attribute.offset - mWebGPUSlotBindingInfos[existingSlot].bufferOffset,
+                .shaderLocation = attributeIndex
+            }
+        );
     }
-
-    for (uint32_t bufferIndex = 0; bufferIndex < bufferCount; bufferIndex++) {
-        mVertexBufferLayout[bufferIndex].attributeCount = mAttributes[bufferIndex].size();
-        mVertexBufferLayout[bufferIndex].attributes = mAttributes[bufferIndex].data();
+    FILAMENT_CHECK_POSTCONDITION(currentAttributeIndex == attributeCount)
+            << "Using " << currentAttributeIndex << " attributes, but " << attributeCount
+            << " where indicated.";
+    mVertexBufferLayouts.shrink_to_fit();
+    mWebGPUSlotBindingInfos.shrink_to_fit();
+    // sort attribute infos by increasing slot (by increasing offset within each slot).
+    // We do this to ensure that attributes for the same slot/layout are contiguous in
+    // the vector, so the vertex buffer layout associated with these contiguous attributes
+    // can directly reference them in the mVertexAttributes vector below.
+    std::sort(attributeInfos.data(), attributeInfos.data() + attributeCount,
+            [](AttributeInfo const& first, AttributeInfo const& second) {
+                if (first.slot < second.slot) {
+                    return true;
+                }
+                if (first.slot == second.slot) {
+                    if (first.attribute.offset < second.attribute.offset) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+    // populate mVertexAttributes and update mVertexBufferLayouts to reference the correct
+    // attributes in it (which will be contiguous in memory as ensured by the sorting above)...
+    for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; ++attributeIndex) {
+        AttributeInfo const& info = attributeInfos[attributeIndex];
+        mVertexAttributes.push_back(info.attribute);
+        if (mVertexBufferLayouts[info.slot].attributeCount == 0) {
+            mVertexBufferLayouts[info.slot].attributes = &mVertexAttributes[attributeIndex];
+        }
+        mVertexBufferLayouts[info.slot].attributeCount++;
     }
 }
 
 WGPUIndexBuffer::WGPUIndexBuffer(wgpu::Device const& device, uint8_t elementSize,
         uint32_t indexCount)
-    : buffer(createBuffer(device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
-              elementSize * indexCount, "index_buffer")),
-      indexFormat(elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32) {}
+    : indexFormat(elementSize == 2 ? wgpu::IndexFormat::Uint16 : wgpu::IndexFormat::Uint32) {
+    createBuffer(device, wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index,
+            elementSize * indexCount, "index_buffer");
+}
 
 
 WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const& device, uint32_t vertexCount,
@@ -217,10 +342,10 @@ WGPUVertexBuffer::WGPUVertexBuffer(wgpu::Device const& device, uint32_t vertexCo
 
 WGPUBufferObject::WGPUBufferObject(wgpu::Device const& device, BufferObjectBinding bindingType,
         uint32_t byteCount)
-    : HwBufferObject(byteCount),
-      buffer(createBuffer(device, wgpu::BufferUsage::CopyDst | getBufferObjectUsage(bindingType),
-              byteCount, "buffer_object")),
-      bufferObjectBinding(bindingType) {}
+    : HwBufferObject(byteCount) {
+    createBuffer(device, wgpu::BufferUsage::CopyDst | getBufferObjectUsage(bindingType), byteCount,
+            "buffer_object");
+}
 
 wgpu::ShaderStage WebGPUDescriptorSetLayout::filamentStageToWGPUStage(ShaderStageFlags fFlags) {
     wgpu::ShaderStage retStages = wgpu::ShaderStage::None;
@@ -255,8 +380,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
     unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
-                return fEntry.type == DescriptorType::SAMPLER ||
-                       fEntry.type == DescriptorType::SAMPLER_EXTERNAL;
+                return DescriptorSetLayoutBinding::isSampler(fEntry.type);
             });
 
 
@@ -272,26 +396,45 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         entryInfo.binding = wEntry.binding;
 
         switch (fEntry.type) {
-            case DescriptorType::SAMPLER_EXTERNAL:
-            case DescriptorType::SAMPLER: {
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT: {
                 auto& samplerEntry = wEntries.emplace_back();
                 auto& samplerEntryInfo = mBindGroupEntries.emplace_back();
                 samplerEntry.binding = fEntry.binding * 2 + 1;
                 samplerEntryInfo.binding = samplerEntry.binding;
-                samplerEntryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER;
                 samplerEntry.visibility = wEntry.visibility;
-                // We are simply hoping that undefined and defaults suffices here.
-                samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering; // Example default
-                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;      // Example default
-                // TODO: FIX! THIS IS HACK FOR HELLO-TRIANGLE!
-                if (baseLabel.find("Skybox") != std::string::npos ||
-                        (baseLabel == "Filament Default Material_perView" && wEntry.binding == 22)) {
-                    wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+                wEntry.texture.multisampled = isMultiSampledTypeDescriptor(fEntry.type);
+                // TODO: Set once we have the filtering values
+                if (isDepthDescriptor(fEntry.type)) {
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::Comparison;
+                } else if (isIntDescriptor(fEntry.type)) {
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
                 } else {
-                    wEntry.texture.viewDimension =
-                            wgpu::TextureViewDimension::e2D;// Example default
+                    samplerEntry.sampler.type = wgpu::SamplerBindingType::Filtering;
                 }
-                entryInfo.type = WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW;
                 break;
             }
             case DescriptorType::UNIFORM_BUFFER: {
@@ -302,7 +445,6 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 // TODO: Ideally we fill minBindingSize
                 break;
             }
-
             case DescriptorType::INPUT_ATTACHMENT: {
                 PANIC_POSTCONDITION("Input Attachment is not supported");
                 break;
@@ -311,6 +453,48 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 PANIC_POSTCONDITION("Shader storage is not supported");
                 break;
             }
+            case DescriptorType::SAMPLER_EXTERNAL: {
+                PANIC_POSTCONDITION("External Sampler is not supported");
+                break;
+            }
+        }
+        if (isDepthDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
+        }
+        else if (isFloatDescriptor(fEntry.type))
+        {
+            // TODO: Set once we have the filtering values
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+        }
+        else if (isIntDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
+        }
+        else if (isUnsignedIntDescriptor(fEntry.type))
+        {
+            wEntry.texture.sampleType = wgpu::TextureSampleType::Uint;
+        }
+
+        if (is3dTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e3D;
+        }
+        else if (is2dTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2D;
+        }
+        else if (is2dArrayTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
+        }
+        else if (isCubeTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::Cube;
+        }
+        else if (isCubeArrayTypeDescriptor(fEntry.type))
+        {
+            wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
         }
         // fEntry.count is unused currently
     }
@@ -325,114 +509,26 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
 
 WebGPUDescriptorSetLayout::~WebGPUDescriptorSetLayout() {}
 
-wgpu::Buffer WebGPUDescriptorSet::sDummyUniformBuffer = nullptr;
-wgpu::Texture WebGPUDescriptorSet::sDummyTexture = nullptr;
-wgpu::TextureView WebGPUDescriptorSet::sDummyTextureView = nullptr;
-wgpu::Sampler WebGPUDescriptorSet::sDummySampler = nullptr;
-
-void WebGPUDescriptorSet::initializeDummyResourcesIfNotAlready(wgpu::Device const& device,
-        wgpu::TextureFormat aColorFormat) {
-    if (!sDummyUniformBuffer) {
-        wgpu::BufferDescriptor bufferDescriptor{
-            .label = "dummy_uniform_not_to_be_used",
-            .usage = wgpu::BufferUsage::Uniform,
-            .size = 4
-        };
-        sDummyUniformBuffer = device.CreateBuffer(&bufferDescriptor);
-        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
-                << "Failed to create dummy uniform buffer?";
-    }
-    if (!sDummyTexture || !sDummyTextureView) {
-        wgpu::TextureDescriptor textureDescriptor{
-            .label = "dummy_texture_not_to_be_used",
-            .usage = wgpu::TextureUsage::TextureBinding,
-            .dimension = wgpu::TextureDimension::e2D,
-            .size = wgpu::Extent3D{ .width = 4, .height = 4, .depthOrArrayLayers = 1 },
-            .format = aColorFormat,
-        };
-        if (!sDummyTexture) {
-            sDummyTexture = device.CreateTexture(&textureDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy texture?";
-        }
-        if (!sDummyTextureView) {
-            wgpu::TextureViewDescriptor textureViewDescriptor{
-                .label = "dummy_texture_view_not_to_be_used"
-            };
-            sDummyTextureView = sDummyTexture.CreateView(&textureViewDescriptor);
-            FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer)
-                    << "Failed to create dummy texture view?";
-        }
-    }
-    if (!sDummySampler) {
-        wgpu::SamplerDescriptor samplerDescriptor{
-            .label = "dummy_sampler_not_to_be_used"
-        };
-        sDummySampler = device.CreateSampler(&samplerDescriptor);
-        FILAMENT_CHECK_POSTCONDITION(sDummyUniformBuffer) << "Failed to create dummy sampler?";
-    }
-}
-
-std::vector<wgpu::BindGroupEntry> WebGPUDescriptorSet::createDummyEntriesSortedByBinding(
-        std::vector<filament::backend::WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&
-                bindGroupEntries) {
-    assert_invariant(WebGPUDescriptorSet::sDummyUniformBuffer &&
-                     "Dummy uniform buffer must have been created before "
-                     "creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummyTexture &&
-            "Dummy texture must have been created before creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummyTextureView &&
-            "Dummy texture view must have been created before creating dummy bind group entries.");
-    assert_invariant(
-            WebGPUDescriptorSet::sDummySampler &&
-            "Dummy sampler must have been created before creating dummy bind group entries.");
-    using filament::backend::WebGPUDescriptorSetLayout;
-    std::vector<wgpu::BindGroupEntry> entries;
-    entries.reserve(bindGroupEntries.size());
-    for (auto const& entryInfo: bindGroupEntries) {
-        auto& entry = entries.emplace_back();
-        entry.binding = entryInfo.binding;
-        switch (entryInfo.type) {
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::UNIFORM_BUFFER:
-                entry.buffer = WebGPUDescriptorSet::sDummyUniformBuffer;
-                break;
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::TEXTURE_VIEW:
-                entry.textureView = WebGPUDescriptorSet::sDummyTextureView;
-                break;
-            case WebGPUDescriptorSetLayout::BindGroupEntryType::SAMPLER:
-                entry.sampler = WebGPUDescriptorSet::sDummySampler;
-                break;
-        }
-    }
-    std::sort(entries.begin(), entries.end(),
-            [](wgpu::BindGroupEntry const& a, wgpu::BindGroupEntry const& b) {
-                return a.binding < b.binding;
-            });
-    return entries;
-}
-
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
     : mLayout(layout),
-      mEntriesSortedByBinding(createDummyEntriesSortedByBinding(bindGroupEntries)) {
+      mEntriesWithDynamicOffsetsCount(std::count_if(bindGroupEntries.begin(),
+              bindGroupEntries.end(), [](auto const& entry) { return entry.hasDynamicOffset; })) {
+
+    mEntries.resize(bindGroupEntries.size());
+    for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
+        mEntries[i].binding = bindGroupEntries[i].binding;
+    }
     // Establish the size of entries based on the layout. This should be reliable and efficient.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
     for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {
         mEntryIndexByBinding[i] = INVALID_INDEX;
     }
-    for (size_t index = 0; index < mEntriesSortedByBinding.size(); index++) {
-        wgpu::BindGroupEntry const& entry = mEntriesSortedByBinding[index];
+    for (size_t index = 0; index < mEntries.size(); index++) {
+        wgpu::BindGroupEntry const& entry = mEntries[index];
         assert_invariant(entry.binding < mEntryIndexByBinding.size());
         mEntryIndexByBinding[entry.binding] = static_cast<uint8_t>(index);
     }
-    for (auto const& entry : bindGroupEntries) {
-        if (entry.hasDynamicOffset) {
-            assert_invariant(entry.binding < mEntriesByBindingWithDynamicOffsets.size());
-            mEntriesByBindingWithDynamicOffsets[entry.binding] = true;
-        }
-    }
-    mDynamicOffsets.reserve(mEntriesSortedByBinding.size());
 }
 
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
@@ -447,15 +543,15 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(const wgpu::Device& device) {
     // TODO label? Should we just copy layout label?
     wgpu::BindGroupDescriptor desc{
         .layout = mLayout,
-        .entryCount = mEntriesSortedByBinding.size(),
-        .entries = mEntriesSortedByBinding.data()
+        .entryCount = mEntries.size(),
+        .entries = mEntries.data()
     };
     mBindGroup = device.CreateBindGroup(&desc);
     FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
     // once we have created the bind group itself we should no longer need any other state
     mLayout = nullptr;
-    mEntriesSortedByBinding.clear();
-    mEntriesSortedByBinding.shrink_to_fit();
+    mEntries.clear();
+    mEntries.shrink_to_fit();
     return mBindGroup;
 }
 
@@ -473,38 +569,18 @@ void WebGPUDescriptorSet::addEntry(unsigned int index, wgpu::BindGroupEntry&& en
             << index;
     uint8_t entryIndex = mEntryIndexByBinding[index];
     FILAMENT_CHECK_POSTCONDITION(
-            entryIndex != INVALID_INDEX && entryIndex < mEntriesSortedByBinding.size())
+            entryIndex != INVALID_INDEX && entryIndex < mEntries.size())
             << "Invalid binding " << index;
     entry.binding = index;
-    mEntriesSortedByBinding[entryIndex] = std::move(entry);
-    mEntriesByBindingAdded[index] = true;
-}
-
-uint32_t const* WebGPUDescriptorSet::setDynamicOffsets(uint32_t const* offsets) {
-    // mDynamicOffsets already reserves enough memory for the number of entries in the set
-    mDynamicOffsets.clear();
-    // this implementation copies the offsets to mDynamicOffsets, but also adds values for
-    // unused entries TODO: is this necessary?
-    size_t inputIndex = 0;
-    size_t outputIndex = 0;
-    for (auto const& entry : mEntriesSortedByBinding) {
-        if (mEntriesByBindingWithDynamicOffsets[entry.binding]) {
-            if (mEntriesByBindingAdded[entry.binding]) {
-                mDynamicOffsets[outputIndex++] = offsets[inputIndex++];
-            } else {
-                mDynamicOffsets[outputIndex++] = 0; // dummy offset, as it was never added
-            }
-        }
-    }
-    return mDynamicOffsets.data();
+    mEntries[entryIndex] = std::move(entry);
 }
 
 size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
-    return mEntriesByBindingWithDynamicOffsets.count();
+    return mEntriesWithDynamicOffsetsCount;
 }
 
-WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+        uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
     assert_invariant(
             samples == 1 ||
@@ -517,6 +593,10 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mUsage = fToWGPUTextureUsage(usage);
     mFormat = fToWGPUTextureFormat(format);
     mAspect = fToWGPUTextureViewAspect(usage, format);
+    mBlockWidth = filament::backend::getBlockWidth(format);
+    mBlockHeight = filament::backend::getBlockHeight(format);
+    target = samplerTargetType;
+
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(target),
         .usage = mUsage,
@@ -558,12 +638,17 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
     // Second, the texture view aspect
-    mTexView = makeTextureView(0, levels, target);
+    mTexureView = makeTextureView(0, levels, target);
 }
 
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
     mTexture = src->mTexture;
-    mTexView = makeTextureView(baseLevel, levelCount, target);
+    mAspect = src->mAspect;
+    mBlockWidth = src->mBlockWidth;
+    mBlockHeight = src->mBlockHeight;
+    target = src->target;
+
+    mTexureView = makeTextureView(baseLevel, levelCount, target);
 }
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
@@ -861,7 +946,7 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
     const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
     const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
-    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+    const bool isSample = any(fUsage & TextureUsage::SAMPLEABLE);
 
     if (isDepth && !isColor && !isStencil) {
         return wgpu::TextureAspect::DepthOnly;
@@ -932,58 +1017,153 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
     return textureView;
 }
 
-WGPURenderTarget::Attachment WGPURenderTarget::getDrawColorAttachment(size_t index) {
-    assert_invariant( index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
-    auto result = color[index];
-    if (index == 0 && defaultRenderTarget) {
-
-    }
-
-    return result;
+WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+        const MRT& colorAttachmentsMRT,
+        const Attachment& depthAttachmentInfo,
+        const Attachment& stencilAttachmentInfo)
+    : HwRenderTarget(width, height),
+      defaultRenderTarget(false),
+      samples(samples),
+      mColorAttachments(colorAttachmentsMRT),
+      mDepthAttachment(depthAttachmentInfo),
+      mStencilAttachment(stencilAttachmentInfo) {
+    // TODO Make this an array
+    mColorAttachmentDescriptors.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
 wgpu::LoadOp WGPURenderTarget::getLoadOperation(RenderPassParams const& params,
-                                             TargetBufferFlags buffer) {
-    auto clearFlags = params.flags.clear;
-    auto discardStartFlags = params.flags.discardStart;
-    if (any(clearFlags & buffer)) {
+                                                TargetBufferFlags bufferToOperateOn) {
+    if (any(params.flags.clear & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear;
-    } else if (any(discardStartFlags & buffer)) {
-        return wgpu::LoadOp::Clear;
+    }
+    if (any(params.flags.discardStart & bufferToOperateOn)) {
+        return wgpu::LoadOp::Clear; // Or wgpu::LoadOp::Undefined if clear is not desired on discard
     }
     return wgpu::LoadOp::Load;
 }
 
 wgpu::StoreOp WGPURenderTarget::getStoreOperation(RenderPassParams const& params,
-                                               TargetBufferFlags buffer) {
-    const auto discardEndFlags = params.flags.discardEnd;
-    if (any(discardEndFlags & buffer)) {
+                                                  TargetBufferFlags bufferToOperateOn) {
+    if (any(params.flags.discardEnd & bufferToOperateOn)) {
         return wgpu::StoreOp::Discard;
     }
     return wgpu::StoreOp::Store;
 }
-void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
-        wgpu::TextureView const& textureView, RenderPassParams const& params) {
-    // auto discardFlags = params.flags.discardEnd;
-    // (void) discardFlags;
-    // std::vector<wgpu::RenderPassColorAttachment> colorAttachments;
-    colorAttachments.clear();
-    for (size_t i = 0; i < 1/*MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT*/; i++) {
-        // auto attachment = getDrawColorAttachment(i);
-        // if (attachment) {
-            wgpu::RenderPassColorAttachment colorAttachment;
-            colorAttachment.view = textureView;
-            colorAttachment.loadOp  = getLoadOperation(params, getTargetBufferFlagsAt(i));
-            colorAttachment.storeOp = getStoreOperation(params, getTargetBufferFlagsAt(i));
-            colorAttachment.clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a };
-            colorAttachments.emplace_back(colorAttachment);
-        // }
-    }
-    descriptor.colorAttachments = colorAttachments.data();
-    descriptor.colorAttachmentCount = colorAttachments.size();
-    descriptor.depthStencilAttachment = nullptr;
-    descriptor.timestampWrites = nullptr;
-}
 
+void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& descriptor,
+        RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
+        wgpu::TextureView const& defaultDepthStencilTextureView,
+        wgpu::TextureView const* customColorTextureViews, uint32_t customColorTextureViewCount,
+        wgpu::TextureView const& customDepthTextureView,
+        wgpu::TextureView const& customStencilTextureView, wgpu::TextureFormat customDepthFormat,
+        wgpu::TextureFormat customStencilFormat) {
+    mColorAttachmentDescriptors.clear();
+    mHasDepthStencilAttachment = false;
+
+    if (defaultRenderTarget) {
+        assert_invariant(defaultColorTextureView);
+        mColorAttachmentDescriptors.push_back({ .view = defaultColorTextureView,
+            .resolveTarget = nullptr,
+            .loadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
+            .storeOp = WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0),
+            .clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b,
+                params.clearColor.a } });
+
+        if (defaultDepthStencilTextureView) {
+            mDepthStencilAttachmentDescriptor = {
+                .view = defaultDepthStencilTextureView,
+                .depthLoadOp = WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
+                .depthStoreOp =
+                        WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
+                .depthClearValue = static_cast<float>(params.clearDepth),
+                .depthReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+                .stencilLoadOp =
+                        WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL),
+                .stencilStoreOp =
+                        WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL),
+                .stencilClearValue = params.clearStencil,
+                .stencilReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0,
+            };
+            mHasDepthStencilAttachment = true;
+        }
+    } else {// Custom Render Target
+        for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
+            if (customColorTextureViews[i]) {
+                mColorAttachmentDescriptors.push_back({ .view = customColorTextureViews[i],
+                    // .resolveTarget = nullptr; // TODO: MSAA resolve for custom RT
+                    .loadOp = WGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
+                    .storeOp =
+                            WGPURenderTarget::getStoreOperation(params, getTargetBufferFlagsAt(i)),
+                    .clearValue = { .r = params.clearColor.r,
+                        .g = params.clearColor.g,
+                        .b = params.clearColor.b,
+                        .a = params.clearColor.a } });
+            }
+        }
+
+        FILAMENT_CHECK_POSTCONDITION(!(customDepthTextureView && customStencilTextureView))
+                << "WebGPU CANNOT support separate texture views for depth + stencil. depth + "
+                   "stencil needs to be in one texture view";
+
+        const bool hasStencil =
+                customStencilTextureView ||
+                (customDepthFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+                        customDepthFormat == wgpu::TextureFormat::Depth32FloatStencil8);
+
+        const bool hasDepth =
+                customDepthTextureView ||
+                (customStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+                        customDepthFormat == wgpu::TextureFormat::Depth32FloatStencil8);
+
+        if (customDepthTextureView || customStencilTextureView) {
+            assert_invariant((hasDepth || hasStencil) &&
+                             "Depth or Texture view without a valid texture format");
+            mDepthStencilAttachmentDescriptor = {};
+            mDepthStencilAttachmentDescriptor.view =
+                    customDepthTextureView ? customDepthTextureView : customStencilTextureView;
+
+            if (hasDepth) {
+                mDepthStencilAttachmentDescriptor.depthLoadOp =
+                        WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDescriptor.depthStoreOp =
+                        WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDescriptor.depthClearValue =
+                        static_cast<float>(params.clearDepth);
+                mDepthStencilAttachmentDescriptor.depthReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+            } else {
+                mDepthStencilAttachmentDescriptor.depthLoadOp = wgpu::LoadOp::Undefined;
+                mDepthStencilAttachmentDescriptor.depthStoreOp = wgpu::StoreOp::Undefined;
+                mDepthStencilAttachmentDescriptor.depthReadOnly = true;
+            }
+
+            if (hasStencil) {
+                mDepthStencilAttachmentDescriptor.stencilLoadOp =
+                        WGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDescriptor.stencilStoreOp =
+                        WGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDescriptor.stencilClearValue = params.clearStencil;
+                mDepthStencilAttachmentDescriptor.stencilReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
+            } else {
+                mDepthStencilAttachmentDescriptor.stencilLoadOp = wgpu::LoadOp::Undefined;
+                mDepthStencilAttachmentDescriptor.stencilStoreOp = wgpu::StoreOp::Undefined;
+                mDepthStencilAttachmentDescriptor.stencilReadOnly = true;
+            }
+            mHasDepthStencilAttachment = true;
+        }
+    }
+
+    descriptor.colorAttachmentCount = mColorAttachmentDescriptors.size();
+    descriptor.colorAttachments = mColorAttachmentDescriptors.data();
+    descriptor.depthStencilAttachment =
+            mHasDepthStencilAttachment ? &mDepthStencilAttachmentDescriptor : nullptr;
+
+    // descriptor.sampleCount was removed from the core spec. If your webgpu.h still has it,
+    // and your Dawn version expects it, you might need to set it here based on this->samples.
+    // e.g., descriptor.sampleCount = this->samples;
+}
 
 }// namespace filament::backend

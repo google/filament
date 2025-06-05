@@ -59,8 +59,8 @@ struct GLDescriptorSet : public HwDescriptorSet {
             descriptor_binding_t binding, GLBufferObject* bo, size_t offset, size_t size) noexcept;
 
     // update a sampler descriptor in the set
-    void update(OpenGLContext& gl,
-            descriptor_binding_t binding, GLTexture* t, SamplerParams params) noexcept;
+    void update(OpenGLContext& gl, HandleAllocatorGL& handleAllocator,
+            descriptor_binding_t binding, TextureHandle th, SamplerParams params) noexcept;
 
     // conceptually bind the set to the command buffer
     void bind(
@@ -111,46 +111,19 @@ private:
 
     // A sampler descriptor
     struct Sampler {
-        uint16_t target;                        // 2 (GLenum)
-        bool external = false;                  // 1
-        bool reserved = false;                  // 1
-        GLuint id = 0;                          // 4
+        TextureHandle handle;                   // 4
         GLuint sampler = 0;                     // 4
-        Handle<GLTextureRef> ref;               // 4
-        int8_t baseLevel = 0x7f;                // 1
-        int8_t maxLevel = -1;                   // 1
-        std::array<TextureSwizzle, 4> swizzle{  // 4
-                TextureSwizzle::CHANNEL_0,
-                TextureSwizzle::CHANNEL_1,
-                TextureSwizzle::CHANNEL_2,
-                TextureSwizzle::CHANNEL_3
-        };
     };
 
     struct SamplerWithAnisotropyWorkaround {
-        uint16_t target;                        // 2 (GLenum)
-        bool external = false;                  // 1
-        bool reserved = false;                  // 1
-        GLuint id = 0;                          // 4
+        TextureHandle handle;                   // 4
         GLuint sampler = 0;                     // 4
-        Handle<GLTextureRef> ref;               // 4
         math::half anisotropy = 1.0f;           // 2
-        int8_t baseLevel = 0x7f;                // 1
-        int8_t maxLevel = -1;                   // 1
-        std::array<TextureSwizzle, 4> swizzle{  // 4
-                TextureSwizzle::CHANNEL_0,
-                TextureSwizzle::CHANNEL_1,
-                TextureSwizzle::CHANNEL_2,
-                TextureSwizzle::CHANNEL_3
-        };
     };
 
     // A sampler descriptor for ES2
     struct SamplerGLES2 {
-        uint16_t target;                        // 2 (GLenum)
-        bool external = false;                  // 1
-        bool reserved = false;                  // 1
-        GLuint id = 0;                          // 4
+        TextureHandle handle;                   // 4
         SamplerParams params{};                 // 4
         float anisotropy = 1.0f;                // 4
     };
@@ -165,9 +138,8 @@ private:
     };
     static_assert(sizeof(Descriptor) <= 32);
 
-    template<typename T>
     static void updateTextureView(OpenGLContext& gl,
-            HandleAllocatorGL& handleAllocator, GLuint unit, T const& desc) noexcept;
+            HandleAllocatorGL& handleAllocator, GLuint unit, GLTexture const* t) noexcept;
 
     utils::FixedCapacityVector<Descriptor> descriptors;     // 16
     utils::bitset64 dynamicBuffers;                         // 8

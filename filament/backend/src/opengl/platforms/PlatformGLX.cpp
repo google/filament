@@ -262,7 +262,7 @@ void PlatformGLX::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 bool PlatformGLX::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     g_glx.setCurrentContext(mGLXDisplay,
             (GLXDrawable)drawSwapChain, (GLXDrawable)readSwapChain, mGLXContext);
     return true;

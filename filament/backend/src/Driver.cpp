@@ -23,8 +23,9 @@
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Logger.h>
-#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
@@ -151,30 +152,31 @@ void DriverBase::debugCommandBegin(CommandStream* cmds, bool synchronous, const 
             DLOG(INFO) << methodName;
         }
         if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
-            SYSTRACE_CONTEXT();
-            SYSTRACE_NAME_BEGIN(methodName);
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, methodName);
 
             if (!synchronous) {
                 cmds->queueCommand([=]() {
-                    SYSTRACE_CONTEXT();
-                    SYSTRACE_NAME_BEGIN(methodName);
+                    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, methodName);
                 });
             }
         }
     }
 }
 
-void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept {
+void DriverBase::debugCommandEnd(CommandStream* cmds, bool synchronous,
+        const char* methodName) noexcept {
     if constexpr (bool(FILAMENT_DEBUG_COMMANDS > FILAMENT_DEBUG_COMMANDS_NONE)) {
         if constexpr (bool(FILAMENT_DEBUG_COMMANDS & FILAMENT_DEBUG_COMMANDS_SYSTRACE)) {
             if (!synchronous) {
                 cmds->queueCommand([]() {
-                    SYSTRACE_CONTEXT();
-                    SYSTRACE_NAME_END();
+                    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
                 });
             }
-            SYSTRACE_CONTEXT();
-            SYSTRACE_NAME_END();
+            FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+            FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
         }
     }
 }

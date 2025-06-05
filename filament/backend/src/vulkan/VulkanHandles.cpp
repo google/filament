@@ -93,7 +93,32 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
             case DescriptorType::SAMPLER_EXTERNAL:
                 fromStageFlags(binding.stageFlags, binding.binding, mask.externalSampler);
                 UTILS_FALLTHROUGH;
-            case DescriptorType::SAMPLER: {
+
+            case DescriptorType::SAMPLER_2D_FLOAT:
+            case DescriptorType::SAMPLER_2D_INT:
+            case DescriptorType::SAMPLER_2D_UINT:
+            case DescriptorType::SAMPLER_2D_DEPTH:
+            case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_INT:
+            case DescriptorType::SAMPLER_CUBE_UINT:
+            case DescriptorType::SAMPLER_CUBE_DEPTH:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            case DescriptorType::SAMPLER_3D_FLOAT:
+            case DescriptorType::SAMPLER_3D_INT:
+            case DescriptorType::SAMPLER_3D_UINT:
+            case DescriptorType::SAMPLER_2D_MS_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_INT:
+            case DescriptorType::SAMPLER_2D_MS_UINT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT: {
                 fromStageFlags(binding.stageFlags, binding.binding, mask.sampler);
                 break;
             }
@@ -495,7 +520,8 @@ void VulkanRenderTarget::emitBarriersEndRenderPass(VulkanCommandBuffer& commands
             }
         } else {
             texture->setLayout(range, VulkanFboCache::FINAL_COLOR_ATTACHMENT_LAYOUT);
-            if (!texture->transitionLayout(&commands, range, VulkanLayout::READ_WRITE)) {
+            if (texture->isSampleable() &&
+                    !texture->transitionLayout(&commands, range, VulkanLayout::FRAG_READ)) {
                 texture->attachmentToSamplerBarrier(&commands, range);
             }
         }
@@ -557,22 +583,22 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
-            vkbuffers[attribIndex] = bufferObject->buffer.getGpuBuffer();
+            vkbuffers[attribIndex] = bufferObject->buffer.getVkBuffer();
         }
     }
     mResources.push_back(bufferObject);
 }
 
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-        uint32_t byteCount, BufferObjectBinding bindingType)
+        VulkanBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
-      buffer(allocator, stagePool, getBufferObjectUsage(bindingType), byteCount),
+      buffer(allocator, stagePool, bufferCache, getBufferObjectUsage(bindingType), byteCount),
       bindingType(bindingType) {}
 
 VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
         fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
         fvkmemory::resource_ptr<VulkanIndexBuffer> ib)
-    : HwRenderPrimitive{.type = pt},
+    : HwRenderPrimitive{ .type = pt },
       vertexBuffer(vb),
       indexBuffer(ib) {}
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -86,25 +88,31 @@ static void printUsage(char* name) {
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
-        "   --api, -a\n"
-        "       Specify the backend API: opengl (default), vulkan, or metal\n"
+        "API_USAGE"
         "   --eyes=<stereoscopic eyes>, -y <stereoscopic eyes>\n"
         "       Sets the number of stereoscopic eyes (default: 2) when stereoscopic rendering is\n"
-        "       enabled.\n\n"
+        "       enabled.\n"
+        "   --samples=<number of samples for MSAA>, -m <number of samples for MSAA>\n"
+        "       Sets the number of samples for MSAA\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
+    }
     std::cout << usage;
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:y:";
+    static constexpr const char* OPTSTR = "ha:y:m:";
     static const struct option OPTIONS[] = {
-        { "help", no_argument,       nullptr, 'h' },
-        { "api",  required_argument, nullptr, 'a' },
-        { "eyes", required_argument, nullptr, 'y' },
+        { "help",    no_argument,       nullptr, 'h' },
+        { "api",     required_argument, nullptr, 'a' },
+        { "eyes",    required_argument, nullptr, 'y' },
+        { "samples", required_argument, nullptr, 'm'},
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -117,16 +125,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
-                    exit(1);
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
             case 'y': {
                 int eyeCount = 0;
@@ -138,6 +137,19 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 } else {
                     std::cerr << "Eye count must be between 2 and CONFIG_MAX_STEREOSCOPIC_EYES ("
                               << (int)CONFIG_MAX_STEREOSCOPIC_EYES << ") (inclusive).\n";
+                    exit(1);
+                }
+                break;
+            }
+            case 'm': {
+                int samples = 0;
+                try {
+                    samples = std::stoi(arg);
+                } catch (std::invalid_argument &e) { }
+                if (samples > 0) {
+                    app->config.samples = samples;
+                } else {
+                    std::cerr << "Sample count must be a positive number\n";
                     exit(1);
                 }
                 break;
@@ -167,6 +179,7 @@ int main(int argc, char** argv) {
         constexpr float3 monkeyPosition{ 0, 0, -4};
         constexpr float3 upVector{ 0, 1, 0};
         const int eyeCount = app.config.stereoscopicEyeCount;
+        const uint8_t sampleCount = app.config.samples;
 
         // Create a mesh material and an instance.
         app.monkeyMaterial = Material::Builder()
@@ -208,6 +221,7 @@ int main(int argc, char** argv) {
                 .height(vp.height)
                 .depth(eyeCount)
                 .levels(1)
+                .samples(sampleCount)
                 .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                 .format(Texture::InternalFormat::RGBA8)
                 .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
@@ -217,15 +231,17 @@ int main(int argc, char** argv) {
                 .height(vp.height)
                 .depth(eyeCount)
                 .levels(1)
+                .samples(sampleCount)
                 .sampler(Texture::Sampler::SAMPLER_2D_ARRAY)
                 .format(Texture::InternalFormat::DEPTH32F)
-                .usage(Texture::Usage::DEPTH_ATTACHMENT)
+                .usage(Texture::Usage::DEPTH_ATTACHMENT | Texture::Usage::SAMPLEABLE)
                 .build(*engine);
         app.stereoRenderTarget = RenderTarget::Builder()
                 .texture(RenderTarget::AttachmentPoint::COLOR, app.stereoColorTexture)
                 .texture(RenderTarget::AttachmentPoint::DEPTH, app.stereoDepthTexture)
                 .multiview(RenderTarget::AttachmentPoint::COLOR, eyeCount, 0)
                 .multiview(RenderTarget::AttachmentPoint::DEPTH, eyeCount, 0)
+                .samples(sampleCount)
                 .build(*engine);
         app.stereoView->setRenderTarget(app.stereoRenderTarget);
         app.stereoView->setViewport({0, 0, vp.width, vp.height});

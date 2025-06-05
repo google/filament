@@ -65,6 +65,17 @@ constexpr wgpu::CullMode toWebGPU(CullingMode cullMode) {
     }
 }
 
+bool hasStencilAspect(wgpu::TextureFormat format) {
+    switch (format) {
+        case wgpu::TextureFormat::Stencil8:
+        case wgpu::TextureFormat::Depth24PlusStencil8:
+        case wgpu::TextureFormat::Depth32FloatStencil8:
+            return true;
+        default:
+            return false;
+    }
+}
+
 constexpr wgpu::CompareFunction toWebGPU(SamplerCompareFunc compareFunction) {
     switch (compareFunction) {
         case SamplerCompareFunc::LE:
@@ -154,45 +165,58 @@ constexpr wgpu::BlendFactor toWebGPU(BlendFunction blendFunction) {
 wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         WGPUProgram const& program, WGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
-        StencilState const& stencilState, PolygonOffset const& polygonOffset,
-        PrimitiveType primitiveType, wgpu::TextureFormat colorFormat,
-        wgpu::TextureFormat depthFormat) {
+        StencilState const& stencilState, PolygonOffset const& polygonOffset, PrimitiveType primitiveType,
+        std::vector<wgpu::TextureFormat> const& colorFormats,
+        wgpu::TextureFormat depthFormat, uint8_t samplesCount) {
     assert_invariant(program.vertexShaderModule);
-    const wgpu::DepthStencilState depthStencilState {
-        .format = depthFormat,
-        .depthWriteEnabled = rasterState.depthWrite,
-        .depthCompare = toWebGPU(rasterState.depthFunc),
-        .stencilFront = {
+    wgpu::DepthStencilState depthStencilState{};
+    if (depthFormat != wgpu::TextureFormat::Undefined) {
+        depthStencilState.format = depthFormat;
+        depthStencilState.depthWriteEnabled = rasterState.depthWrite;
+        depthStencilState.depthCompare = toWebGPU(rasterState.depthFunc);
+        depthStencilState.stencilFront = {
             .compare = toWebGPU(stencilState.front.stencilFunc),
             .failOp = toWebGPU(stencilState.front.stencilOpStencilFail),
             .depthFailOp = toWebGPU(stencilState.front.stencilOpDepthFail),
             .passOp = toWebGPU(stencilState.front.stencilOpDepthStencilPass),
-        },
-        .stencilBack = {
+        };
+        depthStencilState.stencilBack = {
             .compare = toWebGPU(stencilState.back.stencilFunc),
             .failOp = toWebGPU(stencilState.back.stencilOpStencilFail),
             .depthFailOp = toWebGPU(stencilState.back.stencilOpDepthFail),
             .passOp = toWebGPU(stencilState.back.stencilOpDepthStencilPass),
-        },
-        .stencilReadMask = 0,
-        .stencilWriteMask = stencilState.stencilWrite ? 0xFFFFFFFF : 0,
-        .depthBias = static_cast<int32_t>(polygonOffset.constant),
-        .depthBiasSlopeScale = polygonOffset.slope,
-        .depthBiasClamp = 0.0f
-    };
+        };
+        depthStencilState.stencilReadMask =
+                stencilState.front.readMask; // Use front face's comparison mask for read mask
+        depthStencilState.stencilWriteMask = stencilState.stencilWrite ? 0xFFFFFFFF : 0u;
+        depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
+        depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
+        depthStencilState.depthBiasClamp = 0.0f;
+
+        if (!hasStencilAspect(depthFormat)) {
+            depthStencilState.stencilFront.compare = wgpu::CompareFunction::Always;
+            depthStencilState.stencilFront.failOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilFront.depthFailOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilFront.passOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilBack =
+                    depthStencilState.stencilFront; // Keep back and front consistent
+            depthStencilState.stencilReadMask = 0;
+            depthStencilState.stencilWriteMask = 0;
+        }
+    }
+
     std::stringstream pipelineLabelStream;
     pipelineLabelStream << program.name.c_str() << " pipeline";
     const auto pipelineLabel = pipelineLabelStream.str();
     wgpu::RenderPipelineDescriptor pipelineDescriptor{
         .label = wgpu::StringView(pipelineLabel),
         .layout = layout,
-        .vertex = {
-            .module = program.vertexShaderModule,
+        .vertex = { .module = program.vertexShaderModule,
             .entryPoint = "main",
             .constantCount = program.constants.size(),
             .constants = program.constants.data(),
-            .bufferCount = vertexBufferInfo.getVertexBufferLayoutSize(),
-            .buffers = vertexBufferInfo.getVertexBufferLayout()
+            .bufferCount = vertexBufferInfo.getVertexBufferLayoutCount(),
+            .buffers = vertexBufferInfo.getVertexBufferLayouts()
         },
         .primitive = {
             .topology = toWebGPU(primitiveType),
@@ -207,9 +231,9 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             .unclippedDepth = !rasterState.depthClamp &&
                               device.HasFeature(wgpu::FeatureName::DepthClipControl)
         },
-        .depthStencil = &depthStencilState,
+        .depthStencil = depthFormat != wgpu::TextureFormat::Undefined ? &depthStencilState: nullptr,
         .multisample = {
-            .count = 1, // TODO need to get this from the render target
+            .count = samplesCount,
             .mask = 0xFFFFFFFF,
             .alphaToCoverageEnabled = rasterState.alphaToCoverage
         },
@@ -234,12 +258,16 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         fragmentState.entryPoint = "main";
         fragmentState.constantCount = program.constants.size(),
         fragmentState.constants = program.constants.data(),
-        fragmentState.targetCount = 1; // TODO need to get this from the render target
+        fragmentState.targetCount = colorFormats.size();
         fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+        // We expect a fragment shader implies at least one color target if it outputs color.
+        // This should be guaranteed by the caller ensuring colorFormats is not empty.
+        // However, this fails on shadowtest.cpp, TODO investigate why
+        // assert_invariant(fragmentState.targetCount > 0);
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             auto& colorTarget = colorTargets[targetIndex];
-            colorTarget.format = colorFormat;
+            colorTarget.format = colorFormats[targetIndex];
             colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
             colorTarget.writeMask =
                     rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;
