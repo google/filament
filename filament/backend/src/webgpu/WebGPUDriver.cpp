@@ -431,18 +431,6 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
-    // The `targets` flags indicate which of the `color`, `depth`, `stencil` TargetBufferInfo
-    // are actually active for this render target.
-    // We'll pass all TargetBufferInfo to WGPURenderTarget; it will use them if their handles are valid.
-
-    // Ensure that textures intended for use as attachments were created with
-    // wgpu::TextureUsage::RenderAttachment. This check should ideally be in createTextureR
-    // or validated here if possible.
-
-    // The `layerCount` parameter might be for creating array textures that this RT targets.
-    // Individual attachments (color[i].layer, depth.layer, stencil.layer) specify which layer
-    // of an array texture to bind. For now, we assume textures are pre-configured.
-
     constructHandle<WGPURenderTarget>(rth, width, height, samples, layerCount, color, depth, stencil);
 }
 

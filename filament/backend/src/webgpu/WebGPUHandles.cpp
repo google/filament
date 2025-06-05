@@ -638,7 +638,8 @@ WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat 
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
 
-    mDefaultTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, samplerType);
+    mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
+            mArrayLayerCount, samplerType);
 }
 
 WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept
@@ -977,7 +978,10 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
 }
 
 wgpu::TextureView WGPUTexture::getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
-//    TODO: just return mTextureView if redundant
+    //TODO: there's an optimization to be made here to return mDefaultTextureView.
+    // Problem: mDefaultTextureView is a view of the entire texture,
+    // but this function (and its callers) expects a single-slice view.
+    // Returning the whole texture view for a single-slice request seems wrong.
 
     return makeTextureView(mipLevel, 1, arrayLayer, 1, mSamplerType);
 }
