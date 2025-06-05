@@ -183,7 +183,7 @@ public:
 
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
 
-    [[nodiscard]] wgpu::TextureView getTextureView() const {return mTextureView;}
+    [[nodiscard]] wgpu::TextureView getDefaultTextureView() const {return mDefaultTextureView;}
     [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const;
 
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
@@ -207,10 +207,11 @@ private:
     size_t mBlockWidth;
     size_t mBlockHeight;
     SamplerType mSamplerType;
-    wgpu::TextureView mTextureView = nullptr;
+    wgpu::TextureView mDefaultTextureView = nullptr;
 
 
-    [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+    [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(
+            filament::backend::TextureUsage const& fUsage);
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,
