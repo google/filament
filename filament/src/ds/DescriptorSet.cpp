@@ -108,9 +108,8 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
     if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty())) {
         unsetValidDescriptors.forEachSetBit([&](auto i) {
-            slog.w << (layout.isSampler(i) ? "Sampler" : "Buffer")
-                    << " descriptor " << i << " of " << mName.c_str() << " is not set. "
-                       "Please report this issue." << io::endl;
+            LOG(WARNING) << (layout.isSampler(i) ? "Sampler" : "Buffer") << " descriptor " << i
+                         << " of " << mName.c_str() << " is not set. Please report this issue.";
         });
     }
 }
