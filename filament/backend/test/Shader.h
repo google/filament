@@ -31,7 +31,9 @@ struct UniformConfig {
 
 // All describing a shader that should be created.
 struct ShaderConfig {
+    filament::backend::ShaderLanguage vertexLanguage;
     std::string vertexShader;
+    filament::backend::ShaderLanguage fragmentLanguage;
     std::string fragmentShader;
     std::vector<UniformConfig> uniforms;
 };
