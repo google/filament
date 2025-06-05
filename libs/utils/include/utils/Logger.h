@@ -94,12 +94,19 @@ static inline io::ostream& getLogStream(LogSeverity severity) {
     }
 }
 
+struct NoopStream final {
+    template<typename T>
+    NoopStream& operator<<(const T&) {
+        return *this;
+    }
+};
+
 #define LOG(severity) LOG_IMPL_##severity
 
 #ifndef NDEBUG
 #define DLOG(severity) DLOG_IMPL_##severity
 #else
-#define DLOG(severity)
+#define DLOG(severity) utils::NoopStream()
 #endif
 
 #define DLOG_IMPL_INFO utils::LogLine(utils::slog.d)
