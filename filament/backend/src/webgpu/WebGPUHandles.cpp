@@ -638,18 +638,18 @@ WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat 
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
 
-    mTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, samplerType);
+    mDefaultTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, samplerType);
 }
 
-WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept :
-      mTexture(src->mTexture),
+WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept
+    : mTexture(src->mTexture),
       mAspect(src->mAspect),
       mArrayLayerCount(src->mArrayLayerCount),
       mBlockWidth(src->mBlockWidth),
       mBlockHeight(src->mBlockHeight),
       mSamplerType(src->mSamplerType),
-      mTextureView(makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType))
-    {}
+      mDefaultTextureView(
+              makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType)) {}
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
