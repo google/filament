@@ -56,7 +56,12 @@ namespace {
 constexpr std::array REQUIRED_FEATURES = { wgpu::FeatureName::TransientAttachments,
     /*To make filtering assumptions like we want while waiting for Filament to provide that info,
        float 32 needs to be filterable*/
-    wgpu::FeatureName::Float32Filterable };
+    wgpu::FeatureName::Float32Filterable,
+    // Qualcomm 500 and 600 GPUs do not support this so it is not part of core webgpu spec. To
+    // support such devices, we will either need Filament to not attempt this, or find another
+    // workaround. https://github.com/gpuweb/gpuweb/issues/2648
+    wgpu::FeatureName::RG11B10UfloatRenderable
+};
 
 constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::DepthClipControl,
