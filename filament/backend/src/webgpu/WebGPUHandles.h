@@ -208,7 +208,8 @@ private:
     size_t mBlockHeight;
     SamplerType mSamplerType;
     wgpu::TextureView mDefaultTextureView = nullptr;
-
+    uint32_t mDefaultMipLevel = 0;
+    uint32_t mDefaultBaseArrayLayer = 0;
 
     [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(
             filament::backend::TextureUsage const& fUsage);
