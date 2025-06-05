@@ -217,6 +217,21 @@ endif()
 target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Common Sample Utilities
+# ==================================================================================================
+
+add_library(samples-common STATIC
+    common/arguments.cpp
+)
+
+target_include_directories(samples-common PRIVATE
+    ${ROOT_DIR}/third_party/getopt/include
+)
+target_link_libraries(samples-common filament)
+
+set_target_properties(samples-common PROPERTIES FOLDER Samples/Common)
+
+# ==================================================================================================
 # Compiler flags
 # ==================================================================================================
 
@@ -234,7 +249,7 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
+    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp samples-common)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 
