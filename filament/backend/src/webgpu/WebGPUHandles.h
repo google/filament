@@ -181,16 +181,13 @@ public:
     size_t getBlockWidth() const { return mBlockWidth; }
     size_t getBlockHeight() const { return mBlockHeight; }
 
-
     [[nodiscard]] const wgpu::Texture& getTexture() const { return mTexture; }
 
     [[nodiscard]] wgpu::TextureView getTextureView() const {return mTextureView;}
-    [[nodiscard]] wgpu::TextureView getTextureView(uint8_t mipLevel, uint32_t arrayLayer) const;
+    [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const;
 
     [[nodiscard]] wgpu::TextureFormat getFormat() const { return mFormat; }
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
-    [[nodiscard]] filament::backend::SamplerType getSamplerType() const { return mSamplerType; }
-
 
     static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
@@ -203,7 +200,6 @@ private:
     // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
     // ref counted pointer) when making views. View is optional
     wgpu::Texture mTexture = nullptr;
-    wgpu::TextureView mTextureView = nullptr;
     wgpu::TextureFormat mFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
     wgpu::TextureUsage mUsage = wgpu::TextureUsage::None;
@@ -211,12 +207,14 @@ private:
     size_t mBlockWidth;
     size_t mBlockHeight;
     SamplerType mSamplerType;
+    wgpu::TextureView mTextureView = nullptr;
 
-    wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
 
-    [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
-            const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-            SamplerType samplerType) const noexcept;
+    [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(filament::backend::TextureUsage const& fUsage);
+
+    [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
+            const uint8_t& levelCount, const uint32_t& baseArrayLayer,
+            const uint32_t& arrayLayerCount, SamplerType samplerType) const noexcept;
 };
 
 struct WGPURenderPrimitive : public HwRenderPrimitive {
@@ -237,7 +235,7 @@ public:
     // Default constructor for the default render target
     WGPURenderTarget()
         : HwRenderTarget(0, 0),
-          defaultRenderTarget(true),
+          mDefaultRenderTarget(true),
           mSamples(1) {}
 
     // Updated signature: takes resolved views for custom RTs, and default views for default RT
@@ -255,9 +253,9 @@ public:
             wgpu::TextureFormat customDepthFormat,
             wgpu::TextureFormat customStencilFormat);
 
-    bool isDefaultRenderTarget() const { return defaultRenderTarget; }
-    uint8_t getSamples() const { return mSamples; }
-    uint8_t getLayerCount() const { return mLayerCount; }
+    bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
+    [[nodiscard]] uint8_t getSamples() const { return mSamples; }
+    [[nodiscard]] uint8_t getLayerCount() const { return mLayerCount; }
 
     // Accessors for the driver to get stored attachment info
     const MRT& getColorAttachmentInfos() const { return mColorAttachments; }
@@ -269,7 +267,7 @@ public:
     static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
     
 private:
-    bool defaultRenderTarget = false;
+    bool mDefaultRenderTarget = false;
     uint8_t mSamples = 1;
     uint8_t mLayerCount = 1;
 

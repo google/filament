@@ -600,7 +600,7 @@ WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat 
     wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(samplerType),
         .usage = mUsage,
-        .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
+        .dimension = samplerType == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
                                                        : wgpu::TextureDimension::e2D,
         .size = { .width = width, .height = height, .depthOrArrayLayers = depth },
         .format = mFormat,
@@ -641,16 +641,15 @@ WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat 
     mTextureView = makeTextureView(0, levels, 0, mArrayLayerCount, samplerType);
 }
 
-WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
-    mTexture = src->mTexture;
-    mAspect = src->mAspect;
-    mBlockWidth = src->mBlockWidth;
-    mBlockHeight = src->mBlockHeight;
-    mArrayLayerCount = src->mArrayLayerCount;
-    mSamplerType = src->mSamplerType;
-
-    mTextureView = makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType);
-}
+WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept :
+      mTexture(src->mTexture),
+      mAspect(src->mAspect),
+      mArrayLayerCount(src->mArrayLayerCount),
+      mBlockWidth(src->mBlockWidth),
+      mBlockHeight(src->mBlockHeight),
+      mSamplerType(src->mSamplerType),
+      mTextureView(makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType))
+    {}
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
@@ -977,7 +976,9 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     return wgpu::TextureAspect::All;
 }
 
-wgpu::TextureView WGPUTexture::getTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
+wgpu::TextureView WGPUTexture::getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
+//    TODO: just return mTextureView if redundant
+
     return makeTextureView(mipLevel, 1, arrayLayer, 1, mSamplerType);
 }
 
@@ -1027,7 +1028,7 @@ WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samp
         const Attachment& depthAttachmentInfo,
         const Attachment& stencilAttachmentInfo)
     : HwRenderTarget(width, height),
-      defaultRenderTarget(false),
+      mDefaultRenderTarget(false),
       mSamples(samples),
       mLayerCount(layerCount),
       mColorAttachments(colorAttachmentsMRT),
@@ -1066,7 +1067,7 @@ void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& de
     mColorAttachmentDescriptors.clear();
     mHasDepthStencilAttachment = false;
 
-    if (defaultRenderTarget) {
+    if (mDefaultRenderTarget) {
         assert_invariant(defaultColorTextureView);
         mColorAttachmentDescriptors.push_back({ .view = defaultColorTextureView,
             .resolveTarget = nullptr,

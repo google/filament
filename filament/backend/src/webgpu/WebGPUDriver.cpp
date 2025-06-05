@@ -813,9 +813,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
                     << "Color attachment " << i << " requests layer "
                     << colorInfos[i].layer << " but render target has only "
                     << renderTarget->getLayerCount() << ".";
-                    uint8_t mipLevel = colorInfos[i].level;
-                    uint32_t arrayLayer = colorInfos[i].layer;
-                    customColorViews[customColorViewCount++] = hwTexture->getTextureView(mipLevel, arrayLayer);
+                    const uint8_t mipLevel = colorInfos[i].level;
+                    const uint32_t arrayLayer = colorInfos[i].layer;
+                    customColorViews[customColorViewCount++] = hwTexture->getOrMakeTextureView(mipLevel, arrayLayer);
                 }
             }
         }
@@ -827,9 +827,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
             << "but render target has only " << renderTarget->getLayerCount() << ".";
             auto* hwTexture = handleCast<WGPUTexture>(depthInfo.handle);
             if (hwTexture) {
-                uint8_t depthMipLevel = depthInfo.level;
-                uint32_t depthArrayLayer = depthInfo.layer;
-                customDepthView = hwTexture->getTextureView(depthMipLevel, depthArrayLayer);
+                const uint8_t depthMipLevel = depthInfo.level;
+                const uint32_t depthArrayLayer = depthInfo.layer;
+                customDepthView = hwTexture->getOrMakeTextureView(depthMipLevel,depthArrayLayer);
                 customDepthFormat = hwTexture->getFormat();
             }
         }
@@ -843,9 +843,9 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
                         << "Stencil attachment requests layer " << stencilInfo.layer
                         << " but render target has only " << renderTarget->getLayerCount()
                         << " layers.";
-                uint8_t stencilMipLevel = stencilInfo.level;
-                uint32_t stencilArrayLayer = stencilInfo.layer;
-                customStencilView = hwTexture->getTextureView(stencilMipLevel, stencilArrayLayer);
+                const uint8_t stencilMipLevel = stencilInfo.level;
+                const uint32_t stencilArrayLayer = stencilInfo.layer;
+                customStencilView = hwTexture->getOrMakeTextureView(stencilMipLevel,stencilArrayLayer );
                 customStencilFormat = hwTexture->getFormat();
             }
         }
