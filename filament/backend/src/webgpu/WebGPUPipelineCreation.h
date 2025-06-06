@@ -35,13 +35,13 @@ struct RasterState;
 struct StencilState;
 
 class WGPUVertexBufferInfo;
-class WGPUProgram;
+class WebGPUProgram;
 
 [[nodiscard]] wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const&,
-        WGPUProgram const&, WGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
+        WebGPUProgram const&, WGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
         RasterState const&, StencilState const&, PolygonOffset const&, PrimitiveType primitiveType,
-        std::vector<wgpu::TextureFormat> const& colorFormats,
-        wgpu::TextureFormat depthFormat, uint8_t samplesCount);
+        std::vector<wgpu::TextureFormat> const& colorFormats, wgpu::TextureFormat depthFormat,
+        uint8_t samplesCount);
 
 }// namespace filament::backend
 
