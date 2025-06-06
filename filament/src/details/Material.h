@@ -212,7 +212,7 @@ public:
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
-    size_t getMutableConstantCount() const noexcept { return mMaterialMutableConstants.size(); }
+    uint32_t getMutableConstantCount() const noexcept { return mMaterialMutableConstants.size(); }
     std::optional<uint32_t> getMutableConstantId(std::string_view name) const noexcept;
     backend::Program::MutableSpecConstantsInfo getDefaultMutableConstants() const noexcept {
         return mDefaultMutableSpecializationConstants;

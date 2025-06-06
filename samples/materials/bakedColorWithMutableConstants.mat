@@ -16,8 +16,11 @@ material {
             mutable: true,
         },
         {
-            // This offsets the ID of the mutable constants by one,
-            // and is included here purely for testing purposes.
+            // In generated shader sources, we first specify immutable
+            // specialization constants, then mutable specialization constants.
+            // By including this dummy constant, we offset the ID of the first
+            // mutable constant by one. This is done here purely for testing
+            // purposes.
             name: dummy,
             type: bool,
         }
