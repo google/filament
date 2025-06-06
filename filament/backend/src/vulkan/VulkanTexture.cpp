@@ -551,15 +551,16 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel) {
     void* mapped = nullptr;
-    VulkanStageImage const* stage
+    fvkmemory::resource_ptr<VulkanStageImage::Resource> stage
             = mState->mStagePool.acquireImage(hostData.format, hostData.type, width, height);
-    vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
+    vmaMapMemory(mState->mAllocator, stage->memory(), &mapped);
     memcpy(mapped, hostData.buffer, hostData.size);
-    vmaUnmapMemory(mState->mAllocator, stage->memory);
-    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, hostData.size);
+    vmaUnmapMemory(mState->mAllocator, stage->memory());
+    vmaFlushAllocation(mState->mAllocator, stage->memory(), 0, hostData.size);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stage);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
     // TODO: support blit-based format conversion for 3D images and cubemaps.
@@ -582,7 +583,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, u
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(&commands, range, newLayout);
 
-    vkCmdBlitImage(cmdbuf, stage->image, fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+    vkCmdBlitImage(cmdbuf, stage->image(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
             mState->mTextureImage, fvkutils::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionLayout(&commands, range, oldLayout);
