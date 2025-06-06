@@ -449,6 +449,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     RenderPassParams params = getClearColorRenderPass();
     params.viewport.width = kTexSize;
     params.viewport.height = kTexSize;
+    api.makeCurrent(swapChain, swapChain);
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
     state.primitiveType = PrimitiveType::TRIANGLES;
@@ -520,6 +521,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
         RenderPassParams params = getClearColorRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
+        api.makeCurrent(swapChain, swapChain);
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
         state.primitiveType = PrimitiveType::TRIANGLES;
@@ -604,6 +606,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         RenderPassParams params = getClearColorRenderPass();
         params.viewport.width = kTexSize;
         params.viewport.height = kTexSize;
+        api.makeCurrent(swapChain, swapChain);
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
         state.primitiveType = PrimitiveType::TRIANGLES;
