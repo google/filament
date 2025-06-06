@@ -15,10 +15,15 @@
  */
 #include "webgpu/WebGPUDriver.h"
 
+#include "WebGPUBufferObject.h"
 #include "WebGPUHandles.h"
+#include "WebGPUIndexBuffer.h"
 #include "WebGPUPipelineCreation.h"
 #include "WebGPUProgram.h"
+#include "WebGPURenderPrimitive.h"
 #include "WebGPUSwapChain.h"
+#include "WebGPUVertexBuffer.h"
+#include "WebGPUVertexBufferInfo.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "CommandStreamDispatcher.h"
@@ -137,31 +142,31 @@ void WebGPUDriver::finish(int /* dummy */) {
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
    if (rph) {
-        destructHandle<WGPURenderPrimitive>(rph);
+        destructHandle<WebGPURenderPrimitive>(rph);
     }
 }
 
-void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
-   if (vbih) {
-        destructHandle<WGPUVertexBufferInfo>(vbih);
+void WebGPUDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vertexBufferInfoHandle) {
+    if (vertexBufferInfoHandle) {
+        destructHandle<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
     }
 }
 
-void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
-    if (vbh) {
-        destructHandle<WGPUVertexBuffer>(vbh);
+void WebGPUDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vertexBufferHandle) {
+    if (vertexBufferHandle) {
+        destructHandle<WebGPUVertexBuffer>(vertexBufferHandle);
     }
 }
 
-void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
-    if (ibh) {
-        destructHandle<WGPUIndexBuffer>(ibh);
+void WebGPUDriver::destroyIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle) {
+    if (indexBufferHandle) {
+        destructHandle<WebGPUIndexBuffer>(indexBufferHandle);
     }
 }
 
-void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
-    if (boh) {
-        destructHandle<WGPUBufferObject>(boh);
+void WebGPUDriver::destroyBufferObject(Handle<HwBufferObject> bufferObjectHandle) {
+    if (bufferObjectHandle) {
+        destructHandle<WebGPUBufferObject>(bufferObjectHandle);
     }
 }
 
@@ -171,9 +176,9 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
     }
 }
 
-void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
-    if (ph) {
-        destructHandle<WebGPUProgram>(ph);
+void WebGPUDriver::destroyProgram(Handle<HwProgram> programHandle) {
+    if (programHandle) {
+        destructHandle<WebGPUProgram>(programHandle);
     }
 }
 
@@ -268,7 +273,7 @@ Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
-    return allocHandle<WGPUBufferObject>();
+    return allocHandle<WebGPUBufferObject>();
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
@@ -276,7 +281,7 @@ Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
-    return allocHandle<WGPUVertexBuffer>();
+    return allocHandle<WebGPUVertexBuffer>();
 }
 
 Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
@@ -284,11 +289,11 @@ Handle<HwDescriptorSet> WebGPUDriver::createDescriptorSetS() noexcept {
 }
 
 Handle<HwRenderPrimitive> WebGPUDriver::createRenderPrimitiveS() noexcept {
-    return allocHandle<WGPURenderPrimitive>();
+    return allocHandle<WebGPURenderPrimitive>();
 }
 
 Handle<HwVertexBufferInfo> WebGPUDriver::createVertexBufferInfoS() noexcept {
-    return allocHandle<WGPUVertexBufferInfo>();
+    return allocHandle<WebGPUVertexBufferInfo>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
@@ -343,27 +348,27 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
         uint32_t height, uint64_t flags) {}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
-        uint8_t bufferCount, uint8_t attributeCount, AttributeArray attributes) {
-    constructHandle<WGPUVertexBufferInfo>(vertexBufferInfoHandle, bufferCount, attributeCount,
+        const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes) {
+    constructHandle<WebGPUVertexBufferInfo>(vertexBufferInfoHandle, bufferCount, attributeCount,
             attributes, mDeviceLimits);
 }
 
-void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {
-    auto* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(vbih);
-    constructHandle<WGPUVertexBuffer>(vbh, mDevice, vertexCount, vertexBufferInfo->bufferCount,
-            vbih);
+void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle) {
+    const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
+    constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
+            vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
 }
 
-void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
-        uint32_t indexCount, BufferUsage usage) {
-    auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
-    constructHandle<WGPUIndexBuffer>(ibh, mDevice, elementSize, indexCount);
+void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
+        const ElementType elementType, const uint32_t indexCount, const BufferUsage usage) {
+    const auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
+    constructHandle<WebGPUIndexBuffer>(indexBufferHandle, mDevice, elementSize, indexCount);
 }
 
-void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage) {
-    constructHandle<WGPUBufferObject>(boh, mDevice, bindingType, byteCount);
+void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> bufferObjectHandle,
+        const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage) {
+    constructHandle<WebGPUBufferObject>(bufferObjectHandle, mDevice, bindingType, byteCount);
 }
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
@@ -409,20 +414,20 @@ void WebGPUDriver::importTextureR(Handle<HwTexture> th, intptr_t id, SamplerType
     PANIC_POSTCONDITION("Import WebGPU Texture is not supported");
 }
 
-void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<HwVertexBuffer> vbh,
-        Handle<HwIndexBuffer> ibh, PrimitiveType pt) {
+void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimitiveHandle,
+        Handle<HwVertexBuffer> vertexBufferHandle, Handle<HwIndexBuffer> indexBufferHandle,
+        const PrimitiveType primitiveType) {
     assert_invariant(mDevice);
-
-    auto* renderPrimitive = constructHandle<WGPURenderPrimitive>(rph);
-    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
-    auto* indexBuffer = handleCast<WGPUIndexBuffer>(ibh);
+    const auto renderPrimitive = constructHandle<WebGPURenderPrimitive>(renderPrimitiveHandle);
+    const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
+    const auto indexBuffer = handleCast<WebGPUIndexBuffer>(indexBufferHandle);
     renderPrimitive->vertexBuffer = vertexBuffer;
     renderPrimitive->indexBuffer = indexBuffer;
-    renderPrimitive->type = pt;
+    renderPrimitive->type = primitiveType;
 }
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
-    constructHandle<WebGPUProgram>(ph, mDevice, program);
+void WebGPUDriver::createProgramR(Handle<HwProgram> programHandle, Program&& program) {
+    constructHandle<WebGPUProgram>(programHandle, mDevice, program);
 }
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
@@ -471,7 +476,7 @@ void WebGPUDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
     //todo
 }
 
-void WebGPUDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
+void WebGPUDriver::registerBufferObjectStreams(Handle<HwBufferObject> bufferObjectHandle,
         BufferObjectStreamDescriptor&& streams) {
     //todo
 }
@@ -596,43 +601,47 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
     return 256u;
 }
 
-void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
-        uint32_t byteOffset) {
-    handleCast<WGPUIndexBuffer>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
+        BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
+    handleCast<WebGPUIndexBuffer>(indexBufferHandle)
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mQueue);
+    scheduleDestroy(std::move(bufferDescriptor));
 }
 
-void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> ibh, BufferDescriptor&& p,
-        uint32_t byteOffset) {
-    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
+        BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
+    handleCast<WebGPUBufferObject>(bufferObjectHandle)
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mQueue);
+    scheduleDestroy(std::move(bufferDescriptor));
 }
 
-void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> ibh,
-        BufferDescriptor&& p, uint32_t byteOffset) {
-    handleCast<WGPUBufferObject>(ibh)->updateGPUBuffer(p, byteOffset, mQueue);
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> bufferObjectHandle,
+        BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
+    handleCast<WebGPUBufferObject>(bufferObjectHandle)
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mQueue);
+    scheduleDestroy(std::move(bufferDescriptor));
 }
 
-void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> boh) {
+void WebGPUDriver::resetBufferObject(Handle<HwBufferObject> bufferObjectHandle) {
     // Is there something that needs to be done here? Vulkan has left it unimplemented.
 }
 
-void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
-        Handle<HwBufferObject> boh) {
-    auto* vertexBuffer = handleCast<WGPUVertexBuffer>(vbh);
-    auto* bufferObject = handleCast<WGPUBufferObject>(boh);
-    assert_invariant(index < vertexBuffer->buffers.size());
+void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vertexBufferHandle,
+        const uint32_t index, Handle<HwBufferObject> bufferObjectHandle) {
+    const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
+    const auto bufferObject = handleCast<WebGPUBufferObject>(bufferObjectHandle);
+    assert_invariant(index < vertexBuffer->getBuffers().size());
     assert_invariant(bufferObject->getBuffer().GetUsage() & wgpu::BufferUsage::Vertex);
-    vertexBuffer->buffers[index] = bufferObject->getBuffer();
+    vertexBuffer->getBuffers()[index] = bufferObject->getBuffer();
 }
 
-void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
-        uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& p) {
-    PixelBufferDescriptor* data = &p;
+void WebGPUDriver::update3DImage(Handle<HwTexture> th, const uint32_t level,
+        const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
+        const uint32_t width, const uint32_t height, const uint32_t depth,
+        PixelBufferDescriptor&& pixelBufferDescriptor) {
+    PixelBufferDescriptor* data = &pixelBufferDescriptor;
     PixelBufferDescriptor reshapedData;
-    if (reshape(p, reshapedData)) {
+    if (reshape(pixelBufferDescriptor, reshapedData)) {
         data = &reshapedData;
     }
     auto texture = handleCast<WGPUTexture>(th);
@@ -640,7 +649,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     // TODO: Writing to a depth texture is illegal and errors. I'm not sure why Filament is trying
     // to do so, but early returning is working?
     if(texture->getAspect() == wgpu::TextureAspect::DepthOnly){
-        scheduleDestroy(std::move(p));
+        scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
     size_t blockWidth = texture->getBlockWidth();
@@ -692,7 +701,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> th, uint32_t level, uint32_t 
     auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
 
     mQueue.WriteTexture(&copyInfo, dataBuff, dataSize, &layout, &extent);
-    scheduleDestroy(std::move(p));
+    scheduleDestroy(std::move(pixelBufferDescriptor));
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
@@ -941,17 +950,17 @@ void WebGPUDriver::stopCapture(int) {
     //todo
 }
 
-void WebGPUDriver::readPixels(Handle<HwRenderTarget> src,
-        uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& p) {
-    //todo
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::readPixels(Handle<HwRenderTarget> src, const uint32_t x,
+        const uint32_t y, const uint32_t width, const uint32_t height,
+        PixelBufferDescriptor&& pixelBufferDescriptor) {
+    // todo
+    scheduleDestroy(std::move(pixelBufferDescriptor));
 }
 
-void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> boh,
-        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
-    //todo
-    scheduleDestroy(std::move(p));
+void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,
+        const uint32_t offset, const uint32_t size, backend::BufferDescriptor&& bufferDescriptor) {
+    // todo
+    scheduleDestroy(std::move(bufferDescriptor));
 }
 
 void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
@@ -1012,7 +1021,8 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     FILAMENT_CHECK_POSTCONDITION(layout)
             << "Failed to create wgpu::PipelineLayout for render pipeline for "
             << layoutDescriptor.label;
-    auto const* vertexBufferInfo = handleCast<WGPUVertexBufferInfo>(pipelineState.vertexBufferInfo);
+    const auto vertexBufferInfo =
+            handleCast<WebGPUVertexBufferInfo>(pipelineState.vertexBufferInfo);
     assert_invariant(vertexBufferInfo);
 
     std::vector<wgpu::TextureFormat> pipelineColorFormats;
@@ -1070,19 +1080,19 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
 }
 
 void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitiveHandle) {
-    const auto renderPrimitive = handleCast<WGPURenderPrimitive>(renderPrimitiveHandle);
-    const auto vertexBufferInfo =
-            handleCast<WGPUVertexBufferInfo>(renderPrimitive->vertexBuffer->vbih);
+    const auto renderPrimitive = handleCast<WebGPURenderPrimitive>(renderPrimitiveHandle);
+    const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(
+            renderPrimitive->vertexBuffer->getVertexBufferInfoHandle());
     for (size_t slotIndex = 0; slotIndex < vertexBufferInfo->getVertexBufferLayoutCount();
             slotIndex++) {
-        WGPUVertexBufferInfo::WebGPUSlotBindingInfo const& bindingInfo =
+        WebGPUVertexBufferInfo::WebGPUSlotBindingInfo const& bindingInfo =
                 vertexBufferInfo->getWebGPUSlotBindingInfos()[slotIndex];
         mRenderPassEncoder.SetVertexBuffer(slotIndex,
-                renderPrimitive->vertexBuffer->buffers[bindingInfo.sourceBufferIndex],
+                renderPrimitive->vertexBuffer->getBuffers()[bindingInfo.sourceBufferIndex],
                 bindingInfo.bufferOffset);
     }
     mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
-            renderPrimitive->indexBuffer->indexFormat);
+            renderPrimitive->indexBuffer->getIndexFormat());
 }
 
 void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
@@ -1099,12 +1109,12 @@ void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 }
 
 void WebGPUDriver::draw(PipelineState pipelineState,
-        Handle<HwRenderPrimitive> renderPrimitiveHandle, uint32_t indexOffset, uint32_t indexCount,
-        uint32_t instanceCount) {
-    WGPURenderPrimitive const* const renderPrimitive =
-            handleCast<WGPURenderPrimitive>(renderPrimitiveHandle);
+        Handle<HwRenderPrimitive> renderPrimitiveHandle, const uint32_t indexOffset,
+        const uint32_t indexCount, const uint32_t instanceCount) {
+    WebGPURenderPrimitive const* const renderPrimitive =
+            handleCast<WebGPURenderPrimitive>(renderPrimitiveHandle);
     pipelineState.primitiveType = renderPrimitive->type;
-    pipelineState.vertexBufferInfo = renderPrimitive->vertexBuffer->vbih;
+    pipelineState.vertexBufferInfo = renderPrimitive->vertexBuffer->getVertexBufferInfoHandle();
     bindPipeline(pipelineState);
     bindRenderPrimitive(renderPrimitiveHandle);
     draw2(indexOffset, indexCount, instanceCount);
@@ -1129,18 +1139,19 @@ void WebGPUDriver::resetState(int) {
     //todo
 }
 
-void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> dsh,
-        backend::descriptor_binding_t binding, Handle<HwBufferObject> boh, uint32_t offset,
-        uint32_t size) {
-    auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
-    auto buffer = handleCast<WGPUBufferObject>(boh);
+void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> descriptorSetHandle,
+        const backend::descriptor_binding_t binding, Handle<HwBufferObject> bufferObjectHandle,
+        const uint32_t offset, const uint32_t size) {
+    const auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
+    const auto buffer = handleCast<WebGPUBufferObject>(bufferObjectHandle);
     if (!bindGroup->getIsLocked()) {
         // TODO making assumptions that size and offset mean the same thing here.
         FILAMENT_CHECK_PRECONDITION(offset % mDeviceLimits.minUniformBufferOffsetAlignment == 0)
                 << "Binding offset must be multiple of "
                 << mDeviceLimits.minUniformBufferOffsetAlignment << "But requested offset is "
                 << offset;
-        wgpu::BindGroupEntry entry{ .binding = static_cast<uint32_t>(binding * 2),
+        wgpu::BindGroupEntry entry{
+            .binding = static_cast<uint32_t>(binding * 2),
             .buffer = buffer->getBuffer(),
             .offset = offset,
             .size = size };

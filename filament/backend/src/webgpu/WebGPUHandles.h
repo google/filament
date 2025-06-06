@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
 #include "DriverBase.h"
-
 #include <backend/DriverEnums.h>
-#include <backend/Handle.h>
-
-#include <utils/FixedCapacityVector.h>
+#include <backend/TargetBufferInfo.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -32,85 +28,6 @@
 #include <vector>
 
 namespace filament::backend {
-
-// WGPUVertexBufferInfo maps Filament vertex attributes to WebGPU buffer binding model.
-class WGPUVertexBufferInfo final : public HwVertexBufferInfo {
-public:
-    WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-            AttributeArray const& attributes, wgpu::Limits const& deviceLimits);
-
-    [[nodiscard]] inline wgpu::VertexBufferLayout const* getVertexBufferLayouts() const {
-        return mVertexBufferLayouts.data();
-    }
-
-    [[nodiscard]] inline size_t getVertexBufferLayoutCount() const {
-        return mVertexBufferLayouts.size();
-    }
-
-    struct WebGPUSlotBindingInfo final {
-        uint8_t sourceBufferIndex = 0; // limited by filament::backend::Attribute::buffer
-        uint32_t bufferOffset = 0;     // limited by filament::backend::Attribute::offset
-        uint8_t stride = 0;            // limited by filament::backend::Attribute::stride
-    };
-
-    [[nodiscard]] inline std::vector<WebGPUSlotBindingInfo> const&
-    getWebGPUSlotBindingInfos() const {
-        return mWebGPUSlotBindingInfos;
-    }
-
-private:
-    // This stores the final wgpu::VertexBufferLayout objects, one per WebGPU slot.
-    // (this is a vector and not an array due to size limitations of the handle in the handle
-    // allocator)
-    std::vector<wgpu::VertexBufferLayout> mVertexBufferLayouts;
-
-    // This stores all the vertex attributes across all the vertex buffer layouts, where
-    // the attributes are contiguous for each buffer layout.
-    // Each buffer layout references the first in a contiguous group of attributes in this array,
-    // as well as the number of such attributes in this vector.
-    // (this is a vector and not an array due to size limitations of the handle in the handle
-    // allocator)
-    std::vector<wgpu::VertexAttribute> mVertexAttributes;
-
-    // Stores information for the driver to perform setVertexBuffer calls
-    // (this is a vector and not an array due to size limitations of the handle in the handle
-    // allocator)
-    std::vector<WebGPUSlotBindingInfo> mWebGPUSlotBindingInfos;
-};
-
-struct WGPUVertexBuffer : public HwVertexBuffer {
-    WGPUVertexBuffer(wgpu::Device const &device, uint32_t vertexCount, uint32_t bufferCount,
-                     Handle<HwVertexBufferInfo> vbih);
-
-    Handle<HwVertexBufferInfo> vbih;
-    utils::FixedCapacityVector<wgpu::Buffer> buffers;
-};
-
-class WGPUBufferBase {
-public:
-    void createBuffer(wgpu::Device const& device, wgpu::BufferUsage usage, uint32_t size,
-            char const* label);
-    void updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_t byteOffset,
-            wgpu::Queue queue);
-    const wgpu::Buffer& getBuffer() const { return buffer; }
-protected:
-    wgpu::Buffer buffer;
-private:
-    // 4 bytes to hold any extra chunk we need.
-    std::array<uint8_t,4> mRemainderChunk;
-};
-
-class WGPUIndexBuffer : public HwIndexBuffer, public WGPUBufferBase {
-public:
-    WGPUIndexBuffer(wgpu::Device const &device, uint8_t elementSize,
-                    uint32_t indexCount);
-    wgpu::IndexFormat indexFormat;
-};
-
-class WGPUBufferObject : public HwBufferObject, public WGPUBufferBase {
-public:
-    WGPUBufferObject(wgpu::Device const &device, BufferObjectBinding bindingType, uint32_t byteCount);
-};
 
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
@@ -208,12 +125,6 @@ private:
             const uint32_t& arrayLayerCount, SamplerType samplerType) const noexcept;
 };
 
-struct WGPURenderPrimitive : public HwRenderPrimitive {
-
-    WGPUVertexBuffer* vertexBuffer = nullptr;
-    WGPUIndexBuffer* indexBuffer = nullptr;
-};
-
 class WGPURenderTarget : public HwRenderTarget {
 public:
     using Attachment = TargetBufferInfo; // Using TargetBufferInfo directly for attachments
@@ -272,5 +183,7 @@ private:
     wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};
     bool mHasDepthStencilAttachment = false;
 };
+
 }// namespace filament::backend
+
 #endif// TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
