@@ -21,6 +21,8 @@
 
 #include <cstdint>
 
+constexpr size_t WEBGPU_BUFFER_SIZE_MODULUS = 4;
+
 // FWGPU is short for Filament WebGPU
 
 // turn on runtime validation, namely for debugging, that would normally not run (for release)

@@ -257,9 +257,15 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/WebGPUBufferBase.cpp
+            src/webgpu/WebGPUBufferBase.h
+            src/webgpu/WebGPUBufferObject.cpp
+            src/webgpu/WebGPUBufferObject.h
             src/webgpu/WebGPUConstants.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUIndexBuffer.cpp
+            src/webgpu/WebGPUIndexBuffer.h
             src/webgpu/WebGPUHandles.cpp
             src/webgpu/WebGPUHandles.h
             src/webgpu/WebGPUPipelineCreation.cpp
@@ -269,6 +275,11 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPURenderPrimitive.h
+            src/webgpu/WebGPUVertexBuffer.cpp
+            src/webgpu/WebGPUVertexBuffer.h
+            src/webgpu/WebGPUVertexBufferInfo.cpp
+            src/webgpu/WebGPUVertexBufferInfo.h
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)

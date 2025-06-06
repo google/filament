@@ -34,11 +34,11 @@ enum class PrimitiveType : uint8_t;
 struct RasterState;
 struct StencilState;
 
-class WGPUVertexBufferInfo;
+class WebGPUVertexBufferInfo;
 class WebGPUProgram;
 
 [[nodiscard]] wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const&,
-        WebGPUProgram const&, WGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
+        WebGPUProgram const&, WebGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
         RasterState const&, StencilState const&, PolygonOffset const&, PrimitiveType primitiveType,
         std::vector<wgpu::TextureFormat> const& colorFormats, wgpu::TextureFormat depthFormat,
         uint8_t samplesCount);
