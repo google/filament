@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <utils/Hash.h>
 #include "webgpu/WebGPUDriver.h"
 
+#include "WebGPUHandles.h"
 #include "WebGPUPipelineCreation.h"
+#include "WebGPUProgram.h"
 #include "WebGPUSwapChain.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -27,8 +28,10 @@
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 #include <private/backend/BackendUtils.h>
+
 #include <math/mat3.h>
 #include <utils/CString.h>
+#include <utils/Hash.h>
 #include <utils/Panic.h>
 #include <utils/ostream.h>
 
@@ -170,7 +173,7 @@ void WebGPUDriver::destroyTexture(Handle<HwTexture> th) {
 
 void WebGPUDriver::destroyProgram(Handle<HwProgram> ph) {
     if (ph) {
-        destructHandle<WGPUProgram>(ph);
+        destructHandle<WebGPUProgram>(ph);
     }
 }
 
@@ -245,7 +248,7 @@ Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
 Handle<HwTexture> WebGPUDriver::importTextureS() noexcept { return allocHandle<WGPUTexture>(); }
 
 Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
-    return allocHandle<WGPUProgram>();
+    return allocHandle<WebGPUProgram>();
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
@@ -419,7 +422,7 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, Handle<
 }
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
-    constructHandle<WGPUProgram>(ph, mDevice, program);
+    constructHandle<WebGPUProgram>(ph, mDevice, program);
 }
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
@@ -979,7 +982,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
         mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
         return;
     }
-    const auto* program = handleCast<WGPUProgram>(pipelineState.program);
+    const auto program = handleCast<WebGPUProgram>(pipelineState.program);
     assert_invariant(program);
     assert_invariant(program->computeShaderModule == nullptr &&
                      "WebGPU backend does not (yet) support compute pipelines.");

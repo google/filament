@@ -33,17 +33,6 @@
 
 namespace filament::backend {
 
-class WGPUProgram final : public HwProgram {
-public:
-    WGPUProgram(wgpu::Device&, Program&);
-
-    wgpu::ShaderModule vertexShaderModule = nullptr;
-    wgpu::ShaderModule fragmentShaderModule = nullptr;
-    wgpu::ShaderModule computeShaderModule = nullptr;
-    std::vector<wgpu::ConstantEntry> constants;
-};
-
-
 // WGPUVertexBufferInfo maps Filament vertex attributes to WebGPU buffer binding model.
 class WGPUVertexBufferInfo final : public HwVertexBufferInfo {
 public:
