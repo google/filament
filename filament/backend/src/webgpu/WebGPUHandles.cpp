@@ -579,7 +579,7 @@ size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesWithDynamicOffsetsCount;
 }
 
-WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureFormat format,
+WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat format,
         uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
     assert_invariant(
@@ -589,18 +589,18 @@ WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureF
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
-    // First, the texture aspect, starting with the defaults/basic configuration
-    mUsage = fToWGPUTextureUsage(usage);
+
     mFormat = fToWGPUTextureFormat(format);
+    mUsage = fToWGPUTextureUsage(usage);
     mAspect = fToWGPUTextureViewAspect(usage, format);
+    mSamplerType = samplerType;
     mBlockWidth = filament::backend::getBlockWidth(format);
     mBlockHeight = filament::backend::getBlockHeight(format);
-    target = samplerTargetType;
 
     wgpu::TextureDescriptor textureDescriptor{
-        .label = getUserTextureLabel(target),
+        .label = getUserTextureLabel(samplerType),
         .usage = mUsage,
-        .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
+        .dimension = samplerType == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
                                                        : wgpu::TextureDimension::e2D,
         .size = { .width = width, .height = height, .depthOrArrayLayers = depth },
         .format = mFormat,
@@ -611,8 +611,8 @@ WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureF
         .viewFormatCount = 0,
         .viewFormats = nullptr,
     };
-    // adjust for specific cases
-    switch (target) {
+
+    switch (samplerType) {
         case SamplerType::SAMPLER_2D:
             mArrayLayerCount = 1;
             break;
@@ -637,19 +637,20 @@ WGPUTexture::WGPUTexture(SamplerType samplerTargetType, uint8_t levels, TextureF
     mTexture = device.CreateTexture(&textureDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
-    // Second, the texture view aspect
-    mTexureView = makeTextureView(0, levels, target);
+
+    mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
+            mArrayLayerCount, samplerType);
 }
 
-WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
-    mTexture = src->mTexture;
-    mAspect = src->mAspect;
-    mBlockWidth = src->mBlockWidth;
-    mBlockHeight = src->mBlockHeight;
-    target = src->target;
-
-    mTexureView = makeTextureView(baseLevel, levelCount, target);
-}
+WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept
+    : mTexture(src->mTexture),
+      mAspect(src->mAspect),
+      mArrayLayerCount(src->mArrayLayerCount),
+      mBlockWidth(src->mBlockWidth),
+      mBlockHeight(src->mBlockHeight),
+      mSamplerType(src->mSamplerType),
+      mDefaultTextureView(
+              makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType)) {}
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
@@ -976,22 +977,31 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     return wgpu::TextureAspect::All;
 }
 
+wgpu::TextureView WGPUTexture::getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
+    //TODO: there's an optimization to be made here to return mDefaultTextureView.
+    // Problem: mDefaultTextureView is a view of the entire texture,
+    // but this function (and its callers) expects a single-slice view.
+    // Returning the whole texture view for a single-slice request seems wrong.
+
+    return makeTextureView(mipLevel, 1, arrayLayer, 1, mSamplerType);
+}
+
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
-        SamplerType target) {
+        const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
+        SamplerType samplerType) const noexcept{
 
     wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mFormat,
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
-        // TODO: check if this baseArrayLayer assumption is correct
-        .baseArrayLayer = 0,
-        .arrayLayerCount = mArrayLayerCount,
+        .baseArrayLayer = baseArrayLayer,
+        .arrayLayerCount = arrayLayerCount,
         .aspect = mAspect,
         .usage = mUsage
     };
 
-    switch (target) {
+    switch (samplerType) {
         case SamplerType::SAMPLER_2D:
             textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
             break;
@@ -1017,13 +1027,14 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
     return textureView;
 }
 
-WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
         const MRT& colorAttachmentsMRT,
         const Attachment& depthAttachmentInfo,
         const Attachment& stencilAttachmentInfo)
     : HwRenderTarget(width, height),
-      defaultRenderTarget(false),
-      samples(samples),
+      mDefaultRenderTarget(false),
+      mSamples(samples),
+      mLayerCount(layerCount),
       mColorAttachments(colorAttachmentsMRT),
       mDepthAttachment(depthAttachmentInfo),
       mStencilAttachment(stencilAttachmentInfo) {
@@ -1060,7 +1071,7 @@ void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& de
     mColorAttachmentDescriptors.clear();
     mHasDepthStencilAttachment = false;
 
-    if (defaultRenderTarget) {
+    if (mDefaultRenderTarget) {
         assert_invariant(defaultColorTextureView);
         mColorAttachmentDescriptors.push_back({ .view = defaultColorTextureView,
             .resolveTarget = nullptr,

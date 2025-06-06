@@ -431,19 +431,7 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
         uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
-    // The `targets` flags indicate which of the `color`, `depth`, `stencil` TargetBufferInfo
-    // are actually active for this render target.
-    // We'll pass all TargetBufferInfo to WGPURenderTarget; it will use them if their handles are valid.
-
-    // Ensure that textures intended for use as attachments were created with
-    // wgpu::TextureUsage::RenderAttachment. This check should ideally be in createTextureR
-    // or validated here if possible.
-
-    // The `layerCount` parameter might be for creating array textures that this RT targets.
-    // Individual attachments (color[i].layer, depth.layer, stencil.layer) specify which layer
-    // of an array texture to bind. For now, we assume textures are pre-configured.
-
-    constructHandle<WGPURenderTarget>(rth, width, height, samples, color, depth, stencil);
+    constructHandle<WGPURenderTarget>(rth, width, height, samples, layerCount, color, depth, stencil);
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
@@ -809,19 +797,29 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
             if (colorInfos[i].handle) {
                 auto* hwTexture = handleCast<WGPUTexture>(colorInfos[i].handle);
                 if (hwTexture) {
-                    // TODO: Consider colorInfos[i].level and colorInfos[i].layer for view creation
-                    // if WGPUTexture::getTextureView() isn't sufficient or needs parameters.
-                    customColorViews[customColorViewCount++] = hwTexture->getTextureView();
-
+                    FILAMENT_CHECK_POSTCONDITION(
+                            colorInfos[i].layer < renderTarget->getLayerCount())
+                            << "Color attachment " << i << " requests layer " << colorInfos[i].layer
+                            << " but render target has only " << renderTarget->getLayerCount()
+                            << ".";
+                    const uint8_t mipLevel = colorInfos[i].level;
+                    const uint32_t arrayLayer = colorInfos[i].layer;
+                    customColorViews[customColorViewCount++] =
+                            hwTexture->getOrMakeTextureView(mipLevel, arrayLayer);
                 }
             }
         }
 
         const auto& depthInfo = renderTarget->getDepthAttachmentInfo();
         if (depthInfo.handle) {
+            FILAMENT_CHECK_POSTCONDITION(depthInfo.layer < renderTarget->getLayerCount())
+                    << "Depth attachment requests layer " << depthInfo.layer
+                    << "but render target has only " << renderTarget->getLayerCount() << ".";
             auto* hwTexture = handleCast<WGPUTexture>(depthInfo.handle);
             if (hwTexture) {
-                customDepthView = hwTexture->getTextureView();
+                const uint8_t depthMipLevel = depthInfo.level;
+                const uint32_t depthArrayLayer = depthInfo.layer;
+                customDepthView = hwTexture->getOrMakeTextureView(depthMipLevel, depthArrayLayer);
                 customDepthFormat = hwTexture->getFormat();
             }
         }
@@ -831,7 +829,14 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> rth, RenderPassParams 
             // If depth and stencil use the same texture handle, this will re-cast but that's fine.
             auto* hwTexture = handleCast<WGPUTexture>(stencilInfo.handle);
             if (hwTexture) {
-                customStencilView = hwTexture->getTextureView();
+                FILAMENT_CHECK_POSTCONDITION(stencilInfo.layer < renderTarget->getLayerCount())
+                        << "Stencil attachment requests layer " << stencilInfo.layer
+                        << " but render target has only " << renderTarget->getLayerCount()
+                        << " layers.";
+                const uint8_t stencilMipLevel = stencilInfo.level;
+                const uint32_t stencilArrayLayer = stencilInfo.layer;
+                customStencilView =
+                        hwTexture->getOrMakeTextureView(stencilMipLevel, stencilArrayLayer);
                 customStencilFormat = hwTexture->getFormat();
             }
         }
@@ -1151,7 +1156,7 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
         auto sampler = makeSampler(params);
         // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{ .binding = static_cast<uint32_t>(binding * 2),
-            .textureView = texture->getTextureView() };
+            .textureView = texture->getDefaultTextureView() };
         bindGroup->addEntry(tEntry.binding, std::move(tEntry));
 
         wgpu::BindGroupEntry sEntry{ .binding = static_cast<uint32_t>(binding * 2 + 1),

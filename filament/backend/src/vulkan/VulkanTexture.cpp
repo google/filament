@@ -495,22 +495,29 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     commands.acquire(stageSegment);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
-    VkBufferImageCopy copyRegion = { .bufferOffset = stageSegment->offset(),
+    bool const isDepth = getImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    VkBufferImageCopy copyRegion = {
+        .bufferOffset = stageSegment->offset(),
         .bufferRowLength = {},
         .bufferImageHeight = {},
-        .imageSubresource = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .imageSubresource = {
+            .aspectMask = VkImageAspectFlags(
+                    isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
             .mipLevel = miplevel,
             .baseArrayLayer = 0,
-            .layerCount = 1 },
+            .layerCount = 1,
+        },
         .imageOffset = { int32_t(xoffset), int32_t(yoffset), int32_t(zoffset) },
-        .imageExtent = { width, height, depth } };
+        .imageExtent = { width, height, depth },
+    };
 
     VkImageSubresourceRange transitionRange = {
         .aspectMask = getImageAspect(),
         .baseMipLevel = miplevel,
         .levelCount = 1,
         .baseArrayLayer = 0,
-        .layerCount = 1
+        .layerCount = 1,
     };
 
     // Vulkan specifies subregions for 3D textures differently than from 2D arrays.
