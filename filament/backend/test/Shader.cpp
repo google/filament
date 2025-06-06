@@ -41,6 +41,8 @@ Shader::Shader(DriverApi& api, Cleanup& cleanup, ShaderConfig config) : mCleanup
         descriptors[kDescriptorSetIndex][i] = {
                 config.uniforms[i].name, kLayouts[i], config.uniforms[i].samplerInfo };
     }
+    // TODO(b/422803382): When the shader language isn't GLSL dont' use the ShaderGenerator to
+    //  compile the shader.
     ShaderGenerator shaderGen(
             std::move(config.vertexShader), std::move(config.fragmentShader), BackendTest::sBackend,
             BackendTest::sIsMobilePlatform, std::move(descriptors));

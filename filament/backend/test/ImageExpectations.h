@@ -42,6 +42,7 @@ namespace test {
  */
 class ScreenshotParams {
 public:
+    // TODO(b/422804941): Add a set of environments where this test should use a different golden.
     ScreenshotParams(int width, int height, std::string fileName, uint32_t expectedPixelHash,
             bool isSrgb = false);
 

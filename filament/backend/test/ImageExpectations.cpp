@@ -84,6 +84,8 @@ std::string ScreenshotParams::expectedFilePath() const {
 }
 
 const std::string ScreenshotParams::filePrefix() const {
+    // TODO(b/422804941): If there are platform specific goldens, when on those platforms append a
+    //  unique platform identifying string to this.
     return mFileName;
 }
 
