@@ -18,6 +18,7 @@
 
 #include "WebGPUHandles.h"
 #include "WebGPUProgram.h"
+#include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -164,7 +165,7 @@ constexpr wgpu::BlendFactor toWebGPU(BlendFunction blendFunction) {
 }// namespace
 
 wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
-        WebGPUProgram const& program, WGPUVertexBufferInfo const& vertexBufferInfo,
+        WebGPUProgram const& program, WebGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
         StencilState const& stencilState, PolygonOffset const& polygonOffset,
         PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
