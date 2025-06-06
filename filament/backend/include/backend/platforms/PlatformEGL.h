@@ -128,7 +128,7 @@ protected:
     bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
 
     /**
-     * Logs glGetError() to slog.e
+     * Logs glGetError() to LOG(ERROR)
      * @param name a string giving some context on the error. Typically __func__.
      */
     static void logEglError(const char* name) noexcept;

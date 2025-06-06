@@ -96,7 +96,7 @@ CocoaExternalImage::SharedGl::~SharedGl() noexcept {
 CocoaExternalImage::CocoaExternalImage(const CVOpenGLTextureCacheRef textureCache,
         const SharedGl &sharedGl) noexcept : mSharedGl(sharedGl), mTextureCache(textureCache) {
     glGenFramebuffers(1, &mFBO);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 CocoaExternalImage::~CocoaExternalImage() noexcept {
@@ -125,7 +125,7 @@ bool CocoaExternalImage::set(CVPixelBufferRef image) noexcept {
     mTexture = createTextureFromImage(image);
     mRgbaTexture = encodeCopyRectangleToTexture2D(CVOpenGLTextureGetName(mTexture),
             CVPixelBufferGetWidth(image), CVPixelBufferGetHeight(image));
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     return true;
 }
@@ -182,33 +182,33 @@ GLuint CocoaExternalImage::encodeCopyRectangleToTexture2D(GLuint rectangle,
     // Create a texture to hold the result of the blit image.
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     // source textures
     glBindSampler(0, mSharedGl.sampler);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_RECTANGLE, rectangle);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     // destination texture
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
+    CHECK_GL_ERROR()
 
     // draw
     glViewport(0, 0, width, height);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
     glUseProgram(mSharedGl.program);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
     glDisableVertexAttribArray(0);
     glDrawArrays(GL_TRIANGLES, 0, 3);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     mState.restore();
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     return texture;
 }

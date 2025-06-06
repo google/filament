@@ -27,6 +27,7 @@
 #include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
+#include <dawn/webgpu_cpp_print.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -154,7 +155,7 @@ namespace {
                         switch (status) {
                             case wgpu::CompilationInfoRequestStatus::CallbackCancelled:
                                 FWGPU_LOGW << "Shader compilation info callback cancelled for "
-                                           << descriptor.label << "?" << utils::io::endl;
+                                           << descriptor.label << "?";
                                 return;
                             case wgpu::CompilationInfoRequestStatus::Success:
                                 break;
@@ -170,8 +171,7 @@ namespace {
                                                    << " line#:" << message.lineNum
                                                    << " linePos:" << message.linePos
                                                    << " offset:" << message.offset
-                                                   << " length:" << message.length
-                                                   << utils::io::endl;
+                                                   << " length:" << message.length;
                                         break;
                                     case wgpu::CompilationMessageType::Warning:
                                         FWGPU_LOGW
@@ -179,7 +179,7 @@ namespace {
                                                 << message.message << " line#:" << message.lineNum
                                                 << " linePos:" << message.linePos
                                                 << " offset:" << message.offset
-                                                << " length:" << message.length << utils::io::endl;
+                                                << " length:" << message.length;
                                         break;
                                     case wgpu::CompilationMessageType::Error:
                                         errorCount++;
@@ -198,8 +198,7 @@ namespace {
                                     << errorStream.str();
                         }
 #if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
-                        FWGPU_LOGD << descriptor.label << " compiled successfully"
-                                   << utils::io::endl;
+                        FWGPU_LOGD << descriptor.label << " compiled successfully";
 #endif
                     }),
             SHADER_COMPILATION_TIMEOUT_NANOSECONDS);

@@ -21,6 +21,7 @@
 #include <backend/Program.h>
 
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
 
 #include <chrono>
@@ -147,7 +148,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             if (error) {
                 auto description =
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
+                LOG(WARNING) << description;
                 errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to compile Metal program.");
@@ -178,7 +179,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             if (error) {
                 auto description =
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
+                LOG(WARNING) << description;
                 errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to load main0 in Metal program.");

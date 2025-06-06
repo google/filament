@@ -18,8 +18,9 @@
 
 #include "MetalHandles.h"
 
-#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Logger.h>
+#include <utils/debug.h>
 
 #include <utility>
 
@@ -112,8 +113,8 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
         auto errorCode = (MTLCommandBufferError)buffer.error.code;
         if (@available(macOS 11.0, *)) {
             if (errorCode == MTLCommandBufferErrorMemoryless) {
-                utils::slog.w << "Metal: memoryless geometry limit reached. "
-                        "Continuing with private storage mode." << utils::io::endl;
+                LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with private "
+                                "storage mode.";
                 context->memorylessLimitsReached = true;
             }
         }

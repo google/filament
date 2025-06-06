@@ -21,9 +21,25 @@
 #include <utils/compiler.h>
 #include <utils/PrivateImplementation.h>
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <utility>
+
+namespace utils {
+
+// handles utils::bitset
+
+namespace io {
+class ostream;
+}
+
+template<typename S, typename = std::enable_if_t<std::is_same_v<S, std::ostream> ||
+                                                 std::is_same_v<S, io::ostream>>>
+inline S& operator<<(S& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+}// namespace utils
 
 namespace utils::io {
 
@@ -121,11 +137,6 @@ private:
 
     const char* getFormat(type t) const noexcept;
 };
-
-// handles utils::bitset
-inline ostream& operator << (ostream& o, bitset32 const& s) noexcept {
-    return o << (void*)uintptr_t(s.getValue());
-}
 
 // handles vectors from libmath (but we do this generically, without needing a dependency on libmath)
 template<template<typename T> class VECTOR, typename T>

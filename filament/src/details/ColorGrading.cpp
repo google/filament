@@ -868,7 +868,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     }
 
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
-    //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
+    //DLOG(INFO) << "LUT generation time: " << duration.count() << " ms";
 
     if (converted) {
         free(data);

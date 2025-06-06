@@ -52,12 +52,12 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/compiler.h>
 #include <utils/JobSystem.h>
-#include <utils/Log.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <chrono>
 #include <limits>
@@ -155,14 +155,10 @@ FRenderer::FRenderer(FEngine& engine) :
 FRenderer::~FRenderer() noexcept {
     // There shouldn't be any resource left when we get here, but if there is, make sure
     // to free what we can (it would probably mean something when wrong).
-#ifndef NDEBUG
     size_t const wm = getCommandsHighWatermark();
     size_t const wmpct = wm / (mEngine.getPerFrameCommandsSize() / 100);
-    slog.d << "Renderer: Commands High watermark "
-    << wm / 1024 << " KiB (" << wmpct << "%), "
-    << wm / sizeof(Command) << " commands, " << sizeof(Command) << " bytes/command"
-    << io::endl;
-#endif
+    DLOG(INFO) << "Renderer: Commands High watermark " << wm / 1024 << " KiB (" << wmpct << "%), "
+               << wm / sizeof(Command) << " commands, " << sizeof(Command) << " bytes/command";
 }
 
 void FRenderer::terminate(FEngine& engine) {
@@ -463,10 +459,9 @@ void FRenderer::readPixels(FRenderTarget* renderTarget,
 
     // TODO: change the following to an assert when client call sites have addressed the issue.
     if (!renderTarget->supportsReadPixels()) {
-        slog.w << "readPixels() must be called with a renderTarget with COLOR0 created with "
-                         "TextureUsage::BLIT_SRC.  This precondition will be asserted in a later "
-                         "release of Filament."
-                      << io::endl;
+        LOG(WARNING) << "readPixels() must be called with a renderTarget with COLOR0 created with "
+                        "TextureUsage::BLIT_SRC. This precondition will be asserted in a later "
+                        "release of Filament.";
     }
 
     RendererUtils::readPixels(mEngine.getDriverApi(), renderTarget->getHwHandle(),
@@ -1481,7 +1476,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 #endif
 
-    //fg.export_graphviz(slog.d, view.getName());
+    //utils::io::sstream graphviz;
+    //fg.export_graphviz(graphviz, view.getName());
+    //DLOG(INFO) << graphviz.c_str();
 
     fg.execute(driver);
 

@@ -34,7 +34,7 @@
 
 #include <utils/BinaryTreeArray.h>
 #include <utils/JobSystem.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Slice.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
@@ -366,14 +366,12 @@ bool Froxelizer::update() noexcept {
 
         uniformsNeedUpdating = true;
 
-#ifndef NDEBUG
-        slog.d << "Froxel: " << viewport.width << "x" << viewport.height << " / "
-               << froxelDimension.x << "x" << froxelDimension.y << io::endl
-               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
-               << " = " << (froxelCountX * froxelCountY * froxelCountZ)
-               << " (" << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ << " lost)"
-               << io::endl;
-#endif
+        DLOG(INFO) << "Froxel: " << viewport.width << "x" << viewport.height << " / "
+                   << froxelDimension.x << "x" << froxelDimension.y << io::endl
+                   << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
+                   << " = " << (froxelCountX * froxelCountY * froxelCountZ) << " ("
+                   << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ
+                   << " lost)";
 
         mFroxelCountX = froxelCountX;
         mFroxelCountY = froxelCountY;
@@ -712,9 +710,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         const size_t lightCount = entry.count();
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
-#ifndef NDEBUG
-            slog.d << "out of space: " << i << ", at " << offset << io::endl;
-#endif
+            DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
             do {

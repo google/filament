@@ -27,14 +27,14 @@
 #include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
 
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
-#include <utils/CString.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
@@ -120,8 +120,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
 
         mImpl->mDeclaredAttributes.set(attribute);
     } else {
-        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
-                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
+        LOG(WARNING) << "Ignoring VertexBuffer attribute, the limit of "
+                     << MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded";
     }
     return *this;
 }

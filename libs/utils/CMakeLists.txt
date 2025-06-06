@@ -27,6 +27,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h

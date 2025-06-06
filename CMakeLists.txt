@@ -49,6 +49,8 @@ option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filamen
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
 
+option(FILAMENT_USE_ABSEIL_LOGGING "Use Abseil to log, may increase binary size" OFF)
+
 # This is to disable GTAO for the short-term while we investigate a way to better manage size increases.
 # On the regular filament build (where size is of less concern), we enable GTAO by default.
 option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
@@ -589,6 +591,10 @@ endif ()
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")
     add_definitions(-DFILAMENT_BACKEND_DEBUG_FLAG=${FILAMENT_BACKEND_DEBUG_FLAG})
     unset(FILAMENT_BACKEND_DEBUG_FLAG)
+endif()
+
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    add_definitions(-DFILAMENT_USE_ABSEIL_LOGGING)
 endif()
 
 # ==================================================================================================

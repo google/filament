@@ -59,6 +59,10 @@ add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
 
+add_library(abseil STATIC IMPORTED)
+set_target_properties(abseil PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libabseil.a)
+
 if (FILAMENT_ENABLE_FGVIEWER)
     add_library(fgviewer STATIC IMPORTED)
     set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
@@ -128,6 +132,7 @@ target_link_libraries(filament-jni
     PRIVATE jnigraphics
     PRIVATE utils
     PRIVATE perfetto
+    PRIVATE abseil
 
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry

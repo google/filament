@@ -19,8 +19,8 @@
 #include "MetalContext.h"
 #include "MetalUtils.h"
 
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/Log.h>
 
 namespace filament::backend {
 
@@ -323,7 +323,7 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) const
     if (!library || !function) {
         if (error) {
             auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-            utils::slog.e << description << utils::io::endl;
+            LOG(ERROR) << description;
         }
     }
     FILAMENT_CHECK_POSTCONDITION(library && function)
@@ -349,7 +349,7 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
     if (!library || !function) {
         if (error) {
             auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-            utils::slog.e << description << utils::io::endl;
+            LOG(ERROR) << description;
         }
     }
     FILAMENT_CHECK_POSTCONDITION(library && function)
