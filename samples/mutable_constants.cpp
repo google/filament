@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "common/arguments.h"
-
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -28,6 +26,8 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <imgui.h>
+
 #include <utils/EntityManager.h>
 
 #include <filamentapp/Config.h>
@@ -37,7 +37,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <string>// for printing usage/help
 
 
 #include "generated/resources/resources.h"
@@ -73,21 +72,22 @@ static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
-            "HELLOTRIANGLE renders a spinning colored triangle\n"
+            "MUTABLE_CONSTANTS renders a spinning colored triangle\n"
             "Usage:\n"
-            "    HELLOTRIANGLE [options]\n"
+            "    MUTABLE_CONSTANTS [options]\n"
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"
-            "API_USAGE"
+            "   --api, -a\n"
+            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
+            "       (note: webgpu is a no-op for now, printing backend\n"
+            "        component info if FILAMENT_BACKEND_DEBUG_FLAG, \n"
+            "        set at build time, includes the \n"
+            "        FWGPU_PRINT_SYSTEM bit flag 0x2)\n"
     );
-    const std::string from("HELLOTRIANGLE");
+    const std::string from("MUTABLE_CONSTANTS");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
-    }
-    const std::string apiUsage("API_USAGE");
-    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
-        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }
@@ -109,7 +109,19 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                app->config.backend = samples::parseArgumentsForBackend(arg);
+                if (arg == "opengl") {
+                    app->config.backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    app->config.backend = Engine::Backend::VULKAN;
+                } else if (arg == "metal") {
+                    app->config.backend = Engine::Backend::METAL;
+                } else if (arg == "webgpu") {
+                    app->config.backend = Engine::Backend::WEBGPU;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be "
+                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
+                    exit(1);
+                }
                 break;
         }
     }
@@ -118,8 +130,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
 
 int main(int argc, char** argv) {
     App app{};
-    app.config.title = "hellotriangle";
-    app.config.featureLevel = backend::FeatureLevel::FEATURE_LEVEL_0;
+    app.config.title = "mutable_constants";
     handleCommandLineArguments(argc, argv, &app);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
@@ -142,8 +153,8 @@ int main(int argc, char** argv) {
                 .build(*engine);
         app.ib->setBuffer(*engine,
                 IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.mat = Material::Builder()
-                .package(RESOURCES_BAKEDCOLOR_DATA, RESOURCES_BAKEDCOLOR_SIZE)
+        app.mat = Material::Builder().package(RESOURCES_BAKEDCOLORWITHMUTABLECONSTANTS_DATA,
+                RESOURCES_BAKEDCOLORWITHMUTABLECONSTANTS_SIZE)
                 .build(*engine);
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
@@ -170,6 +181,20 @@ int main(int argc, char** argv) {
         utils::EntityManager::get().destroy(app.camera);
     };
 
+    auto gui = [&app](Engine* engine, View* view) {
+        MaterialInstance* mi = app.mat->getDefaultInstance();
+        bool swizzle = mi->getConstant<bool>("swizzle");
+        bool darken = mi->getConstant<bool>("darken");
+        ImGui::Checkbox("Swizzle", &swizzle);
+        ImGui::Checkbox("Darken", &darken);
+        if (swizzle != mi->getConstant<bool>("swizzle")) {
+            mi->setConstant("swizzle", swizzle);
+        }
+        if (darken != mi->getConstant<bool>("darken")) {
+            mi->setConstant("darken", darken);
+        }
+    };
+
     FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
         constexpr float ZOOM = 1.5f;
         const uint32_t w = view->getViewport().width;
@@ -183,7 +208,7 @@ int main(int argc, char** argv) {
                 filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
     });
 
-    FilamentApp::get().run(app.config, setup, cleanup);
+    FilamentApp::get().run(app.config, setup, cleanup, gui);
 
     return 0;
 }

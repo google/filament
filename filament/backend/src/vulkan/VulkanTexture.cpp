@@ -480,30 +480,36 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     assert_invariant(hostData->size > 0 && "Data is empty");
 
     // Otherwise, use vkCmdCopyBufferToImage.
-    void* mapped = nullptr;
-    VulkanStage const* stage = mState->mStagePool.acquireStage(hostData->size);
-    assert_invariant(stage->memory);
-    vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
-    memcpy(mapped, hostData->buffer, hostData->size);
-    vmaUnmapMemory(mState->mAllocator, stage->memory);
-    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, hostData->size);
+    // Note: the following stageSegment must be stored within the command buffer
+    // before going out of scope, to ensure proper bookkeeping within the
+    // staging buffer pool.
+    fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
+            mState->mStagePool.acquireStage(hostData->size);
+    assert_invariant(stageSegment->memory());
+    memcpy(stageSegment->mapping(), hostData->buffer, hostData->size);
+    vmaFlushAllocation(mState->mAllocator, stageSegment->memory(), stageSegment->offset(),
+            hostData->size);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stageSegment);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
+    bool const isDepth = getImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT;
+
     VkBufferImageCopy copyRegion = {
-        .bufferOffset = {},
+        .bufferOffset = stageSegment->offset(),
         .bufferRowLength = {},
         .bufferImageHeight = {},
         .imageSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask = VkImageAspectFlags(
+                    isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
             .mipLevel = miplevel,
             .baseArrayLayer = 0,
-            .layerCount = 1
+            .layerCount = 1,
         },
         .imageOffset = { int32_t(xoffset), int32_t(yoffset), int32_t(zoffset) },
-        .imageExtent = { width, height, depth }
+        .imageExtent = { width, height, depth },
     };
 
     VkImageSubresourceRange transitionRange = {
@@ -511,7 +517,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
         .baseMipLevel = miplevel,
         .levelCount = 1,
         .baseArrayLayer = 0,
-        .layerCount = 1
+        .layerCount = 1,
     };
 
     // Vulkan specifies subregions for 3D textures differently than from 2D arrays.
@@ -536,7 +542,8 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     transitionLayout(&commands, transitionRange, newLayout);
 
-    vkCmdCopyBufferToImage(cmdbuf, stage->buffer, mState->mTextureImage, newVkLayout, 1, &copyRegion);
+    vkCmdCopyBufferToImage(cmdbuf, stageSegment->buffer(), mState->mTextureImage, newVkLayout, 1,
+            &copyRegion);
 
     transitionLayout(&commands, transitionRange, nextLayout);
 }

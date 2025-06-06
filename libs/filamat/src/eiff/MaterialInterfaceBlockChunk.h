@@ -18,6 +18,7 @@
 #define TNT_FILAMAT_MAT_INTEFFACE_BLOCK_CHUNK_H
 
 #include "Chunk.h"
+#include "private/filament/ConstantInfo.h"
 
 #include <backend/Program.h>
 
@@ -87,6 +88,20 @@ private:
     void flatten(Flattener&) override;
 
     FixedCapacityVector<filament::MaterialConstant> mConstants;
+};
+
+// ------------------------------------------------------------------------------------------------
+
+class MaterialMutableConstantParametersChunk final : public Chunk {
+public:
+    explicit MaterialMutableConstantParametersChunk(
+            FixedCapacityVector<filament::MaterialMutableConstant> constants);
+    ~MaterialMutableConstantParametersChunk() override = default;
+
+private:
+    void flatten(Flattener&) override;
+
+    FixedCapacityVector<filament::MaterialMutableConstant> mConstants;
 };
 
 // ------------------------------------------------------------------------------------------------

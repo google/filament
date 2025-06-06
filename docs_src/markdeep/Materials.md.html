@@ -211,7 +211,7 @@ when using textures.
 This property can dramatically change the appearance of a surface. Non-metallic surfaces have
 chromatic diffuse reflection and achromatic specular reflection (reflected light does not change
 color). Metallic surfaces do not have any diffuse reflection and chromatic specular reflection
-(reflected light takes on the color of the surfaced as defined by `baseColor`). 
+(reflected light takes on the color of the surfaced as defined by `baseColor`).
 
 The effect of `metallic` is shown in figure [metallicProperty] (click on the image to see a
 larger version).
@@ -247,7 +247,7 @@ The effect of `roughness` on metallic surfaces is shown in figure [roughnessCond
 When refraction through an object is enabled (using a `refractonType` of `thin` or `solid`), the
 `roughness` property will also affect the refractions, as shown in figure
 [roughnessRefractionProperty] (click on the image to see a larger version).
-                             
+
 ![Figure [roughnessRefractionProperty]: Refractive sphere with `roughness` varying from 0.0
  (left) to 1.0 (right)](images/materials/refraction_roughness.png)
 
@@ -306,7 +306,7 @@ The sheen color controls the color appearance and strength of an optional sheen 
 base layer described by the properties above. The sheen layer always sits below the clear coat layer
 if such a layer is present.
 
-The sheen layer can be used to represent cloth and fabric materials. Please refer to 
+The sheen layer can be used to represent cloth and fabric materials. Please refer to
 section [Cloth model] for more information about cloth and fabric materials.
 
 The effect of `sheenColor` is shown in figure [materialSheenColor]
@@ -519,14 +519,14 @@ light to bend further away from the initial path.
 
 Table [commonMatIOR] describes acceptable refractive indices for various types of materials.
 
-Material                   |        IOR       
+Material                   |        IOR
 --------------------------:|:-----------------
 Air                        | 1.0
-Water                      | 1.33             
-Common liquids             | 1.33 to 1.5      
-Common gemstones           | 1.58 to 2.33     
-Plastics, glass            | 1.5 to 1.58      
-Other dielectric materials | 1.33 to 1.58     
+Water                      | 1.33
+Common liquids             | 1.33 to 1.5
+Common gemstones           | 1.58 to 2.33
+Plastics, glass            | 1.5 to 1.58
+Other dielectric materials | 1.33 to 1.58
 [Table [commonMatIOR]: Index of refraction of common materials]
 
 The appearance of a refractive material will greatly depend on the `refractionType` and
@@ -1091,30 +1091,37 @@ Value
     `bool` or `number`, depending on the `type` of the constant. The type must be one of the types
     described in table [materialConstantsTypes].
 
-         Type          |            Description                   |      Default
-:----------------------|:-----------------------------------------|:------------------
-int                    | A signed, 32 bit GLSL int                |         0
-float                  | A single-precision GLSL float            |         0.0
-bool                   | A GLSL bool                              |         false
+    Constants may also be specified as mutable by setting the `mutable` property to `true`. Only
+    `bool` spec constants may be specified as mutable.
+
+| Type  | Description                   | Default | May be mutable? |
+|:------|:------------------------------|:--------|-----------------|
+| int   | A signed, 32 bit GLSL int     |         | no              |
+| float | A single-precision GLSL float | 0.0     | no              |
+| bool  | A GLSL bool                   | false   | yes             |
 [Table [materialConstantsTypes]: Material constants types]
 
 Description
 :   Lists the constant parameters accepted by your material. These constants can be set, or
     "specialized", at runtime when loading a material package. Multiple materials can be loaded from
-    the same material package with differing constant parameter specializations. Once a material is
-    loaded from a material package, its constant parameters cannot be changed. Compared to regular
-    parameters, constant parameters allow the compiler to generate more efficient code. Access
-    constant parameters from the shader by prefixing the name with `materialConstant_`. For example,
-    a constant parameter named `myConstant` is accessed in the shader as
-    `materialConstant_myConstant`. If a constant parameter is not set at runtime, the default is
-    used.
+    the same material package with differing constant parameter specializations. If a constant
+    parameter is specialized as mutable, it may be changed at any time on a per-instance basis via
+    `MaterialInstance::setConstant(name, value)`. Otherwise, once a material is loaded from a
+    material package, its constant parameters cannot be changed.
+
+    Compared to regular parameters, constant parameters allow the compiler to generate more
+    efficient code. Access constant parameters from the shader by prefixing the name with
+    `materialConstant_`. For example, a constant parameter named `myConstant` is accessed in the
+    shader as `materialConstant_myConstant`. If a constant parameter is not set at runtime, the
+    default is used.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     constants : [
         {
            name : overrideAlpha,
-           type : bool
+           type : bool,
+           mutable : true,
         },
         {
            name : customAlpha,
@@ -2553,7 +2560,7 @@ standard skybox material. It produces a list of 2 parameters, named `showSun` an
 respectively a boolean and a cubemap texture.
 
 ```text
-$ matc --reflect parameters filament/src/materials/skybox.mat 
+$ matc --reflect parameters filament/src/materials/skybox.mat
 {
   "parameters": [
     {
@@ -2569,7 +2576,7 @@ $ matc --reflect parameters filament/src/materials/skybox.mat
     }
   ]
 }
-``` 
+```
 
 ### --variant-filter
 
