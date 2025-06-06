@@ -31,6 +31,7 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/Program.h>
 
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
@@ -66,7 +67,7 @@ public:
     void terminate(FEngine& engine);
 
     void commitStreamUniformAssociations(FEngine::DriverApi& driver);
-    
+
     void commit(FEngine& engine) const;
 
     void commit(FEngine::DriverApi& driver) const;
@@ -242,6 +243,10 @@ public:
 
     using MaterialInstance::setParameter;
 
+    const backend::Program::MutableSpecConstantsInfo getMutableSpecConstants() const noexcept {
+        return mConstants;
+    }
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
@@ -264,6 +269,12 @@ private:
     template<typename T>
     T getParameterImpl(std::string_view name) const;
 
+    template<typename T>
+    void setConstantImpl(std::string_view name, T const& value);
+
+    template<typename T>
+    T getConstantImpl(std::string_view name) const;
+
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
 
@@ -277,6 +288,7 @@ private:
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
     bool mHasStreamUniformAssociations = false;
+    backend::Program::MutableSpecConstantsInfo mConstants;
 
     backend::PolygonOffset mPolygonOffset{};
     backend::StencilState mStencilState{};
