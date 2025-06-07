@@ -23,58 +23,10 @@
 
 #include <webgpu/webgpu_cpp.h>
 
-#include <array>
 #include <cstdint>
 #include <vector>
 
 namespace filament::backend {
-
-class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
-public:
-
-    struct BindGroupEntryInfo final {
-        uint8_t binding = 0;
-        bool hasDynamicOffset = false;
-    };
-
-    WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout, wgpu::Device const& device);
-    ~WebGPUDescriptorSetLayout();
-    [[nodiscard]] const wgpu::BindGroupLayout& getLayout() const { return mLayout; }
-    [[nodiscard]] std::vector<BindGroupEntryInfo> const& getBindGroupEntries() const {
-        return mBindGroupEntries;
-    }
-
-private:
-    // TODO: If this is useful elsewhere, remove it from this class
-    // Convert Filament Shader Stage Flags bitmask to webgpu equivalent
-    static wgpu::ShaderStage filamentStageToWGPUStage(ShaderStageFlags fFlags);
-    std::vector<BindGroupEntryInfo> mBindGroupEntries;
-    wgpu::BindGroupLayout mLayout;
-};
-
-class WebGPUDescriptorSet final : public HwDescriptorSet {
-public:
-
-    WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
-            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries);
-    ~WebGPUDescriptorSet();
-
-    wgpu::BindGroup lockAndReturn(wgpu::Device const&);
-    void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
-    [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
-    [[nodiscard]] size_t countEntitiesWithDynamicOffsets() const;
-
-    // May be nullptr. Use lockAndReturn to create the bind group when appropriate
-    [[nodiscard]] const wgpu::BindGroup& getBindGroup() const { return mBindGroup; }
-
-private:
-    wgpu::BindGroupLayout mLayout = nullptr;
-    static constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
-    std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
-    std::vector<wgpu::BindGroupEntry> mEntries;
-    const size_t mEntriesWithDynamicOffsetsCount;
-    wgpu::BindGroup mBindGroup = nullptr;
-};
 
 class WGPUTexture : public HwTexture {
 public:

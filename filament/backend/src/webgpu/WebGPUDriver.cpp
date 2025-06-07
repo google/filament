@@ -16,6 +16,8 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUBufferObject.h"
+#include "WebGPUDescriptorSet.h"
+#include "WebGPUDescriptorSetLayout.h"
 #include "WebGPUHandles.h"
 #include "WebGPUIndexBuffer.h"
 #include "WebGPUPipelineCreation.h"
@@ -1183,7 +1185,7 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
     const auto wbg = bindGroup->lockAndReturn(mDevice);
 
     mCurrentDescriptorSets[setIndex] = { .bindGroup = wbg,
-        .offsetCount = bindGroup->countEntitiesWithDynamicOffsets(),
+        .offsetCount = bindGroup->getEntitiesWithDynamicOffsetsCount(),
         .offsets = std::move(offsets) };
 }
 
