@@ -18,11 +18,11 @@
 #include "WebGPUBufferObject.h"
 #include "WebGPUDescriptorSet.h"
 #include "WebGPUDescriptorSetLayout.h"
-#include "WebGPUHandles.h"
 #include "WebGPUIndexBuffer.h"
 #include "WebGPUPipelineCreation.h"
 #include "WebGPUProgram.h"
 #include "WebGPURenderPrimitive.h"
+#include "WebGPURenderTarget.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
 #include "WebGPUVertexBuffer.h"
@@ -185,20 +185,20 @@ void WebGPUDriver::destroyProgram(Handle<HwProgram> programHandle) {
     }
 }
 
-void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
-    if (rth) {
-        WGPURenderTarget* rt = handleCast<WGPURenderTarget>(rth);
-        if (rt == mDefaultRenderTarget) {
+void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> renderTargetHandle) {
+    if (renderTargetHandle) {
+        auto renderTarget = handleCast<WebGPURenderTarget>(renderTargetHandle);
+        if (renderTarget == mDefaultRenderTarget) {
             mDefaultRenderTarget = nullptr;
         }
-        if (rt == mCurrentRenderTarget) {
+        if (renderTarget == mCurrentRenderTarget) {
             mCurrentRenderTarget = nullptr;
         }
         // WGPURenderTarget destructor is trivial.
         // The HwTexture handles stored within WGPURenderTarget (via MRT, TargetBufferInfo)
         // are not owned by WGPURenderTarget, so they are not destroyed here.
         // They are destroyed via WebGPUDriver::destroyTexture.
-        destructHandle<WGPURenderTarget>(rth);
+        destructHandle<WebGPURenderTarget>(renderTargetHandle);
     }
 }
 
@@ -281,7 +281,7 @@ Handle<HwBufferObject> WebGPUDriver::createBufferObjectS() noexcept {
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createRenderTargetS() noexcept {
-    return allocHandle<WGPURenderTarget>();
+    return allocHandle<WebGPURenderTarget>();
 }
 
 Handle<HwVertexBuffer> WebGPUDriver::createVertexBufferS() noexcept {
@@ -305,7 +305,7 @@ Handle<HwTexture> WebGPUDriver::createTextureViewSwizzleS() noexcept {
 }
 
 Handle<HwRenderTarget> WebGPUDriver::createDefaultRenderTargetS() noexcept {
-    return allocHandle<WGPURenderTarget>();
+    return allocHandle<WebGPURenderTarget>();
 }
 
 Handle<HwDescriptorSetLayout> WebGPUDriver::createDescriptorSetLayoutS() noexcept {
@@ -440,16 +440,19 @@ void WebGPUDriver::createProgramR(Handle<HwProgram> programHandle, Program&& pro
     constructHandle<WebGPUProgram>(programHandle, mDevice, program);
 }
 
-void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
+void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
+        const int /* dummy */) {
     assert_invariant(!mDefaultRenderTarget);
-    mDefaultRenderTarget = constructHandle<WGPURenderTarget>(rth);
+    mDefaultRenderTarget = constructHandle<WebGPURenderTarget>(renderTargetHandle);
     assert_invariant(mDefaultRenderTarget);
 }
 
-void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> rth, TargetBufferFlags targets,
-        uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
-        TargetBufferInfo depth, TargetBufferInfo stencil) {
-    constructHandle<WGPURenderTarget>(rth, width, height, samples, layerCount, color, depth, stencil);
+void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
+        const TargetBufferFlags targets, const uint32_t width, const uint32_t height,
+        const uint8_t samples, const uint8_t layerCount, const MRT color,
+        const TargetBufferInfo depth, const TargetBufferInfo stencil) {
+    constructHandle<WebGPURenderTarget>(renderTargetHandle, width, height, samples, layerCount,
+            color, depth, stencil);
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
@@ -800,7 +803,7 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
     assert_invariant(mCommandEncoder);
-    auto renderTarget = handleCast<WGPURenderTarget>(renderTargetHandle);
+    auto renderTarget = handleCast<WebGPURenderTarget>(renderTargetHandle);
 
     wgpu::TextureView defaultColorView = nullptr;
     wgpu::TextureView defaultDepthStencilView = nullptr;
@@ -966,7 +969,7 @@ void WebGPUDriver::stopCapture(int) {
     //todo
 }
 
-void WebGPUDriver::readPixels(Handle<HwRenderTarget> src, const uint32_t x,
+void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
     // todo
@@ -980,10 +983,9 @@ void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,
 }
 
 void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, Viewport dstRect,
-        Handle<HwRenderTarget> src, Viewport srcRect,
-        SamplerMagFilter filter) {
-}
+        Handle<HwRenderTarget> destinationRenderTargetHandle, const Viewport destinationViewport,
+        Handle<HwRenderTarget> sourceRenderTargetHandle, const Viewport sourceViewport,
+        const SamplerMagFilter filter) {}
 
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,

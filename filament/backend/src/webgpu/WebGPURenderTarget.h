@@ -28,24 +28,20 @@
 
 namespace filament::backend {
 
-class WGPURenderTarget : public HwRenderTarget {
+class WebGPURenderTarget : public HwRenderTarget {
 public:
     using Attachment = TargetBufferInfo; // Using TargetBufferInfo directly for attachments
 
-    WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
-            const MRT& colorAttachments,
-            const Attachment& depthAttachment,
-            const Attachment& stencilAttachment);
+    WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
+            MRT const& colorAttachments, Attachment const& depthAttachment,
+            Attachment const& stencilAttachment);
 
     // Default constructor for the default render target
-    WGPURenderTarget()
-        : HwRenderTarget(0, 0),
-          mDefaultRenderTarget(true),
-          mSamples(1) {}
+    WebGPURenderTarget();
 
     // Updated signature: takes resolved views for custom RTs, and default views for default RT
     void setUpRenderPassAttachments(
-            wgpu::RenderPassDescriptor& descriptor,
+            wgpu::RenderPassDescriptor& outDescriptor,
             RenderPassParams const& params,
             // For default render target:
             wgpu::TextureView const& defaultColorTextureView,
@@ -58,18 +54,20 @@ public:
             wgpu::TextureFormat customDepthFormat,
             wgpu::TextureFormat customStencilFormat);
 
-    bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
+    [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
     [[nodiscard]] uint8_t getLayerCount() const { return mLayerCount; }
 
     // Accessors for the driver to get stored attachment info
-    const MRT& getColorAttachmentInfos() const { return mColorAttachments; }
-    const Attachment& getDepthAttachmentInfo() const { return mDepthAttachment; }
-    const Attachment& getStencilAttachmentInfo() const { return mStencilAttachment; }
+    [[nodiscard]] MRT const& getColorAttachmentInfos() const { return mColorAttachments; }
+    [[nodiscard]] Attachment const& getDepthAttachmentInfo() const { return mDepthAttachment; }
+    [[nodiscard]] Attachment const& getStencilAttachmentInfo() const { return mStencilAttachment; }
 
     // Static helpers for load/store operations
-    static wgpu::LoadOp getLoadOperation(const RenderPassParams& params, TargetBufferFlags buffer);
-    static wgpu::StoreOp getStoreOperation(const RenderPassParams& params, TargetBufferFlags buffer);
+    [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
+            TargetBufferFlags buffer);
+    [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
+            TargetBufferFlags buffer);
 
 private:
     bool mDefaultRenderTarget = false;
@@ -77,7 +75,8 @@ private:
     uint8_t mLayerCount = 1;
 
     MRT mColorAttachments{};
-    // TODO WebGPU only supports a DepthStencil attachment, should this be just mDepthStencilAttachment?
+    // TODO WebGPU only supports a DepthStencil attachment, should this be just
+    //      mDepthStencilAttachment?
     Attachment mDepthAttachment{};
     Attachment mStencilAttachment{};
 
