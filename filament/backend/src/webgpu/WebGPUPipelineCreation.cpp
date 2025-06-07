@@ -168,8 +168,8 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         WebGPUProgram const& program, WebGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
         StencilState const& stencilState, PolygonOffset const& polygonOffset,
-        PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
-        wgpu::TextureFormat depthFormat, uint8_t samplesCount) {
+        const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
+        const wgpu::TextureFormat depthFormat, const uint8_t samplesCount) {
     assert_invariant(program.vertexShaderModule);
     wgpu::DepthStencilState depthStencilState{};
     if (depthFormat != wgpu::TextureFormat::Undefined) {
