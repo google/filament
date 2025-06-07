@@ -63,6 +63,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
                                      const char* name) noexcept
         : mMaterial(material),
           mDescriptorSet("MaterialInstance", material->getDescriptorSetLayout()),
+          mConstants(material->getDefaultMutableConstants()),
           mCulling(CullingMode::BACK),
           mShadowCulling(CullingMode::BACK),
           mDepthFunc(RasterState::DepthFunc::LE),
@@ -128,6 +129,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
           mTextureParameters(other->mTextureParameters),
           mDescriptorSet(other->mDescriptorSet.duplicate(
                 "MaterialInstance", mMaterial->getDescriptorSetLayout())),
+          mConstants(other->mConstants),
           mPolygonOffset(other->mPolygonOffset),
           mStencilState(other->mStencilState),
           mMaskThreshold(other->mMaskThreshold),
@@ -429,7 +431,7 @@ void FMaterialInstance::fixMissingSamplers() const {
                 FEngine const& engine = mMaterial->getEngine();
                 filament::DescriptorSetLayout const& layout = mMaterial->getDescriptorSetLayout();
 
-                if (pos->format != SamplerFormat::FLOAT) {
+                if (pos->format == SamplerFormat::FLOAT) {
                     // TODO: we only handle missing samplers that are FLOAT
                     switch (pos->type) {
                         case SamplerType::SAMPLER_2D:

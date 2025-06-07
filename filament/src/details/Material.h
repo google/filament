@@ -122,9 +122,8 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
-        return bool(mCachedPrograms[variant.key]);
-    }
+    bool isCached(Variant const variant,
+            const backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept;
 
     void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
 
@@ -132,26 +131,31 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
+            backend::Program::MutableSpecConstantsInfo const mutableSpecConstants,
             backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
+        if (UTILS_UNLIKELY(!isCached(variant, mutableSpecConstants))) {
+            prepareProgramSlow(variant, mutableSpecConstants, priorityQueue);
         }
     }
 
-    // getProgram returns the backend program for the material's given variant.
+    // getProgram returns the backend program for the material's given variant and set of mutable
+    // spec constants.
     // Must be called after prepareProgram().
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
+    backend::Handle<backend::HwProgram> getProgram(Variant const variant,
+            backend::Program::MutableSpecConstantsInfo const mutableSpecConstants) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        return getProgramWithMATDBG(variant);
+        return getProgramWithMATDBG(variant, mutableSpecConstants);
 #endif
-        assert_invariant(mCachedPrograms[variant.key]);
-        return mCachedPrograms[variant.key];
+        size_t index = getCachedProgramIndex(variant, mutableSpecConstants);
+        assert_invariant(mCachedPrograms[index]);
+        return mCachedPrograms[index];
     }
 
     [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant) const noexcept;
+    backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant,
+            backend::Program::MutableSpecConstantsInfo const mutableSpecConstants) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
@@ -208,6 +212,12 @@ public:
     }
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
 
+    uint32_t getMutableConstantCount() const noexcept { return mMaterialMutableConstants.size(); }
+    std::optional<uint32_t> getMutableConstantId(std::string_view name) const noexcept;
+    backend::Program::MutableSpecConstantsInfo getDefaultMutableConstants() const noexcept {
+        return mDefaultMutableSpecializationConstants;
+    }
+
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
     void destroyPrograms(FEngine& engine,
@@ -261,17 +271,24 @@ public:
 private:
     bool hasVariant(Variant variant) const noexcept;
     void prepareProgramSlow(Variant variant,
+            backend::Program::MutableSpecConstantsInfo mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     void getSurfaceProgramSlow(Variant variant,
+            backend::Program::MutableSpecConstantsInfo mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     void getPostProcessProgramSlow(Variant variant,
+            backend::Program::MutableSpecConstantsInfo mutableSpecConstants,
             CompilerPriorityQueue priorityQueue) const noexcept;
     backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const;
+            Variant vertexVariant, Variant fragmentVariant,
+            backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const;
 
     void processBlendingMode(MaterialParser const* parser);
 
     void processSpecializationConstants(FEngine& engine, Builder const& builder,
+            MaterialParser const* parser);
+
+    void processMutableSpecializationConstants(FEngine& engine, Builder const& builder,
             MaterialParser const* parser);
 
     void processPushConstants(FEngine& engine, MaterialParser const* parser);
@@ -280,15 +297,22 @@ private:
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
-    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
+    void createAndCacheProgram(backend::Program&& p, Variant variant,
+            backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept;
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mMaterialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mHasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
 
+    inline size_t getCachedProgramIndex(const Variant variant,
+            const backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept {
+        return static_cast<size_t>(variant.key) |
+                (static_cast<size_t>(mutableSpecConstants.getValue()) << mVariantBits);
+    }
+
     // try to order by frequency of use
-    mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     DescriptorSetLayout mPerViewDescriptorSetLayout;
     DescriptorSetLayout mPerViewDescriptorSetLayoutVsm;
     DescriptorSetLayout mDescriptorSetLayout;
@@ -324,6 +348,7 @@ private:
     bool mHasCustomDepthShader = false;
     bool mIsDefaultMaterial = false;
     bool mSpecularAntiAliasing = false;
+    uint8_t mVariantBits;
 
     // reserve some space to construct the default material instance
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
@@ -347,6 +372,13 @@ private:
     std::unordered_map<std::string_view, uint32_t> mSpecializationConstantsNameToIndex;
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+
+    // Mutable constants defined by this Material.
+    utils::FixedCapacityVector<MaterialMutableConstant> mMaterialMutableConstants;
+    // A map from the Constant name to the mMutableMaterialConstant index
+    std::unordered_map<std::string_view, uint32_t> mMutableSpecializationConstantsNameToIndex;
+    // Default values for the mutable constants.
+    backend::Program::MutableSpecConstantsInfo mDefaultMutableSpecializationConstants;
 
     // current push constants for the HwProgram
     std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,

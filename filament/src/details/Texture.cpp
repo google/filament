@@ -432,10 +432,19 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     size_t const stride = p.stride ? p.stride : width;
     size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
     size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
+    size_t const pbdWidth = stride;
+    // TODO: PBD should have a "layer stride" (using "depth" as a substitute).
+    size_t const pbdDepth = depth;
+    size_t const pbdHeight = p.size / bpr / pbdDepth;
+    assert_invariant(
+            p.size % bpr == 0 &&
+            (p.size / bpr) % pbdDepth == 0);
+
     // TODO: PBD should have a p.depth (# layers to skip)
-    FILAMENT_CHECK_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size)
-            << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+    FILAMENT_CHECK_PRECONDITION(
+            bpp * (pbdWidth - p.left) * (pbdHeight - p.top) * (pbdDepth - 0) >=
+            bpp * (width - xoffset) * (height - yoffset) * (depth - zoffset))
+             << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
             << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
             << ") smaller than specified region "
                "{{"

@@ -718,6 +718,7 @@ public:
                 // TODO: default the following two flags to true.
                 bool assert_material_instance_in_use = false;
                 bool assert_destroy_material_before_material_instance = false;
+                bool assert_vertex_buffer_count_exceeds_8 = false;
             } debug;
         } engine;
         struct {
@@ -755,6 +756,9 @@ public:
             { "features.engine.debug.assert_destroy_material_before_material_instance",
               "Assert when a Material is destroyed but its instances are still alive.",
               &features.engine.debug.assert_destroy_material_before_material_instance, false },
+            { "features.engine.debug.assert_vertex_buffer_count_exceeds_8",
+              "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
+              &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

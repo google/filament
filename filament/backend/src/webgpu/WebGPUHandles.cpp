@@ -197,89 +197,132 @@ void WGPUBufferBase::updateGPUBuffer(BufferDescriptor& bufferDescriptor, uint32_
     }
 }
 
-static constexpr uint32_t DUMMY_WEBGPU_SLOT = 0;
-
 WGPUVertexBufferInfo::WGPUVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
-        AttributeArray const& attributes)
-    : HwVertexBufferInfo(bufferCount, attributeCount),
-      // TODO: max limits may not be supported by webgpu driver. This should be addressed in the
-      // hardening part.
-      mVertexBufferLayouts(MAX_VERTEX_BUFFER_COUNT),
-      mVertexAttributes(MAX_VERTEX_BUFFER_COUNT) {
-
-    // It starts from 1 because slot 0 is now reserved for the dummy.
-    uint32_t currentWebGPUSlotIndex = 1;
-    // A reasonable dummy stride (e.g., for vec4)
-    const uint32_t DUMMY_STRIDE = 16;
-
-    // Initialize the layout for the dummy slot (slot 0)
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].arrayStride = DUMMY_STRIDE;
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].stepMode = wgpu::VertexStepMode::Vertex;
-    mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount = 0;
-
-    mWebGPUSlotBindingInfos.push_back({
-        .sourceBuffer = 0,
-        .slot = DUMMY_WEBGPU_SLOT,
-        .bufferOffset = 0,
-        .stride = DUMMY_STRIDE,
-    });
-
+        AttributeArray const& attributes, wgpu::Limits const& deviceLimits)
+    : HwVertexBufferInfo(bufferCount, attributeCount) {
+    FILAMENT_CHECK_PRECONDITION(attributeCount <= MAX_VERTEX_ATTRIBUTE_COUNT &&
+                                attributeCount <= deviceLimits.maxVertexAttributes)
+            << "The number of vertex attributes requested (" << attributeCount
+            << ") exceeds Filament's MAX_VERTEX_ATTRIBUTE_COUNT limit ("
+            << MAX_VERTEX_ATTRIBUTE_COUNT << ") and/or the device's limit ("
+            << deviceLimits.maxVertexAttributes << ")";
+    mVertexAttributes.reserve(attributeCount);
+    if (attributeCount == 0) {
+        mVertexBufferLayouts.resize(0);
+        mWebGPUSlotBindingInfos.resize(0);
+        return; // should not be possible, but being defensive. nothing to do otherwise
+    }
+    // populate mWebGPUSlotBindingInfos and attribute info (slot + attribute) by going through each
+    // attribute...
+    constexpr uint32_t IMPOSSIBLE_SLOT_INDEX = MAX_VERTEX_BUFFER_COUNT;
+    struct AttributeInfo final {
+        uint8_t slot = IMPOSSIBLE_SLOT_INDEX;
+        wgpu::VertexAttribute attribute = {};
+        AttributeInfo()
+            : slot(IMPOSSIBLE_SLOT_INDEX),
+              attribute({}) {}
+        AttributeInfo(uint8_t slot, wgpu::VertexAttribute attribute)
+            : slot(slot),
+              attribute(attribute) {}
+    };
+    std::array<AttributeInfo, MAX_VERTEX_ATTRIBUTE_COUNT> attributeInfos{};
+    uint8_t currentWebGPUSlotIndex = 0;
+    uint8_t currentAttributeIndex = 0;
+    mVertexBufferLayouts.reserve(MAX_VERTEX_BUFFER_COUNT);
+    mWebGPUSlotBindingInfos.reserve(mVertexBufferLayouts.capacity());
     for (uint32_t attributeIndex = 0; attributeIndex < attributes.size(); ++attributeIndex) {
         const auto& attribute = attributes[attributeIndex];
-
-        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
-        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
-        wgpu::VertexFormat vertexFormat = getVertexFormat(attribute.type, isNormalized, isInteger);
-
         if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-            // Use some dummy format
-            vertexFormat = isInteger ? wgpu::VertexFormat::Uint8x4 : wgpu::VertexFormat::Unorm8x4;
-            mVertexAttributes[DUMMY_WEBGPU_SLOT].push_back({
-                .format = vertexFormat,
-                .offset = 0,
-                .shaderLocation = attributeIndex,
-            });
-            mVertexBufferLayouts[DUMMY_WEBGPU_SLOT].attributeCount++;
+            // We ignore "unused" attributes, ones not associated with a buffer. If a shader
+            // references such an attribute we have a bug one way or another. Either the API/CPU
+            // will produce an error (best case scenario), where an attribute is referenced in the
+            // shader but not provided by the backend API (CPU-side), or the shader would be getting
+            // junk/undefined data from the GPU, since we do not have a valid buffer of data to
+            // provide to the shader/GPU.
             continue;
         }
-
-        auto it = std::find_if(mWebGPUSlotBindingInfos.begin(), mWebGPUSlotBindingInfos.end(),
-                [&](const auto& info) {
-                    return info.sourceBuffer == attribute.buffer && info.stride == attribute.stride;
-                });
-
-        uint32_t assignedSlot;
-        if (it != mWebGPUSlotBindingInfos.end()) {
-            assignedSlot = it->slot;
-        } else {
-            // New combination, allocate a new WebGPU slot
-            assert_invariant(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT);
-            assignedSlot = currentWebGPUSlotIndex++;
-
-            mWebGPUSlotBindingInfos.push_back({
-                .sourceBuffer = attribute.buffer,
-                .slot = assignedSlot,
-                .bufferOffset = attribute.offset - (attribute.offset % attribute.stride),
-                .stride = attribute.stride,
-            });
-
-            mVertexBufferLayouts[assignedSlot].arrayStride = attribute.stride;
-            mVertexBufferLayouts[assignedSlot].stepMode = wgpu::VertexStepMode::Vertex;
-            mVertexBufferLayouts[assignedSlot].attributeCount = 0;
+        bool const isInteger = attribute.flags & Attribute::FLAG_INTEGER_TARGET;
+        bool const isNormalized = attribute.flags & Attribute::FLAG_NORMALIZED;
+        wgpu::VertexFormat const vertexFormat =
+                getVertexFormat(attribute.type, isNormalized, isInteger);
+        uint8_t existingSlot = IMPOSSIBLE_SLOT_INDEX;
+        for (uint32_t slot = 0; slot < currentWebGPUSlotIndex; slot++) {
+            WebGPUSlotBindingInfo const& info = mWebGPUSlotBindingInfos[slot];
+            // We consider attributes to be in the same slot/layout only if they belong to the
+            // same buffer and are interleaved; they cannot belong to separate partitions in the
+            // same buffer, for example.
+            // For the attributes to be interleaved, the stride must match (among other things).
+            // The attribute offset being less than the slot's/layout's buffer offset indicates
+            // that it is in a separate partition before this slot/layout, thus not part of it.
+            // The difference from the attribute's offset and this slot's/layout's buffer offset
+            // being greater than the stride indicates it is in a separate partition after this
+            // slot/layout, thus not part of it.
+            if (info.sourceBufferIndex == attribute.buffer && info.stride == attribute.stride &&
+                    attribute.offset >= info.bufferOffset &&
+                    ((attribute.offset - info.bufferOffset) < attribute.stride)) {
+                existingSlot = slot;
+                break;
+            }
         }
-
-        mVertexAttributes[assignedSlot].push_back({
-            .format = vertexFormat,
-            .offset = attribute.offset % attribute.stride,
-            .shaderLocation = attributeIndex,
-        });
-        mVertexBufferLayouts[assignedSlot].attributeCount++;
+        if (existingSlot == IMPOSSIBLE_SLOT_INDEX) {
+            // New combination, use a new WebGPU slot
+            FILAMENT_CHECK_PRECONDITION(currentWebGPUSlotIndex < MAX_VERTEX_BUFFER_COUNT &&
+                                        currentWebGPUSlotIndex < deviceLimits.maxVertexBuffers)
+                    << "Number of vertex buffer layouts must not exceed MAX_VERTEX_BUFFER_COUNT ("
+                    << MAX_VERTEX_BUFFER_COUNT << ") or the device limit ("
+                    << deviceLimits.maxVertexBuffers << ")";
+            existingSlot = currentWebGPUSlotIndex++;
+            mWebGPUSlotBindingInfos.push_back({
+                .sourceBufferIndex = attribute.buffer,
+                .bufferOffset = attribute.offset,
+                .stride = attribute.stride
+            });
+            // we need to have a vertex buffer layout for each slot
+            mVertexBufferLayouts.push_back({
+                .stepMode = wgpu::VertexStepMode::Vertex,
+                .arrayStride = attribute.stride
+                // we do not know attributeCount or attributes at this time. We get those
+                // in a subsequent pass over the attributeInfos we collect in this loop.
+            });
+        }
+        attributeInfos[currentAttributeIndex++] = AttributeInfo(existingSlot,
+            {
+                .format = vertexFormat,
+                .offset = attribute.offset - mWebGPUSlotBindingInfos[existingSlot].bufferOffset,
+                .shaderLocation = attributeIndex
+            }
+        );
     }
-
-    mVertexBufferLayouts.resize(currentWebGPUSlotIndex);
-
-    for (const auto& info: mWebGPUSlotBindingInfos) {
-        mVertexBufferLayouts[info.slot].attributes = mVertexAttributes[info.slot].data();
+    FILAMENT_CHECK_POSTCONDITION(currentAttributeIndex == attributeCount)
+            << "Using " << currentAttributeIndex << " attributes, but " << attributeCount
+            << " where indicated.";
+    mVertexBufferLayouts.shrink_to_fit();
+    mWebGPUSlotBindingInfos.shrink_to_fit();
+    // sort attribute infos by increasing slot (by increasing offset within each slot).
+    // We do this to ensure that attributes for the same slot/layout are contiguous in
+    // the vector, so the vertex buffer layout associated with these contiguous attributes
+    // can directly reference them in the mVertexAttributes vector below.
+    std::sort(attributeInfos.data(), attributeInfos.data() + attributeCount,
+            [](AttributeInfo const& first, AttributeInfo const& second) {
+                if (first.slot < second.slot) {
+                    return true;
+                }
+                if (first.slot == second.slot) {
+                    if (first.attribute.offset < second.attribute.offset) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+    // populate mVertexAttributes and update mVertexBufferLayouts to reference the correct
+    // attributes in it (which will be contiguous in memory as ensured by the sorting above)...
+    for (uint32_t attributeIndex = 0; attributeIndex < attributeCount; ++attributeIndex) {
+        AttributeInfo const& info = attributeInfos[attributeIndex];
+        mVertexAttributes.push_back(info.attribute);
+        if (mVertexBufferLayouts[info.slot].attributeCount == 0) {
+            mVertexBufferLayouts[info.slot].attributes = &mVertexAttributes[attributeIndex];
+        }
+        mVertexBufferLayouts[info.slot].attributeCount++;
     }
 }
 
@@ -536,8 +579,8 @@ size_t WebGPUDescriptorSet::countEntitiesWithDynamicOffsets() const {
     return mEntriesWithDynamicOffsetsCount;
 }
 
-WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+WGPUTexture::WGPUTexture(SamplerType samplerType, uint8_t levels, TextureFormat format,
+        uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
         wgpu::Device const& device) noexcept {
     assert_invariant(
             samples == 1 ||
@@ -546,16 +589,18 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
-    // First, the texture aspect, starting with the defaults/basic configuration
-    mUsage = fToWGPUTextureUsage(usage);
+
     mFormat = fToWGPUTextureFormat(format);
+    mUsage = fToWGPUTextureUsage(usage);
     mAspect = fToWGPUTextureViewAspect(usage, format);
+    mSamplerType = samplerType;
     mBlockWidth = filament::backend::getBlockWidth(format);
     mBlockHeight = filament::backend::getBlockHeight(format);
+
     wgpu::TextureDescriptor textureDescriptor{
-        .label = getUserTextureLabel(target),
+        .label = getUserTextureLabel(samplerType),
         .usage = mUsage,
-        .dimension = target == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
+        .dimension = samplerType == SamplerType::SAMPLER_3D ? wgpu::TextureDimension::e3D
                                                        : wgpu::TextureDimension::e2D,
         .size = { .width = width, .height = height, .depthOrArrayLayers = depth },
         .format = mFormat,
@@ -566,8 +611,8 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
         .viewFormatCount = 0,
         .viewFormats = nullptr,
     };
-    // adjust for specific cases
-    switch (target) {
+
+    switch (samplerType) {
         case SamplerType::SAMPLER_2D:
             mArrayLayerCount = 1;
             break;
@@ -592,18 +637,20 @@ WGPUTexture::WGPUTexture(SamplerType target, uint8_t levels, TextureFormat forma
     mTexture = device.CreateTexture(&textureDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
-    // Second, the texture view aspect
-    mTexureView = makeTextureView(0, levels, target);
+
+    mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
+            mArrayLayerCount, samplerType);
 }
 
-WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept {
-    mTexture = src->mTexture;
-    mAspect = src->mAspect;
-    mBlockWidth = src->mBlockWidth;
-    mBlockHeight = src->mBlockHeight;
-
-    mTexureView = makeTextureView(baseLevel, levelCount, target);
-}
+WGPUTexture::WGPUTexture(WGPUTexture* src, uint8_t baseLevel, uint8_t levelCount) noexcept
+    : mTexture(src->mTexture),
+      mAspect(src->mAspect),
+      mArrayLayerCount(src->mArrayLayerCount),
+      mBlockWidth(src->mBlockWidth),
+      mBlockHeight(src->mBlockHeight),
+      mSamplerType(src->mSamplerType),
+      mDefaultTextureView(
+              makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount, mSamplerType)) {}
 
 wgpu::TextureUsage WGPUTexture::fToWGPUTextureUsage(TextureUsage const& fUsage) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
@@ -900,7 +947,7 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     const bool isDepth = any(fUsage & TextureUsage::DEPTH_ATTACHMENT);
     const bool isStencil = any(fUsage & TextureUsage::STENCIL_ATTACHMENT);
     const bool isColor = any(fUsage & TextureUsage::COLOR_ATTACHMENT);
-    const bool isSample = (fUsage == TextureUsage::SAMPLEABLE);
+    const bool isSample = any(fUsage & TextureUsage::SAMPLEABLE);
 
     if (isDepth && !isColor && !isStencil) {
         return wgpu::TextureAspect::DepthOnly;
@@ -930,22 +977,31 @@ wgpu::TextureAspect WGPUTexture::fToWGPUTextureViewAspect(TextureUsage const& fU
     return wgpu::TextureAspect::All;
 }
 
+wgpu::TextureView WGPUTexture::getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer) const {
+    //TODO: there's an optimization to be made here to return mDefaultTextureView.
+    // Problem: mDefaultTextureView is a view of the entire texture,
+    // but this function (and its callers) expects a single-slice view.
+    // Returning the whole texture view for a single-slice request seems wrong.
+
+    return makeTextureView(mipLevel, 1, arrayLayer, 1, mSamplerType);
+}
+
 wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const uint8_t& levelCount,
-        SamplerType target) {
+        const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
+        SamplerType samplerType) const noexcept{
 
     wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mFormat,
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
-        // TODO: check if this baseArrayLayer assumption is correct
-        .baseArrayLayer = 0,
-        .arrayLayerCount = mArrayLayerCount,
+        .baseArrayLayer = baseArrayLayer,
+        .arrayLayerCount = arrayLayerCount,
         .aspect = mAspect,
         .usage = mUsage
     };
 
-    switch (target) {
+    switch (samplerType) {
         case SamplerType::SAMPLER_2D:
             textureViewDescriptor.dimension = wgpu::TextureViewDimension::e2D;
             break;
@@ -971,13 +1027,14 @@ wgpu::TextureView WGPUTexture::makeTextureView(const uint8_t& baseLevel, const u
     return textureView;
 }
 
-WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples,
+WGPURenderTarget::WGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
         const MRT& colorAttachmentsMRT,
         const Attachment& depthAttachmentInfo,
         const Attachment& stencilAttachmentInfo)
     : HwRenderTarget(width, height),
-      defaultRenderTarget(false),
-      samples(samples),
+      mDefaultRenderTarget(false),
+      mSamples(samples),
+      mLayerCount(layerCount),
       mColorAttachments(colorAttachmentsMRT),
       mDepthAttachment(depthAttachmentInfo),
       mStencilAttachment(stencilAttachmentInfo) {
@@ -1014,7 +1071,7 @@ void WGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& de
     mColorAttachmentDescriptors.clear();
     mHasDepthStencilAttachment = false;
 
-    if (defaultRenderTarget) {
+    if (mDefaultRenderTarget) {
         assert_invariant(defaultColorTextureView);
         mColorAttachmentDescriptors.push_back({ .view = defaultColorTextureView,
             .resolveTarget = nullptr,
