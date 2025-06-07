@@ -262,6 +262,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUBufferObject.cpp
             src/webgpu/WebGPUBufferObject.h
             src/webgpu/WebGPUConstants.h
+            src/webgpu/WebGPUDescriptorSet.cpp
+            src/webgpu/WebGPUDescriptorSet.h
+            src/webgpu/WebGPUDescriptorSetLayout.cpp
+            src/webgpu/WebGPUDescriptorSetLayout.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
             src/webgpu/WebGPUIndexBuffer.cpp

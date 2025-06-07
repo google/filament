@@ -16,6 +16,8 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUBufferObject.h"
+#include "WebGPUDescriptorSet.h"
+#include "WebGPUDescriptorSetLayout.h"
 #include "WebGPUHandles.h"
 #include "WebGPUIndexBuffer.h"
 #include "WebGPUPipelineCreation.h"
@@ -213,14 +215,15 @@ void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
 void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
-void WebGPUDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
-    if (tqh) {
-        destructHandle<WebGPUDescriptorSetLayout>(tqh);
+void WebGPUDriver::destroyDescriptorSetLayout(
+        Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle) {
+    if (descriptorSetLayoutHandle) {
+        destructHandle<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle);
     }
 }
 
-void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
-    auto* bindGroup = handleCast<WebGPUDescriptorSet>(tqh);
+void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> descriptorSetHandle) {
+    auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     assert_invariant(bindGroup);
     if (bindGroup->getBindGroup() != nullptr) {
         for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
@@ -233,8 +236,8 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
             }
         }
     }
-    if (tqh) {
-        destructHandle<WebGPUDescriptorSet>(tqh);
+    if (descriptorSetHandle) {
+        destructHandle<WebGPUDescriptorSet>(descriptorSetHandle);
     }
 }
 
@@ -448,15 +451,17 @@ void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
 
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
-void WebGPUDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
+void WebGPUDriver::createDescriptorSetLayoutR(
+        Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle,
         backend::DescriptorSetLayout&& info) {
-    constructHandle<WebGPUDescriptorSetLayout>(dslh, std::move(info), mDevice);
+    constructHandle<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle, std::move(info), mDevice);
 }
 
-void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
-        Handle<HwDescriptorSetLayout> dslh) {
-    auto layout = handleCast<WebGPUDescriptorSetLayout>(dslh);
-    constructHandle<WebGPUDescriptorSet>(dsh, layout->getLayout(), layout->getBindGroupEntries());
+void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> descriptorSetHandle,
+        Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle) {
+    auto layout = handleCast<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle);
+    constructHandle<WebGPUDescriptorSet>(descriptorSetHandle, layout->getLayout(),
+            layout->getBindGroupEntries());
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
@@ -1095,7 +1100,8 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
             renderPrimitive->indexBuffer->getIndexFormat());
 }
 
-void WebGPUDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
+        const uint32_t instanceCount) {
     // We defer actually binding until we actually draw
     for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
         auto& binding = mCurrentDescriptorSets[i];
@@ -1179,14 +1185,15 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> dsh,
     }
 }
 
-void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> dsh,
-        backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
+void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> descriptorSetHandle,
+        const backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
     assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
-    const auto bindGroup = handleCast<WebGPUDescriptorSet>(dsh);
+    const auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
 
-    mCurrentDescriptorSets[setIndex] = { .bindGroup = wbg,
-        .offsetCount = bindGroup->countEntitiesWithDynamicOffsets(),
+    mCurrentDescriptorSets[setIndex] = {
+        .bindGroup = wbg,
+        .offsetCount = bindGroup->getEntitiesWithDynamicOffsetsCount(),
         .offsets = std::move(offsets) };
 }
 
