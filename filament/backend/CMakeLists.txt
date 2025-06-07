@@ -270,8 +270,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUDriver.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
-            src/webgpu/WebGPUHandles.cpp
-            src/webgpu/WebGPUHandles.h
+            src/webgpu/WebGPURenderTarget.cpp
+            src/webgpu/WebGPURenderTarget.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
             src/webgpu/WebGPUStrings.h

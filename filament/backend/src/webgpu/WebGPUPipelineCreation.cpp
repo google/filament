@@ -16,8 +16,8 @@
 
 #include "WebGPUPipelineCreation.h"
 
-#include "WebGPUHandles.h"
 #include "WebGPUProgram.h"
+#include "WebGPURenderTarget.h"
 #include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
