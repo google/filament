@@ -345,8 +345,7 @@ void FEngine::init() {
 
     // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
     // backend differences.
-    const bool textureSpaceYFlipped = mBackend == Backend::METAL || mBackend == Backend::VULKAN ||
-                                      mBackend == Backend::WEBGPU;
+    const bool textureSpaceYFlipped = mBackend == Backend::METAL || mBackend == Backend::VULKAN;
     if (textureSpaceYFlipped) {
         mUvFromClipMatrix = mat4f(mat4f::row_major_init{
                 0.5f,  0.0f,   0.0f, 0.5f,
