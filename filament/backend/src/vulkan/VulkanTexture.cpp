@@ -25,6 +25,7 @@
 #include <backend/DriverEnums.h>
 #include <private/backend/BackendUtils.h>
 
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 
 using namespace bluevk;
@@ -216,6 +217,40 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
         }
     }
     return usage;
+}
+
+void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, size_t height,
+        size_t depth) {
+    uint8_t* buf = (uint8_t*) p.buffer;
+    size_t const pixelSize = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
+    size_t const pbdStride = p.stride ? p.stride : width;
+
+    // Slow path of copying row by row
+    assert_invariant(pbdStride >= width);
+    if (UTILS_UNLIKELY(p.left > 0 || p.top > 0 || pbdStride > width)) {
+        size_t const pbdRowSize =
+                PixelBufferDescriptor::computeDataSize(p.format, p.type, pbdStride, 1, p.alignment);
+        size_t const pbdHeight = p.size / pixelSize / pbdStride / depth;
+        size_t const pbdLayerSize = pbdRowSize * pbdHeight;
+
+        size_t const rowSize = width * pixelSize;
+        size_t const layerSize = width * height * pixelSize;
+
+        // Size of a row to write
+        size_t const writeSize = std::min(pbdStride - p.left, width) * pixelSize;
+
+        for (size_t z = 0; z < depth; z++) {
+            for (size_t y = p.top; y < pbdHeight; y++) {
+                uint8_t* buf = (uint8_t*) p.buffer +
+                               ((p.left * pixelSize) + (y * pbdRowSize) + (z * pbdLayerSize));
+                uint8_t* curMapped = (uint8_t*) mapped + ((y - p.top) * rowSize + z * layerSize);
+                memcpy(curMapped, buf, writeSize);
+            }
+        }
+    } else {
+        size_t const writeSize = pixelSize * (width * height * depth);
+        memcpy(mapped, buf, writeSize);
+    }
 }
 
 } // anonymous namespace
@@ -480,30 +515,40 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     assert_invariant(hostData->size > 0 && "Data is empty");
 
     // Otherwise, use vkCmdCopyBufferToImage.
-    void* mapped = nullptr;
-    VulkanStage const* stage = mState->mStagePool.acquireStage(hostData->size);
-    assert_invariant(stage->memory);
-    vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
-    memcpy(mapped, hostData->buffer, hostData->size);
-    vmaUnmapMemory(mState->mAllocator, stage->memory);
-    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, hostData->size);
+    size_t const bpp =
+            PixelBufferDescriptor::computeDataSize(hostData->format, hostData->type, 1, 1, 1);
+    size_t const writeSize = width * height * depth * bpp;
+
+    // Note: the following stageSegment must be stored within the command buffer
+    // before going out of scope, to ensure proper bookkeeping within the
+    // staging buffer pool.
+    fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
+            mState->mStagePool.acquireStage(writeSize);
+    assert_invariant(stageSegment->memory());
+    adjustedMemcpy(stageSegment->mapping(), *hostData, width, height, depth);
+    vmaFlushAllocation(mState->mAllocator, stageSegment->memory(), stageSegment->offset(),
+            writeSize);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stageSegment);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
+    bool const isDepth = getImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT;
+
     VkBufferImageCopy copyRegion = {
-        .bufferOffset = {},
+        .bufferOffset = stageSegment->offset(),
         .bufferRowLength = {},
         .bufferImageHeight = {},
         .imageSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .aspectMask = VkImageAspectFlags(
+                    isDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT),
             .mipLevel = miplevel,
             .baseArrayLayer = 0,
-            .layerCount = 1
+            .layerCount = 1,
         },
         .imageOffset = { int32_t(xoffset), int32_t(yoffset), int32_t(zoffset) },
-        .imageExtent = { width, height, depth }
+        .imageExtent = { width, height, depth },
     };
 
     VkImageSubresourceRange transitionRange = {
@@ -511,7 +556,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
         .baseMipLevel = miplevel,
         .levelCount = 1,
         .baseArrayLayer = 0,
-        .layerCount = 1
+        .layerCount = 1,
     };
 
     // Vulkan specifies subregions for 3D textures differently than from 2D arrays.
@@ -536,20 +581,25 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     transitionLayout(&commands, transitionRange, newLayout);
 
-    vkCmdCopyBufferToImage(cmdbuf, stage->buffer, mState->mTextureImage, newVkLayout, 1, &copyRegion);
+    vkCmdCopyBufferToImage(cmdbuf, stageSegment->buffer(), mState->mTextureImage, newVkLayout, 1,
+            &copyRegion);
 
     transitionLayout(&commands, transitionRange, nextLayout);
 }
 
-void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& hostData, uint32_t width,
+void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint32_t width,
         uint32_t height, uint32_t depth, uint32_t miplevel) {
+    // Otherwise, use vkCmdCopyBufferToImage.
+    size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
+    size_t const writeSize = width * height * depth * bpp;
+
     void* mapped = nullptr;
     VulkanStageImage const* stage
-            = mState->mStagePool.acquireImage(hostData.format, hostData.type, width, height);
+            = mState->mStagePool.acquireImage(data.format, data.type, width, height);
     vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
-    memcpy(mapped, hostData.buffer, hostData.size);
+    adjustedMemcpy(mapped, data, width, height, depth);
     vmaUnmapMemory(mState->mAllocator, stage->memory);
-    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, hostData.size);
+    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, writeSize);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -70,6 +72,7 @@ static const Config config {
 
 int main(int argc, char** argv) {
     App app;
+    config.backend = samples::parseArgumentsForBackend(argc, argv);
 
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         auto& tcm = engine->getTransformManager();

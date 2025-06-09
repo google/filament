@@ -47,6 +47,13 @@
 
 namespace filament {
 
+namespace {
+
+// TODO: reconcile this value (defined in VertexBuffer.h) with DriverEnums' MAX_VERTEX_BUFFER_COUNT
+constexpr size_t DOCUMENTED_MAX_VERTEX_BUFFER_COUNT = 8;
+
+} // anonymous
+
 using namespace backend;
 using namespace filament::math;
 
@@ -148,8 +155,16 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& na
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
     FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
-    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT)
-            << "bufferCount cannot be more than " << MAX_VERTEX_BUFFER_COUNT;
+
+    static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
+
+    if (downcast(engine).features.engine.debug.assert_vertex_buffer_count_exceeds_8) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT)
+                << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
+    } else if (mImpl->mBufferCount > DOCUMENTED_MAX_VERTEX_BUFFER_COUNT) {
+        utils::slog.w << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT
+                      << utils::io::endl;
+    }
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.

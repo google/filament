@@ -85,7 +85,11 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
 #endif
     };
-    VmaAllocatorCreateInfo const allocatorInfo {
+    VmaAllocatorCreateInfo const allocatorInfo{
+        // Disable the internal VMA synchronization because the backend is singled threaded.
+        // Improve CPU performance when using VMA functions. The backend will guarantee that all
+        // access to VMA is done in a thread safe way.
+        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
@@ -210,7 +214,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
               mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
-      mStagePool(mAllocator, &mCommands),
+      mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
       mBufferCache(context, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
@@ -330,7 +334,6 @@ void VulkanDriver::terminate() {
     // descriptorSetLayoutCache
     mExternalImageManager.terminate();
 
-    mStagePool.terminate();
     mPipelineCache.terminate();
     mFramebufferCache.terminate();
     mSamplerCache.terminate();
@@ -345,6 +348,10 @@ void VulkanDriver::terminate() {
     // Before terminating the memory pool, we must make sure all the VulkanBufferMemory are yielded
     // back to the pool.
     mBufferCache.terminate();
+
+    // Before terminating stagePool, we need all resources to have been
+    // reclaimed, as they perform cleanup within the stage pool.
+    mStagePool.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
@@ -1231,7 +1238,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands.buffer(), p.buffer, byteOffset, p.size);
+    ib->buffer.loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -1246,7 +1253,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -1257,7 +1264,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands.buffer(), bd.buffer, byteOffset, bd.size);
+    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -1630,8 +1637,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     mReadPixels.run(
             srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
             std::move(pbd),
-            [&context = mContext](uint32_t reqs, VkFlags flags) {
-                return context.selectMemoryType(reqs, flags);
+            [&context = mContext](uint32_t types, VkFlags reqs) {
+                return context.selectMemoryType(types, reqs);
             },
             [this](PixelBufferDescriptor&& pbd) {
                 scheduleDestroy(std::move(pbd));

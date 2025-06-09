@@ -16,7 +16,9 @@
 
 #include "WebGPUPipelineCreation.h"
 
-#include "WebGPUHandles.h"
+#include "WebGPUProgram.h"
+#include "WebGPURenderTarget.h"
+#include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -62,6 +64,17 @@ constexpr wgpu::CullMode toWebGPU(CullingMode cullMode) {
             FILAMENT_CHECK_POSTCONDITION(false)
                     << "WebGPU does not support CullingMode::FRONT_AND_BACK";
             return wgpu::CullMode::Undefined;
+    }
+}
+
+bool hasStencilAspect(wgpu::TextureFormat format) {
+    switch (format) {
+        case wgpu::TextureFormat::Stencil8:
+        case wgpu::TextureFormat::Depth24PlusStencil8:
+        case wgpu::TextureFormat::Depth32FloatStencil8:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -152,45 +165,70 @@ constexpr wgpu::BlendFactor toWebGPU(BlendFunction blendFunction) {
 }// namespace
 
 wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
-        WGPUProgram const& program, WGPUVertexBufferInfo const& vertexBufferInfo,
+        WebGPUProgram const& program, WebGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
-        StencilState const& stencilState, PolygonOffset const& polygonOffset, PrimitiveType primitiveType,
-        std::vector<wgpu::TextureFormat> const& colorFormats,
-        wgpu::TextureFormat depthFormat, uint8_t samplesCount) {
+        StencilState const& stencilState, PolygonOffset const& polygonOffset,
+        const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
+        const wgpu::TextureFormat depthFormat, const uint8_t samplesCount) {
     assert_invariant(program.vertexShaderModule);
-    const wgpu::DepthStencilState depthStencilState {
-        .format = depthFormat,
-        .depthWriteEnabled = rasterState.depthWrite,
-        .depthCompare = toWebGPU(rasterState.depthFunc),
-        .stencilFront = {
+    wgpu::DepthStencilState depthStencilState{};
+    if (depthFormat != wgpu::TextureFormat::Undefined) {
+        depthStencilState.format = depthFormat;
+        depthStencilState.depthWriteEnabled = rasterState.depthWrite;
+        depthStencilState.depthCompare = toWebGPU(rasterState.depthFunc);
+        depthStencilState.stencilFront = {
             .compare = toWebGPU(stencilState.front.stencilFunc),
             .failOp = toWebGPU(stencilState.front.stencilOpStencilFail),
             .depthFailOp = toWebGPU(stencilState.front.stencilOpDepthFail),
             .passOp = toWebGPU(stencilState.front.stencilOpDepthStencilPass),
-        },
-        .stencilBack = {
+        };
+        depthStencilState.stencilBack = {
             .compare = toWebGPU(stencilState.back.stencilFunc),
             .failOp = toWebGPU(stencilState.back.stencilOpStencilFail),
             .depthFailOp = toWebGPU(stencilState.back.stencilOpDepthFail),
             .passOp = toWebGPU(stencilState.back.stencilOpDepthStencilPass),
-        },
-        .stencilReadMask = 0,
-        .stencilWriteMask = stencilState.stencilWrite ? 0xFFFFFFFF : 0,
-        .depthBias = static_cast<int32_t>(polygonOffset.constant),
-        .depthBiasSlopeScale = polygonOffset.slope,
-        .depthBiasClamp = 0.0f
-    };
+        };
+        depthStencilState.stencilReadMask =
+                stencilState.front.readMask; // Use front face's comparison mask for read mask
+        depthStencilState.stencilWriteMask = stencilState.stencilWrite ? 0xFFFFFFFF : 0u;
+        depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
+        depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
+        depthStencilState.depthBiasClamp = 0.0f;
+
+        if (!hasStencilAspect(depthFormat)) {
+            depthStencilState.stencilFront.compare = wgpu::CompareFunction::Always;
+            depthStencilState.stencilFront.failOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilFront.depthFailOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilFront.passOp = wgpu::StencilOperation::Keep;
+            depthStencilState.stencilBack =
+                    depthStencilState.stencilFront; // Keep back and front consistent
+            depthStencilState.stencilReadMask = 0;
+            depthStencilState.stencilWriteMask = 0;
+        }
+    }
+
     std::stringstream pipelineLabelStream;
     pipelineLabelStream << program.name.c_str() << " pipeline";
     const auto pipelineLabel = pipelineLabelStream.str();
     wgpu::RenderPipelineDescriptor pipelineDescriptor{
         .label = wgpu::StringView(pipelineLabel),
         .layout = layout,
-        .vertex = {
-            .module = program.vertexShaderModule,
+        .vertex = { .module = program.vertexShaderModule,
             .entryPoint = "main",
-            .constantCount = program.constants.size(),
-            .constants = program.constants.data(),
+            // we do not use WebGPU's override constants due to 2 limitations
+            // (at least at the time of write this):
+            // 1. they cannot be used for the size of an array, which is needed
+            // 2. if we pass the WebGPU API (CPU-side) constants not referenced in the
+            //    shader WebGPU fails. This is a problem with how Filament is designed,
+            //    where certain constants may be optimized out of the shader based
+            //    on build configuration, etc.
+            //
+            // to bypass these problems, we do not use override constants in the
+            // WebGPU backend, instead replacing placeholder constants in the shader
+            // text before creating the shader module (essentially implementing
+            // override constants ourselves)
+            .constantCount = 0,
+            .constants = nullptr,
             .bufferCount = vertexBufferInfo.getVertexBufferLayoutCount(),
             .buffers = vertexBufferInfo.getVertexBufferLayouts()
         },
@@ -232,8 +270,10 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
     if (program.fragmentShaderModule != nullptr) {
         fragmentState.module = program.fragmentShaderModule;
         fragmentState.entryPoint = "main";
-        fragmentState.constantCount = program.constants.size(),
-        fragmentState.constants = program.constants.data(),
+        // see the comment about constants for the vertex state, as the same reasoning applies
+        // here
+        fragmentState.constantCount = 0,
+        fragmentState.constants = nullptr,
         fragmentState.targetCount = colorFormats.size();
         fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
