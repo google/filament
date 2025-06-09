@@ -101,20 +101,20 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                 .depthClearValue = static_cast<float>(params.clearDepth),
                 .depthReadOnly =
                         (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+                .stencilLoadOp = wgpu::LoadOp::Undefined,
+                .stencilStoreOp = wgpu::StoreOp::Undefined,
+                .stencilClearValue = params.clearStencil,
+                .stencilReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0,
             };
+
             if (defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
                     defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
                 mDepthStencilAttachmentDescriptor.stencilLoadOp =
                         WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
                 mDepthStencilAttachmentDescriptor.stencilStoreOp =
                         WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::STENCIL);
-            } else {
-                mDepthStencilAttachmentDescriptor.stencilLoadOp = wgpu::LoadOp::Undefined;
-                mDepthStencilAttachmentDescriptor.stencilStoreOp = wgpu::StoreOp::Undefined;
             }
-            mDepthStencilAttachmentDescriptor.stencilClearValue = params.clearStencil;
-            mDepthStencilAttachmentDescriptor.stencilReadOnly =
-                    (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
             mHasDepthStencilAttachment = true;
         }
     } else { // Custom Render Target
