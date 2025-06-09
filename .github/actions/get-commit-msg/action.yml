@@ -17,15 +17,17 @@ runs:
         echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
         echo "" >> /tmp/commit_msg.txt
         echo "${{ github.event.head_commit.message }}" >> /tmp/commit_msg.txt
-    - name: Checkout code
+    - name: Find commit message (PR)
       shell: bash
       id: checkout_code
       if: github.event_name == 'pull_request'
       run: |
+        echo "+++++ head commit message +++++"
+        echo "$(git log -1 --no-merges)"
+        echo "+++++++++++++++++++++++++++++++"
         echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-        git checkout ${{ github.event.pull_request.head.ref }}
-        COMMIT_MESSAGE=$(git log -1)
-        echo "$(git log -1)" >> /tmp/commit_msg.txt
+        git checkout ${{ github.event.pull_request.head.sha }}
+        echo "$(git log -1 --no-merges)" >> /tmp/commit_msg.txt
     - shell: bash
       id: action_output
       run: |
@@ -36,7 +38,7 @@ runs:
         echo "----- got commit message ---"
         cat /tmp/commit_msg.txt
         echo "----------------------------"
-    - name: Uncheckout code
+    - name: Cleanup Find commit message (PR)
       shell: bash
       if: github.event_name == 'pull_request'
       run: |
