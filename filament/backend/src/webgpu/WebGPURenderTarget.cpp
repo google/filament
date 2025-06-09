@@ -130,12 +130,12 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
 
         const bool hasStencil =
                 customStencilTextureView ||
-                (customDepthFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                        customDepthFormat == wgpu::TextureFormat::Depth32FloatStencil8);
+                (customStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+                        customStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8);
 
         const bool hasDepth =
                 customDepthTextureView ||
-                (customStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
+                (customDepthFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
                         customDepthFormat == wgpu::TextureFormat::Depth32FloatStencil8);
 
         if (customDepthTextureView || customStencilTextureView) {
