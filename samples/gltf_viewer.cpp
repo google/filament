@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -155,19 +157,7 @@ static void printUsage(char* name) {
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
-        "   --api, -a\n"
-        "       Specify the backend API: "
-
-// Matches logic in filament/backend/src/PlatformFactory.cpp for Backend::DEFAULT
-#if defined(FILAMENT_IOS) || defined(__APPLE__)
-        "opengl, vulkan, or metal (default)"
-#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        "opengl, vulkan (default), or metal"
-#else
-        "opengl (default), vulkan, or metal"
-#endif
-        "\n\n"
-
+        "API_USAGE"
         "   --feature-level=<1|2|3>, -f <1|2|3>\n"
         "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
@@ -211,6 +201,10 @@ static void printUsage(char* name) {
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
+    }
     std::cout << usage;
 }
 
@@ -249,15 +243,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
             case 'f':
                 if (arg == "1") {
