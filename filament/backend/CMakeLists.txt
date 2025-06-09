@@ -270,18 +270,18 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUDriver.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
-            src/webgpu/WebGPURenderTarget.cpp
-            src/webgpu/WebGPURenderTarget.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUProgram.cpp
+            src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPURenderPrimitive.h
+            src/webgpu/WebGPURenderTarget.cpp
+            src/webgpu/WebGPURenderTarget.h
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WebGPUTexture.cpp
             src/webgpu/WebGPUTexture.h
-            src/webgpu/WebGPUProgram.cpp
-            src/webgpu/WebGPUProgram.h
-            src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPUVertexBuffer.cpp
             src/webgpu/WebGPUVertexBuffer.h
             src/webgpu/WebGPUVertexBufferInfo.cpp
