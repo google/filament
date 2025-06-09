@@ -46,6 +46,7 @@ public:
             // For default render target:
             wgpu::TextureView const& defaultColorTextureView,
             wgpu::TextureView const& defaultDepthStencilTextureView,
+            wgpu::TextureFormat const& defaultDepthStencilFormat,
             // For custom render targets:
             wgpu::TextureView const* customColorTextureViews, // Array of views
             uint32_t customColorTextureViewCount,
