@@ -16,7 +16,9 @@
 
 #include "WebGPUPipelineCreation.h"
 
-#include "WebGPUHandles.h"
+#include "WebGPUProgram.h"
+#include "WebGPURenderTarget.h"
+#include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -163,11 +165,11 @@ constexpr wgpu::BlendFactor toWebGPU(BlendFunction blendFunction) {
 }// namespace
 
 wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
-        WGPUProgram const& program, WGPUVertexBufferInfo const& vertexBufferInfo,
+        WebGPUProgram const& program, WebGPUVertexBufferInfo const& vertexBufferInfo,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
-        StencilState const& stencilState, PolygonOffset const& polygonOffset, PrimitiveType primitiveType,
-        std::vector<wgpu::TextureFormat> const& colorFormats,
-        wgpu::TextureFormat depthFormat, uint8_t samplesCount) {
+        StencilState const& stencilState, PolygonOffset const& polygonOffset,
+        const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
+        const wgpu::TextureFormat depthFormat, const uint8_t samplesCount) {
     assert_invariant(program.vertexShaderModule);
     wgpu::DepthStencilState depthStencilState{};
     if (depthFormat != wgpu::TextureFormat::Undefined) {
@@ -213,8 +215,20 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         .layout = layout,
         .vertex = { .module = program.vertexShaderModule,
             .entryPoint = "main",
-            .constantCount = program.constants.size(),
-            .constants = program.constants.data(),
+            // we do not use WebGPU's override constants due to 2 limitations
+            // (at least at the time of write this):
+            // 1. they cannot be used for the size of an array, which is needed
+            // 2. if we pass the WebGPU API (CPU-side) constants not referenced in the
+            //    shader WebGPU fails. This is a problem with how Filament is designed,
+            //    where certain constants may be optimized out of the shader based
+            //    on build configuration, etc.
+            //
+            // to bypass these problems, we do not use override constants in the
+            // WebGPU backend, instead replacing placeholder constants in the shader
+            // text before creating the shader module (essentially implementing
+            // override constants ourselves)
+            .constantCount = 0,
+            .constants = nullptr,
             .bufferCount = vertexBufferInfo.getVertexBufferLayoutCount(),
             .buffers = vertexBufferInfo.getVertexBufferLayouts()
         },
@@ -256,8 +270,10 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
     if (program.fragmentShaderModule != nullptr) {
         fragmentState.module = program.fragmentShaderModule;
         fragmentState.entryPoint = "main";
-        fragmentState.constantCount = program.constants.size(),
-        fragmentState.constants = program.constants.data(),
+        // see the comment about constants for the vertex state, as the same reasoning applies
+        // here
+        fragmentState.constantCount = 0,
+        fragmentState.constants = nullptr,
         fragmentState.targetCount = colorFormats.size();
         fragmentState.targets = colorTargets.data();
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
