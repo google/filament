@@ -807,6 +807,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
 
     wgpu::TextureView defaultColorView = nullptr;
     wgpu::TextureView defaultDepthStencilView = nullptr;
+    wgpu::TextureFormat defaultDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
     std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
     uint32_t customColorViewCount = 0;
@@ -820,6 +821,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         assert_invariant(mSwapChain && mTextureView);
         defaultColorView = mTextureView;
         defaultDepthStencilView = mSwapChain->getDepthTextureView();
+        defaultDepthStencilFormat = mSwapChain->getDepthFormat();
     } else {
         // Resolve views for custom render target
         const auto& colorInfos = renderTarget->getColorAttachmentInfos();
@@ -877,6 +879,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             params,
             defaultColorView,
             defaultDepthStencilView,
+            defaultDepthStencilFormat,
             customColorViews.data(),
             customColorViewCount,
             customDepthView,
