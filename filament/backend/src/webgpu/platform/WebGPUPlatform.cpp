@@ -87,6 +87,7 @@ constexpr wgpu::Limits REQUIRED_LIMITS = {
     .maxBindingsPerBindGroup = filament::backend::MAX_DESCRIPTOR_COUNT,
     .maxSamplersPerShaderStage = 16, // TODO should be set to filament::backend::MAX_SAMPLER_COUNT,
     .maxStorageBuffersPerShaderStage = filament::backend::MAX_SSBO_COUNT,
+    .maxStorageTexturesPerShaderStage = 8,
     .maxVertexBuffers = 8, // TODO should be set to filament::backend::MAX_VERTEX_BUFFER_COUNT,
     .maxVertexAttributes = filament::backend::MAX_VERTEX_ATTRIBUTE_COUNT,
 };
