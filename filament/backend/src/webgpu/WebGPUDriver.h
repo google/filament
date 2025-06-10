@@ -29,6 +29,7 @@
 
 #include <utils/compiler.h>
 
+#include <tsl/robin_map.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
