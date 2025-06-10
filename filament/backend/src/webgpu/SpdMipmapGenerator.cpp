@@ -78,7 +78,7 @@ namespace spd {
     void MipmapGenerator::PreparePipelines(wgpu::TextureFormat format, SPDFilter filter, bool halfPrecision) {
         SPDScalarType scalarType = SanitizeScalarType(format, halfPrecision);
         // Prepare for a reasonable number of mips
-        for (uint32_t i = 1; i <= 12; ++i) {
+        for (uint32_t i = 1; i <= 4; ++i) {
             GetOrCreatePipeline(format, filter, i, scalarType);
         }
     }
