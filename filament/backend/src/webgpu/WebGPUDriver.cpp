@@ -529,8 +529,8 @@ bool WebGPUDriver::isTextureSwizzleSupported() {
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
-    //todo
-    return true;
+    return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
+            WebGPUTexture::fToWGPUTextureFormat(format));
 }
 
 bool WebGPUDriver::isRenderTargetFormatSupported(const TextureFormat format) {
@@ -756,6 +756,14 @@ void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
     if (mipLevelCount <= 1) {
         return;
     }
+    FILAMENT_CHECK_PRECONDITION(texture->supportsMultipleMipLevels())
+            << "Calling generateMipmaps(...) on a texture that doesn't support generating them. "
+               "sampler type "
+            << to_string(texture->target) << " levels " << static_cast<uint32_t>(texture->levels)
+            << " wgpu format (enum value) "
+            << static_cast<uint32_t>(texture->getTexture().GetFormat()) << " width "
+            << texture->width << " height " << texture->height << " depth " << texture->depth
+            << " usage flags (as a number) " << static_cast<uint32_t>(texture->usage);
 
     uint32_t width = wgpuTexture.GetWidth();
     uint32_t height = wgpuTexture.GetHeight();
@@ -853,7 +861,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                 const uint32_t depthArrayLayer = depthInfo.layer;
                 customDepthView =
                         depthTexture->getOrMakeTextureView(depthMipLevel, depthArrayLayer);
-                customDepthFormat = depthTexture->getWebGPUFormat();
+                customDepthFormat = depthTexture->getViewFormat();
             }
         }
 
@@ -870,7 +878,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                 const uint32_t stencilArrayLayer = stencilInfo.layer;
                 customStencilView =
                         stencilTexture->getOrMakeTextureView(stencilMipLevel, stencilArrayLayer);
-                customStencilFormat = stencilTexture->getWebGPUFormat();
+                customStencilFormat = stencilTexture->getViewFormat();
             }
         }
     }
