@@ -34,7 +34,32 @@
 namespace filament::backend {
 
 namespace {
-
+[[nodiscard]] bool IsFormatStorageCompatible(wgpu::TextureFormat format) {
+    switch (format) {
+        // List of formats that support storage binding
+        case wgpu::TextureFormat::R32Float:
+        case wgpu::TextureFormat::R32Sint:
+        case wgpu::TextureFormat::R32Uint:
+        case wgpu::TextureFormat::RG32Float:
+        case wgpu::TextureFormat::RG32Sint:
+        case wgpu::TextureFormat::RG32Uint:
+        case wgpu::TextureFormat::RGBA16Float:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA32Float:
+        case wgpu::TextureFormat::RGBA32Sint:
+        case wgpu::TextureFormat::RGBA32Uint:
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8Snorm:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGBA8Sint:
+            return true;
+        default:
+            // All other formats, including packed floats (RG11B10Ufloat),
+            // depth/stencil, and sRGB formats do not support storage.
+            return false;
+    }
+}
 wgpu::TextureFormat GetStorageCompatibleFormat(wgpu::TextureFormat srgbFormat) {
     switch (srgbFormat) {
         case wgpu::TextureFormat::RGBA8UnormSrgb:
@@ -264,6 +289,10 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) } {
     mCompatFormat = GetStorageCompatibleFormat(mWebGPUFormat);
+        if(levels > 1 && (mWebGPUUsage & wgpu::TextureUsage::TextureBinding) && (mWebGPUUsage & wgpu::TextureUsage::CopyDst) && IsFormatStorageCompatible(mCompatFormat)){
+        mWebGPUUsage |= wgpu::TextureUsage::StorageBinding;
+    }
+
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
