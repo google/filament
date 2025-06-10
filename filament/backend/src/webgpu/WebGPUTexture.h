@@ -61,6 +61,7 @@ private:
     wgpu::Texture mTexture = nullptr;
     // format is inherited from HwTexture. This naming is to distinguish it from Filament's format
     wgpu::TextureFormat mWebGPUFormat = wgpu::TextureFormat::Undefined;
+    wgpu::TextureFormat mCompatFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
     // usage is inherited from HwTexture. This naming is to distinguish it from Filament's usage
     wgpu::TextureUsage mWebGPUUsage = wgpu::TextureUsage::None;

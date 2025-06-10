@@ -263,7 +263,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mWebGPUUsage{ fToWGPUTextureUsage(usage, samples) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) } {
-    auto compatFormat = GetStorageCompatibleFormat(mWebGPUFormat);
+    mCompatFormat = GetStorageCompatibleFormat(mWebGPUFormat);
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
@@ -286,10 +286,13 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
     };
 
     //If our main format is not srgb, make the srgb a view into a non-srgb format
-    if(compatFormat != mWebGPUFormat){
+    if(mCompatFormat != mWebGPUFormat){
         textureDescriptor.viewFormatCount = 1;
-        std::swap(compatFormat, mWebGPUFormat);
-        textureDescriptor.viewFormats = &compatFormat;
+        std::swap(mCompatFormat, mWebGPUFormat);
+        textureDescriptor.format = mWebGPUFormat;
+        textureDescriptor.viewFormats = &mCompatFormat;
+        mWebGPUUsage|=wgpu::TextureUsage::StorageBinding;
+        textureDescriptor.usage = mWebGPUUsage;
     }
     mArrayLayerCount = toArrayLayerCount(samplerType, textureDescriptor.size.depthOrArrayLayers);
     assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
@@ -516,9 +519,9 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
 wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
         const SamplerType samplerType) const noexcept {
-    const wgpu::TextureViewDescriptor textureViewDescriptor{
+    wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
-        .format = mWebGPUFormat,
+        .format = mCompatFormat,
         .dimension = toWebGPUTextureViewDimension(samplerType),
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
@@ -526,6 +529,7 @@ wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         .arrayLayerCount = arrayLayerCount,
         .aspect = mAspect,
         .usage = mWebGPUUsage };
+    textureViewDescriptor.usage &= (~wgpu::TextureUsage::StorageBinding);
     wgpu::TextureView textureView = mTexture.CreateView(&textureViewDescriptor);
     FILAMENT_CHECK_POSTCONDITION(textureView)
             << "Failed to create texture view " << textureViewDescriptor.label;
