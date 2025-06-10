@@ -26,21 +26,6 @@
 #include <string_view>
 #include <utility>
 
-namespace utils {
-
-// handles utils::bitset
-
-namespace io {
-class ostream;
-}
-
-template<typename S, typename = std::enable_if_t<std::is_same_v<S, std::ostream> ||
-                                                 std::is_same_v<S, io::ostream>>>
-inline S& operator<<(S& o, bitset32 const& s) noexcept {
-    return o << (void*) uintptr_t(s.getValue());
-}
-}// namespace utils
-
 namespace utils::io {
 
 struct ostream_;
@@ -154,5 +139,22 @@ inline ostream& dec(ostream& s) noexcept { return s.dec(); }
 inline ostream& endl(ostream& s) noexcept { return flush(s << '\n'); }
 
 } // namespace utils::io
+
+namespace utils {
+
+// handles utils::bitset
+
+namespace io {
+class ostream;
+}
+
+inline std::ostream& operator<<(std::ostream& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+inline io::ostream& operator<<(io::ostream& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+}// namespace utils
+
 
 #endif // TNT_UTILS_OSTREAM_H
