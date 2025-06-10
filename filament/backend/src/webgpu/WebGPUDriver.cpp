@@ -1222,8 +1222,8 @@ wgpu::Sampler WebGPUDriver::makeSampler(SamplerParams const& params) {
 
     desc.label = "TODO";
     desc.addressModeU = fWrapModeToWAddressMode(params.wrapS);
-    desc.addressModeV = fWrapModeToWAddressMode(params.wrapR);
-    desc.addressModeW = fWrapModeToWAddressMode(params.wrapT);
+    desc.addressModeV = fWrapModeToWAddressMode(params.wrapT);
+    desc.addressModeW = fWrapModeToWAddressMode(params.wrapR);
 
     switch (params.filterMag) {
         case SamplerMagFilter::NEAREST: {
