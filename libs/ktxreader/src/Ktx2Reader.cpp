@@ -247,7 +247,7 @@ Texture* Ktx2Reader::load(const void* data, size_t size, TransferFunction transf
     ktx2_transcoder_state basisThreadState;
     basisThreadState.clear();
 
-    for (uint32_t levelIndex = 0, n = mTranscoder->get_levels(); levelIndex < n; levelIndex++) {
+    for (uint32_t levelIndex = 0, n = 1 /*mTranscoder->get_levels()*/; levelIndex < n; levelIndex++) {
         Texture::PixelBufferDescriptor* pbd;
         Result result = transcodeImageLevel(*mTranscoder, basisThreadState, texture->getFormat(),
                 levelIndex, &pbd);
@@ -275,7 +275,7 @@ FAsync::~FAsync() {
 Result FAsync::doTranscoding() {
     ktx2_transcoder_state basisThreadState;
     basisThreadState.clear();
-    for (uint32_t levelIndex = 0, n = mTranscoder->get_levels(); levelIndex < n; levelIndex++) {
+    for (uint32_t levelIndex = 0, n = 1 /*mTranscoder->get_levels()*/; levelIndex < n; levelIndex++) {
         Texture::PixelBufferDescriptor* pbd;
         Result result = transcodeImageLevel(*mTranscoder, basisThreadState, mTexture->getFormat(),
                 levelIndex, &pbd);
@@ -385,7 +385,7 @@ Texture* Ktx2Reader::createTexture(ktx2_transcoder* transcoder, const void* data
         }
         const uint32_t layerIndex = 0;
         const uint32_t faceIndex = 0;
-        for (uint32_t levelIndex = 0; levelIndex < transcoder->get_levels(); levelIndex++) {
+        for (uint32_t levelIndex = 0; levelIndex < 1 /*transcoder->get_levels()*/; levelIndex++) {
             basist::ktx2_image_level_info info;
             if (!transcoder->get_image_level_info(info, levelIndex, layerIndex, faceIndex)) {
                 continue;
@@ -406,7 +406,7 @@ Texture* Ktx2Reader::createTexture(ktx2_transcoder* transcoder, const void* data
     Texture* texture = Texture::Builder()
         .width(transcoder->get_width())
         .height(transcoder->get_height())
-        .levels(transcoder->get_levels())
+        .levels(1)
         .sampler(Texture::Sampler::SAMPLER_2D)
         .format(resolvedFormat)
         .build(mEngine);

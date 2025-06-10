@@ -27,7 +27,7 @@ Texture* createTexture(Engine* engine, const Ktx1Bundle& ktx, bool srgb,
         Callback callback, void* userdata) {
     using Sampler = Texture::Sampler;
     const auto& ktxinfo = ktx.getInfo();
-    const uint32_t nmips = ktx.getNumMipLevels();
+    const uint32_t nmips = /* ktx.getNumMipLevels() */ 1;
     const auto cdatatype = toCompressedPixelDataType(ktxinfo);
     const auto datatype = toPixelDataType(ktxinfo);
     const auto dataformat = toPixelDataFormat(ktxinfo);

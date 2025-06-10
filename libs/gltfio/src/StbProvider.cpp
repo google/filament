@@ -99,7 +99,7 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
     Texture* texture = Texture::Builder()
             .width(width)
             .height(height)
-            .levels(0xff)
+            .levels(1)
             .format(any(flags & TextureFlags::sRGB) ? InternalFormat::SRGB8_A8 : InternalFormat::RGBA8)
             .build(*mEngine);
 
@@ -190,7 +190,7 @@ void StbProvider::updateQueue() {
 
             // Call generateMipmaps unconditionally to fulfill the promise of the TextureProvider
             // interface. Providers of hierarchical images (e.g. KTX) call this only if needed.
-            texture->generateMipmaps(*mEngine);
+            // texture->generateMipmaps(*mEngine);
 
             info->state = TextureState::READY;
             ++mDecodedCount;
