@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "WebGPUHandles.h"
+#include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -74,8 +74,8 @@ private:
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
-    WGPURenderTarget* mDefaultRenderTarget = nullptr;
-    WGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WebGPURenderTarget* mCurrentRenderTarget = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 

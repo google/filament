@@ -143,7 +143,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         mTaskHandler = std::make_unique<TaskHandler>();
     }
 
-    VkCommandPool& cmdpool = mCommandPool;
+    VkCommandPool const cmdpool = mCommandPool;
 
     fvkmemory::resource_ptr<VulkanTexture> srcTexture = srcTarget->getColor0().texture;
     assert_invariant(srcTexture);
@@ -152,17 +152,17 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
             = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
 
     // Create a host visible, linearly tiled image as a staging area.
-    VkImageCreateInfo const imageInfo{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = srcFormat,
-            .extent = {width, height, 1},
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_LINEAR,
-            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    VkImageCreateInfo const imageInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = srcFormat,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
     VkImage stagingImage;
@@ -195,20 +195,20 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
             << "VulkanReadPixels: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo const allocInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memReqs.size,
-            .memoryTypeIndex = memoryTypeIndex,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = memoryTypeIndex,
     };
 
     vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
     VkCommandBuffer cmdbuffer;
-    VkCommandBufferAllocateInfo const allocateInfo{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = cmdpool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
+    VkCommandBufferAllocateInfo const allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = cmdpool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
     };
     vkAllocateCommandBuffers(device, &allocateInfo, &cmdbuffer);
 
@@ -303,7 +303,6 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
                                  cmdpool, cmdbuffer, pUserBuffer,
                                  fence = readCompleteFence]() mutable {
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-        // Fence hasn't been reached. Try waiting again.
         if (status != VK_SUCCESS) {
             FVK_LOGE << "Failed to wait for readPixels fence";
             return;

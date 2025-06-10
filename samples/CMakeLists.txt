@@ -19,6 +19,7 @@ set(RESOURCE_BINS)
 set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
         materials/bakedColor.mat
+        materials/bakedColorWithMutableConstants.mat
         materials/bakedTexture.mat
         materials/aoPreview.mat
         materials/arrayTexture.mat
@@ -278,6 +279,7 @@ if (NOT ANDROID)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(multiple_windows)
+    add_demo(mutable_constants)
     # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
     # https://github.com/gpuweb/gpuweb/issues/1190
     if (NOT FILAMENT_SUPPORTS_WEBGPU)
@@ -288,6 +290,7 @@ if (NOT ANDROID)
     add_demo(sample_full_pbr)
     add_demo(sample_normal_map)
     add_demo(shadowtest)
+    add_demo(simple_gltf_test)
     add_demo(skinningtest)
     add_demo(strobecolor)
     add_demo(suzanne)
@@ -306,6 +309,7 @@ if (NOT ANDROID)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
+    target_link_libraries(simple_gltf_test PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
     if (FILAMENT_DISABLE_MATOPT)

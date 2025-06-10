@@ -85,7 +85,11 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
         .vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR
 #endif
     };
-    VmaAllocatorCreateInfo const allocatorInfo {
+    VmaAllocatorCreateInfo const allocatorInfo{
+        // Disable the internal VMA synchronization because the backend is singled threaded.
+        // Improve CPU performance when using VMA functions. The backend will guarantee that all
+        // access to VMA is done in a thread safe way.
+        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
         .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &funcs,
@@ -1626,8 +1630,8 @@ void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y
     mReadPixels.run(
             srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
             std::move(pbd),
-            [&context = mContext](uint32_t reqs, VkFlags flags) {
-                return context.selectMemoryType(reqs, flags);
+            [&context = mContext](uint32_t types, VkFlags reqs) {
+                return context.selectMemoryType(types, reqs);
             },
             [this](PixelBufferDescriptor&& pbd) {
                 scheduleDestroy(std::move(pbd));

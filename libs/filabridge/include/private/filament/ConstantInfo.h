@@ -30,7 +30,19 @@ struct MaterialConstant {
     ConstantType type;
 
     MaterialConstant() = default;
-    MaterialConstant(const char* name, ConstantType type) : name(name), type(type)  {}
+    MaterialConstant(utils::CString name, ConstantType type) : name(std::move(name)), type(type)  {}
+};
+
+struct MaterialMutableConstant {
+    utils::CString name;
+    // The Filament engine stores mutable spec constants as a bitfield, meaning that must override
+    // all of the default values built into in the shader souces. Therefore, unlike the immutable
+    // constants above, we have to store the default values in the material metadata.
+    bool defaultValue;
+
+    MaterialMutableConstant() = default;
+    MaterialMutableConstant(utils::CString name, bool defaultValue)
+            : name(std::move(name)), defaultValue(defaultValue) {}
 };
 
 }
