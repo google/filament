@@ -873,6 +873,7 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+    add_subdirectory(${EXTERNAL}/zlib/tnt)
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/cso-lut)
