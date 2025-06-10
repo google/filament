@@ -109,7 +109,8 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             };
 
             if (defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                    defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
+                    defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
+                    defaultDepthStencilFormat == wgpu::TextureFormat::Stencil8) {
                 mDepthStencilAttachmentDescriptor.stencilLoadOp =
                         WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::STENCIL);
                 mDepthStencilAttachmentDescriptor.stencilStoreOp =
