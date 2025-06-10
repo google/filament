@@ -139,30 +139,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             return bufferDimension;
         }
 
-        void exportScreenshot(void* pixelData) const {
-#ifndef FILAMENT_IOS
-            const size_t width = readRect.width, height = readRect.height;
-            LinearImage image(width, height, 4);
-            if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
-            }
-            if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
-                memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
-            }
-            std::string png = std::string(testName) + ".png";
-            std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                    png.c_str());
-#endif
-        }
-
-        void exportRawBytes(void* pixelData) const {
-            std::string out = std::string(testName) + ".raw";
-            std::ofstream outputStream(out.c_str(), std::ios::binary | std::ios::trunc);
-            outputStream.write((char*)pixelData, getBufferSizeBytes());
-            outputStream.close();
-        }
-
         // The format and type for the readPixels call.
         PixelDataFormat format = PixelDataFormat::RGBA;
         PixelDataType type = PixelDataType::UBYTE;
@@ -334,9 +310,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                         void* user) {
                     const auto* test = (const TestCase*)user;
                     assert_invariant(test);
-
-                    test->exportScreenshot(buffer);
-                    //test->exportRawBytes(buffer);
 
                     // Hash the contents of the buffer and check that they match.
                     uint32_t hash = utils::hash::murmur3((const uint32_t*)buffer, size / 4, 0);
