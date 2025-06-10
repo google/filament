@@ -253,6 +253,10 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         },
         .fragment = nullptr // will add below if fragment module is included
     };
+    if (rasterState.alphaToCoverage)
+    {
+        pipelineDescriptor.multisample.count = 4;
+    }
     wgpu::FragmentState fragmentState = {};
     std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
     const wgpu::BlendState blendState {
