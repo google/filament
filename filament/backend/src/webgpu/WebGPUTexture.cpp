@@ -35,6 +35,59 @@ namespace filament::backend {
 
 namespace {
 
+wgpu::TextureFormat GetStorageCompatibleFormat(wgpu::TextureFormat srgbFormat) {
+    switch (srgbFormat) {
+        case wgpu::TextureFormat::RGBA8UnormSrgb:
+            return wgpu::TextureFormat::RGBA8Unorm;
+        case wgpu::TextureFormat::BGRA8UnormSrgb:
+            return wgpu::TextureFormat::BGRA8Unorm;
+        case wgpu::TextureFormat::BC1RGBAUnormSrgb:
+            return wgpu::TextureFormat::BC1RGBAUnorm;
+        case wgpu::TextureFormat::BC2RGBAUnormSrgb:
+            return wgpu::TextureFormat::BC2RGBAUnorm;
+        case wgpu::TextureFormat::BC3RGBAUnormSrgb:
+            return wgpu::TextureFormat::BC3RGBAUnorm;
+        case wgpu::TextureFormat::BC7RGBAUnormSrgb:
+            return wgpu::TextureFormat::BC7RGBAUnorm;
+        case wgpu::TextureFormat::ETC2RGB8UnormSrgb:
+            return wgpu::TextureFormat::ETC2RGB8Unorm;
+        case wgpu::TextureFormat::ETC2RGB8A1UnormSrgb:
+            return wgpu::TextureFormat::ETC2RGB8A1Unorm;
+        case wgpu::TextureFormat::ETC2RGBA8UnormSrgb:
+            return wgpu::TextureFormat::ETC2RGBA8Unorm;
+        case wgpu::TextureFormat::ASTC4x4UnormSrgb:
+            return wgpu::TextureFormat::ASTC4x4Unorm;
+        case wgpu::TextureFormat::ASTC5x4UnormSrgb:
+            return wgpu::TextureFormat::ASTC5x4Unorm;
+        case wgpu::TextureFormat::ASTC5x5UnormSrgb:
+            return wgpu::TextureFormat::ASTC5x5Unorm;
+        case wgpu::TextureFormat::ASTC6x5UnormSrgb:
+            return wgpu::TextureFormat::ASTC6x5Unorm;
+        case wgpu::TextureFormat::ASTC6x6UnormSrgb:
+            return wgpu::TextureFormat::ASTC6x6Unorm;
+        case wgpu::TextureFormat::ASTC8x5UnormSrgb:
+            return wgpu::TextureFormat::ASTC8x5Unorm;
+        case wgpu::TextureFormat::ASTC8x6UnormSrgb:
+            return wgpu::TextureFormat::ASTC8x6Unorm;
+        case wgpu::TextureFormat::ASTC8x8UnormSrgb:
+            return wgpu::TextureFormat::ASTC8x8Unorm;
+        case wgpu::TextureFormat::ASTC10x5UnormSrgb:
+            return wgpu::TextureFormat::ASTC10x5Unorm;
+        case wgpu::TextureFormat::ASTC10x6UnormSrgb:
+            return wgpu::TextureFormat::ASTC10x6Unorm;
+        case wgpu::TextureFormat::ASTC10x8UnormSrgb:
+            return wgpu::TextureFormat::ASTC10x8Unorm;
+        case wgpu::TextureFormat::ASTC10x10UnormSrgb:
+            return wgpu::TextureFormat::ASTC10x10Unorm;
+        case wgpu::TextureFormat::ASTC12x10UnormSrgb:
+            return wgpu::TextureFormat::ASTC12x10Unorm;
+        case wgpu::TextureFormat::ASTC12x12UnormSrgb:
+            return wgpu::TextureFormat::ASTC12x12Unorm;
+        default:
+            return srgbFormat; // If not an sRGB format, return the same input
+    }
+}
+
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
     // TODO will be helpful to get more useful info than this
     switch (target) {
@@ -210,6 +263,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mWebGPUUsage{ fToWGPUTextureUsage(usage, samples) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) } {
+    auto compatFormat = GetStorageCompatibleFormat(mWebGPUFormat);
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
@@ -217,7 +271,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
-    const wgpu::TextureDescriptor textureDescriptor{
+    wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(samplerType),
         .usage = mWebGPUUsage,
         .dimension = toWebGPUTextureDimension(samplerType),
@@ -230,6 +284,13 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         .viewFormatCount = 0,
         .viewFormats = nullptr,
     };
+
+    //If our main format is not srgb, make the srgb a view into a non-srgb format
+    if(compatFormat != mWebGPUFormat){
+        textureDescriptor.viewFormatCount = 1;
+        std::swap(compatFormat, mWebGPUFormat);
+        textureDescriptor.viewFormats = &compatFormat;
+    }
     mArrayLayerCount = toArrayLayerCount(samplerType, textureDescriptor.size.depthOrArrayLayers);
     assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
                      "Could not find appropriate WebGPU format");

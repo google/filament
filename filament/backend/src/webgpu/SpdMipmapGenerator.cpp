@@ -275,9 +275,13 @@ namespace spd {
                 filterCode.replace(pos, 6, "/ 4");
             }
         }
+        if (useF16) {
+            ss << "enable f16;\n";
+        }
+        ss << "alias SPDScalar = " << texelTypeName << ";\n\n";
 
         ss << "// FidelityFX Single Pass Downsampler (SPD) translated for WebGPU\n\n";
-        
+
         // --- Bindings ---
         ss << "@group(0) @binding(0) var src_mip_0: texture_2d_array<" << texelTypeName << ">;\n";
         for (uint32_t i = 0; i < numMips; ++i) {
