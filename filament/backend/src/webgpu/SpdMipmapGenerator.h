@@ -68,15 +68,16 @@ struct SPDPassConfig {
         SPDPipeline& GetOrCreatePipeline(wgpu::TextureFormat format, SPDFilter filter, uint32_t numMips, SPDScalarType scalarType);
         SPDScalarType SanitizeScalarType(wgpu::TextureFormat format, bool halfPrecision);
         std::string GetFilterCode(SPDFilter filter);
-        const char* GetScalarTypeName(SPDScalarType type);
     };
+    // Assuming SPD_FILTER_AVERAGE is a string constant
+    const std::string SPD_FILTER_AVERAGE = "value * 0.25"; // Original filter operation
 
     // Generates the WGSL shader code dynamically.
     std::string MakeShaderCode(
         wgpu::TextureFormat outputFormat,
-        const std::string& filterOp,
-        uint32_t numMips,
-        SPDScalarType scalarType
+        const std::string& filterOp = SPD_FILTER_AVERAGE,
+        uint32_t numMips = 0,
+        SPDScalarType scalarType = SPDScalarType::F32
     );
 
 } // namespace spd

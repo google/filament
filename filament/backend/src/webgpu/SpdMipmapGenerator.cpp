@@ -20,15 +20,6 @@ namespace spd {
         }
     }
 
-    const char* MipmapGenerator::GetScalarTypeName(SPDScalarType type) {
-        switch (type) {
-            case SPDScalarType::I32: return "i32";
-            case SPDScalarType::U32: return "u32";
-            case SPDScalarType::F16: return "f16";
-            case SPDScalarType::F32:
-            default: return "f32";
-        }
-    }
 
     std::string MipmapGenerator::GetFilterCode(SPDFilter filter) {
         switch (filter) {
@@ -257,104 +248,121 @@ namespace spd {
     }
 
     // Main shader generation logic
-    std::string MakeShaderCode(
-        wgpu::TextureFormat outputFormat,
-        const std::string& filterOp,
-        uint32_t numMips,
-        SPDScalarType scalarType)
-    {
-        std::stringstream ss;
-        const char* texelTypeName = (scalarType == SPDScalarType::I32) ? "i32" :
-                                    (scalarType == SPDScalarType::U32) ? "u32" : "f32";
-        bool useF16 = scalarType == SPDScalarType::F16;
-        
-        std::string filterCode = filterOp;
-        if (filterOp.find("0.25") != std::string::npos && (scalarType == SPDScalarType::I32 || scalarType == SPDScalarType::U32)) {
-            size_t pos = filterCode.find("* 0.25");
-            if (pos != std::string::npos) {
-                filterCode.replace(pos, 6, "/ 4");
+
+// Helper function to check if a string is in a vector of strings
+bool includes(const std::vector<std::string>& vec, const std::string& str) {
+    for (const auto& s : vec) {
+        if (s == str) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string MakeShaderCode(wgpu::TextureFormat outputFormat,
+                           const std::string& filterOp,
+                           unsigned int numMips, // Assuming a default value for numMips
+                           SPDScalarType scalarType) { // Default scalarType
+    std::stringstream ss;
+
+    std::string texelType;
+    if (scalarType == SPDScalarType::I32) {
+        texelType = "i32";
+    } else if (scalarType == SPDScalarType::U32) {
+        texelType = "u32";
+    } else {
+        texelType = "f32";
+    }
+
+    bool useF16 = (scalarType == SPDScalarType::F16);
+
+    std::string filterCode = filterOp;
+    if (filterOp == SPD_FILTER_AVERAGE && !includes({"f32", "f16"}, texelType)) {
+        // Replace "* 0.25" with "/ 4"
+        size_t pos = filterCode.find("* 0.25");
+        if (pos != std::string::npos) {
+            filterCode.replace(pos, std::string("* 0.25").length(), "/ 4");
+        }
+    }
+
+    // Generate mipsBindings
+    std::string mipsBindings;
+    for (unsigned int i = 0; i < numMips; ++i) {
+        mipsBindings += "@group(0) @binding(" + std::to_string(i + 1) + ") var dst_mip_" + std::to_string(i + 1) + ": texture_storage_2d_array<" + to_string(outputFormat)  + ", write>;\n";
+    }
+
+    // Generate mipsAccessorBody
+    std::string mipsAccessorBody;
+    for (unsigned int i = 0; i < numMips; ++i) {
+        if (i == 5 && numMips > 6) {
+            mipsAccessorBody += " else if mip == 6 {\n";
+            mipsAccessorBody += "                textureStore(dst_mip_6, uv, slice, " + (useF16 ? "vec4<" + texelType + ">(value)" : "value") + ");\n";
+            mipsAccessorBody += "                mip_dst_6_buffer[slice][uv.y][uv.x] = value;\n";
+            mipsAccessorBody += "            }";
+        } else {
+            if (i != 0) {
+                mipsAccessorBody += " else ";
             }
+            mipsAccessorBody += "if mip == " + std::to_string(i + 1) + " {\n";
+            mipsAccessorBody += "                textureStore(dst_mip_" + std::to_string(i + 1) + ", uv, slice, " + (useF16 ? "vec4<" + texelType + ">(value)" : "value") + ");\n";
+            mipsAccessorBody += "            }";
         }
-        if (useF16) {
-            ss << "enable f16;\n";
-        }
-        ss << "alias SPDScalar = " << texelTypeName << ";\n\n";
+    }
 
-        ss << "// FidelityFX Single Pass Downsampler (SPD) translated for WebGPU\n\n";
+    std::string mipsAccessor = "fn store_dst_mip(value: vec4<SPDScalar>, uv: vec2<u32>, slice: u32, mip: u32) {\n" + mipsAccessorBody + "\n}";
+    std::string midMipAccessor = "return mip_dst_6_buffer[slice][uv.y][uv.x];";
 
-        // --- Bindings ---
-        ss << "@group(0) @binding(0) var src_mip_0: texture_2d_array<" << texelTypeName << ">;\n";
-        for (uint32_t i = 0; i < numMips; ++i) {
-            ss << "@group(0) @binding(" << (i + 1) << ") var dst_mip_" << (i + 1)
-               << ": texture_storage_2d_array<" << to_string(outputFormat) << ", write>;\n";
-        }
+    // Start building the final shader code string
+    ss << R"(
+// This file is part of the FidelityFX SDK.
+//
+// Copyright (C) 2023 Advanced Micro Devices, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files(the “Software”), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 
-        // --- Mip Accessor ---
-        ss << "fn store_dst_mip(value: vec4<" << texelTypeName << ">, uv: vec2<u32>, slice: u32, mip: u32) {\n";
-        for (uint32_t i = 0; i < numMips; ++i) {
-            ss << (i == 0 ? "    if" : " else if") << " mip == " << (i + 1) << " {\n";
-            ss << "        textureStore(dst_mip_" << (i + 1) << ", uv, slice, "
-               << (useF16 ? "vec4<f32>(value)" : "value") << ");\n";
-            ss << "    }";
-        }
-        ss << "\n}\n\n";
 
-        // --- Uniforms & Workgroup Storage ---
-        ss << R"(
-struct DownsamplePassMeta {
-    work_group_offset: vec2<u32>,
-    num_work_groups: u32,
-    mips: u32,
-}
+// Definitions --------------------------------------------------------------------------------------------------------
 
-@group(1) @binding(0) var<uniform> downsample_pass_meta : DownsamplePassMeta;
-
-var<workgroup> spd_intermediate: array<array<vec4<)" << texelTypeName << R"(>, 16>, 16>;
-
-fn get_mips() -> u32 { return downsample_pass_meta.mips; }
-fn get_num_work_groups() -> u32 { return downsample_pass_meta.num_work_groups; }
-fn get_work_group_offset() -> vec2<u32> { return downsample_pass_meta.work_group_offset; }
-fn load_src_image(uv: vec2<u32>, slice: u32) -> vec4<)" << texelTypeName << R"(> {
-    return vec4<)" << texelTypeName << R"(>(textureLoad(src_mip_0, uv, slice, 0));
-}
 )";
-        
-        ss << filterCode << "\n";
+    if (useF16) {
+        ss << "enable f16;\n";
+    }
+    ss << "alias SPDScalar = " << texelType << ";\n\n"; // Using texelType here, assuming SPDScalar maps to it.
 
-        // --- The rest of the static shader code (simplified for brevity) ---
-        // NOTE: The full FidelityFX SPD has complex logic for atomics and multiple passes
-        // for > 6 mips. This version implements the core downsampling logic for up to 6 mips
-        // which is often sufficient and avoids the complexity of global atomics.
-        ss << R"(
-fn spd_store(pix: vec2<u32>, out_value: vec4<)" << texelTypeName << R"(>, mip: u32, slice: u32) {
-    store_dst_mip(out_value, pix, slice, mip + 1);
-}
+    ss << R"(
+// Helpers ------------------------------------------------------------------------------------------------------------
 
-fn spd_load_intermediate(x: u32, y: u32) -> vec4<)" << texelTypeName << R"(> {
-    return spd_intermediate[y][x];
-}
-
-fn spd_store_intermediate(x: u32, y: u32, value: vec4<)" << texelTypeName << R"(>) {
-    spd_intermediate[y][x] = value;
-}
-
-fn spd_reduce_intermediate(i0: vec2<u32>, i1: vec2<u32>, i2: vec2<u32>, i3: vec2<u32>) -> vec4<)" << texelTypeName << R"(> {
-    return spd_reduce_4(
-        spd_load_intermediate(i0.x, i0.y),
-        spd_load_intermediate(i1.x, i1.y),
-        spd_load_intermediate(i2.x, i2.y),
-        spd_load_intermediate(i3.x, i3.y)
-    );
-}
-
-fn spd_reduce_load_4(base: vec2<u32>, slice: u32) -> vec4<)" << texelTypeName << R"(> {
-    let v0 = load_src_image(base + vec2(0, 0), slice);
-    let v1 = load_src_image(base + vec2(1, 0), slice);
-    let v2 = load_src_image(base + vec2(0, 1), slice);
-    let v3 = load_src_image(base + vec2(1, 1), slice);
-    return spd_reduce_4(v0, v1, v2, v3);
-}
-
+/**
+ * A helper function performing a remap 64x1 to 8x8 remapping which is necessary for 2D wave reductions.
+ * * The 64-wide lane indices to 8x8 remapping is performed as follows:
+ * 00 01 08 09 10 11 18 19
+ * 02 03 0a 0b 12 13 1a 1b
+ * 04 05 0c 0d 14 15 1c 1d
+ * 06 07 0e 0f 16 17 1e 1f
+ * 20 21 28 29 30 31 38 39
+ * 22 23 2a 2b 32 33 3a 3b
+ * 24 25 2c 2d 34 35 3c 3d
+ * 26 27 2e 2f 36 37 3e 3f
+ * * @param a: The input 1D coordinate to remap.
+ *
+ * @returns The remapped 2D coordinates.
+ */
 fn remap_for_wave_reduction(a: u32) -> vec2<u32> {
     return vec2<u32>(
         insertBits(extractBits(a, 2u, 3u), a, 0u, 1u),
@@ -363,107 +371,425 @@ fn remap_for_wave_reduction(a: u32) -> vec2<u32> {
 }
 
 fn map_to_xy(local_invocation_index: u32) -> vec2<u32> {
-    let sub_xy: vec2<u32> = remap_for_wave_reduction(local_invocation_index % 64u);
+    let sub_xy: vec2<u32> = remap_for_wave_reduction(local_invocation_index % 64);
     return vec2<u32>(
-        sub_xy.x + 8u * ((local_invocation_index >> 6u) % 2u),
-        sub_xy.y + 8u * (local_invocation_index >> 7u)
+        sub_xy.x + 8 * ((local_invocation_index >> 6) % 2),
+        sub_xy.y + 8 * ((local_invocation_index >> 7))
     );
 }
+
+/*
+ * Compute a linear value from a SRGB value.
+ * * @param value: The value to convert to linear from SRGB.
+ * * @returns A value in SRGB space.
+ */
+/*
+fn srgb_to_linear(value: SPDScalar) -> SPDScalar {
+    let j = vec3<SPDScalar>(0.0031308 * 12.92, 12.92, 1.0 / 2.4);
+    let k = vec2<SPDScalar>(1.055, -0.055);
+    return clamp(j.x, value * j.y, pow(value, j.z) * k.x + k.y);
+}
+*/
+
+// Resources & Accessors -----------------------------------------------------------------------------------------------
+struct DownsamplePassMeta {
+    work_group_offset: vec2<u32>,
+    num_work_groups: u32,
+    mips: u32,
+}
+
+// In the original version dst_mip_i is an image2Darray [SPD_MAX_MIP_LEVELS+1], i.e., 12+1, but WGSL doesn't support arrays of textures yet
+// Also these are read_write because for mips 7-13, the workgroup reads from mip level 6 - since most formats don't support read_write access in WGSL yet, we use a single read_write buffer in such cases instead
+@group(0) @binding(0) var src_mip_0: texture_2d_array<)" << texelType << R"(>;
+)" << mipsBindings << R"(
+
+@group(1) @binding(0) var<uniform> downsample_pass_meta : DownsamplePassMeta;
+@group(1) @binding(1) var<storage, read_write> spd_global_counter: array<atomic<u32>>;
+@group(1) @binding(2) var<storage, read_write> mip_dst_6_buffer: array<array<array<vec4<f32>, 64>, 64>>;
+
+fn get_mips() -> u32 {
+    return downsample_pass_meta.mips;
+}
+
+fn get_num_work_groups() -> u32 {
+    return downsample_pass_meta.num_work_groups;
+}
+
+fn get_work_group_offset() -> vec2<u32> {
+    return downsample_pass_meta.work_group_offset;
+}
+
+fn load_src_image(uv: vec2<u32>, slice: u32) -> vec4<SPDScalar> {
+    return vec4<SPDScalar>(textureLoad(src_mip_0, uv, slice, 0));
+}
+
+fn load_mid_mip_image(uv: vec2<u32>, slice: u32) -> vec4<SPDScalar> {
+    )";
+    if (numMips > 6) {
+        ss << midMipAccessor;
+    } else {
+        ss << "return vec4<SPDScalar>();";
+    }
+    ss << R"(
+}
+
+)" << mipsAccessor << R"(
+
+// Workgroup -----------------------------------------------------------------------------------------------------------
+
+var<workgroup> spd_intermediate: array<array<vec4<SPDScalar>, 16>, 16>;
+var<workgroup> spd_counter: atomic<u32>;
+
+fn spd_increase_atomic_counter(slice: u32) {
+    atomicStore(&spd_counter, atomicAdd(&spd_global_counter[slice], 1));
+}
+
+fn spd_get_atomic_counter() -> u32 {
+    return atomicLoad(&spd_counter);
+}
+
+fn spd_reset_atomic_counter(slice: u32) {
+    atomicStore(&spd_global_counter[slice], 0);
+}
+
+// Cotnrol flow --------------------------------------------------------------------------------------------------------
+
+fn spd_barrier() {
+    // in glsl this does: groupMemoryBarrier(); barrier();
+    workgroupBarrier();
+}
+
+// Only last active workgroup should proceed
+fn spd_exit_workgroup(num_work_groups: u32, local_invocation_index: u32, slice: u32) -> bool {
+    // global atomic counter
+    if (local_invocation_index == 0) {
+        spd_increase_atomic_counter(slice);
+    }
+    spd_barrier();
+    return spd_get_atomic_counter() != (num_work_groups - 1);
+}
+
+// Pixel access --------------------------------------------------------------------------------------------------------
+
+)" << filterCode << R"(
+
+fn spd_store(pix: vec2<u32>, out_value: vec4<SPDScalar>, mip: u32, slice: u32) {
+    store_dst_mip(out_value, pix, slice, mip + 1);
+}
+
+fn spd_load_intermediate(x: u32, y: u32) -> vec4<SPDScalar> {
+    return spd_intermediate[x][y];
+}
+
+fn spd_store_intermediate(x: u32, y: u32, value: vec4<SPDScalar>) {
+    spd_intermediate[x][y] = value;
+}
+
+fn spd_reduce_intermediate(i0: vec2<u32>, i1: vec2<u32>, i2: vec2<u32>, i3: vec2<u32>) -> vec4<SPDScalar> {
+    let v0 = spd_load_intermediate(i0.x, i0.y);
+    let v1 = spd_load_intermediate(i1.x, i1.y);
+    let v2 = spd_load_intermediate(i2.x, i2.y);
+    let v3 = spd_load_intermediate(i3.x, i3.y);
+    return spd_reduce_4(v0, v1, v2, v3);
+}
+
+fn spd_reduce_load_4(base: vec2<u32>, slice: u32) -> vec4<SPDScalar> {
+    let v0 = load_src_image(base + vec2<u32>(0, 0), slice);
+    let v1 = load_src_image(base + vec2<u32>(0, 1), slice);
+    let v2 = load_src_image(base + vec2<u32>(1, 0), slice);
+    let v3 = load_src_image(base + vec2<u32>(1, 1), slice);
+    return spd_reduce_4(v0, v1, v2, v3);
+}
+
+fn spd_reduce_load_mid_mip_4(base: vec2<u32>, slice: u32) -> vec4<SPDScalar> {
+    let v0 = load_mid_mip_image(base + vec2<u32>(0, 0), slice);
+    let v1 = load_mid_mip_image(base + vec2<u32>(0, 1), slice);
+    let v2 = load_mid_mip_image(base + vec2<u32>(1, 0), slice);
+    let v3 = load_mid_mip_image(base + vec2<u32>(1, 1), slice);
+    return spd_reduce_4(v0, v1, v2, v3);
+}
+
+// Main logic ---------------------------------------------------------------------------------------------------------
+
+fn spd_downsample_mips_0_1(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, mip: u32, slice: u32) {
+    var v: array<vec4<SPDScalar>, 4>;
+
+    let workgroup64 = workgroup_id.xy * 64;
+    let workgroup32 = workgroup_id.xy * 32;
+    let workgroup16 = workgroup_id.xy * 16;
+
+    var tex = workgroup64 + vec2<u32>(x * 2, y * 2);
+    var pix = workgroup32 + vec2<u32>(x, y);
+    v[0] = spd_reduce_load_4(tex, slice);
+    spd_store(pix, v[0], 0, slice);
+
+    tex = workgroup64 + vec2<u32>(x * 2 + 32, y * 2);
+    pix = workgroup32 + vec2<u32>(x + 16, y);
+    v[1] = spd_reduce_load_4(tex, slice);
+    spd_store(pix, v[1], 0, slice);
+
+    tex = workgroup64 + vec2<u32>(x * 2, y * 2 + 32);
+    pix = workgroup32 + vec2<u32>(x, y + 16);
+    v[2] = spd_reduce_load_4(tex, slice);
+    spd_store(pix, v[2], 0, slice);
+
+    tex = workgroup64 + vec2<u32>(x * 2 + 32, y * 2 + 32);
+    pix = workgroup32 + vec2<u32>(x + 16, y + 16);
+    v[3] = spd_reduce_load_4(tex, slice);
+    spd_store(pix, v[3], 0, slice);
+
+    if mip <= 1 {
+        return;
+    }
+
+    for (var i = 0u; i < 4u; i++) {
+        spd_store_intermediate(x, y, v[i]);
+        spd_barrier();
+        if local_invocation_index < 64 {
+            v[i] = spd_reduce_intermediate(
+                vec2<u32>(x * 2 + 0, y * 2 + 0),
+                vec2<u32>(x * 2 + 1, y * 2 + 0),
+                vec2<u32>(x * 2 + 0, y * 2 + 1),
+                vec2<u32>(x * 2 + 1, y * 2 + 1)
+            );
+            spd_store(workgroup16 + vec2<u32>(x + (i % 2) * 8, y + (i / 2) * 8), v[i], 1, slice);
+        }
+        spd_barrier();
+    }
+
+    if local_invocation_index < 64 {
+        spd_store_intermediate(x + 0, y + 0, v[0]);
+        spd_store_intermediate(x + 8, y + 0, v[1]);
+        spd_store_intermediate(x + 0, y + 8, v[2]);
+        spd_store_intermediate(x + 8, y + 8, v[3]);
+    }
+}
+
+fn spd_downsample_mip_2(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, mip: u32, slice: u32) {
+    if local_invocation_index < 64u {
+        let v = spd_reduce_intermediate(
+            vec2<u32>(x * 2 + 0, y * 2 + 0),
+            vec2<u32>(x * 2 + 1, y * 2 + 0),
+            vec2<u32>(x * 2 + 0, y * 2 + 1),
+            vec2<u32>(x * 2 + 1, y * 2 + 1)
+        );
+        spd_store(workgroup_id.xy * 8 + vec2<u32>(x, y), v, mip, slice);
+        // store to LDS, try to reduce bank conflicts
+        // x 0 x 0 x 0 x 0 x 0 x 0 x 0 x 0
+        // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        // 0 x 0 x 0 x 0 x 0 x 0 x 0 x 0 x
+        // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        // x 0 x 0 x 0 x 0 x 0 x 0 x 0 x 0
+        // ...
+        // x 0 x 0 x 0 x 0 x 0 x 0 x 0 x 0
+        spd_store_intermediate(x * 2 + y % 2, y * 2, v);
+    }
+}
+
+fn spd_downsample_mip_3(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, mip: u32, slice: u32) {
+    if local_invocation_index < 16u {
+        // x 0 x 0
+        // 0 0 0 0
+        // 0 x 0 x
+        // 0 0 0 0
+        let v = spd_reduce_intermediate(
+            vec2<u32>(x * 4 + 0 + 0, y * 4 + 0),
+            vec2<u32>(x * 4 + 2 + 0, y * 4 + 0),
+            vec2<u32>(x * 4 + 0 + 1, y * 4 + 2),
+            vec2<u32>(x * 4 + 2 + 1, y * 4 + 2)
+        );
+        spd_store(workgroup_id.xy * 4 + vec2<u32>(x, y), v, mip, slice);
+        // store to LDS
+        // x 0 0 0 x 0 0 0 x 0 0 0 x 0 0 0
+        // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        // 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        // 0 x 0 0 0 x 0 0 0 x 0 0 0 x 0 0
+        // ...
+        // 0 0 x 0 0 0 x 0 0 0 x 0 0 0 x 0
+        // ...
+        // 0 0 0 x 0 0 0 x 0 0 0 x 0 0 0 x
+        // ...
+        spd_store_intermediate(x * 4 + y, y * 4, v);
+    }
+}
+
+fn spd_downsample_mip_4(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, mip: u32, slice: u32) {
+    if local_invocation_index < 4u {
+        // x 0 0 0 x 0 0 0
+        // ...
+        // 0 x 0 0 0 x 0 0
+        let v = spd_reduce_intermediate(
+            vec2<u32>(x * 8 + 0 + 0 + y * 2, y * 8 + 0),
+            vec2<u32>(x * 8 + 4 + 0 + y * 2, y * 8 + 0),
+            vec2<u32>(x * 8 + 0 + 1 + y * 2, y * 8 + 4),
+            vec2<u32>(x * 8 + 4 + 1 + y * 2, y * 8 + 4)
+        );
+        spd_store(workgroup_id.xy * 2 + vec2<u32>(x, y), v, mip, slice);
+        // store to LDS
+        // x x x x 0 ...
+        // 0 ...
+        spd_store_intermediate(x + y * 2, 0, v);
+    }
+}
+
+fn spd_downsample_mip_5(workgroup_id: vec2<u32>, local_invocation_index: u32, mip: u32, slice: u32) {
+    if local_invocation_index < 1u {
+        // x x x x 0 ...
+        // 0 ...
+        let v = spd_reduce_intermediate(vec2<u32>(0, 0), vec2<u32>(1, 0), vec2<u32>(2, 0), vec2<u32>(3, 0));
+        spd_store(workgroup_id.xy, v, mip, slice);
+    }
+}
+
+fn spd_downsample_next_four(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, base_mip: u32, mips: u32, slice: u32) {
+    if mips <= base_mip {
+        return;
+    }
+    spd_barrier();
+    spd_downsample_mip_2(x, y, workgroup_id, local_invocation_index, base_mip, slice);
+
+    if mips <= base_mip + 1 {
+        return;
+    }
+    spd_barrier();
+    spd_downsample_mip_3(x, y, workgroup_id, local_invocation_index, base_mip + 1, slice);
+
+    if mips <= base_mip + 2 {
+        return;
+    }
+    spd_barrier();
+    spd_downsample_mip_4(x, y, workgroup_id, local_invocation_index, base_mip + 2, slice);
+
+    if mips <= base_mip + 3 {
+        return;
+    }
+    spd_barrier();
+    spd_downsample_mip_5(workgroup_id, local_invocation_index, base_mip + 3, slice);
+}
+
+fn spd_downsample_last_four(x: u32, y: u32, workgroup_id: vec2<u32>, local_invocation_index: u32, base_mip: u32, mips: u32, slice: u32, exit: bool) {
+    if mips <= base_mip {
+        return;
+    }
+    spd_barrier();
+    if !exit {
+        spd_downsample_mip_2(x, y, workgroup_id, local_invocation_index, base_mip, slice);
+    }
+
+    if mips <= base_mip + 1 {
+        return;
+    }
+    spd_barrier();
+    if !exit {
+        spd_downsample_mip_3(x, y, workgroup_id, local_invocation_index, base_mip + 1, slice);
+    }
+
+    if mips <= base_mip + 2 {
+        return;
+    }
+    spd_barrier();
+    if !exit {
+        spd_downsample_mip_4(x, y, workgroup_id, local_invocation_index, base_mip + 2, slice);
+    }
+
+    if mips <= base_mip + 3 {
+        return;
+    }
+    spd_barrier();
+    if !exit {
+        spd_downsample_mip_5(workgroup_id, local_invocation_index, base_mip + 3, slice);
+    }
+}
+
+fn spd_downsample_mips_6_7(x: u32, y: u32, mips: u32, slice: u32) {
+    var tex = vec2<u32>(x * 4 + 0, y * 4 + 0);
+    var pix = vec2<u32>(x * 2 + 0, y * 2 + 0);
+    let v0 = spd_reduce_load_mid_mip_4(tex, slice);
+    spd_store(pix, v0, 6, slice);
+
+    tex = vec2<u32>(x * 4 + 2, y * 4 + 0);
+    pix = vec2<u32>(x * 2 + 1, y * 2 + 0);
+    let v1 = spd_reduce_load_mid_mip_4(tex, slice);
+    spd_store(pix, v1, 6, slice);
+
+    tex = vec2<u32>(x * 4 + 0, y * 4 + 2);
+    pix = vec2<u32>(x * 2 + 0, y * 2 + 1);
+    let v2 = spd_reduce_load_mid_mip_4(tex, slice);
+    spd_store(pix, v2, 6, slice);
+
+    tex = vec2<u32>(x * 4 + 2, y * 4 + 2);
+    pix = vec2<u32>(x * 2 + 1, y * 2 + 1);
+    let v3 = spd_reduce_load_mid_mip_4(tex, slice);
+    spd_store(pix, v3, 6, slice);
+
+    if mips <= 7 {
+        return;
+    }
+    // no barrier needed, working on values only from the same thread
+
+    let v = spd_reduce_4(v0, v1, v2, v3);
+    spd_store(vec2<u32>(x, y), v, 7, slice);
+    spd_store_intermediate(x, y, v);
+}
+
+fn spd_downsample_last_6(x: u32, y: u32, local_invocation_index: u32, mips: u32, num_work_groups: u32, slice: u32) {
+    if mips <= 6 {
+        return;
+    }
+
+    // increase the global atomic counter for the given slice and check if it's the last remaining thread group:
+    // terminate if not, continue if yes.
+    let exit = spd_exit_workgroup(num_work_groups, local_invocation_index, slice);
+
+    // can't exit directly because subsequent barrier calls break uniform control flow...
+    if !exit {
+        // reset the global atomic counter back to 0 for the next spd dispatch
+        spd_reset_atomic_counter(slice);
+
+        // After mip 5 there is only a single workgroup left that downsamples the remaining up to 64x64 texels.
+        // compute MIP level 6 and 7
+        spd_downsample_mips_6_7(x, y, mips, slice);
+    }
+
+    // compute MIP level 8, 9, 10, 11
+    spd_downsample_last_four(x, y, vec2<u32>(0, 0), local_invocation_index, 8, mips, slice, exit);
+}
+
+/// Downsamples a 64x64 tile based on the work group id.
+/// If after downsampling it's the last active thread group, computes the remaining MIP levels.
+///
+/// @param [in] workGroupID        index of the work group / thread group
+/// @param [in] localInvocationIndex   index of the thread within the thread group in 1D
+/// @param [in] mips             the number of total MIP levels to compute for the input texture
+/// @param [in] numWorkGroups        the total number of dispatched work groups / thread groups for this slice
+/// @param [in] slice             the slice of the input texture
+fn spd_downsample(workgroup_id: vec2<u32>, local_invocation_index: u32, mips: u32, num_work_groups: u32, slice: u32) {
+    let xy = map_to_xy(local_invocation_index);
+    spd_downsample_mips_0_1(xy.x, xy.y, workgroup_id, local_invocation_index, mips, slice);
+    spd_downsample_next_four(xy.x, xy.y, workgroup_id, local_invocation_index, 2, mips, slice);
+)";
+    if (numMips > 6) {
+        ss << "    spd_downsample_last_6(xy.x, xy.y, local_invocation_index, mips, num_work_groups, slice);\n";
+    }
+    ss << R"(}
+
+// Entry points -------------------------------------------------------------------------------------------------------
 
 @compute
 @workgroup_size(256, 1, 1)
 fn downsample(@builtin(local_invocation_index) local_invocation_index: u32, @builtin(workgroup_id) workgroup_id: vec3<u32>) {
-    let mips = get_mips();
-    let slice = workgroup_id.z;
-    let global_workgroup_id = workgroup_id.xy + get_work_group_offset();
-
-    let xy = map_to_xy(local_invocation_index);
-    let x = xy.x;
-    let y = xy.y;
-
-    // Mip 1
-    var v: array<vec4<)" << texelTypeName << R"(>, 4>;
-    v[0] = spd_reduce_load_4(global_workgroup_id * 64u + vec2(x, y) * 2u, slice);
-    v[1] = spd_reduce_load_4(global_workgroup_id * 64u + vec2(x + 16u, y) * 2u, slice);
-    v[2] = spd_reduce_load_4(global_workgroup_id * 64u + vec2(x, y + 16u) * 2u, slice);
-    v[3] = spd_reduce_load_4(global_workgroup_id * 64u + vec2(x + 16u, y + 16u) * 2u, slice);
-    
-    spd_store(global_workgroup_id * 32u + vec2(x, y), v[0], 0, slice);
-    spd_store(global_workgroup_id * 32u + vec2(x + 16u, y), v[1], 0, slice);
-    spd_store(global_workgroup_id * 32u + vec2(x, y + 16u), v[2], 0, slice);
-    spd_store(global_workgroup_id * 32u + vec2(x + 16u, y + 16u), v[3], 0, slice);
-
-    if mips <= 1u { return; }
-    
-    // Mip 2
-    workgroupBarrier();
-    spd_store_intermediate(x, y, v[0]);
-    spd_store_intermediate(x + 16u, y, v[1]);
-    spd_store_intermediate(x, y + 16u, v[2]);
-    spd_store_intermediate(x + 16u, y + 16u, v[3]);
-    workgroupBarrier();
-    
-    if (local_invocation_index < 64u) {
-        let r = spd_reduce_intermediate(
-            vec2(x * 2u, y * 2u),
-            vec2(x * 2u + 1u, y * 2u),
-            vec2(x * 2u, y * 2u + 1u),
-            vec2(x * 2u + 1u, y * 2u + 1u)
-        );
-        spd_store(global_workgroup_id * 16u + vec2(x, y), r, 1, slice);
-        spd_store_intermediate(x, y, r);
-    }
-    
-    if mips <= 2u { return; }
-
-    // Mips 3, 4, 5, 6
-    workgroupBarrier();
-    if (local_invocation_index < 16u) {
-        let r = spd_reduce_intermediate(
-            vec2(x * 2u, y * 2u),
-            vec2(x * 2u + 1u, y * 2u),
-            vec2(x * 2u, y * 2u + 1u),
-            vec2(x * 2u + 1u, y * 2u + 1u)
-        );
-        spd_store(global_workgroup_id * 8u + vec2(x, y), r, 2, slice);
-        spd_store_intermediate(x, y, r);
-    }
-    if mips <= 3u { return; }
-
-    workgroupBarrier();
-    if (local_invocation_index < 4u) {
-        let r = spd_reduce_intermediate(
-            vec2(x * 2u, y * 2u),
-            vec2(x * 2u + 1u, y * 2u),
-            vec2(x * 2u, y * 2u + 1u),
-            vec2(x * 2u + 1u, y * 2u + 1u)
-        );
-        spd_store(global_workgroup_id * 4u + vec2(x, y), r, 3, slice);
-        spd_store_intermediate(x, y, r);
-    }
-    if mips <= 4u { return; }
-    
-    workgroupBarrier();
-    if (local_invocation_index < 1u) {
-        let r = spd_reduce_intermediate(
-            vec2(0u, 0u), vec2(1u, 0u), vec2(0u, 1u), vec2(1u, 1u)
-        );
-        spd_store(global_workgroup_id * 2u, r, 4, slice);
-        spd_store_intermediate(0u, 0u, r);
-    }
-    if mips <= 5u { return; }
-
-    workgroupBarrier();
-    if (local_invocation_index < 1u) {
-        let r = spd_reduce_intermediate(
-             vec2(0u, 0u), vec2(1u, 0u), vec2(0u, 1u), vec2(1u, 1u)
-        ); // This is incorrect, needs another level of reduction
-        spd_store(global_workgroup_id, r, 5, slice);
-    }
+    spd_downsample(
+        workgroup_id.xy + get_work_group_offset(),
+        local_invocation_index,
+        get_mips(),
+        get_num_work_groups(),
+        workgroup_id.z
+    );
 }
 )";
+    return ss.str();
+}
 
-        return ss.str();
-    }
 
 } // namespace spd
