@@ -286,6 +286,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUVertexBuffer.h
             src/webgpu/WebGPUVertexBufferInfo.cpp
             src/webgpu/WebGPUVertexBufferInfo.h
+            src/webgpu/SpdMipmapGenerator.cpp
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)

@@ -28,7 +28,7 @@
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
 #include <backend/platforms/WebGPUPlatform.h>
-
+#include "SpdMipmapGenerator.h"
 #include "CommandStreamDispatcher.h"
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
@@ -738,59 +738,30 @@ void WebGPUDriver::setExternalStream(Handle<HwTexture> textureHandle,
 }
 
 void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
-    if (!mCommandEncoder) {
-        mMipQueue.push_back(textureHandle);
-        return;
-    }
     auto texture = handleCast<WebGPUTexture>(textureHandle);
     assert_invariant(texture);
     wgpu::Texture wgpuTexture = texture->getTexture();
     assert_invariant(wgpuTexture);
-
     FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopySrc)
             << "Texture intended for mipmap generation (as source) must have CopySrc usage.";
     FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopyDst)
             << "Texture intended for mipmap generation (as destination) must have CopyDst usage.";
 
-    uint32_t mipLevelCount = wgpuTexture.GetMipLevelCount();
-    if (mipLevelCount <= 1) {
-        return;
-    }
+    spd::MipmapGenerator mipmapGenerator(mDevice);
+    spd::SPDPassConfig config = {};
+    config.filter = spd::SPDFilter::Average; // Use a simple averaging filter
+    config.targetTexture = wgpuTexture;         // Generate mips in-place
+    mipmapGenerator.PreparePipelines(wgpuTexture.GetFormat(), config.filter);
+    wgpu::CommandEncoderDescriptor encoderDesc = {};
+    encoderDesc.label = "Mipmap Command Encoder";
+    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
+    mipmapGenerator.Generate(encoder, wgpuTexture, config);
 
-    uint32_t width = wgpuTexture.GetWidth();
-    uint32_t height = wgpuTexture.GetHeight();
-    // For 3D textures, depth is > 1. For 2D/Cube/Array, effectively 1 for mip-level copies.
-    uint32_t depth =
-            (texture->target == SamplerType::SAMPLER_3D) ? wgpuTexture.GetDepthOrArrayLayers() : 1;
+    wgpu::CommandBufferDescriptor cmdBufferDesc = {};
+    cmdBufferDesc.label = "Mipmap Command Buffer";
+    wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
 
-    for (uint32_t mipLevel = 0; mipLevel < mipLevelCount - 1; ++mipLevel) {
-        wgpu::TexelCopyTextureInfo sourceCopyInfo{
-            .texture = wgpuTexture,
-            .mipLevel = mipLevel,
-            .aspect = texture->getAspect(),
-        };
-
-        wgpu::TexelCopyTextureInfo destinationCopyInfo{
-            .texture = wgpuTexture,
-            .mipLevel = mipLevel + 1,
-            .aspect = texture->getAspect(),
-        };
-
-        uint32_t dstWidth = std::max(1u, width >> 1);
-        uint32_t dstHeight = std::max(1u, height >> 1);
-        uint32_t dstDepth = std::max(1u, depth >> 1);
-
-        wgpu::Extent3D copySize{ .width = dstWidth,
-            .height = dstHeight,
-            .depthOrArrayLayers = (texture->target == SamplerType::SAMPLER_3D)
-                                          ? dstDepth
-                                          : texture->getArrayLayerCount() };
-        mCommandEncoder.CopyTextureToTexture(&sourceCopyInfo, &destinationCopyInfo, &copySize);
-
-        width = dstWidth;
-        height = dstHeight;
-        depth = dstDepth;
-    }
+    mQueue.Submit(1, &commandBuffer);
 }
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
