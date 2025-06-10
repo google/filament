@@ -25,12 +25,13 @@ namespace spd {
     };
 
     // Configuration for a single mipmap generation pass.
-    struct SPDPassConfig {
-        SPDFilter filter = SPDFilter::Average;
-        wgpu::Texture targetTexture = nullptr;
-        uint32_t numMips = 0;
-        bool halfPrecision = false;
-    };
+struct SPDPassConfig {
+    SPDFilter filter = SPDFilter::Average;
+    wgpu::Texture targetTexture = nullptr;
+    uint32_t numMips = 0;
+    bool halfPrecision = false;
+    uint32_t sourceMipLevel = 0;
+};
     
     // Holds a pipeline and its corresponding bind group layout.
     struct SPDPipeline {

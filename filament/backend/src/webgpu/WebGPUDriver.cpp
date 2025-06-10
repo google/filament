@@ -742,25 +742,58 @@ void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
     assert_invariant(texture);
     wgpu::Texture wgpuTexture = texture->getTexture();
     assert_invariant(wgpuTexture);
-    FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopySrc)
-            << "Texture intended for mipmap generation (as source) must have CopySrc usage.";
-    FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopyDst)
-            << "Texture intended for mipmap generation (as destination) must have CopyDst usage.";
 
+//    const auto usage = wgpuTexture.GetUsage();
+//    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
+//            << "Texture for mipmap generation must have TextureBinding usage.";
+//    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
+//            << "Texture for mipmap generation must have StorageBinding usage.";
+
+    const uint32_t totalMipLevels = wgpuTexture.GetMipLevelCount();
+    if (totalMipLevels <= 1) {
+        return;
+    }
+
+    // Determine the maximum number of mips we can generate in a single pass.
+    // The limit is on *storage* textures, and we need 1 binding for the source texture.
+    const uint32_t maxMipsPerPass = 2;//mDeviceLimits.maxStorageTexturesPerShaderStage - 1;
+    FILAMENT_CHECK_POSTCONDITION(maxMipsPerPass > 0)
+            << "Device does not support enough storage textures for mipmapping.";
+
+    // The generator can be created once.
     spd::MipmapGenerator mipmapGenerator(mDevice);
-    spd::SPDPassConfig config = {};
-    config.filter = spd::SPDFilter::Average; // Use a simple averaging filter
-    config.targetTexture = wgpuTexture;         // Generate mips in-place
-    mipmapGenerator.PreparePipelines(wgpuTexture.GetFormat(), config.filter);
+
+    // We will record all passes into a single command encoder.
     wgpu::CommandEncoderDescriptor encoderDesc = {};
     encoderDesc.label = "Mipmap Command Encoder";
     wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
-    mipmapGenerator.Generate(encoder, wgpuTexture, config);
 
+    uint32_t mipsLeftToGenerate = totalMipLevels - 1;
+    uint32_t currentSourceMipLevel = 0;
+
+    while (mipsLeftToGenerate > 0) {
+        uint32_t mipsThisPass = std::min(mipsLeftToGenerate, maxMipsPerPass);
+
+        spd::SPDPassConfig config = {};
+        config.filter = spd::SPDFilter::Average;
+        config.targetTexture = wgpuTexture;
+        config.numMips = mipsThisPass;
+        config.sourceMipLevel = currentSourceMipLevel;
+
+        // The generator needs to create pipelines for the number of mips in THIS pass.
+        mipmapGenerator.PreparePipelines(wgpuTexture.GetFormat(), config.filter);
+
+        // Generate one batch of mipmaps.
+        mipmapGenerator.Generate(encoder, wgpuTexture, config);
+
+        mipsLeftToGenerate -= mipsThisPass;
+        currentSourceMipLevel += mipsThisPass;
+    }
+
+    // Finish the encoder and submit all the passes at once.
     wgpu::CommandBufferDescriptor cmdBufferDesc = {};
     cmdBufferDesc.label = "Mipmap Command Buffer";
     wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
-
     mQueue.Submit(1, &commandBuffer);
 }
 

@@ -187,7 +187,7 @@ namespace spd {
 
         wgpu::TextureViewDescriptor srcViewDesc{};
         srcViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
-        srcViewDesc.baseMipLevel = 0;
+        srcViewDesc.baseMipLevel = config.sourceMipLevel;
         srcViewDesc.mipLevelCount = 1;
         srcViewDesc.baseArrayLayer = 0;
         srcViewDesc.arrayLayerCount = arrayLayerCount;
@@ -200,7 +200,7 @@ namespace spd {
         for (uint32_t i = 0; i < numMips; ++i) {
             wgpu::TextureViewDescriptor dstViewDesc{};
             dstViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
-            dstViewDesc.baseMipLevel = i + 1;
+            dstViewDesc.baseMipLevel = config.sourceMipLevel + i + 1;
             dstViewDesc.mipLevelCount = 1;
             dstViewDesc.baseArrayLayer = 0;
             dstViewDesc.arrayLayerCount = arrayLayerCount;
