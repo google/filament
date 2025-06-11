@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -22,15 +22,15 @@
 
 /* Begin PBXFileReference section */
 		05D9AFA7CFC6498FE2A8C6A5 /* FullScreenTriangle.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FullScreenTriangle.cpp; sourceTree = "<group>"; };
-		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = clear_coat.mat; sourceTree = "<group>"; };
+		2AFEFBF6FE91628599F70817 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		2AFF66F1228C5F1079042FE2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		33B2CBA1A0F654632B39A45D /* ARKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ARKit.framework; path = System/Library/Frameworks/ARKit.framework; sourceTree = SDKROOT; };
 		4F8E6B508F8C5DE284DA2E34 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		53D025A0625708CC50AEA0DB /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
 		5B5D3E611DCDD9CD2C13B825 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
 		6938BE21CFB8BEB2422BD490 /* FilamentArViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentArViewController.h; sourceTree = "<group>"; };
-		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = camera_feed.mat; sourceTree = "<group>"; };
-		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadow_plane.mat; sourceTree = "<group>"; };
+		7C5E322BA97EEB4FB7EC030F /* camera_feed.mat */ = {isa = PBXFileReference; path = camera_feed.mat; sourceTree = "<group>"; };
+		8832D93E678057F9940A226D /* shadow_plane.mat */ = {isa = PBXFileReference; path = shadow_plane.mat; sourceTree = "<group>"; };
 		973EB840E804440B2AA0F93A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		A85B9D53F72DEE0374F8EBDF /* FullScreenTriangle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FullScreenTriangle.h; sourceTree = "<group>"; };
 		AA47852B486CBD549FA68729 /* FilamentArViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentArViewController.mm; sourceTree = "<group>"; };
@@ -39,8 +39,8 @@
 		B6B92BD0FA8E6F9CFEAE1707 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		CF21F54926F34F027F4FCEA4 /* FilamentApp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = FilamentApp.cpp; sourceTree = "<group>"; };
 		D0800F9FE0C390D084082637 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
+		D7BA0AA38645722DCFA3490D /* hello-ar.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-ar.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD0010D60097DEAA82DAA089 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
 		EC652AC3D2C91759215320C3 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		FCF16FE1B4146DE87F2B76F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -150,6 +150,8 @@
 			dependencies = (
 			);
 			name = "hello-ar";
+			packageProductDependencies = (
+			);
 			productName = "hello-ar";
 			productReference = D7BA0AA38645722DCFA3490D /* hello-ar.app */;
 			productType = "com.apple.product-type.application";
@@ -160,10 +162,13 @@
 		392626AFF36D607FEB6176BE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 281E763643B2F1F3B903864B /* Build configuration list for PBXProject "hello-ar" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -171,6 +176,8 @@
 				en,
 			);
 			mainGroup = 316A56C698744769908E6F88;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -285,6 +292,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -331,6 +339,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -439,6 +448,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
@@ -602,6 +612,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -92,6 +92,8 @@
 			dependencies = (
 			);
 			name = "hello-triangle";
+			packageProductDependencies = (
+			);
 			productName = "hello-triangle";
 			productReference = 3BB2247EC7FE4EFB2C3ED10A /* hello-triangle.app */;
 			productType = "com.apple.product-type.application";
@@ -102,12 +104,13 @@
 		72185E8715083808BEBA6666 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 				};
 			};
 			buildConfigurationList = 69A012BABE82CB5D1986B1BB /* Build configuration list for PBXProject "hello-triangle" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -115,6 +118,8 @@
 				en,
 			);
 			mainGroup = 5B3E3AAF5C75644908492410;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -226,6 +231,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -331,6 +337,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -374,6 +381,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -527,6 +535,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";

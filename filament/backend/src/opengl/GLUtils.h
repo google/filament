@@ -33,21 +33,21 @@
 namespace filament::backend::GLUtils {
 
 std::string_view getGLErrorString(GLenum error) noexcept;
-GLenum checkGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
-void assertGLError(utils::io::ostream& out, const char* function, size_t line) noexcept;
+GLenum checkGLError(const char* function, size_t line) noexcept;
+void assertGLError(const char* function, size_t line) noexcept;
 
 std::string_view getFramebufferStatusString(GLenum err) noexcept;
-GLenum checkFramebufferStatus(utils::io::ostream& out, GLenum target, const char* function, size_t line) noexcept;
-void assertFramebufferStatus(utils::io::ostream& out, GLenum target, const char* function, size_t line) noexcept;
+GLenum checkFramebufferStatus(GLenum target, const char* function, size_t line) noexcept;
+void assertFramebufferStatus(GLenum target, const char* function, size_t line) noexcept;
 
 #ifdef NDEBUG
-#   define CHECK_GL_ERROR(out)
-#   define CHECK_GL_ERROR_NON_FATAL(out)
-#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target)
+#   define CHECK_GL_ERROR()
+#   define CHECK_GL_ERROR_NON_FATAL()
+#   define CHECK_GL_FRAMEBUFFER_STATUS(target)
 #else
-#   define CHECK_GL_ERROR(out) { GLUtils::assertGLError(out, __func__, __LINE__); }
-#   define CHECK_GL_ERROR_NON_FATAL(out) { GLUtils::checkGLError(out, __func__, __LINE__); }
-#   define CHECK_GL_FRAMEBUFFER_STATUS(out, target) { GLUtils::checkFramebufferStatus(out, target, __func__, __LINE__); }
+#   define CHECK_GL_ERROR() { GLUtils::assertGLError(__func__, __LINE__); }
+#   define CHECK_GL_ERROR_NON_FATAL() { GLUtils::checkGLError(__func__, __LINE__); }
+#   define CHECK_GL_FRAMEBUFFER_STATUS(target) { GLUtils::checkFramebufferStatus( target, __func__, __LINE__); }
 #endif
 
 constexpr GLuint getComponentCount(ElementType const type) noexcept {

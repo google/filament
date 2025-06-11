@@ -21,6 +21,7 @@
 #include <utils/compiler.h>
 #include <utils/PrivateImplementation.h>
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -122,11 +123,6 @@ private:
     const char* getFormat(type t) const noexcept;
 };
 
-// handles utils::bitset
-inline ostream& operator << (ostream& o, bitset32 const& s) noexcept {
-    return o << (void*)uintptr_t(s.getValue());
-}
-
 // handles vectors from libmath (but we do this generically, without needing a dependency on libmath)
 template<template<typename T> class VECTOR, typename T>
 inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
@@ -143,5 +139,22 @@ inline ostream& dec(ostream& s) noexcept { return s.dec(); }
 inline ostream& endl(ostream& s) noexcept { return flush(s << '\n'); }
 
 } // namespace utils::io
+
+namespace utils {
+
+// handles utils::bitset
+
+namespace io {
+class ostream;
+}
+
+inline std::ostream& operator<<(std::ostream& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+inline io::ostream& operator<<(io::ostream& o, bitset32 const& s) noexcept {
+    return o << (void*) uintptr_t(s.getValue());
+}
+}// namespace utils
+
 
 #endif // TNT_UTILS_OSTREAM_H

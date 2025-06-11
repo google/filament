@@ -54,52 +54,50 @@ utils::io::ostream& operator<<(utils::io::ostream& out,
 }
 
 void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
-    FWGPU_LOGI << "WebGPU surface capabilities:" << utils::io::endl;
-    FWGPU_LOGI << "  surface usages: " << capabilities.usages << utils::io::endl;
-    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU surface capabilities:";
+    FWGPU_LOGI << "  surface usages: " << capabilities.usages;
+    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):";
     if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
         std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
                 [](wgpu::TextureFormat const format) {
-                    FWGPU_LOGI << "    " << format << utils::io::endl;
+                    FWGPU_LOGI << "    " << format;
                 });
     }
-    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount << "):";
     if (capabilities.presentModeCount > 0 && capabilities.presentModes != nullptr) {
         std::for_each(capabilities.presentModes,
                 capabilities.presentModes + capabilities.presentModeCount,
                 [](wgpu::PresentMode const presentMode) {
-                    FWGPU_LOGI << "    " << presentMode << utils::io::endl;
+                    FWGPU_LOGI << "    " << presentMode;
                 });
     }
-    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount << "):";
     if (capabilities.alphaModeCount > 0 && capabilities.alphaModes != nullptr) {
         std::for_each(capabilities.alphaModes,
                 capabilities.alphaModes + capabilities.alphaModeCount,
                 [](wgpu::CompositeAlphaMode const alphaMode) {
-                    FWGPU_LOGI << "    " << alphaMode << utils::io::endl;
+                    FWGPU_LOGI << "    " << alphaMode;
                 });
     }
 }
 
 void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         wgpu::TextureFormat depthFormat) {
-    FWGPU_LOGI << "WebGPU surface configuration:" << utils::io::endl;
-    FWGPU_LOGI << "  surface format: " << config.format << utils::io::endl;
-    FWGPU_LOGI << "  surface usage: " << config.usage << utils::io::endl;
-    FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU surface configuration:";
+    FWGPU_LOGI << "  surface format: " << config.format;
+    FWGPU_LOGI << "  surface usage: " << config.usage;
+    FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):";
     if (config.viewFormatCount > 0 && config.viewFormats != nullptr) {
         std::for_each(config.viewFormats, config.viewFormats + config.viewFormatCount,
                 [](wgpu::TextureFormat const viewFormat) {
-                    FWGPU_LOGI << "    " << viewFormat << utils::io::endl;
+                    FWGPU_LOGI << "    " << viewFormat;
                 });
     }
-    FWGPU_LOGI << "  surface alpha mode: " << config.alphaMode << utils::io::endl;
-    FWGPU_LOGI << "  surface width: " << config.width << utils::io::endl;
-    FWGPU_LOGI << "  surface height: " << config.height << utils::io::endl;
-    FWGPU_LOGI << "  surface present mode: " << config.presentMode << utils::io::endl;
-    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormat << utils::io::endl;
+    FWGPU_LOGI << "  surface alpha mode: " << config.alphaMode;
+    FWGPU_LOGI << "  surface width: " << config.width;
+    FWGPU_LOGI << "  surface height: " << config.height;
+    FWGPU_LOGI << "  surface present mode: " << config.presentMode;
+    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormat;
 }
 #endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
@@ -189,8 +187,7 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         // We prefer premultiplied to unpremuliplied until that assumption should be adjusted.
         FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
                       "historically used these. Premultiplied alpha composite mode for "
-                      "transparency is being selected as a fallback, but may not work as expected."
-                   << utils::io::endl;
+                      "transparency is being selected as a fallback, but may not work as expected.";
         return wgpu::CompositeAlphaMode::Premultiplied;
     } else {
         FILAMENT_CHECK_POSTCONDITION(unpremultipliedAvailable)
@@ -200,8 +197,7 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
                       "historically used these. Unpremultiplied alpha composite mode for "
                       "transparency is being selected as a fallback "
-                      "(premulitipled is not available either), but may not work as expected."
-                   << utils::io::endl;
+                      "(premulitipled is not available either), but may not work as expected.";
         return wgpu::CompositeAlphaMode::Unpremultiplied;
     }
 }
@@ -274,7 +270,7 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
       mDepthTextureView(createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)) {
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
-        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU surface capabilities";
     } else {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         printSurfaceCapabilitiesDetails(capabilities);
@@ -297,8 +293,7 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     if (mConfig.width != currentSurfaceSize.width || mConfig.height != currentSurfaceSize.height) {
         mConfig.width = currentSurfaceSize.width;
         mConfig.height = currentSurfaceSize.height;
-        FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height
-                   << utils::io::endl;
+        FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif

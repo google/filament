@@ -108,9 +108,9 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
 
 #if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
     if (result != VK_SUCCESS) {
-        FVK_LOGE << "Allocation error: " << result << utils::io::endl;
+        FVK_LOGE << "Allocation error: " << result;
     } else {
-        FVK_LOGD << "Allocated stage with hndl " << buffer << utils::io::endl;
+        FVK_LOGD << "Allocated stage with hndl " << buffer;
     }
 #endif
 

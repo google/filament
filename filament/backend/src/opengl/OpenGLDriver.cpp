@@ -48,12 +48,13 @@
 
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
-#include <utils/FixedCapacityVector.h>
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
+#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
@@ -184,20 +185,18 @@ OpenGLDriver* OpenGLDriver::create(OpenGLPlatform* platform,
     //    GLVertexBufferInfo        : 132       moderate
     // -- less than or equal to 136 bytes
 
-    slog.d
-           << "\nGLSwapChain: " << sizeof(GLSwapChain)
-           << "\nGLBufferObject: " << sizeof(GLBufferObject)
-           << "\nGLVertexBuffer: " << sizeof(GLVertexBuffer)
-           << "\nGLVertexBufferInfo: " << sizeof(GLVertexBufferInfo)
-           << "\nGLIndexBuffer: " << sizeof(GLIndexBuffer)
-           << "\nGLRenderPrimitive: " << sizeof(GLRenderPrimitive)
-           << "\nGLTexture: " << sizeof(GLTexture)
-           << "\nGLTimerQuery: " << sizeof(GLTimerQuery)
-           << "\nGLStream: " << sizeof(GLStream)
-           << "\nGLRenderTarget: " << sizeof(GLRenderTarget)
-           << "\nGLFence: " << sizeof(GLFence)
-           << "\nOpenGLProgram: " << sizeof(OpenGLProgram)
-           << io::endl;
+    DLOG(INFO) << "GLSwapChain: " << sizeof(GLSwapChain);
+    DLOG(INFO) << "GLBufferObject: " << sizeof(GLBufferObject);
+    DLOG(INFO) << "GLVertexBuffer: " << sizeof(GLVertexBuffer);
+    DLOG(INFO) << "GLVertexBufferInfo: " << sizeof(GLVertexBufferInfo);
+    DLOG(INFO) << "GLIndexBuffer: " << sizeof(GLIndexBuffer);
+    DLOG(INFO) << "GLRenderPrimitive: " << sizeof(GLRenderPrimitive);
+    DLOG(INFO) << "GLTexture: " << sizeof(GLTexture);
+    DLOG(INFO) << "GLTimerQuery: " << sizeof(GLTimerQuery);
+    DLOG(INFO) << "GLStream: " << sizeof(GLStream);
+    DLOG(INFO) << "GLRenderTarget: " << sizeof(GLRenderTarget);
+    DLOG(INFO) << "GLFence: " << sizeof(GLFence);
+    DLOG(INFO) << "OpenGLProgram: " << sizeof(OpenGLProgram);
 #endif
 
     // here we check we're on a supported version of GL before initializing the driver
@@ -289,7 +288,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform, const Platform::DriverConfi
     mStreamsWithPendingAcquiredImage.reserve(8);
 
 #ifndef NDEBUG
-    slog.i << "OS version: " << mPlatform.getOSVersion() << io::endl;
+    LOG(INFO) << "OS version: " << mPlatform.getOSVersion();
 #endif
 
     // Timer queries are core in GL 3.3, otherwise we need EXT_disjoint_timer_query
@@ -668,7 +667,7 @@ void OpenGLDriver::createIndexBufferR(
     gl.bindVertexArray(nullptr);
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
@@ -693,7 +692,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
         glBufferData(bo->gl.binding, byteCount, nullptr, getBufferUsage(usage));
     }
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -730,7 +729,7 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     // this records the index buffer into the currently bound VAO
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
@@ -760,7 +759,7 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     }
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 UTILS_NOINLINE
@@ -953,7 +952,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
         renderBufferStorage(t->gl.id, internalFormat, w, h, samples);
     }
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
@@ -999,7 +998,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     assert_invariant(ref);
     ref->count++;
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
@@ -1062,7 +1061,7 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     assert_invariant(ref);
     ref->count++;
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerType target,
@@ -1225,7 +1224,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 #endif
     }
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
@@ -1485,7 +1484,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                 // we shouldn't be here
                 break;
         }
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     } else
 #ifndef __EMSCRIPTEN__
 #ifdef GL_EXT_multisampled_render_to_texture
@@ -1506,7 +1505,7 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
             glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment,
                     GL_RENDERBUFFER, t->gl.id);
         }
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     } else
 #endif // GL_EXT_multisampled_render_to_texture
 #endif // __EMSCRIPTEN__
@@ -1588,13 +1587,13 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
                 break;
         }
 
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     }
 
     rt->gl.resolve |= resolveFlags;
 
-    CHECK_GL_ERROR(utils::slog.e)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
+    CHECK_GL_ERROR()
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
 }
 
 void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width, // NOLINT(readability-convert-member-functions-to-static)
@@ -1623,7 +1622,7 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
     // unbind the renderbuffer, to avoid any later confusion
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createDefaultRenderTargetR(
@@ -1720,7 +1719,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         if (UTILS_LIKELY(!getContext().isES2())) {
             glDrawBuffers((GLsizei)maxDrawBuffers, bufs);
         }
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     }
 #endif
 
@@ -1760,7 +1759,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     assert_invariant(any(targets & TargetBufferFlags::ALL));
     assert_invariant(tmin == tmax);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
@@ -2111,7 +2110,7 @@ void OpenGLDriver::setAcquiredImage(Handle<HwStream> sh, void* hwbuffer, const m
 
     if (UTILS_UNLIKELY(glstream->user_thread.pending.image)) {
         scheduleRelease(glstream->user_thread.pending);
-        slog.w << "Acquired image is set more than once per frame." << io::endl;
+        LOG(WARNING) << "Acquired image is set more than once per frame.";
     }
 
     glstream->user_thread.pending = mPlatform.transformAcquiredImage({
@@ -2560,7 +2559,7 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 
                 // OpenGL context has changed, resynchronize the state with the cache
                 mContext.synchronizeStateAndCache(index);
-                slog.d << "*** OpenGL context change : " << (index ? "protected" : "default") << io::endl;
+                DLOG(INFO) << "*** OpenGL context change : " << (index ? "protected" : "default");
             });
 
     mCurrentDrawSwapChain = scDraw;
@@ -2601,7 +2600,7 @@ void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
         vb->bufferObjectsVersion = (version + 1) % kMaxVersion;
     }
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::updateIndexBuffer(
@@ -2618,7 +2617,7 @@ void OpenGLDriver::updateIndexBuffer(
 
     scheduleDestroy(std::move(p));
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) {
@@ -2698,7 +2697,7 @@ void OpenGLDriver::updateBufferObject(
 
     scheduleDestroy(std::move(bd));
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::updateBufferObjectUnsynchronized(
@@ -2745,7 +2744,7 @@ retry:
             scheduleDestroy(std::move(bd));
         }
     }
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 #endif
 }
 
@@ -2795,7 +2794,7 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
 
     glGenerateMipmap(t->gl.target);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::setTextureData(GLTexture const* t, uint32_t level,
@@ -2904,7 +2903,7 @@ void OpenGLDriver::setTextureData(GLTexture const* t, uint32_t level,
 
     scheduleDestroy(std::move(p));
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::setCompressedTextureData(GLTexture const* t, uint32_t level,
@@ -2990,7 +2989,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture const* t, uint32_t level,
 
     scheduleDestroy(std::move(p));
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -3153,7 +3152,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     TargetBufferFlags discardFlags = params.flags.discardStart & rt->targets;
 
     GLuint const fbo = gl.bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
 
     // each render-pass starts with a disabled scissor
     gl.disable(GL_SCISSOR_TEST);
@@ -3165,7 +3164,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         if (attachmentCount) {
             gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
         }
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     } else {
         // It's important to clear the framebuffer before drawing, as it resets
         // the fb to a known state (resets fb compression and possibly other things).
@@ -3252,7 +3251,7 @@ void OpenGLDriver::endRenderPass(int) {
             if (attachmentCount) {
                 gl.procs.invalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
             }
-           CHECK_GL_ERROR(utils::slog.e)
+           CHECK_GL_ERROR()
         }
     }
 
@@ -3298,13 +3297,13 @@ void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
         gl.bindFramebuffer(GL_READ_FRAMEBUFFER, read);
         gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
 
-        CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
-        CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
+        CHECK_GL_FRAMEBUFFER_STATUS(GL_READ_FRAMEBUFFER)
+        CHECK_GL_FRAMEBUFFER_STATUS(GL_DRAW_FRAMEBUFFER)
 
         gl.disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(0, 0, (GLint)rt->width, (GLint)rt->height,
                 0, 0, (GLint)rt->width, (GLint)rt->height, mask, GL_NEAREST);
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     }
 #endif
 }
@@ -3483,7 +3482,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         if (buffer) {
             gl.bindFramebuffer(GL_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
             glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, buffer);
-            CHECK_GL_ERROR(utils::slog.e)
+            CHECK_GL_ERROR()
 
             // now we need to flip the buffer vertically to match our API
             size_t const stride = p.stride ? p.stride : width;
@@ -3515,7 +3514,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
     glBufferData(GL_PIXEL_PACK_BUFFER, pboSize, nullptr, GL_STATIC_DRAW);
     glReadPixels(GLint(x), GLint(y), GLint(width), GLint(height), glFormat, glType, nullptr);
     gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     // we're forced to make a copy on the heap because otherwise it deletes std::function<> copy
     // constructor.
@@ -3555,7 +3554,7 @@ void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         glDeleteBuffers(1, &pbo);
         scheduleDestroy(std::move(p));
         delete pUserBuffer;
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     });
 #endif
 }
@@ -3580,7 +3579,7 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
         glCopyBufferSubData(bo->gl.binding, GL_PIXEL_PACK_BUFFER, offset, 0, size);
         gl.bindBuffer(bo->gl.binding, 0);
         gl.bindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
 
         // then, we schedule a mapBuffer of the PBO later, once the fence has signaled
         auto* pUserBuffer = new BufferDescriptor(std::move(p));
@@ -3597,7 +3596,7 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
             glDeleteBuffers(1, &pbo);
             scheduleDestroy(std::move(p));
             delete pUserBuffer;
-            CHECK_GL_ERROR(utils::slog.e)
+            CHECK_GL_ERROR()
         });
     } else {
         gl.bindBuffer(bo->gl.binding, bo->gl.id);
@@ -3610,7 +3609,7 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
         }
         gl.bindBuffer(bo->gl.binding, 0);
         scheduleDestroy(std::move(p));
-        CHECK_GL_ERROR(utils::slog.e)
+        CHECK_GL_ERROR()
     }
 #endif
 }
@@ -3640,7 +3639,7 @@ void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
 void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
@@ -3858,7 +3857,7 @@ void OpenGLDriver::clearWithRasterPipe(TargetBufferFlags clearFlags,
         }
     }
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 void OpenGLDriver::resolve(
@@ -3969,7 +3968,7 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_DRAW_FRAMEBUFFER)
 
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, fbo[1]);
     switch (s->target) {
@@ -3995,14 +3994,14 @@ void OpenGLDriver::blit(
         case SamplerType::SAMPLER_EXTERNAL:
             break;
     }
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_READ_FRAMEBUFFER)
 
     gl.disable(GL_SCISSOR_TEST);
     glBlitFramebuffer(
             srcOrigin.x, srcOrigin.y, srcOrigin.x + size.x, srcOrigin.y + size.y,
             dstOrigin.x, dstOrigin.y, dstOrigin.x + size.x, dstOrigin.y + size.y,
             mask, GL_NEAREST);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     gl.unbindFramebuffer(GL_DRAW_FRAMEBUFFER);
     gl.unbindFramebuffer(GL_READ_FRAMEBUFFER);
@@ -4065,15 +4064,15 @@ void OpenGLDriver::blitDEPRECATED(TargetBufferFlags buffers,
     gl.bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
     gl.bindFramebuffer(GL_DRAW_FRAMEBUFFER, d->gl.fbo);
 
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_READ_FRAMEBUFFER)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_DRAW_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_READ_FRAMEBUFFER)
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_DRAW_FRAMEBUFFER)
 
     gl.disable(GL_SCISSOR_TEST);
     glBlitFramebuffer(
             srcRect.left, srcRect.bottom, srcRect.right(), srcRect.top(),
             dstRect.left, dstRect.bottom, dstRect.right(), dstRect.top(),
             GL_COLOR_BUFFER_BIT, glFilterMode);
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 #endif
 }
 
@@ -4200,9 +4199,9 @@ void OpenGLDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
 #endif
 
 #if FILAMENT_ENABLE_MATDBG
-    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+    CHECK_GL_ERROR_NON_FATAL()
 #else
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 #endif
 }
 
@@ -4232,9 +4231,9 @@ void OpenGLDriver::draw2GLES2(uint32_t indexOffset, uint32_t indexCount, uint32_
             reinterpret_cast<const void*>(indexOffset << rp->gl.indicesShift));
 
 #if FILAMENT_ENABLE_MATDBG
-    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+    CHECK_GL_ERROR_NON_FATAL()
 #else
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 #endif
 }
 
@@ -4284,9 +4283,9 @@ void OpenGLDriver::dispatchCompute(Handle<HwProgram> program, uint3 workGroupCou
 #endif // BACKEND_OPENGL_LEVEL_GLES31
 
 #if FILAMENT_ENABLE_MATDBG
-    CHECK_GL_ERROR_NON_FATAL(utils::slog.e)
+    CHECK_GL_ERROR_NON_FATAL()
 #else
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 #endif
 }
 
