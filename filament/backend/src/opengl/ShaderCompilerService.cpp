@@ -122,12 +122,18 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     }
 
     std::optional<CallbackManager::Handle> handle{};
+
+    // Only valid when the blob functions are provided by users. The validity of this variable
+    // doesn't guarantee that the program was created from the cache blob.
     BlobCacheKey key;
 
     // Used for the `THREAD_POOL` mode.
     mutable Mutex lock;
     mutable Condition cond;
     bool signaled = false;
+
+    // Indicate this program was created from the cache blob.
+    bool retrieved = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
@@ -259,6 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     // Try retrieving the cached program blob if available.
     token->gl.program = mBlobCache.retrieve(&token->key, mDriver.mPlatform, program);
     if (token->gl.program) {
+        token->retrieved = true;
         return token;
     }
 
@@ -337,12 +344,15 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
 
     assert_invariant(token);// This function should be called when the token is still alive.
 
-    if (token->compiler.mMode == Mode::THREAD_POOL) {
-        auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
-        if (!job) {
-            // It's likely that the job was already completed. But it may be still being
-            // executed at this moment. Just try waiting for it to avoid a race.
-            token->wait();
+    // Finalize any pending shader compilation tasks only when the token was created without cache.
+    if (!token->retrieved) {
+        if (token->compiler.mMode == Mode::THREAD_POOL) {
+            auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
+            if (!job) {
+                // It's likely that the job was already completed. But it may be still being
+                // executed at this moment. Just try waiting for it to avoid a race.
+                token->wait();
+            }
         }
     }
 
