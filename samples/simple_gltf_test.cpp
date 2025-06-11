@@ -205,6 +205,7 @@ int main(int argc, char** argv) {
     };
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
+        view->setMultiSampleAntiAliasingOptions({ .enabled = true});
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view);
