@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -31,10 +31,10 @@
 		47B161015D23D464253ABAF1 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		6238AED51F5F46CCFBE6892D /* CameraManipulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CameraManipulator.cpp; sourceTree = "<group>"; };
 		84D7269DBC8441140F7F8905 /* FilamentView.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FilamentView.m; sourceTree = "<group>"; };
-		A37B936423E3B1BF1CA137E0 /* hello-gltf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-gltf.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A37B936423E3B1BF1CA137E0 /* hello-gltf.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-gltf.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A52D063A6C24A885D52E2F79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		B1B470F3CDEE0D4A60B11C72 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
-		B299B19218E1CF7B2D13ABB8 /* DamagedHelmet.glb */ = {isa = PBXFileReference; lastKnownFileType = file; path = DamagedHelmet.glb; sourceTree = "<group>"; };
+		B1B470F3CDEE0D4A60B11C72 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		B299B19218E1CF7B2D13ABB8 /* DamagedHelmet.glb */ = {isa = PBXFileReference; path = DamagedHelmet.glb; sourceTree = "<group>"; };
 		BAEAC7786B3EA7E47855A56B /* FilamentViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentViewController.h; sourceTree = "<group>"; };
 		D3A6F9906B0647549CF53196 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
 		EC3FAC405D5790391F3AE4FB /* App.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = App.h; sourceTree = "<group>"; };
@@ -123,6 +123,8 @@
 			dependencies = (
 			);
 			name = "hello-gltf";
+			packageProductDependencies = (
+			);
 			productName = "hello-gltf";
 			productReference = A37B936423E3B1BF1CA137E0 /* hello-gltf.app */;
 			productType = "com.apple.product-type.application";
@@ -133,10 +135,13 @@
 		690D846B2164EA54ABAD02A4 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1200;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = C7514DDCFDA3C5F803E239F9 /* Build configuration list for PBXProject "hello-gltf" */;
-			compatibilityVersion = "Xcode 11.0";
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -144,6 +149,8 @@
 				en,
 			);
 			mainGroup = 74FBC1573C79190CC198A030;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -321,6 +328,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lgltfio_core",
 					"-luberarchive",
 					"-limage",
@@ -373,6 +381,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lgltfio_core",
 					"-luberarchive",
 					"-limage",
@@ -597,6 +606,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lgltfio_core",
 					"-luberarchive",
 					"-limage",
@@ -649,6 +659,7 @@
 					"-lsmol-v",
 					"-lgeometry",
 					"-libl",
+					"-labseil",
 					"-lgltfio_core",
 					"-luberarchive",
 					"-limage",

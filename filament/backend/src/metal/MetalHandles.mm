@@ -27,10 +27,11 @@
 
 #include "private/backend/BackendUtils.h"
 
-#include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
-#include <utils/trap.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/trap.h>
 
 #include <math/scalar.h>
 
@@ -115,14 +116,14 @@ MetalSwapChain::MetalSwapChain(
       type(SwapChainType::CAMETALLAYER) {
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
-        utils::slog.w << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, "
-                         "but the CAMetaLayer(" << (__bridge void*) nativeWindow << ")"
-                         " has .opaque set to NO." << utils::io::endl;
+        LOG(WARNING) << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, but the "
+                        "CAMetaLayer("
+                     << (__bridge void*) nativeWindow << ") has .opaque set to NO.";
     }
     if ((flags & SwapChain::CONFIG_TRANSPARENT) && nativeWindow.opaque) {
-        utils::slog.w << "Warning: Filament SwapChain has the CONFIG_TRANSPARENT flag, "
-                         "but the CAMetaLayer(" << (__bridge void*) nativeWindow << ")"
-                         " has .opaque set to YES." << utils::io::endl;
+        LOG(WARNING) << "Warning: Filament SwapChain has the CONFIG_TRANSPARENT flag, but the "
+                        "CAMetaLayer("
+                     << (__bridge void*) nativeWindow << ") has .opaque set to YES.";
     }
 
     // Needed so we can use the SwapChain as a blit source.

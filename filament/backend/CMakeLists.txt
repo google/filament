@@ -403,6 +403,10 @@ endif()
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    target_link_libraries(${TARGET} PRIVATE absl::log)
+endif()
+
 # Android, iOS, and WebGL do not use bluegl.
 if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PRIVATE bluegl)

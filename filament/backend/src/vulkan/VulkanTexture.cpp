@@ -188,8 +188,8 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(physicalDevice, vkFormat, &props);
             if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-                FVK_LOGW << "Texture usage is SAMPLEABLE but format " << vkFormat << " is not "
-                        "sampleable with optimal tiling." << utils::io::endl;
+                FVK_LOGW << "Texture usage is SAMPLEABLE but format " << vkFormat
+                         << " is not sampleable with optimal tiling.";
             }
         }
 #endif
@@ -361,7 +361,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             imageInfo.flags = VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
         } else {
             FVK_LOGW << "Note: creating 2D views on 3D image is not available on this platform. "
-                     << "i.e. we cannot render to slices of a 3D image" << utils::io::endl;
+                     << "i.e. we cannot render to slices of a 3D image";
         }
     } else if (target == SamplerType::SAMPLER_CUBEMAP) {
         imageInfo.arrayLayers = 6;
@@ -420,7 +420,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice,
             << "type = " << imageInfo.imageType << ", "
             << "flags = " << imageInfo.flags << ", "
             << "target = " << static_cast<int>(target) <<", "
-            << "format = " << vkFormat << utils::io::endl;
+            << "format = " << vkFormat;
     }
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to create image."
                                                        << " error=" << static_cast<int32_t>(result);
@@ -731,14 +731,14 @@ bool VulkanTexture::transitionLayout(VkCommandBuffer cmdbuf, VkImageSubresourceR
                  << range.levelCount << ")" << " from=" << oldLayout << " to=" << newLayout
                  << " format=" << mState->mVkFormat << " depth="
                  << fvkutils::isVkDepthFormat(mState->mVkFormat)
-                 << " slice-by-slice=" << transitionSliceBySlice << utils::io::endl;
+                 << " slice-by-slice=" << transitionSliceBySlice;
 #endif
     } else {
 #if FVK_ENABLED(FVK_DEBUG_LAYOUT_TRANSITION)
         FVK_LOGD << "transition texture=" << mState->mTextureImage << " (" << range.baseArrayLayer
                  << "," << range.baseMipLevel << ")" << " count=(" << range.layerCount << ","
                  << range.levelCount << ")" << " to=" << newLayout
-                 << " is skipped because of no change in layout" << utils::io::endl;
+                 << " is skipped because of no change in layout";
 #endif
     }
 
@@ -849,8 +849,7 @@ void VulkanTexture::print() const {
                 level < (mPrimaryViewRange.baseMipLevel + mPrimaryViewRange.levelCount);
             FVK_LOGD << "[" << mState->mTextureImage << "]: (" << layer << "," << level
                           << ")=" << getLayout(layer, level)
-                          << " primary=" << primary
-                          << utils::io::endl;
+                          << " primary=" << primary;
         }
     }
 
@@ -859,8 +858,7 @@ void VulkanTexture::print() const {
         FVK_LOGD << "[" << mState->mTextureImage << ", imageView=" << view.second << "]=>"
                       << " (" << range.baseArrayLayer << "," << range.baseMipLevel << ")"
                       << " count=(" << range.layerCount << "," << range.levelCount << ")"
-                      << " aspect=" << range.aspectMask << " viewType=" << view.first.type
-                      << utils::io::endl;
+                      << " aspect=" << range.aspectMask << " viewType=" << view.first.type;
     }
 }
 #endif

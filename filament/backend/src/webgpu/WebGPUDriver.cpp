@@ -336,15 +336,15 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
     FWGPU_LOGW << "WebGPU support is highly experimental, in development, and tested for only a "
                   "small set of simple samples (e.g. hellotriangle and texturedquad), thus issues "
-                  "are likely to be encountered at this stage."
-               << utils::io::endl;
+                  "are likely to be encountered at this stage.";
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
-    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << utils::io::hex
-               << FWGPU_PRINT_SYSTEM << utils::io::dec
+    char printSystemHex[16];
+    snprintf(printSystemHex, sizeof(printSystemHex), "%#x", FWGPU_PRINT_SYSTEM);
+    FWGPU_LOGI << "If the FILAMENT_BACKEND_DEBUG_FLAG variable were set with the " << printSystemHex
                << " bit flag on during build time the application would print system details "
                   "about the selected graphics device, surface, etc. To see this try "
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
-               << FWGPU_PRINT_SYSTEM << " ..." << utils::io::endl;
+               << FWGPU_PRINT_SYSTEM << " ...";
 #endif
 }
 

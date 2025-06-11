@@ -18,7 +18,7 @@
 
 #include "MetalEnums.h"
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 
 namespace filament {
 namespace backend {
@@ -95,7 +95,7 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
             [NSString stringWithFormat:@"Could not create Metal pipeline state: %@",
                 error ? error.localizedDescription : @"unknown error"];
         auto description = [errorMessage cStringUsingEncoding:NSUTF8StringEncoding];
-        utils::slog.e << description << utils::io::endl;
+        LOG(ERROR) << description;
         [[NSException exceptionWithName:@"MetalRenderPipelineFailure"
                                  reason:errorMessage
                                userInfo:nil] raise];
@@ -155,7 +155,7 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
     // MTLSamplerDescriptor.
     // In practice, this means shadows are not supported when running in the simulator.
     if (![device supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v1]) {
-        utils::slog.w << "Warning: sample comparison not supported by this GPU" << utils::io::endl;
+        LOG(WARNING) << "Warning: sample comparison not supported by this GPU";
         samplerDescriptor.compareFunction = MTLCompareFunctionNever;
     }
 #endif

@@ -20,12 +20,12 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/compiler.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
-#include <utils/ostream.h>
 #include <utils/Panic.h>
+#include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <algorithm>
 #include <mutex>
@@ -121,11 +121,10 @@ void CommandBufferQueue::flush() {
 
 #ifndef NDEBUG
         size_t const totalUsed = circularBuffer.size() - mFreeSpace;
-        slog.d << "CommandStream used too much space (will block): "
-                << "needed space " << requiredSize << " out of " << mFreeSpace
-                << ", totalUsed=" << totalUsed << ", current=" << used
-                << ", queue size=" << mCommandBuffersToExecute.size() << " buffers"
-                << io::endl;
+        DLOG(INFO) << "CommandStream used too much space (will block): "
+                   << "needed space " << requiredSize << " out of " << mFreeSpace
+                   << ", totalUsed=" << totalUsed << ", current=" << used
+                   << ", queue size=" << mCommandBuffersToExecute.size() << " buffers";
 
         mHighWatermark = std::max(mHighWatermark, totalUsed);
 #endif
