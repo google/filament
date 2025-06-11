@@ -15,10 +15,10 @@
  */
 
 #include "VulkanBufferProxy.h"
-#include "VulkanCommands.h"
-#include "VulkanMemory.h"
 
 #include "VulkanBufferCache.h"
+#include "VulkanCommands.h"
+#include "VulkanContext.h"
 #include "VulkanMemory.h"
 
 using namespace bluevk;
@@ -35,7 +35,38 @@ VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& st
       mUpdatedBytes(0) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
-        uint32_t byteOffset, uint32_t numBytes) {
+        uint32_t byteOffset, uint32_t numBytes, bool forceStaging) {
+    // The VulkanBuffer is available if the only object reference is hold by the
+    // `VulkanBufferProxy`. This means that the buffer is not currently in progress to be use or
+    // already in flight.
+    bool const isAvailable = mBuffer->getCount() == 1;
+
+    if (isAvailable) {
+        // We are up to date with all the update operations, so no need to synchronize with previous
+        // updates.
+        mUpdatedBytes = 0;
+        mUpdatedOffset = 0;
+    }
+
+    // Keep track of the VulkanBuffer usage
+    commands.acquire(mBuffer);
+
+    // Check if we can just memcpy directly to the GPU memory.
+    // This is only allowed for UNIFORMS that are AVAILABLE and the memory is HOST_VISIBLE
+    // (supports memcpy from host). This works regardless if it's a full or partial update of the
+    // buffer.
+    bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
+    bool const isUniform = getUsage() == VulkanBufferUsage::UNIFORM;
+    bool const useMemcpy = isUniform && isMemcopyable && isAvailable && !forceStaging;
+    if (useMemcpy) {
+        char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
+                     byteOffset;
+        memcpy(dest, cpuData, numBytes);
+        vmaFlushAllocation(mAllocator, mBuffer->getGpuBuffer()->vmaAllocation, byteOffset,
+                numBytes);
+        return;
+    }
+
     // Note: this should be stored within the command buffer before going out of
     // scope, so that the command buffer can manage its lifecycle.
     fvkmemory::resource_ptr<VulkanStage::Segment> stage = mStagePool.acquireStage(numBytes);
@@ -128,4 +159,4 @@ VulkanBufferUsage VulkanBufferProxy::getUsage() const noexcept {
     return mBuffer->getGpuBuffer()->usage;
 }
 
-}// namespace filament::backend
+} // namespace filament::backend

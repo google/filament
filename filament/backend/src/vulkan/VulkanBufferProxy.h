@@ -33,7 +33,7 @@ public:
             VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes);
 
     void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes);
+            uint32_t numBytes, bool forceStaging);
 
     VkBuffer getVkBuffer() const noexcept;
 
@@ -49,6 +49,6 @@ private:
     uint32_t mUpdatedBytes = 0;
 };
 
-}// namespace filament::backend
+} // namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_VULKANBUFFERPROXY_H
+#endif // TNT_FILAMENT_BACKEND_VULKANBUFFERPROXY_H
