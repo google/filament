@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
 
+#include "utils/Definitions.h"
+
 #include <backend/DriverEnums.h>
 
 #include <utils/Hash.h>
@@ -30,7 +32,7 @@ namespace filament::backend {
 class VulkanYcbcrConversionCache {
 public:
     struct Params {
-        SamplerYcbcrConversion conversion = {}; // 4
+        fvkutils::SamplerYcbcrConversion conversion = {}; // 4
         VkFormat format;                        // 4
         uint64_t externalFormat = 0;            // 8
     };
@@ -45,16 +47,15 @@ private:
 
     struct ConversionEqualTo {
         bool operator()(Params lhs, Params rhs) const noexcept {
-            SamplerYcbcrConversion::EqualTo equal;
+            fvkutils::SamplerYcbcrConversion::EqualTo equal;
             return equal(lhs.conversion, rhs.conversion) &&
-                   lhs.externalFormat == rhs.externalFormat &&
-                   lhs.format == rhs.format;
+                   lhs.externalFormat == rhs.externalFormat && lhs.format == rhs.format;
         }
     };
     using ConversionHashFn = utils::hash::MurmurHashFn<Params>;
     tsl::robin_map<Params, VkSamplerYcbcrConversion, ConversionHashFn, ConversionEqualTo> mCache;
 };
 
-}// namespace filament::backend
+} // namespace filament::backend
 
 #endif// TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
