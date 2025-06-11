@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "common/arguments.h"
+#include "common/configuration.h"
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
@@ -209,8 +211,10 @@ int main(int argc, char** argv) {
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view);
 
+
         app.materials = (app.materialSource == JITSHADER)
-                                ? createJitShaderProvider(engine)
+                                ? createJitShaderProvider(engine, false /* optimize */,
+                                          samples::getJitMaterialVariantFilter(app.config.backend))
                                 : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
                                           UBERARCHIVE_DEFAULT_SIZE);
 

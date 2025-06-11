@@ -15,6 +15,7 @@
  */
 
 #include "common/arguments.h"
+#include "common/configuration.h"
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
@@ -244,8 +245,11 @@ int main(int argc, char** argv) {
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view);
 
-        app.materials = (app.materialSource == JITSHADER) ? createJitShaderProvider(engine) :
-                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+        app.materials = (app.materialSource == JITSHADER)
+                                ? createJitShaderProvider(engine, false /* optimize */,
+                                          samples::getJitMaterialVariantFilter(app.config.backend))
+                                : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                                          UBERARCHIVE_DEFAULT_SIZE);
 
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {

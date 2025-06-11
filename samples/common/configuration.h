@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef TNT_SAMPLES_ARGUMENTS_H
-#define TNT_SAMPLES_ARGUMENTS_H
+#ifndef TNT_SAMPLES_CONFIGURATION_H
+#define TNT_SAMPLES_CONFIGURATION_H
 
 #include <filament/Engine.h>
 
-#include <string>
+#include <utils/FixedCapacityVector.h>
 
 namespace samples {
 
-filament::Engine::Backend parseArgumentsForBackend(int argc, char* argv[]);
-filament::Engine::Backend parseArgumentsForBackend(const std::string& backend);
-std::string getBackendAPIArgumentsUsage();
+utils::FixedCapacityVector<char const*> const& getJitMaterialVariantFilter(
+        filament::Engine::Backend backend);
 
-} // namespace samples
-#endif //TNT_SAMPLES_ARGUMENTS_H
+}
+
+#endif // TNT_SAMPLES_CONFIGURATION_H
