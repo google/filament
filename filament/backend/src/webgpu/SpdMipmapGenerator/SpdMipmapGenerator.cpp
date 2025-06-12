@@ -86,7 +86,9 @@ MipmapGenerator::MipmapGenerator(const wgpu::Device& device)
     // std::min(4u - 1, 11u) = 3.
     m_maxMipsPerPass =
             std::min(static_cast<uint32_t>(deviceLimits.maxStorageTexturesPerShaderStage) - 1, 11u);
-    
+    m_maxArrayLayers = deviceLimits.maxStorageTexturesPerShaderStage;
+
+
     // If we can generate more than 6 mips in a pass, we need an advanced BGL
     // that includes atomic counter and mid-mip buffer for levels > 5.
     if (m_maxMipsPerPass > 6) {
@@ -222,50 +224,58 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(const PipelineCacheKey& key) {
 
 void MipmapGenerator::Generate(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
         const SPDPassConfig& config) {
-    // config.numMips now represents the total number of desired mip levels for the texture.
-    // config.sourceMipLevel is the starting level (e.g., 0 for a full chain).
     if (config.numMips <= 1 || config.numMips <= config.sourceMipLevel + 1) {
-        return; // Not enough mips to generate, or target is already met/exceeded.
-    }
-
-    if (m_maxMipsPerPass == 0) {
-        // This indicates an issue, e.g., deviceLimits.maxStorageTexturesPerShaderStage <= 1.
-        // Log an error or handle appropriately.
         return;
     }
 
-    // Prepare pipelines once based on the overall configuration for filter and precision.
-    // The actual number of mips per pipeline will be handled by GetOrCreatePipeline.
+    if (m_maxMipsPerPass == 0) {
+        return;
+    }
+
     PreparePipelines(srcTexture.GetFormat(), config.filter, config.halfPrecision);
 
-    uint32_t mipsToGenerateCount = config.numMips - (config.sourceMipLevel + 1);
-    uint32_t currentSourceMipLevel = config.sourceMipLevel;
+    uint32_t totalSrcArrayLayers = srcTexture.GetDepthOrArrayLayers();
 
-    while (mipsToGenerateCount > 0) {
-        uint32_t mipsThisPass = std::min(mipsToGenerateCount, m_maxMipsPerPass);
+    // Loop over array layer chunks
+    for (uint32_t currentBaseArrayLayer = 0; currentBaseArrayLayer < totalSrcArrayLayers;
+            currentBaseArrayLayer += m_maxArrayLayers) {
 
-        SPDPassConfig passSpecificConfig = {}; // Create a new config for this specific pass
-        passSpecificConfig.filter = config.filter;
-        passSpecificConfig.halfPrecision = config.halfPrecision;
-        passSpecificConfig.targetTexture = config.targetTexture ? config.targetTexture : srcTexture;
-        passSpecificConfig.numMips = mipsThisPass; // numMips for this specific pass
-        passSpecificConfig.sourceMipLevel = currentSourceMipLevel;
+        uint32_t arrayLayersThisPass =
+                std::min(m_maxArrayLayers, totalSrcArrayLayers - currentBaseArrayLayer);
 
-        generatePass(commandEncoder, srcTexture, passSpecificConfig);
+        uint32_t mipsToGenerateCount = config.numMips - (config.sourceMipLevel + 1);
+        uint32_t currentSourceMipLevel = config.sourceMipLevel;
 
-        mipsToGenerateCount -= mipsThisPass;
-        currentSourceMipLevel += mipsThisPass;
+        while (mipsToGenerateCount > 0) {
+            uint32_t mipsThisPass = std::min(mipsToGenerateCount, m_maxMipsPerPass);
+
+            SPDPassConfig passSpecificConfig = {};
+            passSpecificConfig.filter = config.filter;
+            passSpecificConfig.halfPrecision = config.halfPrecision;
+            passSpecificConfig.targetTexture =
+                    config.targetTexture ? config.targetTexture : srcTexture;
+            passSpecificConfig.numMips = mipsThisPass;
+            passSpecificConfig.sourceMipLevel = currentSourceMipLevel;
+
+            // Pass baseArrayLayer and numArrayLayers directly to generatePass
+            generatePass(commandEncoder, srcTexture, passSpecificConfig, currentBaseArrayLayer,
+                    arrayLayersThisPass);
+
+            mipsToGenerateCount -= mipsThisPass;
+            currentSourceMipLevel += mipsThisPass;
+        }
     }
 }
 
 void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
-        const SPDPassConfig& passConfig) { // Renamed param to passConfig for clarity
+        const SPDPassConfig& passConfig, uint32_t baseArrayLayer, uint32_t numArrayLayers) {
     uint32_t width = srcTexture.GetWidth() >> passConfig.sourceMipLevel;
     uint32_t height = srcTexture.GetHeight() >> passConfig.sourceMipLevel;
-    uint32_t arrayLayerCount = srcTexture.GetDepthOrArrayLayers();
+
+    uint32_t arrayLayerCountForThisPass = numArrayLayers;
 
     wgpu::Texture target = passConfig.targetTexture ? passConfig.targetTexture : srcTexture;
-    uint32_t numMipsThisPass = passConfig.numMips; // This is now specific to this pass
+    uint32_t numMipsThisPass = passConfig.numMips;
 
     if (numMipsThisPass == 0) return;
 
@@ -280,8 +290,8 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
     srcViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
     srcViewDesc.baseMipLevel = passConfig.sourceMipLevel;
     srcViewDesc.mipLevelCount = 1;
-    srcViewDesc.baseArrayLayer = 0;
-    srcViewDesc.arrayLayerCount = arrayLayerCount;
+    srcViewDesc.baseArrayLayer = baseArrayLayer;
+    srcViewDesc.arrayLayerCount = arrayLayerCountForThisPass;
 
     wgpu::BindGroupEntry srcEntry{};
     srcEntry.binding = 0;
@@ -293,8 +303,8 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
         dstViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
         dstViewDesc.baseMipLevel = passConfig.sourceMipLevel + i + 1;
         dstViewDesc.mipLevelCount = 1;
-        dstViewDesc.baseArrayLayer = 0;
-        dstViewDesc.arrayLayerCount = arrayLayerCount;
+        dstViewDesc.baseArrayLayer = baseArrayLayer;
+        dstViewDesc.arrayLayerCount = arrayLayerCountForThisPass;
 
         wgpu::BindGroupEntry dstEntry{};
         dstEntry.binding = i + 1;
@@ -309,15 +319,15 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
     wgpu::BindGroup mipsBindGroup = m_device.CreateBindGroup(&mipBindGroupDesc);
 
     // --- Create Bind Group 1 (Internal Resources) ---
-    uint32_t numWorkGroupsX = (width + 63) / 64;
-    uint32_t numWorkGroupsY = (height + 63) / 64;
-    uint32_t numWorkGroups = numWorkGroupsX * numWorkGroupsY;
+    uint32_t widthDiv64 = (width + 63) / 64;
+    uint32_t heightDiv64 = (height + 63) / 64;
+    uint32_t numWorkGroups = widthDiv64 * heightDiv64;
 
     struct DownsamplePassMeta {
         uint32_t work_group_offset[2] = { 0, 0 };
         uint32_t num_work_groups;
         uint32_t mips;
-        uint32_t padding[12]; // Ensure size is multiple of 16
+        uint32_t padding[12];
     } meta;
     meta.num_work_groups = numWorkGroups;
     meta.mips = numMipsThisPass;
@@ -334,24 +344,19 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
                     ? m_internalResourcesBindGroupLayout_Advanced
                     : m_internalResourcesBindGroupLayout;
 
-    // If using the advanced BGL for >6 mips, we must create and bind the additional resources.
     if (numMipsThisPass > 6 && m_internalResourcesBindGroupLayout_Advanced) {
-        // Create the atomic counter buffer used to elect the "last workgroup".
         wgpu::BufferDescriptor atomicCounterBufferDesc{};
-        atomicCounterBufferDesc.size = sizeof(uint32_t) * arrayLayerCount; // One counter per slice
+        atomicCounterBufferDesc.size = sizeof(uint32_t) * arrayLayerCountForThisPass;
         atomicCounterBufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst;
         wgpu::Buffer atomicCounterBuffer = m_device.CreateBuffer(&atomicCounterBufferDesc);
 
-        // IMPORTANT: The atomic counter buffer must be cleared to 0 before dispatch.
         commandEncoder.ClearBuffer(atomicCounterBuffer, 0, WGPU_WHOLE_SIZE);
 
-        // Create the intermediate buffer to hold Mip 6 results for the final passes.
         wgpu::BufferDescriptor midMipBufferDesc{};
-        midMipBufferDesc.size = 64 * 64 * 16 * arrayLayerCount; // 64x64 * vec4<f32> * slices
+        midMipBufferDesc.size = 64 * 64 * 16 * arrayLayerCountForThisPass;
         midMipBufferDesc.usage = wgpu::BufferUsage::Storage;
         wgpu::Buffer midMipBuffer = m_device.CreateBuffer(&midMipBufferDesc);
 
-        // Create bind group entries for all three resources.
         std::vector<wgpu::BindGroupEntry> internalEntries(3);
         internalEntries[0].binding = 0;
         internalEntries[0].buffer = metaBuffer;
@@ -371,7 +376,6 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
         internalBindGroupDesc.entries = internalEntries.data();
         internalBindGroup = m_device.CreateBindGroup(&internalBindGroupDesc);
     } else {
-        // Original path for <= 6 mips (only needs the meta uniform).
         wgpu::BindGroupEntry metaEntry{};
         metaEntry.binding = 0;
         metaEntry.buffer = metaBuffer;
@@ -389,10 +393,9 @@ void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::T
     pass.SetPipeline(spdPipeline.pipeline);
     pass.SetBindGroup(0, mipsBindGroup);
     pass.SetBindGroup(1, internalBindGroup);
-    pass.DispatchWorkgroups(numWorkGroupsX, numWorkGroupsY, arrayLayerCount);
+    pass.DispatchWorkgroups(widthDiv64, heightDiv64, arrayLayerCountForThisPass);
     pass.End();
 }
-
 // Main shader generation logic
 
 // Helper function to check if a string is in a vector of strings

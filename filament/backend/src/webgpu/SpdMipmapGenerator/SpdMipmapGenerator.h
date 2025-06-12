@@ -44,8 +44,8 @@ public:
 
 private:
     void generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
-            const SPDPassConfig&
-                    passConfig); // Internal pass config might differ slightly if needed
+            const SPDPassConfig& passConfig, uint32_t baseArrayLayer,
+            uint32_t numArrayLayers); // Internal pass config might differ slightly if needed
 
     wgpu::Device m_device;
     wgpu::BindGroupLayout m_internalResourcesBindGroupLayout;
@@ -53,6 +53,7 @@ private:
 
     // Maximum number of mips that can be generated in a single pass.
     uint32_t m_maxMipsPerPass;
+    uint32_t m_maxArrayLayers;
 
     // Key for the pipeline cache.
     struct PipelineCacheKey {
