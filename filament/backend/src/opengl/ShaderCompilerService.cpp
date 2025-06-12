@@ -23,6 +23,7 @@
 #include "OpenGLDriver.h"
 
 #include <iterator>
+#include <optional>
 #include <private/backend/BackendUtils.h>
 
 #include <backend/DriverEnums.h>
@@ -110,7 +111,17 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         cond.wait(l, [this] { return signaled; });
     }
 
-    CallbackManager::Handle handle{};
+    // This is invoked upon token completion, which occurs after a successful `gl.program`
+    // population or upon cancellation. In either scenario, the callback handle must be submitted
+    // to notify the caller that resource loading has concluded.
+    void trySubmittingCallback() noexcept {
+        if (handle) {
+            compiler.submitCallbackHandle(*handle);
+            handle = std::nullopt;
+        }
+    }
+
+    std::optional<CallbackManager::Handle> handle{};
     BlobCacheKey key;
 
     // Used for the `THREAD_POOL` mode.
@@ -120,7 +131,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
-    compiler.submitCallbackHandle(handle);
+    trySubmittingCallback();
 }
 
 /* static */ void ShaderCompilerService::setUserData(const program_token_t& token,
@@ -339,7 +350,7 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
 
     // Cleanup the token.
     token->compiler.cancelTickOp(token);
-    token = nullptr;// This will submit a callback condition (handle) to the callback manager.
+    token = nullptr; // This will try submitting a callback handle to the callback manager.
 }
 
 void ShaderCompilerService::tick() {
@@ -392,7 +403,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 
     // Cleanup the token.
     token->compiler.cancelTickOp(token);
-    token = nullptr;// This will submit a callback condition (handle) to the callback manager.
+    token = nullptr;
 
     return program;
 }
@@ -659,6 +670,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
     }
     glLinkProgram(program);
     token->gl.program = program;
+    token->trySubmittingCallback();
 }
 
 /* static */ bool ShaderCompilerService::isLinkCompleted(program_token_t const& token) noexcept {

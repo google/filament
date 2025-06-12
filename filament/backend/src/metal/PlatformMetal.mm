@@ -53,9 +53,6 @@ PlatformMetal::~PlatformMetal() noexcept {
 }
 
 Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
-    pImpl->mDrawableFailureBehavior = driverConfig.metalDisablePanicOnDrawableFailure
-            ? DrawableFailureBehavior::ABORT_FRAME
-            : DrawableFailureBehavior::PANIC;
     return MetalDriverFactory::create(this, driverConfig);
 }
 

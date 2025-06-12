@@ -140,7 +140,6 @@ Engine* FEngine::create(Builder const& builder) {
                 .forceGLES2Context = instance->getConfig().forceGLES2Context,
                 .stereoscopicType = instance->getConfig().stereoscopicType,
                 .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
-                .metalDisablePanicOnDrawableFailure = instance->getConfig().metalDisablePanicOnDrawableFailure,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -760,7 +759,6 @@ int FEngine::loop() {
             .forceGLES2Context = mConfig.forceGLES2Context,
             .stereoscopicType =  mConfig.stereoscopicType,
             .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-            .metalDisablePanicOnDrawableFailure = mConfig.metalDisablePanicOnDrawableFailure,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 

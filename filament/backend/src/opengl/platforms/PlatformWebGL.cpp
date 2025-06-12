@@ -47,7 +47,7 @@ void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 bool PlatformWebGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     return true;
 }
 

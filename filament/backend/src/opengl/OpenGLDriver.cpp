@@ -932,7 +932,12 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
                 if (gl.features.multisample_texture) {
                     // multi-sample texture on GL 3.2 / GLES 3.1 and above
-                    t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+                    if (depth <= 1) {
+                        // We forcibly change the target to 2D-multisample only for flat texture.
+                        // A depth value greater than 1 may indicate multiview usage, which requires
+                        // GL_TEXTURE_2D_ARRAY. Also 2D MSAA won't work with non-flat texture anyway.
+                        t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+                    }
                 } else {
                     // Turn off multi-sampling for that texture. It's just not supported.
                 }
@@ -1208,7 +1213,12 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
 #if defined(BACKEND_OPENGL_LEVEL_GLES31)
         if (gl.features.multisample_texture) {
             // multi-sample texture on GL 3.2 / GLES 3.1 and above
-            t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+            if (depth <= 1) {
+                // We forcibly change the target to 2D-multisample only for flat texture.
+                // A depth value greater than 1 may indicate multiview usage, which requires
+                // GL_TEXTURE_2D_ARRAY. Also 2D MSAA won't work with non-flat texture anyway.
+                t->gl.target = GL_TEXTURE_2D_MULTISAMPLE;
+            }
         } else {
             // Turn off multi-sampling for that texture. It's just not supported.
         }
@@ -1453,8 +1463,15 @@ void OpenGLDriver::framebufferTexture(TargetBufferInfo const& binfo,
 #if !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 if (layerCount > 1) {
                     // if layerCount > 1, it means we use the multiview extension.
-                    glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment,
-                        t->gl.id, 0, binfo.layer, layerCount);
+                    if (rt->gl.samples > 1) {
+                        // For MSAA
+                        glFramebufferTextureMultisampleMultiviewOVR(GL_FRAMEBUFFER, attachment,
+                                t->gl.id, 0, rt->gl.samples, binfo.layer, layerCount);
+                    }
+                    else {
+                        glFramebufferTextureMultiviewOVR(GL_FRAMEBUFFER, attachment, t->gl.id, 0,
+                                binfo.layer, layerCount);
+                    }
                 } else
 #endif // !defined(__EMSCRIPTEN__) && !defined(FILAMENT_IOS)
                 {

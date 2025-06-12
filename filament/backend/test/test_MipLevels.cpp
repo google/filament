@@ -145,7 +145,11 @@ TEST_F(BackendTest, TextureViewLod) {
             params.viewport = getFullViewport();
 
             api.beginRenderPass(renderTarget, params);
-            api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+            state.primitiveType = PrimitiveType::TRIANGLES;
+            state.vertexBufferInfo = triangle.getVertexBufferInfo();
+            api.bindPipeline(state);
+            api.bindRenderPrimitive(triangle.getRenderPrimitive());
+            api.draw2(0, 3, 1);
             api.endRenderPass();
         }
 
@@ -170,7 +174,11 @@ TEST_F(BackendTest, TextureViewLod) {
         // previous pass.
         api.beginRenderPass(defaultRenderTarget, params);
         api.scissor(params.viewport);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         // Adjust the base mip to 2.
@@ -195,7 +203,11 @@ TEST_F(BackendTest, TextureViewLod) {
         params.flags.discardStart = TargetBufferFlags::NONE;
         api.beginRenderPass(defaultRenderTarget, params);
         api.scissor(params.viewport);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         api.commit(swapChain);

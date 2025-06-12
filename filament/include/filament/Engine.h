@@ -318,15 +318,6 @@ public:
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
         /**
-         * The action to take if a Drawable cannot be acquired.
-         *
-         * Each frame rendered requires a CAMetalDrawable texture, which is
-         * presented on-screen at the completion of each frame. These are
-         * limited and provided round-robin style by the system.
-         */
-        bool metalDisablePanicOnDrawableFailure = false;
-
-        /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL and Metal backends.
          * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
@@ -1026,7 +1017,7 @@ public:
      *
      * @see setPaused
      */
-    bool isPaused() const noexcept;
+    bool isPaused() const noexcept(UTILS_HAS_THREADING);
 
     /**
      * Pause or resume rendering thread.

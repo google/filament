@@ -127,7 +127,7 @@ protected:
 protected:
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
-            SwapChain* readSwapChain) noexcept override;
+            SwapChain* readSwapChain) override;
 
 private:
     struct InitializeJvmForPerformanceManagerIfNeeded {
