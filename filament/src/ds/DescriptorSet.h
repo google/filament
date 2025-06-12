@@ -110,6 +110,7 @@ private:
     mutable utils::bitset64 mValid;                         //  8
     backend::DescriptorSetHandle mDescriptorSetHandle;      //  4
     mutable bool mSetAfterCommitWarning = false;            //  1
+    mutable bool mSetUndefinedParameterWarning = false;     //  1
     utils::StaticString mName;                              // 16
 };
 
