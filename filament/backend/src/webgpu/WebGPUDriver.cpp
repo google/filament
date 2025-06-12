@@ -64,13 +64,14 @@ Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverCon
 
 WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
         const Platform::DriverConfig& driverConfig) noexcept
-    : mPlatform(platform),
-      mHandleAllocator("Handles", driverConfig.handleArenaSize,
-              driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags) {
-    mAdapter = mPlatform.requestAdapter(nullptr);
-    mDevice = mPlatform.requestDevice(mAdapter);
+    : mPlatform{ platform },
+      mAdapter{ mPlatform.requestAdapter(nullptr) },
+      mDevice{ mPlatform.requestDevice(mAdapter) },
+      mQueue{ mDevice.GetQueue() },
+      mMipMapGenerator{ mDevice },
+      mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
+          driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags } {
     mDevice.GetLimits(&mDeviceLimits);
-    mQueue = mDevice.GetQueue();
 }
 
 WebGPUDriver::~WebGPUDriver() noexcept = default;
@@ -738,67 +739,46 @@ void WebGPUDriver::setExternalStream(Handle<HwTexture> textureHandle,
 }
 
 void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
-    if (!mCommandEncoder) {
-        mMipQueue.push_back(textureHandle);
-        return;
-    }
     auto texture = handleCast<WebGPUTexture>(textureHandle);
     assert_invariant(texture);
     wgpu::Texture wgpuTexture = texture->getTexture();
     assert_invariant(wgpuTexture);
 
-    FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopySrc)
-            << "Texture intended for mipmap generation (as source) must have CopySrc usage.";
-    FILAMENT_CHECK_PRECONDITION(wgpuTexture.GetUsage() & wgpu::TextureUsage::CopyDst)
-            << "Texture intended for mipmap generation (as destination) must have CopyDst usage.";
+    const auto usage = wgpuTexture.GetUsage();
+    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
+            << "Texture for mipmap generation must have TextureBinding usage. "
+               "supportsMultipleMipLevels for texture format "
+            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
+            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
+    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
+            << "Texture for mipmap generation must have StorageBinding usage. "
+               "supportsMultipleMipLevels for texture format "
+            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
+            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
 
-    uint32_t mipLevelCount = wgpuTexture.GetMipLevelCount();
-    if (mipLevelCount <= 1) {
+    const uint32_t totalMipLevels = wgpuTexture.GetMipLevelCount();
+    if (totalMipLevels <= 1) {
         return;
     }
-    FILAMENT_CHECK_PRECONDITION(texture->supportsMultipleMipLevels())
-            << "Calling generateMipmaps(...) on a texture that doesn't support generating them. "
-               "sampler type "
-            << to_string(texture->target) << " levels " << static_cast<uint32_t>(texture->levels)
-            << " wgpu format (enum value) "
-            << static_cast<uint32_t>(texture->getTexture().GetFormat()) << " width "
-            << texture->width << " height " << texture->height << " depth " << texture->depth
-            << " usage flags (as a number) " << static_cast<uint32_t>(texture->usage);
 
-    uint32_t width = wgpuTexture.GetWidth();
-    uint32_t height = wgpuTexture.GetHeight();
-    // For 3D textures, depth is > 1. For 2D/Cube/Array, effectively 1 for mip-level copies.
-    uint32_t depth =
-            (texture->target == SamplerType::SAMPLER_3D) ? wgpuTexture.GetDepthOrArrayLayers() : 1;
+    // We will record all passes into a single command encoder.
+    wgpu::CommandEncoderDescriptor encoderDesc = {};
+    encoderDesc.label = "Mipmap Command Encoder";
+    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
 
-    for (uint32_t mipLevel = 0; mipLevel < mipLevelCount - 1; ++mipLevel) {
-        wgpu::TexelCopyTextureInfo sourceCopyInfo{
-            .texture = wgpuTexture,
-            .mipLevel = mipLevel,
-            .aspect = texture->getAspect(),
-        };
+    spd::SPDPassConfig spdConfig = { .filter = spd::SPDFilter::Average,
+        .targetTexture = wgpuTexture,
+        .numMips = totalMipLevels,
+        .halfPrecision = false,
+        .sourceMipLevel = 0 };
 
-        wgpu::TexelCopyTextureInfo destinationCopyInfo{
-            .texture = wgpuTexture,
-            .mipLevel = mipLevel + 1,
-            .aspect = texture->getAspect(),
-        };
+    mMipMapGenerator.Generate(encoder, wgpuTexture, spdConfig);
 
-        uint32_t dstWidth = std::max(1u, width >> 1);
-        uint32_t dstHeight = std::max(1u, height >> 1);
-        uint32_t dstDepth = std::max(1u, depth >> 1);
-
-        wgpu::Extent3D copySize{ .width = dstWidth,
-            .height = dstHeight,
-            .depthOrArrayLayers = (texture->target == SamplerType::SAMPLER_3D)
-                                          ? dstDepth
-                                          : texture->getArrayLayerCount() };
-        mCommandEncoder.CopyTextureToTexture(&sourceCopyInfo, &destinationCopyInfo, &copySize);
-
-        width = dstWidth;
-        height = dstHeight;
-        depth = dstDepth;
-    }
+    // Finish the encoder and submit all the passes at once.
+    wgpu::CommandBufferDescriptor cmdBufferDesc = {};
+    cmdBufferDesc.label = "Mipmap Command Buffer";
+    wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
+    mQueue.Submit(1, &commandBuffer);
 }
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
@@ -932,12 +912,6 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
         .label = "command_encoder"
     };
     mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
-    if (!mMipQueue.empty()) {
-        for (auto& handle: mMipQueue) {
-            generateMipmaps(handle);
-        }
-        mMipQueue.clear();
-    }
     assert_invariant(mCommandEncoder);
 }
 
