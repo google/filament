@@ -53,6 +53,9 @@ namespace filament::backend {
 
 namespace {
 
+// The SPD Algorithm can make use of up to 12 storage texture attachments
+constexpr uint32_t MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE = 12u;
+
 constexpr std::array REQUIRED_FEATURES = { wgpu::FeatureName::TransientAttachments,
     /*To make filtering assumptions like we want while waiting for Filament to provide that info,
        float 32 needs to be filterable*/
@@ -608,7 +611,21 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.defaultQueue.label = "default_queue";
     deviceDescriptor.requiredFeatureCount = enabledFeatures.size();
     deviceDescriptor.requiredFeatures = enabledFeatures.data();
-    deviceDescriptor.requiredLimits = &REQUIRED_LIMITS;
+
+    // It is helpful to increase maxStorageTexturesPerShaderStage if the hardware supports it, but
+    // not required. This allows our mipmap generation to perform as well as possible for the given
+    // hardware. If we have more cases of "Nice to increase" limits like this we can generalize it
+    // in the future.
+    wgpu::Limits supportedLimits{};
+    FILAMENT_CHECK_POSTCONDITION(
+            adapter.GetLimits(&supportedLimits).status == wgpu::Status::Success)
+            << "Failed to get limits for WebGPU adapter";
+    auto limitsToRequest = REQUIRED_LIMITS;
+    limitsToRequest.maxStorageTexturesPerShaderStage =
+            std::min(MAX_MIPMAP_STORAGE_TEXTURES_PER_STAGE,
+                    supportedLimits.maxStorageTexturesPerShaderStage);
+    deviceDescriptor.requiredLimits = &limitsToRequest;
+
     deviceDescriptor.SetDeviceLostCallback(wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::Device const&, wgpu::DeviceLostReason const& reason,
                     wgpu::StringView message) {
@@ -664,7 +681,6 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
                             "adapter should support them: %s\n",
                 missingFeatures, featureNamesStream.str().data());
     }
-    wgpu::Limits supportedLimits {};
     FILAMENT_CHECK_POSTCONDITION(device.GetLimits(&supportedLimits))
             << "Failed to get limits for the device?";
     FILAMENT_CHECK_POSTCONDITION(satisfiesLimits(supportedLimits))
