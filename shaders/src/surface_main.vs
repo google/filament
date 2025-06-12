@@ -162,12 +162,14 @@ void main() {
     vertex_worldNormal = material.worldNormal;
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
-    vertex_lightSpacePosition = computeLightSpacePosition(
-            vertex_worldPosition.xyz, vertex_worldNormal,
-            frameUniforms.lightDirection,
-            shadowUniforms.shadows[0].normalBias,
-            shadowUniforms.shadows[0].lightFromWorldMatrix);
+#if defined(MATERIAL_HAS_LIGHTING)
+    if (CONFIG_HAS_SHADOWING && CONFIG_HAS_DIRECTIONAL_LIGHTING) {
+        vertex_lightSpacePosition = computeLightSpacePosition(
+                vertex_worldPosition.xyz, vertex_worldNormal,
+                frameUniforms.lightDirection,
+                shadowUniforms.shadows[0].normalBias,
+                shadowUniforms.shadows[0].lightFromWorldMatrix);
+    }
 #endif
 
 #endif // !defined(USE_OPTIMIZED_DEPTH_VERTEX_SHADER)

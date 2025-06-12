@@ -1,6 +1,8 @@
-#if defined(VARIANT_HAS_SHADOWING)
+#if defined(MATERIAL_HAS_LIGHTING)
 // Adreno drivers seem to ignore precision qualifiers in structs, unless they're used in
 // UBOs, which is the case here.
+//
+// Depends on SRE
 struct ShadowData {
     highp mat4 lightFromWorldMatrix;
     highp vec4 lightFromWorldZ;

@@ -355,6 +355,21 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
                 +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION, false);
     }
 
+    // Generate specialization constants for "minor variants".
+    //
+    // HACK: Setting the default values like this is a temporary measure for switching variants to
+    // spec constants.
+    bool const litVariants = material.isLit || material.hasShadowMultiplier;
+    generateSpecializationConstant(out, "CONFIG_HAS_DIRECTIONAL_LIGHTING",
+            +ReservedSpecializationConstants::CONFIG_HAS_DIRECTIONAL_LIGHTING,
+            litVariants && v.hasDirectionalLighting());
+    generateSpecializationConstant(out, "CONFIG_HAS_DYNAMIC_LIGHTING",
+            +ReservedSpecializationConstants::CONFIG_HAS_DYNAMIC_LIGHTING,
+            litVariants && v.hasDynamicLighting());
+    generateSpecializationConstant(out, "CONFIG_HAS_SHADOWING",
+            +ReservedSpecializationConstants::CONFIG_HAS_SHADOWING,
+            litVariants && filament::Variant::isShadowReceiverVariant(v));
+
     out << '\n';
     out << SHADERS_COMMON_DEFINES_GLSL_DATA;
 
@@ -1125,10 +1140,9 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
         filament::Variant variant, Shading shading, bool customSurfaceShading) {
     if (stage == ShaderStage::FRAGMENT) {
         out << SHADERS_SURFACE_LIGHTING_FS_DATA;
-        if (filament::Variant::isShadowReceiverVariant(variant)) {
+        if (!filament::Variant::isSSRVariant(variant)) {
             out << SHADERS_SURFACE_SHADOWING_FS_DATA;
         }
-
         // the only reason we have this assert here is that we used to have a check,
         // which seemed unnecessary.
         assert_invariant(shading != Shading::UNLIT);
@@ -1156,14 +1170,8 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
 
         out << SHADERS_SURFACE_AMBIENT_OCCLUSION_FS_DATA;
         out << SHADERS_SURFACE_LIGHT_INDIRECT_FS_DATA;
-
-        if (variant.hasDirectionalLighting()) {
-            out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
-        }
-        if (variant.hasDynamicLighting()) {
-            out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
-        }
-
+        out << SHADERS_SURFACE_LIGHT_DIRECTIONAL_FS_DATA;
+        out << SHADERS_SURFACE_LIGHT_PUNCTUAL_FS_DATA;
         out << SHADERS_SURFACE_SHADING_LIT_FS_DATA;
     }
     return out;
@@ -1172,10 +1180,8 @@ io::sstream& CodeGenerator::generateSurfaceLit(io::sstream& out, ShaderStage sta
 io::sstream& CodeGenerator::generateSurfaceUnlit(io::sstream& out, ShaderStage stage,
         filament::Variant variant, bool hasShadowMultiplier) {
     if (stage == ShaderStage::FRAGMENT) {
-        if (hasShadowMultiplier) {
-            if (filament::Variant::isShadowReceiverVariant(variant)) {
-                out << SHADERS_SURFACE_SHADOWING_FS_DATA;
-            }
+        if (hasShadowMultiplier && !filament::Variant::isSSRVariant(variant)) {
+            out << SHADERS_SURFACE_SHADOWING_FS_DATA;
         }
         out << SHADERS_SURFACE_SHADING_UNLIT_FS_DATA;
     }

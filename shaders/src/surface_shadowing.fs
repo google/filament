@@ -483,14 +483,14 @@ float ShadowSample_VSM(const bool ELVSM, const highp sampler2DArray shadowMap,
  * the light intensity.
  */
 
+#if defined(MATERIAL_HAS_LIGHTING)
 // get texture coordinate for directional and spot shadow maps
-#if defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+// Depends on DIR
 highp vec4 getShadowPosition(const int cascade) {
     return getCascadeLightSpacePosition(cascade);
 }
-#endif
 
-#if defined(VARIANT_HAS_DYNAMIC_LIGHTING)
+// Depends on DYN
 highp vec4 getShadowPosition(const int index,  const highp vec3 dir, const highp float zLight) {
     return getSpotLightSpacePosition(index, dir, zLight);
 }
