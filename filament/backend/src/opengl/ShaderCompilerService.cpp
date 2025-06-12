@@ -133,7 +133,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     bool signaled = false;
 
     // Indicate this program was created from the cache blob.
-    bool retrieved = false;
+    bool retrievedFromBlobCache = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
@@ -265,7 +265,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     // Try retrieving the cached program blob if available.
     token->gl.program = mBlobCache.retrieve(&token->key, mDriver.mPlatform, program);
     if (token->gl.program) {
-        token->retrieved = true;
+        token->retrievedFromBlobCache = true;
         return token;
     }
 
@@ -345,7 +345,7 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
     assert_invariant(token);// This function should be called when the token is still alive.
 
     // Finalize any pending shader compilation tasks only when the token was created without cache.
-    if (!token->retrieved) {
+    if (!token->retrievedFromBlobCache) {
         if (token->compiler.mMode == Mode::THREAD_POOL) {
             auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
             if (!job) {
