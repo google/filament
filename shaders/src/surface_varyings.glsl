@@ -28,7 +28,8 @@ LAYOUT_LOCATION(10) flat VARYING highp int instance_index;
 highp int logical_instance_index;
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+#if defined(MATERIAL_HAS_LIGHTING)
+/* Depends on SRE | DIR */
 LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
 #endif
 

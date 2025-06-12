@@ -106,7 +106,8 @@ highp vec3 getNormalizedViewportCoord() {
     return vec3(logicalUv, gl_FragCoord.z);
 }
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DYNAMIC_LIGHTING)
+#if defined(MATERIAL_HAS_LIGHTING)
+/* Depends on DYN | SRE */
 highp vec4 getSpotLightSpacePosition(int index, highp vec3 dir, highp float zLight) {
     highp mat4 lightFromWorldMatrix = shadowUniforms.shadows[index].lightFromWorldMatrix;
 
@@ -124,10 +125,12 @@ bool isDoubleSided() {
 }
 #endif
 
-#if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)
+#if defined(MATERIAL_HAS_LIGHTING)
 
 /**
  * Returns the cascade index for this fragment (between 0 and CONFIG_MAX_SHADOW_CASCADES - 1).
+ *
+ * Depends on DIR | SRE
  */
 int getShadowCascade() {
     highp float z = mulMat4x4Float3(getViewFromWorldMatrix(), getWorldPosition()).z;
@@ -136,6 +139,7 @@ int getShadowCascade() {
     return clamp(greaterZ.x + greaterZ.y + greaterZ.z + greaterZ.w, 0, cascadeCount - 1);
 }
 
+/* Depends on DIR | SRE */
 highp vec4 getCascadeLightSpacePosition(int cascade) {
     // For the first cascade, return the interpolated light space position.
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
@@ -152,4 +156,3 @@ highp vec4 getCascadeLightSpacePosition(int cascade) {
 }
 
 #endif
-

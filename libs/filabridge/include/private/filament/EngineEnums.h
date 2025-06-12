@@ -85,6 +85,9 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_SH_BANDS_COUNT = 9,
     CONFIG_SHADOW_SAMPLING_METHOD = 10,
     CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 11,
+    CONFIG_HAS_DIRECTIONAL_LIGHTING = 12,
+    CONFIG_HAS_DYNAMIC_LIGHTING = 13,
+    CONFIG_HAS_SHADOWING = 14,
     // check CONFIG_NEXT_RESERVED_SPEC_CONSTANT and CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 
@@ -107,7 +110,7 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // Updating this value necessitates a material version bump.
 constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
 // The number of the next unassigned reserved spec constant.
-constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 12;
+constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 15;
 
 // The maximum number of shadow maps possible.
 // There is currently a maximum limit of 128 shadow maps.
