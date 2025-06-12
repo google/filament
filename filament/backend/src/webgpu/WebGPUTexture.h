@@ -47,29 +47,46 @@ public:
 
     [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer);
 
-    [[nodiscard]] wgpu::TextureFormat getWebGPUFormat() const { return mWebGPUFormat; }
+    [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
 
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
+
+    [[nodiscard]] bool supportsMultipleMipLevels() const { return mSupportsMultipleMipLevels; }
 
     [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
 
+    /**
+     * @param format a required texture format (can be a view to a different underlying texture
+     * format)
+     * @return true if multiple mip levels can be generated via a compute shader + storage binding
+     * on the texture, false otherwise.
+     */
+    [[nodiscard]] static bool supportsMultipleMipLevelsViaStorageBinding(
+            wgpu::TextureFormat format);
+
 private:
-    // CreateTextureR has info for a texture and sampler. Texture Views are needed for binding,
-    // along with a sampler Current plan: Inherit the sampler and Texture to always exist (It is a
-    // ref counted pointer) when making views. View is optional
-    wgpu::Texture mTexture = nullptr;
+    // the texture view's format, which may differ from the underlying texture's format itself,
+    // an example of when this is needed is when certain underlying shaders don't support
+    // certain formats (e.g. compute shaders), but we need a view to that format elsewhere
+    // (e.g. another shader or render target)
+    wgpu::TextureFormat mViewFormat = wgpu::TextureFormat::Undefined;
+    // this is true IFF levels > 1 AND we can actually generate mipmaps for the texture
+    bool mSupportsMultipleMipLevels = false;
     // format is inherited from HwTexture. This naming is to distinguish it from Filament's format
+    // this is the underlying texture's format, not necessarily the "view" of it... see mViewFormat
     wgpu::TextureFormat mWebGPUFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureAspect mAspect = wgpu::TextureAspect::Undefined;
     // usage is inherited from HwTexture. This naming is to distinguish it from Filament's usage
     wgpu::TextureUsage mWebGPUUsage = wgpu::TextureUsage::None;
-    uint32_t mArrayLayerCount = 1;
+    wgpu::TextureUsage mViewUsage = wgpu::TextureUsage::None;
     size_t mBlockWidth = 0;
     size_t mBlockHeight = 0;
-    wgpu::TextureView mDefaultTextureView = nullptr;
+    uint32_t mArrayLayerCount = 1;
+    wgpu::Texture mTexture = nullptr;
     uint32_t mDefaultMipLevel = 0;
     uint32_t mDefaultBaseArrayLayer = 0;
+    wgpu::TextureView mDefaultTextureView = nullptr;
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,
