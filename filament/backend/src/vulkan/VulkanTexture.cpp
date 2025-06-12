@@ -219,8 +219,8 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
     return usage;
 }
 
-void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, size_t height,
-        size_t depth) {
+void adjustedMemcpy(PixelBufferDescriptor const& p, size_t width, size_t height,
+        size_t depth, std::function<void(size_t, uint8_t*, size_t)> cpy) {
     uint8_t* buf = (uint8_t*) p.buffer;
     size_t const pixelSize = PixelBufferDescriptor::computeDataSize(p.format, p.type, 1, 1, 1);
     size_t const pbdStride = p.stride ? p.stride : width;
@@ -243,13 +243,13 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
             for (size_t y = p.top; y < pbdHeight; y++) {
                 uint8_t* buf = (uint8_t*) p.buffer +
                                ((p.left * pixelSize) + (y * pbdRowSize) + (z * pbdLayerSize));
-                uint8_t* curMapped = (uint8_t*) mapped + ((y - p.top) * rowSize + z * layerSize);
-                memcpy(curMapped, buf, writeSize);
+                uint32_t const offset = (y - p.top) * rowSize + z * layerSize;
+                cpy(offset, buf, writeSize);
             }
         }
     } else {
         size_t const writeSize = pixelSize * (width * height * depth);
-        memcpy(mapped, buf, writeSize);
+        cpy(0, buf, writeSize);
     }
 }
 
@@ -525,9 +525,12 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
             mState->mStagePool.acquireStage(writeSize);
     assert_invariant(stageSegment->memory());
-    adjustedMemcpy(stageSegment->mapping(), *hostData, width, height, depth);
-    vmaFlushAllocation(mState->mAllocator, stageSegment->memory(), stageSegment->offset(),
-            writeSize);
+    adjustedMemcpy(*hostData, width, height, depth,
+            [&stageSegment](size_t dstOffset, uint8_t* src, size_t numBytes) {
+                stageSegment->copy(dstOffset, src, numBytes);
+            });
+//    vmaFlushAllocation(mState->mAllocator, stageSegment->memory(), stageSegment->offset(),
+//            writeSize);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
@@ -597,7 +600,10 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     VulkanStageImage const* stage
             = mState->mStagePool.acquireImage(data.format, data.type, width, height);
     vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
-    adjustedMemcpy(mapped, data, width, height, depth);
+    adjustedMemcpy(data, width, height, depth,
+            [&mapped](size_t, uint8_t* src, size_t numBytes) {
+                memcpy(mapped, src, numBytes);
+            });
     vmaUnmapMemory(mState->mAllocator, stage->memory);
     vmaFlushAllocation(mState->mAllocator, stage->memory, 0, writeSize);
 

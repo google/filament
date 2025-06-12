@@ -35,8 +35,10 @@ class VulkanCommands;
 // into smaller buffers as needed.
 class VulkanStage {
 public:
-    VulkanStage(VmaAllocation memory, VkBuffer buffer, uint32_t capacity, void* mapping)
-        : mMemory(memory),
+    VulkanStage(VmaAllocator allocator, VmaAllocation memory, VkBuffer buffer, uint32_t capacity,
+            void* mapping)
+        : mAllocator(allocator),
+          mMemory(memory),
           mBuffer(buffer),
           mCapacity(capacity),
           mMapping(mapping) {}
@@ -51,10 +53,10 @@ public:
     public:
         using OnRecycle = std::function<void(uint32_t offset)>;
 
-        Segment(VulkanStage* parentStage, uint32_t capacity, uint32_t offset,
+        Segment(VmaAllocator allocator, VulkanStage* parentStage, uint32_t offset,
                 OnRecycle&& onRecycleFn)
-            : mParentStage(parentStage),
-              mCapacity(capacity),
+            : mAllocator(allocator),
+              mParentStage(parentStage),
               mOffset(offset),
               mOnRecycleFn(onRecycleFn) {}
 
@@ -70,11 +72,11 @@ public:
         Segment& operator=(const Segment& other) = delete;
         Segment& operator=(Segment&& other) = delete;
 
-        inline VulkanStage* parentStage() const { return mParentStage; }
-        inline VkBuffer buffer() const { return parentStage()->buffer(); }
-        inline VmaAllocation memory() const { return parentStage()->memory(); }
-        inline uint32_t capacity() const { return mCapacity; }
+        inline VkBuffer buffer() const { return mParentStage->buffer(); }
+        inline VmaAllocation memory() const { return mParentStage->memory(); }
         inline uint32_t offset() const { return mOffset; }
+
+        VkResult copy(size_t dstOffset, void const* src, size_t writeSize);
 
         inline void* mapping() const {
             return reinterpret_cast<void*>(
@@ -85,9 +87,9 @@ public:
         // Ensure parent class can access the terminate method.
         friend class VulkanStage;
 
+        VmaAllocator const mAllocator;
         VulkanStage* const mParentStage;
-        const uint32_t mCapacity;
-        const uint32_t mOffset;
+        uint32_t const mOffset;
         OnRecycle mOnRecycleFn;
     };
 
@@ -109,6 +111,7 @@ public:
             uint32_t numBytes);
 
 private:
+    VmaAllocator const mAllocator;
     const VmaAllocation mMemory;
     const VkBuffer mBuffer;
     const uint32_t mCapacity;

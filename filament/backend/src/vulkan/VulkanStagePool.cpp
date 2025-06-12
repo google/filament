@@ -38,13 +38,21 @@ constexpr uint32_t STAGE_SIZE = 1048576;
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
         fvkmemory::ResourceManager* resManager, uint32_t numBytes) {
-    auto segment = fvkmemory::resource_ptr<Segment>::construct(
-        resManager, this, numBytes, mCurrentOffset, [this](uint32_t offset) {
-            mSegments.erase(offset);
-    });
-    mSegments.insert({mCurrentOffset, segment.get()});
+    auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, mAllocator, this,
+            mCurrentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
+    mSegments.insert({ mCurrentOffset, segment.get() });
+    // constexpr uint32_t BLOCK_SIZE = 16;
+    // uint32_t const additional = BLOCK_SIZE - (numBytes % BLOCK_SIZE);
+    // numBytes += (additional != BLOCK_SIZE ? additional : 0);
     mCurrentOffset += numBytes;
     return segment;
+}
+
+VkResult VulkanStage::Segment::copy(size_t dstOffset, void const* src, size_t writeSize) {
+    //    uint8_t* mapped = ((uint8_t*) mapping()) + dstOffset;
+    //    memcpy(mapped, src, writeSize);
+    //    return vmaFlushAllocation(mAllocator, memory(), offset() + dstOffset, writeSize);
+    return vmaCopyMemoryToAllocation(mAllocator, src, memory(), offset() + dstOffset, writeSize);
 }
 
 VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
@@ -125,7 +133,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
 #endif
     }
 
-    return new VulkanStage(memory, buffer, capacity, pMapping);
+    return new VulkanStage(mAllocator, memory, buffer, capacity, pMapping);
 }
 
 void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {

@@ -27,8 +27,7 @@ namespace filament::backend {
 
 VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& stagePool,
         VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes)
-    : mAllocator(allocator),
-      mStagePool(stagePool),
+    : mStagePool(stagePool),
       mBufferCache(bufferCache),
       mBuffer(mBufferCache.acquire(usage, numBytes)),
       mUpdatedOffset(0),
@@ -39,10 +38,8 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // Note: this should be stored within the command buffer before going out of
     // scope, so that the command buffer can manage its lifecycle.
     fvkmemory::resource_ptr<VulkanStage::Segment> stage = mStagePool.acquireStage(numBytes);
-    assert_invariant(stage->memory());
     commands.acquire(stage);
-    memcpy(stage->mapping(), cpuData, numBytes);
-    vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
+    stage->copy(0, cpuData, numBytes);
 
     // If there was a previous update, then we need to make sure the following write is properly
     // synced with the previous read.

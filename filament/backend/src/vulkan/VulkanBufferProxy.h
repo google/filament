@@ -40,7 +40,6 @@ public:
     VulkanBufferUsage getUsage() const noexcept;
 
 private:
-    VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
     VulkanBufferCache& mBufferCache;
 

@@ -1,3 +1,62 @@
+# 3.3.0 (2025-05-12)
+
+Additions to the library API:
+
+- Added function `vmaImportVulkanFunctionsFromVolk`, useful for loading pointers to Vulkan functions with [volk library](https://github.com/zeux/volk).
+
+Other changes:
+
+- Added macro `VMA_DEBUG_DONT_EXCEED_HEAP_SIZE_WITH_ALLOCATION_SIZE` with default value 1.
+- Changed macro `VMA_DEBUG_DONT_EXCEED_MAX_MEMORY_ALLOCATION_COUNT` default value from 0 to 1.
+- Added documentation chapter "Frequenty asked questions".
+- Other fixes and improvements, including compatibility with various platforms and compilers.
+
+# 3.2.1 (2025-02-05)
+
+Changes:
+
+- Fixed an assert in `vmaCreateAllocator` function incorrectly failing when Vulkan version 1.4 is used (#457).
+- Fix for importing function `vkGetPhysicalDeviceMemoryProperties2` / `vkGetPhysicalDeviceMemoryProperties2KHR` when `VMA_DYNAMIC_VULKAN_FUNCTIONS` macro is enabled (#410).
+- Other minor fixes and improvements...
+
+# 3.2.0 (2024-12-30)
+
+Additions to the library API:
+
+- Added support for Vulkan 1.4.
+- Added support for VK_KHR_external_memory_win32 extension - `VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT` flag, `vmaGetMemoryWin32Handle` function, and a whole new documentation chapter about it (#442).
+
+Other changes:
+
+- Fixed thread safety issue (#451).
+- Many other bug fixes and improvements in the library code, documentation, sample app, Cmake script, mostly to improve compatibility with various compilers and GPUs.
+
+# 3.1.0 (2024-05-27)
+
+This release gathers fixes and improvements made during many months of continuous development on the main branch, mostly based on issues and pull requests on GitHub.
+
+Additions to the library API:
+
+- Added convenience functions `vmaCopyMemoryToAllocation`, `vmaCopyAllocationToMemory`.
+- Added functions `vmaCreateAliasingBuffer2`, `vmaCreateAliasingImage2` that offer creating a buffer/image in an existing allocation with additional `allocationLocalOffset`.
+- Added function `vmaGetAllocationInfo2`, structure `VmaAllocationInfo2` that return additional information about an allocation, useful for interop with other APIs (#383, #340).
+- Added callback `VmaDefragmentationInfo::pfnBreakCallback` that allows breaking long execution of `vmaBeginDefragmentation`.
+  Also added `PFN_vmaCheckDefragmentationBreakFunction`, `VmaDefragmentationInfo::pBreakCallbackUserData`.
+- Added support for VK_KHR_maintenance4 extension - `VMA_ALLOCATOR_CREATE_KHR_MAINTENANCE4_BIT` flag (#397).
+- Added support for VK_KHR_maintenance5 extension - `VMA_ALLOCATOR_CREATE_KHR_MAINTENANCE5_BIT` flag (#411).
+
+Other changes:
+
+- Changes in debug and configuration macros:
+  - Split macros into separate `VMA_DEBUG_LOG` and `VMA_DEBUG_LOG_FORMAT` (#297).
+  - Added macros `VMA_ASSERT_LEAK`, `VMA_LEAK_LOG_FORMAT` separate from normal `VMA_ASSERT`, `VMA_DEBUG_LOG_FORMAT` (#379, #385).
+  - Added macro `VMA_EXTENDS_VK_STRUCT` (#347).
+- Countless bug fixes and improvements in the code and documentation, mostly to improve compatibility with various compilers and GPUs, including:
+  - Fixed missing `#include` that resulted in compilation error about `snprintf` not declared on some compilers (#312).
+  - Fixed main memory type selection algorithm for GPUs that have no `HOST_CACHED` memory type, like Raspberry Pi (#362).
+- Major changes in Cmake script.
+- Fixes in GpuMemDumpVis.py script.
+
 # 3.0.1 (2022-05-26)
 
 - Fixes in defragmentation algorithm.

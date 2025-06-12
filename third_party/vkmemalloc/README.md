@@ -10,11 +10,6 @@ Easy to integrate Vulkan memory allocation library.
 
 **Product page:** [Vulkan Memory Allocator on GPUOpen](https://gpuopen.com/gaming-product/vulkan-memory-allocator/)
 
-**Build status:**
-
-- Windows: [![Build status](https://ci.appveyor.com/api/projects/status/4vlcrb0emkaio2pn/branch/master?svg=true)](https://ci.appveyor.com/project/adam-sawicki-amd/vulkanmemoryallocator/branch/master)  
-- Linux: [![Build Status](https://app.travis-ci.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.svg?branch=master)](https://app.travis-ci.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.svg)](http://isitmaintained.com/project/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator "Average time to resolve an issue")
 
 # Problem
@@ -48,13 +43,17 @@ Additional features:
 - Support for sparse binding and sparse residency: Convenience functions that allocate or free multiple memory pages at once.
 - Custom memory pools: Create a pool with desired parameters (e.g. fixed or limited maximum size) and allocate memory out of it.
 - Linear allocator: Create a pool with linear algorithm and use it for much faster allocations and deallocations in free-at-once, stack, double stack, or ring buffer fashion.
-- Support for Vulkan 1.0, 1.1, 1.2, 1.3.
+- Support for Vulkan 1.0...1.4.
 - Support for extensions (and equivalent functionality included in new Vulkan versions):
    - VK_KHR_dedicated_allocation: Just enable it and it will be used automatically by the library.
-   - VK_KHR_buffer_device_address: Flag `VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR` is automatically added to memory allocations where needed.
+   - VK_KHR_bind_memory2.
+   - VK_KHR_maintenance4.
+   - VK_KHR_maintenance5, including `VkBufferUsageFlags2CreateInfoKHR`.
    - VK_EXT_memory_budget: Used internally if available to query for current usage and budget. If not available, it falls back to an estimation based on memory heap sizes.
+   - VK_KHR_buffer_device_address: Flag `VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR` is automatically added to memory allocations where needed.
    - VK_EXT_memory_priority: Set `priority` of allocations or custom pools and it will be set automatically using this extension.
-   - VK_AMD_device_coherent_memory
+   - VK_AMD_device_coherent_memory.
+   - VK_KHR_external_memory_win32.
 - Defragmentation of GPU and CPU memory: Let the library move data around to free some memory blocks and make your allocations better compacted.
 - Statistics: Obtain brief or detailed statistics about the amount of memory used, unused, number of allocated blocks, number of allocations etc. - globally, per memory heap, and per memory type.
 - Debug annotations: Associate custom `void* pUserData` and debug `char* pName` with each allocation.
@@ -99,42 +98,51 @@ With this one function call:
 
 # How to build
 
-On Windows it is recommended to use [CMake UI](https://cmake.org/runningcmake/). Alternatively you can generate a Visual Studio project map using CMake in command line: `cmake -B./build/ -DCMAKE_BUILD_TYPE=Debug -G "Visual Studio 16 2019" -A x64 ./`
+On Windows it is recommended to use [CMake GUI](https://cmake.org/runningcmake/).
+
+Alternatively you can generate/open a Visual Studio from the command line:
+
+```sh
+# By default CMake picks the newest version of Visual Studio it can use
+cmake -S .  -B build -D VMA_BUILD_SAMPLES=ON
+cmake --open build
+```
 
 On Linux:
 
+```sh
+cmake -S . -B build
+# Since VMA has no source files, you can skip to installation immediately
+cmake --install build --prefix build/install
 ```
-mkdir build
-cd build
-cmake ..
-make
+
+## How to use
+
+After calling either `find_package` or `add_subdirectory` simply link the library.
+This automatically handles configuring the include directory. Example:
+
+```cmake
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+target_link_libraries(YourGameEngine PRIVATE GPUOpen::VulkanMemoryAllocator)
 ```
 
-The following targets are available
+For more info on using CMake visit the official [CMake documentation](https://cmake.org/cmake/help/latest/index.html).
 
-| Target | Description | CMake option | Default setting |
-| ------------- | ------------- | ------------- | ------------- |
-| VmaSample | VMA sample application | `VMA_BUILD_SAMPLE` | `OFF` |
-| VmaBuildSampleShaders | Shaders for VmaSample | `VMA_BUILD_SAMPLE_SHADERS` | `OFF` |
+## Building using vcpkg
 
-Please note that while VulkanMemoryAllocator library is supported on other platforms besides Windows, VmaSample is not.
+You can download and install VulkanMemoryAllocator using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
 
-These CMake options are available
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    ./vcpkg install vulkan-memory-allocator
 
-| CMake option | Description | Default setting |
-| ------------- | ------------- | ------------- |
-| `VMA_RECORDING_ENABLED` | Enable VMA memory recording for debugging | `OFF` |
-| `VMA_USE_STL_CONTAINERS` | Use C++ STL containers instead of VMA's containers | `OFF` |
-| `VMA_STATIC_VULKAN_FUNCTIONS` | Link statically with Vulkan API | `OFF` |
-| `VMA_DYNAMIC_VULKAN_FUNCTIONS` | Fetch pointers to Vulkan functions internally (no static linking) | `ON` |
-| `VMA_DEBUG_ALWAYS_DEDICATED_MEMORY` | Every allocation will have its own memory block | `OFF` |
-| `VMA_DEBUG_INITIALIZE_ALLOCATIONS` | Automatically fill new allocations and destroyed allocations with some bit pattern | `OFF` |
-| `VMA_DEBUG_GLOBAL_MUTEX` | Enable single mutex protecting all entry calls to the library | `OFF` |
-| `VMA_DEBUG_DONT_EXCEED_MAX_MEMORY_ALLOCATION_COUNT` | Never exceed [VkPhysicalDeviceLimits::maxMemoryAllocationCount](https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#limits-maxMemoryAllocationCount) and return error | `OFF` |
+The VulkanMemoryAllocator port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
 
 # Binaries
 
-The release comes with precompiled binary executable for "VulkanSample" application which contains test suite. It is compiled using Visual Studio 2019, so it requires appropriate libraries to work, including "MSVCP140.dll", "VCRUNTIME140.dll", "VCRUNTIME140_1.dll". If the launch fails with error message telling about those files missing, please download and install [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads), "x64" version.
+The release comes with precompiled binary executable for "VulkanSample" application which contains test suite. It is compiled using Visual Studio 2022, so it requires appropriate libraries to work, including "MSVCP140.dll", "VCRUNTIME140.dll", "VCRUNTIME140_1.dll". If the launch fails with error message telling about those files missing, please download and install [Microsoft Visual C++ Redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads), "X64" version.
 
 # Read more
 
@@ -142,24 +150,31 @@ See **[Documentation](https://gpuopen-librariesandsdks.github.io/VulkanMemoryAll
 
 # Software using this library
 
+- **[Blender](https://www.blender.org)**
+- **[Qt Project](https://github.com/qt)**
+- **[Baldur's Gate III](https://www.mobygames.com/game/150689/baldurs-gate-iii/credits/windows/?autoplatform=true)**
+- **[Cyberpunk 2077](https://www.mobygames.com/game/128136/cyberpunk-2077/credits/windows/?autoplatform=true)**
 - **[X-Plane](https://x-plane.com/)**
 - **[Detroit: Become Human](https://gpuopen.com/learn/porting-detroit-3/)**
 - **[Vulkan Samples](https://github.com/LunarG/VulkanSamples)** - official Khronos Vulkan samples. License: Apache-style.
+- **[GFXReconstruct](https://github.com/LunarG/gfxreconstruct)** - a tools for the capture and replay of graphics API calls. License: MIT.
 - **[Anvil](https://github.com/GPUOpen-LibrariesAndSDKs/Anvil)** - cross-platform framework for Vulkan. License: MIT.
 - **[Filament](https://github.com/google/filament)** - physically based rendering engine for Android, Windows, Linux and macOS, from Google. Apache License 2.0.
 - **[Atypical Games - proprietary game engine](https://developer.samsung.com/galaxy-gamedev/gamedev-blog/infinitejet.html)**
 - **[Flax Engine](https://flaxengine.com/)**
 - **[Godot Engine](https://github.com/godotengine/godot/)** - multi-platform 2D and 3D game engine. License: MIT.
 - **[Lightweight Java Game Library (LWJGL)](https://www.lwjgl.org/)** - includes binding of the library for Java. License: BSD.
+- **[LightweightVK](https://github.com/corporateshark/lightweightvk)** - lightweight C++ bindless Vulkan 1.3 wrapper. License: MIT.
 - **[PowerVR SDK](https://github.com/powervr-graphics/Native_SDK)** - C++ cross-platform 3D graphics SDK, from Imagination. License: MIT.
 - **[Skia](https://github.com/google/skia)** - complete 2D graphic library for drawing Text, Geometries, and Images, from Google.
 - **[The Forge](https://github.com/ConfettiFX/The-Forge)** - cross-platform rendering framework. Apache License 2.0.
-- **[VK9](https://github.com/disks86/VK9)** - Direct3D 9 compatibility layer using Vulkan. Zlib lincese.
+- **[VK9](https://github.com/disks86/VK9)** - Direct3D 9 compatibility layer using Vulkan. Zlib license.
 - **[vkDOOM3](https://github.com/DustinHLand/vkDOOM3)** - Vulkan port of GPL DOOM 3 BFG Edition. License: GNU GPL.
 - **[vkQuake2](https://github.com/kondrak/vkQuake2)** - vanilla Quake 2 with Vulkan support. License: GNU GPL.
 - **[Vulkan Best Practice for Mobile Developers](https://github.com/ARM-software/vulkan_best_practice_for_mobile_developers)** from ARM. License: MIT.
 - **[RPCS3](https://github.com/RPCS3/rpcs3)** - PlayStation 3 emulator/debugger. License: GNU GPLv2.
 - **[PPSSPP](https://github.com/hrydgard/ppsspp)** - Playstation Portable emulator/debugger. License: GNU GPLv2+.
+- **[Wicked Engine](https://github.com/turanszkij/WickedEngine)** - 3D engine with modern graphics 
 
 [Many other projects on GitHub](https://github.com/search?q=AMD_VULKAN_MEMORY_ALLOCATOR_H&type=Code) and some game development studios that use Vulkan in their games.
 
@@ -167,7 +182,8 @@ See **[Documentation](https://gpuopen-librariesandsdks.github.io/VulkanMemoryAll
 
 - **[D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)** - equivalent library for Direct3D 12. License: MIT.
 - **[Awesome Vulkan](https://github.com/vinjn/awesome-vulkan)** - a curated list of awesome Vulkan libraries, debuggers and resources.
-- **[VulkanMemoryAllocator-Hpp](https://github.com/malte-v/VulkanMemoryAllocator-Hpp)** - C++ binding for this library. License: CC0-1.0.
+- **[vcpkg](https://github.com/Microsoft/vcpkg)** dependency manager from Microsoft also offers a port of this library.
+- **[VulkanMemoryAllocator-Hpp](https://github.com/YaaZ/VulkanMemoryAllocator-Hpp)** - C++ binding for this library. License: CC0-1.0.
 - **[PyVMA](https://github.com/realitix/pyvma)** - Python wrapper for this library. Author: Jean-Sébastien B. (@realitix). License: Apache 2.0.
 - **[vk-mem](https://github.com/gwihlidal/vk-mem-rs)** - Rust binding for this library. Author: Graham Wihlidal. License: Apache 2.0 or MIT.
 - **[Haskell bindings](https://hackage.haskell.org/package/VulkanMemoryAllocator)**, **[github](https://github.com/expipiplus1/vulkan/tree/master/VulkanMemoryAllocator)** - Haskell bindings for this library. Author: Ellie Hermaszewska (@expipiplus1). License BSD-3-Clause.

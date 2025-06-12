@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -68,9 +68,9 @@ void PrintMessage(CONSOLE_COLOR color, const char* msg)
 {
     if(color != CONSOLE_COLOR::NORMAL)
         SetConsoleColor(color);
-    
+
     printf("%s\n", msg);
-    
+
     if (color != CONSOLE_COLOR::NORMAL)
         SetConsoleColor(CONSOLE_COLOR::NORMAL);
 }
@@ -79,9 +79,9 @@ void PrintMessage(CONSOLE_COLOR color, const wchar_t* msg)
 {
     if(color != CONSOLE_COLOR::NORMAL)
         SetConsoleColor(color);
-    
+
     wprintf(L"%s\n", msg);
-    
+
     if (color != CONSOLE_COLOR::NORMAL)
         SetConsoleColor(CONSOLE_COLOR::NORMAL);
 }

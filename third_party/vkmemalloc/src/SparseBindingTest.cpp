@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017-2022 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -153,7 +153,7 @@ void BaseImage::UploadContent()
     VmaAllocation srcBufAlloc = nullptr;
     VmaAllocationInfo srcAllocInfo = {};
     TEST( vmaCreateBuffer(g_hAllocator, &srcBufCreateInfo, &srcBufAllocCreateInfo, &srcBuf, &srcBufAlloc, &srcAllocInfo) == VK_SUCCESS );
-    
+
     // Fill texels with: r = x % 255, g = u % 255, b = 13, a = 25
     uint32_t* srcBufPtr = (uint32_t*)srcAllocInfo.pMappedData;
     for(uint32_t y = 0, sizeY = m_CreateInfo.extent.height; y < sizeY; ++y)
@@ -211,7 +211,7 @@ void BaseImage::UploadContent()
         vkCmdCopyBufferToImage(g_hTemporaryCommandBuffer, srcBuf, m_Image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     }
-    
+
     // Barrier transfer dst to fragment shader read only.
     {
         VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -441,7 +441,7 @@ void TraditionalImage::Init(RandomNumberGenerator& rand)
     allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
     // Default BEST_FIT is clearly better.
     //allocCreateInfo.flags |= VMA_ALLOCATION_CREATE_STRATEGY_WORST_FIT_BIT;
-    
+
     ERR_GUARD_VULKAN( vmaCreateImage(g_hAllocator, &m_CreateInfo, &allocCreateInfo,
         &m_Image, &m_Allocation, nullptr) );
 }
@@ -469,15 +469,6 @@ void SparseBindingImage::Init(RandomNumberGenerator& rand)
     // Get memory requirements.
     VkMemoryRequirements imageMemReq;
     vkGetImageMemoryRequirements(g_hDevice, m_Image, &imageMemReq);
-
-    // This is just to silence validation layer warning.
-    // But it doesn't help. Looks like a bug in Vulkan validation layers.
-    // See: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/364
-    uint32_t sparseMemReqCount = 0;
-    vkGetImageSparseMemoryRequirements(g_hDevice, m_Image, &sparseMemReqCount, nullptr);
-    TEST(sparseMemReqCount <= 8);
-    VkSparseImageMemoryRequirements sparseMemReq[8];
-    vkGetImageSparseMemoryRequirements(g_hDevice, m_Image, &sparseMemReqCount, sparseMemReq);
 
     // According to Vulkan specification, for sparse resources memReq.alignment is also page size.
     const VkDeviceSize pageSize = imageMemReq.alignment;
@@ -513,7 +504,7 @@ void SparseBindingImage::Init(RandomNumberGenerator& rand)
     VkBindSparseInfo bindSparseInfo = { VK_STRUCTURE_TYPE_BIND_SPARSE_INFO };
     bindSparseInfo.pImageOpaqueBinds = &imageBindInfo;
     bindSparseInfo.imageOpaqueBindCount = 1;
-    
+
     ERR_GUARD_VULKAN( vkResetFences(g_hDevice, 1, &g_ImmediateFence) );
     ERR_GUARD_VULKAN( vkQueueBindSparse(g_hSparseBindingQueue, 1, &bindSparseInfo, g_ImmediateFence) );
     ERR_GUARD_VULKAN( vkWaitForFences(g_hDevice, 1, &g_ImmediateFence, VK_TRUE, UINT64_MAX) );
