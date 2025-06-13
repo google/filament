@@ -810,12 +810,14 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
     wgpu::TextureFormat defaultDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
     std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
+    // NEW: Array to hold resolve views for custom render targets.
+    std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customResolveViews{};
     uint32_t customColorViewCount = 0;
     wgpu::TextureView customDepthView = nullptr;
     wgpu::TextureFormat customDepthFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureFormat customStencilFormat = wgpu::TextureFormat::Undefined;
     wgpu::TextureView customStencilView = nullptr;
-
+    bool multiSamp = false;
     mCurrentRenderTarget = renderTarget;
     if (renderTarget->isDefaultRenderTarget()) {
         assert_invariant(mSwapChain && mTextureView);
@@ -836,8 +838,20 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << ".";
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
-                    customColorViews[customColorViewCount++] =
+                    customColorViews[customColorViewCount] =
                             colorTexture->getOrMakeTextureView(mipLevel, arrayLayer);
+
+                    // NEW: Populate resolve view if the texture is multisampled.
+                    // This assumes WebGPUTexture has getSamples() and getOrMakeResolveTextureView().
+                    if (colorTexture->getSamplesCount() > 1) {
+                        customResolveViews[customColorViewCount] =
+                            colorTexture->getOrMakeResolveTextureView(mipLevel, arrayLayer);
+                        multiSamp = true;
+//                        printf("%u colorTexture->getSamplesCount() > 1.\n", colorTexture->getSamplesCount());
+                    } else {
+                        customResolveViews[customColorViewCount] = nullptr;
+                    }
+                    customColorViewCount++;
                 }
             }
         }
@@ -881,18 +895,26 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             defaultDepthStencilView,
             defaultDepthStencilFormat,
             customColorViews.data(),
+            customResolveViews.data(), // NEW: Pass the array of resolve views
             customColorViewCount,
             customDepthView,
             customStencilView,
             customDepthFormat,
             customStencilFormat);
 
-    mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    if (multiSamp)
+    {
+        mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    }
+    else
+    {
+        mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
+    }
 
     // Ensure viewport dimensions are not 0
     FILAMENT_CHECK_POSTCONDITION(params.viewport.width > 0) << "viewport width is 0?";
     FILAMENT_CHECK_POSTCONDITION(params.viewport.height > 0) << "viewport height is 0?";
-
+    mRenderPassEncoder.SetLabel("TestLabel");
     mRenderPassEncoder.SetViewport(
             static_cast<float>(params.viewport.left),
             static_cast<float>(params.viewport.bottom),
@@ -904,6 +926,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
 
 void WebGPUDriver::endRenderPass(int /* dummy */) {
     mRenderPassEncoder.End();
+
     mRenderPassEncoder = nullptr;
 }
 
@@ -1094,7 +1117,14 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
         }
         pipelineSamples = mCurrentRenderTarget->getSamples();
     }
+    if (layoutLabel.find("ubershade") != std::string::npos){
 
+        if (pipelineSamples > 1)
+        {
+            printf("PipelineSamples is: %u\n", pipelineSamples);
+
+        }
+    }
     // TODO: We expected this to be a sane check, however it complains when running shadowtest.
     //if (program->fragmentShaderModule != nullptr) {
     //    FILAMENT_CHECK_POSTCONDITION(!pipelineColorFormats.empty())
@@ -1123,7 +1153,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
                 bindingInfo.bufferOffset);
     }
     mRenderPassEncoder.SetIndexBuffer(renderPrimitive->indexBuffer->getBuffer(),
-            renderPrimitive->indexBuffer->getIndexFormat());
+            renderPrimitive->indexBuffer->getIndexFormat(), 0, renderPrimitive->indexBuffer->getBuffer().GetSize());
 }
 
 void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,

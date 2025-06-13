@@ -63,6 +63,7 @@ constexpr std::array REQUIRED_FEATURES = { wgpu::FeatureName::TransientAttachmen
     // Qualcomm 500 and 600 GPUs do not support this so it is not part of core webgpu spec. To
     // support such devices, we will either need Filament to not attempt this, or find another
     // workaround. https://github.com/gpuweb/gpuweb/issues/2648
+    wgpu::FeatureName::DawnLoadResolveTexture,
     wgpu::FeatureName::RG11B10UfloatRenderable
 };
 

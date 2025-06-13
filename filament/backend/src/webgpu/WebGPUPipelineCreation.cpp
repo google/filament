@@ -284,9 +284,11 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             auto& colorTarget = colorTargets[targetIndex];
             colorTarget.format = colorFormats[targetIndex];
-            colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
-            colorTarget.writeMask =
-                    rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;
+//            colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
+//            colorTarget.writeMask =
+//                    rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;
+            colorTarget.blend = &blendState;
+            colorTarget.writeMask = wgpu::ColorWriteMask::All;
         }
         pipelineDescriptor.fragment = &fragmentState;
     }

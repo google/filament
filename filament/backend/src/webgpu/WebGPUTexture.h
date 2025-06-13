@@ -45,6 +45,14 @@ public:
         return mDefaultTextureView;
     }
 
+    // New: Member to hold the single-sampled resolve texture
+    wgpu::Texture mResolveTexture = nullptr;
+    // New: Member to hold the view for the single-sampled resolve texture
+    wgpu::TextureView mResolveTextureView = nullptr;
+
+    // Modified/New: Method to get or create the single-sampled resolve texture view
+    wgpu::TextureView getOrMakeResolveTextureView(uint8_t mipLevel, uint32_t arrayLayer);
+
     [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer);
 
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
@@ -55,6 +63,8 @@ public:
 
     [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
+
+    [[nodiscard]] uint8_t getSamplesCount() const { return mSamples; }
 
     /**
      * @param format a required texture format (can be a view to a different underlying texture
@@ -87,6 +97,7 @@ private:
     uint32_t mDefaultMipLevel = 0;
     uint32_t mDefaultBaseArrayLayer = 0;
     wgpu::TextureView mDefaultTextureView = nullptr;
+    uint8_t mSamples = 0;
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,

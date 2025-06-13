@@ -294,19 +294,20 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         const uint32_t height, const uint32_t depth, const TextureUsage usage,
         wgpu::Device const& device) noexcept
     : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage },
-      mViewFormat{ fToWGPUTextureFormat(format) },
-      mSupportsMultipleMipLevels{ levels > 1 &&
-                                  supportsMultipleMipLevelsViaStorageBinding(mViewFormat) },
-      mWebGPUFormat{ mSupportsMultipleMipLevels
-                             ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
-                             : mViewFormat },
-      mAspect{ fToWGPUTextureViewAspect(usage, format) },
-      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples, mSupportsMultipleMipLevels) },
-      mViewUsage{ fToWGPUTextureUsage(usage, samples, false) },
-      mBlockWidth{ filament::backend::getBlockWidth(format) },
-      mBlockHeight{ filament::backend::getBlockHeight(format) },
-      mDefaultMipLevel{ 0 },
-      mDefaultBaseArrayLayer{ 0 } {
+    mViewFormat{ fToWGPUTextureFormat(format) },
+    mSupportsMultipleMipLevels{ levels > 1 &&
+                              supportsMultipleMipLevelsViaStorageBinding(mViewFormat) },
+    mWebGPUFormat{ mSupportsMultipleMipLevels
+                         ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
+                         : mViewFormat },
+    mAspect{ fToWGPUTextureViewAspect(usage, format) },
+    mWebGPUUsage{ fToWGPUTextureUsage(usage, samples, mSupportsMultipleMipLevels) },
+    mViewUsage{ fToWGPUTextureUsage(usage, samples, false) },
+    mBlockWidth{ filament::backend::getBlockWidth(format) },
+    mBlockHeight{ filament::backend::getBlockHeight(format) },
+    mDefaultMipLevel{ 0 },
+    mDefaultBaseArrayLayer{ 0 },
+    mSamples(samples) {
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
@@ -314,6 +315,23 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
+
+        // If multisampled, create a separate single-sampled resolve texture
+    if (samples > 1) {
+        wgpu::TextureDescriptor resolveTextureDesc = {
+            .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopySrc,
+            .dimension = wgpu::TextureDimension::e2D, // Assuming 2D for render targets
+            .size = { width, height, depth },
+            .format = fToWGPUTextureFormat(format), // Use the same format as the multisampled texture
+            .mipLevelCount = 1, // Resolve texture is always single-mip
+            .sampleCount = 1,   // Resolve texture is always single-sampled
+            .viewFormatCount = 0,
+            .viewFormats = nullptr,
+        };
+        mResolveTexture = device.CreateTexture(&resolveTextureDesc);
+        FILAMENT_CHECK_POSTCONDITION(mResolveTexture) << "Failed to create resolve texture.";
+    }
+
     const wgpu::TextureDescriptor textureDescriptor{
         .label = getUserTextureLabel(samplerType),
         .usage = mWebGPUUsage,
@@ -351,20 +369,53 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         const uint8_t levelCount) noexcept
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
           src->format, src->usage },
-      mViewFormat{ src->mViewFormat },
-      mSupportsMultipleMipLevels{ src->mSupportsMultipleMipLevels },
-      mWebGPUFormat{ src->mWebGPUFormat },
-      mAspect{ src->mAspect },
-      mWebGPUUsage{ src->mWebGPUUsage },
-      mViewUsage{ src->mViewUsage },
-      mBlockWidth{ src->mBlockWidth },
-      mBlockHeight{ src->mBlockHeight },
-      mArrayLayerCount{ src->mArrayLayerCount },
-      mTexture{ src->mTexture },
-      mDefaultMipLevel{ baseLevel },
-      mDefaultBaseArrayLayer{ src->mArrayLayerCount },
-      mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              src->target) } {}
+    mViewFormat{ src->mViewFormat },
+    mSupportsMultipleMipLevels{ src->mSupportsMultipleMipLevels },
+    mWebGPUFormat{ src->mWebGPUFormat },
+    mAspect{ src->mAspect },
+    mWebGPUUsage{ src->mWebGPUUsage },
+    mViewUsage{ src->mViewUsage },
+    mBlockWidth{ src->mBlockWidth },
+    mBlockHeight{ src->mBlockHeight },
+    mArrayLayerCount{ src->mArrayLayerCount },
+    mTexture{ src->mTexture },
+    mDefaultMipLevel{ baseLevel },
+    mDefaultBaseArrayLayer{ src->mArrayLayerCount },
+    mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
+          src->target) },
+    mSamples {src->mSamples}{
+
+}
+
+wgpu::TextureView WebGPUTexture::getOrMakeResolveTextureView(uint8_t mipLevel, uint32_t arrayLayer) {
+    // Assert that this is only called for multisampled textures
+    FILAMENT_CHECK_PRECONDITION(mSamples > 1)
+            << "getOrMakeResolveTextureView called on single-sampled texture.";
+
+    // If the resolve texture view hasn't been created yet, create it.
+    // In a real scenario, you might want to create a view for a specific mipLevel/arrayLayer
+    // of the resolve texture if it's an array texture or has mips (though resolve textures
+    // are typically 1 mip, 1 layer).
+    if (!mResolveTextureView) {
+        if (!mResolveTexture) {
+             // This indicates an error in the constructor or setup; resolveTexture should exist.
+             return nullptr;
+        }
+
+        wgpu::TextureViewDescriptor viewDesc = {
+            .format = mResolveTexture.GetFormat(),
+            .dimension = wgpu::TextureViewDimension::e2D, // Match the texture dimension
+            .baseMipLevel = 0, // Resolve texture always uses base mip
+            .mipLevelCount = 1,
+            .baseArrayLayer = 0, // Resolve texture always uses base layer
+            .arrayLayerCount = 1,
+            .aspect = wgpu::TextureAspect::All,
+        };
+        mResolveTextureView = mResolveTexture.CreateView(&viewDesc);
+        FILAMENT_CHECK_POSTCONDITION(mResolveTextureView) << "Failed to create resolve texture view.";
+    }
+    return mResolveTextureView;
+}
 
 bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::TextureFormat format) {
     return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
