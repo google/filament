@@ -257,6 +257,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
             src/webgpu/WebGPUBufferBase.cpp
             src/webgpu/WebGPUBufferBase.h
             src/webgpu/WebGPUBufferObject.cpp
