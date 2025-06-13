@@ -34,14 +34,13 @@ public:
 
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
-            Attachment const& stencilAttachment);
+            Attachment const& stencilAttachment, TargetBufferFlags targetFlags);
 
     // Default constructor for the default render target
     WebGPURenderTarget();
 
     // Updated signature: takes resolved views for custom RTs, and default views for default RT
-    void setUpRenderPassAttachments(
-            wgpu::RenderPassDescriptor& outDescriptor,
+    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& outDescriptor,
             RenderPassParams const& params,
             // For default render target:
             wgpu::TextureView const& defaultColorTextureView,
@@ -49,11 +48,9 @@ public:
             wgpu::TextureFormat const& defaultDepthStencilFormat,
             // For custom render targets:
             wgpu::TextureView const* customColorTextureViews, // Array of views
-            uint32_t customColorTextureViewCount,
-            wgpu::TextureView const& customDepthTextureView,
+            uint32_t customColorTextureViewCount, wgpu::TextureView const& customDepthTextureView,
             wgpu::TextureView const& customStencilTextureView,
-            wgpu::TextureFormat customDepthFormat,
-            wgpu::TextureFormat customStencilFormat);
+            wgpu::TextureFormat customDepthFormat, wgpu::TextureFormat customStencilFormat);
 
     [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
@@ -69,6 +66,10 @@ public:
             TargetBufferFlags buffer);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
+
+    [[nodiscard]] TargetBufferFlags getTargets() const { return mTargetFlags; }
+
+    TargetBufferFlags mTargetFlags = TargetBufferFlags::NONE;
 
 private:
     bool mDefaultRenderTarget = false;
