@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_DEFINITIONS_H
 #define TNT_FILAMENT_BACKEND_VULKAN_UTILS_DEFINITIONS_H
 
+#include <backend/DriverEnums.h>
+
 #include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 
@@ -378,6 +380,81 @@ static constexpr uint8_t getFragmentStageShift() noexcept {
 
 // We have at most 4 descriptor sets. This is to indicate which ones are active.
 using DescriptorSetMask = utils::bitset8;
+
+//! this API is copied from (and only applies to) the Vulkan spec.
+//! These specify YUV to RGB conversions.
+enum class SamplerYcbcrModelConversion : uint8_t {
+    RGB_IDENTITY = 0,
+    YCBCR_IDENTITY = 1,
+    YCBCR_709 = 2,
+    YCBCR_601 = 3,
+    YCBCR_2020 = 4,
+};
+
+enum class SamplerYcbcrRange : uint8_t {
+    ITU_FULL = 0,
+    ITU_NARROW = 1,
+};
+
+enum class ChromaLocation : uint8_t {
+    COSITED_EVEN = 0,
+    MIDPOINT = 1,
+};
+
+//! Sampler parameters
+struct SamplerYcbcrConversion { // NOLINT
+    SamplerYcbcrModelConversion ycbcrModel : 4;
+    TextureSwizzle r : 4;
+    TextureSwizzle g : 4;
+    TextureSwizzle b : 4;
+    TextureSwizzle a : 4;
+    SamplerYcbcrRange ycbcrRange : 1;
+    ChromaLocation xChromaOffset : 1;
+    ChromaLocation yChromaOffset : 1;
+    SamplerMagFilter chromaFilter : 1;
+    uint8_t padding;
+
+    struct Hasher {
+        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
+            // we don't use std::hash<> here, so we don't have to include <functional>
+            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
+        }
+    };
+
+    struct EqualTo {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs == *pRhs;
+        }
+    };
+
+    struct LessThan {
+        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
+            assert_invariant(lhs.padding == 0);
+            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
+            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
+            return *pLhs < *pRhs;
+        }
+    };
+
+private:
+    friend bool operator==(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) noexcept {
+        return SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend bool operator!=(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) noexcept {
+        return !SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
+    }
+    friend bool operator<(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) noexcept {
+        return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
+    }
+};
+
+static_assert(sizeof(SamplerYcbcrConversion) == 4);
+
+static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
+        "SamplerYcbcrConversion must be no more than 64 bits");
 
 } // namespace filament::backend::fvkutils
 

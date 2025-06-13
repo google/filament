@@ -29,6 +29,8 @@ using namespace bluevk;
 
 namespace filament::backend {
 
+using namespace fvkutils;
+
 VulkanYcbcrConversionCache::VulkanYcbcrConversionCache(VkDevice device)
     : mDevice(device) {}
 
