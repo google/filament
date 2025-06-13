@@ -72,6 +72,7 @@ struct App {
     gltfio::TextureProvider* stbDecoder = nullptr;
     gltfio::TextureProvider* ktxDecoder = nullptr;
     FilamentInstance* instance;
+    bool enableMSAA = false;
 };
 
 static const char* DEFAULT_IBL = "assets/ibl/lightroom_14b";
@@ -87,7 +88,9 @@ static void printUsage(char* name) {
                       "       Prints this message\n\n"
                       "API_USAGE"
                       "   --ibl=<path to cmgen IBL>, -i <path>\n"
-                      "       Override the built-in IBL\n\n");
+                      "       Override the built-in IBL\n\n"
+                      "   --msaa, -m\n"
+                      "       setMultiSampleAntiAliasingOptions\n\n");
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
@@ -101,9 +104,11 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:un:m:";
+    static constexpr const char* OPTSTR = "hma:i:";
     static const struct option OPTIONS[] = { { "help", no_argument, nullptr, 'h' },
-        { "api", required_argument, nullptr, 'a' }, { "ibl", required_argument, nullptr, 'i' },
+        { "api", required_argument, nullptr, 'a' },
+        { "ibl", required_argument, nullptr, 'i' },
+        { "msaa", no_argument, nullptr, 'm' },
         { nullptr, 0, nullptr, 0 } };
     int opt;
     int option_index = 0;
@@ -121,6 +126,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 break;
             case 'i':
                 app->config.iblDirectory = arg;
+                break;
+            case 'm':
+                app->enableMSAA = true;
                 break;
         }
     }
@@ -205,6 +213,11 @@ int main(int argc, char** argv) {
     };
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
+        if (app.enableMSAA) {
+            // TODO Investigate why
+            // Enabling MSAA fixes the "transmission" sample but breaks the others
+            view->setMultiSampleAntiAliasingOptions({ .enabled = true});
+        }
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new ViewerGui(engine, scene, view);

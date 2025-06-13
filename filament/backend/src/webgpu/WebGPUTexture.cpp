@@ -25,9 +25,12 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#include <webgpu/webgpu_cpp_print.h>
+#include <sstream>
+#endif
 
 #include <cstdint>
 
@@ -59,20 +62,107 @@ namespace {
     }
 }
 
+/**
+ * @param format texture format to potentially be used for storage binding
+ * @return true if the format is compatible with wgpu::TextureUsage::StorageBinding
+ */
+[[nodiscard]] constexpr bool isFormatStorageCompatible(const wgpu::TextureFormat format) {
+    switch (format) {
+        // List of formats that support storage binding
+        case wgpu::TextureFormat::R32Float:
+        case wgpu::TextureFormat::R32Sint:
+        case wgpu::TextureFormat::R32Uint:
+        case wgpu::TextureFormat::RG32Float:
+        case wgpu::TextureFormat::RG32Sint:
+        case wgpu::TextureFormat::RG32Uint:
+        case wgpu::TextureFormat::RGBA16Float:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA32Float:
+        case wgpu::TextureFormat::RGBA32Sint:
+        case wgpu::TextureFormat::RGBA32Uint:
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8Snorm:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGBA8Sint:
+            return true;
+        default:
+            // All other formats, including packed floats (RG11B10Ufloat),
+            // depth/stencil, and sRGB formats do not support storage.
+            return false;
+    }
+}
+
+/**
+ * @param viewFormat potential view format to a texture
+ * @return an underlying texture format that is storage binding compatible for which this view
+ *         texture format can be used. If no such format exists, Undefined is returned.
+ *         If the view texture is already storage binding compatible then the view texture itself
+ *         is returned.
+ */
+[[nodiscard]] constexpr wgpu::TextureFormat storageBindingCompatibleFormatForViewFormat(
+        const wgpu::TextureFormat viewFormat) {
+    switch (viewFormat) {
+        case wgpu::TextureFormat::RGBA8UnormSrgb:      return wgpu::TextureFormat::RGBA8Unorm;
+        case wgpu::TextureFormat::BGRA8UnormSrgb:      return wgpu::TextureFormat::BGRA8Unorm;
+        case wgpu::TextureFormat::BC1RGBAUnormSrgb:    return wgpu::TextureFormat::BC1RGBAUnorm;
+        case wgpu::TextureFormat::BC2RGBAUnormSrgb:    return wgpu::TextureFormat::BC2RGBAUnorm;
+        case  wgpu::TextureFormat::BC3RGBAUnormSrgb:   return wgpu::TextureFormat::BC3RGBAUnorm;
+        case wgpu::TextureFormat::BC7RGBAUnormSrgb:    return wgpu::TextureFormat::BC7RGBAUnorm;
+        case wgpu::TextureFormat::ETC2RGB8UnormSrgb:   return wgpu::TextureFormat::ETC2RGB8Unorm;
+        case wgpu::TextureFormat::ETC2RGB8A1UnormSrgb: return wgpu::TextureFormat::ETC2RGB8A1Unorm;
+        case wgpu::TextureFormat::ETC2RGBA8UnormSrgb:  return wgpu::TextureFormat::ETC2RGBA8Unorm;
+        case wgpu::TextureFormat::ASTC4x4UnormSrgb:    return wgpu::TextureFormat::ASTC4x4Unorm;
+        case wgpu::TextureFormat::ASTC5x4UnormSrgb:    return wgpu::TextureFormat::ASTC5x4Unorm;
+        case wgpu::TextureFormat::ASTC5x5UnormSrgb:    return wgpu::TextureFormat::ASTC5x5Unorm;
+        case wgpu::TextureFormat::ASTC6x5UnormSrgb:    return wgpu::TextureFormat::ASTC6x5Unorm;
+        case wgpu::TextureFormat::ASTC6x6UnormSrgb:    return wgpu::TextureFormat::ASTC6x6Unorm;
+        case wgpu::TextureFormat::ASTC8x5UnormSrgb:    return wgpu::TextureFormat::ASTC8x5Unorm;
+        case wgpu::TextureFormat::ASTC8x6UnormSrgb:    return wgpu::TextureFormat::ASTC8x6Unorm;
+        case wgpu::TextureFormat::ASTC8x8UnormSrgb:    return wgpu::TextureFormat::ASTC8x8Unorm;
+        case wgpu::TextureFormat::ASTC10x5UnormSrgb:   return wgpu::TextureFormat::ASTC10x5Unorm;
+        case wgpu::TextureFormat::ASTC10x6UnormSrgb:   return wgpu::TextureFormat::ASTC10x6Unorm;
+        case wgpu::TextureFormat::ASTC10x8UnormSrgb:   return wgpu::TextureFormat::ASTC10x8Unorm;
+        case wgpu::TextureFormat::ASTC10x10UnormSrgb:  return wgpu::TextureFormat::ASTC10x10Unorm;
+        case wgpu::TextureFormat::ASTC12x10UnormSrgb:  return wgpu::TextureFormat::ASTC12x10Unorm;
+        case wgpu::TextureFormat::ASTC12x12UnormSrgb:  return wgpu::TextureFormat::ASTC12x12Unorm;
+        default:
+            if (isFormatStorageCompatible(viewFormat)) {
+                return viewFormat; // view format is itself already storage binding compatible
+            } else {
+                return wgpu::TextureFormat::Undefined; // no valid format in this case
+            }
+    }
+}
+
+/**
+ * @param fUsage Filament's requested texture usage
+ * @param samples How many samples to use for MSAA
+ * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
+ *                                   like a compute shader
+ * @return The appropriate texture usage flags for the underlying texture
+ */
 [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
-        const uint8_t samples) {
+        const uint8_t samples, const bool needsComputeStorageSupport) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
+
+    // if needsComputeStorageSupport we need to read and write to the texture in a shader and thus
+    // require CopySrc, CopyDst, TextureBinding, & StorageBinding
 
     // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
     // TODO Validate assumptions, revisit if issues.
-    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+    if (needsComputeStorageSupport || any(TextureUsage::BLIT_SRC & fUsage)) {
         retUsage |= wgpu::TextureUsage::CopySrc;
     }
-    if (any((TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE) & fUsage)) {
+    if (needsComputeStorageSupport ||
+            any((TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE) & fUsage)) {
         retUsage |= wgpu::TextureUsage::CopyDst;
     }
-    if (any(TextureUsage::SAMPLEABLE & fUsage)) {
+    if (needsComputeStorageSupport || any(TextureUsage::SAMPLEABLE & fUsage)) {
         retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
+    if (needsComputeStorageSupport) {
+        retUsage |= wgpu::TextureUsage::StorageBinding;
     }
     // WGPU Render attachment covers either color or stencil situation dependant
     // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
@@ -100,7 +190,6 @@ namespace {
         retUsage |= wgpu::TextureUsage::TransientAttachment;
     }
     // NOTE: Unused wgpu flags:
-    //  StorageBinding
     //  StorageAttachment
 
     // NOTE: Unused Filament flags:
@@ -205,11 +294,19 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         const uint32_t height, const uint32_t depth, const TextureUsage usage,
         wgpu::Device const& device) noexcept
     : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage },
-      mWebGPUFormat{ fToWGPUTextureFormat(format) },
+      mViewFormat{ fToWGPUTextureFormat(format) },
+      mSupportsMultipleMipLevels{ levels > 1 &&
+                                  supportsMultipleMipLevelsViaStorageBinding(mViewFormat) },
+      mWebGPUFormat{ mSupportsMultipleMipLevels
+                             ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
+                             : mViewFormat },
       mAspect{ fToWGPUTextureViewAspect(usage, format) },
-      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples) },
+      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples, mSupportsMultipleMipLevels) },
+      mViewUsage{ fToWGPUTextureUsage(usage, samples, false) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
-      mBlockHeight{ filament::backend::getBlockHeight(format) } {
+      mBlockHeight{ filament::backend::getBlockHeight(format) },
+      mDefaultMipLevel{ 0 },
+      mDefaultBaseArrayLayer{ 0 } {
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
@@ -225,10 +322,8 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         .format = mWebGPUFormat,
         .mipLevelCount = levels,
         .sampleCount = samples,
-        // TODO Is this fine? Could do all-the-things, a naive mapping or get something from
-        // Filament
-        .viewFormatCount = 0,
-        .viewFormats = nullptr,
+        .viewFormatCount = 1,
+        .viewFormats = &mViewFormat,
     };
     mArrayLayerCount = toArrayLayerCount(samplerType, textureDescriptor.size.depthOrArrayLayers);
     assert_invariant(textureDescriptor.format != wgpu::TextureFormat::Undefined &&
@@ -240,23 +335,40 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
             mArrayLayerCount, samplerType);
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
             << "Failed to create default texture view for " << textureDescriptor.label;
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+    if (mViewFormat != mWebGPUFormat) {
+        std::stringstream viewFormatStream;
+        viewFormatStream << mViewFormat;
+        std::stringstream textureFormatStream;
+        textureFormatStream << mWebGPUFormat;
+        FWGPU_LOGD << "Texture '" << textureDescriptor.label << "' has view format "
+                   << viewFormatStream.str() << " and texture format " << textureFormatStream.str();
+    }
+#endif
 }
 
 WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         const uint8_t levelCount) noexcept
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
           src->format, src->usage },
-      mTexture{ src->mTexture },
+      mViewFormat{ src->mViewFormat },
+      mSupportsMultipleMipLevels{ src->mSupportsMultipleMipLevels },
       mWebGPUFormat{ src->mWebGPUFormat },
       mAspect{ src->mAspect },
       mWebGPUUsage{ src->mWebGPUUsage },
-      mArrayLayerCount{ src->mArrayLayerCount },
+      mViewUsage{ src->mViewUsage },
       mBlockWidth{ src->mBlockWidth },
       mBlockHeight{ src->mBlockHeight },
-      mDefaultTextureView{ makeTextureView(baseLevel, levelCount, 0, src->mArrayLayerCount,
-              src->target) },
+      mArrayLayerCount{ src->mArrayLayerCount },
+      mTexture{ src->mTexture },
       mDefaultMipLevel{ baseLevel },
-      mDefaultBaseArrayLayer{ src->mArrayLayerCount } {}
+      mDefaultBaseArrayLayer{ src->mArrayLayerCount },
+      mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
+              src->target) } {}
+
+bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::TextureFormat format) {
+    return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
+}
 
 wgpu::TextureView WebGPUTexture::getOrMakeTextureView(const uint8_t mipLevel,
         const uint32_t arrayLayer) {
@@ -356,51 +468,43 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and discard the alpha and lower precision.
             FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB9_E5: return wgpu::TextureFormat::RGB9E5Ufloat;
         case TextureFormat::RGB5_A1:
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and handle the packing/unpacking in shaders.
             FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGBA4:
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and handle the packing/unpacking in shaders.
             FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB8:
             FWGPU_LOGW << "Requested Filament texture format RGB8 but getting "
                           "wgpu::TextureFormat::RGBA8Unorm (no direct sRGB equivalent in wgpu "
-                          "without alpha)"
-                       << utils::io::endl;
+                          "without alpha)";
             return wgpu::TextureFormat::RGBA8Unorm;
         case TextureFormat::SRGB8:
             FWGPU_LOGW << "Requested Filament texture format SRGB8 but getting "
                           "wgpu::TextureFormat::RGBA8UnormSrgb (no direct sRGB equivalent in wgpu "
-                          "without alpha)"
-                       << utils::io::endl;
+                          "without alpha)";
             return wgpu::TextureFormat::RGBA8UnormSrgb;
         case TextureFormat::RGB8_SNORM:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB8_SNORM but getting "
-                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Snorm;
         case TextureFormat::RGB8UI:
             FWGPU_LOGW << "Requested Filament texture format RGB8UI but getting "
-                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Uint;
         case TextureFormat::RGB8I:
             FWGPU_LOGW << "Requested Filament texture format RGB8I but getting "
-                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Sint;
         case TextureFormat::R11F_G11F_B10F:          return wgpu::TextureFormat::RG11B10Ufloat;
         case TextureFormat::UNUSED:                  return wgpu::TextureFormat::Undefined;
@@ -408,38 +512,32 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
         case TextureFormat::RGB16F:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16F but getting "
-                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Float;
         case TextureFormat::RGB16UI:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16UI but getting "
-                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Uint;
         case TextureFormat::RGB16I:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16I but getting "
-                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Sint;
         case TextureFormat::RGB32F:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32F but getting "
-                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Float;
         case TextureFormat::RGB32UI:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32UI but getting "
-                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Uint;
         case TextureFormat::RGB32I:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32I but getting "
-                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Sint;
         case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT1_RGBA:               return wgpu::TextureFormat::BC1RGBAUnorm;
@@ -455,16 +553,23 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
 wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
         const SamplerType samplerType) const noexcept {
+#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
+    if (baseLevel > 0 && !mSupportsMultipleMipLevels) {
+        FWGPU_LOGW << "Trying to make a texture view into a level ("
+                   << static_cast<uint32_t>(baseLevel)
+                   << ") for which we cannot generate mip levels.";
+    }
+#endif
     const wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
-        .format = mWebGPUFormat,
+        .format = mViewFormat,
         .dimension = toWebGPUTextureViewDimension(samplerType),
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
         .baseArrayLayer = baseArrayLayer,
         .arrayLayerCount = arrayLayerCount,
         .aspect = mAspect,
-        .usage = mWebGPUUsage };
+        .usage = mViewUsage };
     wgpu::TextureView textureView = mTexture.CreateView(&textureViewDescriptor);
     FILAMENT_CHECK_POSTCONDITION(textureView)
             << "Failed to create texture view " << textureViewDescriptor.label;

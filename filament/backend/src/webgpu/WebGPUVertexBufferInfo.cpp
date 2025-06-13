@@ -22,7 +22,6 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>
-#include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -57,26 +56,22 @@ namespace {
             case ElementType::BYTE3:
                 FWGPU_LOGW
                         << "Requested Filament vertex format BYTE3 (normalized) but getting "
-                           "wgpu::VertexFormat::Snorm8x4 (no direct mapping in wgpu for x3 byte)"
-                        << utils::io::endl;
+                           "wgpu::VertexFormat::Snorm8x4 (no direct mapping in wgpu for x3 byte)";
                 return VertexFormat::Snorm8x4; // NOT MINSPEC
             case ElementType::UBYTE3:
                 FWGPU_LOGW
                         << "Requested Filament vertex format UBYTE3 (normalized) but getting "
-                           "wgpu::VertexFormat::Unorm8x4 (no direct mapping in wgpu for x3 byte)"
-                        << utils::io::endl;
+                           "wgpu::VertexFormat::Unorm8x4 (no direct mapping in wgpu for x3 byte)";
                 return VertexFormat::Unorm8x4; // NOT MINSPEC
             case ElementType::SHORT3:
                 FWGPU_LOGW << "Requested Filament vertex format SHORT3 (normalized) but getting "
                               "wgpu::VertexFormat::Snorm16x4 (no direct mapping in wgpu for x3 "
-                              "half/short)"
-                           << utils::io::endl;
+                              "half/short)";
                 return VertexFormat::Snorm16x4; // NOT MINSPEC
             case ElementType::USHORT3:
                 FWGPU_LOGW << "Requested Filament vertex format USHORT3 (normalized) but getting "
                               "wgpu::VertexFormat::Unorm16x4 (no direct mapping in wgpu for x3 "
-                              "half/short)"
-                           << utils::io::endl;
+                              "half/short)";
                 return VertexFormat::Unorm16x4; // NOT MINSPEC
             // Four Component Types
             case ElementType::BYTE4:   return VertexFormat::Snorm8x4;
@@ -97,26 +92,22 @@ namespace {
         case ElementType::BYTE:
             if (integer) return VertexFormat::Sint8;
             FWGPU_LOGW << "Requested Filament vertex format BYTE (float) but getting "
-                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)";
             return wgpu::VertexFormat::Float16;
         case ElementType::UBYTE:
             if (integer) return VertexFormat::Uint8;
             FWGPU_LOGW << "Requested Filament vertex format UBYTE (float) but getting "
-                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16 (no direct mapping in wgpu for 8 bit float)";
             return VertexFormat::Float16;
         case ElementType::SHORT:
             if (integer) return VertexFormat::Sint16;
             FWGPU_LOGW << "Requested Filament vertex format SHORT (float) and getting "
-                          "wgpu::VertexFormat::Float16 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16 (potential loss of precision?)";
             return VertexFormat ::Float16;
         case ElementType::USHORT:
             if (integer) return VertexFormat::Uint16;
             FWGPU_LOGW << "Requested Filament vertex format USHORT (float) and getting "
-                          "wgpu::VertexFormat::Float16 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16 (potential loss of precision?)";
             return VertexFormat::Float16;
         case ElementType::HALF:    return VertexFormat::Float16;
         case ElementType::INT:     return VertexFormat::Sint32;
@@ -127,58 +118,49 @@ namespace {
             if (integer) return VertexFormat::Sint8x2;
             FWGPU_LOGW
                     << "Requested Filament vertex format BYTE2 (float) but getting "
-                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)";
             return VertexFormat::Float16x2;
         case ElementType::UBYTE2:
             if (integer) return VertexFormat::Uint8x2;
             FWGPU_LOGW
                     << "Requested Filament vertex format UBYTE2 (float) but getting "
-                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Float16x2 (no direct mapping in wgpu for 8 bit float)";
             return VertexFormat::Float16x2;
         case ElementType::SHORT2:
             if (integer) return VertexFormat::Sint16x2;
             FWGPU_LOGW << "Requested Filament vertex format SHORT2 (float) but getting "
-                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)";
             return VertexFormat::Float16x2;
         case ElementType::USHORT2:
             if (integer) return VertexFormat::Uint16x2;
             FWGPU_LOGW << "Requested Filament vertex format USHORT2 (float) but getting "
-                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16x2 (potential loss of precision?)";
             return VertexFormat::Float16x2;
         case ElementType::HALF2:   return VertexFormat::Float16x2;
         case ElementType::FLOAT2:  return VertexFormat::Float32x2;
         // Three Component Types
         case ElementType::BYTE3:
             FWGPU_LOGW << "Requested Filament vertex format BYTE3 but getting "
-                          "wgpu::VertexFormat::Sint8x4 (no direct mapping in wgpu for x3 byte)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Sint8x4 (no direct mapping in wgpu for x3 byte)";
             return VertexFormat::Sint8x4; // NOT MINSPEC
         case ElementType::UBYTE3:
             FWGPU_LOGW << "Requested Filament vertex format UBYTE3 but getting "
-                          "wgpu::VertexFormat::Uint8x4 (no direct mapping in wgpu for x3 byte)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Uint8x4 (no direct mapping in wgpu for x3 byte)";
             return VertexFormat::Uint8x4; // NOT MINSPEC
         case ElementType::SHORT3:
             FWGPU_LOGW
                     << "Requested Filament vertex format SHORT3 but getting "
-                       "wgpu::VertexFormat::Sint16x4 (no direct mapping in wgpu for x3 half/short)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Sint16x4 (no direct mapping in wgpu for x3 half/short)";
             return VertexFormat::Sint16x4; // NOT MINSPEC
         case ElementType::USHORT3:
             FWGPU_LOGW
                     << "Requested Filament vertex format USHORT3 but getting "
-                       "wgpu::VertexFormat::Uint16x4 (no direct mapping in wgpu for x3 half/short)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Uint16x4 (no direct mapping in wgpu for x3 half/short)";
             return VertexFormat::Uint16x4; // NOT MINSPEC
         case ElementType::HALF3:
             FWGPU_LOGW
                     << "Requested Filament vertex format HALF3 but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for x3 half/short)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for x3 half/short)";
             return VertexFormat::Float16x4; // NOT MINSPEC
         case ElementType::FLOAT3:  return VertexFormat::Float32x3;
         // Four Component Types
@@ -186,27 +168,23 @@ namespace {
             if (integer) return VertexFormat::Sint8x4;
             FWGPU_LOGW
                     << "Requested Filament vertex format BYTE4 (float) but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)";
             return VertexFormat::Float16x4;
         case ElementType::UBYTE4:
             if (integer) return VertexFormat::Uint8x4;
             FWGPU_LOGW
                     << "Requested Filament vertex format UBYTE4 (float) but getting "
-                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)"
-                    << utils::io::endl;
+                       "wgpu::VertexFormat::Float16x4 (no direct mapping in wgpu for 8 bit float)";
             return VertexFormat::Float16x4;
         case ElementType::SHORT4:
             if (integer) return VertexFormat::Sint16x4;
             FWGPU_LOGW << "Requested Filament vertex format SHORT4 (float) but getting "
-                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)";
             return VertexFormat::Float16x4;
         case ElementType::USHORT4:
             if (integer) return VertexFormat::Uint16x4;
             FWGPU_LOGW << "Requested Filament vertex format USHORT4 (float) but getting "
-                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)"
-                       << utils::io::endl;
+                          "wgpu::VertexFormat::Float16x4 (potential loss of precision?)";
             return VertexFormat::Float16x4;
         case ElementType::HALF4:   return VertexFormat::Float16x4;
         case ElementType::FLOAT4:  return VertexFormat::Float32x4;
