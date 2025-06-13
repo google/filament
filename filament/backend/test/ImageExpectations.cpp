@@ -59,28 +59,28 @@ uint32_t ScreenshotParams::expectedHash() const {
     return mExpectedPixelHash;
 }
 
-std::string ScreenshotParams::actualDirectoryPath() {
-    return "images/actual_images";
+std::filesystem::path ScreenshotParams::actualDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/actual_images");
 }
 
 std::string ScreenshotParams::actualFileName() const {
     return absl::StrFormat("%s_actual.png", mFileName);
 }
 
-std::string ScreenshotParams::actualFilePath() const {
-    return absl::StrFormat("%s/%s", actualDirectoryPath(), actualFileName());
+std::filesystem::path ScreenshotParams::actualFilePath() const {
+    return actualDirectoryPath().append(actualFileName());
 }
 
-std::string ScreenshotParams::expectedDirectoryPath() {
-    return "images/expected_images";
+std::filesystem::path ScreenshotParams::expectedDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/expected_images");
 }
 
 std::string ScreenshotParams::expectedFileName() const {
     return absl::StrFormat("%s.png", mFileName);
 }
 
-std::string ScreenshotParams::expectedFilePath() const {
-    return absl::StrFormat("%s/%s", expectedDirectoryPath(), expectedFileName());
+std::filesystem::path ScreenshotParams::expectedFilePath() const {
+    return expectedDirectoryPath().append(expectedFileName());
 }
 
 const std::string ScreenshotParams::filePrefix() const {

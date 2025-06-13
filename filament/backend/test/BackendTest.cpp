@@ -40,18 +40,24 @@ using namespace filament::math;
 
 using namespace image;
 #endif
+#include <iostream>
 
 namespace test {
 
 Backend BackendTest::sBackend = Backend::NOOP;
 OperatingSystem BackendTest::sOperatingSystem = OperatingSystem::OTHER;
 bool BackendTest::sIsMobilePlatform = false;
+int BackendTest::sArgc = 0;
+char** BackendTest::sArgv = nullptr;
 std::vector<std::string> BackendTest::sFailedImages;
 
-void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform) {
+void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform,
+        int argc, char** argv) {
     sBackend = backend;
     sOperatingSystem = operatingSystem;
     sIsMobilePlatform = isMobilePlatform;
+    sArgc = argc;
+    sArgv = argv;
 }
 
 BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
@@ -160,6 +166,11 @@ void BackendTest::markImageAsFailure(std::string failedImageName) {
     sFailedImages.emplace_back(std::move(failedImageName));
 }
 
+std::filesystem::path BackendTest::binaryDirectory() {
+    assert(sArgc >= 1);
+    return std::filesystem::path(sArgv[0]).remove_filename().string();
+}
+
 void BackendTest::recordFailedImages() {
     if (!sFailedImages.empty()) {
         std::string failedImages;
@@ -187,8 +198,9 @@ public:
     }
 };
 
-void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]) {
-    BackendTest::init(backend, operatingSystem, isMobile);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc,
+        char* argv[]) {
+    BackendTest::init(backend, operatingSystem, isMobile, argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
 }

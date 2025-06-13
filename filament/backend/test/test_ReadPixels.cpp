@@ -150,9 +150,10 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                 memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
             }
             std::string png = std::string(testName) + ".png";
-            std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                    png.c_str());
+            std::filesystem::path path = ScreenshotParams::actualDirectoryPath();
+            path.append(png);
+            std::ofstream outputStream(path.c_str(), std::ios::binary | std::ios::trunc);
+            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "", png);
 #endif
         }
 
