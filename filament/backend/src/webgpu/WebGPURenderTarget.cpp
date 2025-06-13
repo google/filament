@@ -52,12 +52,16 @@ WebGPURenderTarget::WebGPURenderTarget()
       mLayerCount{ 1 } {}
 
 wgpu::LoadOp WebGPURenderTarget::getLoadOperation(RenderPassParams const& params,
-        const TargetBufferFlags bufferToOperateOn) {
+        const TargetBufferFlags bufferToOperateOn, bool msaa ) {
     if (any(params.flags.clear & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear;
     }
     if (any(params.flags.discardStart & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear; // Or wgpu::LoadOp::Undefined if clear is not desired on discard
+    }
+    if (msaa)
+    {
+        return wgpu::LoadOp::ExpandResolveTexture;
     }
     return wgpu::LoadOp::Load;
 }
@@ -74,7 +78,9 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
         RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
         wgpu::TextureView const& defaultDepthStencilTextureView,
         wgpu::TextureFormat const& defaultDepthStencilFormat,
-        wgpu::TextureView const* customColorTextureViews, uint32_t customColorTextureViewCount,
+        wgpu::TextureView const* customColorTextureViews,
+        wgpu::TextureView const* customResolveTextureViews, // NEW: Added resolve views parameter
+        uint32_t customColorTextureViewCount,
         wgpu::TextureView const& customDepthTextureView,
         wgpu::TextureView const& customStencilTextureView,
         const wgpu::TextureFormat customDepthFormat,
@@ -88,8 +94,13 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             .resolveTarget = nullptr,
             .loadOp = WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
             .storeOp = WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0),
-            .clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b,
-                params.clearColor.a } });
+            .clearValue = {1.0f, 0.0f, 0.0f, 0.0f}
+//            .clearValue = {
+//                .r = params.clearColor.r,
+//                .g = params.clearColor.g,
+//                .b = params.clearColor.b,
+//                .a = params.clearColor.a }
+        });
 
         if (defaultDepthStencilTextureView) {
             mDepthStencilAttachmentDescriptor = {
@@ -122,15 +133,20 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
                 mColorAttachmentDescriptors.push_back({ .view = customColorTextureViews[i],
-                    // .resolveTarget = nullptr; // TODO: MSAA resolve for custom RT
+
+                    .resolveTarget = customResolveTextureViews[i], // MODIFIED: Use the resolve view
                     .loadOp =
-                            WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
+                            WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i), true),
                     .storeOp = WebGPURenderTarget::getStoreOperation(params,
                             getTargetBufferFlagsAt(i)),
-                    .clearValue = { .r = params.clearColor.r,
-                        .g = params.clearColor.g,
-                        .b = params.clearColor.b,
-                        .a = params.clearColor.a } });
+                    .clearValue = {0.0f, 1.0f, 0.0f, 0.0f}
+//                    .clearValue = {
+//                        .r = params.clearColor.r,
+//                        .g = params.clearColor.g,
+//                        .b = params.clearColor.b,
+//                        .a = params.clearColor.a
+//                    }
+                });
             }
         }
 

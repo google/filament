@@ -49,6 +49,7 @@ public:
             wgpu::TextureFormat const& defaultDepthStencilFormat,
             // For custom render targets:
             wgpu::TextureView const* customColorTextureViews, // Array of views
+            wgpu::TextureView const* customResolveTextureViews, // NEW: Array of resolve views
             uint32_t customColorTextureViewCount,
             wgpu::TextureView const& customDepthTextureView,
             wgpu::TextureView const& customStencilTextureView,
@@ -66,7 +67,7 @@ public:
 
     // Static helpers for load/store operations
     [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer);
+            TargetBufferFlags buffer, bool msaa = false);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
 
