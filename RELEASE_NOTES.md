@@ -10,8 +10,6 @@ Instead, if you are authoring a PR for the main branch, add your release note to
 ## v1.62.0
 
 - samples: samples now have a CLI to select backend api
-- materials: sampler now export their type in the material binary [⚠️ **New Material Version**]
-- materials: new mutable specialization constants feature. See the [materials documentation](https://google.github.io/filament/Materials.html) for details. [⚠️ **New Material Version**]
 
 ## v1.61.1
 
