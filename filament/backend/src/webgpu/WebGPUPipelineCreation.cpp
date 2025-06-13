@@ -169,39 +169,48 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
         StencilState const& stencilState, PolygonOffset const& polygonOffset,
         const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
-        const wgpu::TextureFormat depthFormat, const uint8_t samplesCount) {
+        const wgpu::TextureFormat depthStencilFormat, const uint8_t samplesCount, bool filamentRequestedStencil) {
     assert_invariant(program.vertexShaderModule);
     wgpu::DepthStencilState depthStencilState{};
-    if (depthFormat != wgpu::TextureFormat::Undefined) {
-        depthStencilState.format = depthFormat;
+
+      if (depthStencilFormat != wgpu::TextureFormat::Undefined) {
+        depthStencilState.format = depthStencilFormat;
         depthStencilState.depthWriteEnabled = rasterState.depthWrite;
         depthStencilState.depthCompare = toWebGPU(rasterState.depthFunc);
-        depthStencilState.stencilFront = {
-            .compare = toWebGPU(stencilState.front.stencilFunc),
-            .failOp = toWebGPU(stencilState.front.stencilOpStencilFail),
-            .depthFailOp = toWebGPU(stencilState.front.stencilOpDepthFail),
-            .passOp = toWebGPU(stencilState.front.stencilOpDepthStencilPass),
-        };
-        depthStencilState.stencilBack = {
-            .compare = toWebGPU(stencilState.back.stencilFunc),
-            .failOp = toWebGPU(stencilState.back.stencilOpStencilFail),
-            .depthFailOp = toWebGPU(stencilState.back.stencilOpDepthFail),
-            .passOp = toWebGPU(stencilState.back.stencilOpDepthStencilPass),
-        };
-        depthStencilState.stencilReadMask =
-                stencilState.front.readMask; // Use front face's comparison mask for read mask
-        depthStencilState.stencilWriteMask = stencilState.stencilWrite ? 0xFFFFFFFF : 0u;
-        depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
-        depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
-        depthStencilState.depthBiasClamp = 0.0f;
 
-        if (!hasStencilAspect(depthFormat)) {
+        if (polygonOffset.constant != 0.0f || polygonOffset.slope != 0.0f) {
+            depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
+            depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
+            depthStencilState.depthBiasClamp = 0.0f;
+        } else {
+            depthStencilState.depthBias = 0;
+            depthStencilState.depthBiasSlopeScale = 0.0f;
+            depthStencilState.depthBiasClamp = 0.0f;
+        }
+
+        if (hasStencilAspect(depthStencilFormat) && filamentRequestedStencil) {
+            depthStencilState.stencilFront = {
+                .compare = toWebGPU(stencilState.front.stencilFunc),
+                .failOp = toWebGPU(stencilState.front.stencilOpStencilFail),
+                .depthFailOp = toWebGPU(stencilState.front.stencilOpDepthFail),
+                .passOp = toWebGPU(stencilState.front.stencilOpDepthStencilPass),
+            };
+            depthStencilState.stencilBack = {
+                .compare = toWebGPU(stencilState.back.stencilFunc),
+                .failOp = toWebGPU(stencilState.back.stencilOpStencilFail),
+                .depthFailOp = toWebGPU(stencilState.back.stencilOpDepthFail),
+                .passOp = toWebGPU(stencilState.back.stencilOpDepthStencilPass),
+            };
+            depthStencilState.stencilReadMask = stencilState.front.readMask;
+            depthStencilState.stencilWriteMask = stencilState.stencilWrite ? stencilState.front.writeMask : 0u;
+        } else {
             depthStencilState.stencilFront.compare = wgpu::CompareFunction::Always;
             depthStencilState.stencilFront.failOp = wgpu::StencilOperation::Keep;
             depthStencilState.stencilFront.depthFailOp = wgpu::StencilOperation::Keep;
             depthStencilState.stencilFront.passOp = wgpu::StencilOperation::Keep;
-            depthStencilState.stencilBack =
-                    depthStencilState.stencilFront; // Keep back and front consistent
+
+            depthStencilState.stencilBack = depthStencilState.stencilFront;
+
             depthStencilState.stencilReadMask = 0;
             depthStencilState.stencilWriteMask = 0;
         }
@@ -245,7 +254,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             .unclippedDepth = !rasterState.depthClamp &&
                               device.HasFeature(wgpu::FeatureName::DepthClipControl)
         },
-        .depthStencil = depthFormat != wgpu::TextureFormat::Undefined ? &depthStencilState: nullptr,
+        .depthStencil = depthStencilFormat != wgpu::TextureFormat::Undefined ? &depthStencilState: nullptr,
         .multisample = {
             .count = samplesCount,
             .mask = 0xFFFFFFFF,
