@@ -53,6 +53,8 @@
 #include <sstream>
 #include <utility>
 
+using namespace std::chrono_literals;
+
 namespace filament::backend {
 
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
@@ -923,6 +925,22 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     assert_invariant(mCommandBuffer);
     mCommandEncoder = nullptr;
     mQueue.Submit(1, &mCommandBuffer);
+
+    static bool firstRender = true;
+    // For the first frame rendered, we need to make sure the work is done before presenting or we
+    // get a purple flash
+    if (firstRender) {
+        auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
+                [=](wgpu::QueueWorkDoneStatus) {});
+        const wgpu::Instance instance = mAdapter.GetInstance();
+        auto wStatus = instance.WaitAny(f,
+                std::chrono::duration_cast<std::chrono::nanoseconds>(1s).count());
+        if (wStatus != wgpu::WaitStatus::Success) {
+            FWGPU_LOGW << "Waiting for first frame work to finish resulted in an error"
+                       << static_cast<uint32_t>(wStatus);
+        }
+        firstRender = false;
+    }
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
