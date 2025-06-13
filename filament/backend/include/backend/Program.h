@@ -20,7 +20,6 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/bitset.h>
 
 #include <backend/DriverEnums.h>
 
@@ -67,7 +66,6 @@ public:
     using DescriptorBindingsInfo = utils::FixedCapacityVector<Descriptor>;
     using DescriptorSetInfo = std::array<DescriptorBindingsInfo, MAX_DESCRIPTOR_SET_COUNT>;
     using SpecializationConstantsInfo = utils::FixedCapacityVector<SpecializationConstant>;
-    using MutableSpecConstantsInfo = utils::bitset8;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
@@ -104,8 +102,7 @@ public:
     Program& descriptorBindings(backend::descriptor_set_t set,
             DescriptorBindingsInfo descriptorBindings) noexcept;
 
-    Program& specializationConstants(SpecializationConstantsInfo specConstants,
-            uint32_t firstMutableId, MutableSpecConstantsInfo mutableSpecConstants) noexcept;
+    Program& specializationConstants(SpecializationConstantsInfo specConstants) noexcept;
 
     struct PushConstant {
         utils::CString name;

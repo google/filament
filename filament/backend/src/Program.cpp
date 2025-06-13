@@ -80,18 +80,8 @@ Program& Program::attributes(AttributesInfo attributes) noexcept {
     return *this;
 }
 
-Program& Program::specializationConstants(SpecializationConstantsInfo specConstants,
-        uint32_t firstMutableId, MutableSpecConstantsInfo mutableSpecConstants) noexcept {
-    // String the two lists together.
+Program& Program::specializationConstants(SpecializationConstantsInfo specConstants) noexcept {
     mSpecializationConstants = std::move(specConstants);
-    uint32_t firstMutableIndex = specConstants.size();
-    mSpecializationConstants.reserve(specConstants.size() + mutableSpecConstants.size());
-    for (uint32_t i = 0; i < mutableSpecConstants.size(); i++) {
-        mSpecializationConstants[i + firstMutableIndex] = SpecializationConstant {
-                .id = i + firstMutableId,
-                .value = mutableSpecConstants[i],
-        };
-    }
     return *this;
 }
 
