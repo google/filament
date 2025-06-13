@@ -152,6 +152,13 @@ public:
          * presentation. Default is true.
          */
         bool transitionSwapChainImageLayoutForPresent = true;
+
+        /**
+         *
+         * Whether the buffer updates always use staging or not. Otherwise
+         * its allowed to also use memcpy for buffer updates. Default is true
+         */
+        bool forceStagingForBufferUpdates = true;
     };
 
     /**
