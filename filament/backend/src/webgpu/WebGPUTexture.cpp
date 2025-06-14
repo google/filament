@@ -22,6 +22,7 @@
 #include "private/backend/BackendUtils.h"
 #include <backend/DriverEnums.h>
 
+#include <string>
 #include <utils/BitmaskEnum.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
@@ -314,8 +315,12 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                     "count to either be 1 (no multisampling) or 4, at least as of April 2025 of "
                     "the spec. See https://www.w3.org/TR/webgpu/#texture-creation or "
                     "https://gpuweb.github.io/gpuweb/#multisample-state");
+    (void) getUserTextureLabel(samplerType);
+    auto dim = toTextureSize(samplerType, width, height, depth);
     const wgpu::TextureDescriptor textureDescriptor{
-        .label = getUserTextureLabel(samplerType),
+//        .label = getUserTextureLabel(samplerType),
+            .label = (std::to_string(dim.width) + "_" + std::to_string(dim.height) + "_" + std::to_string((int)mWebGPUFormat)).c_str(),
+//                
         .usage = mWebGPUUsage,
         .dimension = toWebGPUTextureDimension(samplerType),
         .size = toTextureSize(samplerType, width, height, depth),

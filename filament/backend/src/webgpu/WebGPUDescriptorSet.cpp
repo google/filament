@@ -39,11 +39,11 @@ constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
 } // namespace
 
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
-        std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
-    : mLayout{ layout },
+        std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries,
+        std::string const& name) : mLayout{ layout },
       mEntriesWithDynamicOffsetsCount{ static_cast<size_t>(std::count_if(bindGroupEntries.begin(),
-              bindGroupEntries.end(), [](auto const& entry) { return entry.hasDynamicOffset; })) } {
-
+                          bindGroupEntries.end(), [](auto const& entry) { return entry.hasDynamicOffset; })) },
+                                   mName(name) {
     mEntries.resize(bindGroupEntries.size());
     for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
         mEntries[i].binding = bindGroupEntries[i].binding;
@@ -85,6 +85,7 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
     }
     // TODO label? Should we just copy layout label?
     const wgpu::BindGroupDescriptor descriptor{
+        .label = mName.c_str(),
         .layout = mLayout,
         .entryCount = mEntries.size(),
         .entries = mEntries.data()

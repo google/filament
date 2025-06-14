@@ -5,7 +5,8 @@ material {
             type : sampler2d,
             name : depth,
             precision: high,
-            multisample : true
+            multisample : true,
+            unfilterable: true
         }
     ],
     outputs : [

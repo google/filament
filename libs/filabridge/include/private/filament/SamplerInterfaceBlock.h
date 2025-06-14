@@ -61,6 +61,7 @@ public:
         Type type;                  // type of this sampler
         Format format;              // format of this sampler
         Precision precision;        // precision of this sampler
+        bool unfilterable;          // whether the sampling should be unfiltered.
         bool multisample;           // multisample capable
         ShaderStageFlags stages;    // stages the sampler can be accessed from
     };
@@ -83,6 +84,7 @@ public:
             Type type;                      // type of this sampler
             Format format;                  // format of this sampler
             Precision precision;            // precision of this sampler
+            bool unfilterable = false;      // whether the sampling should be unfiltered.
             bool multisample = false;       // multisample capable
             ShaderStageFlags stages =
                     ShaderStageFlags::ALL_SHADER_STAGE_FLAGS; // shader stages using this sampler
@@ -95,7 +97,8 @@ public:
 
         // Add a sampler
         Builder& add(std::string_view samplerName, Binding binding, Type type, Format format,
-                Precision precision = Precision::MEDIUM, bool multisample = false,
+                Precision precision = Precision::MEDIUM, bool unfilterable = false,
+                bool multisample = false,
                 ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) noexcept;
 
         // Add multiple samplers

@@ -33,7 +33,8 @@ namespace filament::backend {
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
     WebGPUDescriptorSet(wgpu::BindGroupLayout const&,
-            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
+            std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&,
+            std::string const& name);
     ~WebGPUDescriptorSet();
 
     void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
@@ -55,6 +56,7 @@ private:
     std::vector<wgpu::BindGroupEntry> mEntries;
     const size_t mEntriesWithDynamicOffsetsCount;
     wgpu::BindGroup mBindGroup = nullptr;
+    std::string mName;
 };
 
 } // namespace filament::backend

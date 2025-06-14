@@ -43,7 +43,10 @@ public:
         return mBindGroupEntries;
     }
 
+    std::string const& name() const { return mName; }
+
 private:
+    std::string mName;
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout = nullptr;
 };

@@ -795,8 +795,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
     const bool computeBentNormals = options.bentNormals;
 
-    const bool highQualityUpsampling =
-            options.upsampling >= QualityLevel::HIGH && options.resolution < 1.0f;
+    const bool highQualityUpsampling = true;
+//    const bool highQualityUpsampling =
+//            options.upsampling >= QualityLevel::HIGH && options.resolution < 1.0f;
 
     const bool lowPassFilterEnabled = options.lowPassFilter != QualityLevel::LOW;
 

@@ -323,8 +323,8 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool multisample = false,
-            const char* transformName = "",
+            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool unfilterable = false,
+            bool multisample = false, const char* transformName = "",
             ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS);
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
@@ -658,9 +658,17 @@ public:
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
-                bool ms, const char* tn, ShaderStageFlags s)
-            : name(paramName), size(1), precision(p), samplerType(t), format(f),
-              parameterType(SAMPLER), multisample(ms), transformName(tn), stages(s) { }
+                bool unfilterable, bool ms, const char* tn, ShaderStageFlags s)
+            : name(paramName),
+              size(1),
+              precision(p),
+              samplerType(t),
+              format(f),
+              parameterType(SAMPLER),
+              unfilterable(unfilterable),
+              multisample(ms),
+              transformName(tn),
+              stages(s) {}
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
@@ -676,8 +684,9 @@ public:
         ParameterPrecision precision;
         SamplerType samplerType;
         SubpassType subpassType;
-        SamplerFormat format;
-        bool multisample;
+        SamplerFormat format = SamplerFormat::INT; // 0 of the enum
+        bool unfilterable = false;
+        bool multisample = false;
         utils::CString transformName;
         ShaderStageFlags stages;
         enum {

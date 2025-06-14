@@ -4,7 +4,8 @@ material {
         {
             type : sampler2d,
             name : depth,
-            precision: high
+            precision: high,
+            unfilterable: true
         }
     ],
     variables : [
