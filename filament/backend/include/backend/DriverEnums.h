@@ -474,7 +474,12 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
 
 enum class DescriptorFlags : uint8_t {
     NONE = 0x00,
-    DYNAMIC_OFFSET = 0x01
+
+    // Indicate a UNIFORM_BUFFER will have dynamic offsets.
+    DYNAMIC_OFFSET = 0x01,
+
+    // To indicate a texture/sampler type should be unfiltered.
+    UNFILTERABLE = 0x02,
 };
 
 using descriptor_set_t = uint8_t;
