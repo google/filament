@@ -49,7 +49,6 @@ class BufferInterfaceBlock;
 class SamplerInterfaceBlock;
 struct SubpassInfo;
 struct MaterialConstant;
-struct MaterialMutableConstant;
 struct MaterialPushConstant;
 
 class MaterialParser {
@@ -80,8 +79,6 @@ public:
     bool getShaderModels(uint32_t* value) const noexcept;
     bool getMaterialProperties(uint64_t* value) const noexcept;
     bool getConstants(utils::FixedCapacityVector<MaterialConstant>* value) const noexcept;
-    bool getMutableConstants(utils::FixedCapacityVector<MaterialMutableConstant>* value)
-        const noexcept;
     bool getPushConstants(utils::CString* structVarName,
             utils::FixedCapacityVector<MaterialPushConstant>* value) const noexcept;
 
@@ -238,13 +235,6 @@ struct ChunkMaterialConstants {
             utils::FixedCapacityVector<MaterialConstant>* materialConstants);
     using Container = utils::FixedCapacityVector<MaterialConstant>;
     static filamat::ChunkType const tag = filamat::MaterialConstants;
-};
-
-struct ChunkMaterialMutableConstants {
-    static bool unflatten(filaflat::Unflattener& unflattener,
-            utils::FixedCapacityVector<MaterialMutableConstant>* materialConstants);
-    using Container = utils::FixedCapacityVector<MaterialMutableConstant>;
-    static filamat::ChunkType const tag = filamat::MaterialMutableConstants;
 };
 
 struct ChunkMaterialPushConstants {

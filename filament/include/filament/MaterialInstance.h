@@ -86,9 +86,6 @@ public:
             std::is_same_v<math::mat3f, T>
     >;
 
-    template<typename T>
-    using is_supported_constant_parameter_t = std::enable_if_t<std::is_same_v<bool, T>>;
-
     /**
      * Creates a new MaterialInstance using another MaterialInstance as a template for initialization.
      * The new MaterialInstance is an instance of the same Material of the template instance and
@@ -240,13 +237,13 @@ public:
 
     /**
      * Gets the value of a parameter by name.
-     *
+     * 
      * Note: Only supports non-texture parameters such as numeric and math types.
-     *
+     * 
      * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
      * @param nameLength    Length in `char` of the name parameter.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
-     *
+     * 
      * @see Material::hasParameter
      */
     template<typename T>
@@ -262,53 +259,6 @@ public:
     template<typename T, typename = is_supported_parameter_t<T>>
     T getParameter(const char* UTILS_NONNULL name) const {
         return getParameter<T>(name, strlen(name));
-    }
-
-    /**
-     * Set a mutable constant parameter by name.
-     *
-     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param nameLength    Length in `char` of the name parameter.
-     * @param value         Value of the parameter to set.
-     * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
-     */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    void setConstant(const char* UTILS_NONNULL name, size_t nameLength, T const& value);
-
-    /** inline helper to provide the name as a null-terminated string literal */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    void setConstant(StringLiteral const name, T const& value) {
-        setConstant<T>(name.data, name.size, value);
-    }
-
-    /** inline helper to provide the name as a null-terminated C string */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    void setConstant(const char* UTILS_NONNULL name, T const& value) {
-        setConstant<T>(name, strlen(name), value);
-    }
-
-    /**
-     * Gets the value of a mutable constant parameter by name.
-     *
-     * @param name          Name of the parameter as defined by Material. Cannot be nullptr.
-     * @param nameLength    Length in `char` of the name parameter.
-     * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
-     *
-     * @see Material::hasConstant
-     */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    T getConstant(const char* UTILS_NONNULL name, size_t nameLength) const;
-
-    /** inline helper to provide the name as a null-terminated C string */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    T getConstant(StringLiteral const name) const {
-        return getConstant<T>(name.data, name.size);
-    }
-
-    /** inline helper to provide the name as a null-terminated C string */
-    template<typename T, typename = is_supported_constant_parameter_t<T>>
-    T getConstant(const char* UTILS_NONNULL name) const {
-        return getConstant<T>(name, strlen(name));
     }
 
     /**

@@ -229,11 +229,6 @@ bool MaterialParser::getConstants(FixedCapacityVector<MaterialConstant>* contain
     return get<ChunkMaterialConstants>(container);
 }
 
-bool MaterialParser::getMutableConstants(
-        FixedCapacityVector<MaterialMutableConstant>* container) const noexcept {
-    return get<ChunkMaterialMutableConstants>(container);
-}
-
 bool MaterialParser::getPushConstants(CString* structVarName,
         FixedCapacityVector<MaterialPushConstant>* value) const noexcept {
     auto [start, end] = mImpl.mChunkContainer.getChunkRange(MaterialPushConstants);
@@ -751,38 +746,6 @@ bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
 
         (*materialConstants)[i].name = constantName;
         (*materialConstants)[i].type = static_cast<ConstantType>(constantType);
-    }
-
-    return true;
-}
-
-bool ChunkMaterialMutableConstants::unflatten(Unflattener& unflattener,
-        FixedCapacityVector<MaterialMutableConstant>* materialConstants) {
-    assert_invariant(materialConstants);
-
-    // Read number of constants.
-    uint64_t numConstants = 0;
-    if (!unflattener.read(&numConstants)) {
-        return false;
-    }
-
-    materialConstants->reserve(numConstants);
-    materialConstants->resize(numConstants);
-
-    for (uint64_t i = 0; i < numConstants; i++) {
-        CString constantName;
-        bool defaultValue;
-
-        if (!unflattener.read(&constantName)) {
-            return false;
-        }
-
-        if (!unflattener.read(&defaultValue)) {
-            return false;
-        }
-
-        (*materialConstants)[i].name = std::move(constantName);
-        (*materialConstants)[i].defaultValue = defaultValue;
     }
 
     return true;
