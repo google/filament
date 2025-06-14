@@ -32,6 +32,7 @@
 #include "CommandStreamDispatcher.h"
 #include "DriverBase.h"
 #include "private/backend/Dispatcher.h"
+#include "webgpu/WebGPUConstants.h"
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
@@ -1166,6 +1167,7 @@ void WebGPUDriver::updateDescriptorSetBuffer(Handle<HwDescriptorSet> descriptorS
 void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptorSetHandle,
         const backend::descriptor_binding_t binding, Handle<HwTexture> textureHandle,
         const SamplerParams params) {
+
     auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     auto texture = handleCast<WebGPUTexture>(textureHandle);
 

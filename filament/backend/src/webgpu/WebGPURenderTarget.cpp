@@ -91,16 +91,20 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             .clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b,
                 params.clearColor.a } });
 
+        bool const depthReadonly =
+                (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+
         if (defaultDepthStencilTextureView) {
             mDepthStencilAttachmentDescriptor = {
                 .view = defaultDepthStencilTextureView,
-                .depthLoadOp =
-                        WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH),
-                .depthStoreOp =
-                        WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH),
+                .depthLoadOp = depthReadonly ? wgpu::LoadOp::Undefined
+                                             : WebGPURenderTarget::getLoadOperation(params,
+                                                       TargetBufferFlags::DEPTH),
+                .depthStoreOp = depthReadonly ? wgpu::StoreOp::Undefined
+                                              : WebGPURenderTarget::getStoreOperation(params,
+                                                        TargetBufferFlags::DEPTH),
                 .depthClearValue = static_cast<float>(params.clearDepth),
-                .depthReadOnly =
-                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0,
+                .depthReadOnly = depthReadonly,
                 .stencilLoadOp = wgpu::LoadOp::Undefined,
                 .stencilStoreOp = wgpu::StoreOp::Undefined,
                 .stencilClearValue = params.clearStencil,
@@ -156,14 +160,19 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                     customDepthTextureView ? customDepthTextureView : customStencilTextureView;
 
             if (hasDepth) {
+                bool const depthReadonly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+
+
                 mDepthStencilAttachmentDescriptor.depthLoadOp =
+                        depthReadonly ? wgpu::LoadOp::Undefined :
                         WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::DEPTH);
                 mDepthStencilAttachmentDescriptor.depthStoreOp =
+                        depthReadonly ? wgpu::StoreOp::Undefined :
                         WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::DEPTH);
                 mDepthStencilAttachmentDescriptor.depthClearValue =
                         static_cast<float>(params.clearDepth);
-                mDepthStencilAttachmentDescriptor.depthReadOnly =
-                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+                mDepthStencilAttachmentDescriptor.depthReadOnly = depthReadonly;
             } else {
                 mDepthStencilAttachmentDescriptor.depthLoadOp = wgpu::LoadOp::Undefined;
                 mDepthStencilAttachmentDescriptor.depthStoreOp = wgpu::StoreOp::Undefined;

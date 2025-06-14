@@ -15,6 +15,7 @@
  */
 
 #include "WebGPUDescriptorSetLayout.h"
+#include "WebGPUConstants.h"
 
 #include <backend/DriverEnums.h>
 
@@ -117,10 +118,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
                 samplerEntryInfo.binding = samplerEntry.binding;
                 samplerEntry.visibility = wEntry.visibility;
                 wEntry.texture.multisampled = isMultiSampledTypeDescriptor(fEntry.type);
-                // TODO: Set once we have the filtering values
                 if (isDepthDescriptor(fEntry.type)) {
                     samplerEntry.sampler.type = wgpu::SamplerBindingType::Comparison;
-                } else if (isIntDescriptor(fEntry.type)) {
+                } else if (isIntDescriptor(fEntry.type) ||
+                        any(fEntry.flags & DescriptorFlags::UNFILTERABLE)) {
                     samplerEntry.sampler.type = wgpu::SamplerBindingType::NonFiltering;
                 } else {
                     samplerEntry.sampler.type = wgpu::SamplerBindingType::Filtering;
@@ -151,8 +152,11 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         if (isDepthDescriptor(fEntry.type)) {
             wEntry.texture.sampleType = wgpu::TextureSampleType::Depth;
         } else if (isFloatDescriptor(fEntry.type)) {
-            // TODO: Set once we have the filtering values
-            wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+            if (any(fEntry.flags & DescriptorFlags::UNFILTERABLE)) {
+                wEntry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+            } else {
+                wEntry.texture.sampleType = wgpu::TextureSampleType::Float;
+            }
         } else if (isIntDescriptor(fEntry.type)) {
             wEntry.texture.sampleType = wgpu::TextureSampleType::Sint;
         } else if (isUnsignedIntDescriptor(fEntry.type)) {
