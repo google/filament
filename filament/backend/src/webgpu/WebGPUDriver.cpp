@@ -337,9 +337,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
-    FWGPU_LOGW << "WebGPU support is highly experimental, in development, and tested for only a "
-                  "small set of simple samples (e.g. hellotriangle and texturedquad), thus issues "
-                  "are likely to be encountered at this stage.";
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
     char printSystemHex[16];
     snprintf(printSystemHex, sizeof(printSystemHex), "%#x", FWGPU_PRINT_SYSTEM);
