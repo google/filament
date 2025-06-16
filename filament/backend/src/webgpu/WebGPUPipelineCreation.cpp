@@ -169,7 +169,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
         StencilState const& stencilState, PolygonOffset const& polygonOffset,
         const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
-        const wgpu::TextureFormat depthStencilFormat, const uint8_t samplesCount, bool filamentRequestedStencil) {
+        const wgpu::TextureFormat depthStencilFormat, const uint8_t samplesCount, bool requestedStencil) {
     assert_invariant(program.vertexShaderModule);
     wgpu::DepthStencilState depthStencilState{};
 
@@ -188,7 +188,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             depthStencilState.depthBiasClamp = 0.0f;
         }
 
-        if (hasStencilAspect(depthStencilFormat) && filamentRequestedStencil) {
+        if (hasStencilAspect(depthStencilFormat) && requestedStencil) {
             depthStencilState.stencilFront = {
                 .compare = toWebGPU(stencilState.front.stencilFunc),
                 .failOp = toWebGPU(stencilState.front.stencilOpStencilFail),
