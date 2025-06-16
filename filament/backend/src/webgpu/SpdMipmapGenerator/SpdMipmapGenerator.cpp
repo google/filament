@@ -172,11 +172,15 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(const PipelineCacheKey& key) {
             entry.binding = i;
             entry.visibility = wgpu::ShaderStage::Compute;
             if (i == 0) {
-                entry.texture.sampleType = (key.scalarType == SPDScalarType::I32)
-                                                   ? wgpu::TextureSampleType::Sint
-                                           : (key.scalarType == SPDScalarType::U32)
-                                                   ? wgpu::TextureSampleType::Uint
-                                                   : wgpu::TextureSampleType::UnfilterableFloat;
+                if (key.scalarType == SPDScalarType::I32) {
+                    entry.texture.sampleType = wgpu::TextureSampleType::Sint;
+                } else if (key.scalarType == SPDScalarType::U32) {
+                    entry.texture.sampleType = wgpu::TextureSampleType::Uint;
+                } else if (key.scalarType == SPDScalarType::F32 || key.scalarType == SPDScalarType::F16) {
+                    entry.texture.sampleType = wgpu::TextureSampleType::Float;
+                } else {
+                    entry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+                }
                 entry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
             } else {
                 entry.storageTexture.access = wgpu::StorageTextureAccess::WriteOnly;
