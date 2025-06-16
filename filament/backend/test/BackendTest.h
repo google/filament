@@ -19,6 +19,8 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+
 #include <backend/Platform.h>
 
 #include "private/backend/CommandBufferQueue.h"
@@ -31,15 +33,19 @@ namespace test {
 
 class BackendTest : public ::testing::Test {
 public:
-
-    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform);
+    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform,
+            int argc, char** argv);
 
     static Backend sBackend;
     static OperatingSystem sOperatingSystem;
     static bool sIsMobilePlatform;
+    static int sArgc;
+    static char** sArgv;
 
     // Takes the name of the image that wasn't correct, without the .png suffix
     static void markImageAsFailure(std::string failedImageName);
+
+    static std::filesystem::path binaryDirectory();
 
 protected:
 
