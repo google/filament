@@ -609,11 +609,24 @@ size_t WebGPUDriver::getMaxUniformBufferSize() {
 }
 
 size_t WebGPUDriver::getMaxTextureSize(const SamplerType target) {
-    return 2048u;
+    size_t result = 2048u;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_2D_ARRAY:
+        case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            result = mDeviceLimits.maxTextureDimension2D;
+            break;
+        case SamplerType::SAMPLER_3D:
+            result = mDeviceLimits.maxTextureDimension3D;
+            break;
+    }
+    return result;
 }
 
 size_t WebGPUDriver::getMaxArrayTextureLayers() {
-    return 256u;
+    return mDeviceLimits.maxTextureArrayLayers;
 }
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
