@@ -608,7 +608,7 @@ uint8_t WebGPUDriver::getMaxDrawBuffers() {
 }
 
 size_t WebGPUDriver::getMaxUniformBufferSize() {
-    return 16384u;
+    return mDeviceLimits.maxUniformBufferBindingSize;
 }
 
 size_t WebGPUDriver::getMaxTextureSize(const SamplerType target) {
