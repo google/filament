@@ -2,7 +2,7 @@
 
 #include <optional>
 #include <string>
-#include <unordered_map>
+#include <tsl/robin_map.h>
 #include <vector>
 #include <webgpu/webgpu_cpp.h>
 // C++ port of https://github.com/JolifantoBambla/webgpu-spd for early experiments
@@ -18,7 +18,8 @@ enum class SPDScalarType { F32, F16, I32, U32 };
 struct SPDPassConfig {
     SPDFilter filter = SPDFilter::Average;
     wgpu::Texture targetTexture = nullptr;
-    uint32_t numMips = 0;
+    uint32_t numMips = 0; // For the public API, this is total desired mips. Internally, mips for
+                          // the current pass.
     bool halfPrecision = false;
     uint32_t sourceMipLevel = 0;
 };
@@ -42,18 +43,48 @@ public:
             const SPDPassConfig& config);
 
 private:
+    void generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
+            const SPDPassConfig& passConfig, uint32_t baseArrayLayer,
+            uint32_t numArrayLayers); // Internal pass config might differ slightly if needed
+
     wgpu::Device m_device;
     wgpu::BindGroupLayout m_internalResourcesBindGroupLayout;
+    wgpu::BindGroupLayout m_internalResourcesBindGroupLayout_Advanced = nullptr;
 
-    // Cached pipelines: Map<TextureFormat, Map<SPDScalarType, Map<Filter, Map<NumMips, Pipeline>>>>
-    std::unordered_map<wgpu::TextureFormat,
-            std::unordered_map<SPDScalarType,
-                    std::unordered_map<SPDFilter, std::unordered_map<uint32_t, SPDPipeline>>>>
-            m_pipelines;
+    // Maximum number of mips that can be generated in a single pass.
+    uint32_t m_maxMipsPerPass;
+    uint32_t m_maxArrayLayers;
+
+    // Key for the pipeline cache.
+    struct PipelineCacheKey {
+        wgpu::TextureFormat format;
+        SPDScalarType scalarType;
+        SPDFilter filter;
+        uint32_t numMips;
+
+        bool operator==(const PipelineCacheKey& other) const {
+            return format == other.format && scalarType == other.scalarType &&
+                   filter == other.filter && numMips == other.numMips;
+        }
+    };
+
+    // Hash function for PipelineCacheKey.
+    struct PipelineCacheKeyHash {
+        std::size_t operator()(const PipelineCacheKey& key) const {
+            std::size_t h1 = std::hash<wgpu::TextureFormat>()(key.format);
+            std::size_t h2 = std::hash<SPDScalarType>()(key.scalarType);
+            std::size_t h3 = std::hash<SPDFilter>()(key.filter);
+            std::size_t h4 = std::hash<uint32_t>()(key.numMips);
+            // A simple way to combine hashes.
+            return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
+        }
+    };
+
+    // Cached pipelines.
+    tsl::robin_map<PipelineCacheKey, SPDPipeline, PipelineCacheKeyHash> m_pipelines;
 
     // Helper methods
-    SPDPipeline& GetOrCreatePipeline(wgpu::TextureFormat format, SPDFilter filter, uint32_t numMips,
-            SPDScalarType scalarType);
+    SPDPipeline& GetOrCreatePipeline(const PipelineCacheKey& key);
     SPDScalarType SanitizeScalarType(wgpu::TextureFormat format, bool halfPrecision);
     std::string GetFilterCode(SPDFilter filter);
 };

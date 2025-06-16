@@ -25,7 +25,6 @@
 #include <utils/BitmaskEnum.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -343,8 +342,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         std::stringstream textureFormatStream;
         textureFormatStream << mWebGPUFormat;
         FWGPU_LOGD << "Texture '" << textureDescriptor.label << "' has view format "
-                   << viewFormatStream.str() << " and texture format " << textureFormatStream.str()
-                   << utils::io::endl;
+                   << viewFormatStream.str() << " and texture format " << textureFormatStream.str();
     }
 #endif
 }
@@ -470,51 +468,43 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and discard the alpha and lower precision.
             FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB9_E5: return wgpu::TextureFormat::RGB9E5Ufloat;
         case TextureFormat::RGB5_A1:
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and handle the packing/unpacking in shaders.
             FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGBA4:
             // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
             // and handle the packing/unpacking in shaders.
             FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
             return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB8:
             FWGPU_LOGW << "Requested Filament texture format RGB8 but getting "
                           "wgpu::TextureFormat::RGBA8Unorm (no direct sRGB equivalent in wgpu "
-                          "without alpha)"
-                       << utils::io::endl;
+                          "without alpha)";
             return wgpu::TextureFormat::RGBA8Unorm;
         case TextureFormat::SRGB8:
             FWGPU_LOGW << "Requested Filament texture format SRGB8 but getting "
                           "wgpu::TextureFormat::RGBA8UnormSrgb (no direct sRGB equivalent in wgpu "
-                          "without alpha)"
-                       << utils::io::endl;
+                          "without alpha)";
             return wgpu::TextureFormat::RGBA8UnormSrgb;
         case TextureFormat::RGB8_SNORM:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB8_SNORM but getting "
-                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Snorm;
         case TextureFormat::RGB8UI:
             FWGPU_LOGW << "Requested Filament texture format RGB8UI but getting "
-                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Uint;
         case TextureFormat::RGB8I:
             FWGPU_LOGW << "Requested Filament texture format RGB8I but getting "
-                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)"
-                       << utils::io::endl;
+                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA8Sint;
         case TextureFormat::R11F_G11F_B10F:          return wgpu::TextureFormat::RG11B10Ufloat;
         case TextureFormat::UNUSED:                  return wgpu::TextureFormat::Undefined;
@@ -522,38 +512,32 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
         case TextureFormat::RGB16F:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16F but getting "
-                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Float;
         case TextureFormat::RGB16UI:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16UI but getting "
-                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Uint;
         case TextureFormat::RGB16I:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB16I but getting "
-                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA16Sint;
         case TextureFormat::RGB32F:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32F but getting "
-                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Float;
         case TextureFormat::RGB32UI:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32UI but getting "
-                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Uint;
         case TextureFormat::RGB32I:
             FWGPU_LOGW
                     << "Requested Filament texture format RGB32I but getting "
-                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)"
-                    << utils::io::endl;
+                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)";
             return wgpu::TextureFormat::RGBA32Sint;
         case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT1_RGBA:               return wgpu::TextureFormat::BC1RGBAUnorm;
@@ -573,7 +557,7 @@ wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
     if (baseLevel > 0 && !mSupportsMultipleMipLevels) {
         FWGPU_LOGW << "Trying to make a texture view into a level ("
                    << static_cast<uint32_t>(baseLevel)
-                   << ") for which we cannot generate mip levels." << utils::io::endl;
+                   << ") for which we cannot generate mip levels.";
     }
 #endif
     const wgpu::TextureViewDescriptor textureViewDescriptor{

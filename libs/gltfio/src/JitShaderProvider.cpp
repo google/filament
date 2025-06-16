@@ -16,6 +16,7 @@
 
 #include <gltfio/MaterialProvider.h>
 
+#include <filament/MaterialEnums.h>
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/Hash.h>
@@ -23,6 +24,7 @@
 #include <tsl/robin_map.h>
 
 #include <string>
+#include <unordered_map>
 
 using namespace filamat;
 using namespace filament;
@@ -33,7 +35,8 @@ namespace {
 
 class JitShaderProvider : public MaterialProvider {
 public:
-    explicit JitShaderProvider(Engine* engine, bool optimizeShaders);
+    explicit JitShaderProvider(Engine* engine, bool optimizeShaders,
+            utils::FixedCapacityVector<char const*> const& variantFilters);
     ~JitShaderProvider() override;
 
     MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
@@ -49,15 +52,37 @@ public:
         return false;
     }
 
+private:
     using HashFn = hash::MurmurHashFn<MaterialKey>;
     tsl::robin_map<MaterialKey, Material*, HashFn> mCache;
     std::vector<Material*> mMaterials;
     Engine* const mEngine;
     const bool mOptimizeShaders;
+    filament::UserVariantFilterMask mVariantFilter;
 };
 
-JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders) : mEngine(engine),
-        mOptimizeShaders(optimizeShaders) {
+JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,
+        utils::FixedCapacityVector<char const*> const& variantFilters)
+    : mEngine(engine),
+      mOptimizeShaders(optimizeShaders) {
+
+    // Note that this is the same as the list in tools/matc/src/ParametersProcessor.cpp
+    static const std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum  = [] {
+        std::unordered_map<std::string, filament::UserVariantFilterBit> strToEnum;
+        strToEnum["directionalLighting"]    = filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
+        strToEnum["dynamicLighting"]        = filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
+        strToEnum["shadowReceiver"]         = filament::UserVariantFilterBit::SHADOW_RECEIVER;
+        strToEnum["skinning"]               = filament::UserVariantFilterBit::SKINNING;
+        strToEnum["vsm"]                    = filament::UserVariantFilterBit::VSM;
+        strToEnum["fog"]                    = filament::UserVariantFilterBit::FOG;
+        strToEnum["ssr"]                    = filament::UserVariantFilterBit::SSR;
+        strToEnum["stereo"]                 = filament::UserVariantFilterBit::STE;
+        return strToEnum;
+    }();
+
+    for (auto& filterStr : variantFilters) {
+        mVariantFilter |= (uint32_t)strToEnum.at(filterStr);
+    }
     MaterialBuilder::init();
 }
 
@@ -344,24 +369,25 @@ std::string shaderFromKey(const MaterialKey& config) {
 }
 
 Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
-        const char* name, bool optimizeShaders) {
+        const char* name, bool optimizeShaders, filament::UserVariantFilterMask variantFilter) {
     std::string shader = shaderFromKey(config);
     processShaderString(&shader, uvmap, config);
     MaterialBuilder builder;
     builder.name(name)
-           .flipUV(false)
-           .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
-           .specularAntiAliasing(true)
-           .clearCoatIorChange(false)
-           .material(shader.c_str())
-           .doubleSided(config.doubleSided)
-           .transparencyMode(config.doubleSided ?
-           MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES :
-           MaterialBuilder::TransparencyMode::DEFAULT)
-           .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
-           .targetApi(filamat::targetApiFromBackend(engine->getBackend()))
-           .stereoscopicType(engine->getConfig().stereoscopicType)
-           .stereoscopicEyeCount(engine->getConfig().stereoscopicEyeCount);
+            .flipUV(false)
+            .specularAmbientOcclusion(MaterialBuilder::SpecularAmbientOcclusion::SIMPLE)
+            .specularAntiAliasing(true)
+            .clearCoatIorChange(false)
+            .material(shader.c_str())
+            .doubleSided(config.doubleSided)
+            .transparencyMode(config.doubleSided
+                                      ? MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES
+                                      : MaterialBuilder::TransparencyMode::DEFAULT)
+            .reflectionMode(MaterialBuilder::ReflectionMode::SCREEN_SPACE)
+            .targetApi(filamat::targetApiFromBackend(engine->getBackend()))
+            .stereoscopicType(engine->getConfig().stereoscopicType)
+            .stereoscopicEyeCount(engine->getConfig().stereoscopicEyeCount)
+            .variantFilter(variantFilter);
 
     if (!optimizeShaders) {
         builder.optimization(MaterialBuilder::Optimization::NONE);
@@ -589,13 +615,13 @@ Material* JitShaderProvider::getMaterial(MaterialKey* config, UvMap* uvmap, cons
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
-
         bool optimizeShaders = mOptimizeShaders;
 #ifndef NDEBUG
         optimizeShaders = false;
 #endif
 
-        Material* mat = createMaterial(mEngine, *config, *uvmap, label, optimizeShaders);
+        Material* mat =
+                createMaterial(mEngine, *config, *uvmap, label, optimizeShaders, mVariantFilter);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
         return mat;
@@ -612,8 +638,9 @@ MaterialInstance* JitShaderProvider::createMaterialInstance(MaterialKey* config,
 
 namespace filament::gltfio {
 
-MaterialProvider* createJitShaderProvider(filament::Engine* engine, bool optimizeShaders) {
-    return new JitShaderProvider(engine, optimizeShaders);
+MaterialProvider* createJitShaderProvider(Engine* engine, bool optimizeShaders,
+        utils::FixedCapacityVector<char const*> const& variantFilters) {
+    return new JitShaderProvider(engine, optimizeShaders, variantFilters);
 }
 
 } // namespace filament::gltfio

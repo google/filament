@@ -73,15 +73,65 @@ MipmapGenerator::MipmapGenerator(const wgpu::Device& device)
     wgpu::BindGroupLayoutDescriptor bglDesc{};
     bglDesc.entryCount = 1;
     bglDesc.entries = &bglEntry;
-    m_internalResourcesBindGroupLayout = m_device.CreateBindGroupLayout(&bglDesc);
+    m_internalResourcesBindGroupLayout =
+            m_device.CreateBindGroupLayout(&bglDesc); // Basic BGL for <= 6 mips
+
+    wgpu::Limits deviceLimits;
+    m_device.GetLimits(&deviceLimits);
+    // Max number of *output* mips we can generate in a single pass.
+    // This is device.maxStorageTexturesPerShaderStage - 1 (for the source texture binding),
+    // further capped at 11 output mips (which means 12 total texture bindings: 1 source + 11
+    // outputs). WebGPU minspec for maxStorageTexturesPerShaderStage is 4, so
+    // deviceLimits.maxStorageTexturesPerShaderStage >= 4. Thus, m_maxMipsPerPass will be at least
+    // std::min(4u - 1, 11u) = 3.
+    m_maxMipsPerPass =
+            std::min(static_cast<uint32_t>(deviceLimits.maxStorageTexturesPerShaderStage) - 1, 11u);
+    m_maxArrayLayers = deviceLimits.maxStorageTexturesPerShaderStage;
+
+
+    // If we can generate more than 6 mips in a pass, we need an advanced BGL
+    // that includes atomic counter and mid-mip buffer for levels > 5.
+    if (m_maxMipsPerPass > 6) {
+        std::vector<wgpu::BindGroupLayoutEntry> entriesAdvanced(3);
+        // Entry 0: Uniform buffer (DownsamplePassMeta)
+        entriesAdvanced[0].binding = 0;
+        entriesAdvanced[0].visibility = wgpu::ShaderStage::Compute;
+        entriesAdvanced[0].buffer.type = wgpu::BufferBindingType::Uniform;
+        entriesAdvanced[0].buffer.minBindingSize = 16; // sizeof(DownsamplePassMeta) effectively
+
+        // Entry 1: Storage buffer (spd_global_counter)
+        entriesAdvanced[1].binding = 1;
+        entriesAdvanced[1].visibility = wgpu::ShaderStage::Compute;
+        entriesAdvanced[1].buffer.type = wgpu::BufferBindingType::Storage;
+        entriesAdvanced[1].buffer.minBindingSize = 4; // sizeof(atomic<u32>)
+
+        // Entry 2: Storage buffer (mip_dst_6_buffer)
+        entriesAdvanced[2].binding = 2;
+        entriesAdvanced[2].visibility = wgpu::ShaderStage::Compute;
+        entriesAdvanced[2].buffer.type = wgpu::BufferBindingType::Storage;
+        // Size for array<array<array<vec4<f32>, 64>, 64>> which is 16 (bytes for vec4f32) * 64 * 64
+        // * arrayLayers. The shader defines it as [slice][uv.y][uv.x], so 64x64 per slice.
+        // minBindingSize here is for one slice as a baseline. Actual buffer will be larger for
+        // multiple array layers.
+        entriesAdvanced[2].buffer.minBindingSize = 16 * 64 * 64;
+
+        wgpu::BindGroupLayoutDescriptor bglDescAdvanced{};
+        bglDescAdvanced.label = "SPD Internal BGL (Advanced)";
+        bglDescAdvanced.entryCount = static_cast<uint32_t>(entriesAdvanced.size());
+        bglDescAdvanced.entries = entriesAdvanced.data();
+        m_internalResourcesBindGroupLayout_Advanced =
+                m_device.CreateBindGroupLayout(&bglDescAdvanced);
+    }
 }
 
 void MipmapGenerator::PreparePipelines(wgpu::TextureFormat format, SPDFilter filter,
         bool halfPrecision) {
     SPDScalarType scalarType = SanitizeScalarType(format, halfPrecision);
-    // Prepare for a reasonable number of mips
-    for (uint32_t i = 1; i <= 4; ++i) {
-        GetOrCreatePipeline(format, filter, i, scalarType);
+    // Prepare for a reasonable number of mips, up to m_maxMipsPerPass
+    // The loop should go from 1 up to and including m_maxMipsPerPass.
+    // If m_maxMipsPerPass is 0 (e.g. maxStorageTexturesPerShaderStage <=1 ), this loop won't run.
+    for (uint32_t i = 1; i <= m_maxMipsPerPass; ++i) {
+        GetOrCreatePipeline({ format, scalarType, filter, i });
     }
 }
 
@@ -89,53 +139,48 @@ SPDScalarType MipmapGenerator::SanitizeScalarType(wgpu::TextureFormat format, bo
     std::string formatStr = to_string(format);
     std::transform(formatStr.begin(), formatStr.end(), formatStr.begin(), ::tolower);
 
-    SPDScalarType texelType = SPDScalarType::F32;
+    SPDScalarType texelType = SPDScalarType::F32; // Default to F32
     if (formatStr.find("sint") != std::string::npos) {
         texelType = SPDScalarType::I32;
     } else if (formatStr.find("uint") != std::string::npos) {
         texelType = SPDScalarType::U32;
     }
 
-    if (halfPrecision) {
-        bool hasF16 = false;
-        // In a real Dawn app, you would check device.GetSupportedFeatures()
-        // For now, let's assume it's available if requested.
-        hasF16 = true;
-
-        if (!hasF16) {
-            // Log warning: half precision requested but not supported
-        }
-        if (texelType != SPDScalarType::F32) {
-            // Log warning: half precision for non-float format
-        }
-        if (hasF16 && texelType == SPDScalarType::F32) {
+    if (halfPrecision && texelType == SPDScalarType::F32) {
+        if (m_device.HasFeature(wgpu::FeatureName::ShaderF16)) {
             return SPDScalarType::F16;
+        } else {
+            // Optional: Log a warning here that halfPrecision was requested for a float format
+            // but the device does not support ShaderF16, so F32 will be used.
         }
+    } else if (halfPrecision && texelType != SPDScalarType::F32) {
+        // Optional: Log a warning here that halfPrecision was requested for a non-float format.
     }
     return texelType;
 }
 
-SPDPipeline& MipmapGenerator::GetOrCreatePipeline(wgpu::TextureFormat format, SPDFilter filter,
-        uint32_t numMips, SPDScalarType scalarType) {
-    if (m_pipelines[format][scalarType][filter].count(numMips) == 0) {
+SPDPipeline& MipmapGenerator::GetOrCreatePipeline(const PipelineCacheKey& key) {
+    uint32_t numMipsForPipeline = std::min(key.numMips, m_maxMipsPerPass);
+    if (m_pipelines.find(key) == m_pipelines.end()) {
         // Create the pipeline
         SPDPipeline spdPipeline;
 
         std::vector<wgpu::BindGroupLayoutEntry> mipsBglEntries;
-        for (uint32_t i = 0; i <= numMips; ++i) {
+        // Bindings are 0 for source, 1 to numMipsForPipeline for destinations
+        for (uint32_t i = 0; i <= numMipsForPipeline; ++i) {
             wgpu::BindGroupLayoutEntry entry{};
             entry.binding = i;
             entry.visibility = wgpu::ShaderStage::Compute;
             if (i == 0) {
-                entry.texture.sampleType = (scalarType == SPDScalarType::I32)
+                entry.texture.sampleType = (key.scalarType == SPDScalarType::I32)
                                                    ? wgpu::TextureSampleType::Sint
-                                           : (scalarType == SPDScalarType::U32)
+                                           : (key.scalarType == SPDScalarType::U32)
                                                    ? wgpu::TextureSampleType::Uint
                                                    : wgpu::TextureSampleType::UnfilterableFloat;
                 entry.texture.viewDimension = wgpu::TextureViewDimension::e2DArray;
             } else {
                 entry.storageTexture.access = wgpu::StorageTextureAccess::WriteOnly;
-                entry.storageTexture.format = format;
+                entry.storageTexture.format = key.format;
                 entry.storageTexture.viewDimension = wgpu::TextureViewDimension::e2DArray;
             }
             mipsBglEntries.push_back(entry);
@@ -146,7 +191,8 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(wgpu::TextureFormat format, SP
         mipsBglDesc.entries = mipsBglEntries.data();
         spdPipeline.mipsBindGroupLayout = m_device.CreateBindGroupLayout(&mipsBglDesc);
 
-        std::string shaderCode = MakeShaderCode(format, GetFilterCode(filter), numMips, scalarType);
+        std::string shaderCode = MakeShaderCode(key.format, GetFilterCode(key.filter),
+                numMipsForPipeline, key.scalarType);
         wgpu::ShaderModuleWGSLDescriptor wgslDesc{};
         wgslDesc.code = shaderCode.c_str();
 
@@ -154,8 +200,12 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(wgpu::TextureFormat format, SP
         shaderModuleDesc.nextInChain = &wgslDesc;
         wgpu::ShaderModule shaderModule = m_device.CreateShaderModule(&shaderModuleDesc);
 
-        wgpu::BindGroupLayout bgls[] = { spdPipeline.mipsBindGroupLayout,
-            m_internalResourcesBindGroupLayout };
+        wgpu::BindGroupLayout chosenInternalBGL =
+                (numMipsForPipeline > 6 && m_internalResourcesBindGroupLayout_Advanced)
+                        ? m_internalResourcesBindGroupLayout_Advanced
+                        : m_internalResourcesBindGroupLayout;
+
+        wgpu::BindGroupLayout bgls[] = { spdPipeline.mipsBindGroupLayout, chosenInternalBGL };
         wgpu::PipelineLayoutDescriptor layoutDesc{};
         layoutDesc.bindGroupLayoutCount = 2;
         layoutDesc.bindGroupLayouts = bgls;
@@ -166,48 +216,95 @@ SPDPipeline& MipmapGenerator::GetOrCreatePipeline(wgpu::TextureFormat format, SP
         pipelineDesc.compute.entryPoint = "downsample";
 
         spdPipeline.pipeline = m_device.CreateComputePipeline(&pipelineDesc);
-        m_pipelines[format][scalarType][filter][numMips] = std::move(spdPipeline);
+        m_pipelines[key] = std::move(spdPipeline);
     }
-    return m_pipelines[format][scalarType][filter][numMips];
+    return m_pipelines[key];
 }
+
 
 void MipmapGenerator::Generate(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
         const SPDPassConfig& config) {
-    uint32_t width = srcTexture.GetWidth();
-    uint32_t height = srcTexture.GetHeight();
-    uint32_t arrayLayerCount = srcTexture.GetDepthOrArrayLayers();
+    if (config.numMips <= 1 || config.numMips <= config.sourceMipLevel + 1) {
+        return;
+    }
 
-    wgpu::Texture target = config.targetTexture ? config.targetTexture : srcTexture;
-    uint32_t numMips = config.numMips > 0 ? config.numMips : target.GetMipLevelCount() - 1;
+    if (m_maxMipsPerPass == 0) {
+        return;
+    }
 
-    if (numMips == 0) return;
+    PreparePipelines(srcTexture.GetFormat(), config.filter, config.halfPrecision);
 
-    SPDScalarType scalarType = SanitizeScalarType(srcTexture.GetFormat(), config.halfPrecision);
-    SPDPipeline& spdPipeline =
-            GetOrCreatePipeline(target.GetFormat(), config.filter, numMips, scalarType);
+    uint32_t totalSrcArrayLayers = srcTexture.GetDepthOrArrayLayers();
+
+    // Loop over array layer chunks
+    for (uint32_t currentBaseArrayLayer = 0; currentBaseArrayLayer < totalSrcArrayLayers;
+            currentBaseArrayLayer += m_maxArrayLayers) {
+
+        uint32_t arrayLayersThisPass =
+                std::min(m_maxArrayLayers, totalSrcArrayLayers - currentBaseArrayLayer);
+
+        uint32_t mipsToGenerateCount = config.numMips - (config.sourceMipLevel + 1);
+        uint32_t currentSourceMipLevel = config.sourceMipLevel;
+
+        while (mipsToGenerateCount > 0) {
+            uint32_t mipsThisPass = std::min(mipsToGenerateCount, m_maxMipsPerPass);
+
+            SPDPassConfig passSpecificConfig = {};
+            passSpecificConfig.filter = config.filter;
+            passSpecificConfig.halfPrecision = config.halfPrecision;
+            passSpecificConfig.targetTexture =
+                    config.targetTexture ? config.targetTexture : srcTexture;
+            passSpecificConfig.numMips = mipsThisPass;
+            passSpecificConfig.sourceMipLevel = currentSourceMipLevel;
+
+            // Pass baseArrayLayer and numArrayLayers directly to generatePass
+            generatePass(commandEncoder, srcTexture, passSpecificConfig, currentBaseArrayLayer,
+                    arrayLayersThisPass);
+
+            mipsToGenerateCount -= mipsThisPass;
+            currentSourceMipLevel += mipsThisPass;
+        }
+    }
+}
+
+void MipmapGenerator::generatePass(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
+        const SPDPassConfig& passConfig, uint32_t baseArrayLayer, uint32_t numArrayLayers) {
+    uint32_t width = srcTexture.GetWidth() >> passConfig.sourceMipLevel;
+    uint32_t height = srcTexture.GetHeight() >> passConfig.sourceMipLevel;
+
+    uint32_t arrayLayerCountForThisPass = numArrayLayers;
+
+    wgpu::Texture target = passConfig.targetTexture ? passConfig.targetTexture : srcTexture;
+    uint32_t numMipsThisPass = passConfig.numMips;
+
+    if (numMipsThisPass == 0) return;
+
+    SPDScalarType scalarType = SanitizeScalarType(srcTexture.GetFormat(), passConfig.halfPrecision);
+    SPDPipeline& spdPipeline = GetOrCreatePipeline(
+            { target.GetFormat(), scalarType, passConfig.filter, numMipsThisPass });
 
     // --- Create Bind Group 0 (Mips) ---
     std::vector<wgpu::BindGroupEntry> mipEntries;
 
     wgpu::TextureViewDescriptor srcViewDesc{};
     srcViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
-    srcViewDesc.baseMipLevel = config.sourceMipLevel;
+    srcViewDesc.baseMipLevel = passConfig.sourceMipLevel;
     srcViewDesc.mipLevelCount = 1;
-    srcViewDesc.baseArrayLayer = 0;
-    srcViewDesc.arrayLayerCount = arrayLayerCount;
+    srcViewDesc.baseArrayLayer = baseArrayLayer;
+    srcViewDesc.arrayLayerCount = arrayLayerCountForThisPass;
 
     wgpu::BindGroupEntry srcEntry{};
     srcEntry.binding = 0;
     srcEntry.textureView = srcTexture.CreateView(&srcViewDesc);
     mipEntries.push_back(srcEntry);
 
-    for (uint32_t i = 0; i < numMips; ++i) {
+    for (uint32_t i = 0; i < numMipsThisPass; ++i) {
         wgpu::TextureViewDescriptor dstViewDesc{};
         dstViewDesc.dimension = wgpu::TextureViewDimension::e2DArray;
-        dstViewDesc.baseMipLevel = config.sourceMipLevel + i + 1;
+        dstViewDesc.baseMipLevel = passConfig.sourceMipLevel + i + 1;
         dstViewDesc.mipLevelCount = 1;
-        dstViewDesc.baseArrayLayer = 0;
-        dstViewDesc.arrayLayerCount = arrayLayerCount;
+        dstViewDesc.baseArrayLayer = baseArrayLayer;
+        dstViewDesc.arrayLayerCount = arrayLayerCountForThisPass;
 
         wgpu::BindGroupEntry dstEntry{};
         dstEntry.binding = i + 1;
@@ -222,18 +319,18 @@ void MipmapGenerator::Generate(wgpu::CommandEncoder& commandEncoder, wgpu::Textu
     wgpu::BindGroup mipsBindGroup = m_device.CreateBindGroup(&mipBindGroupDesc);
 
     // --- Create Bind Group 1 (Internal Resources) ---
-    uint32_t numWorkGroupsX = (width + 63) / 64;
-    uint32_t numWorkGroupsY = (height + 63) / 64;
-    uint32_t numWorkGroups = numWorkGroupsX * numWorkGroupsY;
+    uint32_t widthDiv64 = (width + 63) / 64;
+    uint32_t heightDiv64 = (height + 63) / 64;
+    uint32_t numWorkGroups = widthDiv64 * heightDiv64;
 
     struct DownsamplePassMeta {
         uint32_t work_group_offset[2] = { 0, 0 };
         uint32_t num_work_groups;
         uint32_t mips;
-        uint32_t padding[12]; // Ensure size is multiple of 16
+        uint32_t padding[12];
     } meta;
     meta.num_work_groups = numWorkGroups;
-    meta.mips = numMips;
+    meta.mips = numMipsThisPass;
 
     wgpu::BufferDescriptor metaBufferDesc{};
     metaBufferDesc.size = sizeof(DownsamplePassMeta);
@@ -241,25 +338,64 @@ void MipmapGenerator::Generate(wgpu::CommandEncoder& commandEncoder, wgpu::Textu
     wgpu::Buffer metaBuffer = m_device.CreateBuffer(&metaBufferDesc);
     m_device.GetQueue().WriteBuffer(metaBuffer, 0, &meta, sizeof(meta));
 
-    wgpu::BindGroupEntry metaEntry{};
-    metaEntry.binding = 0;
-    metaEntry.buffer = metaBuffer;
+    wgpu::BindGroup internalBindGroup;
+    wgpu::BindGroupLayout chosenInternalBGL =
+            (numMipsThisPass > 6 && m_internalResourcesBindGroupLayout_Advanced)
+                    ? m_internalResourcesBindGroupLayout_Advanced
+                    : m_internalResourcesBindGroupLayout;
 
-    wgpu::BindGroupDescriptor internalBindGroupDesc{};
-    internalBindGroupDesc.layout = m_internalResourcesBindGroupLayout;
-    internalBindGroupDesc.entryCount = 1;
-    internalBindGroupDesc.entries = &metaEntry;
-    wgpu::BindGroup internalBindGroup = m_device.CreateBindGroup(&internalBindGroupDesc);
+    if (numMipsThisPass > 6 && m_internalResourcesBindGroupLayout_Advanced) {
+        wgpu::BufferDescriptor atomicCounterBufferDesc{};
+        atomicCounterBufferDesc.size = sizeof(uint32_t) * arrayLayerCountForThisPass;
+        atomicCounterBufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst;
+        wgpu::Buffer atomicCounterBuffer = m_device.CreateBuffer(&atomicCounterBufferDesc);
+
+        commandEncoder.ClearBuffer(atomicCounterBuffer, 0, WGPU_WHOLE_SIZE);
+
+        wgpu::BufferDescriptor midMipBufferDesc{};
+        midMipBufferDesc.size = 64 * 64 * 16 * arrayLayerCountForThisPass;
+        midMipBufferDesc.usage = wgpu::BufferUsage::Storage;
+        wgpu::Buffer midMipBuffer = m_device.CreateBuffer(&midMipBufferDesc);
+
+        std::vector<wgpu::BindGroupEntry> internalEntries(3);
+        internalEntries[0].binding = 0;
+        internalEntries[0].buffer = metaBuffer;
+        internalEntries[0].size = sizeof(DownsamplePassMeta);
+
+        internalEntries[1].binding = 1;
+        internalEntries[1].buffer = atomicCounterBuffer;
+        internalEntries[1].size = atomicCounterBuffer.GetSize();
+
+        internalEntries[2].binding = 2;
+        internalEntries[2].buffer = midMipBuffer;
+        internalEntries[2].size = midMipBuffer.GetSize();
+
+        wgpu::BindGroupDescriptor internalBindGroupDesc{};
+        internalBindGroupDesc.layout = chosenInternalBGL;
+        internalBindGroupDesc.entryCount = static_cast<uint32_t>(internalEntries.size());
+        internalBindGroupDesc.entries = internalEntries.data();
+        internalBindGroup = m_device.CreateBindGroup(&internalBindGroupDesc);
+    } else {
+        wgpu::BindGroupEntry metaEntry{};
+        metaEntry.binding = 0;
+        metaEntry.buffer = metaBuffer;
+        metaEntry.size = sizeof(DownsamplePassMeta);
+
+        wgpu::BindGroupDescriptor internalBindGroupDesc{};
+        internalBindGroupDesc.layout = chosenInternalBGL;
+        internalBindGroupDesc.entryCount = 1;
+        internalBindGroupDesc.entries = &metaEntry;
+        internalBindGroup = m_device.CreateBindGroup(&internalBindGroupDesc);
+    }
 
     // --- Dispatch ---
     wgpu::ComputePassEncoder pass = commandEncoder.BeginComputePass();
     pass.SetPipeline(spdPipeline.pipeline);
     pass.SetBindGroup(0, mipsBindGroup);
     pass.SetBindGroup(1, internalBindGroup);
-    pass.DispatchWorkgroups(numWorkGroupsX, numWorkGroupsY, arrayLayerCount);
+    pass.DispatchWorkgroups(widthDiv64, heightDiv64, arrayLayerCountForThisPass);
     pass.End();
 }
-
 // Main shader generation logic
 
 // Helper function to check if a string is in a vector of strings

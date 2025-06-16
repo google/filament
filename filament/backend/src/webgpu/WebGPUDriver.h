@@ -29,6 +29,7 @@
 
 #include <utils/compiler.h>
 
+#include "SpdMipmapGenerator/SpdMipmapGenerator.h"
 #include <tsl/robin_map.h>
 #include <webgpu/webgpu_cpp.h>
 
@@ -71,12 +72,12 @@ private:
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
-    std::vector<Handle<HwTexture>> mMipQueue;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    spd::MipmapGenerator mMipMapGenerator;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 
