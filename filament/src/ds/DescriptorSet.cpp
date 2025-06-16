@@ -66,6 +66,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
         mDirty = rhs.mDirty;
         mValid = rhs.mValid;
         mSetAfterCommitWarning = rhs.mSetAfterCommitWarning;
+        mSetUndefinedParameterWarning = rhs.mSetUndefinedParameterWarning;
     }
     return *this;
 }
@@ -106,11 +107,12 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
     });
 
     auto const unsetValidDescriptors = layout.getValidDescriptors() & ~mValid;
-    if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty())) {
+    if (UTILS_VERY_UNLIKELY(!unsetValidDescriptors.empty() && !mSetUndefinedParameterWarning)) {
         unsetValidDescriptors.forEachSetBit([&](auto i) {
             LOG(WARNING) << (layout.isSampler(i) ? "Sampler" : "Buffer") << " descriptor " << i
                          << " of " << mName.c_str() << " is not set. Please report this issue.";
         });
+        mSetUndefinedParameterWarning = true;
     }
 }
 
