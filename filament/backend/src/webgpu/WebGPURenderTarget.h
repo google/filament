@@ -34,7 +34,8 @@ public:
 
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
-            Attachment const& stencilAttachment);
+            Attachment const& stencilAttachment,
+            TargetBufferFlags targets);
 
     // Default constructor for the default render target
     WebGPURenderTarget();
@@ -67,9 +68,10 @@ public:
 
     // Static helpers for load/store operations
     [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
-            TargetBufferFlags buffer, bool msaa = false);
+            TargetBufferFlags buffer);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
+    [[nodiscard]] TargetBufferFlags getTargetBufferFlags() const { return mTargetFlags; }
 
 private:
     bool mDefaultRenderTarget = false;
@@ -81,7 +83,7 @@ private:
     //      mDepthStencilAttachment?
     Attachment mDepthAttachment{};
     Attachment mStencilAttachment{};
-
+    TargetBufferFlags mTargetFlags;
     // Cached descriptors for the render pass
     std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDescriptors;
     wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};

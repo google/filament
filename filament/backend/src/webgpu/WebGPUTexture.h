@@ -42,6 +42,9 @@ public:
     [[nodiscard]] wgpu::Texture const& getTexture() const { return mTexture; }
 
     [[nodiscard]] wgpu::TextureView const& getDefaultTextureView() const {
+        if (mResolveTextureView) {
+            return mResolveTextureView;
+        }
         return mDefaultTextureView;
     }
 

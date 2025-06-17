@@ -32,14 +32,16 @@ namespace filament::backend {
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, MRT const& colorAttachmentsMRT,
-        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo)
+        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo,
+        TargetBufferFlags  targets)
     : HwRenderTarget{ width, height },
       mDefaultRenderTarget{ false },
       mSamples{ samples },
       mLayerCount{ layerCount },
       mColorAttachments{ colorAttachmentsMRT },
       mDepthAttachment{ depthAttachmentInfo },
-      mStencilAttachment{ stencilAttachmentInfo } {
+      mStencilAttachment{ stencilAttachmentInfo },
+      mTargetFlags{targets} {
     // TODO consider making this an array
     mColorAttachmentDescriptors.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
@@ -52,16 +54,13 @@ WebGPURenderTarget::WebGPURenderTarget()
       mLayerCount{ 1 } {}
 
 wgpu::LoadOp WebGPURenderTarget::getLoadOperation(RenderPassParams const& params,
-        const TargetBufferFlags bufferToOperateOn, bool msaa ) {
+        const TargetBufferFlags bufferToOperateOn) {
+
     if (any(params.flags.clear & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear;
     }
     if (any(params.flags.discardStart & bufferToOperateOn)) {
         return wgpu::LoadOp::Clear; // Or wgpu::LoadOp::Undefined if clear is not desired on discard
-    }
-    if (msaa)
-    {
-        return wgpu::LoadOp::ExpandResolveTexture;
     }
     return wgpu::LoadOp::Load;
 }
@@ -132,20 +131,26 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
     } else { // Custom Render Target
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
+                // Determine the correct store operation
+                wgpu::StoreOp storeOp = WebGPURenderTarget::getStoreOperation(params, getTargetBufferFlagsAt(i));
+                if (customResolveTextureViews[i] != nullptr) {
+                    // If we have a resolve target, we don't need the contents of the multisampled
+                    // attachment anymore. Discarding it is an optimization and can fix issues.
+                    storeOp = wgpu::StoreOp::Discard;
+                }
                 mColorAttachmentDescriptors.push_back({ .view = customColorTextureViews[i],
 
                     .resolveTarget = customResolveTextureViews[i], // MODIFIED: Use the resolve view
                     .loadOp =
-                            WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i), true),
-                    .storeOp = WebGPURenderTarget::getStoreOperation(params,
-                            getTargetBufferFlagsAt(i)),
-                    .clearValue = {0.0f, 1.0f, 0.0f, 0.0f}
-//                    .clearValue = {
-//                        .r = params.clearColor.r,
-//                        .g = params.clearColor.g,
-//                        .b = params.clearColor.b,
-//                        .a = params.clearColor.a
-//                    }
+                            WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
+                    .storeOp = storeOp,
+//                    .clearValue = {0.0f, 1.0f, 0.0f, 0.0f}
+                    .clearValue = {
+                        .r = params.clearColor.r,
+                        .g = params.clearColor.g,
+                        .b = params.clearColor.b,
+                        .a = params.clearColor.a
+                    }
                 });
             }
         }

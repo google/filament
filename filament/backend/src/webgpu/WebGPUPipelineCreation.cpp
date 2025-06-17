@@ -206,7 +206,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             depthStencilState.stencilWriteMask = 0;
         }
     }
-
+    bool samplesCoverage = (samplesCount > 1) ? rasterState.alphaToCoverage : false;
     std::stringstream pipelineLabelStream;
     pipelineLabelStream << program.name.c_str() << " pipeline";
     const auto pipelineLabel = pipelineLabelStream.str();
@@ -249,7 +249,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         .multisample = {
             .count = samplesCount,
             .mask = 0xFFFFFFFF,
-            .alphaToCoverageEnabled = rasterState.alphaToCoverage
+            .alphaToCoverageEnabled = samplesCoverage
         },
         .fragment = nullptr // will add below if fragment module is included
     };

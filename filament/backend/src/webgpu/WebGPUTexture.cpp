@@ -369,6 +369,8 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
         const uint8_t levelCount) noexcept
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
           src->format, src->usage },
+    mResolveTexture{ src->mResolveTexture },
+    mResolveTextureView{ src->mResolveTextureView },         // <<< ADD THIS LINE
     mViewFormat{ src->mViewFormat },
     mSupportsMultipleMipLevels{ src->mSupportsMultipleMipLevels },
     mWebGPUFormat{ src->mWebGPUFormat },

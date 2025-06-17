@@ -452,7 +452,7 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
         const uint8_t samples, const uint8_t layerCount, const MRT color,
         const TargetBufferInfo depth, const TargetBufferInfo stencil) {
     constructHandle<WebGPURenderTarget>(renderTargetHandle, width, height, samples, layerCount,
-            color, depth, stencil);
+            color, depth, stencil, targets);
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
@@ -1090,23 +1090,30 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
                 mCurrentRenderTarget->getSamples();// Default RT should have samples (usually 1)
     } else {
         const auto& mrtColorAttachments = mCurrentRenderTarget->getColorAttachmentInfos();
+        const auto targetBufferFlags = mCurrentRenderTarget->getTargetBufferFlags();
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
-            if (mrtColorAttachments[i].handle) {
+            if (none(targetBufferFlags & getTargetBufferFlagsAt(i))) {
+                continue;
+            }
+//            if (mrtColorAttachments[i].handle) {
                 const auto colorTexture = handleCast<WebGPUTexture>(mrtColorAttachments[i].handle);
                 if (colorTexture) {
                     pipelineColorFormats.push_back(colorTexture->getTexture().GetFormat());
                 }
-            }
+//            }
         }
 
         const auto& depthInfo = mCurrentRenderTarget->getDepthAttachmentInfo();
         const auto& stencilInfo = mCurrentRenderTarget->getStencilAttachmentInfo();
-        if (depthInfo.handle) {
+        if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
             FILAMENT_CHECK_POSTCONDITION(!stencilInfo.handle)
                     << "depth and stencil attachments cannot both be provided for WebGPU";
             const auto depthTexture = handleCast<WebGPUTexture>(depthInfo.handle);
-            if (depthTexture) pipelineDepthFormat = depthTexture->getTexture().GetFormat();
-        } else {
+            if (depthTexture) {
+                pipelineDepthFormat = depthTexture->getTexture().GetFormat();
+            }
+        }
+        if (any(targetBufferFlags & TargetBufferFlags::STENCIL)) {
             if (stencilInfo.handle) {
                 const auto stencilTexture = handleCast<WebGPUTexture>(stencilInfo.handle);
                 // Assuming combined depth/stencil format if only stencil is present
