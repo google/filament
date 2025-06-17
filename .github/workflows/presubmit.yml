@@ -54,7 +54,6 @@ jobs:
   build-android:
     name: build-android
     runs-on: 'ubuntu-24.04-16core'
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -73,7 +72,6 @@ jobs:
   build-ios:
     name: build-iOS
     runs-on: macos-14-xlarge
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -89,7 +87,6 @@ jobs:
   build-web:
     name: build-web
     runs-on: 'ubuntu-24.04-16core'
-
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -107,11 +104,12 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
         run: |
-          echo "${{ github.event.pull_request.head.sha }} -- ${{ github.event.pull_request.head.sha }}"
-          # disable for now
-          # bash docs_src/build/presubmit_check.sh ${{ github.event.pull_request.head.sha }}
+          COMMIT_ID=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
+          bash docs_src/build/presubmit_check.sh ${COMMIT_ID}
 
   test-renderdiff:
     name: test-renderdiff
