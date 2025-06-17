@@ -216,7 +216,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 }
 
 [[nodiscard]] wgpu::TextureView createDepthTextureView(wgpu::Texture const& depthTexture,
-        wgpu::TextureFormat depthFormat, bool needStencil) {
+        wgpu::TextureFormat const& depthFormat, bool const needStencil) {
     wgpu::TextureViewDescriptor descriptor{
         .label = "depth_texture_view",
         .dimension = wgpu::TextureViewDimension::e2D,

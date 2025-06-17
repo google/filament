@@ -169,7 +169,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         wgpu::PipelineLayout const& layout, RasterState const& rasterState,
         StencilState const& stencilState, PolygonOffset const& polygonOffset,
         const PrimitiveType primitiveType, std::vector<wgpu::TextureFormat> const& colorFormats,
-        wgpu::TextureFormat const& depthStencilFormat, const uint8_t samplesCount, bool requestedDepth, bool requestedStencil) {
+        wgpu::TextureFormat const& depthStencilFormat, const uint8_t samplesCount, const bool requestedDepth, const bool requestedStencil) {
     assert_invariant(program.vertexShaderModule);
     wgpu::DepthStencilState depthStencilState{};
     const bool depthOrStencilRequested = (requestedDepth || requestedStencil);
@@ -183,19 +183,12 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         if (requestedDepth) {
             depthStencilState.depthWriteEnabled = rasterState.depthWrite;
             depthStencilState.depthCompare = toWebGPU(rasterState.depthFunc);
-
-            if (polygonOffset.constant != 0.0f || polygonOffset.slope != 0.0f) {
-                depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
-                depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
-                depthStencilState.depthBiasClamp = 0.0f;
-            } else {
-                depthStencilState.depthBias = 0;
-                depthStencilState.depthBiasSlopeScale = 0.0f;
-                depthStencilState.depthBiasClamp = 0.0f;
-            }
+             depthStencilState.depthBias = static_cast<int32_t>(polygonOffset.constant);
+             depthStencilState.depthBiasSlopeScale = polygonOffset.slope;
+             depthStencilState.depthBiasClamp = 0.0f;
         } else {
             depthStencilState.depthWriteEnabled = false;
-            depthStencilState.depthCompare = wgpu::CompareFunction::Always;
+            depthStencilState.depthCompare = wgpu::CompareFunction::Undefined;
             depthStencilState.depthBias = 0;
             depthStencilState.depthBiasSlopeScale = 0.0f;
             depthStencilState.depthBiasClamp = 0.0f;
@@ -217,7 +210,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
             depthStencilState.stencilReadMask = stencilState.front.readMask;
             depthStencilState.stencilWriteMask = stencilState.stencilWrite ? stencilState.front.writeMask : 0u;
         } else {
-            depthStencilState.stencilFront.compare = wgpu::CompareFunction::Always;
+            depthStencilState.stencilFront.compare = wgpu::CompareFunction::Undefined;
             depthStencilState.stencilFront.failOp = wgpu::StencilOperation::Keep;
             depthStencilState.stencilFront.depthFailOp = wgpu::StencilOperation::Keep;
             depthStencilState.stencilFront.passOp = wgpu::StencilOperation::Keep;
