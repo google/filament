@@ -307,15 +307,14 @@ public:
     MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
             ParameterPrecision precision = ParameterPrecision::DEFAULT);
 
-    //! Add a (mutable) constant parameter to this material.
+    //! Add a constant parameter to this material.
     template<typename T>
     using is_supported_constant_parameter_t = typename std::enable_if<
             std::is_same<int32_t, T>::value ||
             std::is_same<float, T>::value ||
             std::is_same<bool, T>::value>::type;
     template<typename T, typename = is_supported_constant_parameter_t<T>>
-    MaterialBuilder& constant(const char* name, ConstantType type, bool isMutable,
-            T defaultValue = 0);
+    MaterialBuilder& constant(const char *name, ConstantType type, T defaultValue = 0);
 
     /**
      * Add a sampler parameter to this material.
@@ -872,7 +871,6 @@ private:
     PropertyList mProperties;
     ParameterList mParameters;
     ConstantList mConstants;
-    ConstantList mMutableConstants;
     PushConstantList mPushConstants;
     SubpassList mSubpasses;
     VariableList mVariables;

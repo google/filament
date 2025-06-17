@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_CONVERSION_H
 #define TNT_FILAMENT_BACKEND_VULKAN_UTILS_CONVERSION_H
 
+#include "Definitions.h"
+
 #include <backend/DriverEnums.h>
 
 #include <private/backend/BackendUtils.h>  // for getFormatSize()

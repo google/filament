@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "arguments.h"
+
 #include <filament/Engine.h>
 
 #include <utils/Path.h>
