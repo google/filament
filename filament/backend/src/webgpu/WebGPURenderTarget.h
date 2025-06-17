@@ -80,8 +80,8 @@ private:
     Attachment mStencilAttachment{};
 
     // Cached descriptors for the render pass
-    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDescriptors;
-    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};
+    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDesc;
+    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDesc{};
     bool mHasDepthStencilAttachment = false;
 };
 
