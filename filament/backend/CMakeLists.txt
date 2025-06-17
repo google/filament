@@ -503,10 +503,19 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
 
+# ==================================================================================================
+# Linker flags
+# ==================================================================================================
+
 target_link_libraries(${TARGET} PRIVATE
-        ${OSMESA_LINKER_FLAGS}
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
+
+if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
+    # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
+    # WebGPU to build on linux.
+    target_link_libraries(${TARGET} PRIVATE -lxcb)
+endif()
 
 # ==================================================================================================
 # Installation
