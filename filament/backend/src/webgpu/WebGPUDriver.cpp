@@ -927,13 +927,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             params,
             defaultColorView,
             defaultDepthStencilView,
-            defaultDepthStencilFormat,
             customColorViews.data(),
             customColorViewCount,
             customDepthStencilView,
-            customDepthStencilView,
-            customDepthStencilFormat,
-            customDepthStencilFormat);
+            customDepthStencilView);
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
 
@@ -1124,7 +1121,9 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     std::vector<wgpu::TextureFormat> pipelineColorFormats;
     wgpu::TextureFormat pipelineDepthStencilFormat = wgpu::TextureFormat::Undefined;
     uint8_t pipelineSamples = 1;
-    bool requestedStencil = false;
+    bool requestedDepth = any(mCurrentRenderTarget->getTargetFlags() & TargetBufferFlags::DEPTH);
+    bool requestedStencil = any(mCurrentRenderTarget->getTargetFlags() & TargetBufferFlags::STENCIL);
+    pipelineSamples = mCurrentRenderTarget->getSamples();
 
     if (mCurrentRenderTarget->isDefaultRenderTarget()) {
         pipelineColorFormats.push_back(mSwapChain->getColorFormat());
@@ -1170,7 +1169,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program, *vertexBufferInfo,
             layout, pipelineState.rasterState, pipelineState.stencilState,
             pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
-            pipelineDepthStencilFormat, pipelineSamples, requestedStencil);
+            pipelineDepthStencilFormat, pipelineSamples, requestedDepth, requestedStencil);
     assert_invariant(pipeline);
     mPipelineMap[hash] = pipeline;
     mRenderPassEncoder.SetPipeline(pipeline);
