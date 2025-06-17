@@ -283,6 +283,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WebGPUTexture.cpp
             src/webgpu/WebGPUTexture.h
+            src/webgpu/WebGPUTimerQuery.cpp
+            src/webgpu/WebGPUTimerQuery.h
             src/webgpu/WebGPUVertexBuffer.cpp
             src/webgpu/WebGPUVertexBuffer.h
             src/webgpu/WebGPUVertexBufferInfo.cpp

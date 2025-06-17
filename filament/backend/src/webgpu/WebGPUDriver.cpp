@@ -25,6 +25,7 @@
 #include "WebGPURenderTarget.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
+#include "WebGPUTimerQuery.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
 #include <backend/platforms/WebGPUPlatform.h>
@@ -216,9 +217,6 @@ void WebGPUDriver::destroyStream(Handle<HwStream> sh) {
     //TODO
 }
 
-void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
-}
-
 void WebGPUDriver::destroyDescriptorSetLayout(
         Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle) {
     if (descriptorSetLayoutHandle) {
@@ -268,7 +266,31 @@ Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
 }
 
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
-    return Handle<HwTimerQuery>((Handle<HwTimerQuery>::HandleId) mNextFakeHandle++);
+    return allocAndConstructHandle<WebGPUTimerQuery, HwTimerQuery>();
+}
+
+void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> timerQueryHandle, int /*dummy*/) {
+    // nothing to do, timer query was constructed in createTimerQueryS
+}
+
+void WebGPUDriver::destroyTimerQuery(Handle<HwTimerQuery> timerQueryHandle) {
+    if (timerQueryHandle) {
+        destructHandle<WebGPUTimerQuery>(timerQueryHandle);
+    }
+}
+
+TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> timerQueryHandle, uint64_t* elapsedTime) {
+    auto* timerQuery = handleCast<WebGPUTimerQuery>(timerQueryHandle);
+    return timerQuery->getQueryResult(elapsedTime) ? TimerQueryResult::AVAILABLE
+                                               : TimerQueryResult::NOT_READY;
+}
+
+void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> timerQueryHandle) {
+    mTimerQuery = handleCast<WebGPUTimerQuery>(timerQueryHandle);
+}
+
+void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> timerQueryHandle) {
+    mTimerQuery = handleCast<WebGPUTimerQuery>(timerQueryHandle);
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
@@ -461,8 +483,6 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
 void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
     //todo
 }
-
-void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle,
@@ -727,10 +747,6 @@ void WebGPUDriver::setupExternalImage(void* image) {
     //todo
 }
 
-TimerQueryResult WebGPUDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint64_t* elapsedTime) {
-    return TimerQueryResult::ERROR;
-}
-
 void WebGPUDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
     //todo
 }
@@ -924,14 +940,18 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
     assert_invariant(mCommandBuffer);
     mCommandEncoder = nullptr;
+    if (mTimerQuery) {
+        mTimerQuery->beginTimeElapsedQuery();
+    }
     mQueue.Submit(1, &mCommandBuffer);
-
-    static bool firstRender = true;
-    // For the first frame rendered, we need to make sure the work is done before presenting or we
-    // get a purple flash
-    if (firstRender) {
-        auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
-                [=](wgpu::QueueWorkDoneStatus) {});
+    auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
+            [=](wgpu::QueueWorkDoneStatus status) {
+                if (status == wgpu::QueueWorkDoneStatus::Success) {
+                    if (mTimerQuery) {
+                        mTimerQuery->endTimeElapsedQuery();
+                    }
+                }
+            });
         const wgpu::Instance instance = mAdapter.GetInstance();
         auto wStatus = instance.WaitAny(f,
                 std::chrono::duration_cast<std::chrono::nanoseconds>(1s).count());
@@ -939,8 +959,7 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
             FWGPU_LOGW << "Waiting for first frame work to finish resulted in an error"
                        << static_cast<uint32_t>(wStatus);
         }
-        firstRender = false;
-    }
+
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
@@ -1149,12 +1168,6 @@ void WebGPUDriver::dispatchCompute(Handle<HwProgram> program, math::uint3 workGr
 void WebGPUDriver::scissor(
         Viewport scissor) {
     //todo
-}
-
-void WebGPUDriver::beginTimerQuery(Handle<HwTimerQuery> tqh) {
-}
-
-void WebGPUDriver::endTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
 void WebGPUDriver::resetState(int) {
