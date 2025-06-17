@@ -53,6 +53,8 @@
 #include <sstream>
 #include <utility>
 
+using namespace std::chrono_literals;
+
 namespace filament::backend {
 
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
@@ -335,9 +337,6 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
-    FWGPU_LOGW << "WebGPU support is highly experimental, in development, and tested for only a "
-                  "small set of simple samples (e.g. hellotriangle and texturedquad), thus issues "
-                  "are likely to be encountered at this stage.";
 #if !FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) && !defined(NDEBUG)
     char printSystemHex[16];
     snprintf(printSystemHex, sizeof(printSystemHex), "%#x", FWGPU_PRINT_SYSTEM);
@@ -606,15 +605,28 @@ uint8_t WebGPUDriver::getMaxDrawBuffers() {
 }
 
 size_t WebGPUDriver::getMaxUniformBufferSize() {
-    return 16384u;
+    return mDeviceLimits.maxUniformBufferBindingSize;
 }
 
 size_t WebGPUDriver::getMaxTextureSize(const SamplerType target) {
-    return 2048u;
+    size_t result = 2048u;
+    switch (target) {
+        case SamplerType::SAMPLER_2D:
+        case SamplerType::SAMPLER_2D_ARRAY:
+        case SamplerType::SAMPLER_EXTERNAL:
+        case SamplerType::SAMPLER_CUBEMAP:
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            result = mDeviceLimits.maxTextureDimension2D;
+            break;
+        case SamplerType::SAMPLER_3D:
+            result = mDeviceLimits.maxTextureDimension3D;
+            break;
+    }
+    return result;
 }
 
 size_t WebGPUDriver::getMaxArrayTextureLayers() {
-    return 256u;
+    return mDeviceLimits.maxTextureArrayLayers;
 }
 
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
@@ -923,6 +935,22 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     assert_invariant(mCommandBuffer);
     mCommandEncoder = nullptr;
     mQueue.Submit(1, &mCommandBuffer);
+
+    static bool firstRender = true;
+    // For the first frame rendered, we need to make sure the work is done before presenting or we
+    // get a purple flash
+    if (firstRender) {
+        auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
+                [=](wgpu::QueueWorkDoneStatus) {});
+        const wgpu::Instance instance = mAdapter.GetInstance();
+        auto wStatus = instance.WaitAny(f,
+                std::chrono::duration_cast<std::chrono::nanoseconds>(1s).count());
+        if (wStatus != wgpu::WaitStatus::Success) {
+            FWGPU_LOGW << "Waiting for first frame work to finish resulted in an error"
+                       << static_cast<uint32_t>(wStatus);
+        }
+        firstRender = false;
+    }
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
