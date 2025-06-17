@@ -48,8 +48,7 @@ public:
             // For custom render targets:
             wgpu::TextureView const* customColorTextureViews, // Array of views
             uint32_t customColorTextureViewCount,
-            wgpu::TextureView const& customDepthTextureView,
-            wgpu::TextureView const& customStencilTextureView);
+            wgpu::TextureView const& customDepthStencilTextureView);
 
     [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
@@ -80,8 +79,8 @@ private:
     Attachment mStencilAttachment{};
 
     // Cached descriptors for the render pass
-    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDescriptors;
-    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};
+    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDesc;
+    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDesc{};
     bool mHasDepthStencilAttachment = false;
 };
 
