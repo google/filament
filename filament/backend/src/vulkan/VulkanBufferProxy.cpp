@@ -35,10 +35,10 @@ VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& st
       mUpdatedBytes(0) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
-        uint32_t byteOffset, uint32_t numBytes, bool forceStaging) {
+        uint32_t byteOffset, uint32_t numBytes) {
     // The VulkanBuffer is available if the only object reference is hold by the
-    // `VulkanBufferProxy`. This means that the buffer is not currently in progress to be use or
-    // already in flight.
+    // `VulkanBufferProxy`. This means that the buffer is not currently referenced by a
+    // `VulkanCommandBuffer`.
     bool const isAvailable = mBuffer->getCount() == 1;
 
     if (isAvailable) {
@@ -57,7 +57,8 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // buffer.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
     bool const isUniform = getUsage() == VulkanBufferUsage::UNIFORM;
-    bool const useMemcpy = isUniform && isMemcopyable && isAvailable && !forceStaging;
+    bool const useMemcpy =
+            isUniform && isMemcopyable && isAvailable && !FVK_FORCE_STAGING_FOR_BUFFER_UPDATES;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;

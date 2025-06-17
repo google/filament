@@ -33,7 +33,7 @@ public:
             VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes);
 
     void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
-            uint32_t numBytes, bool forceStaging);
+            uint32_t numBytes);
 
     VkBuffer getVkBuffer() const noexcept;
 
