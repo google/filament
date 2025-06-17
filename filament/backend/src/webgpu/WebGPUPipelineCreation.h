@@ -40,8 +40,8 @@ class WebGPUProgram;
 [[nodiscard]] wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const&,
         WebGPUProgram const&, WebGPUVertexBufferInfo const&, wgpu::PipelineLayout const&,
         RasterState const&, StencilState const&, PolygonOffset const&, PrimitiveType primitiveType,
-        std::vector<wgpu::TextureFormat> const& colorFormats, wgpu::TextureFormat depthFormat,
-        uint8_t samplesCount, bool requestedStencil);
+        std::vector<wgpu::TextureFormat> const& colorFormats, wgpu::TextureFormat const& depthStencilFormat,
+        uint8_t samplesCount, bool requestedDepth, bool requestedStencil);
 
 }// namespace filament::backend
 

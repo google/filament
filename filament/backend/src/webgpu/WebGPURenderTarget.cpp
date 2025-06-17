@@ -76,12 +76,9 @@ wgpu::StoreOp WebGPURenderTarget::getStoreOperation(RenderPassParams const& para
 void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& outDescriptor,
         RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
         wgpu::TextureView const& defaultDepthStencilTextureView,
-        wgpu::TextureFormat const& defaultDepthStencilFormat,
         wgpu::TextureView const* customColorTextureViews, uint32_t customColorTextureViewCount,
         wgpu::TextureView const& customDepthTextureView,
-        wgpu::TextureView const& customStencilTextureView,
-        const wgpu::TextureFormat customDepthFormat,
-        const wgpu::TextureFormat customStencilFormat) {
+        wgpu::TextureView const& customStencilTextureView) {
     mColorAttachmentDescriptors.clear();
 
     const bool hasDepth = any(mTargetFlags & TargetBufferFlags::DEPTH);
