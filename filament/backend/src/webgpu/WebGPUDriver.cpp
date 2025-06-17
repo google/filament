@@ -102,8 +102,9 @@ template class ConcreteDispatcher<WebGPUDriver>;
 void WebGPUDriver::terminate() {
 }
 
-void WebGPUDriver::tick(int) {
+void WebGPUDriver::tick(int /*dummy*/) {
     mDevice.Tick();
+    mAdapter.GetInstance().ProcessEvents();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -944,14 +945,12 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
         mTimerQuery->beginTimeElapsedQuery();
     }
     mQueue.Submit(1, &mCommandBuffer);
-    auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
-            [=](wgpu::QueueWorkDoneStatus status) {
-                if (status == wgpu::QueueWorkDoneStatus::Success) {
-                    if (mTimerQuery) {
-                        mTimerQuery->endTimeElapsedQuery();
-                    }
-                }
-            });
+    static bool firstRender = true;
+    // For the first frame rendered, we need to make sure the work is done before presenting or we
+    // get a purple flash
+    if (firstRender) {
+        auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
+                [=](wgpu::QueueWorkDoneStatus) {});
         const wgpu::Instance instance = mAdapter.GetInstance();
         auto wStatus = instance.WaitAny(f,
                 std::chrono::duration_cast<std::chrono::nanoseconds>(1s).count());
@@ -959,7 +958,17 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
             FWGPU_LOGW << "Waiting for first frame work to finish resulted in an error"
                        << static_cast<uint32_t>(wStatus);
         }
-
+        firstRender = false;
+    } else {
+        mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
+            [=](wgpu::QueueWorkDoneStatus status) {
+                if (status == wgpu::QueueWorkDoneStatus::Success) {
+                    if (mTimerQuery) {
+                        mTimerQuery->endTimeElapsedQuery();
+                    }
+                }
+            });
+    }
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
