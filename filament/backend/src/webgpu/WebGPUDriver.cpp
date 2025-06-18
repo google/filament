@@ -18,6 +18,7 @@
 #include "WebGPUBufferObject.h"
 #include "WebGPUDescriptorSet.h"
 #include "WebGPUDescriptorSetLayout.h"
+#include "WebGPUFence.h"
 #include "WebGPUIndexBuffer.h"
 #include "WebGPUPipelineCreation.h"
 #include "WebGPUProgram.h"
@@ -103,6 +104,7 @@ void WebGPUDriver::terminate() {
 
 void WebGPUDriver::tick(int) {
     mDevice.Tick();
+    mAdapter.GetInstance().ProcessEvents();
 }
 
 void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
@@ -264,7 +266,9 @@ Handle<HwProgram> WebGPUDriver::createProgramS() noexcept {
 }
 
 Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
-    return Handle<HwFence>((Handle<HwFence>::HandleId) mNextFakeHandle++);
+    // The handle must be constructed here, as a synchronous call to get the status
+    // might happen before createFenceR is executed.
+    return allocAndConstructHandle<WebGPUFence, HwFence>();
 }
 
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
@@ -455,8 +459,11 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
             color, depth, stencil);
 }
 
-void WebGPUDriver::createFenceR(Handle<HwFence> fh, int) {
-    //todo
+void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {
+    // the handle was already constructed in createFenceS
+    const auto fence = handleCast<WebGPUFence>(fenceHandle);
+    assert_invariant(mQueue);
+    fence->addMarkerToQueueState(mQueue);
 }
 
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
@@ -509,13 +516,18 @@ void WebGPUDriver::updateStreams(CommandStream* driver) {
     //todo
 }
 
-void WebGPUDriver::destroyFence(Handle<HwFence> fh) {
-    //todo
+void WebGPUDriver::destroyFence(Handle<HwFence> fenceHandle) {
+    if (fenceHandle) {
+        destructHandle<WebGPUFence>(fenceHandle);
+    }
 }
 
-FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fh) {
-    //todo
-    return FenceStatus::CONDITION_SATISFIED;
+FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
+    const auto fence = handleCast<WebGPUFence>(fenceHandle);
+    if (!fence) {
+        return FenceStatus::ERROR;
+    }
+    return fence->getStatus();
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
