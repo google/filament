@@ -121,6 +121,11 @@ private:
         return mHandleAllocator.construct<D>(handle, std::forward<ARGS>(args)...);
     }
 
+    template<typename D, typename B, typename... ARGS>
+    Handle<B> allocAndConstructHandle(ARGS&&... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
+    }
+
     template<typename D, typename B>
     D* handleCast(Handle<B> handle) noexcept {
         return mHandleAllocator.handle_cast<D*>(handle);
