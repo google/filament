@@ -49,6 +49,6 @@ private:
     uint32_t mUpdatedBytes = 0;
 };
 
-}// namespace filament::backend
+} // namespace filament::backend
 
-#endif// TNT_FILAMENT_BACKEND_VULKANBUFFERPROXY_H
+#endif // TNT_FILAMENT_BACKEND_VULKANBUFFERPROXY_H
