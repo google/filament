@@ -162,8 +162,7 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT)
                 << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
     } else if (mImpl->mBufferCount > DOCUMENTED_MAX_VERTEX_BUFFER_COUNT) {
-        utils::slog.w << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT
-                      << utils::io::endl;
+        LOG(WARNING) << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
     }
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
