@@ -73,9 +73,9 @@ float D_GGX(float roughness, float NoH, const vec3 h) {
 #endif
 
     float a = NoH * roughness;
-    float k = roughness / (oneMinusNoHSquared + a * a);
-    float d = k * k * (1.0 / PI);
-    return saturateMediump(d);
+    float k = roughness / max(oneMinusNoHSquared + a * a, 0.0023); // .0023 so d won't overflow fp16
+    float d = k * (k * (1.0 / PI));
+    return d;
 }
 
 float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH) {
@@ -105,17 +105,18 @@ float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
     // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
     float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
     float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
-    float v = 0.5 / (lambdaV + lambdaL);
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    float v = 0.5 / max(lambdaV + lambdaL, 0.0000077);
     // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
     // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
-    // clamp to the maximum value representable in mediump
-    return saturateMediump(v);
+    return v;
 }
 
 float V_SmithGGXCorrelated_Fast(float roughness, float NoV, float NoL) {
     // Hammon 2017, "PBR Diffuse Lighting for GGX+Smith Microsurfaces"
-    float v = 0.5 / mix(2.0 * NoL * NoV, NoL + NoV, roughness);
-    return saturateMediump(v);
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    float v = 0.5 / max(mix(2.0 * NoL * NoV, NoL + NoV, roughness), 0.0000077);
+    return v;
 }
 
 float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
@@ -124,18 +125,21 @@ float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
     // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
     float lambdaV = NoL * length(vec3(at * ToV, ab * BoV, NoV));
     float lambdaL = NoV * length(vec3(at * ToL, ab * BoL, NoL));
-    float v = 0.5 / (lambdaV + lambdaL);
-    return saturateMediump(v);
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    float v = 0.5 / max(lambdaV + lambdaL, 0.0000077);
+    return v;
 }
 
 float V_Kelemen(float LoH) {
     // Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
-    return saturateMediump(0.25 / (LoH * LoH));
+    // 0.0000039 = nextafter(0.25 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    return 0.25 / max(LoH * LoH, 0.0000039);
 }
 
 float V_Neubelt(float NoV, float NoL) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    return saturateMediump(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
+    // 0.00001532 = nextafter(1.0 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    return 1.0 / max(4.0 * (NoL + NoV - NoL * NoV), 0.00001532);
 }
 
 vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
