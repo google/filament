@@ -101,7 +101,7 @@ template<typename WebGPUPrintable>
     return out.str();
 }
 
-[[nodiscard]] std::string adapterInfoToString(wgpu::AdapterInfo const& info) {
+[[nodiscard]] inline std::string adapterInfoToString(wgpu::AdapterInfo const& info) {
     std::stringstream out;
     out << "vendor (" << info.vendorID << ") '" << info.vendor
         << "' device (" << info.deviceID << ") '" << info.device
