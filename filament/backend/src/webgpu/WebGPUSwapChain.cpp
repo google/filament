@@ -110,7 +110,6 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
             return wgpu::TextureFormat::Depth24PlusStencil8;
         }
     } else {
-        // other options: Depth16Unorm or Depth24Plus
         return wgpu::TextureFormat::Depth32Float;
     }
 }
@@ -220,7 +219,6 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
         wgpu::TextureFormat depthFormat, bool needStencil) {
     wgpu::TextureViewDescriptor descriptor{
         .label = "depth_texture_view",
-        .format = depthFormat,
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
@@ -231,6 +229,16 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
     };
     if (needStencil) {
         descriptor.aspect = wgpu::TextureAspect::All;
+        descriptor.format = depthFormat;
+    } else {
+        descriptor.aspect = wgpu::TextureAspect::DepthOnly;
+        if (depthFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
+            descriptor.format = wgpu::TextureFormat::Depth32Float;
+        } else if (depthFormat == wgpu::TextureFormat::Depth24PlusStencil8) {
+            descriptor.format = wgpu::TextureFormat::Depth24Plus;
+        } else {
+            descriptor.format = depthFormat;
+        }
     }
     wgpu::TextureView depthTextureView = depthTexture.CreateView(&descriptor);
     FILAMENT_CHECK_POSTCONDITION(depthTextureView) << "Failed to create depth texture view";
