@@ -233,6 +233,7 @@ set(MATERIAL_SRCS
         src/materials/bloom/bloomDownsample2x.mat
         src/materials/bloom/bloomDownsample9.mat
         src/materials/bloom/bloomUpsample.mat
+        src/materials/compute.mat
         src/materials/colorGrading/colorGrading.mat
         src/materials/colorGrading/colorGradingAsSubpass.mat
         src/materials/colorGrading/customResolveAsSubpass.mat
