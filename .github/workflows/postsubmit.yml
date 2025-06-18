@@ -33,3 +33,25 @@ jobs:
               python3 test/renderdiff/src/update_golden.py --branch=${GOLDEN_BRANCH} \
                   --merge-to-main --filament-tag=${COMMIT_HASH} --golden-repo-token=${GH_TOKEN}
           fi
+
+  update-docs:
+    name: update-docs
+    runs-on: 'ubuntu-24.04-4core'
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
+      - id: get_commit_msg
+        uses: ./.github/actions/get-commit-msg
+      - name: Prerequisites
+        run: pip install selenium
+      - name: Run update script
+        env:
+          GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
+        run: |
+          COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | tr -d 'commit ')
+          git config --global user.email "filament.bot@gmail.com"
+          git config --global user.name "Filament Bot"
+          git config --global credential.helper cache
+          bash docs_src/build/postsubmit.sh ${COMMIT_HASH} ${GH_TOKEN}

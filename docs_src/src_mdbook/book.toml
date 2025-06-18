@@ -10,8 +10,8 @@ create-missing = false
 
 [output.html]
 mathjax-support = true
-default-theme = "light"
-preferred-dark-theme = "light"
+default-theme = "ayu"
+preferred-dark-theme = "ayu"
 
 [output.html.print]
 enable = false
