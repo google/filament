@@ -249,7 +249,7 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         .multisample = {
             .count = samplesCount,
             .mask = 0xFFFFFFFF,
-            .alphaToCoverageEnabled = rasterState.alphaToCoverage
+            .alphaToCoverageEnabled = (samplesCount > 1) && rasterState.alphaToCoverage
         },
         .fragment = nullptr // will add below if fragment module is included
     };
