@@ -19,7 +19,6 @@ set(RESOURCE_BINS)
 set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
         materials/bakedColor.mat
-        materials/bakedColorWithMutableConstants.mat
         materials/bakedTexture.mat
         materials/aoPreview.mat
         materials/arrayTexture.mat
@@ -223,6 +222,8 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 add_library(samples-common STATIC
     common/arguments.cpp
+    common/configuration.h
+    common/configuration.cpp
 )
 
 target_include_directories(samples-common PRIVATE
@@ -279,7 +280,6 @@ if (NOT ANDROID)
     add_demo(lightbulb)
     add_demo(material_sandbox)
     add_demo(multiple_windows)
-    add_demo(mutable_constants)
     # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
     # https://github.com/gpuweb/gpuweb/issues/1190
     if (NOT FILAMENT_SUPPORTS_WEBGPU)

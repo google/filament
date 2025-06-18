@@ -117,20 +117,6 @@ void MaterialConstantParametersChunk::flatten(Flattener& f) {
 
 // ------------------------------------------------------------------------------------------------
 
-MaterialMutableConstantParametersChunk::MaterialMutableConstantParametersChunk(
-        FixedCapacityVector<MaterialMutableConstant> constants)
-    : Chunk(MaterialMutableConstants), mConstants(std::move(constants)) {}
-
-void MaterialMutableConstantParametersChunk::flatten(Flattener& f) {
-    f.writeUint64(mConstants.size());
-    for (const auto& constant : mConstants) {
-        f.writeString(constant.name.c_str());
-        f.writeBool(constant.defaultValue);
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
-
 MaterialPushConstantParametersChunk::MaterialPushConstantParametersChunk(
         CString const& structVarName, FixedCapacityVector<MaterialPushConstant> constants)
     : Chunk(MaterialPushConstants),

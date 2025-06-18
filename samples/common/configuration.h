@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_CONSTANTINFO_H
-#define TNT_FILAMENT_CONSTANTINFO_H
+#ifndef TNT_SAMPLES_CONFIGURATION_H
+#define TNT_SAMPLES_CONFIGURATION_H
 
-#include <backend/DriverEnums.h>
+#include <filament/Engine.h>
 
-#include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 
-namespace filament {
+namespace samples {
 
-struct MaterialConstant {
-    using ConstantType = backend::ConstantType;
-
-    utils::CString name;
-    ConstantType type;
-
-    MaterialConstant() = default;
-    MaterialConstant(const char* name, ConstantType type) : name(name), type(type)  {}
-};
+utils::FixedCapacityVector<char const*> const& getJitMaterialVariantFilter(
+        filament::Engine::Backend backend);
 
 }
 
-#endif  // TNT_FILAMENT_CONSTANTINFO_H
+#endif // TNT_SAMPLES_CONFIGURATION_H

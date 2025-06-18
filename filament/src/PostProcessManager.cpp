@@ -187,10 +187,7 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) },
-            // TODO(exv): allow post process materials to use mutable spec constants?
-            Program::MutableSpecConstantsInfo(0)
-            );
+    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) });
     return mMaterial;
 }
 
@@ -426,10 +423,7 @@ UTILS_NOINLINE
 PipelineState PostProcessManager::getPipelineState(
         FMaterial const* const ma, PostProcessVariant variant) const noexcept {
     return {
-            .program = ma->getProgram(Variant{ Variant::type_t(variant) },
-                    // TODO(exv): allow post process materials to use mutable spec constants?
-                    Program::MutableSpecConstantsInfo(0)
-                    ),
+            .program = ma->getProgram(Variant{ Variant::type_t(variant) }),
             .vertexBufferInfo = mFullScreenQuadVbih,
             .pipelineLayout = {
                     .setLayout = {

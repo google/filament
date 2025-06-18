@@ -888,10 +888,10 @@ TEST_F(MaterialCompiler, ConstantParameter) {
         }
     )");
   filamat::MaterialBuilder builder;
-  builder.constant("myFloatConstant", ConstantType::FLOAT, /*isMutable=*/false, 1.0f);
-  builder.constant("myIntConstant", ConstantType::INT, /*isMutable=*/false, 123);
-  builder.constant("myBoolConstant", ConstantType::BOOL, /*isMutable=*/false, true);
-  builder.constant<bool>("myOtherBoolConstant", ConstantType::BOOL, /*isMutable=*/false);
+  builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
+  builder.constant("myIntConstant", ConstantType::INT, 123);
+  builder.constant("myBoolConstant", ConstantType::BOOL, true);
+  builder.constant<bool>("myOtherBoolConstant", ConstantType::BOOL);
 
   builder.shading(filament::Shading::LIT);
   builder.material(shaderCode.c_str());
@@ -904,8 +904,8 @@ TEST_F(MaterialCompiler, ConstantParameterSameName) {
 #ifdef __EXCEPTIONS
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
-        builder.constant("myFloatConstant", ConstantType::FLOAT, /*isMutable=*/false, 1.0f);
-        builder.constant("myFloatConstant", ConstantType::FLOAT, /*isMutable=*/false, 1.0f);
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 1.0f);
     }, utils::PostconditionPanic);
 #endif
 }
@@ -914,7 +914,7 @@ TEST_F(MaterialCompiler, ConstantParameterWrongType) {
 #ifdef __EXCEPTIONS
     EXPECT_THROW({
         filamat::MaterialBuilder builder;
-        builder.constant("myFloatConstant", ConstantType::FLOAT, /*isMutable=*/false, 10);
+        builder.constant("myFloatConstant", ConstantType::FLOAT, 10);
     }, utils::PostconditionPanic);
 #endif
 }

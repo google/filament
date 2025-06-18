@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,30 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_CONSTANTINFO_H
-#define TNT_FILAMENT_CONSTANTINFO_H
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
+#define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
+#include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
-#include <utils/CString.h>
+#include <atomic>
 
-namespace filament {
+namespace wgpu {
+class Queue;
+} // namespace wgpu
 
-struct MaterialConstant {
-    using ConstantType = backend::ConstantType;
+namespace filament::backend {
 
-    utils::CString name;
-    ConstantType type;
+class WebGPUFence final : public HwFence {
+public:
+    [[nodiscard]] FenceStatus getStatus();
 
-    MaterialConstant() = default;
-    MaterialConstant(const char* name, ConstantType type) : name(name), type(type)  {}
+    void addMarkerToQueueState(wgpu::Queue const&);
+
+private:
+    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
 };
 
-}
+} // namespace filament::backend
 
-#endif  // TNT_FILAMENT_CONSTANTINFO_H
+#endif // TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
