@@ -43,6 +43,7 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WebGPUTimerQuery;
 
 /**
  * WebGPU backend (driver) implementation
@@ -78,6 +79,7 @@ private:
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
     spd::MipmapGenerator mMipMapGenerator;
+    WebGPUTimerQuery* mTimerQuery = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 
@@ -114,6 +116,11 @@ private:
     template<typename D>
     Handle<D> allocHandle() {
         return mHandleAllocator.allocate<D>();
+    }
+
+    template<typename D, typename B, typename... ARGS>
+    Handle<B> allocAndConstructHandle(ARGS&&... args) {
+        return mHandleAllocator.allocateAndConstruct<D>(std::forward<ARGS>(args)...);
     }
 
     template<typename D, typename B, typename... ARGS>
