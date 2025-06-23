@@ -185,6 +185,13 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     }
 
+    const JsonishValue* unfilterableValue = jsonObject.getValue("unfilterable");
+    if (unfilterableValue) {
+        if (unfilterableValue->getType() != JsonishValue::BOOL) {
+            std::cerr << "parameters: unfilterable must be a BOOL." << std::endl;
+            return false;
+        }
+    }
     const JsonishValue* multiSampleValue = jsonObject.getValue("multisample");
     if (multiSampleValue) {
         if (multiSampleValue->getType() != JsonishValue::BOOL) {
@@ -260,6 +267,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         auto precision = precisionValue ? Enums::toEnum<ParameterPrecision>(
                 precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
 
+        auto unfilterable = unfilterableValue ? unfilterableValue->toJsonBool()->getBool() : false;
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
         if (stages == ShaderStageFlags::NONE) {
@@ -276,10 +284,11 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 return false;
             }
             auto transformName = transformNameValue->toJsonString()->getString();
-            builder.parameter(nameString.c_str(), type, format, precision, multisample,
-                    transformName.c_str(), stages);
+            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+                    multisample, transformName.c_str(), stages);
         } else {
-            builder.parameter(nameString.c_str(), type, format, precision, multisample, "", stages);
+            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+                    multisample, "", stages);
         }
 
     } else {
