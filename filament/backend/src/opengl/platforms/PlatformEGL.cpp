@@ -209,9 +209,41 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     }
 #endif
 
+    // Configure GPU context priority level for scheduling and preemption
+    if (driverConfig.gpuContextPriority != Platform::GpuContextPriority::DEFAULT) {
+        if (extensions.has("EGL_IMG_context_priority")) {
+            EGLint priorityLevel = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+            const char* priorityName;
+            switch (driverConfig.gpuContextPriority) {
+                case Platform::GpuContextPriority::DEFAULT:
+                    assert_invariant(false);
+                    break;
+                case Platform::GpuContextPriority::LOW:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_LOW_IMG;
+                    priorityName = "LOW";
+                    break;
+                case Platform::GpuContextPriority::MEDIUM:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+                    priorityName = "MEDIUM";
+                    break;
+                case Platform::GpuContextPriority::HIGH:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_HIGH_IMG;
+                    priorityName = "HIGH";
+                    break;
+                case Platform::GpuContextPriority::REALTIME:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_HIGH_IMG;
+                    priorityName = "REALTIME(=HIGH)";
+                    break;
+            }
+            contextAttribs[EGL_CONTEXT_PRIORITY_LEVEL_IMG] = priorityLevel;
+            slog.i << "EGL: Enabling GPU context priority: " << priorityName << io::endl;
+        } else {
+            slog.w << "EGL: GPU context priority requested but not supported" << io::endl;
+        }
+    }
+
     // config use for creating the context
     EGLConfig eglConfig = EGL_NO_CONFIG_KHR;
-
 
     if (UTILS_UNLIKELY(!ext.egl.KHR_no_config_context)) {
         // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
