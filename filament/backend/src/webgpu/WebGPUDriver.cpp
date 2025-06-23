@@ -24,6 +24,7 @@
 #include "WebGPUProgram.h"
 #include "WebGPURenderPrimitive.h"
 #include "WebGPURenderTarget.h"
+#include "WebGPUStrings.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
 #include "WebGPUVertexBuffer.h"
@@ -42,7 +43,7 @@
 #include <utils/CString.h>
 #include <utils/Hash.h>
 #include <utils/Panic.h>
-#include <utils/ostream.h>
+#include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -71,7 +72,8 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mAdapter{ mPlatform.requestAdapter(nullptr) },
       mDevice{ mPlatform.requestDevice(mAdapter) },
       mQueue{ mDevice.GetQueue() },
-      mMipMapGenerator{ mDevice },
+      mRenderPassMipmapGenerator{ mDevice },
+      mSpdComputePassMipmapGenerator{ mDevice },
       mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
           driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags } {
     mDevice.GetLimits(&mDeviceLimits);
@@ -768,41 +770,58 @@ void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
     wgpu::Texture wgpuTexture = texture->getTexture();
     assert_invariant(wgpuTexture);
 
-    const auto usage = wgpuTexture.GetUsage();
-    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
-            << "Texture for mipmap generation must have TextureBinding usage. "
-               "supportsMultipleMipLevels for texture format "
-            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
-            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
-    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
-            << "Texture for mipmap generation must have StorageBinding usage. "
-               "supportsMultipleMipLevels for texture format "
-            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
-            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
-
     const uint32_t totalMipLevels = wgpuTexture.GetMipLevelCount();
     if (totalMipLevels <= 1) {
-        return;
+        return; // nothing to do
     }
 
-    // We will record all passes into a single command encoder.
-    wgpu::CommandEncoderDescriptor encoderDesc = {};
-    encoderDesc.label = "Mipmap Command Encoder";
-    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
+    const auto usage = wgpuTexture.GetUsage();
+    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
+            << "Texture for mipmap generation must have TextureBinding usage.";
 
-    spd::SPDPassConfig spdConfig = { .filter = spd::SPDFilter::Average,
-        .targetTexture = wgpuTexture,
-        .numMips = totalMipLevels,
-        .halfPrecision = false,
-        .sourceMipLevel = 0 };
+    switch (texture->getMipmapGenerationStrategy()) {
+        case WebGPUTexture::MipmapGenerationStrategy::RENDER_PASS:
+            FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::RenderAttachment)
+                    << "Texture for mipmap generation via render pass blit must have "
+                       "RenderAttachment usage.";
+            mRenderPassMipmapGenerator.generateMipmaps(mQueue, texture->getTexture());
+            break;
+        case WebGPUTexture::MipmapGenerationStrategy::NONE:
+            FWGPU_LOGW << "Trying to generate mipmaps for a texture we already know we cannot do "
+                          "such generation. Texture sample type "
+                       << to_string(texture->target) << " WebGPU texture format "
+                       << webGPUTextureFormatToString(texture->getViewFormat()) << " samples "
+                       << static_cast<uint32_t>(texture->samples)
+                       << ". Going to try using the SPD_COMPUTE_PASS approach.";
+            UTILS_FALLTHROUGH;
+        case WebGPUTexture::MipmapGenerationStrategy::SPD_COMPUTE_PASS:
+            FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
+                    << "Texture for mipmap generation must have StorageBinding usage "
+                       "(as a compute pass strategy was selected for use). "
+                       "supportsMultipleMipLevels for WebGPU texture format "
+                    << webGPUTextureFormatToString(wgpuTexture.GetFormat()) << " is "
+                    << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
+                               wgpuTexture.GetFormat());
+            // We will record all passes into a single command encoder.
+            wgpu::CommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.label = "Mipmap Command Encoder";
+            wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
 
-    mMipMapGenerator.Generate(encoder, wgpuTexture, spdConfig);
+            spd::SPDPassConfig spdConfig = { .filter = spd::SPDFilter::Average,
+                .targetTexture = wgpuTexture,
+                .numMips = totalMipLevels,
+                .halfPrecision = false,
+                .sourceMipLevel = 0 };
 
-    // Finish the encoder and submit all the passes at once.
-    wgpu::CommandBufferDescriptor cmdBufferDesc = {};
-    cmdBufferDesc.label = "Mipmap Command Buffer";
-    wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
-    mQueue.Submit(1, &commandBuffer);
+            mSpdComputePassMipmapGenerator.Generate(encoder, wgpuTexture, spdConfig);
+
+            // Finish the encoder and submit all the passes at once.
+            wgpu::CommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.label = "Mipmap Command Buffer";
+            wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
+            mQueue.Submit(1, &commandBuffer);
+            break;
+    }
 }
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,

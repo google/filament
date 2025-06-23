@@ -277,6 +277,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPipelineCreation.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPURenderPassMipmapGenerator.cpp
+            src/webgpu/WebGPURenderPassMipmapGenerator.h
             src/webgpu/WebGPURenderPrimitive.h
             src/webgpu/WebGPURenderTarget.cpp
             src/webgpu/WebGPURenderTarget.h
