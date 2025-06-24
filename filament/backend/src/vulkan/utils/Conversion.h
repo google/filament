@@ -49,6 +49,9 @@ VkFormat getVkFormatLinear(VkFormat format);
 // than a driver-level Texture format, and can account for a specified byte alignment.
 uint32_t getBytesPerPixel(TextureFormat format);
 
+// Required for aligning textures in staging buffers.
+uint8_t getTexelBlockSize(VkFormat format);
+
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);

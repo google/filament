@@ -105,8 +105,11 @@ public:
     // Marks a region of the block as "in-use", and provides information about
     // the allocated region to the caller. Note: this assumes that numBytes
     // is aligned to the physical device's nonCoherentAtomSize.
+    // Takes the offset to use as the segment's start offset. It is assumed
+    // that this is greater than the segment's current offset, and it is
+    // undefined behavior if not.
     fvkmemory::resource_ptr<Segment> acquireSegment(fvkmemory::ResourceManager* resManager,
-            uint32_t numBytes);
+            uint32_t segmentOffset, uint32_t numBytes);
 
 private:
     const VmaAllocation mMemory;
@@ -144,7 +147,10 @@ public:
     // buffers so that we have less objects around that we have to keep track
     // of.
     // This function is NOT thread-safe.
-    fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes);
+    // numBytes - the number of bytes required by this segment.
+    // alignment - the multiple to align the buffer offset to
+    fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes,
+            uint32_t alignment = 0);
 
     // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,
