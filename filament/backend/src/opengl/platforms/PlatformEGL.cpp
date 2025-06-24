@@ -236,9 +236,9 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
                     break;
             }
             contextAttribs[EGL_CONTEXT_PRIORITY_LEVEL_IMG] = priorityLevel;
-            slog.i << "EGL: Enabling GPU context priority: " << priorityName << io::endl;
+            LOG(INFO) << "EGL: Enabling GPU context priority: " << priorityName;
         } else {
-            slog.w << "EGL: GPU context priority requested but not supported" << io::endl;
+            LOG(WARNING) << "EGL: GPU context priority requested but not supported";
         }
     }
 
