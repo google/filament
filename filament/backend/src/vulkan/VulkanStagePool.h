@@ -24,7 +24,6 @@
 #include "vulkan/memory/ResourcePointer.h"
 
 #include <map>
-#include <optional>
 #include <unordered_set>
 #include <vector>
 
@@ -149,9 +148,9 @@ public:
     // of.
     // This function is NOT thread-safe.
     // numBytes - the number of bytes required by this segment.
-    // alignment - (optional) the multiple that
+    // alignment - the multiple to align the buffer offset to
     fvkmemory::resource_ptr<VulkanStage::Segment> acquireStage(uint32_t numBytes,
-            std::optional<uint32_t> alignment = std::nullopt);
+            uint32_t alignment = 0);
 
     // Images have VK_IMAGE_LAYOUT_GENERAL and must not be transitioned to any other layout
     VulkanStageImage const* acquireImage(PixelDataFormat format, PixelDataType type,

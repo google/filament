@@ -62,7 +62,7 @@ VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceMana
       mDeviceLimits(deviceLimits) {}
 
 fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint32_t numBytes,
-        std::optional<uint32_t> alignment) {
+        uint32_t alignment) {
     // Apply alignment to the byte count to ensure that, when we later flush
     // data written by the host, we only flush the atoms that we modified, and
     // no adjacent atoms.
@@ -78,11 +78,7 @@ fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint
     VulkanStage* pStage = nullptr;
     uint32_t segmentOffset = 0;
     while (iter != mStages.end()) {
-        segmentOffset = iter->second->currentOffset();
-        if (alignment.has_value()) {
-            // If aligned, adjust the segment offset.
-            segmentOffset = alignValue(segmentOffset, *alignment);
-        }
+        segmentOffset = alignValue(iter->second->currentOffset(), alignment);
 
         // Check for overflow + if there's space.
         if (segmentOffset >= iter->second->currentOffset() &&
