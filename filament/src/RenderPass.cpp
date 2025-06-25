@@ -42,12 +42,12 @@
 
 #include <private/utils/Tracing.h>
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/JobSystem.h>
 #include <utils/Panic.h>
-#include <utils/Slice.h>
 #include <utils/Range.h>
+#include <utils/Slice.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
 
 #include <algorithm>
 #include <functional>
@@ -407,8 +407,8 @@ RenderPass::Command* RenderPass::instanceify(DriverApi& driver,
     }
 
     if (UTILS_UNLIKELY(firstSentinel)) {
-        //slog.d << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
-        //       << count << io::endl;
+        // DLOG(INFO) << "auto-instancing, saving " << drawCallsSavedCount << " draw calls, out of "
+        //            << count;
         // we have instanced primitives
         // copy our instanced ubo data
         driver.updateBufferObjectUnsynchronized(mInstancedUboHandle, {

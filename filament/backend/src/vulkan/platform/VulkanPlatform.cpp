@@ -25,8 +25,9 @@
 #include "vulkan/utils/Helper.h"
 
 #include <bluevk/BlueVK.h>
-#include <utils/PrivateImplementation-impl.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
+#include <utils/PrivateImplementation-impl.h>
 
 #define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
     if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
@@ -92,6 +93,16 @@ StructA* chainStruct(StructA* structA, StructB* structB) {
     return structA;
 }
 
+bool shouldSkipFormat(VkFormat format) {
+    // Skip formats that require extensions.
+    for (VkFormat const extFormat: fvkutils::EXT_VK_FORMATS) {
+        if (format == extFormat) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
     // Print some driver or MoltenVK information if it is available.
     if (vkGetPhysicalDeviceProperties2) {
@@ -104,7 +115,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
         chainStruct(&physicalDeviceProperties2, &driverProperties);
         vkGetPhysicalDeviceProperties2(device, &physicalDeviceProperties2);
         FVK_LOGI << "Vulkan device driver: " << driverProperties.driverName << " "
-                      << driverProperties.driverInfo << utils::io::endl;
+                 << driverProperties.driverInfo;
     }
 
     VkPhysicalDeviceProperties deviceProperties;
@@ -141,7 +152,7 @@ void printDeviceInfo(VkInstance instance, VkPhysicalDevice device) {
                   << "(vendor " << utils::io::hex << vendorID << ", "
                   << "device " << deviceID << ", "
                   << "driver " << driverVersion << ", " << utils::io::dec << "api " << major << "."
-                  << minor << ")" << utils::io::endl;
+                  << minor << ")";
 }
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -151,14 +162,20 @@ void printDepthFormats(VkPhysicalDevice device) {
     constexpr VkFormatFeatureFlags required =
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     FVK_LOGI << "Sampleable depth formats: ";
-    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
+    for (VkFormat const format : fvkutils::ALL_VK_FORMATS) {
+        // Skip formats that require extensions.
+        if (shouldSkipFormat(format)) {
+            continue;
+        }
+
         VkFormatProperties props;
+
         vkGetPhysicalDeviceFormatProperties(device, format, &props);
         if ((props.optimalTilingFeatures & required) == required) {
             FVK_LOGI << format << " ";
         }
     }
-    FVK_LOGI << utils::io::endl;
+    FVK_LOGI << "";
 }
 #endif
 
@@ -278,10 +295,10 @@ VkInstance createInstance(ExtensionSet const& requiredExts) {
     } else {
 #if defined(__ANDROID__)
         FVK_LOGD << "Validation layers are not available; did you set jniLibs in your "
-                 << "gradle file?" << utils::io::endl;
+                 << "gradle file?";
 #else
         FVK_LOGD << "Validation layer not available; did you install the Vulkan SDK?\n"
-                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
+                 << "Please ensure that VK_LAYER_PATH is set correctly.";
 #endif // __ANDROID__
 
     }
@@ -617,7 +634,13 @@ fvkutils::VkFormatList findBlittableDepthStencilFormats(VkPhysicalDevice device)
     std::vector<VkFormat> selectedFormats;
     constexpr VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
-    for (VkFormat format : fvkutils::ALL_VK_FORMATS) {
+
+    for (VkFormat const format : fvkutils::ALL_VK_FORMATS) {
+        // Skip formats that require extensions.
+        if (shouldSkipFormat(format)) {
+            continue;
+        }
+
         if (fvkutils::isVkDepthFormat(format)) {
             VkFormatProperties props;
             vkGetPhysicalDeviceFormatProperties(device, format, &props);
@@ -900,7 +923,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Keep a copy of context for swapchains.
     mImpl->mContext = context;
 
-    return VulkanDriver::create(this, context, driverConfig);
+    return VulkanDriver::create(this, mImpl->mContext, driverConfig);
 }
 
 // This needs to be explictly written for
@@ -962,8 +985,7 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
 
     if (flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         if (!mImpl->mContext.mProtectedMemorySupported) {
-            utils::slog.w << "protected swapchain requested, but VulkanPlatform does not support it"
-                << utils::io::endl;
+            LOG(WARNING) << "protected swapchain requested, but VulkanPlatform does not support it";
         }
     }
 

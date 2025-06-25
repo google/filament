@@ -49,7 +49,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -169,6 +169,16 @@ template Material::Builder& Material::Builder::constant<int32_t>(const char*, si
 template Material::Builder& Material::Builder::constant<float>(const char*, size_t, float);
 template Material::Builder& Material::Builder::constant<bool>(const char*, size_t, bool);
 
+
+const char* toString(ShaderModel model) {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
+
 Material* Material::Builder::build(Engine& engine) const {
     std::unique_ptr<MaterialParser> materialParser = createParser(
         downcast(engine).getBackend(), downcast(engine).getShaderLanguage(),
@@ -187,17 +197,11 @@ Material* Material::Builder::build(Engine& engine) const {
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
-        slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
-        switch (shaderModel) {
-            case ShaderModel::MOBILE:
-                slog.e << "mobile.\n";
-                break;
-            case ShaderModel::DESKTOP:
-                slog.e << "desktop.\n";
-                break;
-        }
-        slog.e << "Compiled material contains shader models 0x"
-                << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
+        char shaderModelsString[16];
+        snprintf(shaderModelsString, sizeof(shaderModelsString), "%#x", shaderModels.getValue());
+        LOG(ERROR) << "The material '" << name.c_str_safe() << "' was not built for "
+                   << toString(shaderModel) << ".";
+        LOG(ERROR) << "Compiled material contains shader models " << shaderModelsString << ".";
         return nullptr;
     }
 
@@ -217,10 +221,10 @@ Material* Material::Builder::build(Engine& engine) const {
             if (materialStereoscopicType != engineStereoscopicType) {
                 CString name;
                 materialParser->getName(&name);
-                slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
-                        << "' is " << (int)materialStereoscopicType
-                        << ", which is not compatiable with the engine's setting "
-                        << (int)engineStereoscopicType << "." << io::endl;
+                LOG(WARNING) << "The stereoscopic type in the compiled material '"
+                             << name.c_str_safe() << "' is " << (int) materialStereoscopicType
+                             << ", which is not compatiable with the engine's setting "
+                             << (int) engineStereoscopicType << ".";
             }
         }
     }
@@ -362,9 +366,12 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
         !mHasCustomDepthShader) {
         // it would be unsafe to invalidate any of the cached depth variant
         if (UTILS_UNLIKELY(!((variantMask & Variant::DEP) && !(variantValue & Variant::DEP)))) {
-            slog.w << io::hex << "FMaterial::invalidate("
-                   << +variantMask << ", " << +variantValue
-                   << ") would corrupt the depth variant cache" << io::endl;
+            char variantMaskString[16];
+            snprintf(variantMaskString, sizeof(variantMaskString), "%#x", +variantMask);
+            char variantValueString[16];
+            snprintf(variantValueString, sizeof(variantValueString), "%#x", +variantValue);
+            LOG(WARNING) << "FMaterial::invalidate(" << variantMaskString << ", "
+                         << variantValueString << ") would corrupt the depth variant cache";
         }
         variantMask |= Variant::DEP;
         variantValue &= ~Variant::DEP;
@@ -390,8 +397,8 @@ void FMaterial::terminate(FEngine& engine) {
                     << pos->second.size() << " instances still alive.";
         } else {
             if (UTILS_UNLIKELY(!pos->second.empty())) {
-                slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                              << pos->second.size() << " instances still alive." << io::endl;
+                LOG(ERROR) << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                           << pos->second.size() << " instances still alive.";
             }
         }
     }
@@ -731,7 +738,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 // source strings, so here we trigger a rebuild of the HwProgram objects.
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
-    slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
+    DLOG(INFO) << "Applying edits to " << (name ? name : "(untitled)");
     destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
     latchPendingEdits();
 }

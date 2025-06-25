@@ -92,7 +92,7 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
 CC=clang++
 
 main: main.o
@@ -110,12 +110,13 @@ clean:
 ### macOS
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
 FRAMEWORKS=-framework Cocoa -framework Metal -framework CoreVideo
 CC=clang++
+ARCH ?= $(shell uname -m)
 
 main: main.o
-	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
+	$(CC) -Llib/$(ARCH)/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
 
 main.o: main.cpp
 	$(CC) -Iinclude/ -std=c++17 -c main.cpp
@@ -139,7 +140,7 @@ used to change the run-time library version.
 
 ```make
 FILAMENT_LIBS=filament.lib backend.lib bluegl.lib bluevk.lib filabridge.lib filaflat.lib \
-              utils.lib geometry.lib smol-v.lib ibl.lib vkshaders.lib
+              utils.lib geometry.lib smol-v.lib ibl.lib vkshaders.lib abseil.lib
 CC=cl.exe
 
 main.exe: main.obj

@@ -122,9 +122,6 @@ jobs:
           fetch-depth: 0
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - uses: actions/checkout@v4.1.6
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/mac-prereq
       - name: Cache Mesa and deps
         uses: actions/cache@v4

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
-#include "WebGPUHandles.h"
+#include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -64,17 +64,18 @@ private:
     WebGPUPlatform& mPlatform;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
-    uint32_t mMinUniformBufferOffsetAlignment;
+    wgpu::Limits mDeviceLimits = {};
     wgpu::Queue mQueue = nullptr;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
     wgpu::CommandEncoder mCommandEncoder = nullptr;
+    std::vector<Handle<HwTexture>> mMipQueue;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
     wgpu::CommandBuffer mCommandBuffer = nullptr;
-    WGPURenderTarget* mDefaultRenderTarget = nullptr;
-    WGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPURenderTarget* mDefaultRenderTarget = nullptr;
+    WebGPURenderTarget* mCurrentRenderTarget = nullptr;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 

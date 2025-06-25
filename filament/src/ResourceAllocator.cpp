@@ -27,11 +27,11 @@
 
 #include "private/backend/DriverApi.h"
 
+#include <utils/Logger.h>
 #include <utils/algorithm.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 
 #include <array>
@@ -291,17 +291,16 @@ void ResourceAllocator::gc(bool const skippedFrame) noexcept {
 UTILS_NOINLINE
 void ResourceAllocator::dump(bool const brief) const noexcept {
     constexpr float MiB = 1.0f / float(1u << 20u);
-    slog.d  << "# entries=" << mTextureCache.size()
-            << ", sz=" << (float)mCacheSize * MiB << " MiB"
-            << ", max=" << (float)mCacheSizeHiWaterMark * MiB << " MiB"
-            << io::endl;
+    DLOG(INFO) << "# entries=" << mTextureCache.size() << ", sz=" << (float) mCacheSize * MiB
+               << " MiB"
+               << ", max=" << (float) mCacheSizeHiWaterMark * MiB << " MiB";
     if (!brief) {
         for (auto const& it : mTextureCache) {
             auto w = it.first.width;
             auto h = it.first.height;
             auto f = FTexture::getFormatSize(it.first.format);
-            slog.d << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f << ", sz="
-                   << (float)it.second.size * MiB << io::endl;
+            DLOG(INFO) << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f
+                       << ", sz=" << (float) it.second.size * MiB;
         }
     }
 }
@@ -309,7 +308,7 @@ void ResourceAllocator::dump(bool const brief) const noexcept {
 ResourceAllocator::CacheContainer::iterator
 ResourceAllocator::purge(
         CacheContainer::iterator const& pos) {
-    //slog.d << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age << io::endl;
+    // DLOG(INFO) << "purging " << pos->second.handle.getId() << ", age=" << pos->second.age;
     mBackend.destroyTexture(pos->second.handle);
     mCacheSize -= pos->second.size;
     return mTextureCache.erase(pos);

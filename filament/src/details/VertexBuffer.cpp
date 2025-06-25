@@ -27,14 +27,14 @@
 #include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
 
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
-#include <utils/CString.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
@@ -46,6 +46,13 @@
 #include <stdint.h>
 
 namespace filament {
+
+namespace {
+
+// TODO: reconcile this value (defined in VertexBuffer.h) with DriverEnums' MAX_VERTEX_BUFFER_COUNT
+constexpr size_t DOCUMENTED_MAX_VERTEX_BUFFER_COUNT = 8;
+
+} // anonymous
 
 using namespace backend;
 using namespace filament::math;
@@ -113,8 +120,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
 
         mImpl->mDeclaredAttributes.set(attribute);
     } else {
-        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
-                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
+        LOG(WARNING) << "Ignoring VertexBuffer attribute, the limit of "
+                     << MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded";
     }
     return *this;
 }
@@ -148,8 +155,16 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& na
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
     FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
-    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT)
-            << "bufferCount cannot be more than " << MAX_VERTEX_BUFFER_COUNT;
+
+    static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
+
+    if (downcast(engine).features.engine.debug.assert_vertex_buffer_count_exceeds_8) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT)
+                << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
+    } else if (mImpl->mBufferCount > DOCUMENTED_MAX_VERTEX_BUFFER_COUNT) {
+        utils::slog.w << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT
+                      << utils::io::endl;
+    }
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.

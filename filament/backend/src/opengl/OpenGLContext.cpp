@@ -22,9 +22,9 @@
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
 
 #include <functional>
@@ -77,8 +77,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     state.version  = (char const*)glGetString(GL_VERSION);
     state.shader   = (char const*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    slog.v << "[" << state.vendor << "], [" << state.renderer << "], "
-              "[" << state.version << "], [" << state.shader << "]" << io::endl;
+    LOG(INFO) << "[" << state.vendor << "], [" << state.renderer << "], "
+                 "[" << state.version << "], [" << state.shader << "]";
 
     /*
      * Figure out GL / GLES version, extensions and capabilities we need to
@@ -164,51 +164,33 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     }
 #endif
 
-    slog.v << "Feature level: " << +mFeatureLevel << '\n';
-    slog.v << "Active workarounds: " << '\n';
+    LOG(INFO) << "Feature level: " << +mFeatureLevel;
+    LOG(INFO) << "Active workarounds: ";
     UTILS_NOUNROLL
     for (auto [enabled, name, _] : mBugDatabase) {
         if (enabled) {
-            slog.v << name << '\n';
+            LOG(INFO) << name;
         }
     }
-    flush(slog.v);
 
 #ifndef NDEBUG
     // this is useful for development
-    slog.v
-            << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = "
-                    << gets.max_anisotropy << '\n'
-            << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS = "
-                    << gets.max_combined_texture_image_units << '\n'
-            << "GL_MAX_TEXTURE_SIZE = "
-                    << gets.max_texture_size << '\n'
-            << "GL_MAX_CUBE_MAP_TEXTURE_SIZE = "
-                    << gets.max_cubemap_texture_size << '\n'
-            << "GL_MAX_3D_TEXTURE_SIZE = "
-                    << gets.max_3d_texture_size << '\n'
-            << "GL_MAX_ARRAY_TEXTURE_LAYERS = "
-                    << gets.max_array_texture_layers << '\n'
-            << "GL_MAX_DRAW_BUFFERS = "
-                    << gets.max_draw_buffers << '\n'
-            << "GL_MAX_RENDERBUFFER_SIZE = "
-                    << gets.max_renderbuffer_size << '\n'
-            << "GL_MAX_SAMPLES = "
-                    << gets.max_samples << '\n'
-            << "GL_MAX_TEXTURE_IMAGE_UNITS = "
-                    << gets.max_texture_image_units << '\n'
-            << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS = "
-                    << gets.max_transform_feedback_separate_attribs << '\n'
-            << "GL_MAX_UNIFORM_BLOCK_SIZE = "
-                    << gets.max_uniform_block_size << '\n'
-            << "GL_MAX_UNIFORM_BUFFER_BINDINGS = "
-                    << gets.max_uniform_buffer_bindings << '\n'
-            << "GL_NUM_PROGRAM_BINARY_FORMATS = "
-                    << gets.num_program_binary_formats << '\n'
-            << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = "
-                    << gets.uniform_buffer_offset_alignment << '\n'
-            ;
-    flush(slog.v);
+    LOG(INFO) << "GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = " << gets.max_anisotropy;
+    LOG(INFO) << "GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS = " << gets.max_combined_texture_image_units;
+    LOG(INFO) << "GL_MAX_TEXTURE_SIZE = " << gets.max_texture_size;
+    LOG(INFO) << "GL_MAX_CUBE_MAP_TEXTURE_SIZE = " << gets.max_cubemap_texture_size;
+    LOG(INFO) << "GL_MAX_3D_TEXTURE_SIZE = " << gets.max_3d_texture_size;
+    LOG(INFO) << "GL_MAX_ARRAY_TEXTURE_LAYERS = " << gets.max_array_texture_layers;
+    LOG(INFO) << "GL_MAX_DRAW_BUFFERS = " << gets.max_draw_buffers;
+    LOG(INFO) << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size;
+    LOG(INFO) << "GL_MAX_SAMPLES = " << gets.max_samples;
+    LOG(INFO) << "GL_MAX_TEXTURE_IMAGE_UNITS = " << gets.max_texture_image_units;
+    LOG(INFO) << "GL_MAX_TRANSFORM_FEEDBACK_SEPARATE_ATTRIBS = "
+              << gets.max_transform_feedback_separate_attribs;
+    LOG(INFO) << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size;
+    LOG(INFO) << "GL_MAX_UNIFORM_BUFFER_BINDINGS = " << gets.max_uniform_buffer_bindings;
+    LOG(INFO) << "GL_NUM_PROGRAM_BINARY_FORMATS = " << gets.num_program_binary_formats;
+    LOG(INFO) << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment;
 #endif
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
@@ -242,15 +224,14 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     if (ext.KHR_debug) {
         auto cb = +[](GLenum, GLenum type, GLuint, GLenum severity, GLsizei length,
                 const GLchar* message, const void *) {
-            io::ostream* stream = &slog.i;
+            auto logSeverity = utils::LogSeverity::kInfo;
             switch (severity) {
-                case GL_DEBUG_SEVERITY_HIGH:    stream = &slog.e;   break;
-                case GL_DEBUG_SEVERITY_MEDIUM:  stream = &slog.w;   break;
-                case GL_DEBUG_SEVERITY_LOW:     stream = &slog.d;   break;
+                case GL_DEBUG_SEVERITY_HIGH:    logSeverity = utils::LogSeverity::kError;   break;
+                case GL_DEBUG_SEVERITY_MEDIUM:  logSeverity = utils::LogSeverity::kWarning; break;
+                case GL_DEBUG_SEVERITY_LOW:     logSeverity = utils::LogSeverity::kInfo;    break;
                 case GL_DEBUG_SEVERITY_NOTIFICATION:
                 default: break;
             }
-            io::ostream& out = *stream;
             const char* level = ": ";
             switch (type) {
                 case GL_DEBUG_TYPE_ERROR:               level = "ERROR: ";               break;
@@ -262,7 +243,7 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
                 case GL_DEBUG_TYPE_MARKER:              level = "MARKER: ";              break;
                 default: break;
             }
-            out << "KHR_debug " << level << std::string_view{ message, size_t(length) } << io::endl;
+            LOG(LEVEL(logSeverity)) << "KHR_debug " << level << std::string_view{ message, size_t(length) };
         };
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -707,9 +688,8 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     GLUtils::unordered_string_set const exts = GLUtils::split(extensions);
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
         for (auto extension: exts) {
-            slog.d << "\"" << std::string_view(extension) << "\"\n";
+            DLOG(INFO) << "\"" << std::string_view(extension) << "\"";
         }
-        flush(slog.d);
     }
 
     // figure out and initialize the extensions we need
@@ -783,9 +763,8 @@ void OpenGLContext::initExtensionsGL(Extensions* ext, GLint major, GLint minor) 
     }
     if constexpr (DEBUG_PRINT_EXTENSIONS) {
         for (auto extension: exts) {
-            slog.d << "\"" << std::string_view(extension) << "\"\n";
+            DLOG(INFO) << "\"" << std::string_view(extension) << "\"";
         }
-        flush(slog.d);
     }
 
     using namespace std::literals;
@@ -1045,7 +1024,7 @@ GLuint OpenGLContext::getSamplerSlow(SamplerParams params) const noexcept {
                 std::min(gets.max_anisotropy, anisotropy));
     }
 #endif
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
     mSamplerMap[params] = s;
     return s;
 }

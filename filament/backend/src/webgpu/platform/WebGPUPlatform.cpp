@@ -56,7 +56,12 @@ namespace {
 constexpr std::array REQUIRED_FEATURES = { wgpu::FeatureName::TransientAttachments,
     /*To make filtering assumptions like we want while waiting for Filament to provide that info,
        float 32 needs to be filterable*/
-    wgpu::FeatureName::Float32Filterable };
+    wgpu::FeatureName::Float32Filterable,
+    // Qualcomm 500 and 600 GPUs do not support this so it is not part of core webgpu spec. To
+    // support such devices, we will either need Filament to not attempt this, or find another
+    // workaround. https://github.com/gpuweb/gpuweb/issues/2648
+    wgpu::FeatureName::RG11B10UfloatRenderable
+};
 
 constexpr std::array OPTIONAL_FEATURES = {
     wgpu::FeatureName::DepthClipControl,
@@ -244,18 +249,17 @@ void assertLimitsAreExpressedInRequirementsStruct() {
 void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
     if (!instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures)) {
-        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features"
-                   << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features";
     } else {
         FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
-                   << supportedWGSLLanguageFeatures.featureCount << "):" << utils::io::endl;
+                   << supportedWGSLLanguageFeatures.featureCount << "):";
         if (supportedWGSLLanguageFeatures.featureCount > 0 &&
                 supportedWGSLLanguageFeatures.features != nullptr) {
             std::for_each(supportedWGSLLanguageFeatures.features,
                     supportedWGSLLanguageFeatures.features +
                             supportedWGSLLanguageFeatures.featureCount,
                     [](wgpu::WGSLLanguageFeatureName const featureName) {
-                        FWGPU_LOGI << "  " << featureName << utils::io::endl;
+                        FWGPU_LOGI << "  " << featureName;
                     });
         }
     }
@@ -267,7 +271,7 @@ void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::DawnTogglesDescriptor dawnTogglesDescriptor{};
 #if defined(FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING)
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling" << utils::io::endl;
+    FWGPU_LOGI << "setting on toggle enable_immediate_error_handling";
 #endif
     /**
      * Have the un-captured error callback invoked immediately when an error occurs, rather than
@@ -311,7 +315,7 @@ void printLimit(std::string_view name, const std::variant<uint32_t, uint64_t> va
     if (undefined) {
         FWGPU_LOGI << "UNDEFINED";
     }
-    FWGPU_LOGI << utils::io::endl;
+    FWGPU_LOGI << "";
 }
 #endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
@@ -398,23 +402,23 @@ STREAM_TYPE& operator<<(STREAM_TYPE& out, AdapterDetails const& details) noexcep
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printAdapterDetails(AdapterDetails const& details) {
-    FWGPU_LOGI << "Selected WebGPU adapter info: " << details << utils::io::endl;
+    FWGPU_LOGI << "Selected WebGPU adapter info: " << details;
     wgpu::SupportedFeatures supportedFeatures{};
     details.adapter.GetFeatures(&supportedFeatures);
     FWGPU_LOGI << "WebGPU adapter supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
+               << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
         std::for_each(supportedFeatures.features,
                 supportedFeatures.features + supportedFeatures.featureCount,
                 [](wgpu::FeatureName const featureName) {
-                    FWGPU_LOGI << "  " << featureName << utils::io::endl;
+                    FWGPU_LOGI << "  " << featureName;
                 });
     }
     wgpu::Limits supportedLimits{};
     if (!details.adapter.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU adapter supported limits";
     } else {
-        FWGPU_LOGI << "WebGPU adapter supported limits:" << utils::io::endl;
+        FWGPU_LOGI << "WebGPU adapter supported limits:";
         printLimits(supportedLimits);
     }
 }
@@ -441,14 +445,14 @@ struct AdapterDetailsHash final {
                 })) {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         FWGPU_LOGI << "WebGPU adapter " << details
-                   << " does not have the minimum required features." << utils::io::endl;
-        FWGPU_LOGI << "  Missing required feature(s): ";
+                   << " does not have the minimum required features.";
+        FWGPU_LOGI << "Missing required feature(s): ";
         for (wgpu::FeatureName const& requiredFeature: REQUIRED_FEATURES) {
             if (!details.adapter.HasFeature(requiredFeature)) {
-                FWGPU_LOGI << requiredFeature << " ";
+                FWGPU_LOGI << requiredFeature;
             }
         }
-        FWGPU_LOGI << utils::io::endl;
+        FWGPU_LOGI << "";
 #endif
         return false;
     }
@@ -457,7 +461,7 @@ struct AdapterDetailsHash final {
             << "Failed to get limits for WebGPU adapter: " << details;
     if (!satisfiesLimits(supportedLimits)) {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-        FWGPU_LOGI << " (for WebGPU adapter " << details << ")" << utils::io::endl;
+        FWGPU_LOGI << " (for WebGPU adapter " << details << ")";
 #endif
         return false;
     }
@@ -513,9 +517,9 @@ struct AdapterDetailsHash final {
     }
     FILAMENT_CHECK_POSTCONDITION(!compatibleAdapters.empty()) << "No WebGPU adapters found!";
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-    FWGPU_LOGI << compatibleAdapters.size() << " WebGPU adapter(s) found:" << utils::io::endl;
+    FWGPU_LOGI << compatibleAdapters.size() << " WebGPU adapter(s) found:";
     for (auto& details: compatibleAdapters) {
-        FWGPU_LOGI << "  WebGPU adapter: " << details << utils::io::endl;
+        FWGPU_LOGI << "  WebGPU adapter: " << details;
     }
 #endif
     return compatibleAdapters;
@@ -577,19 +581,19 @@ void printDeviceDetails(wgpu::Device const& device) {
     wgpu::SupportedFeatures supportedFeatures{};
     device.GetFeatures(&supportedFeatures);
     FWGPU_LOGI << "WebGPU device supported features (" << supportedFeatures.featureCount
-               << "):" << utils::io::endl;
+               << "):";
     if (supportedFeatures.featureCount > 0 && supportedFeatures.features != nullptr) {
         std::for_each(supportedFeatures.features,
                 supportedFeatures.features + supportedFeatures.featureCount,
                 [](wgpu::FeatureName const featureName) {
-                    FWGPU_LOGI << "  " << featureName << utils::io::endl;
+                    FWGPU_LOGI << "  " << featureName;
                 });
     }
     wgpu::Limits supportedLimits{};
     if (!device.GetLimits(&supportedLimits)) {
-        FWGPU_LOGW << "Failed to get WebGPU supported device limits" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU supported device limits";
     } else {
-        FWGPU_LOGI << "WebGPU device supported limits:" << utils::io::endl;
+        FWGPU_LOGI << "WebGPU device supported limits:";
         printLimits(supportedLimits);
     }
 }
@@ -630,8 +634,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
                     wgpu::StringView message) {
                 if (reason == wgpu::DeviceLostReason::Destroyed) {
 #if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
-                    FWGPU_LOGD << "WebGPU device lost due to being destroyed (expected)"
-                               << utils::io::endl;
+                    FWGPU_LOGD << "WebGPU device lost due to being destroyed (expected)";
 #endif
                     return;
                 }
@@ -643,7 +646,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
     deviceDescriptor.SetUncapturedErrorCallback(
             [](wgpu::Device const&, wgpu::ErrorType errorType, wgpu::StringView message) {
                 FWGPU_LOGE << "WebGPU device error: " << errorTypeToString(errorType) << " "
-                           << message.data << utils::io::endl;
+                           << message.data;
             });
     wgpu::Device device = nullptr;
     wgpu::WaitStatus status = mInstance.WaitAny(
@@ -696,8 +699,7 @@ Driver* WebGPUPlatform::createDriver(void* sharedContext,
         const Platform::DriverConfig& driverConfig) noexcept {
     if (sharedContext) {
         FWGPU_LOGW << "sharedContext is ignored/unused in the WebGPU backend. A non-null "
-                      "sharedContext was provided, but it will be ignored."
-                   << utils::io::endl;
+                      "sharedContext was provided, but it will be ignored.";
     }
     return WebGPUDriver::create(*this, driverConfig);
 }
