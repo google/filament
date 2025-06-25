@@ -926,7 +926,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     // Keep a copy of context for swapchains.
     mImpl->mContext = context;
 
-    return VulkanDriver::create(this, context, driverConfig);
+    return VulkanDriver::create(this, mImpl->mContext, driverConfig);
 }
 
 // This needs to be explictly written for
