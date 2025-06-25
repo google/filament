@@ -7,5 +7,3 @@ We are chaning the way Vulkan buffers are handled. We need to switch over to a m
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- Add new `unfilterable` field to Filament Material's `sampler` [⚠️ **New Material Version**]
