@@ -394,7 +394,13 @@ void VulkanDriver::collectGarbage() {
 void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
-    // Do nothing.
+
+    // Check if any command have finished and reset all its used resources. The resources
+    // wont be destroyed but their reference count will decreased if the command is already
+    // completed.
+    //
+    // This will let us check if any VulkanBuffer is currently in flight or not.
+    mCommands.gc();
 
     if (mAppState.hasExternalSamplers()) {
         mExternalImageManager.onBeginFrame();
@@ -1236,7 +1242,8 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh, BufferObjectStreamDescriptor&& streams) {
+void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
+        BufferObjectStreamDescriptor&& streams) {
     // Noop
 }
 
