@@ -39,13 +39,13 @@ function download_mdbook() {
     fi
 
     local CHECK_UNAME="
-import sys;
-parts=[a.lower() for a in sys.stdin.read().strip().split(' ')];
+import sys
+parts=[a.lower() for a in sys.stdin.read().strip().split(' ')]
 def get_type():
   if 'darwin' in parts:
     if 'x86_64' in parts:
       return ${DARWIN_X86}
-    elif 'aarch' in parts:
+    elif 'aarch' in parts or 'arm64' in parts:
       return ${DARWIN_ARM}
   elif 'linux' in parts:
     if 'x86_64' in parts:
@@ -63,11 +63,12 @@ print(get_type())
             echo "*** Need to install Rust ***"
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
         fi
+        source "${HOME}/.cargo/env"
         if ! (command -v cargo >/dev/null 2>&1); then
-            echo "*** Still cannot find `cargo` ***"
+            echo "*** Still cannot find cargo ***"
             exit 1
         fi
-        cargo install mdbook
+        cargo install --force mdbook
     else
         # Download prebuilts from github
         mkdir -p ${HOME}/.cargo/bin

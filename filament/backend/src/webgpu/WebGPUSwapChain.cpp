@@ -42,7 +42,7 @@ void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabiliti
     if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
         std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
                 [](wgpu::TextureFormat const format) {
-                    FWGPU_LOGI << "    " << webGPUPrintableToString(format);
+                    FWGPU_LOGI << "    " << webGPUTextureFormatToString(format);
                 });
     }
     FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount << "):";
@@ -66,7 +66,7 @@ void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabiliti
 void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         wgpu::TextureFormat depthFormat) {
     FWGPU_LOGI << "WebGPU surface configuration:";
-    FWGPU_LOGI << "  surface format: " << webGPUPrintableToString(config.format);
+    FWGPU_LOGI << "  surface format: " << webGPUTextureFormatToString(config.format);
     FWGPU_LOGI << "  surface usage: " << webGPUPrintableToString(config.usage);
     FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):";
     if (config.viewFormatCount > 0 && config.viewFormats != nullptr) {
@@ -79,7 +79,7 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
     FWGPU_LOGI << "  surface width: " << config.width;
     FWGPU_LOGI << "  surface height: " << config.height;
     FWGPU_LOGI << "  surface present mode: " << webGPUPrintableToString(config.presentMode);
-    FWGPU_LOGI << "WebGPU selected depth format: " << webGPUPrintableToString(depthFormat);
+    FWGPU_LOGI << "WebGPU selected depth format: " << webGPUTextureFormatToString(depthFormat);
 }
 #endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
