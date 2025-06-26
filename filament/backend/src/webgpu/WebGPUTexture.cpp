@@ -17,6 +17,8 @@
 #include "WebGPUTexture.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPURenderPassMipmapGenerator.h"
+#include "WebGPUStrings.h"
 
 #include "DriverBase.h"
 #include "private/backend/BackendUtils.h"
@@ -140,10 +142,13 @@ namespace {
  * @param samples How many samples to use for MSAA
  * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
  *                                   like a compute shader
+ * @param needsRenderAttachmentSupport if we need to use this texture as a render pass attachment
+ *                                     in something like a render pass blit (e.g. mipmap generation)
  * @return The appropriate texture usage flags for the underlying texture
  */
 [[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
-        const uint8_t samples, const bool needsComputeStorageSupport) {
+        const uint8_t samples, const bool needsComputeStorageSupport,
+        const bool needsRenderAttachmentSupport) {
     wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
 
     // if needsComputeStorageSupport we need to read and write to the texture in a shader and thus
@@ -163,6 +168,9 @@ namespace {
     }
     if (needsComputeStorageSupport) {
         retUsage |= wgpu::TextureUsage::StorageBinding;
+    }
+    if (needsRenderAttachmentSupport) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
     }
     // WGPU Render attachment covers either color or stencil situation dependant
     // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
@@ -258,6 +266,26 @@ namespace {
     }
 }
 
+[[nodiscard]] WebGPUTexture::MipmapGenerationStrategy determineMipmapGenerationStrategy(
+        const wgpu::TextureFormat format, const SamplerType samplerType, const uint8_t sampleCount,
+        const uint8_t mipmapLevels) {
+    if (mipmapLevels <= 1) {
+        return WebGPUTexture::MipmapGenerationStrategy::NONE; // no mipmap generation needed
+    }
+    const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
+        WebGPURenderPassMipmapGenerator::getCompatibilityFor(format,
+                toWebGPUTextureDimension(samplerType), sampleCount)
+    };
+    if (renderPassCompatibility.compatible) {
+        return WebGPUTexture::MipmapGenerationStrategy::RENDER_PASS;
+    }
+    if (WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(format)) {
+        return WebGPUTexture::MipmapGenerationStrategy::SPD_COMPUTE_PASS;
+    }
+    // we don't have a way to generate mipmaps for this texture, at least at this time
+    return WebGPUTexture::MipmapGenerationStrategy::NONE;
+}
+
 [[nodiscard]] constexpr wgpu::Extent3D toTextureSize(const SamplerType samplerType,
         const uint32_t width, const uint32_t height, const uint32_t depth) {
     switch (samplerType) {
@@ -295,14 +323,16 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         wgpu::Device const& device) noexcept
     : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage },
       mViewFormat{ fToWGPUTextureFormat(format) },
-      mSupportsMultipleMipLevels{ levels > 1 &&
-                                  supportsMultipleMipLevelsViaStorageBinding(mViewFormat) },
-      mWebGPUFormat{ mSupportsMultipleMipLevels
+      mMipmapGenerationStrategy{ determineMipmapGenerationStrategy(mViewFormat, samplerType,
+              samples, levels) },
+      mWebGPUFormat{ mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS
                              ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
                              : mViewFormat },
       mAspect{ fToWGPUTextureViewAspect(usage, format) },
-      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples, mSupportsMultipleMipLevels) },
-      mViewUsage{ fToWGPUTextureUsage(usage, samples, false) },
+      mWebGPUUsage{ fToWGPUTextureUsage(usage, samples,
+              mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
+              mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS) },
+      mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
       mDefaultMipLevel{ 0 },
@@ -352,7 +382,7 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
     : HwTexture{ src->target, levelCount, src->samples, src->width, src->height, src->depth,
           src->format, src->usage },
       mViewFormat{ src->mViewFormat },
-      mSupportsMultipleMipLevels{ src->mSupportsMultipleMipLevels },
+      mMipmapGenerationStrategy{ src->mMipmapGenerationStrategy },
       mWebGPUFormat{ src->mWebGPUFormat },
       mAspect{ src->mAspect },
       mWebGPUUsage{ src->mWebGPUUsage },
@@ -554,10 +584,13 @@ wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
         const SamplerType samplerType) const noexcept {
 #if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
-    if (baseLevel > 0 && !mSupportsMultipleMipLevels) {
+    if (baseLevel > 0 && mMipmapGenerationStrategy == MipmapGenerationStrategy::NONE) {
         FWGPU_LOGW << "Trying to make a texture view into a level ("
                    << static_cast<uint32_t>(baseLevel)
-                   << ") for which we cannot generate mip levels.";
+                   << ") for which we cannot generate mip levels. SamplerType "
+                   << to_string(samplerType) << " WebGPU view format "
+                   << webGPUTextureFormatToString(mViewFormat) << " samples "
+                   << static_cast<uint32_t>(samples);
     }
 #endif
     const wgpu::TextureViewDescriptor textureViewDescriptor{

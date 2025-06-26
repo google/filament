@@ -30,11 +30,6 @@ from utils import execute, ArgParseImpl
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(CUR_DIR, '../../')
 
-def get_last_commit_hash():
-  res, ret = execute('git rev-parse HEAD', cwd=ROOT_DIR)
-  assert res == 0, 'Failed to get the last commit hash'
-  return ret.strip()
-
 def get_edited_files(commit_hash):
   INSERT = '#####?????'
   res, ret = execute(f'git show --name-only --pretty=%b{INSERT} {commit_hash}')

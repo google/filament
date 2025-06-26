@@ -19,6 +19,7 @@
 
 #include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPURenderPassMipmapGenerator.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -77,7 +78,8 @@ private:
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
-    spd::MipmapGenerator mMipMapGenerator;
+    WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
+    spd::MipmapGenerator mSpdComputePassMipmapGenerator;
 
     tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
 
