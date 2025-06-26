@@ -287,6 +287,9 @@ set(FILAMENT ${CMAKE_CURRENT_SOURCE_DIR})
 # Where our tools are
 set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
+# Where our tools are
+set(TESTS ${CMAKE_CURRENT_SOURCE_DIR}/test)
+
 # ==================================================================================================
 # Compiler check
 # ==================================================================================================
@@ -896,6 +899,8 @@ if (IS_HOST_PLATFORM)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/specular-color)
     add_subdirectory(${TOOLS}/uberz)
+
+    add_subdirectory(${TESTS}/gltf-comparison)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
