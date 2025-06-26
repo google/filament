@@ -227,7 +227,7 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
 
     // Slow path of copying row by row
     assert_invariant(pbdStride >= width);
-    if (UTILS_UNLIKELY(p.left > 0 || p.top > 0 || pbdStride > width)) {
+    if (UTILS_UNLIKELY(pixelSize > 0 && (p.left > 0 || p.top > 0 || pbdStride > width))) {
         size_t const pbdRowSize =
                 PixelBufferDescriptor::computeDataSize(p.format, p.type, pbdStride, 1, p.alignment);
         size_t const pbdHeight = p.size / pixelSize / pbdStride / depth;
@@ -248,7 +248,9 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
             }
         }
     } else {
-        size_t const writeSize = pixelSize * (width * height * depth);
+        // Note: if pixelSize = 0, we're dealing with a compressed format; we
+        // should fall back to the buffer's size.
+        size_t const writeSize = pixelSize > 0 ? pixelSize * (width * height * depth) : p.size;
         memcpy(mapped, buf, writeSize);
     }
 }
@@ -517,7 +519,9 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp =
             PixelBufferDescriptor::computeDataSize(hostData->format, hostData->type, 1, 1, 1);
-    size_t const writeSize = width * height * depth * bpp;
+    // Note: if bpp = 0, we're dealing with a compressed format; we should fall
+    // back to the buffer's size.
+    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : hostData->size;
 
     // Note: the following stageSegment must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
@@ -593,7 +597,9 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
         uint32_t height, uint32_t depth, uint32_t miplevel) {
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
-    size_t const writeSize = width * height * depth * bpp;
+    // Note: if bpp = 0, we're dealing with a compressed format; we should fall
+    // back to the buffer's size.
+    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : data.size;
 
     void* mapped = nullptr;
     VulkanStageImage const* stage
