@@ -141,6 +141,7 @@ Engine* FEngine::create(Builder const& builder) {
                 .stereoscopicType = instance->getConfig().stereoscopicType,
                 .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
                 .metalDisablePanicOnDrawableFailure = instance->getConfig().metalDisablePanicOnDrawableFailure,
+                .gpuContextPriority = instance->getConfig().gpuContextPriority,
         };
         instance->mDriver = platform->createDriver(sharedContext, driverConfig);
 
@@ -761,6 +762,7 @@ int FEngine::loop() {
             .stereoscopicType =  mConfig.stereoscopicType,
             .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
             .metalDisablePanicOnDrawableFailure = mConfig.metalDisablePanicOnDrawableFailure,
+            .gpuContextPriority = mConfig.gpuContextPriority,
     };
     mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
 
@@ -822,9 +824,9 @@ int FEngine::loop() {
 #if FILAMENT_ENABLE_MATDBG
     if(debug.server) {
         delete debug.server;
-    } 
+    }
 #endif
-#if FILAMENT_ENABLE_FGVIEWER 
+#if FILAMENT_ENABLE_FGVIEWER
     if(debug.fgviewerServer) {
         delete debug.fgviewerServer;
     }

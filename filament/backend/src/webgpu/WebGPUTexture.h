@@ -28,6 +28,12 @@ namespace filament::backend {
 
 class WebGPUTexture : public HwTexture {
 public:
+    enum class MipmapGenerationStrategy : uint8_t {
+        RENDER_PASS,
+        SPD_COMPUTE_PASS,
+        NONE,
+    };
+
     WebGPUTexture(SamplerType, uint8_t levels, TextureFormat, uint8_t samples, uint32_t width,
             uint32_t height, uint32_t depth, TextureUsage, wgpu::Device const&) noexcept;
 
@@ -51,7 +57,9 @@ public:
 
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
 
-    [[nodiscard]] bool supportsMultipleMipLevels() const { return mSupportsMultipleMipLevels; }
+    [[nodiscard]] MipmapGenerationStrategy getMipmapGenerationStrategy() const {
+        return mMipmapGenerationStrategy;
+    }
 
     [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
@@ -71,8 +79,7 @@ private:
     // certain formats (e.g. compute shaders), but we need a view to that format elsewhere
     // (e.g. another shader or render target)
     wgpu::TextureFormat mViewFormat = wgpu::TextureFormat::Undefined;
-    // this is true IFF levels > 1 AND we can actually generate mipmaps for the texture
-    bool mSupportsMultipleMipLevels = false;
+    MipmapGenerationStrategy mMipmapGenerationStrategy = MipmapGenerationStrategy::NONE;
     // format is inherited from HwTexture. This naming is to distinguish it from Filament's format
     // this is the underlying texture's format, not necessarily the "view" of it... see mViewFormat
     wgpu::TextureFormat mWebGPUFormat = wgpu::TextureFormat::Undefined;
