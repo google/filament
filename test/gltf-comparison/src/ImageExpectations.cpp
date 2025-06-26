@@ -21,26 +21,16 @@
 #include "utils/Hash.h"
 #include <fstream>
 
-//#include "BackendTest.h"
-#include "backend/PixelBufferDescriptor.h"
-//#include "private/backend/DriverApi.h"
-
-#ifndef FILAMENT_IOS
-
 #include <imageio/ImageEncoder.h>
 #include <imageio/ImageDecoder.h>
 #include <image/ColorTransform.h>
 
-#endif
-
 namespace test {
 
-ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName,
-        uint32_t expectedHash, bool isSrgb)
+ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName, bool isSrgb)
     : mWidth(width),
       mHeight(height),
       mIsSrgb(isSrgb),
-      mExpectedPixelHash(expectedHash),
       mFileName(std::move(fileName)) {}
 
 int ScreenshotParams::width() const {
@@ -53,10 +43,6 @@ int ScreenshotParams::height() const {
 
 bool ScreenshotParams::isSrgb() const {
     return mIsSrgb;
-}
-
-uint32_t ScreenshotParams::expectedHash() const {
-    return mExpectedPixelHash;
 }
 
 std::string ScreenshotParams::actualDirectoryPath() {
@@ -90,10 +76,11 @@ const std::string ScreenshotParams::filePrefix() const {
 }
 
 ImageExpectation::ImageExpectation(const char* fileName, int lineNumber,
-        filament::backend::DriverApi& api, ScreenshotParams params,
-        filament::backend::RenderTargetHandle renderTarget)
-        : mFileName(fileName), mLineNumber(lineNumber), mParams(std::move(params)),
-          mResult(api, renderTarget, mParams) {}
+        RenderTargetDump::ReadPixels readPixels, ScreenshotParams params)
+    : mFileName(fileName),
+      mLineNumber(lineNumber),
+      mParams(std::move(params)),
+      mResult(readPixels, mParams) {}
 
 void ImageExpectation::evaluate() {
     // Ensure this is only evaluated once.
@@ -124,17 +111,12 @@ void ImageExpectation::compareImage() const {
         uint32_t loadedImageHash = loadedImage.hash();
         auto compareToImageMatcher = testing::Eq(loadedImageHash);
         if (!testing::Matches(compareToImageMatcher)(actualHash)) {
-            BackendTest::markImageAsFailure(mParams.filePrefix());
+            ImageExpectations::markImageAsFailure(mParams.filePrefix());
         }
         EXPECT_THAT(actualHash, compareToImageMatcher) << mParams.expectedFileName();
 #endif
-        // For builds that can't load PNGs (currently iOS only) use the expected hash.
-        EXPECT_THAT(actualHash, testing::Eq(mParams.expectedHash())) << mParams.expectedFileName();
-        // TODO: Add better debug output, such as generating a diff image.
     }
 }
-
-ImageExpectations::ImageExpectations(filament::backend::DriverApi& api) : mApi(api) {}
 
 ImageExpectations::~ImageExpectations() {
     // Guarantee that all expectations are evaluated when this leaves scope even if the caller
@@ -143,9 +125,14 @@ ImageExpectations::~ImageExpectations() {
 }
 
 void ImageExpectations::addExpectation(const char* fileName, int lineNumber,
-        filament::backend::RenderTargetHandle renderTarget, ScreenshotParams params) {
-    mExpectations.emplace_back(std::make_unique<ImageExpectation>(fileName, lineNumber, mApi,
-            std::move(params), renderTarget));
+        filament::Renderer* renderer, ScreenshotParams params) {
+    mExpectations.emplace_back(std::make_unique<ImageExpectation>(
+            fileName, lineNumber,
+            [renderer](uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+                    filament::backend::PixelBufferDescriptor&& pb) {
+                renderer->readPixels(x, y, width, height, std::move(pb));
+            },
+            std::move(params)));
 }
 
 void ImageExpectations::evaluate() {
@@ -155,9 +142,13 @@ void ImageExpectations::evaluate() {
     mExpectations.clear();
 }
 
-RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
-        filament::backend::RenderTargetHandle renderTarget, const ScreenshotParams& params)
-        : mInternal(std::make_unique<RenderTargetDump::Internal>(params)) {
+void ImageExpectations::markImageAsFailure(const std::string& imagePrefix) {
+
+}
+
+RenderTargetDump::RenderTargetDump(const RenderTargetDump::ReadPixels& readPixels,
+        const ScreenshotParams& params)
+    : mInternal(std::make_unique<RenderTargetDump::Internal>(params)) {
     const size_t size = mInternal->params.width() * mInternal->params.height() * 4;
     mInternal->bytes.resize(size);
 
@@ -190,8 +181,7 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
     filament::backend::PixelBufferDescriptor pb(mInternal->bytes.data(), size,
             filament::backend::PixelDataFormat::RGBA, filament::backend::PixelDataType::UBYTE, cb,
             (void*)mInternal.get());
-    api.readPixels(renderTarget, 0, 0, mInternal->params.width(), mInternal->params.height(),
-            std::move(pb));
+    readPixels(0, 0, mInternal->params.width(), mInternal->params.height(), std::move(pb));
 }
 
 RenderTargetDump::~RenderTargetDump() {
