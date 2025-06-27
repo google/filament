@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Filament Viewer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+main {
+    max-width: 800px;
+    font-family: "Open Sans";
+    margin: auto;
+    padding: 10px;
+}
+
+filament-viewer {
+    width: 100%;
+    height: 600px;
+    border: none;
+}
+
+filament-viewer::part(canvas) {
+    border: solid 2px gray;
+    border-radius: 10px;
+}
+
+</style>
+</head>
+<body>
+<main>
+
+<p>
+<filament-viewer
+    enableDrop="true"
+    ibl="../webgl/default_env/default_env_ibl.ktx"
+    intensity="20000" />
+</p>
+
+</main>
+<script src="https://unpkg.com/filament@1.51.6/filament.js"></script>
+<script src="https://unpkg.com/gltumble"></script>
+<script src="filament-viewer.js" type="module"></script>
+</body>
+</html>
