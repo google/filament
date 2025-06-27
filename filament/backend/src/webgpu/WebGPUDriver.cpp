@@ -1090,7 +1090,93 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
-    // todo
+
+    FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
+            << "Resolve assumes theres a valid command encoder to piggyback on.";
+    FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
+            << "Resolve cannot be called during an existing render pass";
+
+    const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    const auto destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+
+    assert_invariant(sourceTexture);
+    assert_invariant(destinationTexture);
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->width == sourceTexture->width &&
+                                destinationTexture->height == sourceTexture->height)
+            << "invalid resolve: src and dst sizes don't match";
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->samples > 1 && destinationTexture->samples == 1)
+            << "invalid resolve: src.samples=" << +sourceTexture->samples
+            << ", dst.samples=" << +destinationTexture->samples;
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->format == destinationTexture->format)
+            << "src and dst texture format don't match";
+
+    FILAMENT_CHECK_PRECONDITION(!isDepthFormat(sourceTexture->format))
+            << "can't resolve depth formats";
+
+    FILAMENT_CHECK_PRECONDITION(!isStencilFormat(sourceTexture->format))
+            << "can't resolve stencil formats";
+
+    FILAMENT_CHECK_PRECONDITION(any(destinationTexture->usage & TextureUsage::BLIT_DST))
+            << "texture doesn't have BLIT_DST";
+
+    FILAMENT_CHECK_PRECONDITION(any(sourceTexture->usage & TextureUsage::BLIT_SRC))
+            << "texture doesn't have BLIT_SRC";
+
+    const wgpu::TextureFormat format{ sourceTexture->getViewFormat() };
+    const wgpu::TextureViewDescriptor sourceTextureViewDescriptor{
+        .label = "resolve_source_texture_view",
+        .format = format,
+        .dimension = sourceTexture->getViewDimension(),
+        .baseMipLevel = sourceLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = sourceLayer,
+        .arrayLayerCount = 1,
+        .aspect = sourceTexture->getAspect(),
+        .usage = sourceTexture->getTexture().GetUsage(),
+    };
+    const wgpu::TextureView sourceTextureView{ sourceTexture->getTexture().CreateView(
+            &sourceTextureViewDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(sourceTextureView) << "Failed to create wgpu::TextureView sourceTextureView";
+    const wgpu::TextureViewDescriptor destinationTextureViewDescriptor{
+        .label = "resolve_destination_texture_view",
+        .format = format,
+        .dimension = destinationTexture->getViewDimension(),
+        .baseMipLevel = destinationLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = destinationLayer,
+        .arrayLayerCount = 1,
+        .aspect = destinationTexture->getAspect(),
+        .usage = destinationTexture->getTexture().GetUsage(),
+    };
+
+    const wgpu::TextureView destinationTextureView{ destinationTexture->getTexture().CreateView(
+            &destinationTextureViewDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(destinationTextureView) << "Failed to create wgpu::TextureView destinationTextureView.";
+    const wgpu::RenderPassColorAttachment colorAttachment{
+        .view = sourceTextureView,
+        .depthSlice = wgpu::kDepthSliceUndefined, // being explicit for consistent behavior
+        .resolveTarget = destinationTextureView,
+        .loadOp = wgpu::LoadOp::Load,
+        .storeOp = wgpu::StoreOp::Store,
+        .clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
+    };
+    const wgpu::RenderPassDescriptor renderPassDescriptor{
+        .label = "resolve_render_pass",
+        .colorAttachmentCount = 1,
+        .colorAttachments = &colorAttachment,
+        .depthStencilAttachment = nullptr, // being explicit for consistent behavior
+        .occlusionQuerySet = nullptr,      // being explicit for consistent behavior
+        .timestampWrites = nullptr,        // being explicit for consistent behavior
+    };
+
+    const wgpu::RenderPassEncoder renderPassEncoder{ mCommandEncoder.BeginRenderPass(
+            &renderPassDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(renderPassEncoder)
+            << "Failed to create wgpu::RenderPassEncoder for WebGPUDriver::resolve";
+    renderPassEncoder.End(); // only the implicit resolve is happening in the pass
 }
 
 void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
