@@ -62,6 +62,15 @@ public:
         return mMipmapGenerationStrategy;
     }
 
+    /**
+     * Creates the MSAA sidecar texture if it has not already been created.
+     * If the sidecar already exists with a different number of samples this will panic.
+     * @param samples The number of samples the texture will have
+     */
+    void createMsaaSidecarTexture(uint8_t samples);
+
+    [[nodiscard]] wgpu::Texture const& getMsaaSidecarTexture() const { return mMsaaSidecarTexture; }
+
     [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
 
@@ -96,6 +105,7 @@ private:
     uint32_t mDefaultMipLevel = 0;
     uint32_t mDefaultBaseArrayLayer = 0;
     wgpu::TextureView mDefaultTextureView = nullptr;
+    wgpu::Texture mMsaaSidecarTexture = nullptr;
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,

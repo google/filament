@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
+#include "WebGPUTexture.h"
+
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -24,6 +26,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace filament::backend {
@@ -34,7 +37,8 @@ public:
 
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
-            Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags);
+            Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags,
+            std::function<WebGPUTexture*(const Handle<HwTexture>)> const&);
 
     // Default constructor for the default render target
     WebGPURenderTarget();

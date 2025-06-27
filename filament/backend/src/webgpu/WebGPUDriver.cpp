@@ -458,7 +458,9 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
         const uint8_t samples, const uint8_t layerCount, const MRT color,
         const TargetBufferInfo depth, const TargetBufferInfo stencil) {
     constructHandle<WebGPURenderTarget>(renderTargetHandle, width, height, samples, layerCount,
-            color, depth, stencil, targetFlags);
+            color, depth, stencil, targetFlags, [&](const Handle<HwTexture> textureHandle) {
+                return handleCast<WebGPUTexture>(textureHandle);
+            });
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {

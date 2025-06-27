@@ -16,7 +16,11 @@
 
 #include "WebGPURenderTarget.h"
 
+#include "WebGPUTexture.h"
+
+#include "DriverBase.h"
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
 #include <private/backend/BackendUtils.h>
@@ -26,14 +30,70 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <array>
 #include <cstdint>
+#include <functional>
 
 namespace filament::backend {
+
+namespace {
+
+void createMsaaSidecarTextures(const uint8_t samples, const TargetBufferFlags targetFlags,
+        MRT const& colorAttachments, TargetBufferInfo const& depthAttachment,
+        TargetBufferInfo const& stencilAttachment,
+        std::function<WebGPUTexture*(const Handle<HwTexture>)> const& getWebGPUTexture) {
+    if (samples <= 1) {
+        return; // no need for msaa sidecar textures
+    }
+    struct Target final {
+        TargetBufferFlags flag{ TargetBufferFlags::NONE };
+        size_t colorIndex{ 0 };
+    };
+    // assuming 8 colors. hopefully the following static_assert will get tripped if another
+    // color ever gets added
+    static_assert(
+            (TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1 | TargetBufferFlags::COLOR2 |
+                    TargetBufferFlags::COLOR3 | TargetBufferFlags::COLOR4 |
+                    TargetBufferFlags::COLOR5 | TargetBufferFlags::COLOR6 |
+                    TargetBufferFlags::COLOR7) == TargetBufferFlags::COLOR_ALL);
+    const static std::array TARGETS{
+        Target{ .flag = TargetBufferFlags::COLOR0, .colorIndex = 0 },
+        Target{ .flag = TargetBufferFlags::COLOR1, .colorIndex = 1 },
+        Target{ .flag = TargetBufferFlags::COLOR2, .colorIndex = 2 },
+        Target{ .flag = TargetBufferFlags::COLOR3, .colorIndex = 3 },
+        Target{ .flag = TargetBufferFlags::COLOR4, .colorIndex = 4 },
+        Target{ .flag = TargetBufferFlags::COLOR5, .colorIndex = 5 },
+        Target{ .flag = TargetBufferFlags::COLOR6, .colorIndex = 6 },
+        Target{ .flag = TargetBufferFlags::COLOR7, .colorIndex = 7 },
+        Target{ .flag = TargetBufferFlags::DEPTH },
+        Target{ .flag = TargetBufferFlags::STENCIL },
+    };
+    for (auto const& target: TARGETS) {
+        if (any(targetFlags & target.flag)) {
+            const Handle<HwTexture> textureHandle{
+                target.flag == TargetBufferFlags::DEPTH
+                        ? depthAttachment.handle
+                        : (target.flag == TargetBufferFlags::STENCIL
+                                          ? stencilAttachment.handle
+                                          : colorAttachments[target.colorIndex].handle)
+            };
+            WebGPUTexture* const texture{ getWebGPUTexture(textureHandle) };
+            assert_invariant(texture != nullptr && "target flag indicate the use of an attachment "
+                                                   "for which we do not have a texture?");
+            if (texture->samples != samples) {
+                texture->createMsaaSidecarTexture(samples);
+            }
+        }
+    }
+}
+
+}  // namespace
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, MRT const& colorAttachmentsMRT,
         Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo,
-        TargetBufferFlags const& targetFlags)
+        TargetBufferFlags const& targetFlags,
+        std::function<WebGPUTexture*(const Handle<HwTexture>)> const& getWebGPUTexture)
     : HwRenderTarget{ width, height },
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
@@ -44,6 +104,8 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
       mStencilAttachment{ stencilAttachmentInfo } {
     // TODO consider making this an array
     mColorAttachmentDesc.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+    createMsaaSidecarTextures(samples, targetFlags, colorAttachmentsMRT, depthAttachmentInfo,
+            stencilAttachmentInfo, getWebGPUTexture);
 }
 
 // Default constructor for the default render target
