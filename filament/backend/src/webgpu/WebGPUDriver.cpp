@@ -1100,13 +1100,24 @@ void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_
     // todo
 }
 
-void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+size_t WebGPUDriver::computePipelineKey(PipelineState const& pipelineState,
+        WebGPURenderTarget const* const renderTarget) const {
     // TODO Investigate implications of this hash more closely. Vulkan has a whole class
-    // VulkanPipelineCache to handle this, may be missing nuance
-    static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
-    auto hash = pipleineStateHasher(pipelineState);
-    if (mPipelineMap.find(hash) != mPipelineMap.end()) {
-        mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
+    //      VulkanPipelineCache to handle this, may be missing nuance
+    static const auto pipelineStateHasher{
+        utils::hash::MurmurHashFn<filament::backend::PipelineState>()
+    };
+    const std::hash<uint32_t> intHasher{};
+    const std::hash<WebGPURenderTarget const*> addressHasher{};
+    const size_t pipelineStateHash{ intHasher(pipelineStateHasher(pipelineState)) };
+    const size_t renderTargetHash{ addressHasher(renderTarget) };
+    return utils::hash::combine(pipelineStateHash, renderTargetHash);
+}
+
+void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+    auto pipelineKey{ computePipelineKey(pipelineState, mCurrentRenderTarget) };
+    if (mPipelineMap.find(pipelineKey) != mPipelineMap.end()) {
+        mRenderPassEncoder.SetPipeline(mPipelineMap[pipelineKey]);
         return;
     }
     const auto program = handleCast<WebGPUProgram>(pipelineState.program);
@@ -1192,7 +1203,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
             pipelineDepthStencilFormat, pipelineSamples, requestedDepth, requestedStencil);
     assert_invariant(pipeline);
-    mPipelineMap[hash] = pipeline;
+    mPipelineMap[pipelineKey] = pipeline;
     mRenderPassEncoder.SetPipeline(pipeline);
 }
 

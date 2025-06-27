@@ -120,6 +120,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     printFloatChunk(text, container, MaterialSpecularAntiAliasingVariance, "    Variance: ");
     printFloatChunk(text, container, MaterialSpecularAntiAliasingThreshold, "    Threshold: ");
     printChunk<bool, bool>(text, container, MaterialClearCoatIorChange, "Clear coat IOR change: ");
+    printChunk<bool, bool>(text, container, MaterialHasCustomDepthShader, "Has custom depth: ");
 
     text << endl;
 
