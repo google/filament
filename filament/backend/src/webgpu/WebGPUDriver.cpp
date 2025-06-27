@@ -1092,7 +1092,7 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
 
     FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
-            << "Resolve assumes theres a valid command encoder to piggyback on.";
+            << "Resolve assumes there is a valid command encoder to piggyback on.";
     FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
             << "Resolve cannot be called during an existing render pass";
 
@@ -1104,14 +1104,14 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
 
     FILAMENT_CHECK_PRECONDITION(destinationTexture->width == sourceTexture->width &&
                                 destinationTexture->height == sourceTexture->height)
-            << "invalid resolve: src and dst sizes don't match";
+            << "invalid resolve: source and destination sizes don't match";
 
     FILAMENT_CHECK_PRECONDITION(sourceTexture->samples > 1 && destinationTexture->samples == 1)
-            << "invalid resolve: src.samples=" << +sourceTexture->samples
-            << ", dst.samples=" << +destinationTexture->samples;
+            << "invalid resolve: source.samples=" << +sourceTexture->samples
+            << ", destination.samples=" << +destinationTexture->samples;
 
     FILAMENT_CHECK_PRECONDITION(sourceTexture->format == destinationTexture->format)
-            << "src and dst texture format don't match";
+            << "source and destination texture format don't match";
 
     FILAMENT_CHECK_PRECONDITION(!isDepthFormat(sourceTexture->format))
             << "can't resolve depth formats";
@@ -1120,10 +1120,19 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
             << "can't resolve stencil formats";
 
     FILAMENT_CHECK_PRECONDITION(any(destinationTexture->usage & TextureUsage::BLIT_DST))
-            << "texture doesn't have BLIT_DST";
+            << "destination texture doesn't have BLIT_DST";
 
     FILAMENT_CHECK_PRECONDITION(any(sourceTexture->usage & TextureUsage::BLIT_SRC))
-            << "texture doesn't have BLIT_SRC";
+            << "source texture doesn't have BLIT_SRC";
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
+            << "source texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
+            << "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::TextureBinding)
+            << "destination texture usage doesn't have wgpu::TextureUsage::TextureBinding";
 
     const wgpu::TextureFormat format{ sourceTexture->getViewFormat() };
     const wgpu::TextureViewDescriptor sourceTextureViewDescriptor{
@@ -1161,7 +1170,7 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
         .resolveTarget = destinationTextureView,
         .loadOp = wgpu::LoadOp::Load,
         .storeOp = wgpu::StoreOp::Store,
-        .clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
+        .clearValue = {}, // being explicit for consistent behavior
     };
     const wgpu::RenderPassDescriptor renderPassDescriptor{
         .label = "resolve_render_pass",

@@ -32,7 +32,8 @@ namespace filament::backend {
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, MRT const& colorAttachmentsMRT,
-        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo, TargetBufferFlags const& targetFlags)
+        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo,
+        TargetBufferFlags const& targetFlags)
     : HwRenderTarget{ width, height },
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
@@ -97,13 +98,15 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                 .r = params.clearColor.r,
                 .g = params.clearColor.g,
                 .b = params.clearColor.b,
-                .a = params.clearColor.a }});
+                .a = params.clearColor.a,
+            },
+        });
     } else {
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
-                mColorAttachmentDesc.push_back({
-                    .view = customColorTextureViews[i],
-                    .resolveTarget = nullptr, // We handle MSAA on the WebGPU driver's resolve function
+                mColorAttachmentDesc.push_back({ .view = customColorTextureViews[i],
+                    .resolveTarget =
+                            nullptr, // We handle MSAA on the WebGPU driver's resolve function
                     .loadOp =
                             WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
                     .storeOp = WebGPURenderTarget::getStoreOperation(params,
@@ -112,7 +115,9 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
                         .r = params.clearColor.r,
                         .g = params.clearColor.g,
                         .b = params.clearColor.b,
-                        .a = params.clearColor.a }});
+                        .a = params.clearColor.a,
+                    },
+                });
             }
         }
     }
