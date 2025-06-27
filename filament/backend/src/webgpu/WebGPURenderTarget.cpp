@@ -16,7 +16,11 @@
 
 #include "WebGPURenderTarget.h"
 
+#include "WebGPUTexture.h"
+
+#include "DriverBase.h"
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 #include <backend/TargetBufferInfo.h>
 
 #include <private/backend/BackendUtils.h>
@@ -26,14 +30,97 @@
 
 #include <webgpu/webgpu_cpp.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <functional>
+#include <string_view>
 
 namespace filament::backend {
+
+namespace {
+
+/**
+ * Panics if the number of samples in the original attachment textures do not match.
+ * @return The number of samples in the original attachment textures (the number/count in each one).
+ *         Returns 0 if there are no attachments.
+ */
+[[nodiscard]] uint8_t createMsaaSidecarTextures(const uint8_t renderTargetSampleCount,
+        const TargetBufferFlags targetFlags, MRT const& colorAttachments,
+        TargetBufferInfo const& depthAttachment, TargetBufferInfo const& stencilAttachment,
+        std::function<WebGPUTexture*(const Handle<HwTexture>)> const& getWebGPUTexture,
+        wgpu::Device const& device) {
+    struct Target final {
+        std::string_view name;
+        TargetBufferFlags flag{ TargetBufferFlags::NONE };
+        size_t colorIndex{ 0 };
+    };
+    // assuming 8 colors. hopefully the following static_assert will get tripped if another
+    // color ever gets added
+    static_assert(
+            (TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1 | TargetBufferFlags::COLOR2 |
+                    TargetBufferFlags::COLOR3 | TargetBufferFlags::COLOR4 |
+                    TargetBufferFlags::COLOR5 | TargetBufferFlags::COLOR6 |
+                    TargetBufferFlags::COLOR7) == TargetBufferFlags::COLOR_ALL);
+    const static std::array TARGETS{
+        Target{ .name = "COLOR0", .flag = TargetBufferFlags::COLOR0, .colorIndex = 0 },
+        Target{ .name = "COLOR1", .flag = TargetBufferFlags::COLOR1, .colorIndex = 1 },
+        Target{ .name = "COLOR2", .flag = TargetBufferFlags::COLOR2, .colorIndex = 2 },
+        Target{ .name = "COLOR3", .flag = TargetBufferFlags::COLOR3, .colorIndex = 3 },
+        Target{ .name = "COLOR4", .flag = TargetBufferFlags::COLOR4, .colorIndex = 4 },
+        Target{ .name = "COLOR5", .flag = TargetBufferFlags::COLOR5, .colorIndex = 5 },
+        Target{ .name = "COLOR6", .flag = TargetBufferFlags::COLOR6, .colorIndex = 6 },
+        Target{ .name = "COLOR7", .flag = TargetBufferFlags::COLOR7, .colorIndex = 7 },
+        Target{ .name = "DEPTH", .flag = TargetBufferFlags::DEPTH },
+        Target{ .name = "STENCIL", .flag = TargetBufferFlags::STENCIL },
+    };
+#ifndef NDEBUG
+    for (auto const& target: TARGETS) {
+        assert_invariant(target.colorIndex <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT &&
+                         "color index is >= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT, which should "
+                         "not be possible and could lead to us indexing into the colorAttachments "
+                         "array beyond its bounds.");
+    }
+#endif
+    bool firstAttachment{ true };
+    uint8_t sampleCountPerAttachment{ 0 };
+    for (auto const& target: TARGETS) {
+        if (any(targetFlags & target.flag)) {
+            const Handle<HwTexture> textureHandle{
+                target.flag == TargetBufferFlags::DEPTH
+                        ? depthAttachment.handle
+                        : (target.flag == TargetBufferFlags::STENCIL
+                                          ? stencilAttachment.handle
+                                          : colorAttachments[target.colorIndex].handle)
+            };
+            WebGPUTexture* const texture{ getWebGPUTexture(textureHandle) };
+            assert_invariant(texture != nullptr && "target flag indicate the use of an attachment "
+                                                   "for which we do not have a texture?");
+            if (firstAttachment) {
+                sampleCountPerAttachment = texture->samples;
+                firstAttachment = false;
+            }
+            FILAMENT_CHECK_PRECONDITION(texture->samples == sampleCountPerAttachment)
+                    << target.name << " attachment texture has " << +texture->samples
+                    << " but the other attachment(s) have " << +sampleCountPerAttachment;
+            if (renderTargetSampleCount > 1 && sampleCountPerAttachment == 1) {
+                texture->createMsaaSidecarTextureIfNotAlreadyCreated(renderTargetSampleCount,
+                        device);
+            }
+        }
+    }
+    assert_invariant(sampleCountPerAttachment);
+    return sampleCountPerAttachment;
+}
+
+}  // namespace
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, MRT const& colorAttachmentsMRT,
         Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo,
-        TargetBufferFlags const& targetFlags)
+        TargetBufferFlags const& targetFlags,
+        std::function<WebGPUTexture*(const Handle<HwTexture>)> const& getWebGPUTexture,
+        wgpu::Device const& device)
     : HwRenderTarget{ width, height },
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
@@ -41,8 +128,11 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
       mLayerCount{ layerCount },
       mColorAttachments{ colorAttachmentsMRT },
       mDepthAttachment{ depthAttachmentInfo },
-      mStencilAttachment{ stencilAttachmentInfo } {
-    // TODO consider making this an array
+      mStencilAttachment{ stencilAttachmentInfo },
+      mSampleCountPerAttachment{ createMsaaSidecarTextures(mSamples, mTargetFlags,
+              mColorAttachments, mDepthAttachment, mStencilAttachment, getWebGPUTexture, device) } {
+    // TODO consider possibly making this an array (that would avoid a heap allocation, but the
+    //      concern is the size limitation on the handle itself)
     mColorAttachmentDesc.reserve(MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
 }
 
@@ -52,8 +142,8 @@ WebGPURenderTarget::WebGPURenderTarget()
       mDefaultRenderTarget{ true },
       mTargetFlags{ TargetBufferFlags::NONE },
       mSamples{ 1 },
-      mLayerCount{ 1 }
-     {}
+      mLayerCount{ 1 },
+      mSampleCountPerAttachment{ 1 } {}
 
 wgpu::LoadOp WebGPURenderTarget::getLoadOperation(RenderPassParams const& params,
         const TargetBufferFlags bufferToOperateOn) {
@@ -77,8 +167,35 @@ wgpu::StoreOp WebGPURenderTarget::getStoreOperation(RenderPassParams const& para
 void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& outDescriptor,
         RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
         wgpu::TextureView const& defaultDepthStencilTextureView,
-        wgpu::TextureView const* customColorTextureViews, uint32_t customColorTextureViewCount,
-        wgpu::TextureView const& customDepthStencilTextureView) {
+        wgpu::TextureView const* customColorTextureViews,
+        wgpu::TextureView const* customColorMsaaSidecarTextureViews,
+        uint32_t customColorTextureViewCount,
+        wgpu::TextureView const& customDepthStencilTextureView,
+        wgpu::TextureView const& customDepthStencilMsaaSidecarTextureView) {
+    const bool hasMsaaSidecars{ (customColorTextureViewCount > 0 &&
+                                        customColorMsaaSidecarTextureViews[0]) ||
+                                customDepthStencilMsaaSidecarTextureView };
+    // either all the textures have MSAA sidecars or none of them do
+    if (hasMsaaSidecars) {
+        FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
+                customColorMsaaSidecarTextureViews + customColorTextureViewCount,
+                [](wgpu::TextureView const& msaaView) { return msaaView != nullptr; }))
+                << "A color or depth/stencil attachment texture has a MSAA sidecar but at least "
+                   "one other color attachment texture does not.";
+        FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView != nullptr)
+                << "The color attachment texture(s) have MSAA sidecar(s) but the depth/stencil "
+                   "texture does not.";
+    } else {
+        FILAMENT_CHECK_PRECONDITION(std::all_of(customColorMsaaSidecarTextureViews,
+                customColorMsaaSidecarTextureViews + customColorTextureViewCount,
+                [](wgpu::TextureView const& msaaView) { return msaaView == nullptr; }))
+                << "A color or depth/stencil attachment texture does not have a MSAA sidecar but "
+                   "at least one color attachment texture does.";
+        FILAMENT_CHECK_PRECONDITION(customDepthStencilMsaaSidecarTextureView == nullptr)
+                << "Custom color textures for the render target do not have MSAA sidecar(s) but "
+                   "the depth/stencil texture does.";
+    }
+
     mColorAttachmentDesc.clear();
 
     const bool hasDepth = any(mTargetFlags & TargetBufferFlags::DEPTH);
@@ -104,9 +221,10 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
     } else {
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
-                mColorAttachmentDesc.push_back({ .view = customColorTextureViews[i],
-                    .resolveTarget =
-                            nullptr, // We handle MSAA on the WebGPU driver's resolve function
+                const wgpu::TextureView msaaSidecar{ customColorMsaaSidecarTextureViews[i] };
+                mColorAttachmentDesc.push_back({
+                    .view = hasMsaaSidecars ? msaaSidecar : customColorTextureViews[i],
+                    .resolveTarget = hasMsaaSidecars ? customColorTextureViews[i] : nullptr,
                     .loadOp =
                             WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
                     .storeOp = WebGPURenderTarget::getStoreOperation(params,
@@ -132,7 +250,8 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             assert_invariant(depthStencilViewToUse);
         } else {
             if (customDepthStencilTextureView) {
-                depthStencilViewToUse = customDepthStencilTextureView;
+                depthStencilViewToUse = hasMsaaSidecars ? customDepthStencilMsaaSidecarTextureView
+                                                        : customDepthStencilTextureView;
             }
         }
 

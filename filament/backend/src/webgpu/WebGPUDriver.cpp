@@ -457,8 +457,13 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
         const TargetBufferFlags targetFlags, const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, const MRT color,
         const TargetBufferInfo depth, const TargetBufferInfo stencil) {
-    constructHandle<WebGPURenderTarget>(renderTargetHandle, width, height, samples, layerCount,
-            color, depth, stencil, targetFlags);
+    constructHandle<WebGPURenderTarget>(
+            renderTargetHandle, width, height, samples, layerCount, color, depth, stencil,
+            targetFlags,
+            [&](const Handle<HwTexture> textureHandle) {
+                return handleCast<WebGPUTexture>(textureHandle);
+            },
+            mDevice);
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {
@@ -819,10 +824,15 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
     wgpu::TextureView defaultDepthStencilView = nullptr;
     wgpu::TextureFormat defaultDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
+    const bool msaaSidecarsRequired{ renderTarget->getSamples() > 1 &&
+                                     renderTarget->getSampleCountPerAttachment() <= 1 };
+
     std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
+    std::array<wgpu::TextureView, customColorViews.size()> customColorMsaaSidecarViews{};
     uint32_t customColorViewCount = 0;
 
     wgpu::TextureView customDepthStencilView = nullptr;
+    wgpu::TextureView customDepthStencilMsaaSidecarTextureView = nullptr;
     wgpu::TextureFormat customDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
     mCurrentRenderTarget = renderTarget;
@@ -833,21 +843,17 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         defaultDepthStencilFormat = mSwapChain->getDepthFormat();
 
         if (any(renderTarget->getTargetFlags() & TargetBufferFlags::STENCIL) &&
-            !(defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Stencil8)) {
-            FILAMENT_CHECK_POSTCONDITION(false) << "Default render target requested stencil, but swap chain's depth format "
-                                                << (uint32_t)defaultDepthStencilFormat << " does not have a stencil aspect.";
+                !(hasStencil(defaultDepthStencilFormat))) {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Default render target requested stencil, but swap chain's depth format "
+                    << (uint32_t) defaultDepthStencilFormat << " does not have a stencil aspect.";
         }
 
         if (any(renderTarget->getTargetFlags() & TargetBufferFlags::DEPTH) &&
-            !(defaultDepthStencilFormat == wgpu::TextureFormat::Depth16Unorm ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32Float ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth24Plus ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8)) {
-            FILAMENT_CHECK_POSTCONDITION(false) << "Default render target requested depth, but swap chain's depth format "
-                                                << (uint32_t)defaultDepthStencilFormat << " does not have a depth aspect.";
+                !(hasDepth(defaultDepthStencilFormat))) {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Default render target requested depth, but swap chain's depth format "
+                    << (uint32_t) defaultDepthStencilFormat << " does not have a depth aspect.";
         }
     } else {
         // Resolve views for custom render target
@@ -863,8 +869,19 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << ".";
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
-                    customColorViews[customColorViewCount++] =
+                    customColorViews[customColorViewCount] =
                             colorTexture->getOrMakeTextureView(mipLevel, arrayLayer);
+                    if (msaaSidecarsRequired) {
+                        const wgpu::TextureView msaaSidecarView{
+                            colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
+                                    renderTarget->getSamples(), mipLevel, arrayLayer)
+                        };
+                        FILAMENT_CHECK_POSTCONDITION(msaaSidecarView)
+                                << "Could not get a required MSAA sidecar texture view for color "
+                                << customColorViewCount << "?";
+                        customColorMsaaSidecarViews[customColorViewCount] = msaaSidecarView;
+                    }
+                    customColorViewCount++;
                 }
             }
         }
@@ -896,15 +913,21 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         if (depthStencilSourceHandle) {
             auto dsTexture = handleCast<WebGPUTexture>(depthStencilSourceHandle);
             if (dsTexture) {
-                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel, depthStencilArrayLayer);
+                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel,
+                        depthStencilArrayLayer);
+                if (msaaSidecarsRequired) {
+                    customDepthStencilMsaaSidecarTextureView =
+                            dsTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
+                                    renderTarget->getSamples(), depthStencilMipLevel,
+                                    depthStencilArrayLayer);
+                    FILAMENT_CHECK_POSTCONDITION(customDepthStencilMsaaSidecarTextureView)
+                            << "Could not get a required MSAA sidecar texture view for "
+                               "depth/stencil?";
+                }
                 customDepthStencilFormat = dsTexture->getViewFormat();
 
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::STENCIL) &&
-                        !(customDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth32FloatStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Stencil8)) {
+                        !(hasStencil(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false)
                             << "Custom render target requested stencil, but the provided texture"
                                "format number"
@@ -912,14 +935,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << " does not have a stencil aspect.";
                 }
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::DEPTH) &&
-                        !(customDepthStencilFormat == wgpu::TextureFormat::Depth16Unorm ||
-                                customDepthStencilFormat == wgpu::TextureFormat::Depth32Float ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth24Plus ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth24PlusStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth32FloatStencil8)) {
+                        !(hasDepth(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false) << "Custom render target requested depth, "
                                                            "but the provided texture format number"
                                                         << (uint32_t) customDepthStencilFormat
@@ -934,8 +950,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             defaultColorView,
             defaultDepthStencilView,
             customColorViews.data(),
+            customColorMsaaSidecarViews.data(),
             customColorViewCount,
-            customDepthStencilView);
+            customDepthStencilView,
+            customDepthStencilMsaaSidecarTextureView);
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
 
@@ -976,13 +994,13 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     wgpu::TextureFormat depthFormat = mSwapChain->getDepthFormat();
     TargetBufferFlags newTargetFlags = filament::backend::TargetBufferFlags::NONE;
 
-    //Assuming Color and Depth are always present.
+    //Assuming Color always present in default render target.
     newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
     if (depthFormat != wgpu::TextureFormat::Undefined) {
-        newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
-
-        if (depthFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                depthFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
+        if (hasDepth(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
+        }
+        if (hasStencil(depthFormat)) {
             newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
         }
     }
@@ -1069,102 +1087,33 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
-
     FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
             << "Resolve assumes there is a valid command encoder to piggyback on.";
     FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
             << "Resolve cannot be called during an existing render pass";
-
     const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
     const auto destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
-
     assert_invariant(sourceTexture);
     assert_invariant(destinationTexture);
-
-    FILAMENT_CHECK_PRECONDITION(destinationTexture->width == sourceTexture->width &&
-                                destinationTexture->height == sourceTexture->height)
-            << "invalid resolve: source and destination sizes don't match";
-
-    FILAMENT_CHECK_PRECONDITION(sourceTexture->samples > 1 && destinationTexture->samples == 1)
-            << "invalid resolve: source.samples=" << +sourceTexture->samples
-            << ", destination.samples=" << +destinationTexture->samples;
-
-    FILAMENT_CHECK_PRECONDITION(sourceTexture->format == destinationTexture->format)
-            << "source and destination texture format don't match";
-
-    FILAMENT_CHECK_PRECONDITION(!isDepthFormat(sourceTexture->format))
-            << "can't resolve depth formats";
-
-    FILAMENT_CHECK_PRECONDITION(!isStencilFormat(sourceTexture->format))
-            << "can't resolve stencil formats";
-
-    FILAMENT_CHECK_PRECONDITION(any(destinationTexture->usage & TextureUsage::BLIT_DST))
-            << "destination texture doesn't have BLIT_DST";
-
-    FILAMENT_CHECK_PRECONDITION(any(sourceTexture->usage & TextureUsage::BLIT_SRC))
-            << "source texture doesn't have BLIT_SRC";
-
-    FILAMENT_CHECK_PRECONDITION(sourceTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
-            << "source texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
-
-    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
-            << "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
-
-    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::TextureBinding)
-            << "destination texture usage doesn't have wgpu::TextureUsage::TextureBinding";
-
-    const wgpu::TextureFormat format{ sourceTexture->getViewFormat() };
-    const wgpu::TextureViewDescriptor sourceTextureViewDescriptor{
-        .label = "resolve_source_texture_view",
-        .format = format,
-        .dimension = sourceTexture->getViewDimension(),
-        .baseMipLevel = sourceLevel,
-        .mipLevelCount = 1,
-        .baseArrayLayer = sourceLayer,
-        .arrayLayerCount = 1,
-        .aspect = sourceTexture->getAspect(),
-        .usage = sourceTexture->getTexture().GetUsage(),
+    const WebGPUMsaaTextureResolver::ResolveRequest request{
+        .commandEncoder = mCommandEncoder,
+        .viewFormat = sourceTexture->getViewFormat(),
+        .source = {
+            .texture = sourceTexture->getTexture(),
+            .viewDimension = sourceTexture->getViewDimension(),
+            .mipLevel = sourceLevel,
+            .layer = sourceLayer,
+            .aspect = sourceTexture->getAspect(),
+        },
+        .destination = {
+            .texture = destinationTexture->getTexture(),
+            .viewDimension = destinationTexture->getViewDimension(),
+            .mipLevel = destinationLevel,
+            .layer = destinationLayer,
+            .aspect = destinationTexture->getAspect(),
+        },
     };
-    const wgpu::TextureView sourceTextureView{ sourceTexture->getTexture().CreateView(
-            &sourceTextureViewDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(sourceTextureView) << "Failed to create wgpu::TextureView sourceTextureView";
-    const wgpu::TextureViewDescriptor destinationTextureViewDescriptor{
-        .label = "resolve_destination_texture_view",
-        .format = format,
-        .dimension = destinationTexture->getViewDimension(),
-        .baseMipLevel = destinationLevel,
-        .mipLevelCount = 1,
-        .baseArrayLayer = destinationLayer,
-        .arrayLayerCount = 1,
-        .aspect = destinationTexture->getAspect(),
-        .usage = destinationTexture->getTexture().GetUsage(),
-    };
-
-    const wgpu::TextureView destinationTextureView{ destinationTexture->getTexture().CreateView(
-            &destinationTextureViewDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(destinationTextureView) << "Failed to create wgpu::TextureView destinationTextureView.";
-    const wgpu::RenderPassColorAttachment colorAttachment{
-        .view = sourceTextureView,
-        .depthSlice = wgpu::kDepthSliceUndefined, // being explicit for consistent behavior
-        .resolveTarget = destinationTextureView,
-        .loadOp = wgpu::LoadOp::Load,
-        .storeOp = wgpu::StoreOp::Store,
-        .clearValue = {}, // being explicit for consistent behavior
-    };
-    const wgpu::RenderPassDescriptor renderPassDescriptor{
-        .label = "resolve_render_pass",
-        .colorAttachmentCount = 1,
-        .colorAttachments = &colorAttachment,
-        .depthStencilAttachment = nullptr, // being explicit for consistent behavior
-        .occlusionQuerySet = nullptr,      // being explicit for consistent behavior
-        .timestampWrites = nullptr,        // being explicit for consistent behavior
-    };
-
-    const wgpu::RenderPassEncoder renderPassEncoder{ mCommandEncoder.BeginRenderPass(
-            &renderPassDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(renderPassEncoder)
-            << "Failed to create wgpu::RenderPassEncoder for WebGPUDriver::resolve";
-    renderPassEncoder.End(); // only the implicit resolve is happening in the pass
+    mMsaaTextureResolver.resolve(request);
 }
 
 void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
