@@ -402,7 +402,8 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
       mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              src->target) } {}
+              src->target) },
+      mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
 
 bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::TextureFormat format) {
     return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
@@ -415,6 +416,62 @@ wgpu::TextureView WebGPUTexture::getOrMakeTextureView(const uint8_t mipLevel,
     //  but this function (and its callers) expects a single-slice view.
     //  Returning the whole texture view for a single-slice request seems wrong.
     return makeTextureView(mipLevel, 1, arrayLayer, 1, target);
+}
+
+void WebGPUTexture::createMsaaSidecarTexture(const uint8_t samples, wgpu::Device const& device) {
+    if (samples <= 1) {
+        FWGPU_LOGW << "Requesting to create a MSAA sidecar texture for " << +samples
+                   << " samples? Ignoring request.";
+        return;
+    }
+    if (mMsaaSidecarTexture) {
+        FILAMENT_CHECK_PRECONDITION(mMsaaSidecarTexture.GetSampleCount() == samples)
+                << "An MSAA sidecar texture has already been created for this texture, but with a "
+                   "different sample count ("
+                << mMsaaSidecarTexture.GetSampleCount() << ") than requested (" << +samples << ")";
+        return; // we already have the sidecar created
+    }
+    FILAMENT_CHECK_PRECONDITION(mTexture.GetSampleCount() == 1)
+            << "Creating an MSAA sidecar texture for a multi-sampled texture?";
+    const wgpu::TextureDescriptor descriptor{
+        .label = "msaa_sidecar_texture",
+        .usage = mTexture.GetUsage(),
+        .dimension = mTexture.GetDimension(),
+        .size = {
+            .width = mTexture.GetWidth(),
+            .height = mTexture.GetHeight(),
+            .depthOrArrayLayers = mTexture.GetDepthOrArrayLayers(),
+        },
+        .format = mTexture.GetFormat(),
+        .mipLevelCount = mTexture.GetMipLevelCount(),
+        .sampleCount = samples,
+        .viewFormatCount = 1,
+        .viewFormats = &mViewFormat,
+    };
+    mMsaaSidecarTexture = device.CreateTexture(&descriptor);
+    FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture) << "Failed to create MSAA sidecar texture";
+}
+
+wgpu::TextureView WebGPUTexture::makeMsaaSidecarTextureViewIfApplicable(const uint8_t mipLevel,
+        const uint32_t arrayLayer) const {
+    if (mMsaaSidecarTexture == nullptr) {
+        return nullptr;
+    }
+    const wgpu::TextureViewDescriptor descriptor{
+        .label = "msaa_sidecar_texture_view",
+        .format = mViewFormat,
+        .dimension = mDimension,
+        .baseMipLevel = mipLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = arrayLayer,
+        .arrayLayerCount = 1,
+        .aspect = mAspect,
+        .usage = mViewUsage,
+    };
+    const wgpu::TextureView textureView{ mMsaaSidecarTexture.CreateView(&descriptor) };
+    FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture)
+            << "Failed to create MSAA sidecar texture view";
+    return textureView;
 }
 
 wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {
