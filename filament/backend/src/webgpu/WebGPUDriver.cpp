@@ -719,27 +719,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
 
     const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
     size_t dataSize = data->size;
-    std::unique_ptr<uint8_t[]> paddedBuffer;
-
-    if (bytesPerRow % 256 != 0) {
-        uint32_t padding = 256 - (bytesPerRow % 256);
-        uint32_t paddedBytesPerRow = bytesPerRow + padding;
-
-        size_t paddedBufferSize = static_cast<size_t>(paddedBytesPerRow) * height * depth;
-        paddedBuffer = std::make_unique<uint8_t[]>(paddedBufferSize);
-        uint8_t* dest = paddedBuffer.get();
-
-        for (uint32_t z = 0; z < depth; ++z) {
-            for (uint32_t y = 0; y < height; ++y) {
-                std::memcpy(dest, dataBuff, bytesPerRow);
-                dest += paddedBytesPerRow;
-                dataBuff += bytesPerRow;
-            }
-        }
-        dataBuff = paddedBuffer.get();
-        dataSize = paddedBufferSize;
-        bytesPerRow = paddedBytesPerRow;
-    }
 
     auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
 
