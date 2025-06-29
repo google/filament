@@ -3012,9 +3012,15 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                 data.input = builder.sample(input);
                 data.output = builder.createTexture("upscaled output", outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                TargetBufferFlags clearFlags = TargetBufferFlags::DEPTH;
+                if (translucent) {
+                    clearFlags |= TargetBufferFlags::COLOR0;
+                }
+
                 builder.declareRenderPass(builder.getName(data.output), {
                         .attachments = { .color = { data.output } },
-                        .clearFlags = TargetBufferFlags::DEPTH });
+                        .clearFlags = clearFlags });
             },
             [this, vp, translucent, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
