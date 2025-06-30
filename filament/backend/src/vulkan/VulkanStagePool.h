@@ -160,14 +160,14 @@ class VulkanStageImage {
         RecycleFn mOnRecycleFn;
     };
 
-    VulkanStageImage(VkFormat format, uint32_t width, uint32_t height, VmaAllocation memory, VkImage image, uint64_t lastAccessed)
+    VulkanStageImage(VkFormat format, uint32_t width, uint32_t height, VmaAllocation memory,
+            VkImage image, uint64_t lastAccessed)
         : mFormat(format),
           mWidth(width),
           mHeight(height),
           mMemory(memory),
           mImage(image),
-          mLastAccessed(lastAccessed)
-    {}
+          mLastAccessed(lastAccessed) {}
 
     VulkanStageImage(const VulkanStageImage& other) = delete;
     VulkanStageImage(VulkanStageImage&& other) = delete;

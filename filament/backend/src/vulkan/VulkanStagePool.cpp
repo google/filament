@@ -156,8 +156,8 @@ void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
     delete stage;
 }
 
-fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImage(PixelDataFormat format, PixelDataType type,
-        uint32_t width, uint32_t height) {
+fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImage(
+        PixelDataFormat format, PixelDataType type, uint32_t width, uint32_t height) {
     // Helper lambda so we can return stage images wrapped as resources that can
     // be held by command buffers until no longer needed.
     auto wrapAsResource = [this](VulkanStageImage* image) {
