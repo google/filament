@@ -257,6 +257,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
             src/webgpu/WebGPUBufferBase.cpp
             src/webgpu/WebGPUBufferBase.h
             src/webgpu/WebGPUBufferObject.cpp
@@ -268,6 +269,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUDescriptorSetLayout.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
+            src/webgpu/WebGPUFence.cpp
+            src/webgpu/WebGPUFence.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
             src/webgpu/WebGPUPipelineCreation.cpp
@@ -502,10 +505,19 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
 
+# ==================================================================================================
+# Linker flags
+# ==================================================================================================
+
 target_link_libraries(${TARGET} PRIVATE
-        ${OSMESA_LINKER_FLAGS}
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
+
+if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
+    # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
+    # WebGPU to build on linux.
+    target_link_libraries(${TARGET} PRIVATE -lxcb)
+endif()
 
 # ==================================================================================================
 # Installation

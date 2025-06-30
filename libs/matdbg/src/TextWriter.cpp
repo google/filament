@@ -196,6 +196,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         uint64_t fieldSize;
         uint8_t fieldType;
         uint8_t fieldPrecision;
+        uint8_t fieldAssociatedSampler;
 
         if (!uib.read(&fieldName)) {
             return false;
@@ -213,6 +214,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
+        if (!uib.read(&fieldAssociatedSampler)) {
+            return false;
+        }
+
         text << "    "
                   << setw(alignment) << fieldName.c_str()
                   << setw(shortAlignment) << toString(UniformType(fieldType))
@@ -227,6 +232,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;
+        bool fieldUnfilterable;
         bool fieldMultisample;
 
         if (!sib.read(&fieldName)) {
@@ -245,6 +251,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
 
         if (!sib.read(&fieldPrecision)) {
+            return false;
+        }
+
+        if (!sib.read(&fieldUnfilterable)) {
             return false;
         }
 

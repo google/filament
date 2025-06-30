@@ -522,8 +522,10 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Note: the following stageSegment must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
     // staging buffer pool.
+    uint8_t alignment =
+            fvkutils::getTexelBlockSize(fvkutils::getVkFormat(hostData->format, hostData->type));
     fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
-            mState->mStagePool.acquireStage(writeSize);
+            mState->mStagePool.acquireStage(writeSize, alignment);
     assert_invariant(stageSegment->memory());
     adjustedMemcpy(stageSegment->mapping(), *hostData, width, height, depth);
     vmaFlushAllocation(mState->mAllocator, stageSegment->memory(), stageSegment->offset(),

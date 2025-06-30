@@ -82,10 +82,14 @@ class GoldenManager:
     self._git_exec('checkout main')
     self._git_exec('rebase')
 
-  def _git_exec(self, cmd):
-    return execute(f'git {cmd}', cwd=self._assets_dir(), capture_output=False)
+  def _git_exec(self, cmd, capture_output=False):
+    return execute(f'git {cmd}', cwd=self._assets_dir(),
+                   capture_output=capture_output)
 
-  # tag represent a hash in the filament repo that this merge is associated with
+  # Merge a local branch to the main branch.
+  #  - `tag` is a hash in the filament repo that this merge is associated with
+  #  - `push_to_remote` indicates that the local changes should be pushed to the
+  #    remote branch.
   def merge_to_main(self, branch, tag, push_to_remote=False):
     self.update()
     assets_dir = self._assets_dir()
@@ -108,6 +112,12 @@ class GoldenManager:
       self._git_exec(f'push origin main')
       self.update()
 
+  # Create a branch on the local repo by copying the content from a source directory.
+  # The change/diff is indicated by the 'updates' and the 'deletes' list,
+  #  - Files in 'updates' need to be present in both src_dir and in the repo.
+  #  - Files in 'deletes' only need to be present in the repo.
+  # If caller wants the changes to be pushed to remote, set the `push_to_remote`
+  # value to True.
   def source_from(self, src_dir, commit_msg, branch,
                   updates=[], deletes=[], push_to_remote=False):
     assets_dir = self._assets_dir()
@@ -139,12 +149,16 @@ class GoldenManager:
       self._git_exec(f'push -f origin {branch}')
       self.update()
 
+  # Download the content of a branch to a directory.
   def download_to(self, dest_dir, branch='main'):
     self._git_exec(f'checkout {branch}')
     assets_dir = self._assets_dir()
     mkdir_p(dest_dir)
     rdiff_dir = os.path.join(assets_dir, GOLDENS_DIR)
     shutil.copytree(rdiff_dir, dest_dir, dirs_exist_ok=True)
+    code, o = self._git_exec(f'rev-parse HEAD', capture_output=True)
+    with open(os.path.join(dest_dir, 'GIT_COMMIT_HASH'), 'w') as f:
+      f.write(o)
 
 # The main entry point will enable download content of a branch to a directory
 if __name__ == "__main__":

@@ -21,50 +21,27 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/Panic.h>
-#include <utils/ostream.h>
-
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <dawn/webgpu_cpp_print.h>
-#endif
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 #include <sstream>
-#endif
+#include <string>
 #include <string_view>
 
 /**
  * Reusable set of convenience functions for strings -- generally string views, literals, &
- * streaming -- used in the WebGPU backend
+ * strings -- used in the WebGPU backend
  */
 
 namespace filament::backend {
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
-/**
- * Convenience template to print WGPU types (which don't support Filament's utils::io::ostream)
- * @tparam WebGPUPrintable e.g. wgpu::FeatureName type
- * @param out stream to print to
- * @param printable the instance to print
- * @return the stream printed to
- *
- * Example usage (because including the template operator override itself does not compile):
- * #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
- * utils::io::ostream& operator<<(utils::io::ostream& out,
- *       const wgpu::FeatureName featureName) noexcept {
- *   return streamInsertWebGPUPrintable(out, featureName);
- * }
- * #endif
- */
 template<typename WebGPUPrintable>
-utils::io::ostream& streamInsertWebGPUPrintable(utils::io::ostream& out,
-        const WebGPUPrintable printable) {
-    std::stringstream printableStream;
-    printableStream << printable;
-    out << printableStream.str();
-    return out;
+[[nodiscard]] inline std::string webGPUPrintableToString(const WebGPUPrintable printable) {
+    std::stringstream out;
+    out << printable;
+    return out.str();
 }
 #endif
 
@@ -115,46 +92,17 @@ utils::io::ostream& streamInsertWebGPUPrintable(utils::io::ostream& out,
     }
 }
 
-/**
- * Convenience template to print wgpu::RequestAdapterOptions
- * @tparam STREAM_TYPE useful namely for streaming to either an utils::io::ostream OR
- * utils::details::PanicStream, but also for any kind of stream
- * @param out stream to print to
- * @param options instance to be printed
- * @return stream printed to
- *
- * Example usage (because including the template operator override itself does not compile):
- * template<typename STREAM_TYPE>
- * STREAM_TYPE& operator<<(STREAM_TYPE& out, wgpu::RequestAdapterOptions const& options) noexcept {
- *   return streamInsertRequestAdapterOptions(out, options);
- * }
- */
-template<typename STREAM_TYPE>
-STREAM_TYPE& streamInsertRequestAdapterOptions(STREAM_TYPE& out,
-        wgpu::RequestAdapterOptions const& options) noexcept {
+[[nodiscard]] inline std::string adapterOptionsToString(
+        wgpu::RequestAdapterOptions const& options) {
+    std::stringstream out;
     out << "power preference " << powerPreferenceToString(options.powerPreference)
         << " force fallback adapter " << bool(options.forceFallbackAdapter) << " backend type "
         << backendTypeToString(options.backendType);
-    return out;
+    return out.str();
 }
 
-/**
- * Convenience template to print wgpu::AdapterInfo
- * @tparam STREAM_TYPE useful namely for streaming to either an utils::io::ostream OR
- * utils::details::PanicStream, but also for any kind of stream
- * @param out stream to print to
- * @param options instance to be printed
- * @return stream printed to
- *
- * Example usage (because including the template operator override itself does not compile):
- * template<typename STREAM_TYPE>
- * STREAM_TYPE& operator<<(STREAM_TYPE& out, wgpu::AdapterInfo const& info) noexcept {
- *   return streamInsertRequestAdapterInfo(out, info);
- * }
- */
-template<class STREAM_TYPE>
-STREAM_TYPE& streamInsertRequestAdapterInfo(STREAM_TYPE& out,
-        wgpu::AdapterInfo const& info) noexcept {
+[[nodiscard]] inline std::string adapterInfoToString(wgpu::AdapterInfo const& info) {
+    std::stringstream out;
     out << "vendor (" << info.vendorID << ") '" << info.vendor
         << "' device (" << info.deviceID << ") '" << info.device
         << "' adapter " << adapterTypeToString(info.adapterType)
@@ -162,7 +110,7 @@ STREAM_TYPE& streamInsertRequestAdapterInfo(STREAM_TYPE& out,
         << " architecture '" << info.architecture
         << "' subgroupMinSize " << info.subgroupMinSize
         << " subgroupMaxSize " << info.subgroupMaxSize;
-    return out;
+    return out.str();
 }
 
 [[nodiscard]] constexpr std::string_view deviceLostReasonToString(
@@ -175,7 +123,7 @@ STREAM_TYPE& streamInsertRequestAdapterInfo(STREAM_TYPE& out,
     }
 }
 
-[[nodiscard]] constexpr std::string_view filamentShaderStageToString(ShaderStage stage) {
+[[nodiscard]] constexpr std::string_view filamentShaderStageToString(const ShaderStage stage) {
     switch (stage) {
         case ShaderStage::VERTEX:   return "vertex";
         case ShaderStage::FRAGMENT: return "fragment";

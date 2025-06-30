@@ -14,18 +14,30 @@
  * limitations under the License.
  */
 
-#ifndef TNT_SAMPLES_ARGUMENTS_H
-#define TNT_SAMPLES_ARGUMENTS_H
+#ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
+#define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
-#include <filament/Engine.h>
+#include "DriverBase.h"
+#include <backend/DriverEnums.h>
 
-#include <string>
+#include <atomic>
 
-namespace samples {
+namespace wgpu {
+class Queue;
+} // namespace wgpu
 
-filament::Engine::Backend parseArgumentsForBackend(int argc, char* argv[]);
-filament::Engine::Backend parseArgumentsForBackend(const std::string& backend);
-std::string getBackendAPIArgumentsUsage();
+namespace filament::backend {
 
-} // namespace samples
-#endif //TNT_SAMPLES_ARGUMENTS_H
+class WebGPUFence final : public HwFence {
+public:
+    [[nodiscard]] FenceStatus getStatus();
+
+    void addMarkerToQueueState(wgpu::Queue const&);
+
+private:
+    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
+};
+
+} // namespace filament::backend
+
+#endif // TNT_FILAMENT_BACKEND_WEBGPUFENCE_H

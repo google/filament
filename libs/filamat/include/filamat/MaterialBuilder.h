@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <mutex>
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -323,8 +324,8 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool multisample = false,
-            const char* transformName = "",
+            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool unfilterable = false,
+            bool multisample = false, const char* transformName = "",
             ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS);
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
@@ -658,17 +659,39 @@ public:
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
-                bool ms, const char* tn, ShaderStageFlags s)
-            : name(paramName), size(1), precision(p), samplerType(t), format(f),
-              parameterType(SAMPLER), multisample(ms), transformName(tn), stages(s) { }
+                bool unfilterable, bool ms, const char* tn, ShaderStageFlags s)
+            : name(paramName),
+              size(1),
+              precision(p),
+              samplerType(t),
+              format(f),
+              unfilterable(unfilterable),
+              multisample(ms),
+              transformName(tn),
+              stages(s),
+              parameterType(SAMPLER) {}
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
-                : name(paramName), size(typeSize), uniformType(t), precision(p), parameterType(UNIFORM) { }
+            : name(paramName),
+              size(typeSize),
+              uniformType(t),
+              precision(p),
+              format{ 0 },
+              unfilterable(false),
+              multisample(false),
+              parameterType(UNIFORM) {}
 
         // Subpass
         Parameter(const char* paramName, SubpassType t, SamplerFormat f, ParameterPrecision p)
-                : name(paramName), size(1), precision(p), subpassType(t), format(f), parameterType(SUBPASS) { }
+            : name(paramName),
+              size(1),
+              precision(p),
+              subpassType(t),
+              format(f),
+              unfilterable(false),
+              multisample(false),
+              parameterType(SUBPASS) {}
 
         utils::CString name;
         size_t size;
@@ -677,6 +700,7 @@ public:
         SamplerType samplerType;
         SubpassType subpassType;
         SamplerFormat format;
+        bool unfilterable;
         bool multisample;
         utils::CString transformName;
         ShaderStageFlags stages;

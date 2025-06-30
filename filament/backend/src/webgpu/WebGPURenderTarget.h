@@ -34,44 +34,41 @@ public:
 
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
-            Attachment const& stencilAttachment);
+            Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags);
 
     // Default constructor for the default render target
     WebGPURenderTarget();
 
-    // Updated signature: takes resolved views for custom RTs, and default views for default RT
     void setUpRenderPassAttachments(
             wgpu::RenderPassDescriptor& outDescriptor,
             RenderPassParams const& params,
             // For default render target:
             wgpu::TextureView const& defaultColorTextureView,
             wgpu::TextureView const& defaultDepthStencilTextureView,
-            wgpu::TextureFormat const& defaultDepthStencilFormat,
             // For custom render targets:
             wgpu::TextureView const* customColorTextureViews, // Array of views
             uint32_t customColorTextureViewCount,
-            wgpu::TextureView const& customDepthTextureView,
-            wgpu::TextureView const& customStencilTextureView,
-            wgpu::TextureFormat customDepthFormat,
-            wgpu::TextureFormat customStencilFormat);
+            wgpu::TextureView const& customDepthStencilTextureView);
 
     [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
     [[nodiscard]] uint8_t getLayerCount() const { return mLayerCount; }
 
-    // Accessors for the driver to get stored attachment info
     [[nodiscard]] MRT const& getColorAttachmentInfos() const { return mColorAttachments; }
     [[nodiscard]] Attachment const& getDepthAttachmentInfo() const { return mDepthAttachment; }
     [[nodiscard]] Attachment const& getStencilAttachmentInfo() const { return mStencilAttachment; }
 
-    // Static helpers for load/store operations
     [[nodiscard]] static wgpu::LoadOp getLoadOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
     [[nodiscard]] static wgpu::StoreOp getStoreOperation(RenderPassParams const& params,
             TargetBufferFlags buffer);
 
+    [[nodiscard]] TargetBufferFlags getTargetFlags() const { return mTargetFlags; }
+    void setTargetFlags( TargetBufferFlags value) { mTargetFlags = value; }
+
 private:
     bool mDefaultRenderTarget = false;
+    TargetBufferFlags mTargetFlags = TargetBufferFlags::NONE;
     uint8_t mSamples = 1;
     uint8_t mLayerCount = 1;
 
@@ -82,8 +79,8 @@ private:
     Attachment mStencilAttachment{};
 
     // Cached descriptors for the render pass
-    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDescriptors;
-    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDescriptor{};
+    std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDesc;
+    wgpu::RenderPassDepthStencilAttachment mDepthStencilAttachmentDesc{};
     bool mHasDepthStencilAttachment = false;
 };
 

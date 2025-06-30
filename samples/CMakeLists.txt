@@ -222,6 +222,8 @@ target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 add_library(samples-common STATIC
     common/arguments.cpp
+    common/configuration.h
+    common/configuration.cpp
 )
 
 target_include_directories(samples-common PRIVATE

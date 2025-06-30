@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.62.0
+
+- Add new `unfilterable` field to Filament Material's `sampler` [⚠️ **New Material Version**]
+
 ## v1.61.2
 
 - samples: samples now have a CLI to select backend api

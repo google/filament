@@ -116,7 +116,7 @@ public:
      * Destroys the object D at Handle<B> and construct a new D in its place
      * e.g.:
      *  Handle<ConcreteTexture> h = allocateAndConstruct(w, h);
-     *  ConcreteTexture* p = reconstruct(h, w, h);
+     *  ConcreteTexture* p = destroyAndConstruct(h, w, h);
      */
     template<typename D, typename B, typename ... ARGS>
     std::enable_if_t<std::is_base_of_v<B, D>, D>*

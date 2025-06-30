@@ -138,7 +138,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
-          path: ./out/renderdiff_tests
+          path: ./out/renderdiff
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu

@@ -17,6 +17,7 @@
 #ifndef TNT_IMAGE_EXPECTATIONS_H
 #define TNT_IMAGE_EXPECTATIONS_H
 
+#include <filesystem>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -51,12 +52,12 @@ public:
     bool isSrgb() const;
     uint32_t expectedHash() const;
 
-    static std::string actualDirectoryPath();
+    static std::filesystem::path actualDirectoryPath();
     std::string actualFileName() const;
-    std::string actualFilePath() const;
-    static std::string expectedDirectoryPath();
+    std::filesystem::path actualFilePath() const;
+    static std::filesystem::path expectedDirectoryPath();
     std::string expectedFileName() const;
-    std::string expectedFilePath() const;
+    std::filesystem::path expectedFilePath() const;
     const std::string filePrefix() const;
 
 private:

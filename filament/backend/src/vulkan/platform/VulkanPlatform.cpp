@@ -832,6 +832,9 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         context.mPhysicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
     }
 
+    // TODO: Add support of VK_KHR_global_priority with `driverConfig.gpuContextPriority`
+    // in VulkanPlatform::createDriver.
+
     ExtensionSet deviceExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {

@@ -300,19 +300,19 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
     return parameter(name, 1, type, precision);
 }
 
-
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision, bool multisample,
+        SamplerFormat format, ParameterPrecision precision, bool unfilterable, bool multisample,
         const char* transformName, ShaderStageFlags stages) {
-    FILAMENT_CHECK_PRECONDITION(!multisample ||
-            (format != SamplerFormat::SHADOW &&
-                    (samplerType == SamplerType::SAMPLER_2D ||
-                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
+    FILAMENT_CHECK_PRECONDITION(
+            !multisample || (format != SamplerFormat::SHADOW &&
+                                    (samplerType == SamplerType::SAMPLER_2D ||
+                                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
             << "multisample samplers only possible with SAMPLER_2D or SAMPLER_2D_ARRAY,"
                " as long as type is not SHADOW";
 
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
-    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample, transformName, stages };
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, unfilterable,
+        multisample, transformName, stages };
     return *this;
 }
 
@@ -639,10 +639,12 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
-                    param.format, param.precision, param.multisample, param.stages);
+                    param.format, param.precision, param.unfilterable, param.multisample,
+                    param.stages);
             if (!param.transformName.empty()) {
-                ibb.add({{{ param.transformName.data(), param.transformName.size() }, uint8_t(binding),
-                          0, UniformType::MAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
+                ibb.add({ { { param.transformName.data(), param.transformName.size() },
+                    uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,
+                    FeatureLevel::FEATURE_LEVEL_0 } });
             }
             binding++;
         } else if (param.isUniform()) {
