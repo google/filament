@@ -1,0 +1,37 @@
+{
+    "version": 2,
+    "legal": [
+        {
+            "license": "LicenseRef-CC-BY-TM",
+            "licenseUrl": "",
+            "artist": "Cesium",
+            "year": "2017",
+            "owner": "Cesium",
+            "what": "Everything",
+            "text": "CC-BY 4.0 International with Trademark Limitations",
+            "spdx": "LicenseRef-CC-BY-TM",
+            "icon": "https://licensebuttons.net/l/by/3.0/88x31.png"
+        },
+        {
+            "license": "LicenseRef-LegalMark-Cesium",
+            "licenseUrl": "",
+            "artist": "Non-copyrightable logo",
+            "year": "2015",
+            "owner": "Cesium",
+            "what": "Cesium logo",
+            "text": "Cesium Trademark or Logo",
+            "spdx": "LicenseRef-LegalMark-Cesium",
+            "icon": ""
+        }
+    ],
+    "tags": [
+        "core",
+        "issues",
+        "testing"
+    ],
+    "screenshot": "screenshot/screenshot.png",
+    "name": "Box Textured",
+    "path": "./Models/BoxTextured",
+    "summary": "Box with a power-of-2 texture. [Issues: non-Khronos mark]",
+    "createReadme": true
+}

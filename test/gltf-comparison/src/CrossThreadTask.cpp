@@ -14,27 +14,4 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-
-#include <thread>
-
-#include "RunOnMain.h"
-
-int main(int argc, char** argv) {
-    testing::InitGoogleTest(&argc, argv);
-
-    int testResult = -1;
-
-    std::thread testThread([&](){
-        testResult = RUN_ALL_TESTS();
-        RunOnMain::sTask.setClosed();
-    });
-
-    while (!RunOnMain::sTask.isClosed()) {
-        RunOnMain::sTask.runTask();
-    }
-
-    testThread.join();
-
-    return testResult;
-}
+#include "CrossThreadTask.h"

@@ -34,7 +34,13 @@
 
 #include <utils/EntityManager.h>
 
+#include "absl/strings/str_format.h"
+
 #include "ImageExpectations.h"
+#include "RunOnMain.h"
+
+#include <atomic>
+#include <optional>
 
 using namespace filament;
 using utils::Entity;
@@ -51,119 +57,129 @@ struct App {
     Entity renderable;
 };
 
-struct Vertex {
-    filament::math::float2 position;
-    uint32_t color;
+class CompareGLTFContext {
+public:
+    CompareGLTFContext();
+    ~CompareGLTFContext();
+
+    using Command = std::function<void(Engine*, View*, Scene*, Renderer*)>;
+
+    void postRender(Engine* engine, View* view, Scene* scene, Renderer* renderer);
+
+    void addPostRenderCommand(Command command);
+
+    App mApp;
+
+    CrossThreadTask<void(Engine*, View*, Scene*, Renderer*), Engine*, View*, Scene*, Renderer*>
+            mPostRenderCommand;
+    std::atomic<bool> mStarted = false;
 };
 
-static const Vertex TRIANGLE_VERTICES[3] = {
-        {{1, 0}, 0xffff0000u},
-        {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
-        {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
-};
-
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
-
-const std::string material = R"(material {
-    name : BakedColor,
-    requires : [
-        color
-    ],
-    shadingModel : unlit,
-    culling : none,
-    featureLevel : 0
-}
-
-fragment {
-    void material(inout MaterialInputs material) {
-        prepareMaterial(material);
-        material.baseColor = getColor();
-    }
-}
-)";
-
-class CompareGLTFTest : public testing::Test {
+class CompareGLTFTest : public testing::TestWithParam<std::string> {
 public:
     test::ImageExpectations mExpectations;
 
-    void postRender(Engine*, View* view, Scene*, Renderer* renderer);
+    static void SetUpTestSuite();
+    void SetUp() override;
+    static void TearDownTestSuite();
+
+    static std::optional<CompareGLTFContext> sContext;
+    std::atomic<bool> mTestFinished;
 };
 
-void CompareGLTFTest::postRender(Engine*, View* view, Scene*, Renderer* renderer) {
-    EXPECT_IMAGE(renderer, mExpectations, test::ScreenshotParams(512, 512, "GLTF"));
 
-    FilamentApp::get().close();
+std::optional<CompareGLTFContext> CompareGLTFTest::sContext;
+
+void CompareGLTFTest::SetUpTestSuite() {
+    sContext.emplace();
 }
 
-TEST_F(CompareGLTFTest, Compare) {
-    App app;
+void CompareGLTFTest::SetUp() {
+    while (!sContext->mStarted) {}
+}
 
-    auto setup = [&app](Engine* engine, View* view, Scene* scene) {
-      app.skybox = Skybox::Builder().color({0.1, 0.125, 0.25, 1.0}).build(*engine);
-      scene->setSkybox(app.skybox);
+void CompareGLTFTest::TearDownTestSuite() {
+    sContext.reset();
+}
+
+CompareGLTFContext::CompareGLTFContext() {
+    auto setup = [this](Engine* engine, View* view, Scene* scene) {
+      mApp.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
+      scene->setSkybox(mApp.skybox);
       view->setPostProcessingEnabled(false);
-      static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
-      /*app.vb = VertexBuffer::Builder()
-              .vertexCount(3)
-              .bufferCount(1)
-              .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-              .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-              .normalized(VertexAttribute::COLOR)
-              .build(*engine);
-      app.vb->setBufferAt(*engine, 0,
-              VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-      app.ib = IndexBuffer::Builder()
-              .indexCount(3)
-              .bufferType(IndexBuffer::IndexType::USHORT)
-              .build(*engine);
-      app.ib->setBuffer(*engine,
-              IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-      app.mat = Material::Builder()
-              .package(material.c_str(), material.size())
-              .build(*engine);
-      app.renderable = EntityManager::get().create();
-      RenderableManager::Builder(1)
-              .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-              .material(0, app.mat->getDefaultInstance())
-              .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
-              .culling(false)
-              .receiveShadows(false)
-              .castShadows(false)
-              .build(*engine, app.renderable);
-      scene->addEntity(app.renderable);*/
-      app.camera = utils::EntityManager::get().create();
-      app.cam = engine->createCamera(app.camera);
-      view->setCamera(app.cam);
+      mApp.camera = utils::EntityManager::get().create();
+      mApp.cam = engine->createCamera(mApp.camera);
+      view->setCamera(mApp.cam);
     };
 
-    auto cleanup = [&app](Engine* engine, View*, Scene*) {
-      engine->destroy(app.skybox);
-      //engine->destroy(app.renderable);
-      //engine->destroy(app.mat);
-      //engine->destroy(app.vb);
-      //engine->destroy(app.ib);
-      engine->destroyCameraComponent(app.camera);
-      utils::EntityManager::get().destroy(app.camera);
+    auto cleanup = [this](Engine* engine, View*, Scene*) {
+      engine->destroy(mApp.skybox);
+      engine->destroyCameraComponent(mApp.camera);
+      utils::EntityManager::get().destroy(mApp.camera);
     };
 
-    FilamentApp::get().animate([&app](Engine* engine, View* view, double now) {
+    FilamentApp::get().animate([this](Engine* engine, View* view, double now) {
       constexpr float ZOOM = 1.5f;
       const uint32_t w = view->getViewport().width;
       const uint32_t h = view->getViewport().height;
       const float aspect = (float) w / h;
-      app.cam->setProjection(Camera::Projection::ORTHO,
-              -aspect * ZOOM, aspect * ZOOM,
-              -ZOOM, ZOOM, 0, 1);
+      mApp.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM, aspect * ZOOM, -ZOOM,
+              ZOOM, 0, 1);
       auto& tcm = engine->getTransformManager();
-      tcm.setTransform(tcm.getInstance(app.renderable),
+      tcm.setTransform(tcm.getInstance(mApp.renderable),
               filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
     });
 
-    app.config.backend = filament::Engine::Backend::METAL;
+    mApp.config.backend = filament::Engine::Backend::METAL;
 
-    FilamentApp::get().run(app.config, setup, cleanup, FilamentApp::ImGuiCallback(),
-            FilamentApp::PreRenderCallback(),
-            [this](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
-                postRender(engine, view, scene, renderer);
-            });
+    addPostRenderCommand([this](Engine* engine, View* view, Scene* scene, Renderer* renderer){
+      mStarted = true;
+    });
+    RunOnMain::sTask.queueTask([=,this]() {
+        FilamentApp::get().run(mApp.config, setup, cleanup, FilamentApp::ImGuiCallback(),
+                FilamentApp::PreRenderCallback(),
+                [this](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+                    postRender(engine, view, scene, renderer);
+                });
+    });
+}
+
+CompareGLTFContext::~CompareGLTFContext() {
+    std::atomic<bool> appClosed = false;
+    addPostRenderCommand([&, this](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+        FilamentApp::get().close();
+        appClosed = true;
+    });
+
+    while (!appClosed) {}
+}
+
+void CompareGLTFContext::addPostRenderCommand(CompareGLTFContext::Command command) {
+    while (!mPostRenderCommand.queueTask(command)) {}
+}
+
+void CompareGLTFContext::postRender(Engine* engine, View* view, Scene* scene, Renderer* renderer) {
+    mPostRenderCommand.runTask(engine, view, scene, renderer);
+}
+
+INSTANTIATE_TEST_SUITE_P(GLTFFiles, CompareGLTFTest, testing::Values("BoxTextured", "Box"),
+        [](const testing::TestParamInfo<std::string>& info) { return info.param; });
+
+TEST_P(CompareGLTFTest, Compare) {
+    sContext->addPostRenderCommand([this](Engine*, View* view, Scene*, Renderer* renderer) {
+        EXPECT_IMAGE(renderer, mExpectations,
+                test::ScreenshotParams(512, 512, absl::StrFormat("GLTF_%s", GetParam().c_str())));
+
+        std::cout << "postRender: " << GetParam() << std::endl;
+        mTestFinished = true;
+    });
+    while (!mTestFinished) {}
+
+    std::atomic<int> counter = 0;
+    auto incrementCounter = [&](Engine*, View* view, Scene*, Renderer* renderer) {
+        counter++;
+    };
+    while (counter < 3) {
+        sContext->addPostRenderCommand(incrementCounter);
+    }
 }
