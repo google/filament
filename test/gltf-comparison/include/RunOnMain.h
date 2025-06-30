@@ -14,27 +14,17 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
+#ifndef TNT_RUNONMAIN_H
+#define TNT_RUNONMAIN_H
 
-#include <thread>
+#include <mutex>
+#include <functional>
 
-#include "RunOnMain.h"
+#include "CrossThreadTask.h"
 
-int main(int argc, char** argv) {
-    testing::InitGoogleTest(&argc, argv);
+class RunOnMain {
+public:
+    static CrossThreadTask<void()> sTask;
+};
 
-    int testResult = -1;
-
-    std::thread testThread([&](){
-        testResult = RUN_ALL_TESTS();
-        RunOnMain::sTask.setClosed();
-    });
-
-    while (!RunOnMain::sTask.isClosed()) {
-        RunOnMain::sTask.runTask();
-    }
-
-    testThread.join();
-
-    return testResult;
-}
+#endif // TNT_RUNONMAIN_H

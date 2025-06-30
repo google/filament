@@ -8,6 +8,8 @@ set(GLTF_COMPARISON_SOURCES
         src/test_CompareGLTF.cpp
         src/GLTFViewer.cpp
         src/ImageExpectations.cpp
+        src/RunOnMain.cpp
+        src/CrossThreadTask.cpp
         src/main.cpp
     )
 
