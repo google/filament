@@ -53,6 +53,7 @@ public:
 
     [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer);
 
+    [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
 
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
@@ -87,6 +88,7 @@ private:
     // usage is inherited from HwTexture. This naming is to distinguish it from Filament's usage
     wgpu::TextureUsage mWebGPUUsage = wgpu::TextureUsage::None;
     wgpu::TextureUsage mViewUsage = wgpu::TextureUsage::None;
+    wgpu::TextureViewDimension mDimension = wgpu::TextureViewDimension::Undefined;
     size_t mBlockWidth = 0;
     size_t mBlockHeight = 0;
     uint32_t mArrayLayerCount = 1;

@@ -172,6 +172,13 @@ namespace {
     if (needsRenderAttachmentSupport) {
         retUsage |= wgpu::TextureUsage::RenderAttachment;
     }
+    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+    }
+    if (any(TextureUsage::BLIT_DST & fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
     // WGPU Render attachment covers either color or stencil situation dependant
     // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
     // issues, investigate here.
@@ -333,6 +340,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS) },
       mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false) },
+      mDimension{toWebGPUTextureViewDimension(samplerType)},
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
       mDefaultMipLevel{ 0 },
