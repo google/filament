@@ -386,8 +386,9 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     FILAMENT_CHECK_PRECONDITION(any(mUsage & Texture::Usage::UPLOADABLE))
             << "Texture is not uploadable.";
 
-    FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
-                                                   << unsigned(mSampleCount) << ") texture.";
+    FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1)
+            << "Operation not supported with multisample ("
+            << unsigned(mSampleCount) << ") texture.";
 
     FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
@@ -428,28 +429,46 @@ void FTexture::setImage(FEngine& engine, size_t const level,
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
 
+    if (UTILS_UNLIKELY(!width || !height || !depth)) {
+        // The operation is a no-op, return immediately. The PixelBufferDescriptor callback
+        // should be called automatically when the object is destroyed.
+        // The precondition check below assumes width, height, depth non null.
+        return;
+    }
+
     if (p.type != PixelDataType::COMPRESSED) {
         using PBD = PixelBufferDescriptor;
         size_t const stride = p.stride ? p.stride : width;
-        size_t const bpp = PBD::computePixelSize(p.format, p.type);
+        size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
         size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-        size_t const pbdWidth = stride;
-        // TODO: PBD should have a "layer stride" (using "depth" as a substitute).
-        size_t const pbdDepth = depth;
-        size_t const pbdHeight = p.size / bpr / pbdDepth;
-        assert_invariant(p.size % bpr == 0 && (p.size / bpr) % pbdDepth == 0);
-
+        size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
         // TODO: PBD should have a p.depth (# layers to skip)
-        FILAMENT_CHECK_PRECONDITION(
-                bpp * (pbdWidth - p.left) * (pbdHeight - p.top) * (pbdDepth - 0) >=
-                bpp * width * height * depth)
+
+        /* Calculates the byte offset of the last pixel in a 3D sub-region. */
+        auto const calculateLastPixelOffset = [bpp, bpr, bpl](
+                size_t xoff, size_t yoff, size_t zoff,
+                size_t width, size_t height, size_t depth) {
+            // The 0-indexed coordinates of the last pixel are:
+            // x = xoff + width - 1
+            // y = yoff + height - 1
+            // z = zoff + depth - 1
+            // The offset is calculated as: (z * bpl) + (y * bpr) + (x * bpp)
+            return ((zoff + depth  - 1) * bpl) +
+                   ((yoff + height - 1) * bpr) +
+                   ((xoff + width  - 1) * bpp);
+        };
+
+        size_t const lastPixelOffset = calculateLastPixelOffset(
+                p.left, p.top, 0, width, height, depth);
+
+        // make sure the whole last pixel is in the buffer
+        FILAMENT_CHECK_PRECONDITION(lastPixelOffset + bpp <= p.size)
                 << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
                 << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
                 << ") smaller than specified region "
                    "{{"
-                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset)
-                << "},{" << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth)
-                << ")}}";
+                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+                << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
     }
 
     engine.getDriverApi().update3DImage(mHandle, uint8_t(level), xoffset, yoffset, zoffset, width,
