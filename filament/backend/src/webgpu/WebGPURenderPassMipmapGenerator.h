@@ -56,7 +56,7 @@ private:
     void generateMipmap(wgpu::CommandEncoder const&, wgpu::Texture const&,
             wgpu::RenderPipeline const&, uint32_t layer, uint32_t mipLevel);
 
-    wgpu::Device const& mDevice;
+    wgpu::Device mDevice;
     const wgpu::Sampler mPreviousMipLevelSampler{ nullptr };
     const wgpu::ShaderModule mShaderModule{ nullptr };
     const wgpu::BindGroupLayout mTextureBindGroupLayout{ nullptr };
