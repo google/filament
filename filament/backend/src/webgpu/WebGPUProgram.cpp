@@ -234,7 +234,7 @@ namespace {
                         FWGPU_LOGD << descriptor.label << " compiled successfully";
 #endif
                     }),
-            SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
+            FILAMENT_WEBGPU_SHADER_COMPILATION_TIMEOUT_NANOSECONDS);
     switch (waitResult) {
         case wgpu::WaitStatus::Success:
             break;

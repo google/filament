@@ -39,8 +39,8 @@ protected:
 
 private:
     const wgpu::Buffer mBuffer;
-    // WEBGPU_BUFFER_SIZE_MODULUS (e.g. 4) bytes to hold any extra chunk we need.
-    std::array<uint8_t, WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
+    // FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS (e.g. 4) bytes to hold any extra chunk we need.
+    std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 };
 
 } // namespace filament::backend

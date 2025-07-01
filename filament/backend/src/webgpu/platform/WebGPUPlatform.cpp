@@ -486,7 +486,8 @@ struct AdapterDetailsHash final {
     for (size_t i = 0; i < futures.size(); i++) {
         wgpu::RequestAdapterOptions const& options = requests[i];
         wgpu::Future& future = futures[i];
-        wgpu::WaitStatus status = instance.WaitAny(future, REQUEST_ADAPTER_TIMEOUT_NANOSECONDS);
+        wgpu::WaitStatus status =
+                instance.WaitAny(future, FILAMENT_WEBGPU_REQUEST_ADAPTER_TIMEOUT_NANOSECONDS);
         FILAMENT_CHECK_POSTCONDITION(status != wgpu::WaitStatus::TimedOut)
                 << "Timed out requesting a WebGPU adapter with options "
                 << adapterOptionsToString(options);
@@ -658,7 +659,7 @@ wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {
                         assert_invariant(status == wgpu::RequestDeviceStatus::Success);
                         device = readyDevice;
                     }),
-            REQUEST_DEVICE_TIMEOUT_NANOSECONDS);
+            FILAMENT_WEBGPU_REQUEST_DEVICE_TIMEOUT_NANOSECONDS);
     FILAMENT_CHECK_POSTCONDITION(status != wgpu::WaitStatus::TimedOut)
             << "Failed to request a WebGPU device due to a timeout.";
     FILAMENT_CHECK_POSTCONDITION(status != wgpu::WaitStatus::Error)
