@@ -73,7 +73,7 @@ float D_GGX(float roughness, float NoH, const vec3 h) {
 #endif
 
     float a = NoH * roughness;
-    float k = roughness / max(oneMinusNoHSquared + a * a, 0.0023); // .0023 so d won't overflow fp16
+    float k = min(roughness / (oneMinusNoHSquared + a * a), 453.5); // 453.5 prevents fp16 overflow
     float d = k * (k * (1.0 / PI));
     return d;
 }
