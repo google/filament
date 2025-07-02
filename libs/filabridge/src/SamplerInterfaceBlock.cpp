@@ -50,12 +50,12 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
 }
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(std::string_view samplerName,
-        Binding binding, Type type, Format format, Precision precision, bool unfilterable,
+        Binding binding, Type type, Format format, Precision precision, bool filterable,
         bool multisample, ShaderStageFlags stages) noexcept {
     mEntries.push_back({
         { samplerName.data(), samplerName.size() }, // name
         {},                                         // uniform name
-        binding, type, format, precision, unfilterable, multisample, stages });
+        binding, type, format, precision, filterable, multisample, stages });
     return *this;
 }
 
@@ -66,7 +66,7 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
     for (auto& e: list) {
-        add(e.name, e.binding, e.type, e.format, e.precision, e.unfilterable, e.multisample,
+        add(e.name, e.binding, e.type, e.format, e.precision, e.filterable, e.multisample,
                 e.stages);
     }
     return *this;

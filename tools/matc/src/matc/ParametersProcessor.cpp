@@ -185,9 +185,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     }
 
-    const JsonishValue* unfilterableValue = jsonObject.getValue("unfilterable");
-    if (unfilterableValue) {
-        if (unfilterableValue->getType() != JsonishValue::BOOL) {
+    const JsonishValue* filterableValue = jsonObject.getValue("filterable");
+    if (filterableValue) {
+        if (filterableValue->getType() != JsonishValue::BOOL) {
             std::cerr << "parameters: unfilterable must be a BOOL." << std::endl;
             return false;
         }
@@ -267,7 +267,19 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         auto precision = precisionValue ? Enums::toEnum<ParameterPrecision>(
                 precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
 
-        auto unfilterable = unfilterableValue ? unfilterableValue->toJsonBool()->getBool() : false;
+        // For samplers without `filterable` defined, we use the following logic
+        //   - float sampler can be filterable or not, default to filterable
+        //   - int sampler is not filterable
+        //   - shadow sampler uses comparison operator and does not need filterability defined.
+        auto filterable = filterableValue ? filterableValue->toJsonBool()->getBool()
+                                          : format == SamplerFormat::FLOAT;
+        if (filterable && (format == SamplerFormat::INT || format == SamplerFormat::UINT)) {
+            std::cerr << "parameters: the parameter with name '" << nameString << "'"
+                      << " is an integer sampler with `filterable = true`."
+                      << " This is not allowed." << std::endl;
+            return false;
+        }
+
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
         if (stages == ShaderStageFlags::NONE) {
