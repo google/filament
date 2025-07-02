@@ -1,0 +1,764 @@
+/** @file DriverAPI.dox
+ *  @brief External documentation for the backend::Driver API.
+ *
+ *  This file contains Doxygen documentation for the functions declared in DriverAPI.inc.
+ *  This is used to keep the documentation separate from the macro-heavy header file.
+ */
+
+// General lifecycle and frame management
+
+/** @fn Driver::tick()
+ * @brief Called periodically by the system to perform maintenance tasks.
+ */
+
+/** @fn Driver::beginFrame(int64_t monotonic_clock_ns, int64_t refreshIntervalNs, uint32_t frameId)
+ * @brief Signals the beginning of a new frame to the driver.
+ * @param monotonic_clock_ns The current monotonic clock time in nanoseconds.
+ * @param refreshIntervalNs The display's refresh interval in nanoseconds.
+ * @param frameId A unique identifier for the new frame.
+ */
+
+/** @fn Driver::setFrameScheduledCallback(backend::SwapChainHandle sch, backend::CallbackHandler* handler, backend::FrameScheduledCallback&& callback, uint64_t flags)
+ * @brief Schedules a callback to be executed when the frame associated with the given swap chain has been scheduled for presentation.
+ * @param sch The handle of the swap chain.
+ * @param handler The callback handler that will execute the callback.
+ * @param callback The function to be called.
+ * @param flags Flags to control the callback behavior.
+ */
+
+/** @fn Driver::setFrameCompletedCallback(backend::SwapChainHandle sch, backend::CallbackHandler* handler, utils::Invocable<void(void)>&& callback)
+ * @brief Sets a callback to be executed when rendering to the given swap chain is complete for the current frame.
+ * @param sch The handle of the swap chain.
+ * @param handler The callback handler that will execute the callback.
+ * @param callback The function to be called upon frame completion.
+ */
+
+/** @fn Driver::setPresentationTime(int64_t monotonic_clock_ns)
+ * @brief Informs the driver of the intended presentation time for the current frame.
+ * @param monotonic_clock_ns The desired presentation time in nanoseconds, based on the monotonic clock.
+ */
+
+/** @fn Driver::endFrame(uint32_t frameId)
+ * @brief Signals the end of a frame to the driver.
+ * @param frameId The unique identifier of the frame that is ending.
+ */
+
+/** @fn Driver::flush()
+ * @brief Submits all pending commands to the GPU for execution, without waiting for them to complete.
+ */
+
+/** @fn Driver::finish()
+ * @brief Submits all pending commands and waits for the GPU to finish executing them.
+ */
+
+/** @fn Driver::resetState()
+ * @brief Resets any cached or tracked driver state, forcing the driver to re-evaluate and set all states.
+ */
+
+/** @fn Driver::setDebugTag(backend::HandleBase::HandleId handleId, utils::CString tag)
+ * @brief Associates a user-provided string tag with a driver handle for debugging purposes.
+ * @param handleId The ID of the handle to tag.
+ * @param tag The debug string to associate with the handle.
+ */
+
+// Resource creation
+
+/** @fn backend::VertexBufferInfoHandle Driver::createVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount, backend::AttributeArray attributes)
+ * @brief Creates a VertexBufferInfo object which describes the layout of a vertex buffer.
+ * @param bufferCount The number of buffer objects in the vertex buffer.
+ * @param attributeCount The number of attributes in the vertex buffer.
+ * @param attributes An array describing each vertex attribute.
+ * @return A handle to the new VertexBufferInfo object.
+ */
+
+/** @fn backend::VertexBufferHandle Driver::createVertexBuffer(uint32_t vertexCount, backend::VertexBufferInfoHandle vbih)
+ * @brief Creates a vertex buffer with a specified vertex count and layout.
+ * @param vertexCount The number of vertices in the buffer.
+ * @param vbih A handle to a VertexBufferInfo object describing the vertex layout.
+ * @return A handle to the new vertex buffer.
+ */
+
+/** @fn backend::IndexBufferHandle Driver::createIndexBuffer(backend::ElementType elementType, uint32_t indexCount, backend::BufferUsage usage)
+ * @brief Creates an index buffer for indexed drawing.
+ * @param elementType The data type of an index (e.g., USHORT, UINT).
+ * @param indexCount The number of indices in the buffer.
+ * @param usage The expected usage pattern of the buffer (e.g., STATIC, DYNAMIC).
+ * @return A handle to the new index buffer.
+ */
+
+/** @fn backend::BufferObjectHandle Driver::createBufferObject(uint32_t byteCount, backend::BufferObjectBinding bindingType, backend::BufferUsage usage)
+ * @brief Creates a generic buffer object for storing arbitrary data on the GPU.
+ * @param byteCount The size of the buffer in bytes.
+ * @param bindingType The purpose of the buffer object (e.g., VERTEX, UNIFORM).
+ * @param usage The expected usage pattern of the buffer.
+ * @return A handle to the new buffer object.
+ */
+
+/** @fn backend::TextureHandle Driver::createTexture(backend::SamplerType target, uint8_t levels, backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, backend::TextureUsage usage)
+ * @brief Creates a new texture object.
+ * @param target The type of the texture (e.g. 2D, 3D, CUBEMAP).
+ * @param levels The number of mipmap levels.
+ * @param format The internal format of the texture's pixels.
+ * @param samples The number of samples for multisampling (1 for non-MSAA).
+ * @param width The width of the texture in texels.
+ * @param height The height of the texture in texels.
+ * @param depth The depth of the texture in texels (for 3D or array textures).
+ * @param usage A bitmask specifying the intended usage of the texture.
+ * @return A handle to the new texture.
+ */
+
+/** @fn backend::TextureHandle Driver::createTextureView(backend::TextureHandle texture, uint8_t baseLevel, uint8_t levelCount)
+ * @brief Creates a new texture view from an existing texture, allowing access to a subset of its mipmap levels.
+ * @param texture The handle of the original texture.
+ * @param baseLevel The first mipmap level to include in the view.
+ * @param levelCount The number of mipmap levels to include in the view.
+ * @return A handle to the new texture view.
+ */
+
+/** @fn backend::TextureHandle Driver::createTextureViewSwizzle(backend::TextureHandle texture, backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b, backend::TextureSwizzle a)
+ * @brief Creates a new texture view with remapped color channels (swizzling).
+ * @param texture The handle of the original texture.
+ * @param r The swizzle operation for the red channel.
+ * @param g The swizzle operation for the green channel.
+ * @param b The swizzle operation for the blue channel.
+ * @param a The swizzle operation for the alpha channel.
+ * @return A handle to the new texture view.
+ */
+
+/** @fn backend::TextureHandle Driver::createTextureExternalImage2(backend::SamplerType target, backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage, backend::Platform::ExternalImageHandleRef image)
+ * @brief Creates a texture from a platform-specific external image handle.
+ * @param target The type of the texture.
+ * @param format The format of the texture's pixels.
+ * @param width The width of the texture.
+ * @param height The height of the texture.
+ * @param usage The expected usage of the texture.
+ * @param image A reference to the platform-specific external image.
+ * @return A handle to the new texture.
+ */
+
+/** @fn backend::TextureHandle Driver::createTextureExternalImage(backend::SamplerType target, backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage, void* image)
+ * @brief Creates a texture from a platform-specific external image pointer.
+ * @param target The type of the texture.
+ * @param format The format of the texture's pixels.
+ * @param width The width of the texture.
+ * @param height The height of the texture.
+ * @param usage The expected usage of the texture.
+ * @param image A pointer to the external image data.
+ * @return A handle to the new texture.
+ */
+
+/** @fn backend::TextureHandle Driver::createTextureExternalImagePlane(backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage, void* image, uint32_t plane)
+ * @brief Creates a texture from a single plane of a multi-planar external image.
+ * @param format The format of the texture's pixels.
+ * @param width The width of the texture.
+ * @param height The height of the texture.
+ * @param usage The expected usage of the texture.
+ * @param image A pointer to the external image data.
+ * @param plane The index of the plane to create the texture from.
+ * @return A handle to the new texture.
+ */
+
+/** @fn backend::TextureHandle Driver::importTexture(intptr_t id, backend::SamplerType target, uint8_t levels, backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, backend::TextureUsage usage)
+ * @brief Imports an existing backend-native texture into Filament.
+ * @param id The backend-specific texture ID or handle.
+ * @param target The type of the texture.
+ * @param levels The number of mipmap levels.
+ * @param format The format of the texture's pixels.
+ * @param samples The number of samples for multisampling.
+ * @param width The width of the texture.
+ * @param height The height of the texture.
+ * @param depth The depth of the texture.
+ * @param usage The expected usage of the texture.
+ * @return A handle to the imported texture.
+ */
+
+/** @fn backend::RenderPrimitiveHandle Driver::createRenderPrimitive(backend::VertexBufferHandle vbh, backend::IndexBufferHandle ibh, backend::PrimitiveType pt)
+ * @brief Creates a render primitive, which represents a piece of geometry to be rendered.
+ * @param vbh A handle to a vertex buffer.
+ * @param ibh A handle to an index buffer.
+ * @param pt The type of primitive to render (e.g., TRIANGLES, LINES).
+ * @return A handle to the new render primitive.
+ */
+
+/** @fn backend::ProgramHandle Driver::createProgram(backend::Program&& program)
+ * @brief Creates a shader program from a backend-specific program object.
+ * @param program A Program object containing the shader code and metadata.
+ * @return A handle to the new program.
+ */
+
+/** @fn backend::RenderTargetHandle Driver::createDefaultRenderTarget()
+ * @brief Creates a render target that represents the default framebuffer (e.g., the screen).
+ * @return A handle to the default render target.
+ */
+
+/** @fn backend::RenderTargetHandle Driver::createRenderTarget(backend::TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount, backend::MRT color, backend::TargetBufferInfo depth, backend::TargetBufferInfo stencil)
+ * @brief Creates an offscreen render target.
+ * @param targetBufferFlags A bitmask specifying which buffers (color, depth, stencil) are included.
+ * @param width The width of the render target in pixels.
+ * @param height The height of the render target in pixels.
+ * @param samples The number of samples for multisampling.
+ * @param layerCount The number of layers for layered rendering.
+ * @param color An array of color attachments.
+ * @param depth The depth attachment.
+ * @param stencil The stencil attachment.
+ * @return A handle to the new render target.
+ */
+
+/** @fn backend::FenceHandle Driver::createFence()
+ * @brief Creates a fence for synchronization between the CPU and GPU.
+ * @return A handle to the new fence.
+ */
+
+/** @fn backend::SwapChainHandle Driver::createSwapChain(void* nativeWindow, uint64_t flags)
+ * @brief Creates a swap chain for a native window, used for presenting rendered frames.
+ * @param nativeWindow A platform-specific pointer to the native window.
+ * @param flags Configuration flags for the swap chain.
+ * @return A handle to the new swap chain.
+ */
+
+/** @fn backend::SwapChainHandle Driver::createSwapChainHeadless(uint32_t width, uint32_t height, uint64_t flags)
+ * @brief Creates a headless swap chain for offscreen rendering without a native window.
+ * @param width The width of the swap chain.
+ * @param height The height of the swap chain.
+ * @param flags Configuration flags for the swap chain.
+ * @return A handle to the new swap chain.
+ */
+
+/** @fn backend::TimerQueryHandle Driver::createTimerQuery()
+ * @brief Creates a timer query object for measuring GPU execution time.
+ * @return A handle to the new timer query.
+ */
+
+/** @fn backend::DescriptorSetLayoutHandle Driver::createDescriptorSetLayout(backend::DescriptorSetLayout&& info)
+ * @brief Creates a descriptor set layout, which defines the layout of bindings in a descriptor set.
+ * @param info The layout information for the descriptor set.
+ * @return A handle to the new descriptor set layout.
+ */
+
+/** @fn backend::DescriptorSetHandle Driver::createDescriptorSet(backend::DescriptorSetLayoutHandle dslh)
+ * @brief Creates a descriptor set based on a given layout.
+ * @param dslh A handle to the descriptor set layout.
+ * @return A handle to the new descriptor set.
+ */
+
+/** @fn Driver::updateDescriptorSetBuffer(backend::DescriptorSetHandle dsh, backend::descriptor_binding_t binding, backend::BufferObjectHandle boh, uint32_t offset, uint32_t size)
+ * @brief Updates a buffer descriptor within a descriptor set.
+ * @param dsh The descriptor set to update.
+ * @param binding The binding point of the descriptor.
+ * @param boh The handle of the buffer object to bind.
+ * @param offset The offset into the buffer.
+ * @param size The size of the buffer region to bind.
+ */
+
+/** @fn Driver::updateDescriptorSetTexture(backend::DescriptorSetHandle dsh, backend::descriptor_binding_t binding, backend::TextureHandle th, SamplerParams params)
+ * @brief Updates a texture descriptor within a descriptor set.
+ * @param dsh The descriptor set to update.
+ * @param binding The binding point of the descriptor.
+ * @param th The handle of the texture to bind.
+ * @param params The sampler parameters for the texture.
+ */
+
+/** @fn Driver::bindDescriptorSet(backend::DescriptorSetHandle dsh, backend::descriptor_set_t set, backend::DescriptorSetOffsetArray&& offsets)
+ * @brief Binds a descriptor set to the current pipeline.
+ * @param dsh The descriptor set to bind.
+ * @param set The index of the descriptor set to bind.
+ * @param offsets An array of dynamic offsets for the descriptor set.
+ */
+
+// Resource destruction
+
+/** @fn Driver::destroyVertexBuffer(backend::VertexBufferHandle vbh)
+ * @brief Destroys a vertex buffer and releases its resources.
+ * @param vbh The handle of the vertex buffer to destroy.
+ */
+
+/** @fn Driver::destroyVertexBufferInfo(backend::VertexBufferInfoHandle vbih)
+ * @brief Destroys a VertexBufferInfo object.
+ * @param vbih The handle of the VertexBufferInfo object to destroy.
+ */
+
+/** @fn Driver::destroyIndexBuffer(backend::IndexBufferHandle ibh)
+ * @brief Destroys an index buffer and releases its resources.
+ * @param ibh The handle of the index buffer to destroy.
+ */
+
+/** @fn Driver::destroyBufferObject(backend::BufferObjectHandle boh)
+ * @brief Destroys a buffer object and releases its resources.
+ * @param boh The handle of the buffer object to destroy.
+ */
+
+/** @fn Driver::destroyRenderPrimitive(backend::RenderPrimitiveHandle rph)
+ * @brief Destroys a render primitive.
+ * @param rph The handle of the render primitive to destroy.
+ */
+
+/** @fn Driver::destroyProgram(backend::ProgramHandle ph)
+ * @brief Destroys a shader program.
+ * @param ph The handle of the program to destroy.
+ */
+
+/** @fn Driver::destroyTexture(backend::TextureHandle th)
+ * @brief Destroys a texture and releases its resources.
+ * @param th The handle of the texture to destroy.
+ */
+
+/** @fn Driver::destroyRenderTarget(backend::RenderTargetHandle rth)
+ * @brief Destroys a render target.
+ * @param rth The handle of the render target to destroy.
+ */
+
+/** @fn Driver::destroySwapChain(backend::SwapChainHandle sch)
+ * @brief Destroys a swap chain.
+ * @param sch The handle of the swap chain to destroy.
+ */
+
+/** @fn Driver::destroyStream(backend::StreamHandle sh)
+ * @brief Destroys a stream.
+ * @param sh The handle of the stream to destroy.
+ */
+
+/** @fn Driver::destroyTimerQuery(backend::TimerQueryHandle tqh)
+ * @brief Destroys a timer query object.
+ * @param tqh The handle of the timer query to destroy.
+ */
+
+/** @fn Driver::destroyFence(backend::FenceHandle fh)
+ * @brief Destroys a fence.
+ * @param fh The handle of the fence to destroy.
+ */
+
+/** @fn Driver::destroyDescriptorSetLayout(backend::DescriptorSetLayoutHandle dslh)
+ * @brief Destroys a descriptor set layout.
+ * @param dslh The handle of the descriptor set layout to destroy.
+ */
+
+/** @fn Driver::destroyDescriptorSet(backend::DescriptorSetHandle dsh)
+ * @brief Destroys a descriptor set.
+ * @param dsh The handle of the descriptor set to destroy.
+ */
+
+// Synchronous APIs
+
+/** @fn void Driver::terminate()
+ * @brief Terminates the driver and releases all associated resources. This is a synchronous operation.
+ */
+
+/** @fn backend::StreamHandle Driver::createStreamNative(void* stream)
+ * @brief Creates a stream from a native stream object (e.g., a SurfaceTexture on Android).
+ * @param stream A pointer to the native stream object.
+ * @return A handle to the new stream.
+ */
+
+/** @fn backend::StreamHandle Driver::createStreamAcquired()
+ * @brief Creates a stream that will be populated with images acquired via `setAcquiredImage`.
+ * @return A handle to the new stream.
+ */
+
+/** @fn void Driver::setAcquiredImage(backend::StreamHandle stream, void* image, const math::mat3f& transform, backend::CallbackHandler* handler, backend::StreamCallback cb, void* userData)
+ * @brief Provides an image to an acquired stream, with a callback for when the image is no longer in use.
+ * @param stream The handle of the stream.
+ * @param image A pointer to the image data.
+ * @param transform The transformation matrix for the image.
+ * @param handler The callback handler.
+ * @param cb The callback function to be invoked when the image is released.
+ * @param userData User data for the callback.
+ */
+
+/** @fn void Driver::setStreamDimensions(backend::StreamHandle stream, uint32_t width, uint32_t height)
+ * @brief Sets the dimensions of a stream, which may be necessary for certain stream types.
+ * @param stream The handle of the stream.
+ * @param width The new width of the stream.
+ * @param height The new height of the stream.
+ */
+
+/** @fn int64_t Driver::getStreamTimestamp(backend::StreamHandle stream)
+ * @brief Gets the timestamp of the last frame from a stream, if available.
+ * @param stream The handle of the stream.
+ * @return The timestamp in nanoseconds, or 0 if not available.
+ */
+
+/** @fn void Driver::updateStreams(backend::DriverApi* driver)
+ * @brief Updates all active streams, typically called once per frame.
+ * @param driver The driver API pointer.
+ */
+
+/** @fn backend::FenceStatus Driver::getFenceStatus(backend::FenceHandle fh)
+ * @brief Gets the current status of a fence.
+ * @param fh The handle of the fence.
+ * @return The status of the fence (e.g., SIGNALED, TIMEOUT_EXPIRED).
+ */
+
+/** @fn bool Driver::isTextureFormatSupported(backend::TextureFormat format)
+ * @brief Checks if a specific texture format is supported by the driver.
+ * @param format The texture format to check.
+ * @return True if the format is supported, false otherwise.
+ */
+
+/** @fn bool Driver::isTextureSwizzleSupported()
+ * @brief Checks if texture channel swizzling is supported by the driver.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isTextureFormatMipmappable(backend::TextureFormat format)
+ * @brief Checks if a texture format can have mipmaps automatically generated.
+ * @param format The texture format to check.
+ * @return True if the format is mipmappable, false otherwise.
+ */
+
+/** @fn bool Driver::isRenderTargetFormatSupported(backend::TextureFormat format)
+ * @brief Checks if a texture format is supported for use as a render target attachment.
+ * @param format The texture format to check.
+ * @return True if the format is supported, false otherwise.
+ */
+
+/** @fn bool Driver::isFrameBufferFetchSupported()
+ * @brief Checks if framebuffer fetch (reading from the framebuffer in a shader) is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isFrameBufferFetchMultiSampleSupported()
+ * @brief Checks if multisampled framebuffer fetch is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isFrameTimeSupported()
+ * @brief Checks if frame time queries are supported for performance measurement.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isAutoDepthResolveSupported()
+ * @brief Checks if automatic resolution of multisampled depth buffers is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isSRGBSwapChainSupported()
+ * @brief Checks if sRGB swap chains are supported for correct color space handling.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isProtectedContentSupported()
+ * @brief Checks if rendering protected content (e.g., for DRM) is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isStereoSupported()
+ * @brief Checks if stereoscopic rendering is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isParallelShaderCompileSupported()
+ * @brief Checks if the driver can compile shaders in parallel for improved performance.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isDepthStencilResolveSupported()
+ * @brief Checks if resolving multisampled depth/stencil buffers is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isDepthStencilBlitSupported(backend::TextureFormat format)
+ * @brief Checks if blitting (copying) depth/stencil data is supported for a given format.
+ * @param format The texture format.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isProtectedTexturesSupported()
+ * @brief Checks if creating protected textures is supported.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn bool Driver::isDepthClampSupported()
+ * @brief Checks if depth clamping is supported by the hardware.
+ * @return True if supported, false otherwise.
+ */
+
+/** @fn uint8_t Driver::getMaxDrawBuffers()
+ * @brief Gets the maximum number of simultaneous draw buffers (Multiple Render Targets).
+ * @return The maximum number of draw buffers.
+ */
+
+/** @fn size_t Driver::getMaxUniformBufferSize()
+ * @brief Gets the maximum size of a uniform buffer in bytes.
+ * @return The maximum size in bytes.
+ */
+
+/** @fn size_t Driver::getMaxTextureSize(backend::SamplerType target)
+ * @brief Gets the maximum texture dimension (width, height, or depth) for a given target type.
+ * @param target The texture target type.
+ * @return The maximum size in texels.
+ */
+
+/** @fn size_t Driver::getMaxArrayTextureLayers()
+ * @brief Gets the maximum number of layers in an array texture.
+ * @return The maximum number of layers.
+ */
+
+/** @fn math::float2 Driver::getClipSpaceParams()
+ * @brief Gets the clip space parameters for the current backend.
+ * @return A float2 containing clip space parameters.
+ */
+
+/** @fn void Driver::setupExternalImage2(backend::Platform::ExternalImageHandleRef image)
+ * @brief Performs any necessary setup for an external image before it can be used.
+ * @param image A reference to the external image.
+ */
+
+/** @fn void Driver::setupExternalImage(void* image)
+ * @brief Performs any necessary setup for an external image before it can be used.
+ * @param image A pointer to the external image.
+ */
+
+/** @fn backend::TimerQueryResult Driver::getTimerQueryValue(backend::TimerQueryHandle query, uint64_t* elapsedTime)
+ * @brief Gets the result of a timer query, providing the elapsed GPU time.
+ * @param query The timer query handle.
+ * @param elapsedTime A pointer to store the elapsed time in nanoseconds.
+ * @return The result of the query (e.g., AVAILABLE, NOT_READY).
+ */
+
+/** @fn bool Driver::isWorkaroundNeeded(backend::Workaround workaround)
+ * @brief Checks if a specific driver or hardware workaround is needed.
+ * @param workaround The workaround to check.
+ * @return True if the workaround is needed, false otherwise.
+ */
+
+/** @fn backend::FeatureLevel Driver::getFeatureLevel()
+ * @brief Gets the feature level supported by the driver.
+ * @return The driver's feature level.
+ */
+
+// Resource updates
+
+/** @fn Driver::setVertexBufferObject(backend::VertexBufferHandle vbh, uint32_t index, backend::BufferObjectHandle bufferObject)
+ * @brief Associates a buffer object with a specific buffer slot in a vertex buffer.
+ * @param vbh The handle of the vertex buffer.
+ * @param index The index of the buffer slot to set.
+ * @param bufferObject The handle of the buffer object to associate.
+ */
+
+/** @fn Driver::updateIndexBuffer(backend::IndexBufferHandle ibh, backend::BufferDescriptor&& data, uint32_t byteOffset)
+ * @brief Updates the data of an index buffer.
+ * @param ibh The handle of the index buffer.
+ * @param data The new data to upload.
+ * @param byteOffset The offset in bytes into the buffer to start writing to.
+ */
+
+/** @fn Driver::updateBufferObject(backend::BufferObjectHandle boh, backend::BufferDescriptor&& data, uint32_t byteOffset)
+ * @brief Updates the data of a buffer object.
+ * @param boh The handle of the buffer object.
+ * @param data The new data to upload.
+ * @param byteOffset The offset in bytes into the buffer to start writing to.
+ */
+
+/** @fn Driver::registerBufferObjectStreams(backend::BufferObjectHandle boh, backend::BufferObjectStreamDescriptor&& streams)
+ * @brief Registers external streams with a buffer object for efficient data transfer.
+ * @param boh The handle of the buffer object.
+ * @param streams The stream descriptors.
+ */
+
+/** @fn Driver::updateBufferObjectUnsynchronized(backend::BufferObjectHandle boh, backend::BufferDescriptor&& data, uint32_t byteOffset)
+ * @brief Updates a buffer object without synchronization, for use when manual synchronization is handled.
+ * @param boh The handle of the buffer object.
+ * @param data The new data to upload.
+ * @param byteOffset The offset in bytes into the buffer to start writing to.
+ */
+
+/** @fn Driver::resetBufferObject(backend::BufferObjectHandle boh)
+ * @brief Resets a buffer object, potentially discarding its contents.
+ * @param boh The handle of the buffer object.
+ */
+
+/** @fn Driver::update3DImage(backend::TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height, uint32_t depth, backend::PixelBufferDescriptor&& data)
+ * @brief Updates a sub-region of a 3D texture.
+ * @param th The handle of the texture.
+ * @param level The mipmap level to update.
+ * @param xoffset The x offset of the sub-region.
+ * @param yoffset The y offset of the sub-region.
+ * @param zoffset The z offset of the sub-region.
+ * @param width The width of the sub-region.
+ * @param height The height of the sub-region.
+ * @param depth The depth of the sub-region.
+ * @param data The pixel data to upload.
+ */
+
+/** @fn Driver::generateMipmaps(backend::TextureHandle th)
+ * @brief Generates mipmaps for a texture automatically.
+ * @param th The handle of the texture.
+ */
+
+/** @fn Driver::setExternalStream(backend::TextureHandle th, backend::StreamHandle sh)
+ * @brief Associates an external stream with a texture for video or camera input.
+ * @param th The handle of the texture.
+ * @param sh The handle of the stream.
+ */
+
+// Render passes
+
+/** @fn Driver::beginRenderPass(backend::RenderTargetHandle rth, const backend::RenderPassParams& params)
+ * @brief Begins a new render pass, targeting a specific render target.
+ * @param rth The handle of the render target.
+ * @param params The parameters for the render pass (e.g., clear values, load/store actions).
+ */
+
+/** @fn Driver::endRenderPass()
+ * @brief Ends the current render pass.
+ */
+
+/** @fn Driver::nextSubpass()
+ * @brief Moves to the next subpass within the current render pass.
+ */
+
+// Timer queries
+
+/** @fn Driver::beginTimerQuery(backend::TimerQueryHandle query)
+ * @brief Begins a timer query to measure GPU time.
+ * @param query The handle of the timer query.
+ */
+
+/** @fn Driver::endTimerQuery(backend::TimerQueryHandle query)
+ * @brief Ends a timer query.
+ * @param query The handle of the timer query.
+ */
+
+/** @fn Driver::compilePrograms(backend::CompilerPriorityQueue priority, backend::CallbackHandler* handler, backend::CallbackHandler::Callback callback, void* user)
+ * @brief Compiles a queue of pending shader programs.
+ * @param priority The priority queue to use for compilation.
+ * @param handler The callback handler.
+ * @param callback The callback function to be invoked upon completion.
+ * @param user User data for the callback.
+ */
+
+// Swap chain
+
+/** @fn Driver::makeCurrent(backend::SwapChainHandle schDraw, backend::SwapChainHandle schRead)
+ * @brief Makes a swap chain current for drawing and reading.
+ * @param schDraw The draw swap chain.
+ * @param schRead The read swap chain.
+ */
+
+/** @fn Driver::commit(backend::SwapChainHandle sch)
+ * @brief Commits the back buffer of a swap chain, making it visible.
+ * @param sch The handle of the swap chain.
+ */
+
+// Rendering state
+
+/** @fn Driver::setPushConstant(backend::ShaderStage stage, uint8_t index, backend::PushConstantVariant value)
+ * @brief Sets a push constant value for a specific shader stage.
+ * @param stage The shader stage to set the constant for.
+ * @param index The index of the push constant.
+ * @param value The value to set.
+ */
+
+/** @fn Driver::insertEventMarker(const char* string)
+ * @brief Inserts a debug event marker into the command stream.
+ * @param string The marker string.
+ */
+
+/** @fn Driver::pushGroupMarker(const char* string)
+ * @brief Pushes a debug group marker onto the command stream stack.
+ * @param string The marker string.
+ */
+
+/** @fn Driver::popGroupMarker()
+ * @brief Pops a debug group marker from the command stream stack.
+ */
+
+/** @fn Driver::startCapture()
+ * @brief Starts a graphics capture session.
+ */
+
+/** @fn Driver::stopCapture()
+ * @brief Stops a graphics capture session.
+ */
+
+// Read-back
+
+/** @fn Driver::readPixels(backend::RenderTargetHandle src, uint32_t x, uint32_t y, uint32_t width, uint32_t height, backend::PixelBufferDescriptor&& data)
+ * @brief Reads a block of pixels from a render target into a client-side buffer.
+ * @param src The source render target.
+ * @param x The x coordinate of the region to read.
+ * @param y The y coordinate of the region to read.
+ * @param width The width of the region to read.
+ * @param height The height of the region to read.
+ * @param data The buffer to store the pixel data.
+ */
+
+/** @fn Driver::readBufferSubData(backend::BufferObjectHandle src, uint32_t offset, uint32_t size, backend::BufferDescriptor&& data)
+ * @brief Reads a sub-region of a buffer object into a client-side buffer.
+ * @param src The source buffer object.
+ * @param offset The offset to start reading from.
+ * @param size The number of bytes to read.
+ * @param data The buffer to store the data.
+ */
+
+// Rendering
+
+/** @fn Driver::blitDEPRECATED(backend::TargetBufferFlags buffers, backend::RenderTargetHandle dst, backend::Viewport dstRect, backend::RenderTargetHandle src, backend::Viewport srcRect, backend::SamplerMagFilter filter)
+ * @brief Blits (copies) a region from one render target to another (deprecated).
+ * @param buffers The buffers to blit (e.g., color, depth).
+ * @param dst The destination render target.
+ * @param dstRect The destination rectangle.
+ * @param src The source render target.
+ * @param srcRect The source rectangle.
+ * @param filter The filter to use for scaling.
+ */
+
+/** @fn Driver::resolve(backend::TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer, backend::TextureHandle src, uint8_t srcLevel, uint8_t srcLayer)
+ * @brief Resolves a multisampled texture into a non-multisampled texture.
+ * @param dst The destination texture.
+ * @param dstLevel The destination mipmap level.
+ * @param dstLayer The destination layer.
+ * @param src The source multisampled texture.
+ * @param srcLevel The source mipmap level.
+ * @param srcLayer The source layer.
+ */
+
+/** @fn Driver::blit(backend::TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer, math::uint2 dstOrigin, backend::TextureHandle src, uint8_t srcLevel, uint8_t srcLayer, math::uint2 srcOrigin, math::uint2 size)
+ * @brief Blits (copies) a region from one texture to another.
+ * @param dst The destination texture.
+ * @param dstLevel The destination mipmap level.
+ * @param dstLayer The destination layer.
+ * @param dstOrigin The origin of the destination region.
+ * @param src The source texture.
+ * @param srcLevel The source mipmap level.
+ * @param srcLayer The source layer.
+ * @param srcOrigin The origin of the source region.
+ * @param size The size of the region to blit.
+ */
+
+/** @fn Driver::bindPipeline(const backend::PipelineState& state)
+ * @brief Binds a pipeline state object, including shaders and render states.
+ * @param state The pipeline state to bind.
+ */
+
+/** @fn Driver::bindRenderPrimitive(backend::RenderPrimitiveHandle rph)
+ * @brief Binds a render primitive for subsequent draw calls.
+ * @param rph The handle of the render primitive.
+ */
+
+/** @fn Driver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount)
+ * @brief Draws a render primitive using the currently bound pipeline and primitive.
+ * @param indexOffset The offset into the index buffer.
+ * @param indexCount The number of indices to draw.
+ * @param instanceCount The number of instances to draw.
+ */
+
+/** @fn Driver::draw(backend::PipelineState state, backend::RenderPrimitiveHandle rph, uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount)
+ * @brief A combined call to bind a pipeline, bind a primitive, and draw.
+ * @param state The pipeline state to bind.
+ * @param rph The render primitive to bind.
+ * @param indexOffset The offset into the index buffer.
+ * @param indexCount The number of indices to draw.
+ * @param instanceCount The number of instances to draw.
+ */
+
+/** @fn Driver::dispatchCompute(backend::ProgramHandle program, math::uint3 workGroupCount)
+ * @brief Dispatches a compute shader.
+ * @param program The handle of the compute program.
+ * @param workGroupCount The number of work groups to dispatch in each dimension.
+ */
+
+/** @fn Driver::scissor(Viewport scissor)
+ * @brief Sets the scissor rectangle for clipping.
+ * @param scissor The scissor rectangle.
+ */

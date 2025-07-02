@@ -118,6 +118,7 @@ INPUT                  = ../libs/filabridge/include \
                          ../libs/gltfio/include \
                          ../libs/utils/include \
                          backend/include \
+                         backend/include/private/backend/DriverAPI.dox \
                          include
 
 INPUT_ENCODING         = UTF-8
