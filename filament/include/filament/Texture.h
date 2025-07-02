@@ -117,19 +117,6 @@ public:
     /** @return the maximum number of layers supported by texture arrays. At least 256. */
     static size_t getMaxArrayTextureLayers(Engine& engine) noexcept;
 
-    /**
-     * Options for environment prefiltering into reflection map
-     *
-     * @see generatePrefilterMipmap()
-     */
-    struct PrefilterOptions {
-        uint16_t sampleCount = 8;   //!< sample count used for filtering
-        bool mirror = true;         //!< whether the environment must be mirrored
-    private:
-        UTILS_UNUSED uintptr_t reserved[3] = {};
-    };
-
-
     //! Use Builder to construct a Texture object instance
     class Builder : public BuilderBase<BuilderDetails>, public BuilderNameMixin<Builder> {
         friend struct BuilderDetails;
@@ -560,46 +547,6 @@ public:
      */
     void generateMipmaps(Engine& engine) const noexcept;
 
-    /**
-     * Creates a reflection map from an environment map.
-     *
-     * This is a utility function that replaces calls to Texture::setImage().
-     * The provided environment map is processed and all mipmap levels are populated. The
-     * processing is similar to the offline tool `cmgen` as a lower quality setting.
-     *
-     * This function is intended to be used when the environment cannot be processed offline,
-     * for instance if it's generated at runtime.
-     *
-     * The source data must obey to some constraints:
-     *   - the data type must be PixelDataFormat::RGB
-     *   - the data format must be one of
-     *          - PixelDataType::FLOAT
-     *          - PixelDataType::HALF
-     *
-     * The current texture must be a cubemap
-     *
-     * The reflections cubemap's internal format cannot be a compressed format.
-     *
-     * The reflections cubemap's dimension must be a power-of-two.
-     *
-     * @warning This operation is computationally intensive, especially with large environments and
-     *          is currently synchronous. Expect about 1ms for a 16x16 cubemap.
-     *
-     * @param engine        Reference to the filament::Engine to associate this IndirectLight with.
-     * @param buffer        Client-side buffer containing the images to set.
-     * @param faceOffsets   Offsets in bytes into \p buffer for all six images. The offsets
-     *                      are specified in the following order: +x, -x, +y, -y, +z, -z
-     * @param options       Optional parameter controlling user-specified quality and options.
-     *
-     * @exception utils::PreConditionPanic If the source data constraints are not respected.
-     *
-     */
-    void generatePrefilterMipmap(Engine& engine,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* UTILS_NULLABLE options = nullptr) {
-        generatePrefilterMipmap(this, engine, std::move(buffer), faceOffsets, options);
-    }
-
     /** @deprecated */
     struct FaceOffsets {
         using size_type = size_t;
@@ -647,11 +594,6 @@ public:
 protected:
     // prevent heap allocation
     ~Texture() = default;
-
-private:
-    static void generatePrefilterMipmap(Texture* UTILS_NONNULL texture, Engine& engine,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* UTILS_NULLABLE options = nullptr);
 };
 
 } // namespace filament
