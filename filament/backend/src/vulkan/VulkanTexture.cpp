@@ -255,6 +255,21 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
     }
 }
 
+uint8_t getAlignmentForBufferToImageCopy(VkFormat format) {
+    // VUID-vkCmdCopyBufferToImage-dstImage-07978
+    if(fvkutils::isVkDepthFormat(format) || fvkutils::isVkStencilFormat(format)) {
+        return 4;
+    }
+
+    if (fvkutils::isVKYcbcrConversionFormat(format)) {
+        assert_invariant(false && "Multi planar format is not supported");
+        return 1;
+    }
+
+    // VUID-vkCmdCopyBufferToImage-dstImage-07975
+    return fvkutils::getTexelBlockSize(format);
+}
+
 } // anonymous namespace
 
 VulkanTextureState::VulkanTextureState(VulkanStagePool& stagePool, VulkanCommands* commands,
@@ -526,8 +541,7 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Note: the following stageSegment must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
     // staging buffer pool.
-    uint8_t alignment =
-            fvkutils::getTexelBlockSize(fvkutils::getVkFormat(hostData->format, hostData->type));
+    uint8_t alignment = getAlignmentForBufferToImageCopy(mState->mVkFormat);
     fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
             mState->mStagePool.acquireStage(writeSize, alignment);
     assert_invariant(stageSegment->memory());
