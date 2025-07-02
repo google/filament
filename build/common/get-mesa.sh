@@ -82,7 +82,7 @@ elif [[ "$OS_NAME" == "Darwin" ]]; then
                                                     llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
         # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
         LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
-    elif command -v port > /dev/null 2>&1; then
+    elif sudo command -v port > /dev/null 2>&1; then
         sudo port install autoconf automake libx11 libXext libXrandr llvm-${LLVM_VERSION} \
              ninja meson pkgconfig libxshmfence
         LOCAL_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
