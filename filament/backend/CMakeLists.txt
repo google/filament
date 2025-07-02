@@ -273,6 +273,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUFence.h
             src/webgpu/WebGPUIndexBuffer.cpp
             src/webgpu/WebGPUIndexBuffer.h
+            src/webgpu/WebGPUMsaaTextureResolver.cpp
+            src/webgpu/WebGPUMsaaTextureResolver.h
             src/webgpu/WebGPUPipelineCreation.cpp
             src/webgpu/WebGPUPipelineCreation.h
             src/webgpu/WebGPUProgram.cpp
