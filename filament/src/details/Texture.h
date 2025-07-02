@@ -65,10 +65,6 @@ public:
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
-    void generatePrefilterMipmap(FEngine& engine,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* options);
-
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
@@ -91,6 +87,9 @@ public:
 
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
     static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+
+    // Returns whether particular format is compressed
+    static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
     static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
