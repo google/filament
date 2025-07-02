@@ -95,6 +95,9 @@ public:
     /** @return Whether a backend supports mipmapping of a particular format. */
     static bool isTextureFormatMipmappable(Engine& engine, InternalFormat format) noexcept;
 
+    /** @return Whether particular format is compressed */
+    static bool isTextureFormatCompressed(InternalFormat format) noexcept;
+
     /** @return Whether this backend supports protected textures. */
     static bool isProtectedTexturesSupported(Engine& engine) noexcept;
 
@@ -593,8 +596,9 @@ public:
      */
     void generatePrefilterMipmap(Engine& engine,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* UTILS_NULLABLE options = nullptr);
-
+            PrefilterOptions const* UTILS_NULLABLE options = nullptr) {
+        generatePrefilterMipmap(this, engine, std::move(buffer), faceOffsets, options);
+    }
 
     /** @deprecated */
     struct FaceOffsets {
@@ -643,6 +647,11 @@ public:
 protected:
     // prevent heap allocation
     ~Texture() = default;
+
+private:
+    static void generatePrefilterMipmap(Texture* UTILS_NONNULL texture, Engine& engine,
+            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
+            PrefilterOptions const* UTILS_NULLABLE options = nullptr);
 };
 
 } // namespace filament

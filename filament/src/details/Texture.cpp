@@ -741,6 +741,10 @@ bool FTexture::isTextureFormatMipmappable(FEngine& engine, InternalFormat const 
     return engine.getDriverApi().isTextureFormatMipmappable(format);
 }
 
+bool FTexture::isTextureFormatCompressed(InternalFormat const format) noexcept {
+    return isCompressedFormat(format);
+}
+
 bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isProtectedTexturesSupported();
 }
@@ -771,14 +775,14 @@ TextureType FTexture::getTextureType() const noexcept {
 }
 
 
-void FTexture::generatePrefilterMipmap(FEngine& engine,
+void Texture::generatePrefilterMipmap(Texture* const texture, Engine& engine,
         PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
         PrefilterOptions const* options) {
     using namespace ibl;
     using namespace backend;
     using namespace math;
 
-    const size_t size = getWidth();
+    const size_t size = texture->getWidth();
     const size_t stride = buffer.stride ? buffer.stride : size;
 
     /* validate input data */
@@ -797,13 +801,13 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     FILAMENT_CHECK_PRECONDITION(!(size & (size - 1)))
             << "input data cubemap dimensions must be a power-of-two";
 
-    FILAMENT_CHECK_PRECONDITION(!isCompressed()) << "reflections texture cannot be compressed";
+    FILAMENT_CHECK_PRECONDITION(!isTextureFormatCompressed(texture->getFormat()))
+            << "reflections texture cannot be compressed";
 
     PrefilterOptions const defaultOptions;
     options = options ? options : &defaultOptions;
 
     JobSystem& js = engine.getJobSystem();
-    FEngine::DriverApi& driver = engine.getDriverApi();
 
     auto generateMipmaps = [](JobSystem& js,
             FixedCapacityVector<Cubemap>& levels, FixedCapacityVector<Image>& images) {
@@ -857,10 +861,10 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
     Image temp;
     Cubemap cml = CubemapUtils::create(temp, size);
     for (size_t j = 0; j < 6; j++) {
-        Cubemap::Face const face = (Cubemap::Face)j;
+        Cubemap::Face const face = Cubemap::Face(j);
         Image const& image = cml.getImageForFace(face);
         for (size_t y = 0; y < size; y++) {
-            Cubemap::Texel* out = (Cubemap::Texel*)image.getPixelRef(0, y);
+            Cubemap::Texel* out = static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
             if (buffer.type == PixelDataType::FLOAT) {
                 float3 const* src = pointermath::add((float3 const*)buffer.buffer, faceOffsets[j]);
                 src = pointermath::add(src, y * stride * bytesPerPixel);
@@ -897,8 +901,8 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
      * Create the mipmap chain
      */
 
-    auto images = FixedCapacityVector<Image>::with_capacity(getLevels());
-    auto levels = FixedCapacityVector<Cubemap>::with_capacity(getLevels());
+    auto images = FixedCapacityVector<Image>::with_capacity(texture->getLevels());
+    auto levels = FixedCapacityVector<Cubemap>::with_capacity(texture->getLevels());
 
     images.push_back(std::move(temp));
     levels.push_back(std::move(cml));
@@ -932,18 +936,21 @@ void FTexture::generatePrefilterMipmap(FEngine& engine,
 
         uintptr_t const base = uintptr_t(image.getData());
         for (size_t j = 0; j < 6; j++) {
-            Image const& faceImage = dst.getImageForFace((Cubemap::Face)j);
+            Image const& faceImage = dst.getImageForFace(Cubemap::Face(j));
             auto offset = uintptr_t(faceImage.getData()) - base;
-            driver.update3DImage(mHandle, level, 0, 0, j, dim, dim, 1, {
-                    (char*)image.getData() + offset, dim * dim * 3 * sizeof(float),
-                    PixelBufferDescriptor::PixelDataFormat::RGB,
-                    PixelBufferDescriptor::PixelDataType::FLOAT, 1,
-                    0, 0, uint32_t(image.getStride())
-            });
+            texture->setImage(engine, level, 0, 0, j, dim, dim, 1,
+                    PixelBufferDescriptor::make((char*) image.getData() + offset,
+                            dim * dim * 3 * sizeof(float),
+                            PixelBufferDescriptor::PixelDataFormat::RGB,
+                            PixelBufferDescriptor::PixelDataType::FLOAT, 1,
+                            0, 0, uint32_t(image.getStride()),
+                            [j, &image](void const*, size_t) {
+                                // free the buffer only when processing the last image
+                                if (j == 5) {
+                                    image.detach();
+                                }
+                            }));
         }
-
-        // enqueue a commands that holds the image data until it's executed
-        driver.queueCommand(make_copyable_function([data = image.detach()]() {}));
     }
 
     // no need to call the user callback because buffer is a reference, and it'll be destroyed
