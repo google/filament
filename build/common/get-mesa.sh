@@ -83,8 +83,8 @@ elif [[ "$OS_NAME" == "Darwin" ]]; then
         # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
         LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
     elif sudo command -v port > /dev/null 2>&1; then
-        sudo port install autoconf automake libx11 libXext libXrandr llvm-${LLVM_VERSION} \
-             ninja meson pkgconfig libxshmfence
+        sudo port install autoconf automake xorg-libX11 xorg-libXext xorg-libXrandr llvm-${LLVM_VERSION} \
+             ninja meson pkgconfig xorg-libxshmfence
         LOCAL_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
     else
         echo "Error: need to install homebrew or macports to continue"
