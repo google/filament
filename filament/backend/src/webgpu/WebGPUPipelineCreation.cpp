@@ -281,27 +281,32 @@ wgpu::RenderPipeline createWebGPURenderPipeline(wgpu::Device const& device,
         }
     };
     if (program.fragmentShaderModule != nullptr) {
-        fragmentState.module = program.fragmentShaderModule;
-        fragmentState.entryPoint = "main";
-        // see the comment about constants for the vertex state, as the same reasoning applies
-        // here
-        fragmentState.constantCount = 0,
-        fragmentState.constants = nullptr,
-        fragmentState.targetCount = colorFormats.size();
-        fragmentState.targets = colorTargets.data();
-        assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
-        // We expect a fragment shader implies at least one color target if it outputs color.
-        // This should be guaranteed by the caller ensuring colorFormats is not empty.
-        // However, this fails on shadowtest.cpp, TODO investigate why
-        // assert_invariant(fragmentState.targetCount > 0);
-        for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
-            auto& colorTarget = colorTargets[targetIndex];
-            colorTarget.format = colorFormats[targetIndex];
-            colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
-            colorTarget.writeMask =
-                    rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;
+        // According to the WebGPU spec, a pipeline cannot have a fragment stage with zero color
+        // targets. This situation can arise in Filament during depth-only passes (like shadow map
+        // generation) if the material variant still includes a fragment shader.
+        //
+        // To handle this, we check if any color targets are configured for this pipeline. If not, we
+        // create a pipeline *without* a fragment stage. This makes the pipeline valid for a
+        // depth-only pass, allowing depth writes to proceed correctly.
+        if (!colorFormats.empty()) {
+            fragmentState.module = program.fragmentShaderModule;
+            fragmentState.entryPoint = "main";
+            // see the comment about constants for the vertex state, as the same reasoning applies
+            // here
+            fragmentState.constantCount = 0,
+            fragmentState.constants = nullptr,
+            fragmentState.targetCount = colorFormats.size();
+            fragmentState.targets = colorTargets.data();
+            assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
+            for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
+                auto& colorTarget = colorTargets[targetIndex];
+                colorTarget.format = colorFormats[targetIndex];
+                colorTarget.blend = rasterState.hasBlending() ? &blendState : nullptr;
+                colorTarget.writeMask =
+                        rasterState.colorWrite ? wgpu::ColorWriteMask::All : wgpu::ColorWriteMask::None;
+            }
+            pipelineDescriptor.fragment = &fragmentState;
         }
-        pipelineDescriptor.fragment = &fragmentState;
     }
     const wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&pipelineDescriptor);
     FILAMENT_CHECK_POSTCONDITION(pipeline)

@@ -1215,12 +1215,6 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
         }
     }
 
-    // TODO: We expected this to be a sane check, however it complains when running shadowtest.
-    //if (program->fragmentShaderModule != nullptr) {
-    //    FILAMENT_CHECK_POSTCONDITION(!pipelineColorFormats.empty())
-    //            << "Render pipeline with fragment shader must have at least one color target "
-    //               "format.";
-    //}
     wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program, *vertexBufferInfo,
             layout, pipelineState.rasterState, pipelineState.stencilState,
             pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
