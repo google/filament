@@ -177,9 +177,15 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                 << "attribute " << j << " offset=" << attributes[j].offset
                 << " is not multiple of 4";
 
-        FILAMENT_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0)
-                << "attribute " << j << " stride=" << attributes[j].stride
-                << " is not multiple of 4";
+        FEngine* fengine = static_cast<FEngine*>(&engine);
+        if (fengine->features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4) {
+            FILAMENT_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0)
+                    << "attribute " << j << " stride=" << attributes[j].stride
+                    << " is not multiple of 4";
+        } else if ((attributes[j].stride & 0x3u) != 0) {
+            LOG(WARNING) << "attribute " << j << " stride=" << attributes[j].stride
+                         << " is not multiple of 4";
+        }
 
         if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
             FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))

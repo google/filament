@@ -66,7 +66,7 @@ static std::string to_string(int const i) { return std::to_string(i); }
 static std::string to_string(float const f) { return "float(" + std::to_string(f) + ")"; }
 
 static void logCompilationError(ShaderStage shaderType, const char* name, GLuint shaderId,
-        CString const& sourceCode) noexcept;
+        Program::ShaderBlob const& sourceCode) noexcept;
 static void logProgramLinkError(char const* name, GLuint program) noexcept;
 
 static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context, char* source,
@@ -88,7 +88,7 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     ShaderCompilerService& compiler;
     CString const& name;
     FixedCapacityVector<std::pair<CString, uint8_t>> attributes;
-    shaders_source_t shaderSourceCode;
+    Program::ShaderSource shaderSourceCode;
     void* user = nullptr;
     struct {
         shaders_t shaders{};
@@ -612,7 +612,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
 #ifndef NDEBUG
             // for debugging we return the original shader source (without the modifications we
             // made here), otherwise the line numbers wouldn't match.
-            token->shaderSourceCode[i] = { shader_src, shader_len };
+            token->shaderSourceCode[i] = std::move(shader);
 #endif
             token->gl.shaders[i] = shaderId;
         }
@@ -758,7 +758,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
 UTILS_NOINLINE
 /* static */ void logCompilationError(ShaderStage shaderType, const char* name,
-        GLuint const shaderId, UTILS_UNUSED_IN_RELEASE CString const& sourceCode) noexcept {
+        GLuint const shaderId,
+        UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) noexcept {
 
     { // scope for the temporary string storage
         auto to_string = [](ShaderStage type) -> const char* {
@@ -785,7 +786,8 @@ UTILS_NOINLINE
     }
 
 #ifndef NDEBUG
-    std::string_view const shader{ sourceCode.data(), sourceCode.size() };
+    std::string_view const shader{ reinterpret_cast<const char*>(sourceCode.data()),
+        sourceCode.size() };
     size_t lc = 1;
     size_t start = 0;
     std::string line;

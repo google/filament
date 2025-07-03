@@ -16,6 +16,7 @@
 
 #include "TangentsJob.h"
 
+#include <cstdlib>
 #include <memory>
 
 #include <geometry/SurfaceOrientation.h>

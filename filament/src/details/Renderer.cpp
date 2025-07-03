@@ -1125,16 +1125,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // --------------------------------------------------------------------------------------------
     // Color passes
 
-    // this makes the viewport relative to xvp
-    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
-    //        know at this point. This will usually be the case when post-process is disabled.
-    // FIXME: we probably should take the dynamic scaling into account too
-    // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
-    // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
-    const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
-          (isRenderingMultiview && engine.debug.stereo.combine_multiview_images);
-    passBuilder.scissorViewport(useIntermediateBuffer ? xvp : vp);
-
     // This one doesn't need to be a FrameGraph pass because it always happens by construction
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     passBuilder.variant(variant);
@@ -1174,7 +1164,34 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         passBuilder.renderFlags(renderFlags);
     }
 
+    // create the pass, which generates all its commands (this is a heavy operation)
     RenderPass const pass{ passBuilder.build(engine, driver) };
+
+    // now that we have the commands we can figure out if we have refraction commands
+    auto* const firstRefractionCommand = [&view](RenderPass const& pass) {
+        RenderPass::Command const* p = nullptr;
+        if (UTILS_UNLIKELY(view.isScreenSpaceRefractionEnabled() && !pass.empty())) {
+            p = RendererUtils::getFirstRefractionCommand(pass);
+        }
+        return p;
+    }(pass);
+
+    hasScreenSpaceRefraction = firstRefractionCommand != nullptr;
+
+    // this makes the viewport relative to xvp
+    // FIXME: we should use 'vp' when rendering directly into the swapchain, but that's hard to
+    //        know at this point. This will usually be the case when post-process is disabled.
+    // FIXME: we probably should take the dynamic scaling into account too
+    // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
+    // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
+    const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
+            ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
+            (isRenderingMultiview && engine.debug.stereo.
+            combine_multiview_images);
+
+    // this is slightly ugly, but conceptually `pass` is const; it's just that we can't set
+    // the scissor viewport during construction
+    const_cast<RenderPass&>(pass).setScissorViewport(useIntermediateBuffer ? xvp : vp);
 
     FrameGraphTexture::Descriptor colorBufferDesc = {
             .width = config.physicalViewport.width,
@@ -1220,21 +1237,17 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             },
             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
 
-    if (view.isScreenSpaceRefractionEnabled() && !pass.empty()) {
+    if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
         // This cancels the colorPass() call above if refraction is active.
         // The color pass + refraction + color-grading as subpass if needed
-        auto const output = RendererUtils::refractionPass(fg, mEngine, view, {
+        colorPassOutput = RendererUtils::refractionPass(fg, mEngine, view, {
                         .shadows = blackboard.get<FrameGraphTexture>("shadows"),
                         .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                         .ssr = ssrConfig.ssr,
                         .structure = structure
                 },
-                config, ssrConfig, colorGradingConfigForColor, pass);
-
-        hasScreenSpaceRefraction = output.has_value();
-        if (hasScreenSpaceRefraction) {
-            colorPassOutput = output.value();
-        }
+                config, ssrConfig, colorGradingConfigForColor,
+                pass, firstRefractionCommand);
     }
 
     if (colorGradingConfig.customResolve) {
