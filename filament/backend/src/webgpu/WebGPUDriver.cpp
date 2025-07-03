@@ -591,7 +591,7 @@ bool WebGPUDriver::isParallelShaderCompileSupported() {
 }
 
 bool WebGPUDriver::isDepthStencilResolveSupported() {
-    return true;
+    return false;
 }
 
 bool WebGPUDriver::isDepthStencilBlitSupported(const TextureFormat format) {
