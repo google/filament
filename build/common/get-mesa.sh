@@ -42,6 +42,7 @@ done
 deactivate
 
 LOCAL_PKG_CONFIG_PATH=
+IS_DARWIN_MACPORTS=
 
 # Install system deps
 if [[ "$OS_NAME" == "Linux" ]]; then
@@ -77,16 +78,21 @@ if [[ "$OS_NAME" == "Linux" ]]; then
             sudo ln -s /usr/bin/clang++-${CLANG_VERSION} /usr/bin/clang++
     fi # [[ "$GITHUB_WORKFLOW" ]]
 elif [[ "$OS_NAME" == "Darwin" ]]; then
-    if [[ ! "$GITHUB_WORKFLOW" ]]; then
-        if [ ! command -v brew > /dev/null 2>&1 ]; then
-            echo "Error: need to install homebrew to continue"
-            exit 1
-        fi
+    if command -v brew > /dev/null 2>&1; then
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr \
+                                                    llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+        # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
+        LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
+    elif sudo command -v port > /dev/null 2>&1; then
+        sudo port install autoconf automake xorg-libX11 xorg-libXext xorg-libXrandr llvm-${LLVM_VERSION} \
+             ninja meson pkgconfig xorg-libxshmfence
+        export LLVM_CONFIG=/opt/local/bin/llvm-config-mp-${LLVM_VERSION}
+        LOCAL_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+        IS_DARWIN_MACPORTS=true
+    else
+        echo "Error: need to install homebrew or macports to continue"
+        exit 1
     fi
-    HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
-
-    # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
-    LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 fi # [[ "$OS_NAME" == x ]]
 
 LOCAL_LDFLAGS=${LDFLAGS}
@@ -145,6 +151,10 @@ CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLA
 PKG_CONFIG_PATH=${LOCAL_PKG_CONFIG_PATH} PATH=${LOCAL_PATH} \
 CXX=${LOCAL_CXX} CC=${LOCAL_CC} LDFLAGS=${LOCAL_LDFLAGS} CPPFLAGS=${LOCAL_CPPFLAGS} \
    meson install -C builddir/
+
+if [[ "$IS_DARWIN_MACPORTS" = "true" ]]; then
+    install_name_tool -add_rpath /opt/local/libexec/llvm-${LLVM_VERSION}/lib ${MESA_DIR}/out/lib/libGL.1.dylib
+fi
 
 # Disable python venv
 deactivate
