@@ -78,7 +78,7 @@ if [[ "$OS_NAME" == "Linux" ]]; then
     fi # [[ "$GITHUB_WORKFLOW" ]]
 elif [[ "$OS_NAME" == "Darwin" ]]; then
     if [[ ! "$GITHUB_WORKFLOW" ]]; then
-        if [ ! command -v brew > /dev/null 2>&1 ]; then
+        if ! command -v brew > /dev/null 2>&1; then
             echo "Error: need to install homebrew to continue"
             exit 1
         fi
