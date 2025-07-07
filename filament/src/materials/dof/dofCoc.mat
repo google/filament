@@ -10,7 +10,7 @@ material {
             type : sampler2d,
             name : depth,
             precision: medium,
-            unfilterable: true
+            filterable: false
         },
         {
             type : float2,
