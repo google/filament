@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Metal: fix, respect alpha to coverage rasterization
+- engine: removed `Texture::generatePrefilterMipmap`, a new `libfilament-generatePrefilterMipmap` library can be used in its stead [⚠️ **API BREAKAGE**]

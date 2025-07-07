@@ -82,8 +82,6 @@ RenderPassBuilder& RenderPassBuilder::customCommand(
 
 RenderPass RenderPassBuilder::build(FEngine const& engine, DriverApi& driver) const {
     assert_invariant(mRenderableSoa);
-    assert_invariant(mScissorViewport.width  <= std::numeric_limits<int32_t>::max());
-    assert_invariant(mScissorViewport.height <= std::numeric_limits<int32_t>::max());
     return RenderPass{ engine, driver, *this };
 }
 
@@ -107,8 +105,7 @@ void RenderPass::DescriptorSetHandleDeleter::operator()(
 RenderPass::RenderPass(FEngine const& engine, DriverApi& driver,
         RenderPassBuilder const& builder) noexcept
         : mRenderableSoa(*builder.mRenderableSoa),
-          mColorPassDescriptorSet(builder.mColorPassDescriptorSet),
-          mScissorViewport(builder.mScissorViewport) {
+          mColorPassDescriptorSet(builder.mColorPassDescriptorSet) {
 
     // compute the number of commands we need
     updateSummedPrimitiveCounts(

@@ -26,7 +26,6 @@
 #include <vector>
 
 // Platform specific includes and defines
-#include <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
 
 /**

@@ -20,6 +20,8 @@
 #include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUMsaaTextureResolver.h"
+#include "webgpu/WebGPUPipelineCache.h"
+#include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -32,7 +34,6 @@
 #include <utils/compiler.h>
 
 #include "SpdMipmapGenerator/SpdMipmapGenerator.h"
-#include <tsl/robin_map.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
@@ -79,11 +80,11 @@ private:
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPUPipelineLayoutCache mPipelineLayoutCache;
+    WebGPUPipelineCache mPipelineCache;
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
-
-    tsl::robin_map<size_t, wgpu::RenderPipeline> mPipelineMap;
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
@@ -91,8 +92,6 @@ private:
         backend::DescriptorSetOffsetArray offsets;
     };
     std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
-
-    [[nodiscard]] size_t computePipelineKey(PipelineState const&, WebGPURenderTarget const*) const;
 
     /*
      * Driver interface

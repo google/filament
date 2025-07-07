@@ -77,16 +77,20 @@ if [[ "$OS_NAME" == "Linux" ]]; then
             sudo ln -s /usr/bin/clang++-${CLANG_VERSION} /usr/bin/clang++
     fi # [[ "$GITHUB_WORKFLOW" ]]
 elif [[ "$OS_NAME" == "Darwin" ]]; then
-    if [[ ! "$GITHUB_WORKFLOW" ]]; then
-        if [ ! command -v brew > /dev/null 2>&1 ]; then
-            echo "Error: need to install homebrew to continue"
-            exit 1
-        fi
+    if command -v brew > /dev/null 2>&1; then
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr \
+                                                        llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
+        # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
+        LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
+    elif command -v port > /dev/null 2>&1; then
+        sudo port install autoconf automake libx11 libXext libXrandr llvm-${LLVM_VERSION} \
+             ninja meson pkgconfig libxshmfence
+        # For reasons unknown, this is necessary for pkg-config to find macport's packages
+        LOCAL_PKG_CONFIG_PATH="/opt/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+    else
+        echo "Error: need to install homebrew or macports to continue"
+        exit 1
     fi
-    HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=true brew install autoconf automake libx11 libxext libxrandr llvm@${LLVM_VERSION} ninja meson pkg-config libxshmfence
-
-    # For reasons unknown, this is necessary for pkg-config to find homebrew's packages
-    LOCAL_PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
 fi # [[ "$OS_NAME" == x ]]
 
 LOCAL_LDFLAGS=${LDFLAGS}
