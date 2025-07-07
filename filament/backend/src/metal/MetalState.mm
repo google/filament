@@ -86,6 +86,7 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
 
     // MSAA
     descriptor.rasterSampleCount = state.sampleCount;
+    descriptor.alphaToCoverageEnabled = state.alphaToCoverage;
 
     NSError* error = nullptr;
     id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor
