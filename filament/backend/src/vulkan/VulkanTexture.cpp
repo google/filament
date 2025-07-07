@@ -227,7 +227,7 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
 
     // Slow path of copying row by row
     assert_invariant(pbdStride >= width);
-    if (UTILS_UNLIKELY(p.left > 0 || p.top > 0 || pbdStride > width)) {
+    if (UTILS_UNLIKELY(pixelSize > 0 && (p.left > 0 || p.top > 0 || pbdStride > width))) {
         size_t const pbdRowSize =
                 PixelBufferDescriptor::computeDataSize(p.format, p.type, pbdStride, 1, p.alignment);
         size_t const pbdHeight = p.size / pixelSize / pbdStride / depth;
@@ -248,9 +248,26 @@ void adjustedMemcpy(void* mapped, PixelBufferDescriptor const& p, size_t width, 
             }
         }
     } else {
-        size_t const writeSize = pixelSize * (width * height * depth);
+        // Note: if pixelSize = 0, we're dealing with a compressed format; we
+        // should fall back to the buffer's size.
+        size_t const writeSize = pixelSize > 0 ? pixelSize * (width * height * depth) : p.size;
         memcpy(mapped, buf, writeSize);
     }
+}
+
+uint8_t getAlignmentForBufferToImageCopy(VkFormat format) {
+    // VUID-vkCmdCopyBufferToImage-dstImage-07978
+    if(fvkutils::isVkDepthFormat(format) || fvkutils::isVkStencilFormat(format)) {
+        return 4;
+    }
+
+    if (fvkutils::isVKYcbcrConversionFormat(format)) {
+        assert_invariant(false && "Multi planar format is not supported");
+        return 1;
+    }
+
+    // VUID-vkCmdCopyBufferToImage-dstImage-07975
+    return fvkutils::getTexelBlockSize(format);
 }
 
 } // anonymous namespace
@@ -517,13 +534,14 @@ void VulkanTexture::updateImage(const PixelBufferDescriptor& data, uint32_t widt
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp =
             PixelBufferDescriptor::computeDataSize(hostData->format, hostData->type, 1, 1, 1);
-    size_t const writeSize = width * height * depth * bpp;
+    // Note: if bpp = 0, we're dealing with a compressed format; we should fall
+    // back to the buffer's size.
+    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : hostData->size;
 
     // Note: the following stageSegment must be stored within the command buffer
     // before going out of scope, to ensure proper bookkeeping within the
     // staging buffer pool.
-    uint8_t alignment =
-            fvkutils::getTexelBlockSize(fvkutils::getVkFormat(hostData->format, hostData->type));
+    uint8_t alignment = getAlignmentForBufferToImageCopy(mState->mVkFormat);
     fvkmemory::resource_ptr<VulkanStage::Segment> stageSegment =
             mState->mStagePool.acquireStage(writeSize, alignment);
     assert_invariant(stageSegment->memory());
@@ -593,18 +611,21 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
         uint32_t height, uint32_t depth, uint32_t miplevel) {
     // Otherwise, use vkCmdCopyBufferToImage.
     size_t const bpp = PixelBufferDescriptor::computeDataSize(data.format, data.type, 1, 1, 1);
-    size_t const writeSize = width * height * depth * bpp;
+    // Note: if bpp = 0, we're dealing with a compressed format; we should fall
+    // back to the buffer's size.
+    size_t const writeSize = bpp > 0 ? width * height * depth * bpp : data.size;
 
     void* mapped = nullptr;
-    VulkanStageImage const* stage
+    fvkmemory::resource_ptr<VulkanStageImage::Resource> stage
             = mState->mStagePool.acquireImage(data.format, data.type, width, height);
-    vmaMapMemory(mState->mAllocator, stage->memory, &mapped);
+    vmaMapMemory(mState->mAllocator, stage->memory(), &mapped);
     adjustedMemcpy(mapped, data, width, height, depth);
-    vmaUnmapMemory(mState->mAllocator, stage->memory);
-    vmaFlushAllocation(mState->mAllocator, stage->memory, 0, writeSize);
+    vmaUnmapMemory(mState->mAllocator, stage->memory());
+    vmaFlushAllocation(mState->mAllocator, stage->memory(), 0, writeSize);
 
     VulkanCommandBuffer& commands = mState->mCommands->get();
     VkCommandBuffer const cmdbuf = commands.buffer();
+    commands.acquire(stage);
     commands.acquire(fvkmemory::resource_ptr<VulkanTexture>::cast(this));
 
     // TODO: support blit-based format conversion for 3D images and cubemaps.
@@ -627,7 +648,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     VulkanLayout const oldLayout = getLayout(layer, miplevel);
     transitionLayout(&commands, range, newLayout);
 
-    vkCmdBlitImage(cmdbuf, stage->image, fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+    vkCmdBlitImage(cmdbuf, stage->image(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
             mState->mTextureImage, fvkutils::getVkLayout(newLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
     transitionLayout(&commands, range, oldLayout);

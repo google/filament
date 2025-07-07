@@ -63,6 +63,8 @@ void ShaderGenerator::generateSurfaceMaterialVariantDefines(io::sstream& out,
             filament::Variant::isVSMVariant(variant));
     CodeGenerator::generateDefine(out, "VARIANT_HAS_STEREO",
             hasStereo(variant, featureLevel));
+    CodeGenerator::generateDefine(out, "VARIANT_DEPTH",
+            filament::Variant::isValidDepthVariant(variant));
 
     switch (stage) {
         case ShaderStage::VERTEX:
