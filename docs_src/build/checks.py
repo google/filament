@@ -30,6 +30,13 @@ from utils import execute, ArgParseImpl
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(CUR_DIR, '../../')
 
+DOCS_SRC_DIR = os.path.abspath(os.path.join(CUR_DIR, '../'))
+MARKDEEP_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_markdeep')
+MDBOOK_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_mdbook')
+RAW_SRC_DIR = os.path.join(DOCS_SRC_DIR, 'src_raw')
+
+SRC_SRC_DIRS = [MARKDEEP_SRC_DIR, MDBOOK_SRC_DIR, RAW_SRC_DIR]
+
 def get_edited_files(commit_hash):
   INSERT = '#####?????'
   res, ret = execute(f'git show --name-only --pretty=%b{INSERT} {commit_hash}')
@@ -39,7 +46,7 @@ def get_edited_files(commit_hash):
   for r in filter(lambda a: len(a) > 0, after.split('\n')):
     if r.startswith('commit'):
       break
-    files.append(r)
+    files.append(os.path.abspath(os.path.join(ROOT_DIR, r)))
   return files
 
 # Returns True if there were no direct edits to '/docs'
@@ -54,12 +61,19 @@ def check_has_source_edits(commit_hash, printing=True):
   config = {}
   with open(f'{CUR_DIR}/duplicates.json') as config_txt:
     config = json.loads(config_txt.read())
-  source_files = set(config.keys())
+  source_files = set(os.path.abspath(os.path.join(ROOT_DIR, k)) for k in config.keys())
   edited_files = set(get_edited_files(commit_hash))
-  overlap = [f'\t{f}' for f in list(source_files & edited_files)]
-  if printing and len(overlap) > 0:
-    print(f'Found edited source files:\n' + '\n'.join(overlap))
-  return len(overlap) > 0
+
+  # find any changes to docs_src sources
+  is_docs_src_edit = lambda f: any(f.startswith(prefix) for prefix in SRC_SRC_DIRS)
+
+  final_edited = [f'\t{f}' for f in \
+                  list(source_files & edited_files) + \
+                  list(filter(is_docs_src_edit, edited_files))]
+
+  if printing and len(final_edited) > 0:
+    print(f'Found edited source files:\n' + '\n'.join(final_edited))
+  return len(final_edited) > 0
 
 # Returns true in a given TAG is found in the commit msg
 def commit_msg_has_tag(commit_hash, tag, printing=True):
