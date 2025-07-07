@@ -40,7 +40,7 @@ SRC_SRC_DIRS = [MARKDEEP_SRC_DIR, MDBOOK_SRC_DIR, RAW_SRC_DIR]
 def get_edited_files(commit_hash):
   INSERT = '#####?????'
   res, ret = execute(f'git show --name-only --pretty=%b{INSERT} {commit_hash}')
-  assert res == 0, 'Failed to get edited filed'
+  assert res == 0, f'Failed to get edited filed {res}: ' + ret
   files = []
   _, after = ret.split(INSERT)
   for r in filter(lambda a: len(a) > 0, after.split('\n')):
