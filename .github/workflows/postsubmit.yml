@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
         run: |
           GOLDEN_BRANCH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | python3 test/renderdiff/src/commit_msg.py)
-          COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | tr -d 'commit ')
+          COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
           if [[ "${GOLDEN_BRANCH}" != "main" ]]; then
               git config --global user.email "filament.bot@gmail.com"
               git config --global user.name "Filament Bot"
@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
         run: |
-          COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | tr -d 'commit ')
+          COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"
           git config --global credential.helper cache
