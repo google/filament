@@ -155,13 +155,14 @@ private:
     static bool isCompileCompleted(program_token_t const& token) noexcept;
 
     // Check compilation status of the shaders and log errors on failure.
-    static void checkCompileStatus(program_token_t const& token) noexcept;
+    static bool checkCompileStatus(program_token_t const& token) noexcept;
 
-    // Create a program by linking the compiled shaders. `gl.program` is always populated with a
-    // valid program ID after this method. But this doesn't necessarily mean the program is
-    // successfully linked. Errors can be checked by calling `checkLinkStatusAndCleanupShaders`
-    // later.
-    static void linkProgram(OpenGLContext const& context, program_token_t const& token) noexcept;
+    // Create a program by linking the compiled shaders. If the previous shader compilation was
+    // failed, `compilationFailed` is set, then this function returns false. Otherwise `gl.program`
+    // is populated with a valid program ID, then returns true. However this doesn't necessarily
+    // mean the program is successfully linked. The link error can be checked by calling
+    // `checkLinkStatusAndCleanupShaders` later.
+    static bool linkProgram(OpenGLContext const& context, program_token_t const& token) noexcept;
 
     // Check if the program link is completed. You may want to call this when the extension
     // `KHR_parallel_shader_compile` is enabled.

@@ -121,6 +121,12 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
         }
     }
 
+    // Checks the token's completion status. The token is considered ready if the program was
+    // created successfully or if a shader compilation error occurred.
+    bool isReady() const noexcept {
+        return gl.program || compilationFailed;
+    }
+
     std::optional<CallbackManager::Handle> handle{};
 
     // Only valid when the blob functions are provided by users. The validity of this variable
@@ -134,6 +140,9 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;
+
+    // Indicates that shader compilation failed.
+    bool compilationFailed = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
@@ -297,22 +306,33 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
             runAtNextTick(priorityQueue, token, [this, token](Job const&) {
                 assert_invariant(mMode != Mode::THREAD_POOL);
-                if (mMode == Mode::ASYNCHRONOUS) {
-                    // Check link completion if link was initiated.
-                    if (token->gl.program) {
+
+                if (token->gl.program) {
+                    // Program linking has been initiated.
+                    if (mMode == Mode::ASYNCHRONOUS) {
                         return isLinkCompleted(token);
                     }
-                    // Link hasn't been initiated, then check compile completion.
+                    return true; // In sync mode, if program exists, we're done with this job.
+                }
+
+                // Program not linked yet. Check if shaders are compiled.
+                if (mMode == Mode::ASYNCHRONOUS) {
                     if (!isCompileCompleted(token)) {
-                        return false;
+                        return false; // Wait for compilation to finish.
                     }
                 }
-                if (!token->gl.program) {
-                    linkProgram(mDriver.getContext(), token);
-                    if (mMode == Mode::ASYNCHRONOUS) {
-                        return false;// Wait until the link finishes.
-                    }
+
+                // Shaders are compiled (or we're in sync mode). Let's link.
+                if (!linkProgram(mDriver.getContext(), token)) {
+                    // Shader compilation failed. Stop processing this program.
+                    return true;
                 }
+
+                // Program is now linking.
+                if (mMode == Mode::ASYNCHRONOUS) {
+                    return false; // Wait for linking to finish.
+                }
+
                 return true;
             });
             break;
@@ -394,6 +414,14 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
     assert_invariant(token);// This function should be called when the token is still alive.
 
     ensureTokenIsReady(token);
+
+    if (token->compilationFailed) {
+        // Cleanup the token.
+        token->compiler.cancelTickOp(token);
+        token = nullptr;
+        return 0;
+    }
+
     assert_invariant(token->gl.program);
 
     // Check status of program linking. If it failed, errors will be logged.
@@ -419,7 +447,7 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
 }
 
 void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
-    if (token->gl.program) {
+    if (token->isReady()) {
         return;// It's ready.
     }
 
@@ -638,9 +666,10 @@ void ShaderCompilerService::executeTickOps() noexcept {
     return true;
 }
 
-/* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) noexcept {
+/* static */ bool ShaderCompilerService::checkCompileStatus(program_token_t const& token) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
+    bool success = true;
     UTILS_NOUNROLL
     for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const GLuint shader = token->gl.shaders[i];
@@ -656,15 +685,21 @@ void ShaderCompilerService::executeTickOps() noexcept {
         // Something went wrong. Log the error message.
         const ShaderStage type = static_cast<ShaderStage>(i);
         logCompilationError(type, token->name.c_str_safe(), shader, token->shaderSourceCode[i]);
+        success = false;
     }
+    return success;
 }
 
-/* static */ void ShaderCompilerService::linkProgram(OpenGLContext const& context,
+/* static */ bool ShaderCompilerService::linkProgram(OpenGLContext const& context,
         program_token_t const& token) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // Shader compilation should be completed by now. Check the status and log errors on failure.
-    checkCompileStatus(token);
+    if (!checkCompileStatus(token)) {
+        token->compilationFailed = true;
+        token->trySubmittingCallback();
+        return false;
+    }
 
     // Link program
     GLuint const program = glCreateProgram();
@@ -681,6 +716,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
     glLinkProgram(program);
     token->gl.program = program;
     token->trySubmittingCallback();
+    return true;
 }
 
 /* static */ bool ShaderCompilerService::isLinkCompleted(program_token_t const& token) noexcept {
