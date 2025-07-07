@@ -245,12 +245,11 @@ int main(int argc, char* argv[]) {
     ostringstream headerStream;
     headerStream << "#ifndef " << packagePrefix << "H_" << endl
             << "#define " << packagePrefix << "H_" << endl << endl
-            << "#include <stdint.h>" << endl << endl
+            << "#include <stdint.h>\n" << endl
             << "extern \"C\" {" << endl
             << "    extern const uint8_t " << package << "[];" << endl;
 
     ostringstream headerMacros;
-    ostringstream xxdDefinitions;
     ostringstream appleDataAsmStream;
     ostringstream dataAsmStream;
     ostringstream jsonStream;
@@ -263,7 +262,8 @@ int main(int argc, char* argv[]) {
             cerr << "Unable to open " << xxdPath << endl;
             exit(1);
         }
-        xxdStream << "#include <stdint.h>\n\nconst uint8_t " << package << "[] = {\n";
+        xxdStream << "#include <stdint.h>\n"
+                  << "const uint8_t " << package << "[] = {\n";
     }
 
     // Consume each input file and write it back out into the various output streams.
@@ -306,38 +306,12 @@ int main(int argc, char* argv[]) {
 
         // Write the offsets and sizes.
         headerMacros
-                << "#define " << prname << "_DATA (" << package << " + " << prname << "_OFFSET)\n";
-
-        headerStream
-                << "    extern int " << prname << "_OFFSET;\n"
-                << "    extern int " << prname << "_SIZE;\n";
-
-        dataAsmStream
-                << prname << "_OFFSET:\n"
-                << "    .int " << offset << "\n"
-                << prname << "_SIZE:\n"
-                << "    .int " << content.size() << "\n";
-
-        asmStream
-                << "    .global " << prname << "_OFFSET;\n"
-                << "    .global " << prname << "_SIZE;\n";
-
-        appleDataAsmStream
-                << "_" << prname << "_OFFSET:\n"
-                << "    .int " << offset << "\n"
-                << "_" << prname << "_SIZE:\n"
-                << "    .int " << content.size() << "\n";
-
-        appleAsmStream
-                << "    .global _" << prname << "_OFFSET;\n"
-                << "    .global _" << prname << "_SIZE;\n";
+                << "#define " << prname << "_OFFSET " << offset << "\n"
+                << "#define " << prname << "_SIZE " << content.size() << "\n"
+                << "#define " << prname << "_DATA (" << package << " + " << prname << "_OFFSET)\n\n";
 
         // Write the xxd-style ASCII array, followed by a blank line.
         if (g_generateC) {
-            xxdDefinitions
-                    << "int " << prname << "_OFFSET = " << offset << ";\n"
-                    << "int " << prname << "_SIZE = " << content.size() << ";\n";
-
             xxdStream << "// " << rname << "\n";
             xxdStream << setfill('0') << hex;
             size_t i = 0;
@@ -355,8 +329,9 @@ int main(int argc, char* argv[]) {
         offset += content.size();
     }
 
-    headerStream << "}\n" << headerMacros.str();
-    headerStream << "\n#endif\n";
+    headerStream << "}\n\n";
+    headerStream << headerMacros.str();
+    headerStream << "#endif\n";
 
     // To optimize builds, avoid overwriting the header file if nothing has changed.
     bool headerIsDirty = true;
@@ -396,7 +371,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (g_generateC) {
-        xxdStream << "};\n\n" << xxdDefinitions.str();
+        xxdStream << "};\n\n";
         if (!g_quietMode) {
             cout << " " << xxdPath;
         }
