@@ -361,7 +361,7 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
         uint32_t height, uint64_t flags) {
-     wgpu::Extent2D extent = { width, height};
+     wgpu::Extent2D extent = { .width = width, .height = height };
      mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
      assert_invariant(mSwapChain);
@@ -999,7 +999,7 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
          wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
          mTextureView = mSwapChain->getCurrentTextureView(extent);
     } else {
-        mTextureView = mSwapChain->getCurrentTextureView();
+        mTextureView = mSwapChain->getCurrentHeadlessTextureView();
     }
 
     assert_invariant(mTextureView);

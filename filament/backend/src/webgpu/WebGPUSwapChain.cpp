@@ -245,18 +245,18 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 }// namespace
 
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
-    : mDevice(device),
-      mSurface(surface),
-      mNeedStencil((flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0),
-      mDepthFormat(selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-              mNeedStencil)),
-      mDepthTexture(createDepthTexture(device, extent, mDepthFormat)),
-      mDepthTextureView(createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)),
-      mType(SwapChainType::SURFACE),
-      mHeadlessWidth(0),
-      mHeadlessHeight(0) {
+    : mDevice{device},
+      mSurface{surface},
+      mNeedStencil{(flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0},
+      mDepthFormat{selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+              mNeedStencil)},
+      mDepthTexture{createDepthTexture(device, extent, mDepthFormat)},
+      mDepthTextureView{createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)},
+      mType{SwapChainType::SURFACE},
+      mHeadlessWidth{0},
+      mHeadlessHeight{0} {
 
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
@@ -267,10 +267,10 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
 #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
-    const bool needStencil = (flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0;
+
     initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
     mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-            needStencil);
+            mNeedStencil);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif
@@ -279,42 +279,55 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
 
 WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
-    : mType(SwapChainType::HEADLESS),
-      mHeadlessWidth(extent.width),
-      mHeadlessHeight(extent.height){
+    : mDevice{device},
+      mNeedStencil{(flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0},
+      mDepthFormat{selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+            mNeedStencil)},
+      mDepthTexture{createDepthTexture(device, extent, mDepthFormat)},
+      mDepthTextureView{createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)},
+      mType{SwapChainType::HEADLESS},
+      mHeadlessWidth{extent.width},
+      mHeadlessHeight{extent.height}{
 
+    mConfig.format = wgpu::TextureFormat::RGBA8Unorm;
+    mConfig.device = device;
+    mConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    mConfig.width = extent.width;
+    mConfig.height = extent.height;
+    mConfig.presentMode = wgpu::PresentMode::Fifo;
+    mConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
+
+    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+                mNeedStencil);
     const wgpu::TextureDescriptor textureDescriptor = {
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
         .dimension = wgpu::TextureDimension::e2D,
-        .size = { mHeadlessWidth, mHeadlessHeight, 1 },
+        .size = { .width = mHeadlessWidth, .height = mHeadlessHeight, .depthOrArrayLayers = 1 },
         .format = wgpu::TextureFormat::RGBA8Unorm,
         .mipLevelCount = 1,
         .sampleCount = 1,
     };
 
-     mRenderTargetTextures.fill(nullptr);
-     mRenderTargetViews.fill(nullptr);
+    const wgpu::TextureViewDescriptor viewDesc = {
+        .format = textureDescriptor.format,
+        .dimension = wgpu::TextureViewDimension::e2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = 1,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1,
+        .aspect = wgpu::TextureAspect::All,
+    };
 
     for (size_t i = 0; i < mHeadlessBufferCount; ++i) {
         mRenderTargetTextures[i] = device.CreateTexture(&textureDescriptor);
-        wgpu::TextureViewDescriptor viewDesc{};
-        viewDesc.format = textureDescriptor.format;
-        viewDesc.dimension = wgpu::TextureViewDimension::e2D;
-        viewDesc.baseMipLevel = 0;
-        viewDesc.mipLevelCount = 1;
-        viewDesc.baseArrayLayer = 0;
-        viewDesc.arrayLayerCount = 1;
-        viewDesc.aspect = wgpu::TextureAspect::All;
         mRenderTargetViews[i] = mRenderTargetTextures[i].CreateView(&viewDesc);
+        FILAMENT_CHECK_POSTCONDITION( mRenderTargetViews[i]) << "Failed to create headless texture with width "
+                                               << extent.width << " and height " << extent.height;
     }
 }
 
 WebGPUSwapChain::~WebGPUSwapChain() {
-    if (isHeadless()) {
-        for (auto& texture: mRenderTargetTextures) {
-            if (texture) texture.Destroy();
-        }
-    } else {
+    if (!isHeadless()) {
         mSurface.Unconfigure();
     }
 }
@@ -360,15 +373,16 @@ wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& 
     return surfaceTexture.texture.CreateView(&textureViewDescriptor);
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentTextureView() {
+wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
     return mRenderTargetViews[mHeadlessBufferIndex];
 }
 
 void WebGPUSwapChain::present() {
-     if(isHeadless()){
+    if (isHeadless()) {
         mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    } else {
+        mSurface.Present();
     }
-    mSurface.Present();
 }
 
 }// namespace filament::backend
