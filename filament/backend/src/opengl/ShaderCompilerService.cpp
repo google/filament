@@ -66,8 +66,8 @@ static std::string to_string(int const i) { return std::to_string(i); }
 static std::string to_string(float const f) { return "float(" + std::to_string(f) + ")"; }
 
 static void logCompilationError(ShaderStage shaderType, const char* name, GLuint shaderId,
-        Program::ShaderBlob const& sourceCode) noexcept;
-static void logProgramLinkError(char const* name, GLuint program) noexcept;
+        GLenum callResult, Program::ShaderBlob const& sourceCode) noexcept;
+static void logProgramLinkError(char const* name, GLuint program, GLenum callResult) noexcept;
 
 static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context, char* source,
         size_t len) noexcept;
@@ -92,6 +92,8 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     void* user = nullptr;
     struct {
         shaders_t shaders{};
+        GLenum compilationCallResult = GL_NO_ERROR;
+        GLenum linkCallResult = GL_NO_ERROR;
         GLuint program = 0;
     } gl; // 12 bytes
 
@@ -609,6 +611,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
             GLuint const shaderId = glCreateShader(glShaderType);
             glShaderSource(shaderId, GLsizei(count), shaderStrings.data(), lengths.data());
             glCompileShader(shaderId);
+            token->gl.compilationCallResult = glGetError();
 #ifndef NDEBUG
             // for debugging we return the original shader source (without the modifications we
             // made here), otherwise the line numbers wouldn't match.
@@ -655,7 +658,8 @@ void ShaderCompilerService::executeTickOps() noexcept {
         }
         // Something went wrong. Log the error message.
         const ShaderStage type = static_cast<ShaderStage>(i);
-        logCompilationError(type, token->name.c_str_safe(), shader, token->shaderSourceCode[i]);
+        logCompilationError(type, token->name.c_str_safe(), shader, token->gl.compilationCallResult,
+                token->shaderSourceCode[i]);
     }
 }
 
@@ -679,6 +683,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
         }
     }
     glLinkProgram(program);
+    token->gl.linkCallResult = glGetError();
     token->gl.program = program;
     token->trySubmittingCallback();
 }
@@ -707,7 +712,7 @@ void ShaderCompilerService::executeTickOps() noexcept {
     glGetProgramiv(token->gl.program, GL_LINK_STATUS, &status);
     if (UTILS_UNLIKELY(status != GL_TRUE)) {
         // Something went wrong. Log the error message.
-        logProgramLinkError(token->name.c_str_safe(), token->gl.program);
+        logProgramLinkError(token->name.c_str_safe(), token->gl.program, token->gl.linkCallResult);
         linked = false;
     }
     // No need to keep the shaders around regardless of the result of the program linking.
@@ -758,8 +763,12 @@ void ShaderCompilerService::executeTickOps() noexcept {
 
 UTILS_NOINLINE
 /* static */ void logCompilationError(ShaderStage shaderType, const char* name,
-        GLuint const shaderId,
+        GLuint const shaderId, GLenum callResult,
         UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) noexcept {
+
+    // Collects the current GL error for additional context. While often redundant,
+    // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glCompileShader`.
+    GLenum glError = glGetError();
 
     { // scope for the temporary string storage
         auto to_string = [](ShaderStage type) -> const char* {
@@ -781,8 +790,8 @@ UTILS_NOINLINE
         glGetShaderInfoLog(shaderId, length, nullptr, infoLog.data());
 
         LOG(ERROR) << "Compilation error in " << to_string(shaderType) << " shader \"" << name
-                   << "\":";
-        LOG(ERROR) << "\"" << infoLog.c_str() << "\"";
+                   << "\":\n - glCompileShader=" << callResult << "\n - GL_COMPILE_STATUS=" << glError
+                   << "\n - InfoLog=\"" << infoLog.c_str() << "\"";
     }
 
 #ifndef NDEBUG
@@ -809,14 +818,21 @@ UTILS_NOINLINE
 }
 
 UTILS_NOINLINE
-/* static */ void logProgramLinkError(char const* name, GLuint program) noexcept {
+/* static */ void logProgramLinkError(char const* name, GLuint program,
+        GLenum callResult) noexcept {
+
+    // Collects the current GL error for additional context. While often redundant,
+    // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glLinkProgram`.
+    GLenum glError = glGetError();
+
     GLint length = 0;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
 
     CString infoLog(length);
     glGetProgramInfoLog(program, length, nullptr, infoLog.data());
 
-    LOG(ERROR) << "Link error in \"" << name << "\":\n" << "\"" << infoLog.c_str() << "\"";
+    LOG(ERROR) << "Link error in \"" << name << "\":\n - glLinkProgram=" << callResult
+               << "\n - GL_LINK_STATUS=" << glError << "\n - LogInfo=\"" << infoLog.c_str() << "\"";
 }
 
 // If usages of the Google-style line directive are present, remove them, as some
