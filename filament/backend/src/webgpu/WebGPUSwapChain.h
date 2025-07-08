@@ -41,7 +41,7 @@ public:
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
     [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent);
-    [[nodiscard]] wgpu::TextureView getCurrentTextureView();
+    [[nodiscard]] wgpu::TextureView getCurrentHeadlessTextureView();
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
@@ -69,11 +69,10 @@ private:
     const uint32_t mHeadlessWidth;
     const uint32_t mHeadlessHeight;
 
-    ///TODO: eventually config for double or triple buffering
     static constexpr uint32_t mHeadlessBufferCount = 3;
-    uint32_t mHeadlessBufferIndex = 0;
-    std::array<wgpu::Texture, 3> mRenderTargetTextures;
-    std::array<wgpu::TextureView, 3> mRenderTargetViews;
+    uint8_t mHeadlessBufferIndex = 0;
+    std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;
+    std::array<wgpu::TextureView, mHeadlessBufferCount> mRenderTargetViews;
 };
 
 } // namespace filament::backend
