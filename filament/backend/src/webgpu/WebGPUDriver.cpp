@@ -621,8 +621,23 @@ bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
 }
 
 FeatureLevel WebGPUDriver::getFeatureLevel() {
-    //todo
-    return FeatureLevel::FEATURE_LEVEL_1;
+
+    // If the max sampler counts do not meet FeatureLevel2 standards, then this is an FeatureLevel1
+    // device.
+    const auto& featureLevel2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_1;
+    }
+
+    // If the max sampler counts do not meet FeatureLevel3 standards, then this is an FeatureLevel2
+    // device.
+    const auto& featureLevel3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_2;
+    }
+    return FeatureLevel::FEATURE_LEVEL_3;
 }
 
 math::float2 WebGPUDriver::getClipSpaceParams() {
