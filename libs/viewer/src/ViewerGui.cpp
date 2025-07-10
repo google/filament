@@ -1689,6 +1689,12 @@ void ViewerGui::updateUserInterface() {
             ImGui::SliderFloat("Split pos 1", &light.shadowOptions.cascadeSplitPositions[1], 0.0f, 1.0f);
             ImGui::SliderFloat("Split pos 2", &light.shadowOptions.cascadeSplitPositions[2], 0.0f, 1.0f);
             light.shadowOptions.shadowCascades = shadowCascades;
+
+            ImGui::SliderFloat("PolygonOffsetConstant", &light.shadowOptions.polygonOffsetConstant, 0.0f, 1.0f);
+            ImGui::SliderFloat("PolygonOffsetSlope", &light.shadowOptions.polygonOffsetSlope, 0.0f, 5.0f);
+            if (mSettings.view.shadowType != ShadowType::VSM) {
+                ImGui::SliderFloat("NormalBias (no VSM)", &light.shadowOptions.normalBias, 0.0f, 2.0f);
+            }
         }
         ImGui::Unindent();
     }
