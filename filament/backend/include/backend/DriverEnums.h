@@ -119,8 +119,8 @@ static constexpr struct {
     const size_t MAX_FRAGMENT_SAMPLER_COUNT;
 } FEATURE_LEVEL_CAPS[4] = {
         {  0,  0 }, // do not use
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
         { 31, 31 }, // guaranteed by Metal
 };
 
