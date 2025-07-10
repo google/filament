@@ -740,7 +740,7 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
         mImpl->mSharedContext = true;
     }
 
-    VulkanContext context;
+    VulkanContext& context = mImpl->mContext;
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
@@ -787,12 +787,11 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES,
     };
-    VkPhysicalDeviceProtectedMemoryProperties protectedMemoryProperties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_PROPERTIES,
-    };
+    // Note that we're chaining a struct on the stack into a struct in context, which will then be
+    // passed to the driver. However, this should be ok since the use of
+    // queryProtectedMemoryFeatures is only in this function.
     chainStruct(&context.mPhysicalDeviceFeatures, &queryProtectedMemoryFeatures);
     chainStruct(&context.mPhysicalDeviceFeatures, &context.mPhysicalDeviceVk11Features);
-    chainStruct(&context.mPhysicalDeviceProperties, &protectedMemoryProperties);
 
     // Initialize the following fields: physicalDeviceProperties, memoryProperties,
     // physicalDeviceFeatures, graphicsQueueFamilyIndex.
@@ -923,10 +922,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     printDepthFormats(mImpl->mPhysicalDevice);
 #endif
 
-    // Keep a copy of context for swapchains.
-    mImpl->mContext = context;
-
-    return VulkanDriver::create(this, mImpl->mContext, driverConfig);
+    // Note that `context` is an alias of mImpl->mContext.
+    return VulkanDriver::create(this, context, driverConfig);
 }
 
 // This needs to be explictly written for
