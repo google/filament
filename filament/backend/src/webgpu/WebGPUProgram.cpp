@@ -26,15 +26,14 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
-#include <utils/ostream.h>
 
 #include <webgpu/webgpu_cpp.h>
-#include <dawn/webgpu_cpp_print.h>
 
 #include <array>
 #include <cstdint>
+#include <cstdlib>
+#include <limits>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -98,15 +97,28 @@ namespace {
         }
         posOfEqual += posAfterId; // position in original source overall, not just the segment
         int constantId = 0;
-        try {
-            constantId = std::stoi(idStr.data());
-        } catch (const std::invalid_argument& e) {
-            PANIC_POSTCONDITION("Invalid spec constant id '%s' in %s (not a valid integer?): %s",
-                    idStr.data(), shaderLabel.data(), e.what());
-        } catch (const std::out_of_range& e) {
-            PANIC_POSTCONDITION(
-                    "Invalid spec constant id '%s' in %s (not an integer? out of range?): %s",
-                    idStr.data(), shaderLabel.data(), e.what());
+        char* endPtr;
+        errno = 0; // Clear errno before the call
+
+        long tempConstantId = std::strtol(idStr.data(), &endPtr, 10);
+
+        // Check for conversion errors
+        if (endPtr == idStr.data() || *endPtr != '\0' || errno == ERANGE) {
+            // Parsing failed, or conversion was out of range for 'long'
+            // or the string contained non-numeric characters after the number.
+            PANIC_POSTCONDITION("Invalid spec constant id '%s' in %s (not a valid integer or out "
+                                "of range for 'long'?)",
+                    idStr.data(), shaderLabel.data());
+        } else {
+            // Check if the parsed long value fits into an int
+            if (tempConstantId > std::numeric_limits<int>::max() ||
+                    tempConstantId < std::numeric_limits<int>::min()) {
+                PANIC_POSTCONDITION(
+                        "Invalid spec constant id '%s' in %s (value out of range for 'int')",
+                        idStr.data(), shaderLabel.data());
+            } else {
+                constantId = static_cast<int>(tempConstantId);
+            }
         }
         const auto newValueItr = specConstants.find(static_cast<uint32_t>(constantId));
         if (newValueItr == specConstants.end()) {
