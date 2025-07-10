@@ -72,7 +72,10 @@ struct Resource {
           restype(ResourceType::UNDEFINED_TYPE),
           mHandleConsideredDestroyed(false) {}
 
-    uint32_t getCount() const { return mCount; }
+    template<typename D>
+    bool isType() const {
+        return getTypeEnum<D>() == restype;
+    }
 
 private:
     inline void inc() noexcept {
