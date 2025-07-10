@@ -108,7 +108,13 @@ struct VulkanCommandBuffer {
         return mBuffer;
     }
 
+    uint32_t age() const {
+        return mAge;
+    }
+
 private:
+    static uint32_t sAgeCounter;
+
     VulkanContext const& mContext;
     uint8_t mMarkerCount;
     bool const isProtected;
@@ -120,6 +126,7 @@ private:
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
+    uint32_t mAge;
 };
 
 struct CommandBufferPool {
