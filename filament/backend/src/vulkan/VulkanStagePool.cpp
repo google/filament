@@ -156,26 +156,26 @@ void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
     delete stage;
 }
 
-VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, PixelDataType type,
-        uint32_t width, uint32_t height) {
+fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImage(
+        PixelDataFormat format, PixelDataType type, uint32_t width, uint32_t height) {
+    // Helper lambda so we can return stage images wrapped as resources that can
+    // be held by command buffers until no longer needed.
+    auto wrapAsResource = [this](VulkanStageImage* image) {
+        auto recycleFn = [this](VulkanStageImage* image) {
+            this->mFreeImages.insert(image);
+        };
+        return fvkmemory::resource_ptr<VulkanStageImage::Resource>::construct(
+            this->mResManager, image, recycleFn);
+    };
+
     const VkFormat vkformat = fvkutils::getVkFormat(format, type);
-    for (auto image : mFreeImages) {
-        if (image->format == vkformat && image->width == width && image->height == height) {
-            mFreeImages.erase(image);
-            image->lastAccessed = mCurrentFrame;
-            mUsedImages.push_back(image);
-            return image;
+    for (auto stageImage : mFreeImages) {
+        if (stageImage->format() == vkformat && stageImage->width() == width && stageImage->height() == height) {
+            mFreeImages.erase(stageImage);
+            stageImage->mLastAccessed = mCurrentFrame;
+            return wrapAsResource(stageImage);
         }
     }
-
-    VulkanStageImage* image = new VulkanStageImage({
-        .format = vkformat,
-        .width = width,
-        .height = height,
-        .lastAccessed = mCurrentFrame,
-    });
-
-    mUsedImages.push_back(image);
 
     const VkImageCreateInfo imageInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -194,13 +194,18 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
         .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
     };
 
+    VkImage image;
+    VmaAllocation memory;
     const UTILS_UNUSED VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
-            &image->image, &image->memory, nullptr);
+            &image, &memory, nullptr);
 
     assert_invariant(result == VK_SUCCESS);
 
     VkImageAspectFlags const aspectFlags = fvkutils::getImageAspect(vkformat);
     VkCommandBuffer const cmdbuffer = mCommands->get().buffer();
+
+    VulkanStageImage* stageImage = new VulkanStageImage(
+        vkformat, width, height, memory, image, mCurrentFrame);
 
     // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
     // "Host access to image memory is only well-defined for linear images and for image
@@ -209,12 +214,13 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
     // valid for either of those image layouts."
     fvkutils::transitionLayout(cmdbuffer, {
-            .image = image->image,
+            .image = stageImage->image(),
             .oldLayout = VulkanLayout::UNDEFINED,
             .newLayout = VulkanLayout::STAGING, // (= VK_IMAGE_LAYOUT_GENERAL)
             .subresources = { aspectFlags, 0, 1, 0, 1 },
         });
-    return image;
+
+    return wrapAsResource(stageImage);
 }
 
 void VulkanStagePool::gc() noexcept {
@@ -262,25 +268,14 @@ void VulkanStagePool::gc() noexcept {
     decltype(mFreeImages) freeImages;
     freeImages.swap(mFreeImages);
     for (auto image : freeImages) {
-        if (image->lastAccessed < evictionTime) {
-            vmaDestroyImage(mAllocator, image->image, image->memory);
+        if (image->mLastAccessed < evictionTime) {
+            vmaDestroyImage(mAllocator, image->image(), image->memory());
             delete image;
         } else {
             mFreeImages.insert(image);
         }
     }
 
-    // Reclaim images that are no longer being used by any command buffer.
-    decltype(mUsedImages) usedImages;
-    usedImages.swap(mUsedImages);
-    for (auto image : usedImages) {
-        if (image->lastAccessed < evictionTime) {
-            image->lastAccessed = mCurrentFrame;
-            mFreeImages.insert(image);
-        } else {
-            mUsedImages.push_back(image);
-        }
-    }
     FVK_SYSTRACE_END();
 }
 
@@ -290,14 +285,8 @@ void VulkanStagePool::terminate() noexcept {
     }
     mStages.clear();
 
-    for (auto image : mUsedImages) {
-        vmaDestroyImage(mAllocator, image->image, image->memory);
-        delete image;
-    }
-    mUsedImages.clear();
-
     for (auto image : mFreeImages) {
-        vmaDestroyImage(mAllocator, image->image, image->memory);
+        vmaDestroyImage(mAllocator, image->image(), image->memory());
         delete image;
     }
     mFreeImages.clear();

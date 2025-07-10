@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.62.1
+
+- Add new shader define `VARIANT_DEPTH`, defined when a material is compiled for depth variants
+  (e.g., shadows) [**Requires recompiling materials**]
+
 ## v1.62.0
 
 - Add new `unfilterable` field to Filament Material's `sampler` [⚠️ **New Material Version**]

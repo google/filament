@@ -1810,7 +1810,8 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
             .sourceRGBBlendFactor = getMetalBlendFactor(rs.blendFunctionSrcRGB),
             .blendingEnabled = rs.hasBlending(),
         },
-        .colorWrite = rs.colorWrite
+        .colorWrite = rs.colorWrite,
+        .alphaToCoverage = rs.alphaToCoverage
     };
     mContext->pipelineState.updateState(pipelineState);
     if (mContext->pipelineState.stateChanged()) {

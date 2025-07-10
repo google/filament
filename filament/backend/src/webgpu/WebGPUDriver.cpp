@@ -20,7 +20,8 @@
 #include "WebGPUDescriptorSetLayout.h"
 #include "WebGPUFence.h"
 #include "WebGPUIndexBuffer.h"
-#include "WebGPUPipelineCreation.h"
+#include "WebGPUPipelineCache.h"
+#include "WebGPUPipelineLayoutCache.h"
 #include "WebGPUProgram.h"
 #include "WebGPURenderPrimitive.h"
 #include "WebGPURenderTarget.h"
@@ -72,6 +73,8 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mAdapter{ mPlatform.requestAdapter(nullptr) },
       mDevice{ mPlatform.requestDevice(mAdapter) },
       mQueue{ mDevice.GetQueue() },
+      mPipelineLayoutCache{ mDevice },
+      mPipelineCache{ mDevice },
       mRenderPassMipmapGenerator{ mDevice },
       mSpdComputePassMipmapGenerator{ mDevice },
       mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
@@ -126,7 +129,9 @@ void WebGPUDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
 void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
-void WebGPUDriver::endFrame(uint32_t frameId) {
+void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
+    mPipelineLayoutCache.onFrameEnd();
+    mPipelineCache.onFrameEnd();
 }
 
 void WebGPUDriver::flush(int) {
@@ -254,7 +259,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
-    return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
@@ -338,8 +343,8 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+    wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
@@ -355,7 +360,12 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {}
+        uint32_t height, uint64_t flags) {
+     wgpu::Extent2D extent = { .width = width, .height = height };
+     mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
+            mDevice, flags);
+     assert_invariant(mSwapChain);
+}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes) {
@@ -457,8 +467,13 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
         const TargetBufferFlags targetFlags, const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, const MRT color,
         const TargetBufferInfo depth, const TargetBufferInfo stencil) {
-    constructHandle<WebGPURenderTarget>(renderTargetHandle, width, height, samples, layerCount,
-            color, depth, stencil, targetFlags);
+    constructHandle<WebGPURenderTarget>(
+            renderTargetHandle, width, height, samples, layerCount, color, depth, stencil,
+            targetFlags,
+            [&](const Handle<HwTexture> textureHandle) {
+                return handleCast<WebGPUTexture>(textureHandle);
+            },
+            mDevice);
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {
@@ -586,7 +601,7 @@ bool WebGPUDriver::isParallelShaderCompileSupported() {
 }
 
 bool WebGPUDriver::isDepthStencilResolveSupported() {
-    return true;
+    return false;
 }
 
 bool WebGPUDriver::isDepthStencilBlitSupported(const TextureFormat format) {
@@ -606,8 +621,23 @@ bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
 }
 
 FeatureLevel WebGPUDriver::getFeatureLevel() {
-    //todo
-    return FeatureLevel::FEATURE_LEVEL_1;
+
+    // If the max sampler counts do not meet FeatureLevel2 standards, then this is an FeatureLevel1
+    // device.
+    const auto& featureLevel2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_1;
+    }
+
+    // If the max sampler counts do not meet FeatureLevel3 standards, then this is an FeatureLevel2
+    // device.
+    const auto& featureLevel3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_2;
+    }
+    return FeatureLevel::FEATURE_LEVEL_3;
 }
 
 math::float2 WebGPUDriver::getClipSpaceParams() {
@@ -719,27 +749,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
 
     const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
     size_t dataSize = data->size;
-    std::unique_ptr<uint8_t[]> paddedBuffer;
-
-    if (bytesPerRow % 256 != 0) {
-        uint32_t padding = 256 - (bytesPerRow % 256);
-        uint32_t paddedBytesPerRow = bytesPerRow + padding;
-
-        size_t paddedBufferSize = static_cast<size_t>(paddedBytesPerRow) * height * depth;
-        paddedBuffer = std::make_unique<uint8_t[]>(paddedBufferSize);
-        uint8_t* dest = paddedBuffer.get();
-
-        for (uint32_t z = 0; z < depth; ++z) {
-            for (uint32_t y = 0; y < height; ++y) {
-                std::memcpy(dest, dataBuff, bytesPerRow);
-                dest += paddedBytesPerRow;
-                dataBuff += bytesPerRow;
-            }
-        }
-        dataBuff = paddedBuffer.get();
-        dataSize = paddedBufferSize;
-        bytesPerRow = paddedBytesPerRow;
-    }
 
     auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
 
@@ -840,10 +849,15 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
     wgpu::TextureView defaultDepthStencilView = nullptr;
     wgpu::TextureFormat defaultDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
+    const bool msaaSidecarsRequired{ renderTarget->getSamples() > 1 &&
+                                     renderTarget->getSampleCountPerAttachment() <= 1 };
+
     std::array<wgpu::TextureView, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> customColorViews{};
+    std::array<wgpu::TextureView, customColorViews.size()> customColorMsaaSidecarViews{};
     uint32_t customColorViewCount = 0;
 
     wgpu::TextureView customDepthStencilView = nullptr;
+    wgpu::TextureView customDepthStencilMsaaSidecarTextureView = nullptr;
     wgpu::TextureFormat customDepthStencilFormat = wgpu::TextureFormat::Undefined;
 
     mCurrentRenderTarget = renderTarget;
@@ -854,21 +868,17 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         defaultDepthStencilFormat = mSwapChain->getDepthFormat();
 
         if (any(renderTarget->getTargetFlags() & TargetBufferFlags::STENCIL) &&
-            !(defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Stencil8)) {
-            FILAMENT_CHECK_POSTCONDITION(false) << "Default render target requested stencil, but swap chain's depth format "
-                                                << (uint32_t)defaultDepthStencilFormat << " does not have a stencil aspect.";
+                !(hasStencil(defaultDepthStencilFormat))) {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Default render target requested stencil, but swap chain's depth format "
+                    << (uint32_t) defaultDepthStencilFormat << " does not have a stencil aspect.";
         }
 
         if (any(renderTarget->getTargetFlags() & TargetBufferFlags::DEPTH) &&
-            !(defaultDepthStencilFormat == wgpu::TextureFormat::Depth16Unorm ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32Float ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth24Plus ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-              defaultDepthStencilFormat == wgpu::TextureFormat::Depth32FloatStencil8)) {
-            FILAMENT_CHECK_POSTCONDITION(false) << "Default render target requested depth, but swap chain's depth format "
-                                                << (uint32_t)defaultDepthStencilFormat << " does not have a depth aspect.";
+                !(hasDepth(defaultDepthStencilFormat))) {
+            FILAMENT_CHECK_POSTCONDITION(false)
+                    << "Default render target requested depth, but swap chain's depth format "
+                    << (uint32_t) defaultDepthStencilFormat << " does not have a depth aspect.";
         }
     } else {
         // Resolve views for custom render target
@@ -884,8 +894,19 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << ".";
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
-                    customColorViews[customColorViewCount++] =
+                    customColorViews[customColorViewCount] =
                             colorTexture->getOrMakeTextureView(mipLevel, arrayLayer);
+                    if (msaaSidecarsRequired) {
+                        const wgpu::TextureView msaaSidecarView{
+                            colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
+                                    renderTarget->getSamples(), mipLevel, arrayLayer)
+                        };
+                        FILAMENT_CHECK_POSTCONDITION(msaaSidecarView)
+                                << "Could not get a required MSAA sidecar texture view for color "
+                                << customColorViewCount << "?";
+                        customColorMsaaSidecarViews[customColorViewCount] = msaaSidecarView;
+                    }
+                    customColorViewCount++;
                 }
             }
         }
@@ -917,15 +938,21 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         if (depthStencilSourceHandle) {
             auto dsTexture = handleCast<WebGPUTexture>(depthStencilSourceHandle);
             if (dsTexture) {
-                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel, depthStencilArrayLayer);
+                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel,
+                        depthStencilArrayLayer);
+                if (msaaSidecarsRequired) {
+                    customDepthStencilMsaaSidecarTextureView =
+                            dsTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
+                                    renderTarget->getSamples(), depthStencilMipLevel,
+                                    depthStencilArrayLayer);
+                    FILAMENT_CHECK_POSTCONDITION(customDepthStencilMsaaSidecarTextureView)
+                            << "Could not get a required MSAA sidecar texture view for "
+                               "depth/stencil?";
+                }
                 customDepthStencilFormat = dsTexture->getViewFormat();
 
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::STENCIL) &&
-                        !(customDepthStencilFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth32FloatStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Stencil8)) {
+                        !(hasStencil(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false)
                             << "Custom render target requested stencil, but the provided texture"
                                "format number"
@@ -933,14 +960,7 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                             << " does not have a stencil aspect.";
                 }
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::DEPTH) &&
-                        !(customDepthStencilFormat == wgpu::TextureFormat::Depth16Unorm ||
-                                customDepthStencilFormat == wgpu::TextureFormat::Depth32Float ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth24Plus ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth24PlusStencil8 ||
-                                customDepthStencilFormat ==
-                                        wgpu::TextureFormat::Depth32FloatStencil8)) {
+                        !(hasDepth(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false) << "Custom render target requested depth, "
                                                            "but the provided texture format number"
                                                         << (uint32_t) customDepthStencilFormat
@@ -955,8 +975,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             defaultColorView,
             defaultDepthStencilView,
             customColorViews.data(),
+            customColorMsaaSidecarViews.data(),
             customColorViewCount,
-            customDepthStencilView);
+            customDepthStencilView,
+            customDepthStencilMsaaSidecarTextureView);
 
     mRenderPassEncoder = mCommandEncoder.BeginRenderPass(&renderPassDescriptor);
 
@@ -988,8 +1010,13 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     auto swapChain = handleCast<WebGPUSwapChain>(drawSch);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize);
+    if(!mSwapChain->isHeadless()){
+         wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+         mTextureView = mSwapChain->getCurrentTextureView(extent);
+    } else {
+        mTextureView = mSwapChain->getCurrentHeadlessTextureView();
+    }
+
     assert_invariant(mTextureView);
 
     assert_invariant(mDefaultRenderTarget);
@@ -997,13 +1024,13 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     wgpu::TextureFormat depthFormat = mSwapChain->getDepthFormat();
     TargetBufferFlags newTargetFlags = filament::backend::TargetBufferFlags::NONE;
 
-    //Assuming Color and Depth are always present.
+    //Assuming Color always present in default render target.
     newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
     if (depthFormat != wgpu::TextureFormat::Undefined) {
-        newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
-
-        if (depthFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-                depthFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
+        if (hasDepth(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
+        }
+        if (hasStencil(depthFormat)) {
             newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
         }
     }
@@ -1090,7 +1117,33 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
-    // todo
+    FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
+            << "Resolve assumes there is a valid command encoder to piggyback on.";
+    FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
+            << "Resolve cannot be called during an existing render pass";
+    const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    const auto destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+    assert_invariant(sourceTexture);
+    assert_invariant(destinationTexture);
+    const WebGPUMsaaTextureResolver::ResolveRequest request{
+        .commandEncoder = mCommandEncoder,
+        .viewFormat = sourceTexture->getViewFormat(),
+        .source = {
+            .texture = sourceTexture->getTexture(),
+            .viewDimension = sourceTexture->getViewDimension(),
+            .mipLevel = sourceLevel,
+            .layer = sourceLayer,
+            .aspect = sourceTexture->getAspect(),
+        },
+        .destination = {
+            .texture = destinationTexture->getTexture(),
+            .viewDimension = destinationTexture->getViewDimension(),
+            .mipLevel = destinationLevel,
+            .layer = destinationLayer,
+            .aspect = destinationTexture->getAspect(),
+        },
+    };
+    mMsaaTextureResolver.resolve(request);
 }
 
 void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
@@ -1100,110 +1153,94 @@ void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_
     // todo
 }
 
-size_t WebGPUDriver::computePipelineKey(PipelineState const& pipelineState,
-        WebGPURenderTarget const* const renderTarget) const {
-    // TODO Investigate implications of this hash more closely. Vulkan has a whole class
-    //      VulkanPipelineCache to handle this, may be missing nuance
-    static const auto pipelineStateHasher{
-        utils::hash::MurmurHashFn<filament::backend::PipelineState>()
-    };
-    const std::hash<uint32_t> intHasher{};
-    const std::hash<WebGPURenderTarget const*> addressHasher{};
-    const size_t pipelineStateHash{ intHasher(pipelineStateHasher(pipelineState)) };
-    const size_t renderTargetHash{ addressHasher(renderTarget) };
-    return utils::hash::combine(pipelineStateHash, renderTargetHash);
-}
-
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
-    auto pipelineKey{ computePipelineKey(pipelineState, mCurrentRenderTarget) };
-    if (mPipelineMap.find(pipelineKey) != mPipelineMap.end()) {
-        mRenderPassEncoder.SetPipeline(mPipelineMap[pipelineKey]);
-        return;
-    }
-    const auto program = handleCast<WebGPUProgram>(pipelineState.program);
+    assert_invariant(mRenderPassEncoder);
+    const auto program{ handleCast<WebGPUProgram>(pipelineState.program) };
     assert_invariant(program);
+    WebGPURenderTarget const* renderTarget{ mCurrentRenderTarget };
+    assert_invariant(renderTarget);
     assert_invariant(program->computeShaderModule == nullptr &&
                      "WebGPU backend does not (yet) support compute pipelines.");
     FILAMENT_CHECK_POSTCONDITION(program->vertexShaderModule)
             << "WebGPU backend requires a vertex shader module for a render pipeline";
+    const auto vertexBufferInfo{ handleCast<WebGPUVertexBufferInfo>(
+            pipelineState.vertexBufferInfo) };
+    assert_invariant(vertexBufferInfo);
     std::array<wgpu::BindGroupLayout, MAX_DESCRIPTOR_SET_COUNT> bindGroupLayouts{};
     assert_invariant(bindGroupLayouts.size() >= pipelineState.pipelineLayout.setLayout.size());
-    size_t bindGroupLayoutCount = 0;
-    for (size_t i = 0; i < bindGroupLayouts.size(); i++) {
-        const auto handle = pipelineState.pipelineLayout.setLayout[bindGroupLayoutCount];
+    size_t bindGroupLayoutCount{ 0 };
+    for (size_t i{ 0 }; i < bindGroupLayouts.size(); i++) {
+        const auto handle{ pipelineState.pipelineLayout.setLayout[bindGroupLayoutCount] };
         if (handle.getId() == HandleBase::nullid) {
             continue;
         }
         bindGroupLayouts[bindGroupLayoutCount++] =
                 handleCast<WebGPUDescriptorSetLayout>(handle)->getLayout();
     }
-    std::stringstream layoutLabelStream;
-    layoutLabelStream << program->name.c_str() << " layout";
-    const auto layoutLabel = layoutLabelStream.str();
-    const wgpu::PipelineLayoutDescriptor layoutDescriptor{
-        .label = wgpu::StringView(layoutLabel),
+    const WebGPUPipelineLayoutCache::PipelineLayoutRequest pipelineLayoutRequest{
+        .label = program->name,
+        .bindGroupLayouts = bindGroupLayouts,
         .bindGroupLayoutCount = bindGroupLayoutCount,
-        .bindGroupLayouts = bindGroupLayouts.data()
-        // TODO investigate immediateDataRangeByteSize
     };
-    const wgpu::PipelineLayout layout = mDevice.CreatePipelineLayout(&layoutDescriptor);
-    FILAMENT_CHECK_POSTCONDITION(layout)
-            << "Failed to create wgpu::PipelineLayout for render pipeline for "
-            << layoutDescriptor.label;
-    const auto vertexBufferInfo =
-            handleCast<WebGPUVertexBufferInfo>(pipelineState.vertexBufferInfo);
-    assert_invariant(vertexBufferInfo);
-
-    std::vector<wgpu::TextureFormat> pipelineColorFormats;
-    wgpu::TextureFormat pipelineDepthStencilFormat = wgpu::TextureFormat::Undefined;
-    uint8_t pipelineSamples = 1;
-    bool const requestedDepth = any(mCurrentRenderTarget->getTargetFlags() & TargetBufferFlags::DEPTH);
-    bool const requestedStencil = any(mCurrentRenderTarget->getTargetFlags() & TargetBufferFlags::STENCIL);
-    pipelineSamples = mCurrentRenderTarget->getSamples();
-
-    if (mCurrentRenderTarget->isDefaultRenderTarget()) {
-        pipelineColorFormats.push_back(mSwapChain->getColorFormat());
-        pipelineDepthStencilFormat = mSwapChain->getDepthFormat();
+    wgpu::PipelineLayout const& layout{ mPipelineLayoutCache.getOrCreatePipelineLayout(
+            pipelineLayoutRequest) };
+    uint8_t colorFormatCount{ 0 };
+    std::array<wgpu::TextureFormat, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorFormats{
+        wgpu::TextureFormat::Undefined
+    };
+    wgpu::TextureFormat depthStencilFormat{ wgpu::TextureFormat::Undefined };
+    if (renderTarget->isDefaultRenderTarget()) {
+        // default render target color(s) (one)...
+        colorFormatCount = 1;
+        colorFormats[0] = mSwapChain->getColorFormat();
+        // default render target depth/stencil...
+        depthStencilFormat = mSwapChain->getDepthFormat();
     } else {
-        const auto& mrtColorAttachments = mCurrentRenderTarget->getColorAttachmentInfos();
-        for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
+        // custom render target color(s)...
+        MRT const& mrtColorAttachments{ mCurrentRenderTarget->getColorAttachmentInfos() };
+        for (size_t i{ 0 }; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
             if (mrtColorAttachments[i].handle) {
-                const auto colorTexture = handleCast<WebGPUTexture>(mrtColorAttachments[i].handle);
+                const auto colorTexture{ handleCast<WebGPUTexture>(mrtColorAttachments[i].handle) };
                 if (colorTexture) {
-                    pipelineColorFormats.push_back(colorTexture->getTexture().GetFormat());
+                    colorFormats[colorFormatCount++] = colorTexture->getTexture().GetFormat();
                 }
             }
         }
-
+        // custom render target depth/stencil...
         const auto& depthInfo = mCurrentRenderTarget->getDepthAttachmentInfo();
         const auto& stencilInfo = mCurrentRenderTarget->getStencilAttachmentInfo();
-        Handle<HwTexture> depthStencilHandle = {};
+        Handle<HwTexture> depthStencilHandle{};
         if (depthInfo.handle) {
             depthStencilHandle = depthInfo.handle;
         } else if (stencilInfo.handle) {
-             depthStencilHandle = stencilInfo.handle;
+            depthStencilHandle = stencilInfo.handle;
         }
-
         if (depthStencilHandle) {
-            const auto dsTexture = handleCast<WebGPUTexture>(depthStencilHandle);
-            if (dsTexture) {
-                pipelineDepthStencilFormat = dsTexture->getTexture().GetFormat();
+            const auto depthStencilTexture{ handleCast<WebGPUTexture>(depthStencilHandle) };
+            if (depthStencilTexture) {
+                depthStencilFormat = depthStencilTexture->getTexture().GetFormat();
             }
         }
     }
-
-    // TODO: We expected this to be a sane check, however it complains when running shadowtest.
-    //if (program->fragmentShaderModule != nullptr) {
-    //    FILAMENT_CHECK_POSTCONDITION(!pipelineColorFormats.empty())
-    //            << "Render pipeline with fragment shader must have at least one color target "
-    //               "format.";
-    //}
-    wgpu::RenderPipeline pipeline = createWebGPURenderPipeline(mDevice, *program, *vertexBufferInfo,
-            layout, pipelineState.rasterState, pipelineState.stencilState,
-            pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
-            pipelineDepthStencilFormat, pipelineSamples, requestedDepth, requestedStencil);
-    assert_invariant(pipeline);
-    mPipelineMap[pipelineKey] = pipeline;
+    const WebGPUPipelineCache::RenderPipelineRequest pipelineRequest{
+        .label = program->name,
+        .vertexShaderModule = program->vertexShaderModule,
+        .fragmentShaderModule = program->fragmentShaderModule,
+        .vertexBufferSlots = vertexBufferInfo->getWebGPUSlotBindingInfos(),
+        .vertexBufferLayouts = vertexBufferInfo->getVertexBufferLayouts(),
+        .pipelineLayout = layout,
+        .primitiveType = pipelineState.primitiveType,
+        .rasterState = pipelineState.rasterState,
+        .stencilState = pipelineState.stencilState,
+        .polygonOffset = pipelineState.polygonOffset,
+        .targetRenderFlags = renderTarget->getTargetFlags(),
+        .multisampleCount = renderTarget->getSamples(),
+        .depthStencilFormat = depthStencilFormat,
+        .colorFormatCount = colorFormatCount,
+        .colorFormats = colorFormats.data(),
+    };
+    wgpu::RenderPipeline const& pipeline{ mPipelineCache.getOrCreateRenderPipeline(
+            pipelineRequest) };
     mRenderPassEncoder.SetPipeline(pipeline);
 }
 

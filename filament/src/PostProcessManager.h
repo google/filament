@@ -257,7 +257,7 @@ public:
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
             FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
 
-    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg, bool translucent,
+    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;

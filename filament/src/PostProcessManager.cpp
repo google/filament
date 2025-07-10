@@ -2989,7 +2989,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     }
 
     if (dsrOptions.quality == QualityLevel::LOW) {
-        return upscaleBilinear(fg, translucent, dsrOptions, input, vp, outDesc, filter);
+        return upscaleBilinear(fg, dsrOptions, input, vp, outDesc, filter);
     }
     if (dsrOptions.quality == QualityLevel::MEDIUM) {
         return upscaleSGSR1(fg, sourceHasLuminance, dsrOptions, input, vp, outDesc);
@@ -2997,7 +2997,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     return upscaleFSR1(fg, dsrOptions, input, vp, outDesc);
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg, bool translucent,
+FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
@@ -3016,17 +3016,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                         .attachments = { .color = { data.output } },
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [this, vp, translucent, filter](FrameGraphResources const& resources,
+            [this, vp, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
-
-                // helper to enable blending
-                auto enableTranslucentBlending = [](PipelineState& pipeline) {
-                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                };
 
                 auto color = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
@@ -3055,9 +3047,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                 auto out = resources.getRenderPassInfo();
 
                 auto pipeline = getPipelineState(material.getMaterial(mEngine));
-                if (translucent) {
-                    enableTranslucentBlending(pipeline);
-                }
                 renderFullScreenQuad(out, pipeline, driver);
             });
 
@@ -3065,7 +3054,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
     if (dsrOptions.sharpness > 0.0f) {
-        output = rcas(fg, dsrOptions.sharpness, output, outDesc, translucent);
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc,
+                false /* translucent=false, because dst buffer is allocated */);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3443,9 +3433,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         return input;
     }
 
-    // we currently don't support stencil resolve
-    assert_invariant(!isStencilFormat(inDesc.format));
-
     // The Metal / Vulkan backends currently don't support depth/stencil resolve.
     if (isDepthFormat(inDesc.format) && (!mEngine.getDriverApi().isDepthStencilResolveSupported())) {
         return resolveDepth(fg, outputBufferName, input, outDesc);
@@ -3463,6 +3450,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
+                // we currently don't support stencil resolve.
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
@@ -3514,6 +3504,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolveDepth",
             [&](FrameGraph::Builder& builder, auto& data) {
+                // we currently don't support stencil resolve
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);

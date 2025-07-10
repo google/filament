@@ -172,6 +172,13 @@ namespace {
     if (needsRenderAttachmentSupport) {
         retUsage |= wgpu::TextureUsage::RenderAttachment;
     }
+    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+    }
+    if (any(TextureUsage::BLIT_DST & fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
     // WGPU Render attachment covers either color or stencil situation dependant
     // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
     // issues, investigate here.
@@ -333,6 +340,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS) },
       mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false) },
+      mDimension{toWebGPUTextureViewDimension(samplerType)},
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
       mDefaultMipLevel{ 0 },
@@ -394,7 +402,21 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
       mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              src->target) } {}
+              src->target) },
+      mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
+
+wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
+    if (mMsaaSidecarTexture == nullptr) {
+        return mMsaaSidecarTexture; // nullptr (no such sidecar)
+    }
+    FILAMENT_CHECK_PRECONDITION(sampleCount == mMsaaSidecarTexture.GetSampleCount())
+            << "The MSAA sidecar texture has a different sample count ("
+            << mMsaaSidecarTexture.GetSampleCount() << ") than requested (" << +sampleCount
+            << "). Note that this restriction was written when WebGPU only supported msaa "
+               "textures with 4 samples. If that has changed, this implementation should be "
+               "updated (e.g. map of sidecar textures by sampleCount or something).";
+    return mMsaaSidecarTexture;
+}
 
 bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::TextureFormat format) {
     return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
@@ -407,6 +429,68 @@ wgpu::TextureView WebGPUTexture::getOrMakeTextureView(const uint8_t mipLevel,
     //  but this function (and its callers) expects a single-slice view.
     //  Returning the whole texture view for a single-slice request seems wrong.
     return makeTextureView(mipLevel, 1, arrayLayer, 1, target);
+}
+
+void WebGPUTexture::createMsaaSidecarTextureIfNotAlreadyCreated(const uint8_t samples,
+        wgpu::Device const& device) {
+    FILAMENT_CHECK_PRECONDITION(samples > 1) << "Requesting to create a MSAA sidecar texture for "
+                                             << +samples << " samples? Invalid request.";
+    if (mMsaaSidecarTexture) {
+        FILAMENT_CHECK_PRECONDITION(mMsaaSidecarTexture.GetSampleCount() == samples)
+                << "An MSAA sidecar texture has already been created for this texture, but with a "
+                   "different sample count ("
+                << mMsaaSidecarTexture.GetSampleCount() << ") than requested (" << +samples
+                << "). Note that this restriction was written when WebGPU only supported msaa "
+                   "textures with 4 samples. If that has changed, this implementation should be "
+                   "updated (e.g. map of sidecar textures by sampleCount or something).";
+        return; // we already have the sidecar created
+    }
+    const wgpu::TextureDescriptor descriptor{
+        .label = "msaa_sidecar_texture",
+        .usage = mTexture.GetUsage(),
+        .dimension = mTexture.GetDimension(),
+        .size = {
+            .width = mTexture.GetWidth(),
+            .height = mTexture.GetHeight(),
+            .depthOrArrayLayers = mTexture.GetDepthOrArrayLayers(),
+        },
+        .format = mTexture.GetFormat(),
+        .mipLevelCount = mTexture.GetMipLevelCount(),
+        .sampleCount = samples,
+        .viewFormatCount = 1,
+        .viewFormats = &mViewFormat,
+    };
+    mMsaaSidecarTexture = device.CreateTexture(&descriptor);
+    FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture) << "Failed to create MSAA sidecar texture";
+}
+
+wgpu::TextureView WebGPUTexture::makeMsaaSidecarTextureViewIfTextureSidecarExists(
+        const uint8_t samples, const uint8_t mipLevel, const uint32_t arrayLayer) const {
+    if (mMsaaSidecarTexture == nullptr) {
+        return nullptr;
+    }
+    FILAMENT_CHECK_PRECONDITION(mMsaaSidecarTexture.GetSampleCount() == samples)
+            << "An MSAA sidecar texture has already been created for this texture, but with a "
+               "different sample count ("
+            << mMsaaSidecarTexture.GetSampleCount() << ") than requested for view (" << +samples
+            << "). Note that this restriction was written when WebGPU only supported msaa "
+               "textures with 4 samples. If that has changed, this implementation should be "
+               "updated (e.g. map of sidecar textures by sampleCount or something).";
+    const wgpu::TextureViewDescriptor descriptor{
+        .label = "msaa_sidecar_texture_view",
+        .format = mViewFormat,
+        .dimension = mDimension,
+        .baseMipLevel = mipLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = arrayLayer,
+        .arrayLayerCount = 1,
+        .aspect = mAspect,
+        .usage = mViewUsage,
+    };
+    const wgpu::TextureView textureView{ mMsaaSidecarTexture.CreateView(&descriptor) };
+    FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture)
+            << "Failed to create MSAA sidecar texture view (" << +samples << " samples)";
+    return textureView;
 }
 
 wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {
@@ -583,16 +667,6 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
 wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
         const SamplerType samplerType) const noexcept {
-#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
-    if (baseLevel > 0 && mMipmapGenerationStrategy == MipmapGenerationStrategy::NONE) {
-        FWGPU_LOGW << "Trying to make a texture view into a level ("
-                   << static_cast<uint32_t>(baseLevel)
-                   << ") for which we cannot generate mip levels. SamplerType "
-                   << to_string(samplerType) << " WebGPU view format "
-                   << webGPUTextureFormatToString(mViewFormat) << " samples "
-                   << static_cast<uint32_t>(samples);
-    }
-#endif
     const wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mViewFormat,
