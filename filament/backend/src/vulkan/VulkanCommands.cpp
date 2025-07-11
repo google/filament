@@ -86,8 +86,8 @@ bool VulkanGroupMarkers::empty() const noexcept {
 }
 #endif // FVK_DEBUG_GROUP_MARKERS
 
-VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext* context, VkDevice device, VkQueue queue,
-        VkCommandPool pool, bool isProtected)
+VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice device,
+        VkQueue queue, VkCommandPool pool, bool isProtected)
     : mContext(context),
       mMarkerCount(0),
       isProtected(isProtected),
@@ -120,14 +120,14 @@ void VulkanCommandBuffer::reset() noexcept {
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
-    if (mContext->isDebugUtilsSupported()) {
+    if (mContext.isDebugUtilsSupported()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
                 .pLabelName = marker,
                 .color = {0, 1, 0, 1},
         };
         vkCmdBeginDebugUtilsLabelEXT(mBuffer, &labelInfo);
-    } else if (mContext->isDebugMarkersSupported()) {
+    } else if (mContext.isDebugMarkersSupported()) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
                 .pMarkerName = marker,
@@ -140,23 +140,23 @@ void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
 
 void VulkanCommandBuffer::popMarker() noexcept{
     assert_invariant(mMarkerCount > 0);
-    if (mContext->isDebugUtilsSupported()) {
+    if (mContext.isDebugUtilsSupported()) {
         vkCmdEndDebugUtilsLabelEXT(mBuffer);
-    } else if (mContext->isDebugMarkersSupported()) {
+    } else if (mContext.isDebugMarkersSupported()) {
         vkCmdDebugMarkerEndEXT(mBuffer);
     }
     mMarkerCount--;
 }
 
 void VulkanCommandBuffer::insertEvent(char const* marker) noexcept {
-    if (mContext->isDebugUtilsSupported()) {
+    if (mContext.isDebugUtilsSupported()) {
         VkDebugUtilsLabelEXT labelInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
                 .pLabelName = marker,
                 .color = {1, 1, 0, 1},
         };
         vkCmdInsertDebugUtilsLabelEXT(mBuffer, &labelInfo);
-    } else if (mContext->isDebugMarkersSupported()) {
+    } else if (mContext.isDebugMarkersSupported()) {
         VkDebugMarkerMarkerInfoEXT markerInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
                 .pMarkerName = marker,
@@ -232,7 +232,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
     return mSubmission;
 }
 
-CommandBufferPool::CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
         uint8_t queueFamilyIndex, bool isProtected)
     : mDevice(device),
       mRecording(INVALID) {
@@ -384,7 +384,7 @@ void CommandBufferPool::insertEvent(char const* marker) {
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context)
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext const& context)
     : mDevice(device),
       mProtectedQueue(protectedQueue),
       mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
