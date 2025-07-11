@@ -10,3 +10,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - Metal: fix, respect alpha to coverage rasterization
 - engine: removed `Texture::generatePrefilterMipmap`, a new `libfilament-generatePrefilterMipmap` library can be used in its stead [⚠️ **API BREAKAGE**]
+- Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]

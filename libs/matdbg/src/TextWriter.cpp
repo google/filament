@@ -233,7 +233,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;
-        bool fieldUnfilterable;
+        bool fieldFilterable;
         bool fieldMultisample;
 
         if (!sib.read(&fieldName)) {
@@ -255,7 +255,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
-        if (!sib.read(&fieldUnfilterable)) {
+        if (!sib.read(&fieldFilterable)) {
             return false;
         }
 

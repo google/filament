@@ -154,7 +154,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         std::cerr << "parameters: name value must be STRING." << std::endl;
         return false;
     }
-    
+
     const JsonishValue* transformNameValue = jsonObject.getValue("transformName");
     if (transformNameValue && transformNameValue->getType() != JsonishValue::STRING) {
         std::cerr << "parameters: transformName value must be STRING." << std::endl;
@@ -185,9 +185,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     }
 
-    const JsonishValue* unfilterableValue = jsonObject.getValue("unfilterable");
-    if (unfilterableValue) {
-        if (unfilterableValue->getType() != JsonishValue::BOOL) {
+    const JsonishValue* filterableValue = jsonObject.getValue("filterable");
+    if (filterableValue) {
+        if (filterableValue->getType() != JsonishValue::BOOL) {
             std::cerr << "parameters: unfilterable must be a BOOL." << std::endl;
             return false;
         }
@@ -267,7 +267,34 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         auto precision = precisionValue ? Enums::toEnum<ParameterPrecision>(
                 precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
 
-        auto unfilterable = unfilterableValue ? unfilterableValue->toJsonBool()->getBool() : false;
+        if (format == SamplerFormat::SHADOW) {
+            std::cerr << "Materials should not be able to define a shadow sampler";
+            return false;
+        }
+
+        // For samplers without `filterable` defined, we use the following logic
+        //   - float sampler can be filterable or not, default to filterable
+        //   - int sampler is not filterable
+        auto defaultFilterability = [format]() {
+            switch (format) {
+                case SamplerFormat::FLOAT:
+                    return true;
+                case SamplerFormat::INT:
+                case SamplerFormat::UINT:
+                    return false;
+                default:
+                    return false;
+            }
+        };
+        auto filterable =
+                filterableValue ? filterableValue->toJsonBool()->getBool() : defaultFilterability();
+        if (filterable && (format == SamplerFormat::INT || format == SamplerFormat::UINT)) {
+            std::cerr << "parameters: the parameter with name '" << nameString << "'"
+                      << " is an integer sampler with `filterable = true`."
+                      << " This is not allowed." << std::endl;
+            return false;
+        }
+
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
         if (stages == ShaderStageFlags::NONE) {
@@ -284,10 +311,10 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 return false;
             }
             auto transformName = transformNameValue->toJsonString()->getString();
-            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+            builder.parameter(nameString.c_str(), type, format, precision, filterable,
                     multisample, transformName.c_str(), stages);
         } else {
-            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+            builder.parameter(nameString.c_str(), type, format, precision, filterable,
                     multisample, "", stages);
         }
 
