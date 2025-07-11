@@ -39,6 +39,20 @@ namespace filament::backend {
 
 namespace {
 
+inline VulkanBufferUsage getBufferObjectUsage(BufferObjectBinding bindingType) noexcept {
+    switch (bindingType) {
+        case BufferObjectBinding::VERTEX:
+            return VulkanBufferUsage::VERTEX;
+        case BufferObjectBinding::UNIFORM:
+            return VulkanBufferUsage::UNIFORM;
+        case BufferObjectBinding::SHADER_STORAGE:
+            return VulkanBufferUsage::SHADER_STORAGE;
+            // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
+            // if necessary.
+    }
+    return VulkanBufferUsage::UNKNOWN;
+}
+
 void flipVertically(VkViewport* rect, uint32_t framebufferHeight) {
     rect->y = framebufferHeight - rect->y - rect->height;
 }
@@ -165,14 +179,6 @@ VulkanAttachment createSwapchainAttachment(const fvkmemory::resource_ptr<VulkanT
 }
 
 } // anonymous namespace
-
-void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanTexture> texture) {
-    mResources.push_back(texture);
-}
-
-void VulkanDescriptorSet::acquire(fvkmemory::resource_ptr<VulkanBufferObject> obj) {
-    mResources.push_back(obj);
-}
 
 VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(DescriptorSetLayout&& layout,
         VkDescriptorSetLayout vkLayout)
@@ -588,7 +594,7 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
     int8_t const* const attribToBuffer = vbi->getAttributeToBuffer();
     for (uint8_t attribIndex = 0; attribIndex < count; attribIndex++) {
         if (attribToBuffer[attribIndex] == static_cast<int8_t>(index)) {
-            vkbuffers[attribIndex] = bufferObject->buffer.getVkBuffer();
+            vkbuffers[attribIndex] = bufferObject->getVkBuffer();
         }
     }
     mResources.push_back(bufferObject);
@@ -597,8 +603,8 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 VulkanBufferObject::VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
         VulkanBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType)
     : HwBufferObject(byteCount),
-      buffer(allocator, stagePool, bufferCache, getBufferObjectUsage(bindingType), byteCount),
-      bindingType(bindingType) {}
+      bindingType(bindingType),
+      mBuffer(allocator, stagePool, bufferCache, getBufferObjectUsage(bindingType), byteCount) {}
 
 VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
         fvkmemory::resource_ptr<VulkanVertexBuffer> vb,

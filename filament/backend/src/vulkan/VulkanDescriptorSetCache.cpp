@@ -320,7 +320,7 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
     VkDescriptorBufferInfo const info = {
-        .buffer = bufferObject->buffer.getVkBuffer(),
+        .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
         .range = size,
     };
@@ -345,6 +345,9 @@ void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescri
         vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
     }
     set->acquire(bufferObject);
+
+    // This is to ensure the the refcounting of the actual backing VulkanBuffer is consistent.
+    bufferObject->referencedBy(set);
 }
 
 void VulkanDescriptorSetCache::updateSamplerImpl(VkDescriptorSet vkset, uint8_t binding,

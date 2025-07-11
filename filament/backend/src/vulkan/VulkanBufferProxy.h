@@ -25,6 +25,9 @@
 
 namespace filament::backend {
 
+struct VulkanDescriptorSet;
+struct VulkanCommandBuffer;
+
 // This class acts as a dynamic wrapper for a `VulkanBuffer`. It allows you to modify the
 // `VulkanBuffer` it references at runtime, wihtout affecting any external objects.
 class VulkanBufferProxy {
@@ -37,9 +40,11 @@ public:
 
     VkBuffer getVkBuffer() const noexcept;
 
-    VulkanBufferUsage getUsage() const noexcept;
+    void referencedBy(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
 
 private:
+    VulkanBufferUsage getUsage() const noexcept;
+
     VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
     VulkanBufferCache& mBufferCache;

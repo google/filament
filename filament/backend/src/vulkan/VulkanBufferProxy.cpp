@@ -20,6 +20,7 @@
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
 #include "VulkanMemory.h"
+#include "VulkanHandles.h"
 
 using namespace bluevk;
 
@@ -158,6 +159,10 @@ VkBuffer VulkanBufferProxy::getVkBuffer() const noexcept {
 
 VulkanBufferUsage VulkanBufferProxy::getUsage() const noexcept {
     return mBuffer->getGpuBuffer()->usage;
+}
+
+void VulkanBufferProxy::referencedBy(fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
+    set->acquire(mBuffer);
 }
 
 } // namespace filament::backend
