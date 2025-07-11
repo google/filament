@@ -125,6 +125,9 @@ private:
     void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask descriptorSetMask);
 
+    // Flush the current command buffer and reset the pipeline state.
+    void endCommandRecording();
+
     VulkanPlatform* mPlatform = nullptr;
     fvkmemory::ResourceManager mResourceManager;
 
