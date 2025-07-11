@@ -17,20 +17,23 @@
 #ifndef TNT_FILAMENT_UNIFORMBUFFER_H
 #define TNT_FILAMENT_UNIFORMBUFFER_H
 
-#include <algorithm>
-
 #include "private/backend/DriverApi.h"
-
-#include <utils/Allocator.h>
-#include <utils/compiler.h>
-#include <utils/Log.h>
-#include <utils/debug.h>
 
 #include <backend/BufferDescriptor.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
 #include <math/mat3.h>
 #include <math/mat4.h>
+#include <math/quat.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 
+#include <type_traits>
+
+#include <stdint.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -52,7 +55,7 @@ public:
     // can be moved
     UniformBuffer(UniformBuffer&& rhs) noexcept;
 
-    // can be moved (e.g. assigned from a temporary)
+    // Can be moved (e.g. assigned from a temporary)
     UniformBuffer& operator=(UniformBuffer&& rhs) noexcept;
 
     ~UniformBuffer() noexcept {
@@ -66,15 +69,22 @@ public:
 
     UniformBuffer& setUniforms(const UniformBuffer& rhs) noexcept;
 
-    // invalidate a range of uniforms and return a pointer to it. offset and size given in bytes
-    void* invalidateUniforms(size_t const offset, size_t const size) {
-        assert_invariant(offset + size <= mSize);
-        mSomethingDirty = true;
-        return static_cast<char*>(mBuffer) + offset;
+    // Checks if a range needs to be invalidated by comparing the current value.
+    template<size_t Size>
+    bool invalidateNeeded(size_t const offset, void const* UTILS_RESTRICT v) const {
+        assert_invariant(offset + Size <= mSize);
+        void* const UTILS_RESTRICT addr = getUniformAddress(offset);
+        return bool(memcmp(addr, v, Size)); // inlined
     }
 
-    void* invalidate() noexcept {
-        return invalidateUniforms(0, mSize);
+    // Invalidate a range of uniforms and return a pointer to it. offset and size given in bytes
+    void invalidateUniforms(size_t const offset, size_t const size) const {
+        assert_invariant(offset + size <= mSize);
+        mSomethingDirty = true;
+    }
+
+    void invalidate() const noexcept {
+        invalidateUniforms(0, mSize);
     }
 
     // pointer to the uniform buffer
@@ -99,23 +109,23 @@ public:
     // (e.g. bool and bool vectors)
     template <typename T>
     struct is_supported_type {
-        using type = typename std::enable_if<
-                std::is_same<float, T>::value ||
-                std::is_same<int32_t, T>::value ||
-                std::is_same<uint32_t, T>::value ||
-                std::is_same<math::quatf, T>::value ||
-                std::is_same<math::int2, T>::value ||
-                std::is_same<math::int3, T>::value ||
-                std::is_same<math::int4, T>::value ||
-                std::is_same<math::uint2, T>::value ||
-                std::is_same<math::uint3, T>::value ||
-                std::is_same<math::uint4, T>::value ||
-                std::is_same<math::float2, T>::value ||
-                std::is_same<math::float3, T>::value ||
-                std::is_same<math::float4, T>::value ||
-                std::is_same<math::mat3f, T>::value ||
-                std::is_same<math::mat4f, T>::value
-        >::type;
+        using type = std::enable_if_t<
+                std::is_same_v<float, T> ||
+                std::is_same_v<int32_t, T> ||
+                std::is_same_v<uint32_t, T> ||
+                std::is_same_v<math::quatf, T> ||
+                std::is_same_v<math::int2, T> ||
+                std::is_same_v<math::int3, T> ||
+                std::is_same_v<math::int4, T> ||
+                std::is_same_v<math::uint2, T> ||
+                std::is_same_v<math::uint3, T> ||
+                std::is_same_v<math::uint4, T> ||
+                std::is_same_v<math::float2, T> ||
+                std::is_same_v<math::float3, T> ||
+                std::is_same_v<math::float4, T> ||
+                std::is_same_v<math::mat3f, T> ||
+                std::is_same_v<math::mat4f, T>
+        >;
     };
 
     // Invalidates an array of uniforms and returns a pointer to the first element.
@@ -141,14 +151,14 @@ public:
     // (see specialization for mat3f below)
     template<typename T, typename = typename is_supported_type<T>::type>
     UTILS_ALWAYS_INLINE
-    static inline void setUniform(void* addr, size_t const offset, const T& v) noexcept {
+    static void setUniform(void* addr, const T& v) noexcept {
         static_assert(!std::is_same_v<T, math::mat3f>);
-        setUniformUntyped<sizeof(T)>(addr, offset, &v);
+        setUniformUntyped<sizeof(T)>(addr, &v);
     }
 
     template<typename T, typename = typename is_supported_type<T>::type>
     UTILS_ALWAYS_INLINE
-    inline void setUniform(size_t const offset, const T& v) noexcept {
+    void setUniform(size_t const offset, const T& v) noexcept {
         static_assert(!std::is_same_v<T, math::mat3f>);
         setUniformUntyped<sizeof(T)>(offset, &v);
     }
@@ -185,6 +195,7 @@ public:
     void setUniformArrayUntyped(size_t offset, void const* UTILS_RESTRICT begin, size_t count) noexcept;
 
 private:
+
 #if !defined(NDEBUG)
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const UniformBuffer& rhs);
 #endif
@@ -194,24 +205,34 @@ private:
     template<size_t Size, std::enable_if_t<
             Size == 4 || Size == 8 || Size == 12 || Size == 16 || Size == 64, bool> = true>
     UTILS_ALWAYS_INLINE
-    static void setUniformUntyped(void* addr, size_t const offset, void const* v) noexcept {
-        memcpy(static_cast<char*>(addr) + offset, v, Size); // inlined
+    static void setUniformUntyped(void* UTILS_RESTRICT addr, void const* v) noexcept {
+        memcpy(addr, v, Size); // inlined
     }
 
-    inline bool isLocalStorage() const noexcept { return mBuffer == mStorage; }
+    bool isLocalStorage() const noexcept { return mBuffer == mStorage; }
 
-    char mStorage[96];
+    void* getUniformAddress(size_t const offset) const noexcept {
+        return static_cast<char*>(mBuffer) + offset;
+    }
+
+    char mStorage[96]; // 6 lines (6 x vec4 x 4)
     void *mBuffer = nullptr;
     uint32_t mSize = 0;
     mutable bool mSomethingDirty = false;
+    // we have 3 padding bytes here
 };
 
-// specialization for mat3f (which has a different alignment, see std140 layout rules)
+// Specialization for mat3f (which has a different alignment, see std140 layout rules), we declare it
+// but don't define it, so that we are sure it's never called.
 template<>
-void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat3f& v) noexcept;
+void UniformBuffer::setUniform(void* addr, const math::mat3f& v) noexcept;
 
+// The specialization for mat3f (which has a different alignment, see std140 layout rules) is handled as
+// an array of three float3 (which therefore have an alignment of 16)
 template<>
-void UniformBuffer::setUniform(size_t offset, const math::mat3f& v) noexcept;
+inline void UniformBuffer::setUniform(size_t const offset, const math::mat3f& v) noexcept {
+    setUniformArrayUntyped<sizeof(math::float3)>(offset, &v, 3);
+}
 
 template<>
 inline void UniformBuffer::setUniformArray(
