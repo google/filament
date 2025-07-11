@@ -209,8 +209,9 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
     DynamicResolutionOptions& dynamicResolution = mDynamicResolution;
     dynamicResolution = options;
 
-    // only enable if dynamic resolution is supported
-    dynamicResolution.enabled = dynamicResolution.enabled && mIsDynamicResolutionSupported;
+    // only enable if dynamic resolution is supported or if it's not actually dynamic
+    dynamicResolution.enabled = dynamicResolution.enabled &&
+            (mIsDynamicResolutionSupported || dynamicResolution.minScale == dynamicResolution.maxScale);
     if (dynamicResolution.enabled) {
         // if enabled, sanitize the parameters
 
@@ -249,6 +250,8 @@ float2 FView::updateScale(FEngine& engine,
 
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
+        // if timerQueries are not supported, info.valid will always be false; but in that case
+        // we're guaranteed that minScale == maxScale.
         if (!UTILS_UNLIKELY(info.valid)) {
             // always clamp to the min/max scale range
             mScale = clamp(1.0f, options.minScale, options.maxScale);

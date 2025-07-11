@@ -1390,8 +1390,8 @@ public class View {
      *
      * \note
      * Dynamic resolution is only supported on platforms where the time to render
-     * a frame can be measured accurately. Dynamic resolution is currently only
-     * supported on Android.
+     * a frame can be measured accurately. On platform where this is not supported,
+     * Dynamic Resolution can't be enabled unless minScale == maxScale.
      *
      * @see Renderer::FrameRateOptions
      *
