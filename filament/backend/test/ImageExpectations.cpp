@@ -89,6 +89,14 @@ const std::string ScreenshotParams::filePrefix() const {
     return mFileName;
 }
 
+int ScreenshotParams::allowedPixelDeviations() const {
+    return mAllowedPixelDeviations;
+}
+
+int ScreenshotParams::pixelMatchThreshold() const {
+    return mPixelMatchThreshold;
+}
+
 ImageExpectation::ImageExpectation(const char* fileName, int lineNumber,
         filament::backend::DriverApi& api, ScreenshotParams params,
         filament::backend::RenderTargetHandle renderTarget)
@@ -121,6 +129,16 @@ void ImageExpectation::compareImage() const {
         uint32_t actualHash = mResult.hash();
 #ifndef FILAMENT_IOS
         LoadedPng loadedImage(mParams.expectedFilePath());
+        // Bytewise compare, strict for now.
+        EXPECT_EQ( loadedImage.bytes().size(), mResult.bytes().size() );
+        int pixelDeviations = 0;
+        for( int i = 0; i < mResult.bytes().size(); ++i ) {
+            if( std::abs( mResult.bytes()[i] - loadedImage.bytes()[i] ) >
+                mParams.pixelMatchThreshold() ) {
+                pixelDeviations++;
+            }
+        }
+        EXPECT_LE( pixelDeviations, mParams.allowedPixelDeviations() );
         uint32_t loadedImageHash = loadedImage.hash();
         auto compareToImageMatcher = testing::Eq(loadedImageHash);
         if (!testing::Matches(compareToImageMatcher)(actualHash)) {
