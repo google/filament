@@ -46,6 +46,14 @@
 #include "details/VertexBuffer.h"
 
 #include "generated/resources/materials.h"
+#include "generated/resources/antiAliasing.h"
+#include "generated/resources/colorGrading.h"
+#include "generated/resources/flare.h"
+#include "generated/resources/fsr.h"
+#include "generated/resources/sgsr.h"
+#include "generated/resources/ssao.h"
+#include "generated/resources/bloom.h"
+#include "generated/resources/dof.h"
 
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
@@ -272,68 +280,68 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 // we ensure it's trivially destructible
 static_assert(std::is_trivially_destructible_v<PostProcessManager::StaticMaterialInfo::ConstantInfo>);
 
-#define MATERIAL(n) MATERIALS_ ## n ## _DATA, size_t(MATERIALS_ ## n ## _SIZE)
+#define MATERIAL(p, n) p ## _ ## n ## _DATA, size_t(p ## _ ## n ## _SIZE)
 
 static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[] = {
-        { "blitLow",                    MATERIAL(BLITLOW) },
+        { "blitLow",                    MATERIAL(MATERIALS, BLITLOW) },
 };
 
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
-        { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
-        { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitArray",                  MATERIAL(BLITARRAY) },
-        { "blitDepth",                  MATERIAL(BLITDEPTH) },
-        { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
-        { "bloomDownsample2x",          MATERIAL(BLOOMDOWNSAMPLE2X) },
-        { "bloomDownsample9",           MATERIAL(BLOOMDOWNSAMPLE9) },
-        { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
-        { "colorGrading",               MATERIAL(COLORGRADING) },
-        { "colorGradingAsSubpass",      MATERIAL(COLORGRADINGASSUBPASS) },
-        { "customResolveAsSubpass",     MATERIAL(CUSTOMRESOLVEASSUBPASS) },
-        { "dof",                        MATERIAL(DOF) },
-        { "dofCoc",                     MATERIAL(DOFCOC) },
-        { "dofCombine",                 MATERIAL(DOFCOMBINE) },
-        { "dofDilate",                  MATERIAL(DOFDILATE) },
-        { "dofDownsample",              MATERIAL(DOFDOWNSAMPLE) },
-        { "dofMedian",                  MATERIAL(DOFMEDIAN) },
-        { "dofMipmap",                  MATERIAL(DOFMIPMAP) },
-        { "dofTiles",                   MATERIAL(DOFTILES) },
-        { "dofTilesSwizzle",            MATERIAL(DOFTILESSWIZZLE) },
-        { "flare",                      MATERIAL(FLARE) },
-        { "fxaa",                       MATERIAL(FXAA) },
-        { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
-        { "sao",                        MATERIAL(SAO) },
-        { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
+        { "bloomDownsample",            MATERIAL(BLOOM, BLOOMDOWNSAMPLE) },
+        { "bloomDownsample2x",          MATERIAL(BLOOM, BLOOMDOWNSAMPLE2X) },
+        { "bloomDownsample9",           MATERIAL(BLOOM, BLOOMDOWNSAMPLE9) },
+        { "bloomUpsample",              MATERIAL(BLOOM, BLOOMUPSAMPLE) },
+        { "dof",                        MATERIAL(DOF, DOF) },
+        { "dofCoc",                     MATERIAL(DOF, DOFCOC) },
+        { "dofCombine",                 MATERIAL(DOF, DOFCOMBINE) },
+        { "dofDilate",                  MATERIAL(DOF, DOFDILATE) },
+        { "dofDownsample",              MATERIAL(DOF, DOFDOWNSAMPLE) },
+        { "dofMedian",                  MATERIAL(DOF, DOFMEDIAN) },
+        { "dofMipmap",                  MATERIAL(DOF, DOFMIPMAP) },
+        { "dofTiles",                   MATERIAL(DOF, DOFTILES) },
+        { "dofTilesSwizzle",            MATERIAL(DOF, DOFTILESSWIZZLE) },
+        { "bilateralBlur",              MATERIAL(SSAO, BILATERALBLUR) },
+        { "bilateralBlurBentNormals",   MATERIAL(SSAO, BILATERALBLURBENTNORMALS) },
+        { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
+        { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
+        { "colorGrading",               MATERIAL(COLORGRADING, COLORGRADING) },
+        { "colorGradingAsSubpass",      MATERIAL(COLORGRADING, COLORGRADINGASSUBPASS) },
+        { "customResolveAsSubpass",     MATERIAL(COLORGRADING, CUSTOMRESOLVEASSUBPASS) },
+        { "flare",                      MATERIAL(FLARE, FLARE) },
+        { "fxaa",                       MATERIAL(ANTIALIASING, FXAA) },
+        { "mipmapDepth",                MATERIAL(SSAO, MIPMAPDEPTH) },
+        { "sao",                        MATERIAL(SSAO, SAO) },
+        { "saoBentNormals",             MATERIAL(SSAO, SAOBENTNORMALS) },
 #ifndef FILAMENT_DISABLE_GTAO
-        { "gtao",                       MATERIAL(GTAO) },
-        { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
+        { "gtao",                       MATERIAL(SSAO, GTAO) },
+        { "gtaoBentNormals",            MATERIAL(SSAO, GTAOBENTNORMALS) },
 #endif
-        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
-        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 1} } },
-        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 2} } },
-        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 2} } },
-        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 3} } },
-        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 3} } },
-        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 4} } },
-        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 4} } },
-        { "taa",                        MATERIAL(TAA) },
-        { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                   MATERIAL(FSR_EASU) },
-        { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
-        { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
-        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
-        { "sgsr1",                      MATERIAL(SGSR1) },
-        { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
-        { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
-        { "shadowmap",                  MATERIAL(SHADOWMAP) },
+        { "taa",                        MATERIAL(ANTIALIASING, TAA) },
+        { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
+        { "fsr_easu",                   MATERIAL(FSR, FSR_EASU) },
+        { "fsr_easu_mobile",            MATERIAL(FSR, FSR_EASU_MOBILE) },
+        { "fsr_easu_mobileF",           MATERIAL(FSR, FSR_EASU_MOBILEF) },
+        { "fsr_rcas",                   MATERIAL(FSR, FSR_RCAS) },
+        { "sgsr1",                      MATERIAL(SGSR, SGSR1) },
+        { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
+        { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
+        { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
 };
 
 void PostProcessManager::init() noexcept {
