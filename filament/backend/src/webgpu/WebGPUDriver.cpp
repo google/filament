@@ -558,6 +558,16 @@ bool WebGPUDriver::isTextureSwizzleSupported() {
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
+    // passing 2D and sampleCount 1 to only check the format
+    const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
+        WebGPURenderPassMipmapGenerator::getCompatibilityFor(
+                WebGPUTexture::fToWGPUTextureFormat(format), wgpu::TextureDimension::e2D, 1)
+    };
+
+    if (renderPassCompatibility.compatible) {
+        return true;
+    }
+
     return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
             WebGPUTexture::fToWGPUTextureFormat(format));
 }
