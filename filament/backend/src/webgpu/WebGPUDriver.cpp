@@ -24,6 +24,7 @@
 #include "WebGPUProgram.h"
 #include "WebGPURenderPrimitive.h"
 #include "WebGPURenderTarget.h"
+#include "WebGPUStrings.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
 #include "WebGPUVertexBuffer.h"
@@ -42,7 +43,7 @@
 #include <utils/CString.h>
 #include <utils/Hash.h>
 #include <utils/Panic.h>
-#include <utils/ostream.h>
+#include <utils/compiler.h>
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -71,7 +72,8 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mAdapter{ mPlatform.requestAdapter(nullptr) },
       mDevice{ mPlatform.requestDevice(mAdapter) },
       mQueue{ mDevice.GetQueue() },
-      mMipMapGenerator{ mDevice },
+      mRenderPassMipmapGenerator{ mDevice },
+      mSpdComputePassMipmapGenerator{ mDevice },
       mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
           driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags } {
     mDevice.GetLimits(&mDeviceLimits);
@@ -717,27 +719,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
 
     const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
     size_t dataSize = data->size;
-    std::unique_ptr<uint8_t[]> paddedBuffer;
-
-    if (bytesPerRow % 256 != 0) {
-        uint32_t padding = 256 - (bytesPerRow % 256);
-        uint32_t paddedBytesPerRow = bytesPerRow + padding;
-
-        size_t paddedBufferSize = static_cast<size_t>(paddedBytesPerRow) * height * depth;
-        paddedBuffer = std::make_unique<uint8_t[]>(paddedBufferSize);
-        uint8_t* dest = paddedBuffer.get();
-
-        for (uint32_t z = 0; z < depth; ++z) {
-            for (uint32_t y = 0; y < height; ++y) {
-                std::memcpy(dest, dataBuff, bytesPerRow);
-                dest += paddedBytesPerRow;
-                dataBuff += bytesPerRow;
-            }
-        }
-        dataBuff = paddedBuffer.get();
-        dataSize = paddedBufferSize;
-        bytesPerRow = paddedBytesPerRow;
-    }
 
     auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
 
@@ -768,41 +749,58 @@ void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
     wgpu::Texture wgpuTexture = texture->getTexture();
     assert_invariant(wgpuTexture);
 
-    const auto usage = wgpuTexture.GetUsage();
-    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
-            << "Texture for mipmap generation must have TextureBinding usage. "
-               "supportsMultipleMipLevels for texture format "
-            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
-            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
-    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
-            << "Texture for mipmap generation must have StorageBinding usage. "
-               "supportsMultipleMipLevels for texture format "
-            << static_cast<uint32_t>(wgpuTexture.GetFormat()) << " is "
-            << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(wgpuTexture.GetFormat());
-
     const uint32_t totalMipLevels = wgpuTexture.GetMipLevelCount();
     if (totalMipLevels <= 1) {
-        return;
+        return; // nothing to do
     }
 
-    // We will record all passes into a single command encoder.
-    wgpu::CommandEncoderDescriptor encoderDesc = {};
-    encoderDesc.label = "Mipmap Command Encoder";
-    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
+    const auto usage = wgpuTexture.GetUsage();
+    FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::TextureBinding)
+            << "Texture for mipmap generation must have TextureBinding usage.";
 
-    spd::SPDPassConfig spdConfig = { .filter = spd::SPDFilter::Average,
-        .targetTexture = wgpuTexture,
-        .numMips = totalMipLevels,
-        .halfPrecision = false,
-        .sourceMipLevel = 0 };
+    switch (texture->getMipmapGenerationStrategy()) {
+        case WebGPUTexture::MipmapGenerationStrategy::RENDER_PASS:
+            FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::RenderAttachment)
+                    << "Texture for mipmap generation via render pass blit must have "
+                       "RenderAttachment usage.";
+            mRenderPassMipmapGenerator.generateMipmaps(mQueue, texture->getTexture());
+            break;
+        case WebGPUTexture::MipmapGenerationStrategy::NONE:
+            FWGPU_LOGW << "Trying to generate mipmaps for a texture we already know we cannot do "
+                          "such generation. Texture sample type "
+                       << to_string(texture->target) << " WebGPU texture format "
+                       << webGPUTextureFormatToString(texture->getViewFormat()) << " samples "
+                       << static_cast<uint32_t>(texture->samples)
+                       << ". Going to try using the SPD_COMPUTE_PASS approach.";
+            UTILS_FALLTHROUGH;
+        case WebGPUTexture::MipmapGenerationStrategy::SPD_COMPUTE_PASS:
+            FILAMENT_CHECK_PRECONDITION(usage & wgpu::TextureUsage::StorageBinding)
+                    << "Texture for mipmap generation must have StorageBinding usage "
+                       "(as a compute pass strategy was selected for use). "
+                       "supportsMultipleMipLevels for WebGPU texture format "
+                    << webGPUTextureFormatToString(wgpuTexture.GetFormat()) << " is "
+                    << WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
+                               wgpuTexture.GetFormat());
+            // We will record all passes into a single command encoder.
+            wgpu::CommandEncoderDescriptor encoderDesc = {};
+            encoderDesc.label = "Mipmap Command Encoder";
+            wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder(&encoderDesc);
 
-    mMipMapGenerator.Generate(encoder, wgpuTexture, spdConfig);
+            spd::SPDPassConfig spdConfig = { .filter = spd::SPDFilter::Average,
+                .targetTexture = wgpuTexture,
+                .numMips = totalMipLevels,
+                .halfPrecision = false,
+                .sourceMipLevel = 0 };
 
-    // Finish the encoder and submit all the passes at once.
-    wgpu::CommandBufferDescriptor cmdBufferDesc = {};
-    cmdBufferDesc.label = "Mipmap Command Buffer";
-    wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
-    mQueue.Submit(1, &commandBuffer);
+            mSpdComputePassMipmapGenerator.Generate(encoder, wgpuTexture, spdConfig);
+
+            // Finish the encoder and submit all the passes at once.
+            wgpu::CommandBufferDescriptor cmdBufferDesc = {};
+            cmdBufferDesc.label = "Mipmap Command Buffer";
+            wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
+            mQueue.Submit(1, &commandBuffer);
+            break;
+    }
 }
 
 void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
@@ -1071,7 +1069,102 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
-    // todo
+
+    FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
+            << "Resolve assumes there is a valid command encoder to piggyback on.";
+    FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
+            << "Resolve cannot be called during an existing render pass";
+
+    const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    const auto destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+
+    assert_invariant(sourceTexture);
+    assert_invariant(destinationTexture);
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->width == sourceTexture->width &&
+                                destinationTexture->height == sourceTexture->height)
+            << "invalid resolve: source and destination sizes don't match";
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->samples > 1 && destinationTexture->samples == 1)
+            << "invalid resolve: source.samples=" << +sourceTexture->samples
+            << ", destination.samples=" << +destinationTexture->samples;
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->format == destinationTexture->format)
+            << "source and destination texture format don't match";
+
+    FILAMENT_CHECK_PRECONDITION(!isDepthFormat(sourceTexture->format))
+            << "can't resolve depth formats";
+
+    FILAMENT_CHECK_PRECONDITION(!isStencilFormat(sourceTexture->format))
+            << "can't resolve stencil formats";
+
+    FILAMENT_CHECK_PRECONDITION(any(destinationTexture->usage & TextureUsage::BLIT_DST))
+            << "destination texture doesn't have BLIT_DST";
+
+    FILAMENT_CHECK_PRECONDITION(any(sourceTexture->usage & TextureUsage::BLIT_SRC))
+            << "source texture doesn't have BLIT_SRC";
+
+    FILAMENT_CHECK_PRECONDITION(sourceTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
+            << "source texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::RenderAttachment)
+            << "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+
+    FILAMENT_CHECK_PRECONDITION(destinationTexture->getTexture().GetUsage() & wgpu::TextureUsage::TextureBinding)
+            << "destination texture usage doesn't have wgpu::TextureUsage::TextureBinding";
+
+    const wgpu::TextureFormat format{ sourceTexture->getViewFormat() };
+    const wgpu::TextureViewDescriptor sourceTextureViewDescriptor{
+        .label = "resolve_source_texture_view",
+        .format = format,
+        .dimension = sourceTexture->getViewDimension(),
+        .baseMipLevel = sourceLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = sourceLayer,
+        .arrayLayerCount = 1,
+        .aspect = sourceTexture->getAspect(),
+        .usage = sourceTexture->getTexture().GetUsage(),
+    };
+    const wgpu::TextureView sourceTextureView{ sourceTexture->getTexture().CreateView(
+            &sourceTextureViewDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(sourceTextureView) << "Failed to create wgpu::TextureView sourceTextureView";
+    const wgpu::TextureViewDescriptor destinationTextureViewDescriptor{
+        .label = "resolve_destination_texture_view",
+        .format = format,
+        .dimension = destinationTexture->getViewDimension(),
+        .baseMipLevel = destinationLevel,
+        .mipLevelCount = 1,
+        .baseArrayLayer = destinationLayer,
+        .arrayLayerCount = 1,
+        .aspect = destinationTexture->getAspect(),
+        .usage = destinationTexture->getTexture().GetUsage(),
+    };
+
+    const wgpu::TextureView destinationTextureView{ destinationTexture->getTexture().CreateView(
+            &destinationTextureViewDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(destinationTextureView) << "Failed to create wgpu::TextureView destinationTextureView.";
+    const wgpu::RenderPassColorAttachment colorAttachment{
+        .view = sourceTextureView,
+        .depthSlice = wgpu::kDepthSliceUndefined, // being explicit for consistent behavior
+        .resolveTarget = destinationTextureView,
+        .loadOp = wgpu::LoadOp::Load,
+        .storeOp = wgpu::StoreOp::Store,
+        .clearValue = {}, // being explicit for consistent behavior
+    };
+    const wgpu::RenderPassDescriptor renderPassDescriptor{
+        .label = "resolve_render_pass",
+        .colorAttachmentCount = 1,
+        .colorAttachments = &colorAttachment,
+        .depthStencilAttachment = nullptr, // being explicit for consistent behavior
+        .occlusionQuerySet = nullptr,      // being explicit for consistent behavior
+        .timestampWrites = nullptr,        // being explicit for consistent behavior
+    };
+
+    const wgpu::RenderPassEncoder renderPassEncoder{ mCommandEncoder.BeginRenderPass(
+            &renderPassDescriptor) };
+    FILAMENT_CHECK_POSTCONDITION(renderPassEncoder)
+            << "Failed to create wgpu::RenderPassEncoder for WebGPUDriver::resolve";
+    renderPassEncoder.End(); // only the implicit resolve is happening in the pass
 }
 
 void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
@@ -1081,13 +1174,24 @@ void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_
     // todo
 }
 
-void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+size_t WebGPUDriver::computePipelineKey(PipelineState const& pipelineState,
+        WebGPURenderTarget const* const renderTarget) const {
     // TODO Investigate implications of this hash more closely. Vulkan has a whole class
-    // VulkanPipelineCache to handle this, may be missing nuance
-    static auto pipleineStateHasher = utils::hash::MurmurHashFn<filament::backend::PipelineState>();
-    auto hash = pipleineStateHasher(pipelineState);
-    if (mPipelineMap.find(hash) != mPipelineMap.end()) {
-        mRenderPassEncoder.SetPipeline(mPipelineMap[hash]);
+    //      VulkanPipelineCache to handle this, may be missing nuance
+    static const auto pipelineStateHasher{
+        utils::hash::MurmurHashFn<filament::backend::PipelineState>()
+    };
+    const std::hash<uint32_t> intHasher{};
+    const std::hash<WebGPURenderTarget const*> addressHasher{};
+    const size_t pipelineStateHash{ intHasher(pipelineStateHasher(pipelineState)) };
+    const size_t renderTargetHash{ addressHasher(renderTarget) };
+    return utils::hash::combine(pipelineStateHash, renderTargetHash);
+}
+
+void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
+    auto pipelineKey{ computePipelineKey(pipelineState, mCurrentRenderTarget) };
+    if (mPipelineMap.find(pipelineKey) != mPipelineMap.end()) {
+        mRenderPassEncoder.SetPipeline(mPipelineMap[pipelineKey]);
         return;
     }
     const auto program = handleCast<WebGPUProgram>(pipelineState.program);
@@ -1173,7 +1277,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
             pipelineState.polygonOffset, pipelineState.primitiveType, pipelineColorFormats,
             pipelineDepthStencilFormat, pipelineSamples, requestedDepth, requestedStencil);
     assert_invariant(pipeline);
-    mPipelineMap[hash] = pipeline;
+    mPipelineMap[pipelineKey] = pipeline;
     mRenderPassEncoder.SetPipeline(pipeline);
 }
 

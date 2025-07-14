@@ -19,6 +19,7 @@
 
 #include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPURenderPassMipmapGenerator.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -77,9 +78,10 @@ private:
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
-    spd::MipmapGenerator mMipMapGenerator;
+    WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
+    spd::MipmapGenerator mSpdComputePassMipmapGenerator;
 
-    tsl::robin_map<uint32_t, wgpu::RenderPipeline> mPipelineMap;
+    tsl::robin_map<size_t, wgpu::RenderPipeline> mPipelineMap;
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
@@ -87,6 +89,9 @@ private:
         backend::DescriptorSetOffsetArray offsets;
     };
     std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
+
+    [[nodiscard]] size_t computePipelineKey(PipelineState const&, WebGPURenderTarget const*) const;
+
     /*
      * Driver interface
      */

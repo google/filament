@@ -32,7 +32,8 @@ namespace filament::backend {
 
 WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, MRT const& colorAttachmentsMRT,
-        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo, TargetBufferFlags const& targetFlags)
+        Attachment const& depthAttachmentInfo, Attachment const& stencilAttachmentInfo,
+        TargetBufferFlags const& targetFlags)
     : HwRenderTarget{ width, height },
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
@@ -77,14 +78,13 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
         RenderPassParams const& params, wgpu::TextureView const& defaultColorTextureView,
         wgpu::TextureView const& defaultDepthStencilTextureView,
         wgpu::TextureView const* customColorTextureViews, uint32_t customColorTextureViewCount,
-        wgpu::TextureView const& customDepthStencilTextureView){
+        wgpu::TextureView const& customDepthStencilTextureView) {
     mColorAttachmentDesc.clear();
 
     const bool hasDepth = any(mTargetFlags & TargetBufferFlags::DEPTH);
     const bool hasStencil = any(mTargetFlags & TargetBufferFlags::STENCIL);
     mHasDepthStencilAttachment = hasDepth || hasStencil;
-    bool const depthReadOnly =
-                (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
+    bool const depthReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_DEPTH) > 0;
 
     // Color attachments
     if (mDefaultRenderTarget) {
@@ -94,21 +94,30 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             .resolveTarget = nullptr,
             .loadOp = WebGPURenderTarget::getLoadOperation(params, TargetBufferFlags::COLOR0),
             .storeOp = WebGPURenderTarget::getStoreOperation(params, TargetBufferFlags::COLOR0),
-            .clearValue = { params.clearColor.r, params.clearColor.g, params.clearColor.b,
-                params.clearColor.a } });
+            .clearValue = {
+                .r = params.clearColor.r,
+                .g = params.clearColor.g,
+                .b = params.clearColor.b,
+                .a = params.clearColor.a,
+            },
+        });
     } else {
         for (uint32_t i = 0; i < customColorTextureViewCount; ++i) {
             if (customColorTextureViews[i]) {
                 mColorAttachmentDesc.push_back({ .view = customColorTextureViews[i],
-                    // .resolveTarget = nullptr; // TODO: MSAA resolve for custom RT
+                    .resolveTarget =
+                            nullptr, // We handle MSAA on the WebGPU driver's resolve function
                     .loadOp =
                             WebGPURenderTarget::getLoadOperation(params, getTargetBufferFlagsAt(i)),
                     .storeOp = WebGPURenderTarget::getStoreOperation(params,
                             getTargetBufferFlagsAt(i)),
-                    .clearValue = { .r = params.clearColor.r,
+                    .clearValue = {
+                        .r = params.clearColor.r,
                         .g = params.clearColor.g,
                         .b = params.clearColor.b,
-                        .a = params.clearColor.a } });
+                        .a = params.clearColor.a,
+                    },
+                });
             }
         }
     }
@@ -117,7 +126,7 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
 
     // Depth/Stencil Attachments
     if (mHasDepthStencilAttachment) {
-        wgpu::TextureView depthStencilViewToUse{nullptr};
+        wgpu::TextureView depthStencilViewToUse{ nullptr };
         if (mDefaultRenderTarget) {
             depthStencilViewToUse = defaultDepthStencilTextureView;
             assert_invariant(depthStencilViewToUse);
@@ -132,8 +141,12 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             mDepthStencilAttachmentDesc.view = depthStencilViewToUse;
 
             if (hasDepth) {
-                mDepthStencilAttachmentDesc.depthLoadOp =  depthReadOnly ? wgpu::LoadOp::Undefined :getLoadOperation(params, TargetBufferFlags::DEPTH);
-                mDepthStencilAttachmentDesc.depthStoreOp =  depthReadOnly ? wgpu::StoreOp::Undefined :getStoreOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDesc.depthLoadOp =
+                        depthReadOnly ? wgpu::LoadOp::Undefined
+                                      : getLoadOperation(params, TargetBufferFlags::DEPTH);
+                mDepthStencilAttachmentDesc.depthStoreOp =
+                        depthReadOnly ? wgpu::StoreOp::Undefined
+                                      : getStoreOperation(params, TargetBufferFlags::DEPTH);
                 mDepthStencilAttachmentDesc.depthClearValue = static_cast<float>(params.clearDepth);
                 mDepthStencilAttachmentDesc.depthReadOnly = depthReadOnly;
             } else {
@@ -143,10 +156,13 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
             }
 
             if (hasStencil) {
-                mDepthStencilAttachmentDesc.stencilLoadOp = getLoadOperation(params, TargetBufferFlags::STENCIL);
-                mDepthStencilAttachmentDesc.stencilStoreOp = getStoreOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDesc.stencilLoadOp =
+                        getLoadOperation(params, TargetBufferFlags::STENCIL);
+                mDepthStencilAttachmentDesc.stencilStoreOp =
+                        getStoreOperation(params, TargetBufferFlags::STENCIL);
                 mDepthStencilAttachmentDesc.stencilClearValue = params.clearStencil;
-                mDepthStencilAttachmentDesc.stencilReadOnly = (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
+                mDepthStencilAttachmentDesc.stencilReadOnly =
+                        (params.readOnlyDepthStencil & RenderPassParams::READONLY_STENCIL) > 0;
             } else {
                 mDepthStencilAttachmentDesc.stencilLoadOp = wgpu::LoadOp::Undefined;
                 mDepthStencilAttachmentDesc.stencilStoreOp = wgpu::StoreOp::Undefined;
@@ -163,10 +179,6 @@ void WebGPURenderTarget::setUpRenderPassAttachments(wgpu::RenderPassDescriptor& 
         outDescriptor.depthStencilAttachment = nullptr;
         mDepthStencilAttachmentDesc = {};
     }
-
-    // descriptor.sampleCount was removed from the core spec. If your webgpu.h still has it,
-    // and your Dawn version expects it, you might need to set it here based on this->samples.
-    // e.g., descriptor.sampleCount = this->samples;
 }
 
 } // namespace filament::backend

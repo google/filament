@@ -760,6 +760,10 @@ UTILS_NOINLINE
 /* static */ void logCompilationError(ShaderStage shaderType, const char* name,
         GLuint const shaderId, UTILS_UNUSED_IN_RELEASE CString const& sourceCode) noexcept {
 
+    // Collects the current GL error for additional context. While often redundant,
+    // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glCompileShader`.
+    GLenum glError = glGetError();
+
     { // scope for the temporary string storage
         auto to_string = [](ShaderStage type) -> const char* {
             switch (type) {
@@ -780,8 +784,7 @@ UTILS_NOINLINE
         glGetShaderInfoLog(shaderId, length, nullptr, infoLog.data());
 
         LOG(ERROR) << "Compilation error in " << to_string(shaderType) << " shader \"" << name
-                   << "\":";
-        LOG(ERROR) << "\"" << infoLog.c_str() << "\"";
+                   << "\":\n - glError=" << glError << "\n - InfoLog=\"" << infoLog.c_str() << "\"";
     }
 
 #ifndef NDEBUG
@@ -808,13 +811,19 @@ UTILS_NOINLINE
 
 UTILS_NOINLINE
 /* static */ void logProgramLinkError(char const* name, GLuint program) noexcept {
+
+    // Collects the current GL error for additional context. While often redundant,
+    // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glLinkProgram`.
+    GLenum glError = glGetError();
+
     GLint length = 0;
     glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
 
     CString infoLog(length);
     glGetProgramInfoLog(program, length, nullptr, infoLog.data());
 
-    LOG(ERROR) << "Link error in \"" << name << "\":\n" << "\"" << infoLog.c_str() << "\"";
+    LOG(ERROR) << "Link error in \"" << name << "\":\n - glError=" << glError << "\n - LogInfo=\""
+               << infoLog.c_str() << "\"";
 }
 
 // If usages of the Google-style line directive are present, remove them, as some
