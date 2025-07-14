@@ -38,6 +38,7 @@
 
 #include "ImageExpectations.h"
 #include "RunOnMain.h"
+#include "GLTFViewer.h"
 
 #include <atomic>
 #include <optional>
@@ -46,16 +47,7 @@ using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
 
-struct App {
-    Config config;
-    VertexBuffer* vb;
-    IndexBuffer* ib;
-    Material* mat;
-    Camera* cam;
-    Entity camera;
-    Skybox* skybox;
-    Entity renderable;
-};
+constexpr int kFramesToWait = 1000;
 
 class CompareGLTFContext {
 public:
@@ -68,11 +60,11 @@ public:
 
     void addPostRenderCommand(Command command);
 
-    App mApp;
-
     CrossThreadTask<void(Engine*, View*, Scene*, Renderer*), Engine*, View*, Scene*, Renderer*>
             mPostRenderCommand;
     std::atomic<bool> mStarted = false;
+
+    GLTFViewer mViewer;
 };
 
 class CompareGLTFTest : public testing::TestWithParam<std::string> {
@@ -103,44 +95,14 @@ void CompareGLTFTest::TearDownTestSuite() {
 }
 
 CompareGLTFContext::CompareGLTFContext() {
-    auto setup = [this](Engine* engine, View* view, Scene* scene) {
-      mApp.skybox = Skybox::Builder().color({ 0.1, 0.125, 0.25, 1.0 }).build(*engine);
-      scene->setSkybox(mApp.skybox);
-      view->setPostProcessingEnabled(false);
-      mApp.camera = utils::EntityManager::get().create();
-      mApp.cam = engine->createCamera(mApp.camera);
-      view->setCamera(mApp.cam);
-    };
-
-    auto cleanup = [this](Engine* engine, View*, Scene*) {
-      engine->destroy(mApp.skybox);
-      engine->destroyCameraComponent(mApp.camera);
-      utils::EntityManager::get().destroy(mApp.camera);
-    };
-
-    FilamentApp::get().animate([this](Engine* engine, View* view, double now) {
-      constexpr float ZOOM = 1.5f;
-      const uint32_t w = view->getViewport().width;
-      const uint32_t h = view->getViewport().height;
-      const float aspect = (float) w / h;
-      mApp.cam->setProjection(Camera::Projection::ORTHO, -aspect * ZOOM, aspect * ZOOM, -ZOOM,
-              ZOOM, 0, 1);
-      auto& tcm = engine->getTransformManager();
-      tcm.setTransform(tcm.getInstance(mApp.renderable),
-              filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
-    });
-
-    mApp.config.backend = filament::Engine::Backend::METAL;
-
+    mViewer.setFilename("glTF_cases/Models/Box/glTF/Box.gltf");
     addPostRenderCommand([this](Engine* engine, View* view, Scene* scene, Renderer* renderer){
       mStarted = true;
     });
     RunOnMain::sTask.queueTask([=,this]() {
-        FilamentApp::get().run(mApp.config, setup, cleanup, FilamentApp::ImGuiCallback(),
-                FilamentApp::PreRenderCallback(),
-                [this](Engine* engine, View* view, Scene* scene, Renderer* renderer) {
-                    postRender(engine, view, scene, renderer);
-                });
+        mViewer.runApp([this](Engine* engine, View* view, Scene* scene, Renderer* renderer){
+            postRender(engine, view, scene, renderer);
+        });
     });
 }
 
@@ -179,7 +141,7 @@ TEST_P(CompareGLTFTest, Compare) {
     auto incrementCounter = [&](Engine*, View* view, Scene*, Renderer* renderer) {
         counter++;
     };
-    while (counter < 3) {
+    while (counter < kFramesToWait) {
         sContext->addPostRenderCommand(incrementCounter);
     }
 }
