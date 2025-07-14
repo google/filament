@@ -23,6 +23,7 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
+#include "VulkanContext.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
 
@@ -40,8 +41,6 @@
 namespace filament::backend {
 
 using namespace fvkmemory;
-
-struct VulkanContext;
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
@@ -64,7 +63,7 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext* mContext,
+    VulkanCommandBuffer(VulkanContext const& mContext,
             VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
@@ -110,7 +109,7 @@ struct VulkanCommandBuffer {
     }
 
 private:
-    VulkanContext* mContext;
+    VulkanContext const& mContext;
     uint8_t mMarkerCount;
     bool const isProtected;
     VkDevice mDevice;
@@ -127,7 +126,7 @@ struct CommandBufferPool {
     using ActiveBuffers = utils::bitset64;
     static constexpr int8_t INVALID = -1;
 
-    CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+    CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
             uint8_t queueFamilyIndex, bool isProtected);
     ~CommandBufferPool();
 
@@ -195,7 +194,8 @@ private:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context);
+            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
+            VulkanContext const& context);
 
     void terminate();
 
@@ -246,7 +246,7 @@ private:
     VkQueue const mProtectedQueue;
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
-    VulkanContext* mContext;
+    VulkanContext const& mContext;
 
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
