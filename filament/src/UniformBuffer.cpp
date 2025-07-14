@@ -126,10 +126,8 @@ void UniformBuffer::setUniformUntyped<64ul>(size_t offset, void const* UTILS_RES
 template<size_t Size>
 void UniformBuffer::setUniformArrayUntyped(size_t const offset, void const* UTILS_RESTRICT begin, size_t const count) noexcept {
     constexpr size_t stride = (Size + 0xFu) & ~0xFu;
-    void* p = getUniformAddress(offset);
     for (size_t i = 0; i < count; i++) {
-        setUniformUntyped<Size>(p, static_cast<const char *>(begin) + i * Size);
-        p = utils::pointermath::add(p, stride);
+        setUniformUntyped<Size>(offset + i * stride, static_cast<const char *>(begin) + i * Size);
     }
 }
 
