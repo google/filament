@@ -50,6 +50,15 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/materials/antiAliasing/fxaa/fxaa.cpp
+        src/materials/antiAliasing/taa/taa.cpp
+        src/materials/bloom/bloom.cpp
+        src/materials/colorGrading/colorGrading.cpp
+        src/materials/dof/dof.cpp
+        src/materials/flare/flare.cpp
+        src/materials/fsr/fsr.cpp
+        src/materials/sgsr/sgsr.cpp
+        src/materials/ssao/ssao.cpp
         src/AtlasAllocator.cpp
         src/BufferObject.cpp
         src/Camera.cpp
@@ -143,6 +152,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        src/materials/StaticMaterialInfo.h
         src/Allocators.h
         src/Bimap.h
         src/BufferPoolAllocator.h
@@ -224,8 +234,8 @@ set(PRIVATE_HDRS
 )
 
 set(MATERIAL_SRCS
-        src/materials/antiAliasing/fxaa.mat
-        src/materials/antiAliasing/taa.mat
+        src/materials/antiAliasing/fxaa/fxaa.mat
+        src/materials/antiAliasing/taa/taa.mat
         src/materials/blitDepth.mat
         src/materials/blitLow.mat
         src/materials/blitArray.mat
@@ -450,7 +460,7 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
-        DEPENDS src/materials/antiAliasing/fxaa.fs
+        DEPENDS src/materials/antiAliasing/fxaa/fxaa.fs
         APPEND
 )
 
