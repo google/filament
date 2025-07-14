@@ -24,6 +24,16 @@
 
 #include "PostProcessManager.h"
 
+#include "materials/antiAliasing/fxaa/fxaa.h"
+#include "materials/antiAliasing/taa/taa.h"
+#include "materials/bloom/bloom.h"
+#include "materials/colorGrading/colorGrading.h"
+#include "materials/dof/dof.h"
+#include "materials/flare/flare.h"
+#include "materials/fsr/fsr.h"
+#include "materials/sgsr/sgsr.h"
+#include "materials/ssao/ssao.h"
+
 #include "details/Engine.h"
 
 #include "ds/SsrPassDescriptorSet.h"
@@ -46,14 +56,6 @@
 #include "details/VertexBuffer.h"
 
 #include "generated/resources/materials.h"
-#include "generated/resources/antiAliasing.h"
-#include "generated/resources/colorGrading.h"
-#include "generated/resources/flare.h"
-#include "generated/resources/fsr.h"
-#include "generated/resources/sgsr.h"
-#include "generated/resources/ssao.h"
-#include "generated/resources/bloom.h"
-#include "generated/resources/dof.h"
 
 #include <filament/Material.h>
 #include <filament/MaterialEnums.h>
@@ -287,35 +289,8 @@ static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[]
 };
 
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
-        { "bloomDownsample",            MATERIAL(BLOOM, BLOOMDOWNSAMPLE) },
-        { "bloomDownsample2x",          MATERIAL(BLOOM, BLOOMDOWNSAMPLE2X) },
-        { "bloomDownsample9",           MATERIAL(BLOOM, BLOOMDOWNSAMPLE9) },
-        { "bloomUpsample",              MATERIAL(BLOOM, BLOOMUPSAMPLE) },
-        { "dof",                        MATERIAL(DOF, DOF) },
-        { "dofCoc",                     MATERIAL(DOF, DOFCOC) },
-        { "dofCombine",                 MATERIAL(DOF, DOFCOMBINE) },
-        { "dofDilate",                  MATERIAL(DOF, DOFDILATE) },
-        { "dofDownsample",              MATERIAL(DOF, DOFDOWNSAMPLE) },
-        { "dofMedian",                  MATERIAL(DOF, DOFMEDIAN) },
-        { "dofMipmap",                  MATERIAL(DOF, DOFMIPMAP) },
-        { "dofTiles",                   MATERIAL(DOF, DOFTILES) },
-        { "dofTilesSwizzle",            MATERIAL(DOF, DOFTILESSWIZZLE) },
-        { "bilateralBlur",              MATERIAL(SSAO, BILATERALBLUR) },
-        { "bilateralBlurBentNormals",   MATERIAL(SSAO, BILATERALBLURBENTNORMALS) },
         { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
         { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
-        { "colorGrading",               MATERIAL(COLORGRADING, COLORGRADING) },
-        { "colorGradingAsSubpass",      MATERIAL(COLORGRADING, COLORGRADINGASSUBPASS) },
-        { "customResolveAsSubpass",     MATERIAL(COLORGRADING, CUSTOMRESOLVEASSUBPASS) },
-        { "flare",                      MATERIAL(FLARE, FLARE) },
-        { "fxaa",                       MATERIAL(ANTIALIASING, FXAA) },
-        { "mipmapDepth",                MATERIAL(SSAO, MIPMAPDEPTH) },
-        { "sao",                        MATERIAL(SSAO, SAO) },
-        { "saoBentNormals",             MATERIAL(SSAO, SAOBENTNORMALS) },
-#ifndef FILAMENT_DISABLE_GTAO
-        { "gtao",                       MATERIAL(SSAO, GTAO) },
-        { "gtaoBentNormals",            MATERIAL(SSAO, GTAOBENTNORMALS) },
-#endif
         { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
@@ -332,13 +307,7 @@ static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
                 { {"arraySampler", false}, {"componentCount", 4} } },
         { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 4} } },
-        { "taa",                        MATERIAL(ANTIALIASING, TAA) },
         { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
-        { "fsr_easu",                   MATERIAL(FSR, FSR_EASU) },
-        { "fsr_easu_mobile",            MATERIAL(FSR, FSR_EASU_MOBILE) },
-        { "fsr_easu_mobileF",           MATERIAL(FSR, FSR_EASU_MOBILEF) },
-        { "fsr_rcas",                   MATERIAL(FSR, FSR_RCAS) },
-        { "sgsr1",                      MATERIAL(SGSR, SGSR1) },
         { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
         { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
         { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
@@ -374,6 +343,33 @@ void PostProcessManager::init() noexcept {
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         UTILS_NOUNROLL
         for (auto const& info: sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getBloomMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFlareMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getDofMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getColorGradingMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSgsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFxaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getTaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSsaoMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
     }
