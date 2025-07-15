@@ -56,7 +56,7 @@ constexpr uint8_t MAX_RENDERTARGET_ATTACHMENT_TEXTURES =
 
 class VulkanDriver final : public DriverBase {
 public:
-    static Driver* create(VulkanPlatform* platform, VulkanContext const& context,
+    static Driver* create(VulkanPlatform* platform, VulkanContext& context,
             Platform::DriverConfig const& driverConfig);
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -69,7 +69,7 @@ public:
     private:
         static DebugUtils* get();
 
-        DebugUtils(VkInstance instance, VkDevice device, VulkanContext const* context);
+        DebugUtils(VkInstance instance, VkDevice device, VulkanContext const& context);
         ~DebugUtils();
 
         VkInstance const mInstance;
@@ -92,7 +92,7 @@ private:
     void debugCommandBegin(CommandStream* cmds, bool synchronous,
             const char* methodName) noexcept override;
 
-    VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
+    VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
             Platform::DriverConfig const& driverConfig);
 
     ~VulkanDriver() noexcept override;
@@ -137,7 +137,7 @@ private:
     VmaAllocator mAllocator = VK_NULL_HANDLE;
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
 
-    VulkanContext mContext = {};
+    VulkanContext& mContext;
 
     VulkanCommands mCommands;
     VulkanPipelineLayoutCache mPipelineLayoutCache;
