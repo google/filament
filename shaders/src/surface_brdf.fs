@@ -106,7 +106,7 @@ float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
     float lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
     float lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
     // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
-    float v = 0.5 / max(lambdaV + lambdaL, 0.0000077);
+    float v = PREVENT_DIV0(0.5, lambdaV + lambdaL, 0.0000077);
     // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
     // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
     return v;
@@ -115,7 +115,7 @@ float V_SmithGGXCorrelated(float roughness, float NoV, float NoL) {
 float V_SmithGGXCorrelated_Fast(float roughness, float NoV, float NoL) {
     // Hammon 2017, "PBR Diffuse Lighting for GGX+Smith Microsurfaces"
     // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
-    float v = 0.5 / max(mix(2.0 * NoL * NoV, NoL + NoV, roughness), 0.0000077);
+    float v = PREVENT_DIV0(0.5, mix(2.0 * NoL * NoV, NoL + NoV, roughness), 0.0000077);
     return v;
 }
 
@@ -126,20 +126,20 @@ float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
     float lambdaV = NoL * length(vec3(at * ToV, ab * BoV, NoV));
     float lambdaL = NoV * length(vec3(at * ToL, ab * BoL, NoL));
     // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
-    float v = 0.5 / max(lambdaV + lambdaL, 0.0000077);
+    float v = PREVENT_DIV0(0.5, lambdaV + lambdaL, 0.0000077);
     return v;
 }
 
 float V_Kelemen(float LoH) {
     // Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
     // 0.0000039 = nextafter(0.25 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
-    return 0.25 / max(LoH * LoH, 0.0000039);
+    return PREVENT_DIV0(0.25, LoH * LoH, 0.0000039);
 }
 
 float V_Neubelt(float NoV, float NoL) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     // 0.00001532 = nextafter(1.0 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
-    return 1.0 / max(4.0 * (NoL + NoV - NoL * NoV), 0.00001532);
+    return PREVENT_DIV0(1.0, 4.0 * (NoL + NoV - NoL * NoV), 0.00001532);
 }
 
 vec3 F_Schlick(const vec3 f0, float f90, float VoH) {

@@ -3,20 +3,26 @@
 //------------------------------------------------------------------------------
 
 /** @public-api */
-#define PI                 3.14159265359
+#define PI                          3.14159265359
 /** @public-api */
-#define HALF_PI            1.570796327
+#define HALF_PI                     1.570796327
 
-#define MEDIUMP_FLT_MAX    65504.0
-#define MEDIUMP_FLT_MIN    0.00006103515625
+#define MEDIUMP_FLT_MAX             65504.0
+#define MEDIUMP_FLT_MIN             0.00006103515625
 
 #ifdef TARGET_MOBILE
-#define FLT_EPS            MEDIUMP_FLT_MIN
+#define FLT_EPS                     MEDIUMP_FLT_MIN
 #else
-#define FLT_EPS            1e-5
+#define FLT_EPS                     1e-5
 #endif
 
-#define saturate(x)        clamp(x, 0.0, 1.0)
+#define saturate(x)                 clamp(x, 0.0, 1.0)
+
+#ifdef TARGET_MOBILE
+#define PREVENT_DIV0(n, d, magic)   n / max(d, magic)
+#else
+#define PREVENT_DIV0(n, d, magic)   n / d
+#endif
 
 //------------------------------------------------------------------------------
 // Scalar operations
