@@ -25,9 +25,11 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes)
-    : mAllocator(allocator),
+VulkanBufferProxy::VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
+        VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferUsage usage,
+        uint32_t numBytes)
+    : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
+      mAllocator(allocator),
       mStagePool(stagePool),
       mBufferCache(bufferCache),
       mBuffer(mBufferCache.acquire(usage, numBytes)),
@@ -57,8 +59,7 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // buffer.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
     bool const isUniform = getUsage() == VulkanBufferUsage::UNIFORM;
-    bool const useMemcpy =
-            isUniform && isMemcopyable && isAvailable && !FVK_FORCE_STAGING_FOR_BUFFER_UPDATES;
+    bool const useMemcpy = isUniform && isMemcopyable && isAvailable && mStagingBufferBypassEnabled;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;

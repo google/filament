@@ -741,6 +741,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     }
 
     VulkanContext& context = mImpl->mContext;
+
+    // Pass along relevant driver config (feature flags)
+    context.mStagingBufferBypassEnabled = driverConfig.vulkanEnableStagingBufferBypass;
+
     ExtensionSet instExts;
     // If using a shared context, we do not assume any extensions.
     if (!mImpl->mSharedContext) {
