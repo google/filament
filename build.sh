@@ -63,6 +63,9 @@ function print_help {
     echo "    -b"
     echo "        Enable Address and Undefined Behavior Sanitizers (asan/ubsan) for debugging."
     echo "        This is only for the desktop build."
+    echo "    -V"
+    echo "        Enable LLVM code coverage for debug builds."
+    echo "        This is only for the desktop build."
     echo "    -x value"
     echo "        Define a preprocessor flag FILAMENT_BACKEND_DEBUG_FLAG with [value]. This is useful for"
     echo "        enabling debug paths in the backend from the build script. For example, make a"
@@ -208,6 +211,7 @@ MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
+COVERAGE_OPTION=""
 
 BACKEND_DEBUG_FLAG_OPTION=""
 
@@ -275,6 +279,7 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
+            ${COVERAGE_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
@@ -835,7 +840,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
     case ${opt} in
         h)
             print_help
@@ -982,6 +987,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
             ;;
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"
+            ;;
+        V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
+            echo "Enabled coverage"
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
