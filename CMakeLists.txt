@@ -41,6 +41,8 @@ option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitiz
 
 option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
+option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
+
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
@@ -459,6 +461,10 @@ if (NOT MSVC AND NOT WEBGL)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
+
+if (FILAMENT_ENABLE_COVERAGE)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+endif()
 
 # Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
 # See: https://forums.developer.apple.com/thread/121887
