@@ -98,6 +98,14 @@ namespace filament::fgviewer {
 } // namespace filament::fgviewer
 #endif
 
+// We have added correctness assertions that breaks clients' projects. We add this define to allow
+// for the client's to address these assertions at a more gradual pace.
+#if defined(FILAMENT_RELAXED_CORRECTNESS_ASSERTIONS)
+#define CORRECTNESS_ASSERTION_DEFAULT false
+#else
+#define CORRECTNESS_ASSERTION_DEFAULT true
+#endif
+
 namespace filament {
 
 class Renderer;
@@ -715,10 +723,14 @@ public:
                 bool use_shadow_atlas = false;
             } shadows;
             struct {
-                // TODO: default the following two flags to true.
-                bool assert_material_instance_in_use = false;
-                bool assert_destroy_material_before_material_instance = false;
-                bool assert_vertex_buffer_count_exceeds_8 = false;
+                // TODO: clean-up the following flags (equivalent to setting them to true) when
+                // clients have addressed their usages.
+                bool assert_material_instance_in_use = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_destroy_material_before_material_instance =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_attribute_stride_mult_of_4 =
+                        CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
@@ -759,6 +771,9 @@ public:
             { "features.engine.debug.assert_vertex_buffer_count_exceeds_8",
               "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
               &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
+            { "features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
+              "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
+              &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

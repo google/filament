@@ -19,9 +19,8 @@ source `dirname $0`/src/preamble.sh
 start_
 
 if [[ "$GITHUB_WORKFLOW" ]]; then
-    # The commit message would have been piped as stdin to this script
-    COMMIT_MSG=$(cat)
-    GOLDEN_BRANCH=$(echo "${COMMIT_MSG}" | python3 test/renderdiff/src/commit_msg.py)
+    echo "This is meant to run locally (not part of the CI)"
+    exit 1
 else
     GOLDEN_BRANCH=$(git log -1 | python3 test/renderdiff/src/commit_msg.py)
 fi

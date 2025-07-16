@@ -25,7 +25,7 @@
 #include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
-#include <private/filament/Variant.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <fg/FrameGraphId.h>
 #include <fg/FrameGraphResources.h>
@@ -48,10 +48,8 @@
 #include <tsl/robin_map.h>
 
 #include <array>
-#include <initializer_list>
 #include <random>
 #include <string_view>
-#include <variant>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -70,20 +68,7 @@ struct CameraInfo;
 class PostProcessManager {
 public:
 
-
-    // This is intended to be used only to hold the static material data
-    struct StaticMaterialInfo {
-        struct ConstantInfo {
-            std::string_view name;
-            std::variant<int32_t, float, bool> value;
-        };
-        std::string_view name;
-        uint8_t const* data;
-        size_t size;
-        // the life-time of objects pointed to by this initializer_list<> is extended to the
-        // life-time of the initializer_list
-        std::initializer_list<ConstantInfo> constants;
-    };
+    using StaticMaterialInfo = filament::StaticMaterialInfo;
 
     struct ColorGradingConfig {
         bool asSubpass{};
@@ -257,7 +242,7 @@ public:
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
             FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
 
-    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg, bool translucent,
+    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;

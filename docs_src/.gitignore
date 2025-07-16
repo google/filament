@@ -1,2 +1,5 @@
-book
-src/dup/*.md
+build/__pycache__
+src_mdbook/book
+src_mdbook/src/dup/*.md
+src_mdbook/src/main/filament.md
+src_mdbook/src/main/materials.md

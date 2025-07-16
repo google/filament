@@ -24,6 +24,16 @@
 
 #include "PostProcessManager.h"
 
+#include "materials/antiAliasing/fxaa/fxaa.h"
+#include "materials/antiAliasing/taa/taa.h"
+#include "materials/bloom/bloom.h"
+#include "materials/colorGrading/colorGrading.h"
+#include "materials/dof/dof.h"
+#include "materials/flare/flare.h"
+#include "materials/fsr/fsr.h"
+#include "materials/sgsr/sgsr.h"
+#include "materials/ssao/ssao.h"
+
 #include "details/Engine.h"
 
 #include "ds/SsrPassDescriptorSet.h"
@@ -272,68 +282,35 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 // we ensure it's trivially destructible
 static_assert(std::is_trivially_destructible_v<PostProcessManager::StaticMaterialInfo::ConstantInfo>);
 
-#define MATERIAL(n) MATERIALS_ ## n ## _DATA, size_t(MATERIALS_ ## n ## _SIZE)
+#define MATERIAL(p, n) p ## _ ## n ## _DATA, size_t(p ## _ ## n ## _SIZE)
 
 static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[] = {
-        { "blitLow",                    MATERIAL(BLITLOW) },
+        { "blitLow",                    MATERIAL(MATERIALS, BLITLOW) },
 };
 
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
-        { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
-        { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitArray",                  MATERIAL(BLITARRAY) },
-        { "blitDepth",                  MATERIAL(BLITDEPTH) },
-        { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
-        { "bloomDownsample2x",          MATERIAL(BLOOMDOWNSAMPLE2X) },
-        { "bloomDownsample9",           MATERIAL(BLOOMDOWNSAMPLE9) },
-        { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
-        { "colorGrading",               MATERIAL(COLORGRADING) },
-        { "colorGradingAsSubpass",      MATERIAL(COLORGRADINGASSUBPASS) },
-        { "customResolveAsSubpass",     MATERIAL(CUSTOMRESOLVEASSUBPASS) },
-        { "dof",                        MATERIAL(DOF) },
-        { "dofCoc",                     MATERIAL(DOFCOC) },
-        { "dofCombine",                 MATERIAL(DOFCOMBINE) },
-        { "dofDilate",                  MATERIAL(DOFDILATE) },
-        { "dofDownsample",              MATERIAL(DOFDOWNSAMPLE) },
-        { "dofMedian",                  MATERIAL(DOFMEDIAN) },
-        { "dofMipmap",                  MATERIAL(DOFMIPMAP) },
-        { "dofTiles",                   MATERIAL(DOFTILES) },
-        { "dofTilesSwizzle",            MATERIAL(DOFTILESSWIZZLE) },
-        { "flare",                      MATERIAL(FLARE) },
-        { "fxaa",                       MATERIAL(FXAA) },
-        { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
-        { "sao",                        MATERIAL(SAO) },
-        { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
-#ifndef FILAMENT_DISABLE_GTAO
-        { "gtao",                       MATERIAL(GTAO) },
-        { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
-#endif
-        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
+        { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
+        { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
-        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 1} } },
-        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 2} } },
-        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 2} } },
-        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 3} } },
-        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 3} } },
-        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 4} } },
-        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 4} } },
-        { "taa",                        MATERIAL(TAA) },
-        { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                   MATERIAL(FSR_EASU) },
-        { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
-        { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
-        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
-        { "sgsr1",                      MATERIAL(SGSR1) },
-        { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
-        { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
-        { "shadowmap",                  MATERIAL(SHADOWMAP) },
+        { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
+        { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
+        { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
+        { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -366,6 +343,33 @@ void PostProcessManager::init() noexcept {
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         UTILS_NOUNROLL
         for (auto const& info: sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getBloomMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFlareMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getDofMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getColorGradingMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSgsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFxaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getTaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSsaoMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
     }
@@ -2989,7 +2993,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     }
 
     if (dsrOptions.quality == QualityLevel::LOW) {
-        return upscaleBilinear(fg, translucent, dsrOptions, input, vp, outDesc, filter);
+        return upscaleBilinear(fg, dsrOptions, input, vp, outDesc, filter);
     }
     if (dsrOptions.quality == QualityLevel::MEDIUM) {
         return upscaleSGSR1(fg, sourceHasLuminance, dsrOptions, input, vp, outDesc);
@@ -2997,7 +3001,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     return upscaleFSR1(fg, dsrOptions, input, vp, outDesc);
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg, bool translucent,
+FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
@@ -3016,17 +3020,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                         .attachments = { .color = { data.output } },
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [this, vp, translucent, filter](FrameGraphResources const& resources,
+            [this, vp, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
-
-                // helper to enable blending
-                auto enableTranslucentBlending = [](PipelineState& pipeline) {
-                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
-                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
-                };
 
                 auto color = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
@@ -3055,9 +3051,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                 auto out = resources.getRenderPassInfo();
 
                 auto pipeline = getPipelineState(material.getMaterial(mEngine));
-                if (translucent) {
-                    enableTranslucentBlending(pipeline);
-                }
                 renderFullScreenQuad(out, pipeline, driver);
             });
 
@@ -3065,7 +3058,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
     if (dsrOptions.sharpness > 0.0f) {
-        output = rcas(fg, dsrOptions.sharpness, output, outDesc, translucent);
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc,
+                false /* translucent=false, because dst buffer is allocated */);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3443,9 +3437,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
         return input;
     }
 
-    // we currently don't support stencil resolve
-    assert_invariant(!isStencilFormat(inDesc.format));
-
     // The Metal / Vulkan backends currently don't support depth/stencil resolve.
     if (isDepthFormat(inDesc.format) && (!mEngine.getDriverApi().isDepthStencilResolveSupported())) {
         return resolveDepth(fg, outputBufferName, input, outDesc);
@@ -3463,6 +3454,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolve(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolve",
             [&](FrameGraph::Builder& builder, auto& data) {
+                // we currently don't support stencil resolve.
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 data.input = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::BLIT_DST);
@@ -3514,6 +3508,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
 
     auto const& ppResolve = fg.addPass<ResolveData>("resolveDepth",
             [&](FrameGraph::Builder& builder, auto& data) {
+                // we currently don't support stencil resolve
+                assert_invariant(!isStencilFormat(inDesc.format));
+
                 data.input = builder.sample(input);
                 data.output = builder.createTexture(outputBufferName, outDesc);
                 data.output = builder.write(data.output, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);

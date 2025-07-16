@@ -1027,8 +1027,11 @@ samplerCubemap         | Cubemap texture
 [Table [materialParamsTypes]: Material parameter types]
 
 Samplers
-:     Sampler types can also specify a `format` which can be either `int` or `float` (defaults to
-      `float`).
+:     Sampler types can have the following fields:
+       - `format` : which can be either `int` or `float` (defaults to `float`).
+       - `multisample` : a boolean to indicate whether the sampler is meant for multisampling (defaults to `false`)
+       - `unfilterable` : a boolean to indicate whether the sampling is not filtered (defaults to `false`)
+
 
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where

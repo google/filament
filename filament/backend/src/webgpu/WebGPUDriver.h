@@ -19,6 +19,9 @@
 
 #include "WebGPURenderTarget.h"
 #include "webgpu/WebGPUConstants.h"
+#include "webgpu/WebGPUMsaaTextureResolver.h"
+#include "webgpu/WebGPUPipelineCache.h"
+#include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -31,7 +34,6 @@
 #include <utils/compiler.h>
 
 #include "SpdMipmapGenerator/SpdMipmapGenerator.h"
-#include <tsl/robin_map.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
@@ -56,7 +58,7 @@ public:
     [[nodiscard]] static Driver* create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
 
 private:
-    explicit WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
+    WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
     [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
@@ -78,10 +80,11 @@ private:
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPUPipelineLayoutCache mPipelineLayoutCache;
+    WebGPUPipelineCache mPipelineCache;
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
-
-    tsl::robin_map<size_t, wgpu::RenderPipeline> mPipelineMap;
+    WebGPUMsaaTextureResolver mMsaaTextureResolver{};
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
@@ -89,8 +92,6 @@ private:
         backend::DescriptorSetOffsetArray offsets;
     };
     std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
-
-    [[nodiscard]] size_t computePipelineKey(PipelineState const&, WebGPURenderTarget const*) const;
 
     /*
      * Driver interface

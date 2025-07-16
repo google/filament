@@ -130,13 +130,30 @@ jobs:
         run: |
           bash build/common/get-mesa.sh
           pip install tifffile numpy
-      - name: Run Test
+      - name: Render
         run: |
-          echo "${{ steps.get_commit_msg.outputs.msg }}" | bash test/renderdiff/test.sh
+          TEST_DIR=test/renderdiff
+          source ${TEST_DIR}/src/preamble.sh
+          start_
+          GOLDEN_BRANCH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | python3 ${TEST_DIR}/src/commit_msg.py)
+          bash ${TEST_DIR}/generate.sh && \
+              python3 ${TEST_DIR}/src/golden_manager.py \
+                  --branch=${GOLDEN_BRANCH} \
+                  --output=${GOLDEN_OUTPUT_DIR}
+          # Note that we need to upload the output even if comparison fails
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff
+      - name: Compare output
+        run: |
+          TEST_DIR=test/renderdiff
+          source ${TEST_DIR}/src/preamble.sh
+          python3 ${TEST_DIR}/src/compare.py \
+              --src=${GOLDEN_OUTPUT_DIR} \
+              --dest=${RENDER_OUTPUT_DIR} \
+              --out=${DIFF_OUTPUT_DIR}
+          end_
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
