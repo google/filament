@@ -19,9 +19,9 @@
 #define saturate(x)                 clamp(x, 0.0, 1.0)
 
 #ifdef TARGET_MOBILE
-#define PREVENT_DIV0(n, d, magic)   n / max(d, magic)
+#define PREVENT_DIV0(n, d, magic)   (n) / max(d, magic)
 #else
-#define PREVENT_DIV0(n, d, magic)   n / d
+#define PREVENT_DIV0(n, d, magic)   (n) / (d)
 #endif
 
 //------------------------------------------------------------------------------
