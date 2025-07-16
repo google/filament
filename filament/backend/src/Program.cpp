@@ -37,6 +37,8 @@ Program::Program() noexcept {  // NOLINT(modernize-use-equals-default)
 
 Program::Program(Program&& rhs) noexcept = default;
 
+Program& Program::operator=(Program&& rhs) noexcept = default;
+
 Program::~Program() noexcept = default;
 
 Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {

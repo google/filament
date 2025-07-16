@@ -134,6 +134,11 @@ private:
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 
+    uint32_t mNumProgramsCreatedSynchronouslyThisTick = 0u;
+    uint32_t mNumTicksUntilNextSynchronousProgram = 0u;
+    using PendingSynchronousProgram = std::tuple<program_token_t, Program>;
+    std::vector<PendingSynchronousProgram> mPendingSynchronousPrograms;
+
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);
 
@@ -141,6 +146,14 @@ private:
             Job job) noexcept;
     void executeTickOps() noexcept;
     bool cancelTickOp(program_token_t const& token) noexcept;
+
+    bool shouldCompileSynchronousProgramThisTick() const noexcept;
+    void compilePendingSynchronousPrograms() noexcept;
+    bool compilePendingSynchronousProgramNow(program_token_t const& token) noexcept;
+    bool cancelPendingSynchronousProgram(program_token_t const& token) noexcept;
+
+    // Compile the program. Does NOT attempt to use the shader blob cache.
+    void compileProgram(program_token_t const& token, Program&& program) noexcept;
 
     // Compile shaders with the given `shaderSource`. `gl.shaders` is always populated with valid
     // shader IDs after this method. But this doesn't necessarily mean the shaders are successfully
