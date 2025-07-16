@@ -188,3 +188,17 @@ jobs:
           ./build.sh -p desktop debug gltf_viewer
       - name: Run test
         run: bash test/code-correctness/test.sh
+
+  test-mdbook:
+    name: test-mdbook
+    runs-on: 'ubuntu-24.04-4core'
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/linux-prereq
+      - name: Run build script
+        run: |
+          bash docs_src/build/install_mdbook.sh && source ~/.bashrc
+          mdbook --version
+
