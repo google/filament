@@ -674,6 +674,7 @@ enum class Precision : uint8_t {
  * Shader compiler priority queue
  */
 enum class CompilerPriorityQueue : uint8_t {
+    IMMEDIATE,
     HIGH,
     LOW
 };
