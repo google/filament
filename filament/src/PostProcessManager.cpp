@@ -24,6 +24,16 @@
 
 #include "PostProcessManager.h"
 
+#include "materials/antiAliasing/fxaa/fxaa.h"
+#include "materials/antiAliasing/taa/taa.h"
+#include "materials/bloom/bloom.h"
+#include "materials/colorGrading/colorGrading.h"
+#include "materials/dof/dof.h"
+#include "materials/flare/flare.h"
+#include "materials/fsr/fsr.h"
+#include "materials/sgsr/sgsr.h"
+#include "materials/ssao/ssao.h"
+
 #include "details/Engine.h"
 
 #include "ds/SsrPassDescriptorSet.h"
@@ -272,68 +282,35 @@ PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMater
 // we ensure it's trivially destructible
 static_assert(std::is_trivially_destructible_v<PostProcessManager::StaticMaterialInfo::ConstantInfo>);
 
-#define MATERIAL(n) MATERIALS_ ## n ## _DATA, size_t(MATERIALS_ ## n ## _SIZE)
+#define MATERIAL(p, n) p ## _ ## n ## _DATA, size_t(p ## _ ## n ## _SIZE)
 
 static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[] = {
-        { "blitLow",                    MATERIAL(BLITLOW) },
+        { "blitLow",                    MATERIAL(MATERIALS, BLITLOW) },
 };
 
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
-        { "bilateralBlur",              MATERIAL(BILATERALBLUR) },
-        { "bilateralBlurBentNormals",   MATERIAL(BILATERALBLURBENTNORMALS) },
-        { "blitArray",                  MATERIAL(BLITARRAY) },
-        { "blitDepth",                  MATERIAL(BLITDEPTH) },
-        { "bloomDownsample",            MATERIAL(BLOOMDOWNSAMPLE) },
-        { "bloomDownsample2x",          MATERIAL(BLOOMDOWNSAMPLE2X) },
-        { "bloomDownsample9",           MATERIAL(BLOOMDOWNSAMPLE9) },
-        { "bloomUpsample",              MATERIAL(BLOOMUPSAMPLE) },
-        { "colorGrading",               MATERIAL(COLORGRADING) },
-        { "colorGradingAsSubpass",      MATERIAL(COLORGRADINGASSUBPASS) },
-        { "customResolveAsSubpass",     MATERIAL(CUSTOMRESOLVEASSUBPASS) },
-        { "dof",                        MATERIAL(DOF) },
-        { "dofCoc",                     MATERIAL(DOFCOC) },
-        { "dofCombine",                 MATERIAL(DOFCOMBINE) },
-        { "dofDilate",                  MATERIAL(DOFDILATE) },
-        { "dofDownsample",              MATERIAL(DOFDOWNSAMPLE) },
-        { "dofMedian",                  MATERIAL(DOFMEDIAN) },
-        { "dofMipmap",                  MATERIAL(DOFMIPMAP) },
-        { "dofTiles",                   MATERIAL(DOFTILES) },
-        { "dofTilesSwizzle",            MATERIAL(DOFTILESSWIZZLE) },
-        { "flare",                      MATERIAL(FLARE) },
-        { "fxaa",                       MATERIAL(FXAA) },
-        { "mipmapDepth",                MATERIAL(MIPMAPDEPTH) },
-        { "sao",                        MATERIAL(SAO) },
-        { "saoBentNormals",             MATERIAL(SAOBENTNORMALS) },
-#ifndef FILAMENT_DISABLE_GTAO
-        { "gtao",                       MATERIAL(GTAO) },
-        { "gtaoBentNormals",            MATERIAL(GTAOBENTNORMALS) },
-#endif
-        { "separableGaussianBlur1",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
+        { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
+        { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
-        { "separableGaussianBlur1L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 1} } },
-        { "separableGaussianBlur2",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 2} } },
-        { "separableGaussianBlur2L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur2L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 2} } },
-        { "separableGaussianBlur3",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 3} } },
-        { "separableGaussianBlur3L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur3L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 3} } },
-        { "separableGaussianBlur4",     MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 4} } },
-        { "separableGaussianBlur4L",    MATERIAL(SEPARABLEGAUSSIANBLUR),
+        { "separableGaussianBlur4L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", true }, {"componentCount", 4} } },
-        { "taa",                        MATERIAL(TAA) },
-        { "vsmMipmap",                  MATERIAL(VSMMIPMAP) },
-        { "fsr_easu",                   MATERIAL(FSR_EASU) },
-        { "fsr_easu_mobile",            MATERIAL(FSR_EASU_MOBILE) },
-        { "fsr_easu_mobileF",           MATERIAL(FSR_EASU_MOBILEF) },
-        { "fsr_rcas",                   MATERIAL(FSR_RCAS) },
-        { "sgsr1",                      MATERIAL(SGSR1) },
-        { "debugShadowCascades",        MATERIAL(DEBUGSHADOWCASCADES) },
-        { "resolveDepth",               MATERIAL(RESOLVEDEPTH) },
-        { "shadowmap",                  MATERIAL(SHADOWMAP) },
+        { "vsmMipmap",                  MATERIAL(MATERIALS, VSMMIPMAP) },
+        { "debugShadowCascades",        MATERIAL(MATERIALS, DEBUGSHADOWCASCADES) },
+        { "resolveDepth",               MATERIAL(MATERIALS, RESOLVEDEPTH) },
+        { "shadowmap",                  MATERIAL(MATERIALS, SHADOWMAP) },
 };
 
 void PostProcessManager::init() noexcept {
@@ -366,6 +343,33 @@ void PostProcessManager::init() noexcept {
     if (mEngine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1) {
         UTILS_NOUNROLL
         for (auto const& info: sMaterialList) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getBloomMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFlareMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getDofMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getColorGradingMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSgsrMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getFxaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getTaaMaterialList()) {
+            registerPostProcessMaterial(info.name, info);
+        }
+        for (auto const& info: getSsaoMaterialList()) {
             registerPostProcessMaterial(info.name, info);
         }
     }

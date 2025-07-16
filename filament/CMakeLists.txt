@@ -50,6 +50,15 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
+        src/materials/antiAliasing/fxaa/fxaa.cpp
+        src/materials/antiAliasing/taa/taa.cpp
+        src/materials/bloom/bloom.cpp
+        src/materials/colorGrading/colorGrading.cpp
+        src/materials/dof/dof.cpp
+        src/materials/flare/flare.cpp
+        src/materials/fsr/fsr.cpp
+        src/materials/sgsr/sgsr.cpp
+        src/materials/ssao/ssao.cpp
         src/AtlasAllocator.cpp
         src/BufferObject.cpp
         src/Camera.cpp
@@ -143,6 +152,7 @@ set(SRCS
 )
 
 set(PRIVATE_HDRS
+        src/materials/StaticMaterialInfo.h
         src/Allocators.h
         src/Bimap.h
         src/BufferPoolAllocator.h
@@ -224,8 +234,8 @@ set(PRIVATE_HDRS
 )
 
 set(MATERIAL_SRCS
-        src/materials/antiAliasing/fxaa.mat
-        src/materials/antiAliasing/taa.mat
+        src/materials/antiAliasing/fxaa/fxaa.mat
+        src/materials/antiAliasing/taa/taa.mat
         src/materials/blitDepth.mat
         src/materials/blitLow.mat
         src/materials/blitArray.mat
@@ -281,11 +291,6 @@ set(MATERIAL_MULTIVIEW_SRCS
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
 )
-
-# Embed the binary resource blob for materials.
-get_resgen_vars(${RESOURCE_DIR} materials)
-list(APPEND PRIVATE_HDRS ${RESGEN_HEADER})
-list(APPEND SRCS ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Configuration
@@ -346,48 +351,93 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-set(MATERIAL_BINS)
 file(MAKE_DIRECTORY ${MATERIAL_DIR})
+file(MAKE_DIRECTORY ${RESOURCE_DIR})
 
-foreach (mat_src ${MATERIAL_SRCS})
-    get_filename_component(localname "${mat_src}" NAME_WE)
-    get_filename_component(fullname "${mat_src}" ABSOLUTE)
-    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+set(GENERATED_RESOURCE_HDRS)
+set(GENERATED_RESOURCE_SRCS)
+
+# Get all unique directories containing materials
+set(MATERIAL_DIRS)
+foreach(mat_src ${MATERIAL_SRCS})
+    get_filename_component(mat_dir ${mat_src} DIRECTORY)
+    list(APPEND MATERIAL_DIRS ${mat_dir})
+endforeach()
+list(REMOVE_DUPLICATES MATERIAL_DIRS)
+
+# For each directory, generate a single resource package
+foreach(mat_dir ${MATERIAL_DIRS})
+    get_filename_component(package_name ${mat_dir} NAME)
+
+    set(MATERIALS_IN_DIR)
+    foreach(mat_src ${MATERIAL_SRCS})
+        get_filename_component(current_mat_dir ${mat_src} DIRECTORY)
+        if(current_mat_dir STREQUAL mat_dir)
+            list(APPEND MATERIALS_IN_DIR ${mat_src})
+        endif()
+    endforeach()
+
+    set(FILAMAT_FILES_FOR_GROUP)
+    set(FILAMAT_TARGETS_FOR_GROUP)
+
+    # Compile each material in the group
+    foreach(mat_src ${MATERIALS_IN_DIR})
+        get_filename_component(localname "${mat_src}" NAME_WE)
+        get_filename_component(fullname "${mat_src}" ABSOLUTE)
+
+        # --- Base material ---
+        set(output_path "${MATERIAL_DIR}/${localname}.filamat")
+        add_custom_command(
+                OUTPUT ${output_path}
+                COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
+                MAIN_DEPENDENCY ${fullname}
+                DEPENDS matc
+                COMMENT "Compiling material ${fullname}"
+        )
+        list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path})
+        list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path})
+
+        # --- Feature Level 0 variant ---
+        list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
+        if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
+            string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
+            add_custom_command(
+                    OUTPUT ${output_path_fl0}
+                    COMMAND matc ${MATC_BASE_FLAGS} -PfeatureLevel=0 -o ${output_path_fl0} ${fullname}
+                    MAIN_DEPENDENCY ${fullname}
+                    DEPENDS matc
+                    COMMENT "Compiling material ${fullname} (FL0)"
+            )
+            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_fl0})
+            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_fl0})
+        endif()
+
+        # --- Multiview variant ---
+        list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
+        if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
+            string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
+            add_custom_command(
+                    OUTPUT ${output_path_multiview}
+                    COMMAND matc ${MATC_BASE_FLAGS} -PstereoscopicType=multiview -o ${output_path_multiview} ${fullname}
+                    MAIN_DEPENDENCY ${fullname}
+                    DEPENDS matc
+                    COMMENT "Compiling material ${fullname} (Multiview)"
+            )
+            list(APPEND FILAMAT_FILES_FOR_GROUP ${output_path_multiview})
+            list(APPEND FILAMAT_TARGETS_FOR_GROUP ${output_path_multiview})
+        endif()
+    endforeach()
+
+    # Generate a single resource file for the whole group
+    get_resgen_vars(${RESOURCE_DIR} ${package_name})
     add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
-            MAIN_DEPENDENCY ${fullname}
-            DEPENDS matc
-            COMMENT "Compiling material ${fullname} to ${output_path}"
+            OUTPUT ${RESGEN_OUTPUTS}
+            COMMAND resgen ${RESGEN_FLAGS} ${FILAMAT_FILES_FOR_GROUP}
+            DEPENDS resgen ${FILAMAT_TARGETS_FOR_GROUP}
+            COMMENT "Generating resource package for ${package_name}"
     )
-    list(APPEND MATERIAL_BINS ${output_path})
-
-    list(FIND MATERIAL_FL0_SRCS ${mat_src} index)
-    if (${index} GREATER -1 AND FILAMENT_ENABLE_FEATURE_LEVEL_0)
-        string(REGEX REPLACE "[.]filamat$" "_fl0.filamat" output_path_fl0 ${output_path})
-        add_custom_command(
-                OUTPUT ${output_path_fl0}
-                COMMAND matc ${MATC_BASE_FLAGS} -PfeatureLevel=0 -o ${output_path_fl0} ${fullname}
-                MAIN_DEPENDENCY ${fullname}
-                DEPENDS matc
-                COMMENT "Compiling material ${fullname} to ${output_path_fl0}"
-        )
-        list(APPEND MATERIAL_BINS ${output_path_fl0})
-    endif ()
-
-    list(FIND MATERIAL_MULTIVIEW_SRCS ${mat_src} index)
-    if (${index} GREATER -1 AND FILAMENT_ENABLE_MULTIVIEW)
-        string(REGEX REPLACE "[.]filamat$" "_multiview.filamat" output_path_multiview ${output_path})
-        add_custom_command(
-                OUTPUT ${output_path_multiview}
-                COMMAND matc ${MATC_BASE_FLAGS} -PstereoscopicType=multiview -o ${output_path_multiview} ${fullname}
-                MAIN_DEPENDENCY ${fullname}
-                DEPENDS matc
-                COMMENT "Compiling material ${fullname} to ${output_path_multiview}"
-        )
-        list(APPEND MATERIAL_BINS ${output_path_multiview})
-    endif ()
-
+    list(APPEND GENERATED_RESOURCE_HDRS ${RESGEN_HEADER})
+    list(APPEND GENERATED_RESOURCE_SRCS ${RESGEN_SOURCE})
 endforeach()
 
 # Additional dependencies on included files for materials
@@ -410,7 +460,7 @@ add_custom_command(
 
 add_custom_command(
         OUTPUT "${MATERIAL_DIR}/fxaa.filamat"
-        DEPENDS src/materials/antiAliasing/fxaa.fs
+        DEPENDS src/materials/antiAliasing/fxaa/fxaa.fs
         APPEND
 )
 
@@ -551,15 +601,12 @@ add_custom_command(
         APPEND
 )
 
-add_custom_command(
-        OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${MATERIAL_BINS}
-        DEPENDS resgen ${MATERIAL_BINS}
-        COMMENT "Aggregating compiled materials"
-)
+# Add the generated resource files to the source and header lists.
+list(APPEND PRIVATE_HDRS ${GENERATED_RESOURCE_HDRS})
+list(APPEND SRCS ${GENERATED_RESOURCE_SRCS})
 
 if (DEFINED RESGEN_SOURCE_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+    set_source_files_properties(${GENERATED_RESOURCE_SRCS} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
