@@ -132,7 +132,8 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
-            backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
+            backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::IMMEDIATE)
+        const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
         if (UTILS_UNLIKELY(!isCached(variant))) {
             prepareProgramSlow(variant, priorityQueue);

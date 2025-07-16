@@ -2421,7 +2421,14 @@ bool OpenGLDriver::isStereoSupported() {
 }
 
 bool OpenGLDriver::isParallelShaderCompileSupported() {
-    return mShaderCompilerService.isParallelShaderCompileSupported();
+    // We emulate parallel compilation even on platforms that don't support it by amortizing the
+    // cost of shader compilation over N frames. It would be nice to move this behavior out of the
+    // OpenGL into a generic system usable by all backends. However, the behavior of async shader
+    // compilation is closely coupled to the internals of ShaderCompilerService, which is
+    // GL-specific. It would also be nice to inform the engine that they're working with this fake
+    // amortized system, but this fact will become implicit when we generalize this feature for all
+    // backends.
+    return true;
 }
 
 bool OpenGLDriver::isDepthStencilResolveSupported() {

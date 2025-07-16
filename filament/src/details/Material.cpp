@@ -1164,7 +1164,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
-                prepareProgram(variant);
+                prepareProgram(variant, CompilerPriorityQueue::HIGH);
             }
         }
         return;

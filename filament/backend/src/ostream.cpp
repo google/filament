@@ -499,6 +499,7 @@ io::ostream& operator<<(io::ostream& out, ShaderStage shaderStage) {
 
 io::ostream& operator<<(io::ostream& out, CompilerPriorityQueue compilerPriorityQueue) {
     switch (compilerPriorityQueue) {
+        CASE(CompilerPriorityQueue, IMMEDIATE)
         CASE(CompilerPriorityQueue, HIGH)
         CASE(CompilerPriorityQueue, LOW)
     }
