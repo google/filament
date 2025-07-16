@@ -14,7 +14,7 @@ In the `test` directory is a list of test descriptions that are specified in jso
 `sample.json` to parse the structure.
 
 ## Running the test locally
- - To run the same presbumit as [`test-renderdiff`](resubmit-renderdiff), you can do
+ - To run the same presbumit as [`test-renderdiff`](presubmit-renderdiff), you can do
 
    ```
    bash test/renderdiff/test.sh
