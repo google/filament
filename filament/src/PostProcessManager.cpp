@@ -198,7 +198,8 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) });
+    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) },
+            CompilerPriorityQueue::IMMEDIATE);
     return mMaterial;
 }
 

@@ -632,12 +632,15 @@ void ShaderCompilerService::executeTickOps() noexcept {
 }
 
 bool ShaderCompilerService::shouldCompileSynchronousProgramThisTick() const noexcept {
-    return mNumProgramsCreatedSynchronouslyThisTick < MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME
-            && mNumTicksUntilNextSynchronousProgram == 0;
+    return mDriver.getDriverConfig().disableAmortizedShaderCompile ||
+            (mNumProgramsCreatedSynchronouslyThisTick < MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME &&
+                    mNumTicksUntilNextSynchronousProgram == 0);
 }
 
 void ShaderCompilerService::compilePendingSynchronousPrograms() noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
 
     auto it = mPendingSynchronousPrograms.begin();
     while (it != mPendingSynchronousPrograms.end() && shouldCompileSynchronousProgramThisTick()) {
@@ -652,8 +655,12 @@ void ShaderCompilerService::compilePendingSynchronousPrograms() noexcept {
     }
 }
 
-bool ShaderCompilerService::compilePendingSynchronousProgramNow(
+void ShaderCompilerService::compilePendingSynchronousProgramNow(
         program_token_t const& token) noexcept {
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
+
     auto pos = std::find_if(mPendingSynchronousPrograms.begin(),
             mPendingSynchronousPrograms.end(), [&](PendingSynchronousProgram const& item) {
                 return std::get<0>(item) == token;
@@ -661,12 +668,14 @@ bool ShaderCompilerService::compilePendingSynchronousProgramNow(
     if (pos != mPendingSynchronousPrograms.end()) {
         compileProgram(std::get<0>(*pos), std::move(std::get<1>(*pos)));
         mPendingSynchronousPrograms.erase(pos);
-        return true;
     }
-    return false;
 }
 
-bool ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t const& token) noexcept {
+void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t const& token) noexcept {
+    if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
+        return;
+    }
+
     // We do a linear search here, but this is rare, and we know the list is pretty small.
     auto const pos = std::find_if(mPendingSynchronousPrograms.begin(),
             mPendingSynchronousPrograms.end(), [&](const auto& item) {
@@ -674,12 +683,11 @@ bool ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
             });
     if (pos != mPendingSynchronousPrograms.end()) {
         mPendingSynchronousPrograms.erase(pos);
-        return true;
+        return;
     }
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
     FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT,
             "ShaderCompilerService Pending Programs", mPendingSynchronousPrograms.size());
-    return false;
 }
 
 /* static */ void ShaderCompilerService::compileShaders(OpenGLContext& context,

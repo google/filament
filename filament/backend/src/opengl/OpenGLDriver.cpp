@@ -2428,6 +2428,9 @@ bool OpenGLDriver::isParallelShaderCompileSupported() {
     // GL-specific. It would also be nice to inform the engine that they're working with this fake
     // amortized system, but this fact will become implicit when we generalize this feature for all
     // backends.
+    if (mDriverConfig.disableAmortizedShaderCompile) {
+        return mShaderCompilerService.isParallelShaderCompileSupported();
+    }
     return true;
 }
 
