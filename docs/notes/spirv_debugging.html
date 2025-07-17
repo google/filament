@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="en" class="ayu sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>SPIR-V - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('ayu')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+	    <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="investigating-spirv-cross--spirv-tools-issues"><a class="header" href="#investigating-spirv-cross--spirv-tools-issues">Investigating SPIRV-Cross / SPIRV-Tools issues</a></h1>
+<p>There are 4 repositories at play here:</p>
+<ul>
+<li><a href="https://github.com/KhronosGroup/glslang">KhronosGroup/glslang</a></li>
+<li><a href="https://github.com/KhronosGroup/SPIRV-Tools">KhronosGroup/spirv-tools</a></li>
+<li><a href="https://github.com/KhronosGroup/SPIRV-Cross">KhronosGroup/spirv-cross</a></li>
+<li><a href="https://github.com/KhronosGroup/SPIRV-Headers">KhronosGroup/SPIRV-Headers</a></li>
+</ul>
+<p>Typically, the bug is present either in spirv-tools or spirv-cross.</p>
+<h2 id="build-and-install-command-line-tools-on-path"><a class="header" href="#build-and-install-command-line-tools-on-path">Build and install command-line tools on PATH</a></h2>
+<p>The goal is to replicate the bug outside of Filament, so we're going to use command-line versions of
+the SPIRV tools.</p>
+<h3 id="clone-and-build-each-repo"><a class="header" href="#clone-and-build-each-repo">Clone and build each repo</a></h3>
+<p>Note: Filament checks-out versions of these repositories inside <code>third_party/</code>; however, I've found
+it easiser to check out fresh copies separately so I can simply <code>git pull</code> to get the latest
+versions. Furthermore, Filament has modified some of these repositories locally for its own use
+case. Checking them out separately "proves" that the issue isn't Filament-specific.</p>
+<pre><code>git clone git@github.com:KhronosGroup/SPIRV-Tools.git
+git clone git@github.com:KhronosGroup/SPIRV-Cross.git
+git clone git@github.com:KhronosGroup/glslang.git
+git clone git@github.com:KhronosGroup/SPIRV-Headers.git SPIRV-Tools/external/SPIRV-Headers
+
+cd SPIRV-Tools/
+mkdir build &amp;&amp; cmake . -G Ninja -B build
+ninja -C build
+cd ..
+
+cd SPIRV-Cross/
+mkdir build &amp;&amp; cmake . -G Ninja -B build
+ninja -C build
+cd ..
+
+cd glslang/
+mkdir build &amp;&amp; cmake . -G Ninja -B build
+ninja -C build
+cd ..
+</code></pre>
+<h3 id="add-directories-to-path"><a class="header" href="#add-directories-to-path">Add directories to PATH</a></h3>
+<pre><code>export PATH=`pwd`/SPIRV-Tools/build/tools:$PATH
+export PATH=`pwd`/glslang/build/StandAlone:$PATH
+export PATH=`pwd`/spirv-cross/build:$PATH
+</code></pre>
+<p>Ensure the following tools now exist on your PATH:</p>
+<ol>
+<li><code>glslangValidator</code></li>
+<li><code>spiv-opt</code></li>
+<li><code>spirv-val</code></li>
+<li><code>spirv-cross</code></li>
+</ol>
+<h2 id="isolate-the-problematic-glsl-shader"><a class="header" href="#isolate-the-problematic-glsl-shader">Isolate the problematic GLSL shader</a></h2>
+<p>First determine the Filament material and variant that causes the problem.</p>
+<p>What we want is the "raw" GLSL version of the shader, before any optimizations / cross-compilation
+happens.</p>
+<p>We can use the <code>--save-raw-variants</code> debug flag in matc to export each GLSL
+shader to a file. For example:</p>
+<pre><code>matc --save-raw-variants --optimize-size --variant-filter fog,ssr,vsm,stereo \
+        -a all -p all -o mymaterial.filamat mymaterial.mat
+</code></pre>
+<p>Files will be named like <code>mymaterial_0x05.frag</code> or <code>mymaterial_0x05.vert</code>.</p>
+<p>Note that gltfio material "templates" first go through a build step. After building gltfio, the
+gltfio Filament materials are output to:</p>
+<pre><code>out/cmake-release/libs/gltfio/*.mat
+</code></pre>
+<p>One of these materials can be compiled with the following command:</p>
+<pre><code>matc \
+    -TCUSTOM_PARAMS="// no custom params" \
+    -TCUSTOM_VERTEX="// no custom vertex" \
+    -TCUSTOM_FRAGMENT="// no custom fragment" \
+    -TDOUBLESIDED=false \
+    -TTRANSPARENCY=default \
+    -TSHADINGMODEL=unlit \
+    -TBLENDING=opaque \
+    --platform mobile --api metal -o temp.filamat \
+    unlit_opaque.mat
+</code></pre>
+<h2 id="reproduce-the-compilation-error"><a class="header" href="#reproduce-the-compilation-error">Reproduce the compilation error</a></h2>
+<p>The goal is to generate a .spv file that doesn't pass validation (through the spirv-val tool).</p>
+<p>Reproducing the error usually involves a few steps:</p>
+<ol>
+<li>Compile the raw GLSL shader into SPIR-V.</li>
+</ol>
+<pre><code>glslangValidator -V -o unoptimized.spv in.frag
+</code></pre>
+<ol start="2">
+<li>Optimize for performance.</li>
+</ol>
+<pre><code>spirv-opt -Oconfig=optimizations.cfg unoptimized.spv -o optimized.spv
+</code></pre>
+<p>See <a href="optimizations.cfg">optimizations.cfg</a> for a template. This file should contain the same list of optimizations that
+Filament employs. This should match the same optimizations specified in <code>GLSLPostProcessor</code>, for
+example, <code>GLSLPostProcessor::registerPerformancePasses</code> or <code>GLSLPostProcessor::registerSizePasses</code>.</p>
+<ol start="3">
+<li>For shaders targeting Metal, convert relaxed ops to half.</li>
+</ol>
+<pre><code>spirv-opt \
+    --convert-relaxed-to-half \
+    --simplify-instructions \
+    --redundancy-elimination \
+    --eliminate-dead-code-aggressive \
+    optimized.spv \
+    -o half.spv
+</code></pre>
+<ol start="4">
+<li>Finally, validate the final SPIR-V.</li>
+</ol>
+<pre><code>spirv-val half.spv
+</code></pre>
+<ol start="5">
+<li>Sometimes validation will still pass, but still generate invalid shaders after cross-compiling.
+In these cases, you'll need to cross compile to the target language and manually pick out errors
+in the generated shader.</li>
+</ol>
+<pre><code># for OpenGL
+spirv-cross optimized.spv &gt; optimized.frag
+
+# for OpenGL ES
+spirv-cross --es optimized.spv &gt; optimized.frag
+
+# for MSL
+spirv-cross --msl optimized.spv &gt; optimized.metal
+</code></pre>
+<p>To invoke Apple's compiler to compile MSL, you can run:</p>
+<pre><code>xcrun -sdk macosx metal -c optimized.metal -o /dev/null
+</code></pre>
+<h2 id="clean-up-the-shader-for-a-bug-report"><a class="header" href="#clean-up-the-shader-for-a-bug-report">Clean up the shader for a bug report</a></h2>
+<p>These commands will run the preprocessor only on <code>in.frag</code>, and remove any empty lines.</p>
+<pre><code>glslangValidator -E in.frag &gt; preprocessed.frag
+sed '/^$/d' preprocessed.frag &gt; preprocessed_small.frag
+</code></pre>
+<p>You can also run <code>clang-format</code> on the preprocessed shader to make it easier to read:</p>
+<pre><code>clang-format -i preprocessed_small.frag
+</code></pre>
+<p>I always try to "whittle down" the shader to a smaller version that still reproduces the error. This
+might make it a bit easier on the Khronos team to diagnose the issue. I typically follow these steps
+in a loop until I'm satisfied:</p>
+<ol>
+<li>Delete an unnecessary part of the shader</li>
+<li>Run the steps to reproduce the error</li>
+<li>If the error still reproduces, repeat</li>
+<li>Otherwise, undo the change and make a smaller change</li>
+</ol>
+<p>There's also a <a href="https://github.com/KhronosGroup/SPIRV-Tools#reducer">Reducer</a> tool that's part of
+SPIRV-Tools which can be used to automate these steps. I haven't experimented much with this, but it
+seems promising.</p>
+<h2 id="submit-an-issue-with-the-relevant-khronos-repository"><a class="header" href="#submit-an-issue-with-the-relevant-khronos-repository">Submit an Issue with the relevant Khronos repository</a></h2>
+<p>See some example issues that have been filed in the past:</p>
+<ul>
+<li>https://github.com/KhronosGroup/SPIRV-Cross/issues/1935</li>
+<li>https://github.com/KhronosGroup/SPIRV-Cross/issues/1088</li>
+<li>https://github.com/KhronosGroup/SPIRV-Cross/issues/1026</li>
+<li>https://github.com/KhronosGroup/SPIRV-Tools/issues/4452</li>
+<li>https://github.com/KhronosGroup/SPIRV-Tools/issues/3406</li>
+<li>https://github.com/KhronosGroup/SPIRV-Tools/issues/3099</li>
+<li>https://github.com/KhronosGroup/SPIRV-Tools/issues/5044</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/vulkan_debugging.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../notes/asan_ubsan.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/vulkan_debugging.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../notes/asan_ubsan.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

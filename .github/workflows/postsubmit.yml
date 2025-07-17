@@ -50,6 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FILAMENTBOT_TOKEN }}
         run: |
+          bash docs_src/build/install_mdbook.sh && source ~/.bashrc
           COMMIT_HASH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
           git config --global user.email "filament.bot@gmail.com"
           git config --global user.name "Filament Bot"

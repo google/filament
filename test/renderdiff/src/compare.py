@@ -45,8 +45,8 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None):
       output_fname = os.path.join(output_test_dir, "compare_results.json")
       results_meta = {
         'results': results,
-        'base_dir': os.path.relpath(output_fname, base_test_dir),
-        'comparison_dir': os.path.relpath(output_fname, comp_test_dir),
+        'base_dir': os.path.relpath(output_test_dir, base_test_dir),
+        'comparison_dir': os.path.relpath(output_test_dir, comp_test_dir),
       }
       with open(output_fname, 'w') as f:
         f.write(json.dumps(results_meta, indent=2))

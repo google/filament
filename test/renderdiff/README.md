@@ -14,16 +14,19 @@ In the `test` directory is a list of test descriptions that are specified in jso
 `sample.json` to parse the structure.
 
 ## Running the test locally
- - To run the same presbumit as [`test-renderdiff`][presubmit-renderdiff], you can do
+ - To run the same presbumit as [`test-renderdiff`](presubmit-renderdiff), you can do
+
    ```
-bash test/renderdiff/test.sh
+   bash test/renderdiff/test.sh
    ```
+
  - This script will generate the renderings based on the current state of your repo.
    Additionally, it will also compare the generated images with corresponding images in the
    golden repo.
  - To just render without running the test, you could use the following script
+
    ```
-bash test/renderdiff/generate.sh
+   bash test/renderdiff/generate.sh
    ```
 
 ## Update the golden images
@@ -39,32 +42,42 @@ in the following fashion
 ### Using a script to update the golden repo
 
  - Run interactive mode in the `update_golden.py` script.
+
    ```
-python3 test/renderdiff/src/update_golden.py
+   python3 test/renderdiff/src/update_golden.py
    ```
+
  - This will guide you through a series of steps to push the changes to a remote branch
    on `filament-assets`.
 
 ### Manually updating the golden repo
 
  - Check out the golden repo
+
    ```
-git clone git@github.com:google/filament-assets.git
+   git clone git@github.com:google/filament-assets.git
    ```
+
  - Create a branch on the golden repo
+
    ```
-cd filament-assets
-git switch -c my-pr-branch-golden
+   cd filament-assets
+   git switch -c my-pr-branch-golden
    ```
+
  - Copy the new images to their appropriate place in `filament-assets`
  - Push the `filament-assets` working branch to remote
+   
    ```
-git push origin my-pr-branch-golden
+   git push origin my-pr-branch-golden
    ```
+
  - In the commit message of your working branch on `filament`, add the following line
+
    ```
-RDIFF_BBRANCH=my-pr-branch-golden
+   RDIFF_BBRANCH=my-pr-branch-golden
    ```
+
 ### Manually updating the golden repo
 
 Doing the above has multiple effects:

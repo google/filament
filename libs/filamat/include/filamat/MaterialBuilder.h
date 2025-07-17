@@ -324,7 +324,8 @@ public:
      */
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT, bool unfilterable = false,
+            ParameterPrecision precision = ParameterPrecision::DEFAULT,
+            bool filterable = true, /* defaulting to filterable because format is default to float */
             bool multisample = false, const char* transformName = "",
             ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS);
 
@@ -659,13 +660,13 @@ public:
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
-                bool unfilterable, bool ms, const char* tn, ShaderStageFlags s)
+                bool filterable, bool ms, const char* tn, ShaderStageFlags s)
             : name(paramName),
               size(1),
               precision(p),
               samplerType(t),
               format(f),
-              unfilterable(unfilterable),
+              filterable(filterable),
               multisample(ms),
               transformName(tn),
               stages(s),
@@ -678,7 +679,7 @@ public:
               uniformType(t),
               precision(p),
               format{ 0 },
-              unfilterable(false),
+              filterable(false),
               multisample(false),
               parameterType(UNIFORM) {}
 
@@ -689,7 +690,7 @@ public:
               precision(p),
               subpassType(t),
               format(f),
-              unfilterable(false),
+              filterable(false),
               multisample(false),
               parameterType(SUBPASS) {}
 
@@ -700,7 +701,7 @@ public:
         SamplerType samplerType;
         SubpassType subpassType;
         SamplerFormat format;
-        bool unfilterable;
+        bool filterable;
         bool multisample;
         utils::CString transformName;
         ShaderStageFlags stages;

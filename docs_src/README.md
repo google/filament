@@ -5,6 +5,14 @@ Filament's documentation (which you are reading) is a collection of pages create
 ## How the book is created and updated {#how-to-create}
 ### Prerequisites
  - Install [`mdBook`] for your platform
+   - There is a script `docs_src/build/install_mdbook.sh` that might help.
+ - It is best practice to install the python dependencies in a virtual python environment. You can
+   start such an environment by
+   ```shell
+   python3 -m venv venv
+   . venv/bin/activate
+   ```
+   After that you may install deps and run the build script.
  - `selenium` package for python
    ```shell
    python3 -m pip install selenium
@@ -14,7 +22,7 @@ Filament's documentation (which you are reading) is a collection of pages create
 We wrote a python script to gather and transform the different documents in the project tree into a
 single book. This script can be found in [`docs_src/build/run.py`]. In addition,
 [`docs_src/build/duplicates.json`] is used to describe the markdown files that are copied and
-transformed from the source tree. These copies are placed into `docs_src/src/dup`.
+transformed from the source tree. These copies are placed into `docs_src/src_mdbook/src/dup`.
 
 To collect the pages and generate the book, run the following
 ```shell
@@ -36,7 +44,7 @@ of markdown files that are then processed with `mdBook`.
 The [github landing page] for Filament displays an extensive introduction to Filament. It
 links to `BUILDING.md` and `CONTRIBUTING.md`, which are conventional pages for building or
 contributing to the project. We copy these pages from their respective locations in the project
-tree into `docs_src/src/dup`. Moreover, to restore valid linkage between the pages, we need
+tree into `docs_src/src_mdbook/src/dup`. Moreover, to restore valid linkage between the pages, we need
 to perform a number of URL replacements in addition to the copy. These replacements are
 described in [`docs_src/build/duplicates.json`].
 
@@ -46,7 +54,7 @@ system are described in `Filament.md.html` and `Materials.md.html`, respectively
 documents are written in [`markdeep`]. To embed them into our book, we
  1. Convert the markdeep into html
  2. Embed the html output in a markdown file
- 3. Place the markdown file in `docs_src/src/main`
+ 3. Place the markdown file in `docs_src/src_mdbook/src/main`
 
 We describe step 1 in detail for the sake of record:
  - Start a local-only server to serve the markdeep file (e.g. `Filament.md.html`)
@@ -78,7 +86,7 @@ add a link in `SUMMARY.md`, and perform the steps outlined in
 
 For example, if you are adding a general technical note, then you would
  - Place the document (file with extension `.md`) in `docs_src/src/notes`
- - Add a link in [`docs_src/src/SUMMARY.md`]
+ - Add a link in [`docs_src/src_mdbook/src/SUMMARY.md`]
  - Run the commands in the [Generate](#how-to-generate) section
 
 [github landing page]: https://google.github.io/filament
@@ -86,4 +94,4 @@ For example, if you are adding a general technical note, then you would
 [`markdeep`]: https://casual-effects.com/markdeep/
 [`docs_src/build/run.py`]: https://github.com/google/filament/blob/main/docs_src/build/run.py
 [`docs_src/build/duplicates.json`]: https://github.com/google/filament/blob/main/docs_src/build/duplicates.json
-[`docs_src/src/SUMMARY.md`]: https://github.com/google/filament/blob/main/docs_src/src/SUMMARY.md
+[`docs_src/src_mdbook/src/SUMMARY.md`]: https://github.com/google/filament/blob/main/docs_src/src_mdbook/src/SUMMARY.md
