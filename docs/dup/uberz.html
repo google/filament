@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Page not found - Filament</title>
-        <base href="/">
+        <title>uberz - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -13,19 +12,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
 
@@ -34,11 +33,11 @@
 
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc.js"></script>
+        <script src="../toc.js"></script>
     </head>
     <body>
     <div id="body-container">
@@ -88,12 +87,12 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
 	    <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="images/filament_logo_small.png"></img>
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -153,14 +152,95 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <ul>
+<li><a href="#ubershader-archive-files">Ubershader Archive Files</a></li>
+<li><a href="#ubershader-spec-files">Ubershader Spec Files</a></li>
+</ul>
+<h1 id="ubershader-archive-files"><a class="header" href="#ubershader-archive-files">Ubershader Archive Files</a></h1>
+<p>An ubershader archive provides a way to bundle up a set of <code>filamat</code> files along with some metadata
+that conveys which glTF features each material can handle. It is a file that has been compressed
+with <code>zstd</code> and has an <code>.uberz</code> file extension. In uncompressed form, it has the following layout
+(little endian is assumed).</p>
+<pre><code>[u32] magic identifier: UBER
+[u32] simple (unpartitioned) version number for the archive format
+[u64] number of specs
+[u64] byte offset to SPECS
+SPECS:
+foreach spec {
+    [u8] shading model
+    [u8] blending model
+    [u16] number of flags
+    [u32] size in bytes of the filamat blob
+    [u64] byte offset to FLAGLIST for this spec
+    [u64] byte offset to FILAMAT for this spec
+}
+foreach spec {
+    FLAGLIST:
+    foreach flag {
+        [u64] byte offset to FLAGNAME for this spec/flag pair
+        [u64] flag value: 0 = unsupported, 1 = optional, or 2 = required
+    }
+}
+foreach spec {
+    foreach flag {
+        FLAGNAME:
+        [u8...] flag name, including null terminator
+    }
+}
+foreach spec {
+    FILAMAT:
+    [u8...] filamat blob
+}
+</code></pre>
+<p>In the above specification, each "offset" is a number of bytes between the top of the file to the
+given label. These offsets are 64 bits so that they can be replaced with pointers in a C struct,
+which allows the file to be consumed without any parsing. On 32-bit architectures, this still works
+because we can simply ignore the unused padding after every pointer.</p>
+<h1 id="ubershader-spec-files"><a class="header" href="#ubershader-spec-files">Ubershader Spec Files</a></h1>
+<p>An ubershader spec file is a simple text file with a <code>.spec</code> extension. It contains a list of
+key-value pairs conforming to the following grammar. Each key-value pair is either a <em>feature flag</em>
+or a <em>fundamental aspect</em>.</p>
+<ul>
+<li>Each feature flag can be <strong>unsupported</strong>, <strong>required</strong>, or <strong>optional</strong>.</li>
+<li>The fundamental aspect of the material cannot be changed, such as the blend mode.</li>
+</ul>
+<pre><code class="language-eBNF">spec = { [ comment | key_value_pair ] , "\n" } ;
+comment = "#" , { any } ;
+key_value_pair = ( fundamental_aspect | feature_flag ) ;
+fundamental_aspect = ( blending | shading ) ;
+feature_flag = identifier , equals , ("unsupported" | "required" | "optional") ;
+blending = "BlendingMode" , equals ,
+    ( "opaque" | "transparent" | "fade" | "add" | "masked" | "multiply" | "screen" ) ;
+shading = "ShadingModel"  , equals ,
+    ( "lit" | "subsurface" | "cloth" | "unlit" | "specularGlossiness") ;
+equals = [ whitespace ] , "=" , [ whitespace ] ;
+any = ? any character other than newline ? ;
+whitespace = ? sequence of tabs and spaces ? ;
+identifier = ? sequence of alphanumeric characters ? ;
+</code></pre>
+<p>If a fundamental aspect is missing from the spec, then the loader will assume that the spec can
+handle all possible values for that aspect. For example, we may wish to override the glTF
+blending mode in certain ubershader materials (e.g. materials that support <code>KHR_materials_volume</code>).
+These materials should simply omit the <code>BlendingMode</code> line from the spec.</p>
+<p>If any feature flag is missing from the spec, it implicitly has the value of <code>unsupported</code>. For an
+up-to-date list of recognized feature flags, look at the source for <code>UbershaderProvider::getMaterial</code>.</p>
+<p>If a particular feature flag is set to <code>required</code> for a particular material, then the glTF loader
+will bind that material to a given glTF mesh only if that feature is enabled in the mesh.</p>
+<p>Usually, features are either <code>unsupported</code> or <code>optional</code>. For example, if the ubershader user can
+set <code>normalIndex</code> in the material to <code>-1</code> to signal that they do not have a normal map, then normal
+mapping should be specified as an <code>optional</code> feature of the ubershader.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dup/matdbg.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
+                            <a rel="next prefetch" href="../notes/tools.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -168,7 +248,13 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dup/matdbg.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
+                    <a rel="next prefetch" href="../notes/tools.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -181,13 +267,13 @@
         </script>
 
 
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
 
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
 

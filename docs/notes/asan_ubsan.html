@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Page not found - Filament</title>
-        <base href="/">
+        <title>Running with ASAN and UBSAN - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -13,19 +12,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
 
@@ -34,11 +33,11 @@
 
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc.js"></script>
+        <script src="../toc.js"></script>
     </head>
     <body>
     <div id="body-container">
@@ -88,12 +87,12 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
 	    <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="images/filament_logo_small.png"></img>
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -153,14 +152,45 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="running-with-asanubsan"><a class="header" href="#running-with-asanubsan">Running with ASAN/UBSAN</a></h1>
+<h2 id="enabling"><a class="header" href="#enabling">Enabling</a></h2>
+<p>When building though build.sh, pass the <code>-b</code> flag. This sets the cmake variable
+<code>FILAMENT_ENABLE_ASAN_UBSAN=ON</code> which eventually passes <code>"-fsanitize=address -fsanitize=undefined"</code>
+to all compile and link operations.</p>
+<p>If building through CMake directly, or an IDE like CLion that doesn't use build.sh, instead pass
+<code>-DFILAMENT_ENABLE_ASAN_UBSAN=ON</code> to cmake in order to get the same result.</p>
+<h2 id="getting-memory-leak-detection-on-mac"><a class="header" href="#getting-memory-leak-detection-on-mac">Getting memory leak detection on Mac</a></h2>
+<p>Memory leak detection isn't enabled by default on MacOS. There are two issues to address, first is
+using a version of clang that supports memory leak detection and second is enabling it at runtime.</p>
+<p>The version of clang distributed by Apple (with a version like "Apple clang version 16.0.0") doesn't
+currently support leak detection at all. Instead you will need to get or build a different LLVM,
+such as the one distributed through homebrew and get CMake to use that instead.</p>
+<p>Then during runtime you'll need to have the environment variable <code>ASAN_OPTIONS</code> include the option
+<code>detect_leaks=1</code>. Multiple <code>ASAN_OPTIONS</code> values are concatenated with <code>:</code>.</p>
+<h2 id="getting-memory-leak-output-in-clion"><a class="header" href="#getting-memory-leak-output-in-clion">Getting memory leak output in CLion</a></h2>
+<h3 id="setting-variables"><a class="header" href="#setting-variables">Setting variables</a></h3>
+<p>Under <code>Settings | Build, Execution, Deployment | Dynamic Analysis Tools | Sanitizers</code> there is an
+ASAN Settings field that overrides whatever other <code>ASAN_OPTIONS</code> you might set elsewhere, so you
+must use that instead of setting it through your Run/Debug Configuration.</p>
+<p>To pass <code>-DFILAMENT_ENABLE_ASAN_UBSAN=ON</code> to CMake you'll want to create a new CMake Profile and
+pass it as a CMake argument.</p>
+<h3 id="avoiding-losing-output"><a class="header" href="#avoiding-losing-output">Avoiding losing output</a></h3>
+<p>CMake will consume ASAN output and display it through a separate "Sanitizers" tab. Unfortunately
+certain leak detection errors that interrupt the executable seem to not show up in this tab, but are
+still removed from the user-visible console output. If this is happening and you need to see the
+unfiltered console output you'll need to go to <code>Settings | Build, Execution, Deployment | Dynamic Analysis Tools | Sanitizers</code> and uncheck "Use visual representation for Sanitizer's output".</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/spirv_debugging.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
+                            <a rel="next prefetch" href="../notes/instruments.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -168,7 +198,13 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/spirv_debugging.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
+                    <a rel="next prefetch" href="../notes/instruments.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -181,13 +217,13 @@
         </script>
 
 
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
 
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
 

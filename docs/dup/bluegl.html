@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Page not found - Filament</title>
-        <base href="/">
+        <title>bluegl - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -13,19 +12,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="shortcut icon" href="favicon.png">
-        <link rel="stylesheet" href="css/variables.css">
-        <link rel="stylesheet" href="css/general.css">
-        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="highlight.css">
-        <link rel="stylesheet" href="tomorrow-night.css">
-        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
 
@@ -34,11 +33,11 @@
 
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc.js"></script>
+        <script src="../toc.js"></script>
     </head>
     <body>
     <div id="body-container">
@@ -88,12 +87,12 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
 	    <div style="display:flex;align-items:center;justify-content:center">
-                <img class="flogo" src="images/filament_logo_small.png"></img>
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -153,14 +152,57 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="bluegl-mechanics"><a class="header" href="#bluegl-mechanics">BlueGL Mechanics</a></h1>
+<p>So you want to call <code>glClear()</code>?</p>
+<h2 id="step-0-run-bluegl-genpy"><a class="header" href="#step-0-run-bluegl-genpy">Step 0: Run <code>bluegl-gen.py</code></a></h2>
+<p>This step is only required if updating or modifying BlueGL. These artifacts should already be checked into the Filament repository.</p>
+<p>From the <code>libs/bluegl</code> folder, run:</p>
+<pre><code>./bluegl-gen.py
+</code></pre>
+<p>The <code>bluegl-gen.py</code> script generates a set of files:</p>
+<ul>
+<li>assembly (proxy) files: <code>BlueGLCore*.S</code></li>
+<li>header files: <code>include/BlueGLDefines.h</code> and <code>include/bluegl/BlueGL.h</code></li>
+<li>a private header:<code>include/private_BlueGL.h</code></li>
+</ul>
+<h2 id="step-1-include-the-bluegl-defines-header"><a class="header" href="#step-1-include-the-bluegl-defines-header">Step 1: Include the BlueGL defines header:</a></h2>
+<pre><code>#include &lt;bluegl/BlueGLDefines.h&gt;
+</code></pre>
+<p>This headers adds a bunch of defines:</p>
+<pre><code>...
+#define glClear bluegl_glClear
+...
+</code></pre>
+<h2 id="step-2-include-the-bluegl-header-after-the-defines-header"><a class="header" href="#step-2-include-the-bluegl-header-after-the-defines-header">Step 2: Include the BlueGL header after the defines header:</a></h2>
+<pre><code>#include &lt;bluegl/BlueGLDefines.h&gt;
+#include &lt;bluegl/BlueGL.h&gt;
+</code></pre>
+<p>This also includes the GL headers, like <code>&lt;GL/glcorearb.h&gt;</code> for you.</p>
+<h2 id="step-3-call-blueglbind"><a class="header" href="#step-3-call-blueglbind">Step 3: Call <code>bluegl::bind()</code></a></h2>
+<p>Internally, the BlueGL library maintains a list of function pointers:</p>
+<pre><code>void* __blue_glCore_glClear;
+</code></pre>
+<p>During <code>bluegl::bind()</code>, each function gets assigned to the appropriate symbol loaded from the OS-specific GL shared library via <code>dlopen</code>, <code>dlsym</code>, and equivalents.</p>
+<h2 id="step-4-call-glclear"><a class="header" href="#step-4-call-glclear">Step 4: Call <code>glClear()</code></a></h2>
+<p>Because of the prior <code>#define</code>, you'll actually be calling <code>bluegl_glClear()</code>. This is a trampoline function, defined in the <code>BlueGLCore*.S</code> assembly file (the exact implementation varies slightly on each platform):</p>
+<pre><code>.private_extern _bluegl_glClear
+_bluegl_glClear:
+    mov ___blue_glCore_glClear@GOTPCREL(%rip), %r11
+    jmp *(%r11)
+</code></pre>
+<p>The invokes the <code>__blue_glCore_glClear</code> function, which was previously assigned to the actual GL function.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/libs.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
+                            <a rel="next prefetch" href="../dup/bluevk.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -168,7 +210,13 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/libs.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
+                    <a rel="next prefetch" href="../dup/bluevk.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -181,13 +229,13 @@
         </script>
 
 
-        <script src="elasticlunr.min.js"></script>
-        <script src="mark.min.js"></script>
-        <script src="searcher.js"></script>
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
 
-        <script src="clipboard.min.js"></script>
-        <script src="highlight.js"></script>
-        <script src="book.js"></script>
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
 
