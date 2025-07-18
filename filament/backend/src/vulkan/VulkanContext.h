@@ -146,6 +146,10 @@ public:
         return mIsUnifiedMemoryArchitecture;
     }
 
+    inline bool stagingBufferBypassEnabled() const noexcept {
+        return mStagingBufferBypassEnabled;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -169,6 +173,7 @@ private:
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
+    bool mStagingBufferBypassEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

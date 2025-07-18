@@ -429,10 +429,11 @@ private:
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
-    VulkanIndexBuffer(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanBufferCache& bufferCache, uint8_t elementSize, uint32_t indexCount)
+    VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
+            uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
-          buffer(allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
+          buffer(context, allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
                   elementSize * indexCount),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
 
@@ -441,8 +442,9 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
 };
 
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
-    VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanBufferCache& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType);
+    VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
+            BufferObjectBinding bindingType);
 
     VulkanBufferProxy buffer;
     const BufferObjectBinding bindingType;

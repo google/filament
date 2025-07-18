@@ -214,8 +214,4 @@ constexpr static const int FVK_MAX_PIPELINE_AGE = FVK_MAX_COMMAND_BUFFERS;
 // destroying any unused pipeline object.
 static_assert(FVK_MAX_PIPELINE_AGE >= FVK_MAX_COMMAND_BUFFERS);
 
-// Whether the buffer updates always use staging or not. Otherwise its allowed to also use memcpy
-// for buffer updates. Default is false
-constexpr static const bool FVK_FORCE_STAGING_FOR_BUFFER_UPDATES = false;
-
 #endif
