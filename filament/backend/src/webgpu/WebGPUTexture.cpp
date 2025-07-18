@@ -370,7 +370,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
     mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
-            mArrayLayerCount, samplerType);
+            mArrayLayerCount, toWebGPUTextureViewDimension(samplerType));
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
             << "Failed to create default texture view for " << textureDescriptor.label;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -402,7 +402,7 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
       mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              src->target) },
+              toWebGPUTextureViewDimension(src->target)) },
       mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
 
 wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
@@ -422,13 +422,15 @@ bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::Textu
     return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
 }
 
-wgpu::TextureView WebGPUTexture::getOrMakeTextureView(const uint8_t mipLevel,
-        const uint32_t arrayLayer) {
+wgpu::TextureView WebGPUTexture::makeAttachmentTextureView(const uint8_t mipLevel,
+        const uint32_t arrayLayer, const uint32_t layerCount) {
     // TODO: there's an optimization to be made here to return mDefaultTextureView.
     //  Problem: mDefaultTextureView is a view of the entire texture,
     //  but this function (and its callers) expects a single-slice view.
     //  Returning the whole texture view for a single-slice request seems wrong.
-    return makeTextureView(mipLevel, 1, arrayLayer, 1, target);
+    return makeTextureView(mipLevel, 1, arrayLayer, layerCount,
+            layerCount > 1 ? wgpu::TextureViewDimension::e2DArray
+                           : wgpu::TextureViewDimension::e2D);
 }
 
 void WebGPUTexture::createMsaaSidecarTextureIfNotAlreadyCreated(const uint8_t samples,
@@ -663,14 +665,14 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
     }
 }
-
 wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-        const SamplerType samplerType) const noexcept {
+        const wgpu::TextureViewDimension dimension) const noexcept {
+
     const wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mViewFormat,
-        .dimension = toWebGPUTextureViewDimension(samplerType),
+        .dimension = dimension,
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
         .baseArrayLayer = baseArrayLayer,

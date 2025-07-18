@@ -852,6 +852,10 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
+    if (!mCommandEncoder) {
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    }
     assert_invariant(mCommandEncoder);
     auto renderTarget = handleCast<WebGPURenderTarget>(renderTargetHandle);
 
@@ -897,15 +901,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             if (colorInfos[i].handle) {
                 auto colorTexture = handleCast<WebGPUTexture>(colorInfos[i].handle);
                 if (colorTexture) {
-                    FILAMENT_CHECK_POSTCONDITION(
-                            colorInfos[i].layer < renderTarget->getLayerCount())
-                            << "Color attachment " << i << " requests layer " << colorInfos[i].layer
-                            << " but render target has only " << renderTarget->getLayerCount()
-                            << ".";
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
                     customColorViews[customColorViewCount] =
-                            colorTexture->getOrMakeTextureView(mipLevel, arrayLayer);
+                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer, renderTarget->getLayerCount());
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -948,8 +947,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         if (depthStencilSourceHandle) {
             auto dsTexture = handleCast<WebGPUTexture>(depthStencilSourceHandle);
             if (dsTexture) {
-                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel,
-                        depthStencilArrayLayer);
+                customDepthStencilView = dsTexture->makeAttachmentTextureView(depthStencilMipLevel,
+                        depthStencilArrayLayer, renderTarget->getLayerCount());
                 if (msaaSidecarsRequired) {
                     customDepthStencilMsaaSidecarTextureView =
                             dsTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -1046,8 +1045,10 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     }
     mDefaultRenderTarget->setTargetFlags(newTargetFlags);
 
-    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
-    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    if (!mCommandEncoder) {
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    }
     assert_invariant(mCommandEncoder);
 }
 
