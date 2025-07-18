@@ -1,0 +1,25 @@
+{
+    "version": 2,
+    "legal": [
+        {
+            "license": "CC-BY 4.0",
+            "licenseUrl": "https://creativecommons.org/licenses/by/4.0/legalcode",
+            "artist": "Cesium",
+            "year": "2017",
+            "owner": "Cesium",
+            "what": "Everything",
+            "text": "CC BY 4.0 International",
+            "spdx": "CC-BY-4.0",
+            "icon": "https://licensebuttons.net/l/by/3.0/88x31.png"
+        }
+    ],
+    "tags": [
+        "core",
+        "testing"
+    ],
+    "screenshot": "screenshot/screenshot.png",
+    "name": "Box",
+    "path": "./Models/Box",
+    "summary": "One mesh and one material. Start with this.",
+    "createReadme": true
+}
