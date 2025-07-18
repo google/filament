@@ -194,7 +194,7 @@ public:
     using Transaction = ShadowMapDescriptorSet::Transaction;
 
     static void prepareCamera(Transaction const& transaction,
-            backend::DriverApi& driver, const CameraInfo& cameraInfo) noexcept;
+            FEngine const& engine, const CameraInfo& cameraInfo) noexcept;
     static void prepareViewport(Transaction const& transaction,
             backend::Viewport const& viewport) noexcept;
     static void prepareTime(Transaction const& transaction,
