@@ -1,0 +1,19 @@
+name: "OpenCV"
+description:
+    "Open Source Computer Vision Library"
+
+third_party {
+  homepage: "https://opencv.org/"
+  identifier {
+    type: "Git"
+    value: "https://github.com/opencv/opencv"
+    primary_source: true
+    version: "4.11.0"
+  }
+  version: "4.11.0"
+  last_upgrade_date { year: 2025 month: 7 day: 1 }
+  license_type: PERMISSIVE
+  local_modifications:
+    "Added tnt/ subdirectory to integrate with filament build.\n"
+    "Edited cmake/OpenCVFindLibsGrfmt.cmake to integrate with filament build."
+}
