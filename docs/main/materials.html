@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="ayu sidebar-visible" dir="ltr">
+<html lang="en" class="light sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -34,7 +34,7 @@
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -63,7 +63,7 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
-            html.classList.remove('ayu')
+            html.classList.remove('light')
             html.classList.add(theme);
             html.classList.add("js");
         </script>
@@ -86,7 +86,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-	    <div style="display:flex;align-items:center;justify-content:center">
+            <div style="display:flex;align-items:center;justify-content:center">
                 <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
@@ -108,6 +108,8 @@
                         <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -118,6 +120,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
+                        -->
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
@@ -126,6 +129,9 @@
                     <h1 class="menu-title">Filament</h1>
 
                     <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
 
                     </div>
                 </div>
@@ -177,7 +183,6 @@ counter-increment: h6;margin-right:10px}
 <span class="md"><p><title>Filament Materials Guide</title><div class="title"> Filament Materials Guide </div>
 <div class="afterTitles"></div>
 </p><p>
-<center><a href="../images/filament_logo.png" target="_blank"><img class="markdeep" src="../images/filament_logo.png" /></a></center>
 </p>
 <div class="longTOC"><div class="tocHeader">Contents</div><p><a href="#" class="tocTop" target="_self">(Top)</a><br/>
 <a href="#about"  target="_self" class="level1"><span class="tocNumber">1&nbsp; </span>About</a><br/>

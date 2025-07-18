@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="ayu sidebar-visible" dir="ltr">
+<html lang="en" class="light sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -34,7 +34,7 @@
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -63,7 +63,7 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
-            html.classList.remove('ayu')
+            html.classList.remove('light')
             html.classList.add(theme);
             html.classList.add("js");
         </script>
@@ -86,7 +86,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-	    <div style="display:flex;align-items:center;justify-content:center">
+            <div style="display:flex;align-items:center;justify-content:center">
                 <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
@@ -108,6 +108,8 @@
                         <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -118,6 +120,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
+                        -->
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
@@ -126,6 +129,9 @@
                     <h1 class="menu-title">Filament</h1>
 
                     <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
 
                     </div>
                 </div>
@@ -174,6 +180,7 @@ At the time of this writing, the following capabilities are supported.</p>
 <li>OpenGL: Editing GLSL</li>
 <li>Metal: Editing MSL</li>
 <li>Vulkan: Editing transpiled GLSL, displaying disassembled SPIR-V</li>
+<li>WebGPU: Editing WGSL</li>
 </ul>
 <p>Note that a given material can be built with multiple backends, even though only one backend
 is active in a particular session. For example, if the current app is using Vulkan, it is still
@@ -247,11 +254,11 @@ engine.</li>
 <li><strong>setQueryCallback</strong> Sets up a callback that allows the debugger to ask for current information.</li>
 </ul>
 <h2 id="javascript-client"><a class="header" href="#javascript-client">JavaScript Client</a></h2>
-<p>The web app is written in simple, modern JavaScript and avoids frameworks like React or Angular. It
-uses the following third-party libraries which are fetched from a CDN using <code>&lt;script&gt;</code>. This allows
-us to avoid adding them to our git repo, and leads to good caching behavior.</p>
+<p>The web app is written in simple, modern JavaScript. It uses third-party libraries
+which are fetched from a CDN using <code>&lt;script&gt;</code>. This allows us to avoid adding them to our git repo,
+and leads to good caching behavior.</p>
 <ul>
-<li><strong>mustache</strong> Popular tiny library that converts template strings into HTML.</li>
+<li><strong>lit-html</strong> A small wrapper around web-components for fast, iterative development.</li>
 <li><strong>monaco</strong> The engine behind Visual Studio Code.
 <ul>
 <li>We've configured this for C++ for somewhat reasonable syntax highlighting.</li>
@@ -259,8 +266,9 @@ us to avoid adding them to our git repo, and leads to good caching behavior.</p>
 </ul>
 </li>
 </ul>
-<p>All the source code for our web app is contained in a single file (<code>script.js</code>) and the mustache
-template strings are specified using <code>&lt;template&gt;</code> tags in <code>index.html</code>.</p>
+<p>All the source code for our web app is contained in a single file (<code>app.js</code>), and there is a
+corresponding <code>api.js</code> to handle the protocol between the server (the running filament app)
+the client (the browser).</p>
 <p>The web app basically provides a view over a pseudo-database which is a just a global variable
 that holds a dictionary that maps from material id's to objects that conform to the JSON described
 below.</p>
@@ -296,7 +304,7 @@ the entire binary content of the material package.</p>
 }]
 </code></pre>
 <p>Some of the returned data may seem redundant (e.g. the <code>index</code> and <code>variantString</code> fields) but
-these allow the client to be very simple by passing the raw JSON into <a href="https://mustache.github.io/">mustache</a> templates.
+these allow the client to be very simple by passing the raw JSON into [mustache][4] templates.
 Moreover it helps prevent duplication of knowledge between C++ and JavaScript.</p>
 <p>This format of this message is also used for the in-browser "database" of materials.</p>
 <hr />
@@ -318,34 +326,11 @@ text instead of JSON.</p>
 for Vulkan it can select between SPIR-V or decompiled GLSL. Note that the original GLSL that was
 used to create the SPIR-V is not available.</p>
 <hr />
-<h2 id="websocket-messages"><a class="header" href="#websocket-messages">WebSocket messages</a></h2>
-<p>Unlike HTTP requests, WebSocket messages can be pushed at any time and can travel in either
-direction. In our homegrown protocol, every WebSocket message starts with a command that matches
-[A-Z_]+ followed by a space character. Command arguments are delimited with spaces.</p>
-<p>Currently we support only one command. It travels from client to server.</p>
-<pre><code>EDIT [material id] [api index] [shader index] [shader length] [entire shader source....]
-</code></pre>
-<p>The <code>material id</code> is 8 hex digits.</p>
-<p>The <code>api index</code> chooses between GL/VK/Metal and matches the values of the Backend enum (except that
-zero is invalid).</p>
-<p>The <code>shader index</code> is a zero-based index into the list of variants using the order that
-they appear in the package, where each API (GL / VK / Metal) has its own list.</p>
-<p>The <code>shader length</code> is the number of bytes required for UTF-8 encoding of the shader source string,
-not including the terminating null.</p>
 <h2 id="wish-list"><a class="header" href="#wish-list">Wish List</a></h2>
 <ul>
 <li>Allow editing of the original GLSL, perhaps by enhancing the <code>-g</code> option in matc and adding new chunk types.</li>
-<li>Port the web side to TypeScript
-<ul>
-<li>This will clarify the structure of the pseudo-database, which is currently a total hack.</li>
-<li>Allows us to use enums instead of strings in several places (e.g. getShaderAPI)</li>
-<li>Try using https://github.com/basarat/typescript-script because webpack etc is painful.</li>
-<li>If the above idea is too slow then use https://github.com/evanw/esbuild.</li>
-</ul>
-</li>
 <li>Expose the entire <code>engine.debug</code> struct in the web UI.</li>
 <li>When shader errors occur, send them back over the wire to the web client.</li>
-<li>Resizing the Chrome window causes layout issues.</li>
 <li>The sidebar in the web app is not resizeable.</li>
 <li>For the material ids, SHA-1 would be better than murmur since the latter can easily have collisions.</li>
 <li>It would be easy to add diff decorations to the editor in our <code>onEdit</code> function:

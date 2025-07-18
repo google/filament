@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="ayu sidebar-visible" dir="ltr">
+<html lang="en" class="light sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -34,7 +34,7 @@
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "ayu" : "ayu";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc.js"></script>
@@ -63,7 +63,7 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             const html = document.documentElement;
-            html.classList.remove('ayu')
+            html.classList.remove('light')
             html.classList.add(theme);
             html.classList.add("js");
         </script>
@@ -86,7 +86,7 @@
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
-	    <div style="display:flex;align-items:center;justify-content:center">
+            <div style="display:flex;align-items:center;justify-content:center">
                 <img class="flogo" src="../images/filament_logo_small.png"></img>
             </div>
             <!-- populated by js -->
@@ -108,6 +108,8 @@
                         <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
                         </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -118,6 +120,7 @@
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
                         </ul>
+                        -->
                         <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
                             <i class="fa fa-search"></i>
                         </button>
@@ -126,6 +129,9 @@
                     <h1 class="menu-title">Filament</h1>
 
                     <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
 
                     </div>
                 </div>
@@ -224,10 +230,10 @@ located in <code>tools</code>. Some of tools also have README.md as description.
 <h3 id="other-technical-notes"><a class="header" href="#other-technical-notes">Other technical notes</a></h3>
 <p>These are technical documents that do not fit into a library, tool, or directory of the
 Filament source tree. We collect them into the <code>docs_src/src/notes</code> directory. No additional
-processing are needed for these documents.</p>
+processing is needed for these documents.</p>
 <h3 id="raw-source-files"><a class="header" href="#raw-source-files">Raw source files</a></h3>
-<p>These are files that are not part of the mdbook generation, but should be included output in /docs
-to point to standalone pages/components (for example, the remote page for Android gltf_viewer). These
+<p>These are files that are not part of the <code>mdbook</code> generation, but should be included output in <code>/docs</code>
+to point to standalone pages or components (for example, the remote page for Android's <code>gltf_viewer</code>). These
 files are stored in <code>docs_src/src_raw</code>.</p>
 <h2 id="adding-more-documents"><a class="header" href="#adding-more-documents">Adding more documents</a></h2>
 <p>To add any documentation, first consider the type of the document you like to add. If it
@@ -245,7 +251,7 @@ add a link in <code>SUMMARY.md</code>, and perform the steps outlined in
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/versioning.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/release_guide.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -259,7 +265,7 @@ add a link in <code>SUMMARY.md</code>, and perform the steps outlined in
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/versioning.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/release_guide.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
