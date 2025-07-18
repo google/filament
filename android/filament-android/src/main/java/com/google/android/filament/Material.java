@@ -239,8 +239,25 @@ public class Material {
         FRONT_AND_BACK
     }
 
+    /**
+     * Shader compiler priority queue
+     *
+     * On platforms which support parallel shader compilation, compilation requests will be
+     * processed in order of priority, then insertion order.
+     *
+     * See {@link #compile(CompilerPriorityQueue, int, Object, Runnable)}.
+     */
     public enum CompilerPriorityQueue {
+        /** We need this program NOW.
+         *
+         * When passed as an argument to {@link #compile(CompilerPriorityQueue, int, Object,
+         * Runnable)}, if the platform doesn't support parallel compilation, but does support
+         * amortized shader compilation, the given shader program will be synchronously compiled.
+         */
+        IMMEDIATE,
+        /** We will need this program soon. */
         HIGH,
+        /** We will need this program eventually. */
         LOW
     }
 
