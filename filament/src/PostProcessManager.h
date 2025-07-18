@@ -391,7 +391,7 @@ public:
     FMaterialInstance* configureColorGradingMaterial(
             PostProcessMaterial& material, FColorGrading const* colorGrading,
             ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
-            uint32_t const width, uint32_t const height) noexcept;
+            uint32_t width, uint32_t height) noexcept;
 
 private:
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
