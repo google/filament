@@ -31,6 +31,9 @@ RAW_COPIES_DIR = os.path.join(CUR_DIR, '../src_raw')
 DUP_DIR = os.path.join(SRC_DIR, 'dup')
 MAIN_DIR = os.path.join(SRC_DIR, 'main')
 
+FILAMENT_MD = 'Filament.md.html'
+MATERIALS_MD = 'Materials.md.html'
+
 def transform_dup_file_link(line, transforms):
   URL_CONTENT = '[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
   res = re.findall(f'\[(.+)\]\(({URL_CONTENT})\)', line)
@@ -134,3 +137,5 @@ if __name__ == "__main__":
   assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
 
   shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)
+  shutil.copy(os.path.join(MARKDEEP_DIR, FILAMENT_MD), BOOK_OUPUT_DIR)
+  shutil.copy(os.path.join(MARKDEEP_DIR, MATERIALS_MD), BOOK_OUPUT_DIR)
