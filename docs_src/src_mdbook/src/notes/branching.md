@@ -1,4 +1,6 @@
-![Filament branching strategy](art/diagrams/branching.png)
+# Branching
+
+![Filament branching strategy](../images/branching.png)
 
 ## Which branch do I open my PR against?
 

@@ -114,11 +114,15 @@ def pull_markdeep_docs():
     # 1. Remove the double empty lines.  These make the following text seem like markdown text as oppose to embedded html.
     # 2. Remove the max-width styling from the body tag.
     # 3. Remove the font-family styling from the body tag.
+    # 4. Properly redirect images to the right directory
     text = text.replace("\n\n","\n")\
                .replace("max-width:680px;", "")\
                .replace("font-family:Palatino", "--font-family:Palatino")\
                .replace("\"./images", "\"../images")\
                .replace("\"images/", "\"../images/")
+
+    # 5. Remove giant filament logo
+    text = '\n'.join([l for l in text.split("\n") if 'filament_logo.png' not in l])
 
     # Save the page source as .md with embedded html
     with open(f'{MAIN_DIR}/{doc.lower()}.md', "w", encoding="utf-8") as f:
