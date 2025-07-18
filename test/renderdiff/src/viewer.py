@@ -95,8 +95,8 @@ def _download_github_artifacts(pr_number, github_token, output_dir= ".") -> None
       print("Consider checking GitHub Actions runs manually for this PR's branch on GitHub.")
       return None
 
-    # Filter for runs that completed successfully
-    successful_runs = [run for run in workflow_runs if run.get("conclusion") == "success" and run.get("status") == "completed"]
+    # Do not filter for runs that completed successfully
+    successful_runs = sorted(workflow_runs, key=lambda run: run['id'], reverse=True)
     if not successful_runs:
       print(f"No *successful and completed* workflow runs found for PR #{pr_number} with commit SHA {commit_sha}. Exiting.")
       return None
@@ -161,6 +161,10 @@ def _download_github_artifacts(pr_number, github_token, output_dir= ".") -> None
             print(f"  Error: Downloaded file for '{artifact_name}' is not a valid zip file. Skipping extraction.")
           except Exception as e:
             print(f"  An error occurred during extraction of '{artifact_name}': {e}")
+
+      # Once we find the lastest run with artifacts, we just quit
+      if len(artifacts) > 0:
+        break
     except requests.exceptions.HTTPError as e:
       print(f"  An HTTP error occurred while fetching artifacts for run {run_id}: {e}")
       if e.response.status_code == 403:

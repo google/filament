@@ -130,7 +130,8 @@ jobs:
         run: |
           bash build/common/get-mesa.sh
           pip install tifffile numpy
-      - name: Render
+      - name: Render and compare
+        id: render_compare
         run: |
           TEST_DIR=test/renderdiff
           source ${TEST_DIR}/src/preamble.sh
@@ -140,20 +141,32 @@ jobs:
               python3 ${TEST_DIR}/src/golden_manager.py \
                   --branch=${GOLDEN_BRANCH} \
                   --output=${GOLDEN_OUTPUT_DIR}
-          # Note that we need to upload the output even if comparison fails
+
+          # Note that we need to upload the output even if comparison fails, so we undo `set -ex`
+          end_
+
+          python3 ${TEST_DIR}/src/compare.py \
+              --src=${GOLDEN_OUTPUT_DIR} \
+              --dest=${RENDER_OUTPUT_DIR} \
+              --out=${DIFF_OUTPUT_DIR} 2>&1 | tee compare_output.txt
+
+          if grep "Failed" compare_output.txt > /dev/null; then
+             DELIMITER="EOF_FILE_CONTENT_$(date +%s)" # Using timestamp to make it more unique
+             echo "err<<$DELIMITER" >> "$GITHUB_OUTPUT"
+             cat compare_output.txt >> "$GITHUB_OUTPUT"
+             echo "$DELIMITER" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: presubmit-renderdiff-result
           path: ./out/renderdiff
-      - name: Compare output
+      - name: Compare result
         run: |
-          TEST_DIR=test/renderdiff
-          source ${TEST_DIR}/src/preamble.sh
-          python3 ${TEST_DIR}/src/compare.py \
-              --src=${GOLDEN_OUTPUT_DIR} \
-              --dest=${RENDER_OUTPUT_DIR} \
-              --out=${DIFF_OUTPUT_DIR}
-          end_
+          ERROR_STR="${{ steps.render_compare.outputs.err }}"
+          if [ -n "${ERROR_STR}" ]; then
+              echo "${ERROR_STR}"
+              exit 1
+          fi
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
