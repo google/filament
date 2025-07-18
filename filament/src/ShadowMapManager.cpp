@@ -385,7 +385,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                     auto transaction = ShadowMap::open(driver);
-                    ShadowMap::prepareCamera(transaction, driver, cameraInfo);
+                    ShadowMap::prepareCamera(transaction, engine, cameraInfo);
                     ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                     ShadowMap::prepareTime(transaction, engine, userTime);
                     ShadowMap::prepareShadowMapping(transaction,

@@ -55,8 +55,10 @@ public:
 
     void terminate(backend::DriverApi& driver);
 
+    // All UBO values that can affect user code must be set here
+
     static void prepareCamera(Transaction const& transaction,
-            backend::DriverApi& driver, const CameraInfo& camera) noexcept;
+            FEngine const& engine, const CameraInfo& camera) noexcept;
 
     static void prepareLodBias(Transaction const& transaction,
             float bias) noexcept;
@@ -66,6 +68,8 @@ public:
 
     static void prepareTime(Transaction const& transaction,
             FEngine const& engine, math::float4 const& userTime) noexcept;
+
+    // FIXME: I think this misses prepareMaterialGlobals()
 
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;

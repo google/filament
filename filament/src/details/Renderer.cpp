@@ -1129,7 +1129,9 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // (i.e. it won't be culled, unless everything is culled), so no need to complexify things.
     passBuilder.variant(variant);
 
-    // This is optional, if not set, the per-view descriptor-set must be set before calling execute()
+    // We need to specify the ColorPassDescriptorSet (which is in fact a collection of descriptor
+    // sets) because the layout can change based on the material used, and that's only known
+    // at execution time.
     passBuilder.colorPassDescriptorSet(&view.getColorPassDescriptorSet());
 
     // color-grading as subpass is done either by the color pass or the TAA pass if any
