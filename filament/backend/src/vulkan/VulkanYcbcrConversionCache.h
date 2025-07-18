@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
 #define TNT_FILAMENT_BACKEND_VULKANYCBCRCONVERSIONCACHE_H
 
-#include "utils/Definitions.h"
+#include "vulkan/utils/Definitions.h"
 
 #include <backend/DriverEnums.h>
 
