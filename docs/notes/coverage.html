@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Using Instruments on macOS - Filament</title>
+        <title>Code coverage analysis - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -152,44 +152,99 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="using-instruments-on-macos"><a class="header" href="#using-instruments-on-macos">Using Instruments on macOS</a></h1>
-<p>When running a binary under Instruments on macOS, you may run into the following issue when
-launching or attaching to an executable:</p>
-<pre><code>Failed to gain authorization
-Recovery Suggestion: Target binary needs to be debuggable and signed with 'get-task-allow'
+                        <h1 id="generating-backend-code-coverage"><a class="header" href="#generating-backend-code-coverage">Generating Backend Code Coverage</a></h1>
+<p>Code coverage analysis helps visualize which parts of the backend are exercised by backend tests.
+This guide outlines the process for generating an HTML coverage report for Filament's backend on
+macOS.</p>
+<h2 id="1-prerequisites-install-clang-and-llvm-tools"><a class="header" href="#1-prerequisites-install-clang-and-llvm-tools">1. Prerequisites: Install Clang and LLVM tools</a></h2>
+<p>You'll need a recent version of <strong>Clang</strong> and its corresponding <strong>LLVM tools</strong> for code coverage.
+You can install these using Homebrew or MacPorts.</p>
+<h3 id="using-homebrew"><a class="header" href="#using-homebrew">Using Homebrew</a></h3>
+<p>Install the <code>llvm</code> package:</p>
+<pre><code class="language-bash">brew install llvm
 </code></pre>
-<p>This is a security precaution; the solution is to code sign the binary with the
-<code>com.apple.security.get-task-allow</code> entitlement.</p>
+<p>This typically installs the tools in a location like <code>/usr/local/opt/llvm/bin</code>. You may need to add
+this to your <code>PATH</code> environment variable.</p>
+<h3 id="using-macports"><a class="header" href="#using-macports">Using MacPorts</a></h3>
+<p>Install a specific version of Clang (e.g., version 18):</p>
+<pre><code class="language-bash">sudo port install clang-18
+</code></pre>
+<p>MacPorts often adds version suffixes to the tool names (e.g., <code>llvm-cov-mp-18</code>).</p>
+<h3 id="required-tools"><a class="header" href="#required-tools">Required Tools</a></h3>
+<p>Ensure you can locate the following tools from your installation:</p>
+<ul>
+<li><code>clang</code> and <code>clang++</code> (The C/C++ compilers)</li>
+<li><code>llvm-profdata</code> (For merging coverage data)</li>
+<li><code>llvm-cov</code> (For generating reports)</li>
+</ul>
+<p>The rest of this guide assumes your tools are in your <code>PATH</code>. If not, you'll need to use the full
+path to each executable.</p>
+<h2 id="2-build-filament-with-coverage-enabled"><a class="header" href="#2-build-filament-with-coverage-enabled">2. Build Filament with Coverage Enabled</a></h2>
+<p>Compile the <code>backend_test_mac</code> target with coverage instrumentation. This is done by setting the
+<code>CC</code> and <code>CXX</code> environment variables to point to your Clang compiler and using the <code>-V</code> flag in the
+build script.</p>
+<pre><code class="language-bash">CC=clang CXX=clang++ ./build.sh -V -p desktop debug backend_test_mac
+</code></pre>
+<p><em>If your Clang executables aren't in your <code>PATH</code> or have version suffixes, provide the full name or
+path (e.g., <code>CC=/opt/local/bin/clang CXX=/opt/local/bin/clang++</code>).</em></p>
+<h2 id="3-run-the-backend-tests"><a class="header" href="#3-run-the-backend-tests">3. Run the Backend Tests</a></h2>
+<p>Running the test suite will generate the raw coverage data needed for the report.</p>
 <ol>
-<li>Create an <code>entitlements.plist</code> file with the following contents:</li>
-</ol>
-<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
-&lt;plist version="1.0"&gt;
-&lt;dict&gt;
-    &lt;key&gt;com.apple.security.get-task-allow&lt;/key&gt;
-    &lt;true/&gt;
-&lt;/dict&gt;
-&lt;/plist&gt;
+<li>
+<p>Navigate to the build output directory:</p>
+<pre><code class="language-bash">cd out/cmake-debug/filament/backend
 </code></pre>
-<ol start="2">
-<li>Run the following command:</li>
-</ol>
-<pre><code>codesign -s - --entitlements entitlements.plist &lt;binary&gt;
+</li>
+<li>
+<p>Run the tests for a specific backend (e.g., Metal):</p>
+<pre><code class="language-bash">./backend_test_mac --api metal
 </code></pre>
-<p>Replace <code>&lt;binary&gt;</code> with the name of the binary, for example: <code>out/cmake-debug/samples/gltf_viewer</code>.</p>
-<p>Afterwards, you should be able to successfully launch and attach to the executable using
-Instruments.</p>
+</li>
+</ol>
+<p>This command creates a <code>default.profraw</code> file in the current directory, which contains the raw
+execution profile data.</p>
+<h2 id="4-generate-the-coverage-report"><a class="header" href="#4-generate-the-coverage-report">4. Generate the Coverage Report</a></h2>
+<p>Finally, process the raw data and generate an HTML report.</p>
+<ol>
+<li>
+<p><strong>Merge the raw profile data</strong> into a single file using <code>llvm-profdata</code>.</p>
+<pre><code class="language-bash">llvm-profdata merge -sparse default.profraw -o filament.profdata
+</code></pre>
+<p><em>Remember to use the version-specific tool name if required (e.g., <code>llvm-profdata-mp-18</code>).</em></p>
+</li>
+<li>
+<p><strong>Generate the HTML report</strong> using <code>llvm-cov</code>. This command creates a report for the entire
+<code>backend_test_mac</code> executable.</p>
+<pre><code class="language-bash">llvm-cov show ./backend_test_mac \
+  -instr-profile=filament.profdata \
+  -format=html \
+  -show-line-counts-or-regions &gt; coverage.html
+</code></pre>
+<p><em>To view coverage for a <strong>specific source file</strong>, add its path at the end of the command:</em></p>
+<pre><code class="language-bash">llvm-cov show ./backend_test_mac \
+  -instr-profile=filament.profdata \
+  -format=html \
+  -show-line-counts-or-regions \
+  -- ../../../../filament/backend/src/metal/MetalDriver.mm &gt; coverage.html
+</code></pre>
+</li>
+<li>
+<p><strong>Open the report</strong> in your browser:</p>
+<pre><code class="language-bash">open coverage.html
+</code></pre>
+</li>
+</ol>
+<p>In the report, code paths that were not executed during the test run will be highlighted in red.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/asan_ubsan.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/instruments.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/coverage.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../notes/libs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -199,11 +254,11 @@ Instruments.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/asan_ubsan.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/instruments.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/coverage.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../notes/libs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

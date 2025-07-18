@@ -78,6 +78,11 @@ These are technical documents that do not fit into a library, tool, or directory
 Filament source tree. We collect them into the `docs_src/src/notes` directory. No additional
 processing are needed for these documents.
 
+### Raw source files
+These are files that are not part of the mdbook generation, but should be included output in /docs
+to point to standalone pages/components (for example, the remote page for Android gltf_viewer). These
+files are stored in `docs_src/src_raw`.
+
 ## Adding more documents
 To add any documentation, first consider the type of the document you like to add. If it
 belongs to any of the above sources, then simply place the document in the appropriate place,
