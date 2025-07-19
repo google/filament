@@ -16,11 +16,9 @@
 
 #include <gtest/gtest.h>
 
-#include <matc/MaterialCompiler.h>
-
-#include "TestMaterialCompiler.h"
-
-#include <utils/JobSystem.h>
+#include "TestMaterialParser.h"
+#include "utils/JobSystem.h"
+#include <filament-matp/MaterialParser.h>
 
 static std::string_view jsonMaterialSourceSimple(R"(
 material {
@@ -36,14 +34,14 @@ compute {
 }
 )");
 
-TEST(TestComputeMaterial, JsonMaterialCompilerSimple) {
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+TEST(TestParseAndComputeMaterial, JsonMaterialCompilerSimple) {
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
 
     filamat::MaterialBuilder::init();
     filamat::MaterialBuilder builder;
 
-    bool result = compiler.parseMaterial(jsonMaterialSourceSimple.data(), jsonMaterialSourceSimple.size(), builder);
+    bool result = testParser.parseMaterial(jsonMaterialSourceSimple.data(), jsonMaterialSourceSimple.size(), builder);
 
     EXPECT_TRUE(result);
 

@@ -24,8 +24,8 @@ using namespace filamat;
 
 namespace matc {
 
-bool Compiler::writeBlob(const Package &pkg, const Config& config) const noexcept {
-    Config::Output* output = config.getOutput();
+bool Compiler::writeBlob(const Package &pkg, const matp::Config& config) const noexcept {
+    matp::Config::Output* output = config.getOutput();
     if (!output->open()) {
         std::cerr << "Unable to create blob file." << std::endl;
         return false;
@@ -37,10 +37,10 @@ bool Compiler::writeBlob(const Package &pkg, const Config& config) const noexcep
     return true;
 }
 
-bool Compiler::writeBlobAsHeader(const Package &pkg, const Config& config) const noexcept {
+bool Compiler::writeBlobAsHeader(const Package &pkg, const matp::Config& config) const noexcept {
     uint8_t* data = pkg.getData();
 
-    Config::Output* output = config.getOutput();
+    matp::Config::Output* output = config.getOutput();
     if (!output->open()) {
         std::cerr << "Unable to create header file." << std::endl;
         return false;

@@ -20,7 +20,7 @@
 #include "Lexer.h"
 #include "JsonishLexeme.h"
 
-namespace matc {
+namespace matp {
 
 // Breaks down a stream of chars into JsonLexemes.
 class JsonishLexer final: public Lexer<JsonLexeme> {
@@ -33,6 +33,6 @@ private:
     JsonType readPunctuation() noexcept;
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif //TNT_JSONLEXER_H

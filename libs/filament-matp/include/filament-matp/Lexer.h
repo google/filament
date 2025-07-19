@@ -21,7 +21,7 @@
 
 #include "Lexeme.h"
 
-namespace matc {
+namespace matp {
 
 // Templated on the class of Lexemes to parse: Material lexeme, JSON Lexemes, GLSL lexemes.
 template <class T>
@@ -121,6 +121,7 @@ protected:
     size_t mLineCounter = 1;
     size_t mLinePosition = 0;
 };
-}
+
+} // namespace matp
 
 #endif //TNT_LEXER_H
