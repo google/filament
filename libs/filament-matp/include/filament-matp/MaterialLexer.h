@@ -20,7 +20,7 @@
 #include "Lexer.h"
 #include "MaterialLexeme.h"
 
-namespace matc {
+namespace matp {
 
 class MaterialLexer final: public Lexer<MaterialLexeme> {
 public:
@@ -35,6 +35,6 @@ private:
     void readUnknown() noexcept;
 };
 
-}
+} // namespace matp
 
 #endif //TNT_MATERIALLEXER_H

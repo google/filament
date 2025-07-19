@@ -17,8 +17,8 @@
 #ifndef TNT_CONFIG_H
 #define TNT_CONFIG_H
 
-#include <filament/MaterialEnums.h>
 #include <backend/DriverEnums.h>
+#include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 
@@ -28,7 +28,7 @@
 
 #include <utils/compiler.h>
 
-namespace matc {
+namespace matp {
 
 class Config {
 public:
@@ -167,6 +167,6 @@ protected:
     bool mIncludeEssl1 = true;
 };
 
-}
+} // namespace matp
 
 #endif //TNT_CONFIG_H

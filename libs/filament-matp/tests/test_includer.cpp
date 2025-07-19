@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include <matc/DirIncluder.h>
+#include <filament-matp/DirIncluder.h>
 
 using namespace utils;
 using namespace filamat;
@@ -26,7 +26,7 @@ const utils::Path root = utils::Path(__FILE__).getParent();
 // TODO: these tests are disabled as they fail on CI, which needs investigation.
 
 TEST(DirIncluder, DISABLED_IncludeNonexistent) {
-    matc::DirIncluder includer;
+    matp::DirIncluder includer;
     {
         IncludeResult i {
             .includeName = CString("nonexistent.h")
@@ -45,7 +45,7 @@ TEST(DirIncluder, DISABLED_IncludeNonexistent) {
 }
 
 TEST(DirIncluder, DISABLED_IncludeFile) {
-    matc::DirIncluder includer;
+    matp::DirIncluder includer;
     includer.setIncludeDirectory(root);
 
     IncludeResult result {
@@ -63,7 +63,7 @@ TEST(DirIncluder, DISABLED_IncludeFile) {
 }
 
 TEST(DirIncluder, DISABLED_IncludeFileFromIncluder) {
-    matc::DirIncluder includer;
+    matp::DirIncluder includer;
     includer.setIncludeDirectory(root);
 
     utils::CString includerFile((root + "Dir/Baz.h").c_str());
