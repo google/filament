@@ -23,6 +23,7 @@
 
 #include "ds/PostProcessDescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
+#include "ds/StructureDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
 #include "materials/StaticMaterialInfo.h"
@@ -103,6 +104,10 @@ public:
     StructurePassOutput structure(FrameGraph& fg,
             RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
+
+    FrameGraphId<FrameGraphTexture> transparentPicking(FrameGraph& fg,
+            RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
+            uint32_t width, uint32_t height, float scale) noexcept;
 
     // reflections pass
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
@@ -393,6 +398,8 @@ public:
             ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
 
+    StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
+
 private:
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
@@ -402,6 +409,7 @@ private:
 
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
+    mutable StructureDescriptorSet mStructureDescriptorSet;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;

@@ -73,8 +73,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
 
 void DescriptorSet::terminate(FEngine::DriverApi& driver) noexcept {
     if (mDescriptorSetHandle) {
-        driver.destroyDescriptorSet(mDescriptorSetHandle);
-        mDescriptorSetHandle.clear();
+        driver.destroyDescriptorSet(std::move(mDescriptorSetHandle));
     }
 }
 

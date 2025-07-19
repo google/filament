@@ -38,7 +38,10 @@ struct CameraInfo;
 
 class StructureDescriptorSet {
 public:
-    explicit StructureDescriptorSet(FEngine& engine) noexcept;
+    StructureDescriptorSet() noexcept;
+    ~StructureDescriptorSet() noexcept;
+
+    void init(FEngine& engine) noexcept;
 
     void terminate(backend::DriverApi& driver);
 
@@ -61,7 +64,7 @@ public:
     void prepareMaterialGlobals(std::array<math::float4, 4> const& materialGlobals) noexcept;
 
 private:
-    DescriptorSetLayout const& mDescriptorSetLayout;
+    DescriptorSetLayout const* mDescriptorSetLayout = nullptr;
     DescriptorSet mDescriptorSet;
     TypedUniformBuffer<PerViewUib> mUniforms;
 };

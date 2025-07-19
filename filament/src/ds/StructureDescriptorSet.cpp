@@ -24,6 +24,9 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
 #include <math/vec4.h>
 
 #include <array>
@@ -33,15 +36,24 @@ namespace filament {
 using namespace backend;
 using namespace math;
 
-StructureDescriptorSet::StructureDescriptorSet(FEngine& engine) noexcept
-        : mDescriptorSetLayout(engine.getPerViewDescriptorSetLayoutDepthVariant()),
-          mUniforms(engine.getDriverApi()) {
+StructureDescriptorSet::StructureDescriptorSet() noexcept = default;
+
+StructureDescriptorSet::~StructureDescriptorSet() noexcept {
+    assert_invariant(!mDescriptorSet.getHandle());
+}
+
+void StructureDescriptorSet::init(FEngine& engine) noexcept {
+
+    mUniforms.init(engine.getDriverApi());
+
+    mDescriptorSetLayout = &engine.getPerViewDescriptorSetLayoutDepthVariant();
+
     // create the descriptor-set from the layout
     mDescriptorSet = DescriptorSet{
-        "StructureDescriptorSet", mDescriptorSetLayout };
+        "StructureDescriptorSet", *mDescriptorSetLayout };
 
     // initialize the descriptor-set
-    mDescriptorSet.setBuffer(mDescriptorSetLayout, +PerViewBindingPoints::FRAME_UNIFORMS,
+    mDescriptorSet.setBuffer(*mDescriptorSetLayout, +PerViewBindingPoints::FRAME_UNIFORMS,
             mUniforms.getUboHandle(), 0, sizeof(PerViewUib));
 }
 
@@ -53,7 +65,11 @@ void StructureDescriptorSet::terminate(DriverApi& driver) {
 void StructureDescriptorSet::commit(DriverApi& driver) noexcept {
     driver.updateBufferObject(mUniforms.getUboHandle(),
             mUniforms.toBufferDescriptor(driver), 0);
-    mDescriptorSet.commit(mDescriptorSetLayout, driver);
+
+    assert_invariant(mDescriptorSetLayout);
+    if (mDescriptorSetLayout) {
+        mDescriptorSet.commit(*mDescriptorSetLayout, driver);
+    }
 }
 
 void StructureDescriptorSet::bind(DriverApi& driver) const noexcept {

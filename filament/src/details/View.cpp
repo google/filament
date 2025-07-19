@@ -854,6 +854,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     auto const fogTransform = tcm.getWorldTransformAccurate(tcm.getInstance(mFogEntity));
 
     auto& colorPassDescriptorSet = getColorPassDescriptorSet();
+    colorPassDescriptorSet.prepareCamera(engine, cameraInfo);
     colorPassDescriptorSet.prepareTime(engine, userTime);
     colorPassDescriptorSet.prepareFog(engine, cameraInfo, fogTransform, mFogOptions,
             scene->getIndirectLight());

@@ -329,6 +329,7 @@ void PostProcessManager::init() noexcept {
 
     mSsrPassDescriptorSet.init(engine);
     mPostProcessDescriptorSet.init(engine);
+    mStructureDescriptorSet.init(engine);
 
     mWorkaroundSplitEasu =
             driver.isWorkaroundNeeded(Workaround::SPLIT_EASU);
@@ -405,6 +406,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
 
     mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mSsrPassDescriptorSet.terminate(driver);
+    mStructureDescriptorSet.terminate(driver);
 }
 
 Handle<HwTexture> PostProcessManager::getOneTexture() const {
@@ -546,7 +548,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 Variant structureVariant(Variant::DEPTH_VARIANT);
                 structureVariant.setPicking(config.picking);
 
-                bindPostProcessDescriptorSet(driver);
+                // bind the per-view descriptorSet that is used for the structure pass
+                getStructureDescriptorSet().bind(driver);
 
                 passBuilder.renderFlags(structureRenderFlags);
                 passBuilder.variant(structureVariant);
@@ -607,6 +610,63 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
             });
 
     return { depth, structurePass->picking };
+}
+
+FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGraph& fg,
+        RenderPassBuilder const& passBuilder, uint8_t const structureRenderFlags,
+        uint32_t width, uint32_t height, float const scale) noexcept {
+
+            struct PickingRenderPassData {
+                FrameGraphId<FrameGraphTexture> depth;
+                FrameGraphId<FrameGraphTexture> picking;
+            };
+            auto const& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                [&](FrameGraph::Builder& builder, auto& data) {
+                    bool const isFL0 = mEngine.getDriverApi().getFeatureLevel() ==
+                        FeatureLevel::FEATURE_LEVEL_0;
+
+                    // TODO: Specify the precision for picking pass
+                     width  = std::max(32u, uint32_t(std::ceil(float(width) * scale)));
+                     height = std::max(32u, uint32_t(std::ceil(float(height) * scale)));
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
+
+                    data.depth = builder.write(data.depth,
+                        FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+
+                    data.picking = builder.createTexture("Picking Buffer", {
+                            .width = width, .height = height,
+                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+
+                    data.picking = builder.write(data.picking,
+                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+
+                    builder.declareRenderPass("Picking Render Target", {
+                            .attachments = {.color = { data.picking }, .depth = data.depth },
+                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
+                        });
+                },
+                [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+                    auto const&, DriverApi& driver) mutable {
+                        Variant pickingVariant(Variant::DEPTH_VARIANT);
+                        pickingVariant.setPicking(true);
+
+                        // bind the per-view descriptorSet that is used for the structure pass
+                        getStructureDescriptorSet().bind(driver);
+
+                        auto [target, params] = resources.getRenderPassInfo();
+                        passBuilder.renderFlags(structureRenderFlags);
+                        passBuilder.variant(pickingVariant);
+                        passBuilder.commandTypeFlags(RenderPass::CommandTypeFlags::DEPTH);
+
+                        RenderPass const pass{ passBuilder.build(mEngine, driver) };
+                        driver.beginRenderPass(target, params);
+                        pass.getExecutor().execute(mEngine, driver);
+                        driver.endRenderPass();
+                });
+
+    return pickingRenderPass->picking;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -858,7 +918,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 });
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                bindPostProcessDescriptorSet(driver);
+                // bind the per-view descriptorSet that is used for the structure pass
+                getStructureDescriptorSet().bind(driver);
 
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderPassInfo();
