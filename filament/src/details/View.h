@@ -102,6 +102,7 @@ class FScene;
 
 class FView : public View {
 public:
+    using MaterialGlobals = std::array<math::float4, 4>;
     using Range = utils::Range<uint32_t>;
 
     explicit FView(FEngine& engine);
@@ -483,6 +484,8 @@ public:
         return mFrameGraphViewerViewHandle;
     }
 
+    MaterialGlobals getMaterialGlobals() const { return mMaterialGlobals; }
+
 private:
     struct FPickingQuery : public PickingQuery {
     private:
@@ -609,12 +612,12 @@ private:
 
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
-    std::array<math::float4, 4> mMaterialGlobals = {{
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                    }};
+    MaterialGlobals mMaterialGlobals = {{
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+    }};
 
     fgviewer::ViewHandle mFrameGraphViewerViewHandle;
 

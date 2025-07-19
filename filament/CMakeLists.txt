@@ -134,12 +134,14 @@ set(SRCS
         src/details/Texture.cpp
         src/details/VertexBuffer.cpp
         src/details/View.cpp
+        src/ds/PerViewDescriptorSetUtils.cpp
         src/ds/ColorPassDescriptorSet.cpp
         src/ds/DescriptorSet.cpp
         src/ds/DescriptorSetLayout.cpp
         src/ds/PostProcessDescriptorSet.cpp
         src/ds/ShadowMapDescriptorSet.cpp
         src/ds/SsrPassDescriptorSet.cpp
+        src/ds/StructureDescriptorSet.cpp
         src/fg/Blackboard.cpp
         src/fg/DependencyGraph.cpp
         src/fg/FrameGraph.cpp

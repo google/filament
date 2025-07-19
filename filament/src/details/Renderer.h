@@ -87,7 +87,7 @@ public:
     void renderStandaloneView(FView const* view);
 
 
-    void setPresentationTime(int64_t monotonic_clock_ns);
+    void setPresentationTime(int64_t monotonic_clock_ns) const;
 
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
@@ -108,7 +108,7 @@ public:
             backend::PixelBufferDescriptor&& buffer);
 
     // read pixel from a rendertarget. must be called between beginFrame/enfFrame.
-    void readPixels(FRenderTarget* renderTarget,
+    void readPixels(FRenderTarget const* renderTarget,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
