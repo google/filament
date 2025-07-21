@@ -291,6 +291,8 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     defaultMi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
 
     for (size_t i = 0; i < 2; i++) {
+        // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
+        // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
         MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
 #else
@@ -468,6 +470,8 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     view->setViewport({ 0, 0, dim, dim });
 
     for (size_t i = 0; i < 2; i++) {
+        // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
+        // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
         MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
 #else
@@ -729,6 +733,8 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         view->setViewport({ 0, 0, dim, dim });
 
         for (size_t i = 0; i < 2; i++) {
+            // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
+            // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
             MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
 #else
