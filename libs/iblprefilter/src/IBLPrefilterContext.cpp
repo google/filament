@@ -433,7 +433,7 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->createInstance();
+    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->getDefaultInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -678,7 +678,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->createInstance();
+    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->getDefaultInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
