@@ -619,10 +619,10 @@ Program FMaterial::getProgramWithVariants(
             .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
             .shaderLanguage(mMaterialParser->getShaderLanguage())
             .diagnostics(mName,
-                    [this, variant, vertexVariant, fragmentVariant](
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
                             io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe() << ", variant=(" << io::hex
-                                   << +variant.key << io::dec << "), vertexVariant=(" << io::hex
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
                                    << +vertexVariant.key << io::dec << "), fragmentVariant=("
                                    << io::hex << +fragmentVariant.key << io::dec << ")";
                     });
