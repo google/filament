@@ -61,7 +61,7 @@ constexpr float4 sFullScreenTriangleVertices[3] = {
     { -1.0f, 3.0f,  1.0f, 1.0f }
 };
 
-constexpr static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
+constexpr uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
 float lodToPerceptualRoughness(float lod) noexcept {
     // Inverse perceptualRoughness-to-LOD mapping:
@@ -83,7 +83,7 @@ constexpr T log4(T x) {
 
 void cleanupMaterialInstance(MaterialInstance const* mi, Engine& engine, RenderableManager& rcm,
     utils::EntityInstance<RenderableManager> const& ci) {
-    // mi is already nullptr, there is no need to clean up.
+    // mi is already nullptr, there is no need to clean up again.
     if (mi == nullptr)
         return;
 
