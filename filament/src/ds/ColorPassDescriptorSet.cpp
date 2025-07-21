@@ -345,25 +345,6 @@ void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
     s.ssrDistance = (ssrOptions.enabled && !disableSSR) ? ssrOptions.maxDistance : 0.0f;
 }
 
-void ColorPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
-        mat4f const& historyProjection,
-        mat4f const& uvFromViewMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
-
-    setSampler(+PerViewBindingPoints::SSR, ssr, {
-        .filterMag = SamplerMagFilter::LINEAR,
-        .filterMin = SamplerMinFilter::LINEAR
-    });
-
-    auto& s = mUniforms.edit();
-    s.ssrReprojection = historyProjection;
-    s.ssrUvFromViewMatrix = uvFromViewMatrix;
-    s.ssrThickness = ssrOptions.thickness;
-    s.ssrBias = ssrOptions.bias;
-    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
-    s.ssrStride = ssrOptions.stride;
-}
-
 void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexcept {
     // sampler must be NEAREST
     setSampler(+PerViewBindingPoints::STRUCTURE, structure, {});

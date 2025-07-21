@@ -76,7 +76,7 @@ void SsrPassDescriptorSet::prepareHistorySSR(FEngine const& engine, Handle<HwTex
         ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
 
     mDescriptorSet.setSampler(engine.getPerViewDescriptorSetLayoutSsrVariant(),
-            +PerViewBindingPoints::SSR, ssr, {
+            +PerViewBindingPoints::SSR_HISTORY, ssr, {
                 .filterMag = SamplerMagFilter::LINEAR,
                 .filterMin = SamplerMinFilter::LINEAR
             });
