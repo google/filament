@@ -6,7 +6,7 @@ material {
             name : depth,
             precision: high,
             multisample : true,
-            unfilterable: true
+            filterable: false
         }
     ],
     outputs : [

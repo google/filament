@@ -67,7 +67,8 @@ public:
         return mDefaultTextureView;
     }
 
-    [[nodiscard]] wgpu::TextureView getOrMakeTextureView(uint8_t mipLevel, uint32_t arrayLayer);
+    [[nodiscard]] wgpu::TextureView makeAttachmentTextureView(uint8_t mipLevel, uint32_t arrayLayer,
+            uint32_t layerCount);
 
     [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
@@ -147,7 +148,7 @@ private:
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,
-            const uint32_t& arrayLayerCount, SamplerType samplerType) const noexcept;
+            const uint32_t& arrayLayerCount, wgpu::TextureViewDimension dimension) const noexcept;
 };
 
 }// namespace filament::backend

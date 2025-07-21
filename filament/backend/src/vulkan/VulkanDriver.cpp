@@ -231,7 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
-            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), &mContext);
+            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), mContext);
 #endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -422,7 +422,7 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 
 void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
-    mCommands.flush();
+    endCommandRecording();
     collectGarbage();
 }
 
@@ -462,13 +462,13 @@ void VulkanDriver::updateDescriptorSetTexture(
 
 void VulkanDriver::flush(int) {
     FVK_SYSTRACE_SCOPE();
-    mCommands.flush();
+    endCommandRecording();
 }
 
 void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_SCOPE();
 
-    mCommands.flush();
+    endCommandRecording();
     mCommands.wait();
 
     mReadPixels.runUntilComplete();
@@ -1635,7 +1635,7 @@ void VulkanDriver::stopCapture(int) {}
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& pbd) {
     auto srcTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, src);
-    mCommands.flush();
+    endCommandRecording();
     mReadPixels.run(
             srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
             std::move(pbd),
@@ -2056,6 +2056,11 @@ void VulkanDriver::resetState(int) {
 
 void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
     mResourceManager.associateHandle(handleId, std::move(tag));
+}
+
+void VulkanDriver::endCommandRecording() {
+    mCommands.flush();
+    mPipelineCache.resetBoundPipeline();
 }
 
 // explicit instantiation of the Dispatcher

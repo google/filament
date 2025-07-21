@@ -262,22 +262,20 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         token->attributes = std::move(program.getAttributes());
     }
 
-    // Try retrieving the cached program blob if available.
-    token->gl.program = mBlobCache.retrieve(&token->key, mDriver.mPlatform, program);
-    if (token->gl.program) {
-        token->retrievedFromBlobCache = true;
-        return token;
-    }
-
     // Initiate program compilation.
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
     switch (mMode) {
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, program = std::move(program), token]() mutable {
-                        compileShaders(gl, std::move(program.getShadersSource()),
-                                program.getSpecializationConstants(), program.isMultiview(), token);
-                        linkProgram(gl, token);
+                        // Try retrieving the program from the cache first. If no program found,
+                        // a normal compilation/linking process is performed.
+                        if (!tryRetrievingProgram(mBlobCache, mDriver.mPlatform, program, token)) {
+                            compileShaders(gl, std::move(program.getShadersSource()),
+                                    program.getSpecializationConstants(), program.isMultiview(),
+                                    token);
+                            linkProgram(gl, token);
+                        }
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
                         // because it'll be done in the engine thread.
@@ -292,29 +290,33 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 
         case Mode::SYNCHRONOUS:
         case Mode::ASYNCHRONOUS: {
-            compileShaders(gl, std::move(program.getShadersSource()),
-                    program.getSpecializationConstants(), program.isMultiview(), token);
+            // Try retrieving the program from the cache first. If no program found,
+            // a normal compilation/linking process is performed.
+            if (!tryRetrievingProgram(mBlobCache, mDriver.mPlatform, program, token)) {
+                compileShaders(gl, std::move(program.getShadersSource()),
+                        program.getSpecializationConstants(), program.isMultiview(), token);
 
-            runAtNextTick(priorityQueue, token, [this, token](Job const&) {
-                assert_invariant(mMode != Mode::THREAD_POOL);
-                if (mMode == Mode::ASYNCHRONOUS) {
-                    // Check link completion if link was initiated.
-                    if (token->gl.program) {
-                        return isLinkCompleted(token);
-                    }
-                    // Link hasn't been initiated, then check compile completion.
-                    if (!isCompileCompleted(token)) {
-                        return false;
-                    }
-                }
-                if (!token->gl.program) {
-                    linkProgram(mDriver.getContext(), token);
+                runAtNextTick(priorityQueue, token, [this, token](Job const&) {
+                    assert_invariant(mMode != Mode::THREAD_POOL);
                     if (mMode == Mode::ASYNCHRONOUS) {
-                        return false;// Wait until the link finishes.
+                        // Check link completion if link was initiated.
+                        if (token->gl.program) {
+                            return isLinkCompleted(token);
+                        }
+                        // Link hasn't been initiated, then check compile completion.
+                        if (!isCompileCompleted(token)) {
+                            return false;
+                        }
                     }
-                }
-                return true;
-            });
+                    if (!token->gl.program) {
+                        linkProgram(mDriver.getContext(), token);
+                        if (mMode == Mode::ASYNCHRONOUS) {
+                            return false; // Wait until the link finishes.
+                        }
+                    }
+                    return true;
+                });
+            }
             break;
         }
 
@@ -345,14 +347,12 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
     assert_invariant(token);// This function should be called when the token is still alive.
 
     // Finalize any pending shader compilation tasks only when the token was created without cache.
-    if (!token->retrievedFromBlobCache) {
-        if (token->compiler.mMode == Mode::THREAD_POOL) {
-            auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
-            if (!job) {
-                // It's likely that the job was already completed. But it may be still being
-                // executed at this moment. Just try waiting for it to avoid a race.
-                token->wait();
-            }
+    if (token->compiler.mMode == Mode::THREAD_POOL) {
+        auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
+        if (!job) {
+            // It's likely that the job was already completed. But it may be still being
+            // executed at this moment. Just try waiting for it to avoid a race.
+            token->wait();
         }
     }
 
@@ -722,10 +722,23 @@ void ShaderCompilerService::executeTickOps() noexcept {
     return linked;
 }
 
+/* static */ bool ShaderCompilerService::tryRetrievingProgram(OpenGLBlobCache& cache,
+        OpenGLPlatform& platform, Program const& program, program_token_t const& token) noexcept {
+    token->gl.program = cache.retrieve(&token->key, platform, program);
+    if (!token->gl.program) {
+        return false;
+    }
+    token->retrievedFromBlobCache = true;
+    return true;
+}
+
 /* static */ void ShaderCompilerService::tryCachingProgram(OpenGLBlobCache& cache,
         OpenGLPlatform& platform, program_token_t const& token) noexcept {
     if (!token->key || !token->gl.program) {
         return; // Invalid params
+    }
+    if (token->retrievedFromBlobCache) {
+        return; // Don't store in the cache if it's loaded from the cache.
     }
     GLint status = GL_FALSE;
     glGetProgramiv(token->gl.program, GL_LINK_STATUS, &status);

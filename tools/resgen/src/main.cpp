@@ -190,7 +190,6 @@ int main(int argc, char* argv[]) {
 
     std::string packageFile = g_packageName;
     std::string packagePrefix = std::string(g_packageName) + "_";
-    transform(packageFile.begin(), packageFile.end(), packageFile.begin(), ::tolower);
     transform(packagePrefix.begin(), packagePrefix.end(), packagePrefix.begin(), ::toupper);
     std::string package = packagePrefix + "PACKAGE";
 
