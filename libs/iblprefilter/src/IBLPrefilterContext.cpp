@@ -50,18 +50,20 @@
 
 #include "generated/resources/iblprefilter_materials.h"
 
+namespace {
+
 using namespace filament::math;
 using namespace filament;
 
-constexpr static float4 sFullScreenTriangleVertices[3] = {
-        { -1.0f, -1.0f, 1.0f, 1.0f },
-        { 3.0f,  -1.0f, 1.0f, 1.0f },
-        { -1.0f, 3.0f,  1.0f, 1.0f }
+constexpr float4 sFullScreenTriangleVertices[3] = {
+    { -1.0f, -1.0f, 1.0f, 1.0f },
+    { 3.0f,  -1.0f, 1.0f, 1.0f },
+    { -1.0f, 3.0f,  1.0f, 1.0f }
 };
 
 constexpr static const uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-static float lodToPerceptualRoughness(float lod) noexcept {
+float lodToPerceptualRoughness(float lod) noexcept {
     // Inverse perceptualRoughness-to-LOD mapping:
     // The LOD-to-perceptualRoughness mapping is a quadratic fit for
     // log2(perceptualRoughness)+iblMaxMipLevel when iblMaxMipLevel is 4.
@@ -75,9 +77,21 @@ static float lodToPerceptualRoughness(float lod) noexcept {
 }
 
 template<typename T>
-static inline constexpr T log4(T x) {
+constexpr T log4(T x) {
     return std::log2(x) * T(0.5);
 }
+
+void cleanupMaterialInstance(MaterialInstance const* mi, Engine& engine, RenderableManager& rcm,
+    utils::EntityInstance<RenderableManager> const& ci) {
+    // mi is already nullptr, there is no need to clean up.
+    if (mi == nullptr)
+        return;
+
+    rcm.clearMaterialInstanceAt(ci, 0);
+    engine.destroy(mi);
+}
+
+} // anonymous
 
 
 IBLPrefilterContext::IBLPrefilterContext(Engine& engine)
@@ -227,7 +241,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mEquirectMaterial->createInstance();
+    MaterialInstance* const defaultMi = mEquirectMaterial->getDefaultInstance();
 
     FILAMENT_CHECK_PRECONDITION(equirect != nullptr) << "equirect is null!";
 
@@ -256,14 +270,13 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
-    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     TextureSampler environmentSampler;
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
     environmentSampler.setAnisotropy(16.0f); // maybe make this an option
 
-    mi->setParameter("equirect", equirect, environmentSampler);
+    defaultMi->setParameter("equirect", equirect, environmentSampler);
 
     // We need mipmaps because we're sampling down
     equirect->generateMipmaps(engine);
@@ -275,9 +288,16 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
            .texture(RenderTarget::AttachmentPoint::COLOR1, outCube)
            .texture(RenderTarget::AttachmentPoint::COLOR2, outCube);
 
-    mi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
+    defaultMi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
 
     for (size_t i = 0; i < 2; i++) {
+#if defined(__EMSCRIPTEN__)
+        MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+#else
+        MaterialInstance *const mi = defaultMi;
+#endif
+        rcm.setMaterialInstanceAt(ci, 0, mi);
+
         mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
         mi->commit(engine);
 
@@ -289,10 +309,13 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         view->setRenderTarget(rt);
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
+
+#if defined(__EMSCRIPTEN__)
+        cleanupMaterialInstance(mi, engine, rcm, ci);
+#endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-    engine.destroy(mi);
 
     return outCube;
 }
@@ -344,10 +367,8 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
 
     renderer->renderStandaloneView(view);
 
-    rcm.clearMaterialInstanceAt(ci, 0);
-
+    cleanupMaterialInstance(mi, engine, rcm, ci);
     engine.destroy(rt);
-    engine.destroy(mi);
 }
 
 UTILS_NOINLINE
@@ -412,11 +433,10 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mContext.mIrradianceIntegrationMaterial->createInstance();
+    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
-    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     const uint32_t sampleCount = mSampleCount;
     const float linear = options.hdrLinear;
@@ -428,11 +448,11 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
 
-    mi->setParameter("environment", environmentCubemap, environmentSampler);
-    mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
-    mi->setParameter("compress", float2{ linear, compress });
-    mi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
-    mi->setParameter("sampleCount", sampleCount);
+    defaultMi->setParameter("environment", environmentCubemap, environmentSampler);
+    defaultMi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
+    defaultMi->setParameter("compress", float2{ linear, compress });
+    defaultMi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
+    defaultMi->setParameter("sampleCount", sampleCount);
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -448,6 +468,13 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     view->setViewport({ 0, 0, dim, dim });
 
     for (size_t i = 0; i < 2; i++) {
+#if defined(__EMSCRIPTEN__)
+        MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+#else
+        MaterialInstance *const mi = defaultMi;
+#endif
+        rcm.setMaterialInstanceAt(ci, 0, mi);
+
         mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
         mi->commit(engine);
 
@@ -459,11 +486,13 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
         view->setRenderTarget(rt);
         renderer->renderStandaloneView(view);
         engine.destroy(rt);
+
+#if defined(__EMSCRIPTEN__)
+        cleanupMaterialInstance(mi, engine, rcm, ci);
+#endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-
-    engine.destroy(mi);
 
     return outIrradianceTexture;
 }
@@ -554,10 +583,8 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
 
     renderer->renderStandaloneView(view);
 
-    rcm.clearMaterialInstanceAt(ci, 0);
-
+    cleanupMaterialInstance(mi, engine, rcm, ci);
     engine.destroy(rt);
-    engine.destroy(mi);
 }
 
 UTILS_NOINLINE
@@ -651,11 +678,10 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const mi = mContext.mIntegrationMaterial->createInstance();
+    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
-    rcm.setMaterialInstanceAt(ci, 0, mi);
 
     const uint32_t sampleCount = mSampleCount;
     const float linear = options.hdrLinear;
@@ -668,10 +694,10 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
 
-    mi->setParameter("environment", environmentCubemap, environmentSampler);
-    mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
-    mi->setParameter("compress", float2{ linear, compress });
-    mi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
+    defaultMi->setParameter("environment", environmentCubemap, environmentSampler);
+    defaultMi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
+    defaultMi->setParameter("compress", float2{ linear, compress });
+    defaultMi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -686,14 +712,14 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     for (size_t lod = 0; lod < levels; lod++) {
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "executeFilterLOD");
 
-        mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
-        mi->setParameter("attachmentLevel", uint32_t(lod));
+        defaultMi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
+        defaultMi->setParameter("attachmentLevel", uint32_t(lod));
 
         if (lod == levels - 1) {
             // this is the last lod, use a more aggressive filtering because this level is also
             // used for the diffuse brdf by filament, and we need it to be very smooth.
             // So we set the lod offset to at least 2.
-            mi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));
+            defaultMi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));
         }
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
@@ -703,6 +729,13 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
         view->setViewport({ 0, 0, dim, dim });
 
         for (size_t i = 0; i < 2; i++) {
+#if defined(__EMSCRIPTEN__)
+            MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+#else
+            MaterialInstance *const mi = defaultMi;
+#endif
+            rcm.setMaterialInstanceAt(ci, 0, mi);
+
             mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
             mi->commit(engine);
 
@@ -714,14 +747,16 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
             view->setRenderTarget(rt);
             renderer->renderStandaloneView(view);
             engine.destroy(rt);
+
+#if defined(__EMSCRIPTEN__)
+            cleanupMaterialInstance(mi, engine, rcm, ci);
+#endif
         }
 
         dim >>= 1;
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-
-    engine.destroy(mi);
 
     return outReflectionsTexture;
 }
