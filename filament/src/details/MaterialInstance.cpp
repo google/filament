@@ -284,11 +284,13 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
         auto const& descriptorSetLayout = mMaterial->getDescriptorSetLayout();
         DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
         TextureType const textureType = texture->getTextureType();
+        SamplerType const samplerType = texture->getTarget();
 
         FILAMENT_CHECK_PRECONDITION(
-                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, descriptorType))
+                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, samplerType, descriptorType))
                 << "Texture format " << int(texture->getFormat())
                 << " of type " << to_string(textureType)
+                << " with sampler type " << to_string(samplerType)
                 << " is not compatible with material \"" << getMaterial()->getName().c_str() << "\""
                 << " parameter \"" << name << "\""
                 << " of type " << to_string(descriptorType);

@@ -86,7 +86,8 @@ public:
     }
 
     static bool isTextureCompatibleWithDescriptor(
-        backend::TextureType t, backend::DescriptorType d) noexcept;
+            backend::TextureType t, backend::SamplerType s,
+            backend::DescriptorType d) noexcept;
 
 private:
     struct Desc {
