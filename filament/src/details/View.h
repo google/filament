@@ -110,7 +110,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
+    CameraInfo computeCameraInfo(FEngine const& engine) const noexcept;
 
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
@@ -618,7 +618,7 @@ private:
             { 0, 0, 0, 1 },
     }};
 
-    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle{};
 
 #ifndef NDEBUG
     struct DebugState {

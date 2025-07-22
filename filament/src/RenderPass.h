@@ -521,9 +521,9 @@ public:
     }
 
     // Specifies camera information (e.g. used for sorting commands)
-    RenderPassBuilder& camera(const CameraInfo& camera) noexcept {
-        mCameraPosition = camera.getPosition();
-        mCameraForwardVector = camera.getForwardVector();
+    RenderPassBuilder& camera(math::float3 position, math::float3 forward) noexcept {
+        mCameraPosition = position;
+        mCameraForwardVector = forward;
         return *this;
     }
 
