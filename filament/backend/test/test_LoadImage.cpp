@@ -48,7 +48,7 @@ layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
 // This parameter is ignored for other backends.
-layout(location = 0, set = 0) uniform {samplerType} test_tex;
+layout(binding = 0, set = 0) uniform {samplerType} test_tex;
 
 void main() {
     vec2 fbsize = vec2({texSize});
@@ -66,7 +66,7 @@ std::string fragmentUpdateImage3DTemplate (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 0) uniform {samplerType} test_tex;
+layout(binding = 0, set = 0) uniform {samplerType} test_tex;
 
 float getLayer(in sampler3D s) { return 2.5f / 4.0f; }
 float getLayer(in sampler2DArray s) { return 2.0f; }
@@ -87,7 +87,7 @@ std::string fragmentUpdateImageMip (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 
 // Filament's Vulkan backend requires a descriptor set index of 1 for all samplers.
-layout(location = 0, set = 0) uniform sampler2D test_tex;
+layout(binding = 0, set = 0) uniform sampler2D test_tex;
 
 void main() {
     vec2 fbsize = vec2({texSize});
@@ -314,9 +314,11 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         Cleanup cleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        assert_invariant(defaultRenderTarget);
+
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -374,21 +376,17 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-                ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
-
         api.commit(swapChain);
         api.endFrame(0);
+        
+        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+                ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
     }
 
     api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -397,10 +395,13 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     PixelDataType const pixelType = PixelDataType::UBYTE;
     TextureFormat const textureFormat = TextureFormat::SRGB8_A8;
 
+    
     // Create a platform-specific SwapChain and make it current.
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    assert_invariant(defaultRenderTarget);
+
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -463,20 +464,17 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.draw2(0, 3, 1);
     api.endRenderPass();
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-            ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
-
     api.commit(swapChain);
     api.endFrame(0);
+    api.finish();
+
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
 
     api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -486,9 +484,11 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     TextureFormat textureFormat = TextureFormat::RGBA32F;
 
     // Create a platform-specific SwapChain and make it current.
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    assert_invariant(defaultRenderTarget);
+
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -537,21 +537,17 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
         api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+
+        api.commit(swapChain);
     }
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
             ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
 
-    api.commit(swapChain);
-    api.endFrame(0);
-
     api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
             "see b/417254499");
@@ -566,9 +562,11 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     TextureUsage usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
 
     // Create a platform-specific SwapChain and make it current.
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    assert_invariant(defaultRenderTarget);
+
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -624,10 +622,10 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
-
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
-                ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
     }
+
+    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
 
     api.stopCapture();
 }

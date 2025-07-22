@@ -82,10 +82,10 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         // Create source color and depth textures.
         Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
                 kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC));
         Handle<HwTexture> depthTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::DEPTH16, 1, 512, 512, 1,
-                TextureUsage::DEPTH_ATTACHMENT));
+                TextureUsage::DEPTH_ATTACHMENT  | TextureUsage::BLIT_SRC));
 
         // Render into the bottom-left quarter of the texture.
         Viewport srcRect = {
@@ -132,11 +132,12 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(fullRenderTarget, getExpectations(),
-                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
-
         api.commit(swapChain);
         api.endFrame(0);
+        api.finish();
+
+        EXPECT_IMAGE(fullRenderTarget, getExpectations(),
+                ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.stopCapture(0);
     }
@@ -165,7 +166,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         // Create a source color textures.
         Handle<HwTexture> srcTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 TextureFormat::RGBA8, 1, 512, 512, 1,
-                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+                TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC));
 
         // Render into the bottom-left quarter of the texture, checking 3 special cases.
         // 1. negative viewport left/bottom
@@ -224,11 +225,12 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
-
         api.commit(swapChain);
         api.endFrame(0);
+        api.finish();
+
+        EXPECT_IMAGE(renderTarget, getExpectations(),
+                ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.stopCapture(0);
     }
