@@ -23,6 +23,7 @@
     - [Running with ASAN and UBSAN](./notes/asan_ubsan.md)
     - [Using Instruments on macOS](./notes/instruments.md)
     - [Code coverage analysis](./notes/coverage.md)
+  - [Framegraph](./notes/framegraph.md)
   - [Libraries](./notes/libs.md)
     - [bluegl](./dup/bluegl.md)
     - [bluevk](./dup/bluevk.md)
