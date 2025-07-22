@@ -1381,6 +1381,11 @@ void ShadowMap::prepareTime(Transaction const& transaction,
     ShadowMapDescriptorSet::prepareTime(transaction, engine, userTime);
 }
 
+void ShadowMap::prepareMaterialGlobals(Transaction const& transaction,
+        std::array<float4, 4> const& materialGlobals) noexcept {
+    ShadowMapDescriptorSet::prepareMaterialGlobals(transaction, materialGlobals);
+}
+
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,
         bool const highPrecision) noexcept {
     ShadowMapDescriptorSet::prepareShadowMapping(transaction, highPrecision);

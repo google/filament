@@ -189,6 +189,10 @@ private:
     void renderInternal(FView const* view);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
 
+    std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
+            TemporalAntiAliasingOptions const& taaOptions,
+            DynamicResolutionOptions const& dsrOptions);
+
     // keep a reference to our engine
     FEngine& mEngine;
     FrameSkipper mFrameSkipper;

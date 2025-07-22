@@ -29,6 +29,8 @@
 
 #include <math/vec4.h>
 
+#include <array>
+
 namespace filament {
 
 struct CameraInfo;
@@ -69,7 +71,8 @@ public:
     static void prepareTime(Transaction const& transaction,
             FEngine const& engine, math::float4 const& userTime) noexcept;
 
-    // FIXME: I think this misses prepareMaterialGlobals()
+    static void prepareMaterialGlobals(Transaction const& transaction,
+            std::array<math::float4, 4> const& materialGlobals) noexcept;
 
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
