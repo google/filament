@@ -42,15 +42,6 @@ public:
     void generateMipmaps(wgpu::Queue const&, wgpu::Texture const&);
 
 private:
-    enum class ScalarSampleType : uint8_t {
-        F32,
-        I32,
-        U32,
-    };
-
-    [[nodiscard]] constexpr static ScalarSampleType getScalarSampleTypeFrom(
-            wgpu::TextureFormat format);
-
     [[nodiscard]] wgpu::RenderPipeline& getOrCreatePipelineFor(wgpu::TextureFormat);
 
     void generateMipmap(wgpu::CommandEncoder const&, wgpu::Texture const&,

@@ -19,6 +19,7 @@
 #include "WebGPUConstants.h"
 #include "WebGPURenderPassMipmapGenerator.h"
 #include "WebGPUStrings.h"
+#include "WebGPUTextureHelpers.h"
 
 #include "DriverBase.h"
 #include "private/backend/BackendUtils.h"
@@ -61,37 +62,6 @@ namespace {
         case SamplerType::SAMPLER_EXTERNAL:      return "an_external_user_texture_view";
         case SamplerType::SAMPLER_3D:            return "a_3D_user_texture_view";
         case SamplerType::SAMPLER_CUBEMAP_ARRAY: return "a_cube_map_array_user_texture_view";
-    }
-}
-
-/**
- * @param format texture format to potentially be used for storage binding
- * @return true if the format is compatible with wgpu::TextureUsage::StorageBinding
- */
-[[nodiscard]] constexpr bool isFormatStorageCompatible(const wgpu::TextureFormat format) {
-    switch (format) {
-        // List of formats that support storage binding
-        case wgpu::TextureFormat::R32Float:
-        case wgpu::TextureFormat::R32Sint:
-        case wgpu::TextureFormat::R32Uint:
-        case wgpu::TextureFormat::RG32Float:
-        case wgpu::TextureFormat::RG32Sint:
-        case wgpu::TextureFormat::RG32Uint:
-        case wgpu::TextureFormat::RGBA16Float:
-        case wgpu::TextureFormat::RGBA16Sint:
-        case wgpu::TextureFormat::RGBA16Uint:
-        case wgpu::TextureFormat::RGBA32Float:
-        case wgpu::TextureFormat::RGBA32Sint:
-        case wgpu::TextureFormat::RGBA32Uint:
-        case wgpu::TextureFormat::RGBA8Unorm:
-        case wgpu::TextureFormat::RGBA8Snorm:
-        case wgpu::TextureFormat::RGBA8Uint:
-        case wgpu::TextureFormat::RGBA8Sint:
-            return true;
-        default:
-            // All other formats, including packed floats (RG11B10Ufloat),
-            // depth/stencil, and sRGB formats do not support storage.
-            return false;
     }
 }
 
@@ -247,18 +217,6 @@ namespace {
     }
 
     return wgpu::TextureAspect::All;
-}
-
-[[nodiscard]] constexpr wgpu::TextureViewDimension toWebGPUTextureViewDimension(
-        const SamplerType samplerType) {
-    switch (samplerType) {
-        case SamplerType::SAMPLER_2D:            return wgpu::TextureViewDimension::e2D;
-        case SamplerType::SAMPLER_2D_ARRAY:      return wgpu::TextureViewDimension::e2DArray;
-        case SamplerType::SAMPLER_CUBEMAP:       return wgpu::TextureViewDimension::Cube;
-        case SamplerType::SAMPLER_EXTERNAL:      return wgpu::TextureViewDimension::e2D;
-        case SamplerType::SAMPLER_3D:            return wgpu::TextureViewDimension::e3D;
-        case SamplerType::SAMPLER_CUBEMAP_ARRAY: return wgpu::TextureViewDimension::CubeArray;
-    }
 }
 
 [[nodiscard]] constexpr wgpu::TextureDimension toWebGPUTextureDimension(

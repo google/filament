@@ -23,6 +23,7 @@
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/WebGPUTextureSwizzler.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -85,6 +86,7 @@ private:
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
+    WebGPUTextureSwizzler mTextureSwizzler;
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;

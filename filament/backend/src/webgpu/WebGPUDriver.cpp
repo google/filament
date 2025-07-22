@@ -28,6 +28,7 @@
 #include "WebGPUStrings.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
+#include "WebGPUTextureSwizzler.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
 #include <backend/platforms/WebGPUPlatform.h>
@@ -77,6 +78,7 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mPipelineCache{ mDevice },
       mRenderPassMipmapGenerator{ mDevice },
       mSpdComputePassMipmapGenerator{ mDevice },
+      mTextureSwizzler{ mDevice },
       mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
           driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags } {
     mDevice.GetLimits(&mDeviceLimits);
@@ -407,10 +409,24 @@ void WebGPUDriver::createTextureViewR(Handle<HwTexture> textureHandle,
 }
 
 void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
-        Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
-        const backend::TextureSwizzle g, const backend::TextureSwizzle b,
-        const backend::TextureSwizzle a) {
-    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
+        Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle red,
+        const backend::TextureSwizzle green, const backend::TextureSwizzle blue,
+        const backend::TextureSwizzle alpha) {
+    auto source{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    auto destination{ handleCast<WebGPUTexture>(textureHandle) };
+    // TODO fix this. This does not work. The "destination" texture at this point is "junk", meaning
+    //      we need to create it here. Also, we should NOT do the swizzling at this point either,
+    //      as we should track the swizzle parameters such that we can have swizzles of swizzles
+    //      (they can be stacked), and we should only do the actual swizzle action below when it
+    //      time to use the texture. As a result, we are abandoning this custom implementation
+    //      in favor of using Dawn's texture sizzle view when we can (otherwise tell Filament above
+    //      that we can't swizzle textures).
+    PANIC_POSTCONDITION("The texture swizzling implementation is not complete. We need to support "
+                        "swizzle stacking and lazy swizzle computation at the appropriate places "
+                        "fot this implementation to be viable. Most likely, we should use Dawn's "
+                        "texture swizzle view or nothing.");
+    mTextureSwizzler.swizzle(mQueue, source->getTexture(), destination->getTexture(), red, green,
+            blue, alpha);
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
@@ -554,7 +570,7 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
-    return false;
+    return true;
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {

@@ -26,20 +26,6 @@
 
 namespace filament::backend {
 
-[[nodiscard]] constexpr bool hasStencil(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
-           textureFormat == wgpu::TextureFormat::Stencil8;
-}
-
-[[nodiscard]] constexpr bool hasDepth(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth16Unorm ||
-           textureFormat == wgpu::TextureFormat::Depth32Float ||
-           textureFormat == wgpu::TextureFormat::Depth24Plus ||
-           textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8;
-}
-
 class WebGPUTexture : public HwTexture {
 public:
     enum class MipmapGenerationStrategy : uint8_t {
