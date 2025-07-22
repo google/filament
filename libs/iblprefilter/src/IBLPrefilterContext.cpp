@@ -63,7 +63,7 @@ constexpr float4 sFullScreenTriangleVertices[3] = {
 
 constexpr uint16_t sFullScreenTriangleIndices[3] = { 0, 1, 2 };
 
-float lodToPerceptualRoughness(float lod) noexcept {
+static float lodToPerceptualRoughness(float lod) noexcept {
     // Inverse perceptualRoughness-to-LOD mapping:
     // The LOD-to-perceptualRoughness mapping is a quadratic fit for
     // log2(perceptualRoughness)+iblMaxMipLevel when iblMaxMipLevel is 4.
@@ -81,8 +81,8 @@ constexpr T log4(T x) {
     return std::log2(x) * T(0.5);
 }
 
-void cleanupMaterialInstance(MaterialInstance const* mi, Engine& engine, RenderableManager& rcm,
-    utils::EntityInstance<RenderableManager> const& ci) {
+static void cleanupMaterialInstance(MaterialInstance const* mi, Engine& engine, RenderableManager& rcm,
+    RenderableManager::Instance const& ci) {
     // mi is already nullptr, there is no need to clean up again.
     if (mi == nullptr)
         return;
@@ -241,7 +241,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mEquirectMaterial->getDefaultInstance();
+    MaterialInstance* const defaultMi = mEquirectMaterial->createInstance();
 
     FILAMENT_CHECK_PRECONDITION(equirect != nullptr) << "equirect is null!";
 
@@ -318,6 +318,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
+    engine.destroy(defaultMi);
 
     return outCube;
 }
@@ -435,7 +436,7 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->getDefaultInstance();
+    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -497,6 +498,7 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
+    engine.destroy(defaultMi);
 
     return outIrradianceTexture;
 }
@@ -682,7 +684,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->getDefaultInstance();
+    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -763,6 +765,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
+    engine.destroy(defaultMi);
 
     return outReflectionsTexture;
 }
