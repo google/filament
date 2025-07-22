@@ -20,9 +20,12 @@
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
+#include <utils/CString.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 namespace filament::backend {
@@ -34,8 +37,11 @@ public:
         bool hasDynamicOffset = false;
     };
 
-    WebGPUDescriptorSetLayout(DescriptorSetLayout const&, wgpu::Device const&);
+    WebGPUDescriptorSetLayout(std::string_view const& label, DescriptorSetLayout const&,
+            wgpu::Device const&);
     ~WebGPUDescriptorSetLayout() = default;
+
+    [[nodiscard]] std::string_view getLabel() const { return std::string_view{ mLabel.data() }; }
 
     [[nodiscard]] wgpu::BindGroupLayout const& getLayout() const { return mLayout; }
 
@@ -44,6 +50,7 @@ public:
     }
 
 private:
+    utils::CString mLabel{};
     std::vector<BindGroupEntryInfo> mBindGroupEntries;
     wgpu::BindGroupLayout mLayout = nullptr;
 };

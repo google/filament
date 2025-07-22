@@ -23,6 +23,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <string_view>
 
 namespace filament::backend {
 
@@ -146,8 +147,8 @@ private:
     // For now that complexity and cost is not warranted due to WebGPU's restrictions.
     wgpu::Texture mMsaaSidecarTexture = nullptr;
 
-    [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
-            const uint8_t& levelCount, const uint32_t& baseArrayLayer,
+    [[nodiscard]] wgpu::TextureView makeTextureView(std::string_view const& label,
+            const uint8_t& baseLevel, const uint8_t& levelCount, const uint32_t& baseArrayLayer,
             const uint32_t& arrayLayerCount, wgpu::TextureViewDimension dimension) const noexcept;
 };
 

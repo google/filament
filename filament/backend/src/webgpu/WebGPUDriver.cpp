@@ -55,6 +55,7 @@
 #include <memory>
 #include <sstream>
 #include <utility>
+#include <variant>
 
 using namespace std::chrono_literals;
 
@@ -488,14 +489,30 @@ void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
 void WebGPUDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle,
         backend::DescriptorSetLayout&& info) {
-    constructHandle<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle, std::move(info), mDevice);
+    const std::string_view label{ std::holds_alternative<utils::StaticString>(info.label)
+                                          ? std::get<utils::StaticString>(info.label).c_str()
+                                          : std::get<utils::CString>(info.label).c_str_safe() };
+    constexpr static std::string_view labelOfInterest{ "ssrVariant" };
+    if (labelOfInterest == label) {
+        FWGPU_LOGD << labelOfInterest << " bindGroupLayout (" << info.bindings.size()
+                   << " bindings):";
+        for (auto const& binding: info.bindings) {
+            FWGPU_LOGD << "  binding " << +binding.binding << " type " << to_string(binding.type)
+                       << (any(binding.flags & DescriptorFlags::DYNAMIC_OFFSET) ? " DYNAMIC_OFFSET "
+                                                                                : " (not dynamic offset) ")
+                       << (any(binding.flags & DescriptorFlags::UNFILTERABLE) ? " UNFILTERABLE "
+                                                                              : " (not unfilterable) ");
+        }
+    }
+    constructHandle<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle, label, std::move(info),
+            mDevice);
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> descriptorSetHandle,
         Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle);
-    constructHandle<WebGPUDescriptorSet>(descriptorSetHandle, layout->getLayout(),
-            layout->getBindGroupEntries());
+    constructHandle<WebGPUDescriptorSet>(descriptorSetHandle, layout->getLabel(),
+            layout->getLayout(), layout->getBindGroupEntries());
 }
 
 Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
@@ -1341,6 +1358,18 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
         const SamplerParams params) {
     auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     auto texture = handleCast<WebGPUTexture>(textureHandle);
+
+    constexpr static std::string_view labelOfInterest{ "ssrVariant" };
+    if (labelOfInterest == bindGroup->getLabel()) {
+        FWGPU_LOGD << labelOfInterest << " bindGroup " << bindGroup << " (webgpu handle "
+                   << (bindGroup->getBindGroup().Get() ? bindGroup->getBindGroup().Get() : nullptr)
+                   << ") (locked? " << bindGroup->getIsLocked() << " ) setting texture with format "
+                   << webGPUTextureFormatToString(texture->getTexture().GetFormat())
+                   << " and view format " << webGPUTextureFormatToString(texture->getViewFormat())
+                   << " and usage " << webGPUPrintableToString(texture->getTexture().GetUsage())
+                   << " and aspect " << webGPUPrintableToString(texture->getAspect())
+                   << " at binding " << +binding;
+    }
 
     if (!bindGroup->getIsLocked()) {
         // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache.

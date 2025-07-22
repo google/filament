@@ -19,16 +19,13 @@
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
-#include <utils/CString.h>
 #include <utils/Panic.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
 
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
-#include <string>
-#include <variant>
+#include <string_view>
 #include <vector>
 
 namespace filament::backend {
@@ -52,22 +49,10 @@ namespace {
 
 } // namespace
 
-WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& layout,
-        wgpu::Device const& device) {
+WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(std::string_view const& label,
+        DescriptorSetLayout const& layout, wgpu::Device const& device)
+    : mLabel{ label.data() } {
     assert_invariant(device);
-
-    std::string baseLabel;
-    if (std::holds_alternative<utils::StaticString>(layout.label)) {
-        const auto& temp = std::get_if<utils::StaticString>(&layout.label);
-        baseLabel = temp->c_str();
-    } else if (std::holds_alternative<utils::CString>(layout.label)) {
-        const auto& temp = std::get_if<utils::CString>(&layout.label);
-        baseLabel = temp->c_str();
-    }
-
-    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-    // debugging. For now, hack an incrementing value.
-    static int layoutNum = 0;
 
     const unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
@@ -175,11 +160,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         }
         // fEntry.count is unused currently
     }
-    std::string label =  "layout_" + baseLabel + std::to_string(++layoutNum) ;
     const wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
+        .label{ mLabel.c_str_safe() },
         .entryCount = wEntries.size(),
-        .entries = wEntries.data()
+        .entries = wEntries.data(),
     };
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mLayout)

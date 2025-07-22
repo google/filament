@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -38,9 +39,11 @@ constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
 
 } // namespace
 
-WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
+WebGPUDescriptorSet::WebGPUDescriptorSet(std::string_view const& label,
+        wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
-    : mLayout{ layout },
+    : mLabel{ label.data() },
+      mLayout{ layout },
       mEntriesWithDynamicOffsetsCount{ static_cast<size_t>(std::count_if(bindGroupEntries.begin(),
               bindGroupEntries.end(), [](auto const& entry) { return entry.hasDynamicOffset; })) } {
 

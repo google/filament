@@ -22,19 +22,24 @@
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
+#include <utils/CString.h>
+
 #include <webgpu/webgpu_cpp.h>
 
 #include <array>
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 namespace filament::backend {
 
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
-    WebGPUDescriptorSet(wgpu::BindGroupLayout const&,
+    WebGPUDescriptorSet(std::string_view const& label, wgpu::BindGroupLayout const&,
             std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const&);
     ~WebGPUDescriptorSet();
+
+    [[nodiscard]] std::string_view getLabel() const { return std::string_view{ mLabel.data() }; }
 
     void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
 
@@ -50,6 +55,7 @@ public:
     [[nodiscard]] wgpu::BindGroup const& getBindGroup() const { return mBindGroup; }
 
 private:
+    utils::CString mLabel{};
     wgpu::BindGroupLayout mLayout = nullptr;
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
     std::vector<wgpu::BindGroupEntry> mEntries;

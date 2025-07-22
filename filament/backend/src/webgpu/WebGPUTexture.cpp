@@ -369,8 +369,12 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
     mTexture = device.CreateTexture(&textureDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
-    mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
-            mArrayLayerCount, toWebGPUTextureViewDimension(samplerType));
+    mDefaultTextureView = makeTextureView(
+            "default_" + std::string(getUserTextureViewLabel(samplerType)) + "_depth_" +
+                    std::to_string(depth) + "_sampler_type_" + std::string(to_string(samplerType)) +
+                    "_format_" + std::string(webGPUTextureFormatToString(mWebGPUFormat)),
+            mDefaultMipLevel, levels, mDefaultBaseArrayLayer, mArrayLayerCount,
+            toWebGPUTextureViewDimension(samplerType));
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
             << "Failed to create default texture view for " << textureDescriptor.label;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -401,7 +405,11 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mTexture{ src->mTexture },
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
-      mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
+      mDefaultTextureView{ makeTextureView(
+              "default_copy_" + std::string(getUserTextureViewLabel(target)) + "_depth_" +
+                      std::to_string(depth) + "_sampler_type_" + std::string(to_string(target)) +
+                      "_format_" + std::string(webGPUTextureFormatToString(mWebGPUFormat)),
+              mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
               toWebGPUTextureViewDimension(src->target)) },
       mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
 
@@ -428,7 +436,11 @@ wgpu::TextureView WebGPUTexture::makeAttachmentTextureView(const uint8_t mipLeve
     //  Problem: mDefaultTextureView is a view of the entire texture,
     //  but this function (and its callers) expects a single-slice view.
     //  Returning the whole texture view for a single-slice request seems wrong.
-    return makeTextureView(mipLevel, 1, arrayLayer, layerCount,
+    return makeTextureView("attachment_" + std::string(getUserTextureViewLabel(target)) +
+                                   "_depth_" + std::to_string(depth) + "_sampler_type_" +
+                                   std::string(to_string(target)) + "_format_" +
+                                   std::string(webGPUTextureFormatToString(mWebGPUFormat)),
+            mipLevel, 1, arrayLayer, layerCount,
             layerCount > 1 ? wgpu::TextureViewDimension::e2DArray
                            : wgpu::TextureViewDimension::e2D);
 }
@@ -665,12 +677,11 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
     }
 }
-wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
-        const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
+wgpu::TextureView WebGPUTexture::makeTextureView(std::string_view const& label,
+        const uint8_t& baseLevel, const uint8_t& levelCount, const uint32_t& baseArrayLayer,
+        const uint32_t& arrayLayerCount,
         const wgpu::TextureViewDimension dimension) const noexcept {
-
-    const wgpu::TextureViewDescriptor textureViewDescriptor{
-        .label = getUserTextureViewLabel(target),
+    const wgpu::TextureViewDescriptor textureViewDescriptor{ .label = label,
         .format = mViewFormat,
         .dimension = dimension,
         .baseMipLevel = baseLevel,
