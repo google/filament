@@ -160,10 +160,9 @@ public:
         return mName.c_str_safe();
     }
 
-    void prepareUpscaler(math::float2 scale,
-            TemporalAntiAliasingOptions const& taaOptions,
-            DynamicResolutionOptions const& dsrOptions) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
+
+    void prepareLodBias(float bias, math::float2 derivativesScale) const noexcept;
 
     void prepareViewport(
             const Viewport& physicalViewport,

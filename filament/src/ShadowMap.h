@@ -33,9 +33,6 @@
 #include <utils/compiler.h>
 
 #include <math/mathfwd.h>
-#include <math/vec3.h>
-#include <math/vec4.h>
-#include <math/mat4.h>
 
 #include <array>
 
@@ -199,6 +196,8 @@ public:
             backend::Viewport const& viewport) noexcept;
     static void prepareTime(Transaction const& transaction,
             FEngine const& engine, math::float4 const& userTime) noexcept;
+    static void prepareMaterialGlobals(Transaction const& transaction,
+            std::array<math::float4, 4> const& materialGlobals) noexcept;
     static void prepareShadowMapping(Transaction const& transaction,
             bool highPrecision) noexcept;
     static ShadowMapDescriptorSet::Transaction open(backend::DriverApi& driver) noexcept;
@@ -326,12 +325,12 @@ private:
     static float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF,
             uint16_t shadowDimension) noexcept;
 
-    static constexpr const Segment sBoxSegments[12] = {
+    static constexpr Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
             { 4, 5 }, { 5, 7 }, { 7, 6 }, { 6, 4 },
             { 0, 4 }, { 1, 5 }, { 3, 7 }, { 2, 6 },
     };
-    static constexpr const Quad sBoxQuads[6] = {
+    static constexpr Quad sBoxQuads[6] = {
             { 2, 0, 1, 3 },  // far
             { 6, 4, 5, 7 },  // near
             { 2, 0, 4, 6 },  // left

@@ -906,27 +906,13 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 const scale,
-        TemporalAntiAliasingOptions const& taaOptions,
-        DynamicResolutionOptions const& dsrOptions) const noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    float bias = 0.0f;
-    float2 derivativesScale{ 1.0f };
-    if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
-        bias = std::log2(std::min(scale.x, scale.y));
-    }
-    if (taaOptions.enabled) {
-        bias += taaOptions.lodBias;
-        if (taaOptions.upscaling) {
-            derivativesScale = 0.5f;
-        }
-    }
-    getColorPassDescriptorSet().prepareLodBias(bias, derivativesScale);
-}
-
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     getColorPassDescriptorSet().prepareCamera(engine, cameraInfo);
+}
+
+void FView::prepareLodBias(float const bias, float2 const derivativesScale) const noexcept {
+    getColorPassDescriptorSet().prepareLodBias(bias, derivativesScale);
 }
 
 void FView::prepareViewport(

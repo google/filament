@@ -244,6 +244,23 @@ void FRenderer::setVsyncTime(uint64_t const steadyClockTimeNano) noexcept {
     mVsyncSteadyClockTimeNano = steadyClockTimeNano;
 }
 
+std::pair<float, float2> FRenderer::prepareUpscaler(float2 const scale,
+        TemporalAntiAliasingOptions const& taaOptions,
+        DynamicResolutionOptions const& dsrOptions) {
+    float bias = 0.0f;
+    float2 derivativesScale{ 1.0f };
+    if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
+        bias = std::log2(std::min(scale.x, scale.y));
+    }
+    if (taaOptions.enabled) {
+        bias += taaOptions.lodBias;
+        if (taaOptions.upscaling) {
+            derivativesScale = 0.5f;
+        }
+    }
+    return { bias, derivativesScale };
+}
+
 void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
@@ -799,9 +816,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
+    auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
+
     view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
 
-    view.prepareUpscaler(scale, taaOptions, dsrOptions);
+    view.prepareLodBias(bias, derivativeScale);
 
     // Set the PER_VIEW UBO for the passes that use the user materials, but are not the color pass
     // (e.g. structure, ssao). The PER_VIEW UBO may be different because these passes don't run
@@ -816,7 +835,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             int32_t(float(xvp.bottom) * aoOptions.resolution),
             uint32_t(float(xvp.width) * aoOptions.resolution),
             uint32_t(float(xvp.height) * aoOptions.resolution) });
-    //descriptorSet.prepareLodBias(); // FIXME: we need to do that too
+    descriptorSet.prepareLodBias(bias, derivativeScale);
     descriptorSet.prepareMaterialGlobals(view.getMaterialGlobals());
     descriptorSet.commit(driver);
 

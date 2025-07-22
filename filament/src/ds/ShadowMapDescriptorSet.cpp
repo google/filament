@@ -22,16 +22,15 @@
 #include "details/Engine.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/DescriptorSets.h>
 #include <private/filament/UibStructs.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
 
-#include <math/mat4.h>
+#include <math/vec4.h>
 
-#include <stdint.h>
+#include <array>
 
 namespace filament {
 
@@ -83,6 +82,11 @@ void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
 void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
         FEngine const& engine, float4 const& userTime) noexcept {
     PerViewDescriptorSetUtils::prepareTime(edit(transaction), engine, userTime);
+}
+
+void ShadowMapDescriptorSet::prepareMaterialGlobals(Transaction const& transaction,
+        std::array<float4, 4> const& materialGlobals) noexcept {
+    PerViewDescriptorSetUtils::prepareMaterialGlobals(edit(transaction), materialGlobals);
 }
 
 void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction,

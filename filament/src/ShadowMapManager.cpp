@@ -388,6 +388,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     ShadowMap::prepareCamera(transaction, engine, cameraInfo);
                     ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                     ShadowMap::prepareTime(transaction, engine, userTime);
+                    ShadowMap::prepareMaterialGlobals(transaction, view.getMaterialGlobals());
                     ShadowMap::prepareShadowMapping(transaction,
                             vsmShadowOptions.highPrecision);
                     shadowMap.commit(transaction, engine, driver);
