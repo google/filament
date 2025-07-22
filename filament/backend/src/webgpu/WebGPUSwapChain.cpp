@@ -381,8 +381,9 @@ void WebGPUSwapChain::present(wgpu::Queue const& queue) {
     if (isHeadless()) {
         // To ensure the CPU doesn't read the texture before the GPU is done,
         // we wait for the queue to be idle.
-        wgpu::Future future = queue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly, [](WGPUQueueWorkDoneStatus) {});
-        mDevice.GetAdapter().GetInstance().WaitAny(1, &future, UINT64_MAX);
+        wgpu::Future future = queue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly, [](wgpu::QueueWorkDoneStatus) {});
+        wgpu::FutureWaitInfo waitInfo { .future = future };
+        mDevice.GetAdapter().GetInstance().WaitAny(1, &waitInfo, UINT64_MAX);
         mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
     } else {
         mSurface.Present();
