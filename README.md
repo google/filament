@@ -63,7 +63,7 @@ pod 'Filament', '~> 1.62.0'
 - [Materials](https://google.github.io/filament/Materials.html), the full reference
   documentation for our material system. This document explains our different material models, how
   to use the material compiler `matc` and how to write custom materials.
-- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference
+- [Material Properties](https://google.github.io/filament/notes/material_properties.html), a reference
   sheet for the standard material model.
 
 ## Examples

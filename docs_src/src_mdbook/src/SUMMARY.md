@@ -12,6 +12,7 @@
   - [iOS Tutorial](./samples/ios.md)
   - [Web Tutorial](./samples/web.md)
 - [Technical Notes](./notes/README.md)
+  - [Material Properties](./notes/material_properties.md)
   - [Versioning](./notes/versioning.md)
   - [Documentation](./dup/docs.md)
   - [Debugging](./notes/debugging.md)
