@@ -486,7 +486,6 @@ TEST_F(BlitTest, BlitRegion) {
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
-    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment, see b/417481493");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -498,10 +497,9 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current.
+    Handle<HwRenderTarget> dstRenderTarget = mCleanup.add(api.createDefaultRenderTarget());
     auto swapChain = mCleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-
-    Handle<HwRenderTarget> dstRenderTarget = mCleanup.add(api.createDefaultRenderTarget());
 
     // Create a source texture.
     Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(
