@@ -29,8 +29,9 @@ namespace filament::backend {
 // `VulkanBuffer` it references at runtime, wihtout affecting any external objects.
 class VulkanBufferProxy {
 public:
-    VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& stagePool,
-            VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes);
+    VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferUsage usage,
+            uint32_t numBytes);
 
     void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes);
@@ -40,6 +41,7 @@ public:
     VulkanBufferUsage getUsage() const noexcept;
 
 private:
+    bool const mStagingBufferBypassEnabled;
     VmaAllocator mAllocator;
     VulkanStagePool& mStagePool;
     VulkanBufferCache& mBufferCache;
