@@ -51,6 +51,7 @@ public:
             MaterialBuilder::OutputList const& outputs,
             MaterialBuilder::PreprocessorDefineList const& defines,
             MaterialBuilder::ConstantList const& constants,
+            MaterialBuilder::ConstantList const& mutableConstants,
             MaterialBuilder::PushConstantList const& pushConstants,
             utils::CString const& materialCode,
             size_t lineOffset,
@@ -104,9 +105,14 @@ private:
     static void generatePostProcessMaterialVariantDefines(utils::io::sstream& out,
             filament::PostProcessVariant variant) noexcept;
 
+    static void generateAllUserSpecConstants(const CodeGenerator& cg, utils::io::sstream& fs,
+            MaterialBuilder::ConstantList const& constants,
+            MaterialBuilder::ConstantList const& mutableConstants);
+
     static void generateUserSpecConstants(
             const CodeGenerator& cg, utils::io::sstream& fs,
-            MaterialBuilder::ConstantList const& constants);
+            MaterialBuilder::ConstantList const& constants,
+            size_t offset);
 
     std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
@@ -135,6 +141,7 @@ private:
     MaterialBuilder::MaterialDomain mMaterialDomain;
     MaterialBuilder::PreprocessorDefineList mDefines;
     MaterialBuilder::ConstantList mConstants;
+    MaterialBuilder::ConstantList mMutableConstants;
     MaterialBuilder::PushConstantList mPushConstants;
     utils::CString mMaterialFragmentCode;   // fragment or compute code
     utils::CString mMaterialVertexCode;

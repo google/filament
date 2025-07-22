@@ -60,6 +60,14 @@ static void setParameter(JNIEnv* env, jlong nativeMaterialInstance, jstring name
     env->ReleaseStringUTFChars(name_, name);
 }
 
+template<typename T>
+static void setConstant(JNIEnv* env, jlong nativeMaterialInstance, jstring name_, T v) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    const char *name = env->GetStringUTFChars(name_, 0);
+    instance->setConstant(name, v);
+    env->ReleaseStringUTFChars(name_, name);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool(JNIEnv *env, jclass,
@@ -262,6 +270,13 @@ Java_com_google_android_filament_MaterialInstance_nSetParameterTexture(
     const char *name = env->GetStringUTFChars(name_, 0);
     instance->setParameter(name, texture, JniUtils::from_long(sampler_));
     env->ReleaseStringUTFChars(name_, name);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetConstantBool(JNIEnv *env, jclass,
+        jlong nativeMaterialInstance, jstring name_, jboolean x) {
+    setConstant(env, nativeMaterialInstance, name_, bool(x));
 }
 
 extern "C"

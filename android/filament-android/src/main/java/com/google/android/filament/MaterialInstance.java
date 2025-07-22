@@ -403,6 +403,16 @@ public class MaterialInstance {
     }
 
     /**
+     * Sets the value of a bool constant.
+     *
+     * @param name the name of the material constant
+     * @param x    the value of the material constant
+     */
+    public void setConstant(@NonNull String name, boolean x) {
+        nSetConstantBool(getNativeObject(), name, x);
+    }
+
+    /**
      * Set-up a custom scissor rectangle; by default it is disabled.
      *
      * <p>
@@ -920,6 +930,9 @@ public class MaterialInstance {
     private static native void nSetFloatParameterArray(long nativeMaterialInstance,
             @NonNull String name, int element, @NonNull @Size(min = 1) float[] v,
             @IntRange(from = 0) int offset, @IntRange(from = 1) int count);
+
+    private static native void nSetConstantBool(long nativeMaterialInstance,
+            @NonNull String name, boolean x);
 
     private static native void nSetParameterTexture(long nativeMaterialInstance,
             @NonNull String name, long nativeTexture, long sampler);
