@@ -47,7 +47,7 @@ public:
 
     [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
-    void present();
+    void present(wgpu::Queue const& queue);
 
 private:
 

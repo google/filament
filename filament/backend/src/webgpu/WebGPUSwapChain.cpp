@@ -377,8 +377,12 @@ wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
     return mRenderTargetViews[mHeadlessBufferIndex];
 }
 
-void WebGPUSwapChain::present() {
+void WebGPUSwapChain::present(wgpu::Queue const& queue) {
     if (isHeadless()) {
+        // To ensure the CPU doesn't read the texture before the GPU is done,
+        // we wait for the queue to be idle.
+        wgpu::Future future = queue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly, [](WGPUQueueWorkDoneStatus) {});
+        mDevice.GetAdapter().GetInstance().WaitAny(1, &future, UINT64_MAX);
         mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
     } else {
         mSurface.Present();

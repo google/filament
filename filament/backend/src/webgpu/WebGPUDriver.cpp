@@ -1079,7 +1079,7 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     mCommandBuffer = nullptr;
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
-    mSwapChain->present();
+    mSwapChain->present(mQueue);
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
