@@ -980,7 +980,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     FView::updatePrimitivesLod(scene.getRenderableData(),
             engine, cameraInfo, view.getVisibleRenderables());
 
-    passBuilder.camera(cameraInfo);
+    passBuilder.camera(cameraInfo.getPosition(), cameraInfo.getForwardVector());
     passBuilder.geometry(scene.getRenderableData(), view.getVisibleRenderables());
 
     // --------------------------------------------------------------------------------------------

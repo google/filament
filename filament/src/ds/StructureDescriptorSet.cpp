@@ -27,6 +27,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 #include <array>
@@ -63,13 +64,10 @@ void StructureDescriptorSet::terminate(DriverApi& driver) {
 }
 
 void StructureDescriptorSet::commit(DriverApi& driver) noexcept {
+    assert_invariant(mDescriptorSetLayout);
     driver.updateBufferObject(mUniforms.getUboHandle(),
             mUniforms.toBufferDescriptor(driver), 0);
-
-    assert_invariant(mDescriptorSetLayout);
-    if (mDescriptorSetLayout) {
-        mDescriptorSet.commit(*mDescriptorSetLayout, driver);
-    }
+    mDescriptorSet.commit(*mDescriptorSetLayout, driver);
 }
 
 void StructureDescriptorSet::bind(DriverApi& driver) const noexcept {
@@ -87,7 +85,7 @@ void StructureDescriptorSet::prepareCamera(FEngine const& engine,
     PerViewDescriptorSetUtils::prepareCamera(mUniforms.edit(), engine, camera);
 }
 
-void StructureDescriptorSet::prepareLodBias(float bias, float2 derivativesScale) noexcept {
+void StructureDescriptorSet::prepareLodBias(float bias, float2 const derivativesScale) noexcept {
     PerViewDescriptorSetUtils::prepareLodBias(mUniforms.edit(), bias, derivativesScale);
 }
 

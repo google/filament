@@ -413,7 +413,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     RenderPass const pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
-                            .camera(cameraInfo)
+                            .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
