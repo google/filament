@@ -290,7 +290,9 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
     if (mLastBoundInfo.pipelineLayout == pipelineLayout) {
         auto& lastBoundSets = mLastBoundInfo.boundSets;
         curMask.forEachSetBit([&](size_t index) {
-            if (updateSets[index] == lastBoundSets[index] && !useExternalSamplers[index]) {
+            auto& set = updateSets[index];
+            if (set == lastBoundSets[index] && !useExternalSamplers[index] &&
+                    set->uniqueDynamicUboCount == 0) {
                 curMask.unset(index);
             }
         });
@@ -302,25 +304,24 @@ void VulkanDescriptorSetCache::commit(VulkanCommandBuffer* commands,
         VkCommandBuffer const cmdbuffer = commands->buffer();
         VkDescriptorSet vkset = useExternalSamplers[index] ? set->getExternalSamplerVkSet() :
             set->getVkSet();
+        commands->acquire(set);
         vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, index,
                 1, &vkset, set->uniqueDynamicUboCount, set->getOffsets()->data());
-        commands->acquire(set);
+        set->referencedBy(*commands);
     });
-
-    mStashedSets = {};
-
     mLastBoundInfo = {
         pipelineLayout,
         setMask,
         updateSets,
     };
+    mStashedSets = {};
 }
 
 void VulkanDescriptorSetCache::updateBuffer(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t binding, fvkmemory::resource_ptr<VulkanBufferObject> bufferObject,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
     VkDescriptorBufferInfo const info = {
-        .buffer = bufferObject->buffer.getVkBuffer(),
+        .buffer = bufferObject->getVkBuffer(),
         .offset = offset,
         .range = size,
     };
