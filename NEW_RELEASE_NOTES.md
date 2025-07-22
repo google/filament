@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]
+- materials: new mutable specialization constants feature. See the [materials documentation](https://google.github.io/filament/Materials.html) for details. [⚠️ **New Material Version**]
