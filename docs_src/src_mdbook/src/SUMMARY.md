@@ -13,6 +13,8 @@
   - [Web Tutorial](./samples/web.md)
 - [Technical Notes](./notes/README.md)
   - [Versioning](./notes/versioning.md)
+    - [Branching](./notes/branching.md)
+    - [Release Guide](./notes/release_guide.md)
   - [Documentation](./dup/docs.md)
   - [Debugging](./notes/debugging.md)
     - [Metal](./notes/metal_debugging.md)

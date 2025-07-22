@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Vulkan - Filament</title>
+        <title>Release Guide - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,26 +158,103 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="debugging-vulkan"><a class="header" href="#debugging-vulkan">Debugging Vulkan</a></h1>
-<h2 id="enable-validation-logs"><a class="header" href="#enable-validation-logs">Enable Validation Logs</a></h2>
-<p>Simply install the LunarG SDK (it's fast and easy), then make sure you've got the following
-environment variables set up in your <strong>bashrc</strong> file. For example:</p>
-<pre><code>export VULKAN_SDK='/path_to_home/VulkanSDK/1.3.216.0/x86_64'
-export VK_LAYER_PATH="$VULKAN_SDK/etc/explicit_layer.d"
-export PATH="$VULKAN_SDK/bin:$PATH"
+                        <h1 id="filament-release-guide"><a class="header" href="#filament-release-guide">Filament Release Guide</a></h1>
+<p>This guide makes use of some "environment variables":</p>
+<ul>
+<li>$RELEASE = the new version of Filament we are releasing today. (e.g., 1.9.3)</li>
+<li>$NEXT_RELEASE = the version we plan to release next week (e.g., 1.9.4)</li>
+</ul>
+<p>Before starting, ensure that each of these branches is up-to-date with origin:</p>
+<ul>
+<li>release</li>
+<li>rc/$RELEASE</li>
+<li>main</li>
+</ul>
+<h2 id="0-check-versions"><a class="header" href="#0-check-versions">0. Check versions.</a></h2>
+<p>Make sure the rc/$RELEASE branch has the correct Filament version. It should have the version
+corresponding to its name, $RELEASE.</p>
+<p>Make sure <code>MATERIAL_VERSION</code> has been bumped to a new version if this is a MAJOR or MINOR release
+(first two version numbers).</p>
+<h2 id="1-bump-filament-versions-on-main-to-release"><a class="header" href="#1-bump-filament-versions-on-main-to-release">1. Bump Filament versions on main to $RELEASE.</a></h2>
+<p>Checkout main and run the following command to bump Filament's version to $RELEASE:</p>
+<pre><code>build/common/bump-version.sh $RELEASE
 </code></pre>
-<p>As long as you're running a debug build of Filament, you should now see extra debugging spew in your
-console if there are any errors or performance issues being caught by validation.</p>
+<p>Commit changes to main with the title:</p>
+<pre><code>Release Filament $RELEASE
+</code></pre>
+<p>Do not push to origin yet.</p>
+<h2 id="2-update-release_notesmd-on-main"><a class="header" href="#2-update-release_notesmd-on-main">2. Update RELEASE_NOTES.md on main.</a></h2>
+<p>Create a new header in RELEASE_NOTES.md for $NEXT_RELEASE. Copy the release notes in
+NEW_RELEASE_NOTES.md to RELEASE_NOTES.md under the new header. Clear NEW_RELEASE_NOTES.md.</p>
+<p>Amend these changes to the "Release Filament $RELEASE" commit.</p>
+<pre><code>git add -u
+git commit --amend --no-edit
+</code></pre>
+<h2 id="3-run-release-script"><a class="header" href="#3-run-release-script">3. Run release script.</a></h2>
+<pre><code>build/common/release.sh rc/$RELEASE rc/$NEXT_RELEASE
+</code></pre>
+<p>This script will merge rc/$RELEASE into release, delete the rc branch, and create a new rc
+branch called rc/$NEXT_RELEASE. Verify that everything looks okay locally.</p>
+<h2 id="4-push-the-release-branch"><a class="header" href="#4-push-the-release-branch">4. Push the release branch.</a></h2>
+<pre><code>git push origin release
+</code></pre>
+<h2 id="5-create-the-github-release"><a class="header" href="#5-create-the-github-release">5. Create the GitHub release.</a></h2>
+<p>Use the GitHub UI to create a GitHub release corresponding to $RELEASE version.
+Make sure the target is set to the release branch.</p>
+<h2 id="6-delete-the-old-rc-branch-optional"><a class="header" href="#6-delete-the-old-rc-branch-optional">6. Delete the old rc branch (optional).</a></h2>
+<p>This step is optional. The old rc branch may be left alive for a few weeks for posterity.</p>
+<pre><code>git push origin --delete rc/$RELEASE
+</code></pre>
+<h2 id="7-bump-the-version-on-the-new-rc-branch-to-next_release"><a class="header" href="#7-bump-the-version-on-the-new-rc-branch-to-next_release">7. Bump the version on the new rc branch to $NEXT_RELEASE.</a></h2>
+<pre><code>git checkout rc/$NEXT_RELEASE
+build/common/bump-version.sh $NEXT_RELEASE
+</code></pre>
+<p>Commit the changes to rc/$NEXT_RELEASE with the title:</p>
+<pre><code>Bump version to $NEXT_RELEASE
+</code></pre>
+<h2 id="8-push-main"><a class="header" href="#8-push-main">8. Push main.</a></h2>
+<pre><code>git push origin main
+</code></pre>
+<h2 id="9-push-the-new-rc-branch"><a class="header" href="#9-push-the-new-rc-branch">9. Push the new rc branch.</a></h2>
+<pre><code>git push origin -u rc/$NEXT_RELEASE
+</code></pre>
+<h2 id="10-rebuild-the-github-release-if-failed"><a class="header" href="#10-rebuild-the-github-release-if-failed">10. Rebuild the GitHub release (if failed).</a></h2>
+<p>Sometimes the GitHub release job will fail. In this case, you can manually re-run the release job.</p>
+<h3 id="remove-any-assets-uploaded-to-the-release-if-needed"><a class="header" href="#remove-any-assets-uploaded-to-the-release-if-needed">Remove any assets uploaded to the release (if needed).</a></h3>
+<p>For example, if rebuilding the Mac release, ensure that the <code>filament-&lt;version&gt;-mac.tgz</code> artifact
+is removed from the release assets.</p>
+<h3 id="update-the-release-branch-if-needed"><a class="header" href="#update-the-release-branch-if-needed">Update the release branch (if needed).</a></h3>
+<p>If you need to add one or more new commits to the release, perform the following:</p>
+<p>First, push the new commit(s) to the <code>release</code> branch.</p>
+<p>Then, with the release branch checked out with the new commit(s), run</p>
+<pre><code>git tag -f -a &lt;release tagname&gt;
+git push origin -f &lt;release tagname&gt;
+</code></pre>
+<p>This will update and force push the tag.</p>
+<h3 id="re-run-the-github-release-workflow"><a class="header" href="#re-run-the-github-release-workflow">Re-run the GitHub release workflow</a></h3>
+<p>Navigate to <a href="https://github.com/google/filament/actions/workflows/release.yml">Filament's release
+workflow</a>. Hit the <em>Run workflow</em>
+dropdown. Modify <em>Platform to build</em> and <em>Release tag to build</em>, then hit <em>Run workflow</em>. This will
+initiate a new release run.</p>
+<h2 id="11-kick-off-the-npm-and-cocoapods-release-jobs"><a class="header" href="#11-kick-off-the-npm-and-cocoapods-release-jobs">11. Kick off the npm and CocoaPods release jobs</a></h2>
+<p>Navigate to <a href="https://github.com/google/filament/actions/workflows/npm-deploy.yml">Filament's npm deploy
+workflow</a>.
+Hit the <em>Run workflow</em> dropdown. Modify <em>Release tag to deploy</em> to the tag corresponding to this
+release (for example, v1.42.2).</p>
+<p>Navigate to <a href="https://github.com/google/filament/actions/workflows/cocopods-deploy.yml">Filament's CocoaPods deploy
+workflow</a>.
+Hit the <em>Run workflow</em> dropdown. Modify <em>Release tag to deploy</em> to the tag corresponding to this
+release (for example, v1.42.2).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/metal_debugging.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/branching.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/spirv_debugging.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/docs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -187,11 +264,11 @@ console if there are any errors or performance issues being caught by validation
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/metal_debugging.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/branching.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/spirv_debugging.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/docs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

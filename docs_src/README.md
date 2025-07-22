@@ -76,7 +76,12 @@ The process for copying and processing these READMEs is outlined in [Introductor
 ### Other technical notes
 These are technical documents that do not fit into a library, tool, or directory of the
 Filament source tree. We collect them into the `docs_src/src/notes` directory. No additional
-processing are needed for these documents.
+processing is needed for these documents.
+
+### Raw source files
+These are files that are not part of the `mdbook` generation, but should be included output in `/docs`
+to point to standalone pages or components (for example, the remote page for Android's `gltf_viewer`). These
+files are stored in `docs_src/src_raw`.
 
 ## Adding more documents
 To add any documentation, first consider the type of the document you like to add. If it

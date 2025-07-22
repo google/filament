@@ -54,8 +54,6 @@ function print_help {
     echo "        Build arm64/x86_64 universal libraries."
     echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
     echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
-    echo "    -w"
-    echo "        Build Web documents (compiles .md.html files to .html)."
     echo "    -k sample1,sample2,..."
     echo "        When building for Android, also build select sample APKs."
     echo "        sampleN is an Android sample, e.g., sample-gltf-viewer."
@@ -184,8 +182,6 @@ ISSUE_ARCHIVES=false
 BUILD_JS_DOCS=false
 
 ISSUE_CMAKE_ALWAYS=false
-
-ISSUE_WEB_DOCS=false
 
 ANDROID_SAMPLES=()
 BUILD_ANDROID_SAMPLES=false
@@ -731,21 +727,6 @@ function build_ios {
     fi
 }
 
-function build_web_docs {
-    echo "Building Web documents..."
-
-    mkdir -p out/web-docs
-    cp -f docs/web-docs-package.json out/web-docs/package.json
-    pushd out/web-docs > /dev/null
-
-    npm install > /dev/null
-
-    # Generate documents
-    npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/
-
-    popd > /dev/null
-}
-
 function validate_build_command {
     set +e
     # Make sure CMake is installed
@@ -776,16 +757,6 @@ function validate_build_command {
     if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
         exit 1
-    fi
-    # Web documents require node and npm for processing
-    if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
-        local node_binary=$(command -v node)
-        local npm_binary=$(command -v npm)
-        local npx_binary=$(command -v npx)
-        if [[ ! "${node_binary}" ]] || [[ ! "${npm_binary}" ]] || [[ ! "${npx_binary}" ]]; then
-            echo "Error: Web documents require node, npm and npx to be installed"
-            exit 1
-        fi
     fi
 
     # Make sure FILAMENT_BACKEND_DEBUG_FLAG is only meant for debug builds
@@ -826,8 +797,7 @@ function run_tests {
 function check_debug_release_build {
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" || \
           "${ISSUE_RELEASE_BUILD}" == "true" || \
-          "${ISSUE_CLEAN}" == "true" || \
-          "${ISSUE_WEB_DOCS}" == "true" ]]; then
+          "${ISSUE_CLEAN}" == "true" ]]; then
         "$@";
     else
         echo "You must declare a debug or release target for $@ builds."
@@ -978,9 +948,6 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
             BUILD_UNIVERSAL_LIBRARIES=true
             echo "Building universal libraries."
             ;;
-        w)
-            ISSUE_WEB_DOCS=true
-            ;;
         k)
             BUILD_ANDROID_SAMPLES=true
             ANDROID_SAMPLES=$(echo "${OPTARG}" | tr ',' '\n')
@@ -1065,10 +1032,6 @@ fi
 
 if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
     check_debug_release_build build_webgl
-fi
-
-if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
-    build_web_docs
 fi
 
 if [[ "${RUN_TESTS}" == "true" ]]; then
