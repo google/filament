@@ -37,6 +37,7 @@ class BasicStencilBufferTest : public BackendTest {
 public:
 
     Handle <HwSwapChain> mSwapChain;
+    Handle <HwRenderTarget> mDefaultRenderTarget;
     ProgramHandle mProgram;
     Cleanup mCleanup;
 
@@ -46,6 +47,8 @@ public:
         auto& api = getDriverApi();
 
         // Create a platform-specific SwapChain and make it current.
+        mDefaultRenderTarget = mCleanup.add(api.createDefaultRenderTarget(0));
+
         mSwapChain = mCleanup.add(createSwapChain());
         api.makeCurrent(mSwapChain, mSwapChain);
 

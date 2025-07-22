@@ -25,6 +25,7 @@ RenderFrame::RenderFrame(filament::backend::DriverApi& api): mApi(api) {
 
 RenderFrame::~RenderFrame() {
     mApi.endFrame(0);
+    mApi.finish();
 }
 
 Cleanup::Cleanup(filament::backend::DriverApi& driverApi) : mDriverApi(driverApi) {}

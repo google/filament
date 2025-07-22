@@ -53,6 +53,8 @@ TEST_F(BackendTest, MRT) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
@@ -65,8 +67,6 @@ TEST_F(BackendTest, MRT) {
         });
 
         TrianglePrimitive triangle(api);
-
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // Create two Textures.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
@@ -110,7 +110,6 @@ TEST_F(BackendTest, MRT) {
 
         api.startCapture(0);
 
-        api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
 
         // Draw a triangle.
