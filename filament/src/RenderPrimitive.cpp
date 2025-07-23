@@ -39,6 +39,7 @@ void FRenderPrimitive::init(HwRenderPrimitiveFactory& factory, backend::DriverAp
 
     mMaterialInstance = downcast(entry.materialInstance);
     mBlendOrder = entry.blendOrder;
+    mGlobalBlendOrderEnabled = entry.globalBlendOrderEnabled;
 
     if (entry.indices && entry.vertices) {
         FVertexBuffer const* vertexBuffer = downcast(entry.vertices);

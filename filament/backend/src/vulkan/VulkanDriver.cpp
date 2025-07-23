@@ -532,8 +532,8 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
         uint32_t indexCount, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
-            mBufferCache, elementSize, indexCount);
+    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mContext, mAllocator,
+            mStagePool, mBufferCache, elementSize, indexCount);
     ib.inc();
 }
 
@@ -549,8 +549,8 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
-    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
-            mBufferCache, byteCount, bindingType);
+    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mContext, mAllocator,
+            mStagePool, mBufferCache, byteCount, bindingType);
     bo.inc();
 }
 
@@ -1239,7 +1239,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands, p.buffer, byteOffset, p.size);
+    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -1255,7 +1255,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -1266,7 +1266,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -1915,7 +1915,7 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
     vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getVkBuffer(), 0,
+    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->getVkBuffer(), 0,
             prim->indexBuffer->indexType);
 }
 

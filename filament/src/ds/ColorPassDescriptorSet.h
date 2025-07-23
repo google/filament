@@ -117,11 +117,6 @@ public:
             float refractionLodOffset,
             ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
 
-    void prepareHistorySSR(TextureHandle ssr,
-            math::mat4f const& historyProjection,
-            math::mat4f const& uvFromViewMatrix,
-            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
-
     void prepareShadowMapping(backend::BufferObjectHandle shadowUniforms, bool highPrecision) noexcept;
 
     void prepareDirectionalLight(FEngine& engine, float exposure,

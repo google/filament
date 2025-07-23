@@ -86,6 +86,8 @@ bool VulkanGroupMarkers::empty() const noexcept {
 }
 #endif // FVK_DEBUG_GROUP_MARKERS
 
+uint32_t VulkanCommandBuffer::sAgeCounter = 0;
+
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice device,
         VkQueue queue, VkCommandPool pool, bool isProtected)
     : mContext(context),
@@ -94,7 +96,8 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
       mDevice(device),
       mQueue(queue),
       mBuffer(createCommandBuffer(device, pool)),
-      mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)) {
+      mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)),
+      mAge(++sAgeCounter) {
     VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
 
@@ -111,6 +114,7 @@ void VulkanCommandBuffer::reset() noexcept {
     mMarkerCount = 0;
     mResources.clear();
     mWaitSemaphores.clear();
+    mAge = ++sAgeCounter;
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
