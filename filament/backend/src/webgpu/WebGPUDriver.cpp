@@ -410,7 +410,7 @@ void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a) {
-    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
+//    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
@@ -964,15 +964,15 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
                         !(hasStencil(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false)
                             << "Custom render target requested stencil, but the provided texture"
-                               "format number"
-                            << (uint32_t) customDepthStencilFormat
+                               "format number "
+                            << webGPUTextureFormatToString(customDepthStencilFormat)
                             << " does not have a stencil aspect.";
                 }
                 if (any(renderTarget->getTargetFlags() & TargetBufferFlags::DEPTH) &&
                         !(hasDepth(customDepthStencilFormat))) {
                     FILAMENT_CHECK_POSTCONDITION(false) << "Custom render target requested depth, "
                                                            "but the provided texture format number"
-                                                        << (uint32_t) customDepthStencilFormat
+                                                        << webGPUTextureFormatToString(customDepthStencilFormat)
                                                         << " does not have a depth aspect.";
                 }
             }

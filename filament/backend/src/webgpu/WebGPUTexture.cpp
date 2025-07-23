@@ -109,7 +109,7 @@ namespace {
         case wgpu::TextureFormat::BGRA8UnormSrgb:      return wgpu::TextureFormat::BGRA8Unorm;
         case wgpu::TextureFormat::BC1RGBAUnormSrgb:    return wgpu::TextureFormat::BC1RGBAUnorm;
         case wgpu::TextureFormat::BC2RGBAUnormSrgb:    return wgpu::TextureFormat::BC2RGBAUnorm;
-        case  wgpu::TextureFormat::BC3RGBAUnormSrgb:   return wgpu::TextureFormat::BC3RGBAUnorm;
+        case wgpu::TextureFormat::BC3RGBAUnormSrgb:    return wgpu::TextureFormat::BC3RGBAUnorm;
         case wgpu::TextureFormat::BC7RGBAUnormSrgb:    return wgpu::TextureFormat::BC7RGBAUnorm;
         case wgpu::TextureFormat::ETC2RGB8UnormSrgb:   return wgpu::TextureFormat::ETC2RGB8Unorm;
         case wgpu::TextureFormat::ETC2RGB8A1UnormSrgb: return wgpu::TextureFormat::ETC2RGB8A1Unorm;
@@ -329,12 +329,12 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
         const uint32_t height, const uint32_t depth, const TextureUsage usage,
         wgpu::Device const& device) noexcept
     : HwTexture{ samplerType, levels, samples, width, height, depth, format, usage },
-      mViewFormat{ fToWGPUTextureFormat(format) },
+      mViewFormat{ fToWGPUTextureFormat(format, usage) },
       mMipmapGenerationStrategy{ determineMipmapGenerationStrategy(mViewFormat, samplerType,
               samples, levels) },
       mWebGPUFormat{ mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS
                              ? storageBindingCompatibleFormatForViewFormat(mViewFormat)
-                             : mViewFormat },
+                             : fToWGPUTextureFormat(format, usage) },
       mAspect{ fToWGPUTextureViewAspect(usage, format) },
       mWebGPUUsage{ fToWGPUTextureUsage(usage, samples,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
@@ -493,6 +493,66 @@ wgpu::TextureView WebGPUTexture::makeMsaaSidecarTextureViewIfTextureSidecarExist
     FILAMENT_CHECK_POSTCONDITION(mMsaaSidecarTexture)
             << "Failed to create MSAA sidecar texture view (" << +samples << " samples)";
     return textureView;
+}
+
+wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat,
+        TextureUsage const& fUsage) {
+
+    const bool isDepth{ any(fUsage & TextureUsage::DEPTH_ATTACHMENT) };
+    const bool isStencil{ any(fUsage & TextureUsage::STENCIL_ATTACHMENT) };
+    const bool isColor{ any(fUsage & TextureUsage::COLOR_ATTACHMENT) };
+    const bool isBlitSrc{ any(fUsage & TextureUsage::BLIT_SRC) };
+    const bool isBlitDst{ any(fUsage & TextureUsage::BLIT_DST) };
+    const bool isUploadable{ any(fUsage & TextureUsage::UPLOADABLE) };
+    const bool isSampleable{ any(fUsage & TextureUsage::SAMPLEABLE) };
+    const bool isSubpassInput{ any(fUsage & TextureUsage::SUBPASS_INPUT) };
+    const bool isProtected{ any(fUsage & TextureUsage::PROTECTED) };
+
+    FWGPU_LOGD << ""
+        << " isDepth: "
+        << isDepth
+        << " isStencil: "
+        << isStencil
+        << " isColor: "
+        << isColor
+        << " isBlitSrc: "
+        << isBlitSrc
+        << " isBlitDst: "
+        << isBlitDst
+        << " isUploadable: "
+        << isUploadable
+        << " isSampleable: "
+        << isSampleable
+        << " isSubpassInput: "
+        << isSubpassInput
+        << " isProtected: "
+        << isProtected;
+
+    const bool depthOnly{ isDepth && !isColor && !isStencil };
+    const bool stencilOnly = { isStencil && !isColor && !isDepth };
+    if (depthOnly || stencilOnly) {
+        switch (fFormat) {
+            case TextureFormat::DEPTH24_STENCIL8:
+                if (depthOnly && stencilOnly) {
+                    return wgpu::TextureFormat::Depth24PlusStencil8;
+                } else if (depthOnly) {
+                    return wgpu::TextureFormat::Depth24Plus;
+                } else {
+                    return wgpu::TextureFormat::Stencil8;
+                }
+            case TextureFormat::DEPTH32F_STENCIL8:
+                if (depthOnly && stencilOnly) {
+                    return wgpu::TextureFormat::Depth32FloatStencil8;
+                } else if (depthOnly) {
+                    return wgpu::TextureFormat::Depth32Float;
+                } else {
+                    return wgpu::TextureFormat::Stencil8;
+                }
+            default:
+                break;
+        }
+    }
+    return fToWGPUTextureFormat(fFormat);
 }
 
 wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFormat) {

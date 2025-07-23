@@ -104,10 +104,13 @@ public:
     /**
      * @return nullptr if a MSAA sidecar texture is not appliable, otherwise a view to one
      */
-    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&, uint8_t mipLevel, uint32_t arrayLayer) const;
+    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&,
+            uint8_t mipLevel, uint32_t arrayLayer) const;
 
     [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
             filament::backend::TextureFormat const& fFormat);
+    [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
+            filament::backend::TextureFormat const& fFormat, TextureUsage const& fUsage);
 
     /**
      * @param format a required texture format (can be a view to a different underlying texture
