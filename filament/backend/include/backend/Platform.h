@@ -193,6 +193,13 @@ public:
          *      - PlatformEGL
          */
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+
+        /**
+         * Bypass the staging buffer because the device is of Unified Memory Architecture.
+         * This is only supported for:
+         *      - VulkanPlatform
+         */
+        bool vulkanEnableStagingBufferBypass = false;
     };
 
     Platform() noexcept;
