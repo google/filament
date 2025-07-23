@@ -77,8 +77,9 @@ struct VulkanCommandBuffer {
 
     void reset() noexcept;
 
-    inline void insertWait(VkSemaphore sem) {
+    inline void insertWait(VkSemaphore sem, VkPipelineStageFlags waitStage) {
         mWaitSemaphores.push_back(sem);
+        mWaitSemaphoreStages.push_back(waitStage);
     }
 
     void pushMarker(char const* marker) noexcept;
@@ -121,6 +122,7 @@ private:
     VkDevice mDevice;
     VkQueue mQueue;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
+    fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;
@@ -143,7 +145,7 @@ struct CommandBufferPool {
     void update();
     VkSemaphore flush();
     void wait();
-    void waitFor(VkSemaphore previousAction);
+    void waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage);
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
     std::string topMarker() const;
@@ -228,8 +230,10 @@ public:
 
     // Takes a semaphore that signals when the next flush can occur. Only one injected
     // semaphore is allowed per flush. Useful after calling vkAcquireNextImageKHR.
-    void injectDependency(VkSemaphore next) {
+    // waitStage
+    void injectDependency(VkSemaphore next, VkPipelineStageFlags waitStage) {
         mInjectedDependency = next;
+        mInjectedDependencyWaitStage = waitStage;
     }
 
     // Destroys all command buffers that are no longer in use.
@@ -260,6 +264,8 @@ private:
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     VkSemaphore mLastSubmit = VK_NULL_HANDLE;
+
+    VkPipelineStageFlags mInjectedDependencyWaitStage = 0;
 };
 
 } // namespace filament::backend
