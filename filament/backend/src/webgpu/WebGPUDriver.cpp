@@ -1110,8 +1110,84 @@ void WebGPUDriver::stopCapture(int) {
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
-    // todo
-    scheduleDestroy(std::move(pixelBufferDescriptor));
+    auto srcTarget = handleCast<WebGPURenderTarget>(sourceRenderTargetHandle);
+    assert_invariant(srcTarget);
+
+    wgpu::Texture srcTexture = nullptr;
+    if (srcTarget->isDefaultRenderTarget()) {
+        assert_invariant(mSwapChain);
+        srcTexture = mSwapChain->getCurrentTexture(mPlatform.getSurfaceExtent(mNativeWindow));
+    } else {
+        // TODO: Handle custom render targets
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+    assert_invariant(srcTexture);
+
+    // Create a staging buffer to copy the texture to
+    const size_t bytesPerPixel = 4;
+    const size_t unpaddedBytesPerRow = width * bytesPerPixel;
+    const size_t alignment = 256;
+    const size_t paddedBytesPerRow = (unpaddedBytesPerRow + alignment - 1) & ~(alignment - 1);
+
+    size_t bufferSize = paddedBytesPerRow * height;
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = bufferSize;
+    bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
+    wgpu::Buffer stagingBuffer = mDevice.CreateBuffer(&bufferDesc);
+    assert_invariant(stagingBuffer);
+
+    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder();
+
+    wgpu::TexelCopyTextureInfo source {
+        .texture = srcTexture,
+        .mipLevel = 0,
+        .origin = { x, y, 0 }
+    };
+    wgpu::TexelCopyBufferInfo destination {
+        .layout = {
+            .offset = 0,
+            .bytesPerRow = static_cast<uint32_t>(paddedBytesPerRow),
+            .rowsPerImage = height,
+        },
+        .buffer = stagingBuffer
+    };
+    wgpu::Extent3D copySize {
+        .width = width,
+        .height = height,
+        .depthOrArrayLayers = 1
+    };
+    encoder.CopyTextureToBuffer(&source, &destination, &copySize);
+    wgpu::CommandBuffer commandBuffer = encoder.Finish();
+    mQueue.Submit(1, &commandBuffer);
+
+    // Map the buffer to read the data
+    struct UserData {
+        PixelBufferDescriptor pbd;
+        wgpu::Buffer buffer;
+        size_t unpaddedBytesPerRow;
+        size_t paddedBytesPerRow;
+        uint32_t height;
+    };
+    auto userData = std::make_unique<UserData>();
+    userData->pbd = std::move(pixelBufferDescriptor);
+    userData->buffer = stagingBuffer;
+    userData->unpaddedBytesPerRow = unpaddedBytesPerRow;
+    userData->paddedBytesPerRow = paddedBytesPerRow;
+    userData->height = height;
+
+    stagingBuffer.MapAsync(wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous, [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
+        std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
+        if (status == wgpu::MapAsyncStatus::Success) {
+            const char* src = static_cast<const char*>(data->buffer.GetConstMappedRange(0, data->buffer.GetSize()));
+            char* dst = static_cast<char*>(data->pbd.buffer);
+            for (uint32_t i = 0; i < data->height; ++i) {
+                memcpy(dst + i * data->unpaddedBytesPerRow, src + i * data->paddedBytesPerRow, data->unpaddedBytesPerRow);
+            }
+            data->buffer.Unmap();
+        }
+        // scheduleDestroy(std::move(data->pbd)); // This line is problematic, need to pass scheduleDestroy func
+    }, userData.release());
 }
 
 void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,

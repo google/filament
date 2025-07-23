@@ -377,6 +377,17 @@ wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
     return mRenderTargetViews[mHeadlessBufferIndex];
 }
 
+wgpu::Texture WebGPUSwapChain::getCurrentTexture(wgpu::Extent2D const& extent) {
+    if (isHeadless()) {
+        return mRenderTargetTextures[mHeadlessBufferIndex];
+    } else {
+        setExtent(extent);
+        wgpu::SurfaceTexture surfaceTexture;
+        mSurface.GetCurrentTexture(&surfaceTexture);
+        return surfaceTexture.texture;
+    }
+}
+
 void WebGPUSwapChain::present(wgpu::Queue const& queue) {
     if (isHeadless()) {
         // To ensure the CPU doesn't read the texture before the GPU is done,
