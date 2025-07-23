@@ -302,7 +302,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
         SamplerFormat format, ParameterPrecision precision, bool filterable, bool multisample,
-        const char* transformName, ShaderStageFlags stages) {
+        const char* transformName, std::optional<ShaderStageFlags> stages) {
     FILAMENT_CHECK_PRECONDITION(
             !multisample || (format != SamplerFormat::SHADOW &&
                                     (samplerType == SamplerType::SAMPLER_2D ||
@@ -629,6 +629,13 @@ bool MaterialBuilder::hasSamplerType(SamplerType const samplerType) const noexce
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     prepare(mEnableFramebufferFetch, mFeatureLevel);
 
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    const bool isPostProcessMaterial = mMaterialDomain == MaterialDomain::POST_PROCESS;
+    const ShaderStageFlags defaultShaderStages =
+            isPostProcessMaterial || hasEmptyVertexCode
+                    ? (ShaderStageFlags::FRAGMENT)
+                    : (ShaderStageFlags::FRAGMENT | ShaderStageFlags::VERTEX);
+
     // Build the per-material sampler block and uniform block.
     SamplerInterfaceBlock::Builder sbb;
     BufferInterfaceBlock::Builder ibb;
@@ -638,9 +645,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
+            ShaderStageFlags stages = param.stages.value_or(defaultShaderStages);
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
                     param.format, param.precision, param.filterable, param.multisample,
-                    param.stages);
+                    stages);
             if (!param.transformName.empty()) {
                 ibb.add({ { { param.transformName.data(), param.transformName.size() },
                     uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,

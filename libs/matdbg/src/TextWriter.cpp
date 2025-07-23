@@ -156,6 +156,61 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     return true;
 }
 
+static bool printDescriptorSetLayout(ostream& text, const ChunkContainer& container) {
+    if (!container.hasChunk(ChunkType::MaterialDescriptorSetLayoutInfo)) {
+        return true;
+    }
+
+    auto [startDsli, endDsli] = container.getChunkRange(ChunkType::MaterialDescriptorSetLayoutInfo);
+    Unflattener dsli(startDsli, endDsli);
+
+    uint8_t descriptorCount;
+    if (!dsli.read(&descriptorCount)) {
+        return false;
+    }
+
+    text << "Descriptors:" << endl;
+
+    for (int i = 0; i < descriptorCount; i++) {
+        uint8_t type;
+        uint8_t stages;
+        uint8_t binding;
+        uint8_t flags;
+
+        if (!dsli.read(&type)) {
+            return false;
+        }
+
+        if (!dsli.read(&stages)) {
+            return false;
+        }
+
+        if (!dsli.read(&binding)) {
+            return false;
+        }
+
+        if (!dsli.read(&flags)) {
+            return false;
+        }
+
+        uint16_t padding;
+        if (!dsli.read(&padding)) {
+            return false;
+        }
+
+        text << "    "
+                  << setw(alignment) << toString(DescriptorType(type))
+                  << setw(alignment) << toString(ShaderStageFlags(stages))
+                  << setw(shortAlignment) << static_cast<int>(binding)
+                  << setw(alignment) << toString(DescriptorFlags(flags))
+                  << endl;
+    }
+
+    text << endl;
+
+    return true;
+}
+
 static bool printParametersInfo(ostream& text, const ChunkContainer& container) {
     if (!container.hasChunk(ChunkType::MaterialUib)) {
         return true;
@@ -458,6 +513,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printParametersInfo(text, container)) {
+        return false;
+    }
+    if (!printDescriptorSetLayout(text, container)) {
         return false;
     }
     if (!printConstantInfo(text, container)) {
