@@ -586,7 +586,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 }
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                bindPostProcessDescriptorSet(driver);
+                 getStructureDescriptorSet().bind(driver);
 
                 auto in = resources.getTexture(data.depth);
                 auto& material = getPostProcessMaterial("mipmapDepth");
@@ -1111,7 +1111,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
             },
             [=](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
-                bindPostProcessDescriptorSet(driver);
+                // TODO: the structure descriptor set might not be the best fit.
+                getStructureDescriptorSet().bind(driver);
 
                 auto ssao = resources.getTexture(data.input);
                 auto blurred = resources.getRenderPassInfo();
@@ -3463,7 +3464,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
                         {.attachments = {.depth = {data.output}}});
             },
             [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
-                bindPostProcessDescriptorSet(driver);
+                getStructureDescriptorSet().bind(driver);
                 auto depth = resources.getTexture(data.input);
                 auto const& inputDesc = resources.getDescriptor(data.input);
                 auto const out = resources.getRenderPassInfo();
