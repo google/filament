@@ -23,7 +23,9 @@
 
 namespace filament {
 
-FMaterialInstance* MaterialInstanceManager::Record::getInstance() {
+using Record = MaterialInstanceManager::Record;
+
+FMaterialInstance* Record::getInstance() {
     if (mAvailable.any()) {
         int picked = -1;
         mAvailable.forEachSetBit([&picked](size_t index) {
@@ -41,18 +43,34 @@ FMaterialInstance* MaterialInstanceManager::Record::getInstance() {
     return inst;
 }
 
-void MaterialInstanceManager::Record::terminate(FEngine& engine) {
-    std::for_each(mInstances.begin(), mInstances.end(), [&engine](auto instance) {
-        engine.destroy(instance);
-    });
+// Defined in cpp to avoid inlining
+Record::Record(Record const& rhs) noexcept = default;
+Record& Record::operator=(Record const& rhs) noexcept = default;
+Record::Record(MaterialInstanceManager::Record&& rhs) noexcept = default;
+Record& Record::operator=(Record&& rhs) noexcept = default;
+
+void Record::terminate(FEngine& engine) {
+    std::for_each(mInstances.begin(), mInstances.end(),
+            [&engine](auto instance) { engine.destroy(instance); });
 }
+
+MaterialInstanceManager::MaterialInstanceManager() noexcept {}
+
+MaterialInstanceManager::MaterialInstanceManager(
+        MaterialInstanceManager const& rhs) noexcept = default;
+MaterialInstanceManager::MaterialInstanceManager(MaterialInstanceManager&& rhs) noexcept = default;
+MaterialInstanceManager& MaterialInstanceManager::operator=(
+        MaterialInstanceManager const& rhs) noexcept = default;
+MaterialInstanceManager& MaterialInstanceManager::operator=(
+        MaterialInstanceManager&& rhs) noexcept = default;
+
+MaterialInstanceManager::~MaterialInstanceManager() = default;
 
 void MaterialInstanceManager::terminate(FEngine& engine) {
     std::for_each(mMaterials.begin(), mMaterials.end(), [&engine](auto& record) {
         record.terminate(engine);
     });
 }
-
 
 FMaterialInstance* MaterialInstanceManager::getMaterialInstance(
         FMaterial const* ma) {

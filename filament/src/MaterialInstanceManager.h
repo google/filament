@@ -36,10 +36,10 @@ public:
             : mMaterial(material) {}
         ~Record() = default;
 
-        Record(Record const& rhs) noexcept = default;
-        Record& operator=(Record const& rhs) noexcept = default;
-        Record(Record&& rhs) noexcept = default;
-        Record& operator=(Record&& rhs) noexcept = default;
+        Record(Record const& rhs) noexcept;
+        Record& operator=(Record const& rhs) noexcept;
+        Record(Record&& rhs) noexcept;
+        Record& operator=(Record&& rhs) noexcept;
 
         void terminate(FEngine& engine);
         void reset() { mAvailable = utils::bitset32{ (1 << (mInstances.size() + 1)) - 1 }; }
@@ -53,7 +53,13 @@ public:
         friend class MaterialInstanceManager;
     };
 
-    ~MaterialInstanceManager() = default;
+    MaterialInstanceManager() noexcept;
+    MaterialInstanceManager(MaterialInstanceManager const& rhs) noexcept;
+    MaterialInstanceManager(MaterialInstanceManager&& rhs) noexcept;
+    MaterialInstanceManager& operator=(MaterialInstanceManager const& rhs) noexcept;
+    MaterialInstanceManager& operator=(MaterialInstanceManager&& rhs) noexcept;    
+
+    ~MaterialInstanceManager();
 
     /*
      * Destroy all of the cached material instances. This needs to be done before the destruction of
