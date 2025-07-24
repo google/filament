@@ -42,10 +42,10 @@ namespace filament::backend {
 
 CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused)
         : mRequiredSize((requiredSize + (CircularBuffer::getBlockSize() - 1u)) & ~(CircularBuffer::getBlockSize() -1u)),
-          mCircularBuffer(bufferSize),
+          mCircularBuffer(std::max(mRequiredSize, bufferSize)),
           mFreeSpace(mCircularBuffer.size()),
           mPaused(paused) {
-    assert_invariant(mCircularBuffer.size() > requiredSize);
+    assert_invariant(mCircularBuffer.size() >= mRequiredSize);
 }
 
 CommandBufferQueue::~CommandBufferQueue() {
