@@ -1,9 +1,9 @@
 # FrameGraph
 
-FrameGraph is a framework within Filamentfor computing resources needed to
+FrameGraph is a framework within Filament for computing resources needed to
 render a frame. The framework enables declaring dependencies between resources.
 
-For example, when rendering shadow, we would need to first compute and store the
+For example, when rendering shadows, we would need to first compute and store the
 shadow map into a texture resource, and then the later color pass would then
 sample that texture to attenuate the final output color. That creates a
 dependency on the shadow map from the color pass. Filament uses FrameGraph to
@@ -16,9 +16,8 @@ declare that dependency.
 The core of this framework is
 [a class that defines a dependency graph][dependency_graph] — that is, the class
 defines nodes and connections between nodes. This class makes assumptions about
-the types of its nodes (i.e. a Texture, Material, or an Entity). Like many other
-classes within Filament, this class is without virtual function declaration to
-avoid paying the high cost of virtual calls.
+the types of its nodes. Like many other classes within Filament, this class is
+without virtual function declaration to avoid paying the cost of virtual calls.
 
 This class has additional functions to detect whether there is a cycle in the
 graph, and it is able to cull unreachable nodes.
@@ -122,9 +121,9 @@ auto& structurePass = fg.addPass<StructurePassData>("Structure Pass",
 
 The `addPass` method creates a node and it take in two lambda functions as its
 parameter. The first lambda sets up the resources that will be used in the
-execution of the Pass. This lambda is executed immediately when `addPass` is
-called. The second lambda is the actual execution of the pass; it is executed
-when the graph has been completed and is traversed.
+execution of the Pass. This lambda is executed immediately and synchronously when
+`addPass` is called. The second lambda is the actual execution of the pass; it is
+executed when the graph has been completed and is traversed.
 
 ### What does it do?
 
@@ -141,9 +140,6 @@ how to build it. We provide here a more detailed description of what it does:
     *   For example, if we are rendering into a texture, we would want to mark
         it with the bit "keep" as oppose to "discard".
 
-In the notes below, we also document details on
-two "extra" features of FrameGraph, and we note some possible future improvements.
-
 ## Additional details
 
 *   In a previous version of FrameGraph, there were only edges between Resource
@@ -154,12 +150,6 @@ two "extra" features of FrameGraph, and we note some possible future improvement
 *   There are two extra features of FrameGraph that are important but has a lot
     subtlety, and, incidentally, their inclusion added great complexity to the
     implementation
-    *   Resource forwarding
-        *   There are cases where output of Pass A and input of Pass B have
-            mismatched semantics (say A writes to a 2D texture, but B expects a
-            layer within a texture array).
-        *   In those cases, we can prevent an extra copy by "replacing" the
-            output node of B with the resource allocated for the input of A.
     *   Importing/exporting resources outside of the graph
         *   In most cases, the graph and its resources are "alive" for only for
             a frame.
