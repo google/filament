@@ -786,7 +786,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
             // FIXME: when only one is active the UBO handle of the other is null
             //        (probably a problem on vulkan)
-            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.handle)) {
+            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.buffer)) {
                 auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
                 FRenderableManager& rcm = engine.getRenderableManager();
                 auto& descriptorSet = rcm.getDescriptorSet(ci);
@@ -800,7 +800,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::OBJECT_UNIFORMS,
-                        instance.handle ? instance.handle : mRenderableUbh,
+                        instance.buffer ? instance.buffer->getHandle() : mRenderableUbh,
                         0, sizeof(PerRenderableUib));
 
                 descriptorSet.setBuffer(layout,

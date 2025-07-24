@@ -435,7 +435,7 @@ void FScene::updateUBOs(
         auto& instancesInfo = instancesData[i];
         if (UTILS_UNLIKELY(instancesInfo.buffer)) {
             instancesInfo.buffer->prepare(
-                    mEngine, worldTransformData[i], uboData[i], instancesInfo.handle);
+                    mEngine, worldTransformData[i], uboData[i]);
         }
     }
 
