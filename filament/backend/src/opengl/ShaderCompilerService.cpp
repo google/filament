@@ -22,6 +22,7 @@
 #include "OpenGLBlobCache.h"
 #include "OpenGLDriver.h"
 
+#include <atomic>
 #include <iterator>
 #include <optional>
 #include <private/backend/BackendUtils.h>
@@ -134,9 +135,31 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;
+
+    // Indicate whether this token was canceled. Used for THREAD_POOL mode.
+    std::atomic_bool cancelled = false;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
+    // Clean up OpenGL resources. Typically, shader objects are destroyed, and ownership of the
+    // created program is transferred to `OpenGLProgram` if everything goes well. However, these GL
+    // resources may persist if the token was cancelled. This ensures thorough cleanup for the case.
+    for (GLuint& shader: gl.shaders) {
+        if (!shader) {
+            continue;
+        }
+        if (gl.program) {
+            glDetachShader(gl.program, shader);
+        }
+        glDeleteShader(shader);
+        shader = 0;
+    }
+    if (gl.program) {
+        glDeleteProgram(gl.program);
+        gl.program = 0;
+    }
+
+    // Notify the caller that the resource loading has concluded.
     trySubmittingCallback();
 }
 
@@ -268,6 +291,12 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, program = std::move(program), token]() mutable {
+                        // If the token is canceled, we exit early. Even if the cancellation occurs
+                        // immediately after this check, the created GL resources will be properly
+                        // cleaned up within the token's destructor.
+                        if (token->cancelled.load(std::memory_order_relaxed)) {
+                            return;
+                        }
                         // Try retrieving the program from the cache first. If no program found,
                         // a normal compilation/linking process is performed.
                         if (!tryRetrievingProgram(mBlobCache, mDriver.mPlatform, program, token)) {
@@ -346,17 +375,12 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
 
     assert_invariant(token);// This function should be called when the token is still alive.
 
-    // Finalize any pending shader compilation tasks only when the token was created without cache.
     if (token->compiler.mMode == Mode::THREAD_POOL) {
-        auto const job = token->compiler.mCompilerThreadPool.dequeue(token);
-        if (!job) {
-            // It's likely that the job was already completed. But it may be still being
-            // executed at this moment. Just try waiting for it to avoid a race.
-            token->wait();
-        }
+        // Flag the token as canceled. The compiler thread will later discard this token, allowing
+        // the current engine thread to proceed without blocking while the cancellation is processed
+        // in the background.
+        token->cancelled.store(true, std::memory_order_relaxed);
     }
-
-    cleanupProgramAndShaders(token);
 
     // Cleanup the token.
     token->compiler.cancelTickOp(token);
@@ -409,7 +433,9 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
         tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
     }
 
+    // Release the program from the token.
     GLuint const program = token->gl.program;
+    token->gl.program = 0;
 
     // Cleanup the token.
     token->compiler.cancelTickOp(token);
@@ -747,24 +773,6 @@ void ShaderCompilerService::executeTickOps() noexcept {
     }
 
     cache.insert(platform, token->key, token->gl.program);
-}
-
-/* static */ void ShaderCompilerService::cleanupProgramAndShaders(
-        program_token_t const& token) noexcept {
-    for (GLuint& shader: token->gl.shaders) {
-        if (!shader) {
-            continue;
-        }
-        if (token->gl.program) {
-            glDetachShader(token->gl.program, shader);
-        }
-        glDeleteShader(shader);
-        shader = 0;
-    }
-    if (token->gl.program) {
-        glDeleteProgram(token->gl.program);
-        token->gl.program = 0;
-    }
 }
 
 // ------------------------------------------------------------------------------------------------

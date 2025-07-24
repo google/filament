@@ -178,9 +178,6 @@ private:
     // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
     static void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
             program_token_t const& token) noexcept;
-
-    // Cleanup GL resources.
-    static void cleanupProgramAndShaders(program_token_t const& token) noexcept;
 };
 
 } // namespace filament::backend
