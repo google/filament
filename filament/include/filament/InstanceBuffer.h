@@ -101,7 +101,7 @@ public:
         /**
          * Creates the InstanceBuffer object and returns a pointer to it.
          */
-        InstanceBuffer* UTILS_NONNULL build(Engine& engine);
+        InstanceBuffer* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FInstanceBuffer;

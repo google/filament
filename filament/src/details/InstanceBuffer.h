@@ -28,8 +28,11 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <cstddef>
+
 namespace filament {
 
+class RenderableManager;
 class FEngine;
 
 struct PerRenderableData;
@@ -44,7 +47,7 @@ public:
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
-    void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo,
+    void prepare(FEngine& engine, math::mat4f const& rootTransform, const PerRenderableData& ubo,
             backend::Handle<backend::HwBufferObject> handle);
 
     utils::CString const& getName() const noexcept { return mName; }
