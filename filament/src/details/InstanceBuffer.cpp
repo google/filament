@@ -16,15 +16,31 @@
 
 #include "details/InstanceBuffer.h"
 
-#include <details/Engine.h>
-#include <private/filament/UibStructs.h>
+#include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
 
+#include <private/filament/UibStructs.h>
+
+#include <filament/FilamentAPI.h>
+#include <filament/Engine.h>
+#include <filament/InstanceBuffer.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/Panic.h>
 #include <utils/StaticString.h>
 
 #include <math/mat3.h>
-#include <math/vec3.h>
+#include <math/mat4.h>
+
+#include <utility>
+
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cstddef>
 
 namespace filament {
 
@@ -60,7 +76,7 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::name(utils::StaticString const
     return BuilderNameMixin::name(name);
 }
 
-InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
+InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())
             << "instanceCount is " << mImpl->mInstanceCount
@@ -71,7 +87,7 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
+FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
     : mName(builder.getName()) {
     mInstanceCount = builder->mInstanceCount;
 
@@ -93,20 +109,20 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
+void FInstanceBuffer::prepare(FEngine& engine, math::mat4f const& rootTransform,
         const PerRenderableData& ubo, Handle<HwBufferObject> handle) {
     DriverApi& driver = engine.getDriverApi();
 
     // TODO: allocate this staging buffer from a pool.
-    uint32_t stagingBufferSize = sizeof(PerRenderableUib);
-    PerRenderableData* stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
+    constexpr uint32_t stagingBufferSize = sizeof(PerRenderableUib);
+    PerRenderableData* stagingBuffer = static_cast<PerRenderableData*>(malloc(stagingBufferSize));
     // TODO: consider using JobSystem to parallelize this.
     for (size_t i = 0, c = mInstanceCount; i < c; i++) {
         stagingBuffer[i] = ubo;
-        math::mat4f model = rootTransform * mLocalTransforms[i];
+        math::mat4f const model = rootTransform * mLocalTransforms[i];
         stagingBuffer[i].worldFromModelMatrix = model;
 
-        math::mat3f m = math::mat3f::getTransformForNormals(model.upperLeft());
+        math::mat3f const m = math::mat3f::getTransformForNormals(model.upperLeft());
         stagingBuffer[i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
     driver.updateBufferObject(handle, {
@@ -117,7 +133,7 @@ void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
     }, 0);
 }
 
-void FInstanceBuffer::terminate(FEngine& engine) {
+void FInstanceBuffer::terminate(FEngine&) {
 }
 
 } // namespace filament
