@@ -144,7 +144,8 @@ void VulkanSwapChain::acquire(bool& resized) {
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
             << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
-        mCommands->injectDependency(imageSyncData.imageReadySemaphore);
+        mCommands->injectDependency(imageSyncData.imageReadySemaphore,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
     mAcquired = true;
 }
