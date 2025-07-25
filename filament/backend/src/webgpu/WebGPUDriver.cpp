@@ -28,6 +28,7 @@
 #include "WebGPUStrings.h"
 #include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
+#include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
 #include <backend/platforms/WebGPUPlatform.h>
@@ -77,8 +78,9 @@ WebGPUDriver::WebGPUDriver(WebGPUPlatform& platform,
       mPipelineCache{ mDevice },
       mRenderPassMipmapGenerator{ mDevice },
       mSpdComputePassMipmapGenerator{ mDevice },
+      mBlitter{ mDevice },
       mHandleAllocator{ "Handles", driverConfig.handleArenaSize,
-          driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags } {
+          driverConfig.disableHandleUseAfterFreeCheck, driverConfig.disableHeapHandleTags }{
     mDevice.GetLimits(&mDeviceLimits);
 }
 
@@ -721,10 +723,10 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
         const uint32_t width, const uint32_t height, const uint32_t depth,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
-    PixelBufferDescriptor* data = &pixelBufferDescriptor;
+    PixelBufferDescriptor* inputData = &pixelBufferDescriptor;
     PixelBufferDescriptor reshapedData;
     if (reshape(pixelBufferDescriptor, reshapedData)) {
-        data = &reshapedData;
+        inputData = &reshapedData;
     }
     auto texture = handleCast<WebGPUTexture>(textureHandle);
 
@@ -734,6 +736,38 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
+
+    const wgpu::TextureFormat inputPixelFormat = toWebGPUFormat(inputData->format, inputData->type);
+    const wgpu::TextureFormat outputLinearFormat =
+            toWebGPULinearFormat(texture->getTexture().GetFormat());
+    const bool conversionNecessary =
+            inputPixelFormat != outputLinearFormat &&
+            inputData->type !=
+                    PixelDataType::COMPRESSED; // compressed formats should never need conversion
+    const bool doBlit = conversionNecessary;
+#ifndef NDEBUG
+    if (texture->width > 1000 && texture->height > 500) {
+        FWGPU_LOGD << "Update3DImage(..., level=" << level << ", xoffset=" << xoffset
+                   << ", yoffset=" << yoffset << ", zoffset=" << zoffset << ", width=" << width
+                   << ", height=" << height << ", depth=" << depth << ",  ...):";
+        FWGPU_LOGD << "     PixelBufferDescriptor format (input): " << toString(inputData->format);
+        FWGPU_LOGD << "     PixelBufferDescriptor type (input):   " << toString(inputData->type);
+        FWGPU_LOGD << "     Pixel WebGPUFormat (input):           "
+                   << webGPUTextureFormatToString(inputPixelFormat);
+        FWGPU_LOGD << "     Texture View format (output):         "
+                   << webGPUTextureFormatToString(texture->getViewFormat());
+        FWGPU_LOGD << "     Texture format (output):              "
+                   << webGPUTextureFormatToString(texture->getTexture().GetFormat());
+        FWGPU_LOGD << "     Linear Texture format (output):       "
+                   << webGPUTextureFormatToString(outputLinearFormat);
+        FWGPU_LOGD << "     Conversion Necessary:                 " << conversionNecessary;
+        FWGPU_LOGD << "     Do Blit:                              " << doBlit;
+    }
+#endif
+    FILAMENT_CHECK_PRECONDITION(inputData->type == PixelDataType::COMPRESSED ||
+                                inputPixelFormat != wgpu::TextureFormat::Undefined)
+            << "Failed to determine uncompressed input pixel format for WebGPU. Pixel format "
+            << toString(inputData->format) << " type " << toString(inputData->type);
     size_t blockWidth = texture->getBlockWidth();
     size_t blockHeight = texture->getBlockHeight();
     // WebGPU specification requires that for compressed textures, the x and y offsets
@@ -747,23 +781,65 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
                 << "yoffset must be aligned to blockHeight, but offset is " << blockHeight
                 << "and offset is " << yoffset;
     }
-
-    auto copyInfo = wgpu::TexelCopyTextureInfo{
-        .texture = texture->getTexture(),
-        .mipLevel = level,
-        .origin = { .x = xoffset, .y = yoffset, .z = zoffset },
-        .aspect = texture->getAspect() };
-    uint32_t bytesPerRow = static_cast<uint32_t>(
-            PixelBufferDescriptor::computePixelSize(data->format, data->type) * width);
+    wgpu::Texture stagingTexture = doBlit ? wgpu::Texture{nullptr} : texture->getTexture();
     auto extent = wgpu::Extent3D{ .width = width, .height = height, .depthOrArrayLayers = depth };
+    if (doBlit) {
+        const wgpu::TextureDescriptor stagingTextureDescriptor{
+            .label = "blit_staging_input_texture",
+            .usage = texture->getTexture().GetUsage(),
+            .dimension = texture->getTexture().GetDimension(),
+            .size = extent,
+            .format = inputPixelFormat,
+            .mipLevelCount = 1,
+            .sampleCount = texture->getTexture().GetSampleCount(),
+            .viewFormatCount = 0,
+            .viewFormats = nullptr,
+        };
+        stagingTexture = mDevice.CreateTexture(&stagingTextureDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(stagingTexture)
+                << "Failed to create staging input texture for blit?";
+    }
+    wgpu::Origin3D origin = { .x = 0, .y = 0, .z = 0 };
+    if (!doBlit) {
+        origin.x = xoffset;
+        origin.y = yoffset;
+        origin.z = zoffset;
+    }
+    const auto copyInfo = wgpu::TexelCopyTextureInfo{
+        .texture = stagingTexture,
+        .mipLevel = level,
+        .origin = origin,
+        .aspect = texture->getAspect(),
+    };
+    const uint32_t bytesPerRow = static_cast<uint32_t>(
+            PixelBufferDescriptor::computePixelSize(inputData->format, inputData->type) * width);
 
-    const uint8_t* dataBuff = static_cast<const uint8_t*>(data->buffer);
-    size_t dataSize = data->size;
+    const uint8_t* dataBuff = static_cast<const uint8_t*>(inputData->buffer);
+    const size_t dataSize = inputData->size;
 
-    auto layout = wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
+    const auto layout =
+            wgpu::TexelCopyBufferLayout{ .bytesPerRow = bytesPerRow, .rowsPerImage = height };
 
     mQueue.WriteTexture(&copyInfo, dataBuff, dataSize, &layout, &extent);
     scheduleDestroy(std::move(pixelBufferDescriptor));
+    if (doBlit) {
+        const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{ .label = "blit_command" };
+        wgpu::CommandEncoder blitCommandEncoder =
+                mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(blitCommandEncoder)
+                << "Failed to create command encoder for blit?";
+        for (uint32_t layerIndex{ 0 }; layerIndex < texture->getArrayLayerCount(); ++layerIndex) {
+            mBlitter.blit(blitCommandEncoder, layerIndex, level, stagingTexture,
+                    texture->getTexture());
+        }
+        const wgpu::CommandBufferDescriptor commandBufferDescriptor{
+            .label = "blit_command_buffer",
+        };
+        const wgpu::CommandBuffer blitCommand = blitCommandEncoder.Finish(&commandBufferDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(blitCommand) << "Failed to create command buffer for blit?";
+        mQueue.Submit(1, &blitCommand);
+        stagingTexture.Destroy();
+    }
 }
 
 void WebGPUDriver::setupExternalImage(void* image) {
