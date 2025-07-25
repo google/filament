@@ -58,7 +58,7 @@ private:
     std::vector<Material*> mMaterials;
     Engine* const mEngine;
     const bool mOptimizeShaders;
-    filament::UserVariantFilterMask mVariantFilter;
+    filament::UserVariantFilterMask mVariantFilter{};
 };
 
 JitShaderProvider::JitShaderProvider(Engine* engine, bool optimizeShaders,

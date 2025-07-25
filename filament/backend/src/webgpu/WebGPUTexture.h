@@ -118,6 +118,8 @@ public:
     [[nodiscard]] static bool supportsMultipleMipLevelsViaStorageBinding(
             wgpu::TextureFormat format);
 
+    [[nodiscard]] static size_t getWGPUTextureFormatPixelSize(const wgpu::TextureFormat format);
+
 private:
     // the texture view's format, which may differ from the underlying texture's format itself,
     // an example of when this is needed is when certain underlying shaders don't support

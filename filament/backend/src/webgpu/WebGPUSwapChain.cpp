@@ -373,6 +373,18 @@ wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& 
     return surfaceTexture.texture.CreateView(&textureViewDescriptor);
 }
 
+wgpu::Texture WebGPUSwapChain::getCurrentTexture(wgpu::Extent2D const& extent) {
+    if (isHeadless()) {
+        return mRenderTargetTextures[mHeadlessBufferIndex];
+    }
+    // We should return the actual texture that was in use, but we don't keep a direct handle to it.
+    // The non-headless case for this isn't currently relevant (Since this is only used by headless
+    // rendering captured by readPixels), but if we need it this can be done in the future
+    FILAMENT_CHECK_POSTCONDITION(false)
+            << "getCurrentTexture is not implemented for non-headless mode.";
+    return nullptr;
+}
+
 wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
     return mRenderTargetViews[mHeadlessBufferIndex];
 }
