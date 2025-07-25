@@ -201,20 +201,6 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     return mMaterial;
 }
 
-UTILS_NOINLINE
-FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(
-        FMaterial const* const ma) noexcept {
-    // TODO: we need to move away from the default instance
-    return const_cast<FMaterial *>(ma)->getDefaultInstance();
-}
-
-UTILS_NOINLINE
-FMaterialInstance* PostProcessManager::PostProcessMaterial::getMaterialInstance(FEngine& engine,
-        PostProcessMaterial const& material, PostProcessVariant const variant) noexcept {
-    FMaterial const* ma = material.getMaterial(engine, variant);
-    return getMaterialInstance(ma);
-}
-
 // ------------------------------------------------------------------------------------------------
 
 const PostProcessManager::JitterSequence<4> PostProcessManager::sRGSS4 = {{{
@@ -397,6 +383,9 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
     FEngine& engine = mEngine;
     driver.destroyTexture(mStarburstTexture);
 
+    // Must destroy the instances before the materials
+    mMaterialInstanceManager.terminate(engine);
+
     auto first = mMaterialRegistry.begin();
     auto const last = mMaterialRegistry.end();
     while (first != last) {
@@ -423,6 +412,10 @@ Handle<HwTexture> PostProcessManager::getOneTextureArray() const {
 
 Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
     return mEngine.getZeroTextureArray();
+}
+
+void PostProcessManager::resetForRender() {
+    mMaterialInstanceManager.reset();
 }
 
 UTILS_NOINLINE
@@ -593,7 +586,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 FMaterial const* const ma = material.getMaterial(mEngine);
                 auto pipeline = getPipelineState(ma);
 
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 // The first mip already exists, so we process n-1 lods
                 for (size_t level = 0; level < levelCount - 1; level++) {
@@ -956,7 +949,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 auto& material = getPostProcessMaterial(materialName);
 
                 FMaterial const * const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 // Set AO type specific material parameters
                 switch (aoType) {
@@ -1140,7 +1133,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                         getPostProcessMaterial("bilateralBlurBentNormals") :
                         getPostProcessMaterial("bilateralBlur");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
                 mi->setParameter("ssao", ssao, { /* only reads level 0 */ });
                 mi->setParameter("axis", axis / float2{desc.width, desc.height});
                 mi->setParameter("kernel", kGaussianSamples, kGaussianCount);
@@ -1306,8 +1299,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                             "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
                 }
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(
-                        mEngine, separableGaussianBlur);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, separableGaussianBlur);
 
                 const size_t kernelStorageSize = mi->getMaterial()->reflect("kernel")->size;
 
@@ -1751,8 +1743,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto const& material = (dofResolution == 1) ?
                         getPostProcessMaterial("dofCoc") :
                         getPostProcessMaterial("dofDownsample");
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(
-                        mEngine, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
 
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("depth", depth, { .filterMin = SamplerMinFilter::NEAREST });
@@ -1811,7 +1802,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 auto const pipeline = getPipelineState(ma, variant);
 
@@ -1884,8 +1875,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto const& material = (!textureSwizzleSupported && (i == 0)) ?
                             getPostProcessMaterial("dofTilesSwizzle") :
                             getPostProcessMaterial("dofTiles");
-                    FMaterialInstance* const mi =
-                            PostProcessMaterial::getMaterialInstance(mEngine, material);
+                    FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                     mi->setParameter("cocMinMax", inCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
                     mi->setParameter("texelSize", float2{ 1.0f / inputDesc.width, 1.0f / inputDesc.height });
                     commitAndRenderFullScreenQuad(driver, out, mi);
@@ -1918,8 +1908,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto const& out = resources.getRenderPassInfo();
                     auto inTilesCocMinMax = resources.getTexture(data.inTilesCocMinMax);
                     auto const& material = getPostProcessMaterial("dofDilate");
-                    FMaterialInstance* const mi =
-                            PostProcessMaterial::getMaterialInstance(mEngine, material);
+                    FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                     mi->setParameter("tiles", inTilesCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
                     commitAndRenderFullScreenQuad(driver, out, mi);
                 });
@@ -1978,8 +1967,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto const& inputDesc = resources.getDescriptor(data.coc);
 
                 auto const& material = getPostProcessMaterial("dof");
-                FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                 // it's not safe to use bilinear filtering in the general case (causes artifacts around edges)
                 mi->setParameter("color", color,
                         { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
@@ -2040,8 +2028,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto tilesCocMinMax = resources.getTexture(data.tilesCocMinMax);
 
                 auto const& material = getPostProcessMaterial("dofMedian");
-                FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                 mi->setParameter("dof",   inColor,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("alpha", inAlpha,        { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                 mi->setParameter("tiles", tilesCocMinMax, { .filterMin = SamplerMinFilter::NEAREST });
@@ -2089,8 +2076,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 auto tilesCocMinMax = resources.getTexture(data.tilesCocMinMax);
 
                 auto const& material = getPostProcessMaterial("dofCombine");
-                FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                 mi->setParameter("color", color, { .filterMin = SamplerMinFilter::NEAREST });
                 mi->setParameter("dof",   dof,   { .filterMag = SamplerMagFilter::NEAREST });
                 mi->setParameter("alpha", alpha, { .filterMag = SamplerMagFilter::NEAREST });
@@ -2120,8 +2106,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
                 bindPostProcessDescriptorSet(driver);
                 auto const& out = resources.getRenderPassInfo();
                 auto const& material = getPostProcessMaterial("bloomDownsample2x");
-                FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                 mi->setParameter("source", resources.getTexture(data.input), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR
@@ -2264,10 +2249,10 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                 auto hwOut = resources.getTexture(data.out);
 
                 auto const& material9 = getPostProcessMaterial("bloomDownsample9");
-                auto* mi9 = PostProcessMaterial::getMaterialInstance(mEngine, material9);
+                auto* mi9 = getMaterialInstance(mEngine, material9);
 
                 auto const& material13 = getPostProcessMaterial("bloomDownsample");
-                auto* mi13 = PostProcessMaterial::getMaterialInstance(mEngine, material13);
+                auto* mi13 = getMaterialInstance(mEngine, material13);
 
                 for (size_t i = 1; i < inoutBloomOptions.levels; i++) {
                     auto hwDstRT = resources.getRenderPassInfo(data.outRT[i]);
@@ -2309,13 +2294,16 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("bloomUpsample");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* mi = PostProcessMaterial::getMaterialInstance(ma);
 
                 auto pipeline = getPipelineState(ma);
                 pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
                 pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
 
                 for (size_t j = inoutBloomOptions.levels, i = j - 1; i >= 1; i--, j++) {
+                    // Note that we wouldn't want to use the same instance for each pass since that
+                    // would imply using the same UBOs, which implies synchronization across the
+                    // passes.
+                    FMaterialInstance* mi = getMaterialInstance(ma);
                     auto hwDstRT = resources.getRenderPassInfo(data.outRT[i - 1]);
                     hwDstRT.params.flags.discardStart = TargetBufferFlags::NONE; // b/c we'll blend
                     hwDstRT.params.flags.discardEnd = TargetBufferFlags::NONE;
@@ -2366,7 +2354,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("flare");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                        getMaterialInstance(mEngine, material);
 
                 mi->setParameter("color", in, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -2444,7 +2432,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine, variant);
     // the UBO has been set and committed in colorGradingPrepareSubpass()
-    FMaterialInstance const* mi = PostProcessMaterial::getMaterialInstance(ma);
+    FMaterialInstance const* mi = getMaterialInstance(ma);
     mi->use(driver);
     auto const pipeline = getPipelineState(ma, variant);
     driver.nextSubpass();
@@ -2454,7 +2442,7 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
-    FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(mEngine, material);
+    FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver);
     material.getMaterial(mEngine);
@@ -2469,7 +2457,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine);
     // the UBO has been set and committed in colorGradingPrepareSubpass()
-    FMaterialInstance const* mi = PostProcessMaterial::getMaterialInstance(ma);
+    FMaterialInstance const* mi = getMaterialInstance(ma);
     mi->use(driver);
     auto const pipeline = getPipelineState(ma);
     driver.nextSubpass();
@@ -2672,7 +2660,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                         PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
 
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+                        getMaterialInstance(mEngine, material, variant);
 
                 mi->setParameter("colorBuffer", texture, {
                         .filterMag = SamplerMagFilter::LINEAR,
@@ -2787,7 +2775,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
     PostProcessVariant const variant = colorGradingConfig.translucent ?
             PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
     FMaterialInstance* const mi =
-            PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+            getMaterialInstance(mEngine, material, variant);
 
     const SamplerParams params = {
             .filterMag = SamplerMagFilter::LINEAR,
@@ -2938,7 +2926,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
 
                 FMaterial const* const ma = material.getMaterial(mEngine, variant);
 
-                FMaterialInstance* mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* mi = getMaterialInstance(ma);
                 mi->setParameter("color",  color, {});  // nearest
                 mi->setParameter("depth",  depth, {});  // nearest
                 mi->setParameter("alpha", taaOptions.feedback);
@@ -3025,7 +3013,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
 
                 auto const& material = getPostProcessMaterial("fsr_rcas");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+                        getMaterialInstance(mEngine, material, variant);
 
                 FSRUniforms uniforms;
                 FSR_SharpeningSetup(&uniforms, { .sharpness = 2.0f - 2.0f * sharpness });
@@ -3094,7 +3082,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
 
                 auto& material = getPostProcessMaterial("blitLow");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                        getMaterialInstance(mEngine, material);
                 mi->setParameter("color", color, {
                     .filterMag = filter
                 });
@@ -3162,7 +3150,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleSGSR1(FrameGraph& fg,
                         PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
 
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material, variant);
+                        getMaterialInstance(mEngine, material, variant);
 
                 mi->setParameter("color", color, {
                     // The SGSR documentation doesn't clarify if LINEAR or NEAREST should be used. The
@@ -3271,7 +3259,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                 if (twoPassesEASU) {
                     splitEasuMaterial = &getPostProcessMaterial("fsr_easu_mobileF");
                     FMaterialInstance* const mi =
-                            PostProcessMaterial::getMaterialInstance(mEngine, *splitEasuMaterial);
+                            getMaterialInstance(mEngine, *splitEasuMaterial);
                     setEasuUniforms(mi, inputDesc, outputDesc);
                     mi->setParameter("color", color, {
                         .filterMag = SamplerMagFilter::LINEAR
@@ -3288,7 +3276,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                     unsigned const index = std::min(1u, unsigned(dsrOptions.quality) - 2);
                     easuMaterial = &getPostProcessMaterial(blitterNames[index]);
                     FMaterialInstance* const mi =
-                            PostProcessMaterial::getMaterialInstance(mEngine, *easuMaterial);
+                            getMaterialInstance(mEngine, *easuMaterial);
 
                     setEasuUniforms(mi, inputDesc, outputDesc);
 
@@ -3375,7 +3363,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
                 PostProcessMaterial const& material =
                         getPostProcessMaterial(layer ? "blitArray" : "blitLow");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                auto* mi = PostProcessMaterial::getMaterialInstance(ma);
+                auto* mi = getMaterialInstance(ma);
                 mi->setParameter("color", color, {
                         .filterMag = filterMag,
                         .filterMin = filterMin
@@ -3473,7 +3461,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
                 // set uniforms
                 PostProcessMaterial const& material = getPostProcessMaterial("blitDepth");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                        getMaterialInstance(mEngine, material);
                 mi->setParameter("depth", depth,
                         {
                             .filterMag = SamplerMagFilter::NEAREST,
@@ -3585,7 +3573,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
                 auto const& input = resources.getTexture(data.input);
                 auto const& material = getPostProcessMaterial("resolveDepth");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                        getMaterialInstance(mEngine, material);
                 mi->setParameter("depth", input, {}); // NEAREST
                 commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
             });
@@ -3636,7 +3624,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                 auto const pipeline = getPipelineState(ma);
                 backend::Viewport const scissor = { 1u, 1u, dim - 2u, dim - 2u };
 
-                FMaterialInstance* const mi = PostProcessMaterial::getMaterialInstance(ma);
+                FMaterialInstance* const mi = getMaterialInstance(ma);
                 mi->setParameter("color", in, {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -3679,7 +3667,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
                 auto const out = resources.getRenderPassInfo();
                 auto const& material = getPostProcessMaterial("debugShadowCascades");
                 FMaterialInstance* const mi =
-                        PostProcessMaterial::getMaterialInstance(mEngine, material);
+                        getMaterialInstance(mEngine, material);
                 mi->setParameter("color",  color, {});  // nearest
                 mi->setParameter("depth",  depth, {});  // nearest
                 commitAndRenderFullScreenQuad(driver, out, mi);
@@ -3728,7 +3716,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
 
                 PostProcessMaterial const& material = getPostProcessMaterial("blitArray");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                auto* mi = PostProcessMaterial::getMaterialInstance(ma);
+                auto* mi = getMaterialInstance(ma);
                 mi->setParameter("color", color, {
                         .filterMag = filterMag,
                         .filterMin = filterMin
@@ -3800,8 +3788,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
                     auto const out = resources.getRenderPassInfo();
                     auto in = resources.getTexture(data.depth);
                     auto const& material = getPostProcessMaterial("shadowmap");
-                    FMaterialInstance* const mi =
-                            PostProcessMaterial::getMaterialInstance(mEngine, material);
+                    FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
                     mi->setParameter("shadowmap", in, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("scale", s);
