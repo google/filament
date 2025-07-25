@@ -19,7 +19,7 @@ material {
             target : depth,
             type : float
         }
-    ],    
+    ],
     variables : [
         vertex
     ],
