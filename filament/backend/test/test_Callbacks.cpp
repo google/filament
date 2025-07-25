@@ -34,9 +34,8 @@ TEST_F(BackendTest, FrameScheduledCallback) {
     // Create a SwapChain.
     // In order for the frameScheduledCallback to be called, this must be a real SwapChain (not
     // headless) so we obtain a drawable.
-    auto swapChain = cleanup.add(createSwapChain());
-
     Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
+    auto swapChain = cleanup.add(createSwapChain());
 
     int callbackCountA = 0;
     api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
