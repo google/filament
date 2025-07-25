@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUDRIVER_H
 
 #include "WebGPURenderTarget.h"
+#include "webgpu/WebGPUBlitter.h"
 #include "webgpu/WebGPUConstants.h"
 #include "webgpu/WebGPUMsaaTextureResolver.h"
 #include "webgpu/WebGPUPipelineCache.h"
@@ -46,7 +47,6 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
-
 /**
  * WebGPU backend (driver) implementation
  */
@@ -85,6 +85,7 @@ private:
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
+    WebGPUBlitter mBlitter;
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
