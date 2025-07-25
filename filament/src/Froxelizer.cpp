@@ -710,7 +710,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         const size_t lightCount = entry.count();
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
-            DLOG(INFO) << "out of space: " << i << ", at " << offset;
+            // DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
             do {
@@ -729,7 +729,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             const size_t word = l / LIGHT_PER_GROUP;
             const size_t bit  = l % LIGHT_PER_GROUP;
             l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
-            *point = (RecordBufferType)l;
+            *point = RecordBufferType(l);
             // we need to "cancel" the write operation if we have more than 255 spot or point lights
             // (this is a limitation of the data type used to store the light counts per froxel)
             point += (point - beginPoint < 255) ? 1 : 0;
