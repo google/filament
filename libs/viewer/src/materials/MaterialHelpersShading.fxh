@@ -225,11 +225,18 @@ BiplanarAxes ComputeBiplanarPlanes(vec3 weights) {
     return result;
 }
 
-BiplanarData GenerateBiplanarData(BiplanarAxes axes, float scaler, highp vec3 pos, lowp vec3 weights) {
-    // Depending on the resolution of the texture, we may want to multiply the texture coordinates
-    vec3 queryPos = scaler * (pos - getMaterialOrientationCenter());
-    queryPos *= getMaterialOrientationMatrix();
+struct BiplanarCommonData {
+    vec3 normalWeights;
+    vec3 orientedNormal;
+    vec3 rotatedVectorToMatCenter;
+    BiplanarAxes axes;
+};
 
+BiplanarData GenerateBiplanarData(in BiplanarCommonData btCommon, float scaler) {
+    // Depending on the resolution of the texture, we may want to multiply the texture coordinates
+    vec3 queryPos = scaler * btCommon.rotatedVectorToMatCenter;
+    BiplanarAxes axes = btCommon.axes;
+    vec3 weights = btCommon.normalWeights;
     // Store the query data
     BiplanarData result = DEFAULT_BIPLANAR_DATA;
 
@@ -261,10 +268,8 @@ BiplanarData GenerateBiplanarData(BiplanarAxes axes, float scaler, highp vec3 po
 }
 
 // A simple linear blend with normalization
+// Get transformed normals (material rotation)
 vec3 ComputeWeights(vec3 normal) {
-    // We transform the normal only here for material rotation
-    normal = normal * getMaterialOrientationMatrix();
-
     // This one has a region where there is no blend, creating more defined interpolations
     const float blendBias = 0.2;
     vec3 blend = abs(normal.xyz);
@@ -274,20 +279,30 @@ vec3 ComputeWeights(vec3 normal) {
     return blend;
 }
 
-vec4 BiplanarTexture(sampler2D tex, float scaler, highp vec3 pos, lowp vec3 normal) {
+//compute data shared between different functions
+BiplanarCommonData ComputeBiplanarCommonData(in FragmentData fragmentData) {
+    BiplanarCommonData res;
+    res.orientedNormal = fragmentData.normal * getMaterialOrientationMatrix();
+    res.normalWeights = ComputeWeights(res.orientedNormal);
+    res.axes = ComputeBiplanarPlanes(res.normalWeights);
+    res.rotatedVectorToMatCenter = (fragmentData.pos - getMaterialOrientationCenter());
+    res.rotatedVectorToMatCenter *= getMaterialOrientationMatrix();
+    return res;
+}
+
+const float kSupportThreshold = 0.25;
+const float kSupportThresholdInv = 1.0 / (1.0 - kSupportThreshold);
+
+vec4 BiplanarTexture(sampler2D tex, float scaler, in BiplanarCommonData btCommon) {
     // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
-    vec3 weights = ComputeWeights(normal);
-    BiplanarAxes axes = ComputeBiplanarPlanes(weights);
-    BiplanarData queryData = GenerateBiplanarData(axes, scaler, pos, weights);
+    BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
     vec4 mainPlaneSample = textureGrad( tex, queryData.maxPos, queryData.maxDpDx, queryData.maxDpDy );
     vec4 secondaryPlaneSample = textureGrad( tex, queryData.medPos, queryData.medDpDx, queryData.medDpDy );
     
     // optional - add local support (prevents discontinuty)
-    const float kSupportThreshold = 0.25;
-    queryData.mainWeight = clamp( (queryData.mainWeight - kSupportThreshold) / (1.0 - kSupportThreshold), 0.0, 1.0 );
-    queryData.medianWeight = clamp( (queryData.medianWeight - kSupportThreshold) / (1.0 - kSupportThreshold), 0.0, 1.0 );
-
+    queryData.mainWeight = saturate((queryData.mainWeight - kSupportThreshold) * kSupportThresholdInv);
+    queryData.medianWeight = saturate((queryData.medianWeight - kSupportThreshold) * kSupportThresholdInv);
 	return (mainPlaneSample * queryData.mainWeight + secondaryPlaneSample * queryData.medianWeight) / (queryData.mainWeight + queryData.medianWeight);
 }
 
@@ -331,18 +346,17 @@ vec3 swizzleIvec(vec3 x, ivec3 i) {
 // approximated by the appropriate sequence and flips of world space axes. For more details
 // Refer to https://iquilezles.org/articles/biplanar/
 // Refer to (basic triplanar mapping) https://bgolus.medium.com/normal-mapping-for-a-triplanar-shader-10bf39dca05a
-vec3 BiplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp vec3 normal, bool useSwizzledNormalMaps, float normalIntensity) {
+vec3 BiplanarNormalMap(sampler2D normalMap, float scaler, bool useSwizzledNormalMaps, float normalIntensity, in BiplanarCommonData btCommon) {
     // We sort triplanar plane relevance by the relative ordering of the weights and not by the normal
-    vec3 weights = ComputeWeights(normal);
-    BiplanarAxes axes = ComputeBiplanarPlanes(weights);
-    BiplanarData queryData = GenerateBiplanarData(axes, scaler, pos, weights);
+    BiplanarAxes axes = btCommon.axes;
+    BiplanarData queryData = GenerateBiplanarData(btCommon, scaler);
 
     // Tangent space normal maps in a quasi world space. 2-channel XY TS normal texture: this saves 33% on storage
     vec2 packedNormalMax = SampleNormalMap(normalMap, queryData.maxPos, queryData.maxDpDx, queryData.maxDpDy, useSwizzledNormalMaps);
     vec2 packedNormalMed = SampleNormalMap(normalMap, queryData.medPos, queryData.medDpDx, queryData.medDpDy, useSwizzledNormalMaps);
     int maxAxis = axes.maximum.x;
     int medAxis = axes.median.x;
-    normal = normal * getMaterialOrientationMatrix();
+    vec3 normal = btCommon.orientedNormal;
     vec3 tNormalMax = UnpackNormal(packedNormalMax, NormalMapScale(normal, maxAxis, normalIntensity) );
     vec3 tNormalMed = UnpackNormal(packedNormalMed, NormalMapScale(normal, medAxis, normalIntensity) );
 
@@ -370,17 +384,16 @@ vec3 BiplanarNormalMap(sampler2D normalMap, float scaler, highp vec3 pos, lowp v
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ApplyNormalMap(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyNormalMap(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_NORMAL)
     if (IsNormalTextured()) {
         // We combine the normals in world space, hence the transformation in the end from world to tangent, assuming an
         // orthonormal tangent frame (which may not hold actually but looks fine enough for now).
         vec3 normalWS = BiplanarNormalMap(materialParams_normalTexture,
                                           materialParams.textureScaler.y,
-                                          fragmentData.pos,
-                                          fragmentData.normal,
                                           IsNormalMapSwizzled(),
-                                          GetNormalIntensity());
+                                          GetNormalIntensity(),
+                                          btCommon);
 #if defined(SHAPR_USE_WORLD_NORMALS)
         material.normal = normalWS;
 #else
@@ -395,15 +408,14 @@ void ApplyNormalMap(inout MaterialInputs material, inout FragmentData fragmentDa
 #endif
 }
 
-void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyClearCoatNormalMap(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     if (IsClearCoatNormalTextured()) {
         vec3 clearCoatNormalWS = BiplanarNormalMap(materialParams_clearCoatNormalTexture,
                                                    materialParams.textureScaler.z,
-                                                   fragmentData.pos,
-                                                   fragmentData.normal,
                                                    IsNormalMapSwizzled(),
-                                                   GetClearCoatNormalIntensity());
+                                                   GetClearCoatNormalIntensity(),
+                                                   btCommon);
 #if defined(SHAPR_USE_WORLD_NORMALS)
         material.clearCoatNormal = clearCoatNormalWS;
 #else
@@ -418,20 +430,18 @@ void ApplyClearCoatNormalMap(inout MaterialInputs material, inout FragmentData f
 #endif
 }
 
-void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyBaseColor(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_BASE_COLOR)
     if (IsBaseColorTextured()) {
 #if defined(BLENDING_ENABLED) || defined(MATERIAL_HAS_REFRACTION)
         material.baseColor.rgba = BiplanarTexture(materialParams_baseColorTexture,
                                                 materialParams.textureScaler.x,
-                                                fragmentData.pos,
-                                                fragmentData.normal)
+                                                btCommon)
                                     .rgba;
 #else
         material.baseColor.rgb = BiplanarTexture(materialParams_baseColorTexture,
                                                  materialParams.textureScaler.x,
-                                                 fragmentData.pos,
-                                                 fragmentData.normal)
+                                                 btCommon)
                                     .rgb;
 #endif
     } else {
@@ -465,17 +475,16 @@ void ApplyBaseColor(inout MaterialInputs material, inout FragmentData fragmentDa
 #endif
 }
 
-void ApplyEmissive(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyEmissive(inout MaterialInputs material) {
     material.emissive = float4( material.baseColor.rgb *  materialParams.emissiveControl.x, materialParams.emissiveControl.y);
 }
 
-void ApplyOcclusion(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyOcclusion(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION) && defined(BLENDING_DISABLED)
     if (IsOcclusionTextured()) {
         material.ambientOcclusion = BiplanarTexture(materialParams_occlusionTexture,
                                                     materialParams.textureScaler.y,
-                                                    fragmentData.pos,
-                                                    fragmentData.normal).r;
+                                                    btCommon).r;
     } else {
         material.ambientOcclusion = materialParams.occlusion;
     }
@@ -483,13 +492,12 @@ void ApplyOcclusion(inout MaterialInputs material, inout FragmentData fragmentDa
 #endif
 }
 
-void ApplyRoughness(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyRoughness(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_ROUGHNESS)
     if (IsRoughnessTextured()) {
         material.roughness = BiplanarTexture(materialParams_roughnessTexture,
                                              materialParams.textureScaler.y * materialParams.roughnessUvScaler,
-                                             fragmentData.pos,
-                                             fragmentData.normal).r;
+                                             btCommon).r;
     } else {
         material.roughness = materialParams.roughness;
     }
@@ -497,7 +505,7 @@ void ApplyRoughness(inout MaterialInputs material, inout FragmentData fragmentDa
 #endif
 }
 
-void ApplyReflectance(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyReflectance(inout MaterialInputs material) {
     // Unfortunately, MATERIAL_HAS_REFLECTANCE is defined even for cloth which does not have reflectance. Luckily, cloth and
     // specular-glossiness models are the only two that do not have this property (and the latter is a legacy mode anyway).
 #if defined(MATERIAL_HAS_REFLECTANCE) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
@@ -507,59 +515,57 @@ void ApplyReflectance(inout MaterialInputs material, inout FragmentData fragment
 #endif
 }
 
-void ApplyMetallic(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyMetallic(inout MaterialInputs material, in BiplanarCommonData btCommon) {
     // Cloth and specular glossiness explicitly do not have these properties.
 #if defined(MATERIAL_HAS_METALLIC) && !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     if (IsMetallicTextured()) {
         material.metallic = BiplanarTexture(materialParams_metallicTexture,
                                             materialParams.textureScaler.y,
-                                            fragmentData.pos,
-                                            fragmentData.normal).r;
+                                            btCommon).r;
     } else {
         material.metallic = materialParams.metallic;
     }
 #endif
 }
 
-void ApplyClearCoatRoughness(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyClearCoatRoughness(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
     if (IsClearCoatRoughnessTextured()) {
         material.clearCoatRoughness = BiplanarTexture(materialParams_clearCoatRoughnessTexture,
                                                        materialParams.textureScaler.z,
-                                                       fragmentData.pos,
-                                                       fragmentData.normal).r;
+                                                       btCommon).r;
     } else {
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
     }
 #endif
 }
 
-void ApplyAbsorption(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyAbsorption(inout MaterialInputs material) {
     // This is a transmission-only property and those materials actually disable blending
 #if defined(MATERIAL_HAS_ABSORPTION) && defined(MATERIAL_HAS_REFRACTION)
     material.absorption = DoDeriveAbsorption() ? 1.0 - material.baseColor.rgb : materialParams.absorption;
 #endif
 }
 
-void ApplyIOR(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyIOR(inout MaterialInputs material) {
     // This is a transmission-only property and those materials actually disable blending
 #if defined(MATERIAL_HAS_IOR) && defined(MATERIAL_HAS_REFRACTION)
     material.ior = 1.0 + materialParams.iorScale * ( materialParams.ior - 1.0 );
 #endif
 }
 
-void ApplyTransmission(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyTransmission(inout MaterialInputs material, in BiplanarCommonData btCommon) {
     // This is a transmission-only property and those materials actually disable blending
 #if defined(MATERIAL_HAS_TRANSMISSION) && defined(MATERIAL_HAS_REFRACTION)
     if ( IsTransmissionTextured() ) {
-        material.transmission = BiplanarTexture(materialParams_transmissionTexture, materialParams.textureScaler.w, fragmentData.pos, fragmentData.normal).r;
+        material.transmission = BiplanarTexture(materialParams_transmissionTexture, materialParams.textureScaler.w, btCommon).r;
     } else {
         material.transmission = materialParams.transmission;
     }
 #endif
 }
 
-void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyThickness(inout MaterialInputs material) {
     // This is a transmission-only property and those materials actually disable blending
     // This applies both micro and regular thickness, although we only do the latter for now (the former would be used in transparent thin materials).
 #if defined(BLENDING_DISABLED) && defined(MATERIAL_HAS_REFRACTION)
@@ -572,13 +578,13 @@ void ApplyThickness(inout MaterialInputs material, inout FragmentData fragmentDa
 #endif
 }
 
-void ApplySheenRoughness(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplySheenRoughness(inout MaterialInputs material, in BiplanarCommonData btCommon) {
 #if defined(MATERIAL_HAS_SHEEN_ROUGHNESS) && !defined(SHADING_MODEL_SUBSURFACE) && !defined(SHADING_MODEL_CLOTH) &&    \
     defined(BLENDING_DISABLED)
 #if defined(MATERIAL_HAS_USE_SHEEN_ROUGHNESS_TEXTURE)
     if (IsSheenRoughnessTextured()) {
         material.sheenRoughness =
-            BiplanarTexture(materialParams_sheenRoughnessTexture, 1.0f, fragmentData.pos, fragmentData.normal).r;
+            BiplanarTexture(materialParams_sheenRoughnessTexture, 1.0f, btCommon).r;
     } else {
         material.sheenRoughness = materialParams.sheenRoughness;
     }
@@ -588,7 +594,7 @@ void ApplySheenRoughness(inout MaterialInputs material, inout FragmentData fragm
 #endif
 }
 
-void ApplyShaprScalars(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyShaprScalars(inout MaterialInputs material) {
     // All of our materials have specularIntensity and useWard, so no need to define-guard these
     material.specularIntensity = GetSpecularIntensity();
     material.useWard = IsWard();
@@ -605,7 +611,7 @@ vec3 BaseColorToSheenColor(vec3 baseColor) {
     return result;
 }
 
-void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyNonTextured(inout MaterialInputs material) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     material.clearCoat = materialParams.clearCoat;
 #endif
@@ -645,29 +651,39 @@ void ApplyNonTextured(inout MaterialInputs material, inout FragmentData fragment
 //
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ApplyAllPrePrepare(inout MaterialInputs material, inout FragmentData fragmentData) {
+void ApplyAllPrePrepare(inout MaterialInputs material, in BiplanarCommonData btCommon) {
     // Filament material docs state normals should be set _before_ calling prepareMaterial,
     // and that also means clear coat normals
-    ApplyNormalMap(material, fragmentData);
-    ApplyClearCoatNormalMap(material, fragmentData);
+    ApplyNormalMap(material, btCommon);
+    ApplyClearCoatNormalMap(material, btCommon);
 }
 
-void ApplyAllPostPrepare(inout MaterialInputs material, inout FragmentData fragmentData) {
-    ApplyOcclusion(material, fragmentData);
-    ApplyBaseColor(material, fragmentData);
-    ApplyEmissive(material, fragmentData);
-    ApplyRoughness(material, fragmentData);
-    ApplyReflectance(material, fragmentData);
-    ApplyMetallic(material, fragmentData);
+void ApplyAllPostPrepare(inout MaterialInputs material, in BiplanarCommonData btCommon) {
+    ApplyOcclusion(material, btCommon);
+    ApplyBaseColor(material, btCommon);
+    ApplyEmissive(material);
+    ApplyRoughness(material, btCommon);
+    ApplyReflectance(material);
+    ApplyMetallic(material, btCommon);
 
-    ApplyClearCoatRoughness(material, fragmentData);
-    ApplySheenRoughness(material, fragmentData);
+    ApplyClearCoatRoughness(material, btCommon);
+    ApplySheenRoughness(material, btCommon);
 
-    ApplyAbsorption(material, fragmentData);
-    ApplyIOR(material, fragmentData);
-    ApplyTransmission(material, fragmentData);
-    ApplyThickness(material, fragmentData);
+    ApplyAbsorption(material);
+    ApplyIOR(material);
+    ApplyTransmission(material, btCommon);
+    ApplyThickness(material);
 
-    ApplyNonTextured(material, fragmentData);
-    ApplyShaprScalars(material, fragmentData);
+    ApplyNonTextured(material);
+    ApplyShaprScalars(material);
+}
+
+
+void ApplyStandardMaterialFragment(inout MaterialInputs material) {
+    ApplyEditorScalers(material);
+    FragmentData fragmentData = GetPositionAndNormal();
+    BiplanarCommonData btCommon = ComputeBiplanarCommonData(fragmentData);
+    ApplyAllPrePrepare(material, btCommon);
+    prepareMaterial(material);
+    ApplyAllPostPrepare(material, btCommon);
 }
