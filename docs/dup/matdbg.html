@@ -1,0 +1,397 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>matdbg - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="matdbg"><a class="header" href="#matdbg">matdbg</a></h1>
+<ol>
+<li><a href="#capabilities">Capabilities</a></li>
+<li><a href="#setup-for-desktop">Setup for Desktop</a></li>
+<li><a href="#setup-for-android">Setup for Android</a></li>
+<li><a href="#debugger-usage">Debugger Usage</a></li>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#c-server">C++ Server</a></li>
+<li><a href="#javascript-client">JavaScript Client</a></li>
+<li><a href="#http-requests">HTTP Requests</a></li>
+<li><a href="#websocket-messages">WebSocket Messages</a></li>
+<li><a href="#wish-list">Wish List</a></li>
+<li><a href="#screenshot">Screenshot</a></li>
+<li><a href="#material-chunks">Material Chunks</a></li>
+</ol>
+<h2 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h2>
+<p>matdbg is a library and web application that enables debugging and live-editing of Filament shaders.
+At the time of this writing, the following capabilities are supported.</p>
+<ul>
+<li>OpenGL: Editing GLSL</li>
+<li>Metal: Editing MSL</li>
+<li>Vulkan: Editing transpiled GLSL, displaying disassembled SPIR-V</li>
+<li>WebGPU: Editing WGSL</li>
+</ul>
+<p>Note that a given material can be built with multiple backends, even though only one backend
+is active in a particular session. For example, if the current app is using Vulkan, it is still
+possible to inspect the Metal shaders, as long as the material has been built with Metal support
+included.</p>
+<h2 id="setup-for-desktop"><a class="header" href="#setup-for-desktop">Setup for Desktop</a></h2>
+<p>When using the easy build script, include the <code>-d</code> argument. For example:</p>
+<pre><code>./build.sh -fd debug gltf_viewer
+</code></pre>
+<p>The <code>d</code> enables a CMake option called FILAMENT_ENABLE_MATDBG and the <code>f</code> ensures that CMake gets
+re-run so that the option is honored.</p>
+<p>Next, set an environment variable as follows. In Windows, use <code>set</code> instead of <code>export</code>.</p>
+<pre><code>export FILAMENT_MATDBG_PORT=8080
+</code></pre>
+<p>Next, launch any app that links against a debug build of a Filament and point your web browser to
+http://localhost:8080. Skip ahead to <strong>Debugger Usage</strong>.</p>
+<h2 id="setup-for-android"><a class="header" href="#setup-for-android">Setup for Android</a></h2>
+<p>Rebuild Filament for Android after enabling a CMake option called FILAMENT_ENABLE_MATDBG. Note that
+CMake is invoked from several places for Android (both gradle and our easy build script), so one
+pragmatic and reliable way of doing this is to simply hack <code>CMakeLists.txt</code> and
+<code>filament-android/CMakeLists.txt</code> by unconditionally setting FILAMENT_ENABLE_MATDBG to ON.</p>
+<p>After rebuilding Filament with the option enabled, ensure that internet permissions are enabled in
+your app by adding the following into your manifest as a child of the <code>&lt;manifest&gt;</code> element.</p>
+<pre><code>&lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+</code></pre>
+<p>Now launch your app as usual. The Filament Engine sets up a server that is hardcoded to listen to
+port 8081. Next, you will need to forward your device's TCP port 8081 to your host port of choice.
+For example, to forward the matdbg server on your device to port 8081 on your host machine, do the
+following:</p>
+<pre><code>adb forward tcp:8081 tcp:8081
+</code></pre>
+<p>This lets you go to http://localhost:8081 in Chrome on your host machine.</p>
+<p>Note that we generally use a release build of Filament when running on Android, so the shaders
+are optimized and very unreadable. This can be avoided by modifying the build such that <code>-g</code> is
+passed to matc even in release builds.</p>
+<h2 id="debugger-usage"><a class="header" href="#debugger-usage">Debugger Usage</a></h2>
+<p>After opening the matdbg page in your browser, the usual first step is to select a material in the
+upper-left pane. Sometimes you might need force your app to redraw (e.g. by resizing the window) in
+order make the materials selectable.</p>
+<p>The next step is to select an active (boldface) shader variant in the lower-left pane. This allows
+you to view the GLSL, MSL, and SPIR-V code that was generated by <code>matc</code> or <code>filamat</code>.</p>
+<p>In the sidebar, inactive shader variants have a disabled appearance, but they can still be examined
+in the shader editor. The active status of each shader program is refreshed every second.</p>
+<p>You can also make modifications to GLSL or MSL, so long as the shader inputs and uniforms remain
+intact. After making an edit, click the <code>[rebuild]</code> button in the header. Note that your edits will
+be lost after closing the web page.</p>
+<h2 id="keyboard-shortcuts"><a class="header" href="#keyboard-shortcuts">Keyboard Shortcuts</a></h2>
+<p>To save an edit, press <strong>Cmd+S</strong> (<strong>Ctrl+S</strong> on Linux/Windows) as an alternative to clicking
+<code>[rebuild]</code>.</p>
+<p>If the editor has focus, you can navigate between materials by holding <strong>Shift+Ctrl</strong> while
+pressing the up or down arrow. Navigation between variants is similar, just use left / right instead
+of up / down.</p>
+<h2 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h2>
+<p>The matdbg library has two parts: a C++ server and a JavaScript client. The C++ server is
+responsible for instancing a <a href="https://github.com/civetweb/civetweb">civetweb</a> context that handles HTTP and WebSocket requests. The
+JavaScript client is a small web app that contains a view into an in-browser database of materials.</p>
+<p>The WebSocket server receives push-style notifications from the client (such as edits) while
+the HTTP server responds to material queries using simple JSON messages.</p>
+<p>When a new WebSocket connection is established, the client asks the server for a list of materials
+in order to populate its in-browser database. If the connection is lost (e.g. if the app crashes),
+then the database stays intact and the web app is still functional. If a new Filament app is
+launched, the client inserts entries into its database rather than replacing the existing set.</p>
+<p>The material database is cleared only when the web page is manually refreshed by the user.</p>
+<h2 id="c-server"><a class="header" href="#c-server">C++ Server</a></h2>
+<p>The civetweb server is wrapped by our <code>DebugServer</code> class, whose public interface is comprised of a
+couple methods that are called from the Filament engine:</p>
+<ul>
+<li><strong>addMaterial</strong> Notifies the debugger that the given material package is being loaded into the
+engine.</li>
+<li><strong>setEditCallback</strong> Sets up a callback that allows the Filament engine to listen for shader edits.</li>
+<li><strong>setQueryCallback</strong> Sets up a callback that allows the debugger to ask for current information.</li>
+</ul>
+<h2 id="javascript-client"><a class="header" href="#javascript-client">JavaScript Client</a></h2>
+<p>The web app is written in simple, modern JavaScript. It uses third-party libraries
+which are fetched from a CDN using <code>&lt;script&gt;</code>. This allows us to avoid adding them to our git repo,
+and leads to good caching behavior.</p>
+<ul>
+<li><strong>lit-html</strong> A small wrapper around web-components for fast, iterative development.</li>
+<li><strong>monaco</strong> The engine behind Visual Studio Code.
+<ul>
+<li>We've configured this for C++ for somewhat reasonable syntax highlighting.</li>
+<li>If desired we could extend the editor to better handle GLSL and SPIR-V.</li>
+</ul>
+</li>
+</ul>
+<p>All the source code for our web app is contained in a single file (<code>app.js</code>), and there is a
+corresponding <code>api.js</code> to handle the protocol between the server (the running filament app)
+the client (the browser).</p>
+<p>The web app basically provides a view over a pseudo-database which is a just a global variable
+that holds a dictionary that maps from material id's to objects that conform to the JSON described
+below.</p>
+<h2 id="http-requests"><a class="header" href="#http-requests">HTTP requests</a></h2>
+<p>The server responds to the following GET requests by returning a JSON blob. The <code>{id}</code> in these
+requests is a concept specific to matdbg (not Filament) which is an 8-digit hex string that hashes
+the entire binary content of the material package.</p>
+<hr />
+<p><code>/api/matids</code></p>
+<p>Returns an array containing the id for each known material. Example:</p>
+<pre><code class="language-json">["e4c41141", "44ae2b62", "9dab8a03"]
+</code></pre>
+<hr />
+<p><code>/api/materials</code></p>
+<p>Returns an array with all information (except shader source) for all known materials. Example:</p>
+<pre><code class="language-json">[{
+    "matid": "e4c41141",
+    "name": "uiBlit",
+    "version": 4,
+    "shading": { "model": "unlit", "vertex_domain": "object", ... },
+    "raster":  { "blending": "transparent", "color_write": "true", ... },
+    "opengl": [
+        { "index": " 0", "shaderModel": "gl41", "pipelineStage": "vertex  ", "variantString": "", "variant": 0 },
+        { "index": " 1", "shaderModel": "gl41", "pipelineStage": "fragment", "variantString": "", "variant": 0 },
+    ],
+    "vulkan": [],
+    "metal": [],
+    "required_attributes": ["position", "color", "uv0"]
+},
+{
+    "matid": "44ae2b62",
+    ...
+}]
+</code></pre>
+<p>Some of the returned data may seem redundant (e.g. the <code>index</code> and <code>variantString</code> fields) but
+these allow the client to be very simple by passing the raw JSON into [mustache][4] templates.
+Moreover it helps prevent duplication of knowledge between C++ and JavaScript.</p>
+<p>This format of this message is also used for the in-browser "database" of materials.</p>
+<hr />
+<p><code>/api/material?matid={id}</code></p>
+<p>Returns all information (except shader source) for a specific known material. The JSON response
+is equivalent to one of the items in the top-level array in <code>/api/materials</code>.</p>
+<hr />
+<p><code>/api/active</code></p>
+<p>Returns an object that maps from material ids to their active shader variants. Example:</p>
+<pre><code class="language-json">{"b38d4ad0": ["opengl", 5] , "44ae2b62": ["opengl", 1, 4] }
+</code></pre>
+<p>Each numeric element in the list is a variant mask. For example, at the time of this writing,
+Filament has 7-bit mask, so each number in the list is between 0 and 127.</p>
+<hr />
+<p><code>/api/shader?matid={id}&amp;type=[glsl|spirv|msl]&amp;[glindex|vkindex|metalindex]={index}</code></p>
+<p>Returns the entire shader code for the given variant. This is the only HTTP request that returns
+text instead of JSON.</p>
+<p>The <code>type</code> field in the request selects the desired shading language, not the backend. For example,
+for Vulkan it can select between SPIR-V or decompiled GLSL. Note that the original GLSL that was
+used to create the SPIR-V is not available.</p>
+<hr />
+<h2 id="wish-list"><a class="header" href="#wish-list">Wish List</a></h2>
+<ul>
+<li>Allow editing of the original GLSL, perhaps by enhancing the <code>-g</code> option in matc and adding new chunk types.</li>
+<li>Expose the entire <code>engine.debug</code> struct in the web UI.</li>
+<li>When shader errors occur, send them back over the wire to the web client.</li>
+<li>The sidebar in the web app is not resizeable.</li>
+<li>For the material ids, SHA-1 would be better than murmur since the latter can easily have collisions.</li>
+<li>It would be easy to add diff decorations to the editor in our <code>onEdit</code> function:
+<ol>
+<li>Examine "changes" (IModelContentChange) to get a set of line numbers.</li>
+<li><code>shader.decorations = gEditor.deltaDecorations(shader.decorations, ...)</code></li>
+<li>See <a href="https://microsoft.github.io/monaco-editor/playground.html#interacting-with-the-editor-line-and-inline-decorations">these monaco docs</a>.</li>
+</ol>
+</li>
+</ul>
+<h2 id="screenshot"><a class="header" href="#screenshot">Screenshot</a></h2>
+<img width="600px" src="https://user-images.githubusercontent.com/1288904/63553241-b043ba80-c4ee-11e9-816c-c6acb1d6cdf7.png">
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dup/iblprefilter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../dup/uberz.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dup/iblprefilter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../dup/uberz.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

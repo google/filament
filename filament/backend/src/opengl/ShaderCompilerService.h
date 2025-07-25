@@ -171,6 +171,10 @@ private:
     // Also cleanup shaders regardless of the result.
     static bool checkLinkStatusAndCleanupShaders(program_token_t const& token) noexcept;
 
+    // Try retrieving the program from the cache. Return `true` if it's loaded from the cache.
+    static bool tryRetrievingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
+            Program const& program, program_token_t const& token) noexcept;
+
     // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
     static void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
             program_token_t const& token) noexcept;

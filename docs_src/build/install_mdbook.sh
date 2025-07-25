@@ -21,7 +21,7 @@ LINUX_ARM=4
 
 function add_cargo_path() {
     local BASH_P="${HOME}/.bashrc"
-    local PATH_LINE='export PATH=${PATH}:~/.cargo/bin'
+    local PATH_LINE='export PATH=${PATH}:${HOME}/.cargo/bin'
     local TYPE=$1
     if [ ${TYPE} == ${DARWIN_ARM} ] || [ ${TYPE} == ${DARWIN_X86} ]; then
         BASH_P="${HOME}/.bash_profile"
@@ -77,10 +77,10 @@ print(get_type())
         if [ ${TYPE} == ${LINUX_X86} ]; then
             DL_URL='https://github.com/rust-lang/mdBook/releases/download/v0.4.43/mdbook-v0.4.43-x86_64-unknown-linux-gnu.tar.gz'
         fi
-        curl -L -o ~/Downloads/mdbook.tar.gz ${DL_URL}
+        curl -L -o /tmp/mdbook.tar.gz ${DL_URL}
         mkdir -p /tmp/mdbook
-        tar -xvzf ~/Downloads/mdbook.tar.gz -C /tmp/mdbook >/dev/null 2>&1
-        mv /tmp/mdbook/mdbook ~/.cargo/bin/
+        tar -xvzf /tmp/mdbook.tar.gz -C /tmp/mdbook >/dev/null 2>&1
+        mv /tmp/mdbook/mdbook ${HOME}/.cargo/bin/
     fi
     add_cargo_path ${TYPE}
 }

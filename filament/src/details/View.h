@@ -102,6 +102,7 @@ class FScene;
 
 class FView : public View {
 public:
+    using MaterialGlobals = std::array<math::float4, 4>;
     using Range = utils::Range<uint32_t>;
 
     explicit FView(FEngine& engine);
@@ -109,7 +110,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
+    CameraInfo computeCameraInfo(FEngine const& engine) const noexcept;
 
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
@@ -159,10 +160,9 @@ public:
         return mName.c_str_safe();
     }
 
-    void prepareUpscaler(math::float2 scale,
-            TemporalAntiAliasingOptions const& taaOptions,
-            DynamicResolutionOptions const& dsrOptions) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
+
+    void prepareLodBias(float bias, math::float2 derivativesScale) const noexcept;
 
     void prepareViewport(
             const Viewport& physicalViewport,
@@ -483,6 +483,8 @@ public:
         return mFrameGraphViewerViewHandle;
     }
 
+    MaterialGlobals getMaterialGlobals() const { return mMaterialGlobals; }
+
 private:
     struct FPickingQuery : public PickingQuery {
     private:
@@ -609,14 +611,14 @@ private:
 
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
-    std::array<math::float4, 4> mMaterialGlobals = {{
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                    }};
+    MaterialGlobals mMaterialGlobals = {{
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+    }};
 
-    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle{};
 
 #ifndef NDEBUG
     struct DebugState {

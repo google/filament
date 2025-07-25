@@ -273,12 +273,16 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
     }
 }
 
+void VulkanPipelineCache::resetBoundPipeline() {
+    mBoundPipeline = {};
+}
+
 void VulkanPipelineCache::terminate() noexcept {
     for (auto& iter : mPipelines) {
         vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
     }
     mPipelines.clear();
-    mBoundPipeline = {};
+    resetBoundPipeline();
 
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }
@@ -292,7 +296,7 @@ void VulkanPipelineCache::gc() noexcept {
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
-    mBoundPipeline = {};
+    resetBoundPipeline();
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 

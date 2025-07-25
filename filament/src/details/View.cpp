@@ -16,11 +16,15 @@
 
 #include "details/View.h"
 
+#include "Allocators.h"
 #include "Culler.h"
+#include "DebugRegistry.h"
 #include "FrameHistory.h"
+#include "FrameInfo.h"
 #include "Froxelizer.h"
 #include "RenderPrimitive.h"
 #include "ResourceAllocator.h"
+#include "ShadowMap.h"
 #include "ShadowMapManager.h"
 
 #include "details/Engine.h"
@@ -30,9 +34,15 @@
 #include "details/Scene.h"
 #include "details/Skybox.h"
 
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <fg/FrameGraphTexture.h>
+#include <fg/FrameGraphId.h>
+
 #include <filament/Exposure.h>
+#include <filament/Frustum.h>
 #include <filament/DebugRegistry.h>
-#include <filament/TextureSampler.h>
 #include <filament/View.h>
 
 #include <private/filament/UibStructs.h>
@@ -40,18 +50,29 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/architecture.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/Profiler.h>
+#include <utils/Panic.h>
 #include <utils/Slice.h>
 #include <utils/Zip2Iterator.h>
 
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
 #include <math/scalar.h>
-#include <math/fast.h>
+
+#include <assert.h>
 
 #include <array>
+#include <algorithm>
+#include <cmath>
+#include <chrono>
+#include <functional>
 #include <memory>
-#include <tuple>
+#include <ratio>
+#include <utility>
 
 using namespace utils;
 
@@ -114,7 +135,7 @@ FView::FView(FEngine& engine)
 #ifndef NDEBUG
     // This can fail if another view has already registered this data source
     mDebugState->owner = debugRegistry.registerDataSource("d.view.frame_info",
-            [weak = std::weak_ptr<DebugState>(mDebugState)]() -> DebugRegistry::DataSource {
+            [weak = std::weak_ptr(mDebugState)]() -> DebugRegistry::DataSource {
                 // the View could have been destroyed by the time we do this
                 auto const state = weak.lock();
                 if (!state) {
@@ -200,8 +221,8 @@ void FView::terminate(FEngine& engine) {
 
 void FView::setViewport(filament::Viewport const& viewport) noexcept {
     // catch the cases were user had an underflow and didn't catch it.
-    assert((int32_t)viewport.width > 0);
-    assert((int32_t)viewport.height > 0);
+    assert(int32_t(viewport.width) > 0);
+    assert(int32_t(viewport.height) > 0);
     mViewport = viewport;
 }
 
@@ -209,8 +230,9 @@ void FView::setDynamicResolutionOptions(DynamicResolutionOptions const& options)
     DynamicResolutionOptions& dynamicResolution = mDynamicResolution;
     dynamicResolution = options;
 
-    // only enable if dynamic resolution is supported
-    dynamicResolution.enabled = dynamicResolution.enabled && mIsDynamicResolutionSupported;
+    // only enable if dynamic resolution is supported or if it's not actually dynamic
+    dynamicResolution.enabled = dynamicResolution.enabled &&
+            (mIsDynamicResolutionSupported || dynamicResolution.minScale == dynamicResolution.maxScale);
     if (dynamicResolution.enabled) {
         // if enabled, sanitize the parameters
 
@@ -249,6 +271,8 @@ float2 FView::updateScale(FEngine& engine,
 
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
+        // if timerQueries are not supported, info.valid will always be false; but in that case
+        // we're guaranteed that minScale == maxScale.
         if (!UTILS_UNLIKELY(info.valid)) {
             // always clamp to the min/max scale range
             mScale = clamp(1.0f, options.minScale, options.maxScale);
@@ -271,7 +295,7 @@ float2 FView::updateScale(FEngine& engine,
         const float dt = 1.0f; // we don't really need dt here, setting it to 1, means our parameters are in "frames"
         const float target = (1000.0f * float(frameRateOptions.interval)) / displayInfo.refreshRate;
         const float targetWithHeadroom = target * (1.0f - frameRateOptions.headRoomRatio);
-        float const measured = duration<float, std::milli>{ info.denoisedFrameTime }.count();
+        float const measured = duration{ info.denoisedFrameTime }.count();
         float const out = mPidController.update(measured / targetWithHeadroom, 1.0f, dt);
 
         // maps pid command to a scale (absolute or relative, see below)
@@ -430,7 +454,7 @@ void FView::prepareShadowing(FEngine& engine, FScene::RenderableSoa& renderableD
 
     if (builder.hasShadowMaps()) {
         ShadowMapManager::createIfNeeded(engine, mShadowMapManager);
-        auto shadowTechnique = mShadowMapManager->update(builder, engine, *this,
+        auto const shadowTechnique = mShadowMapManager->update(builder, engine, *this,
                 cameraInfo, renderableData, lightData);
 
         mHasShadowing = any(shadowTechnique);
@@ -490,7 +514,7 @@ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexc
     getColorPassDescriptorSet().prepareDirectionalLight(engine, exposure, sceneSpaceDirection, directionalLight);
 }
 
-CameraInfo FView::computeCameraInfo(FEngine& engine) const noexcept {
+CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
     FScene const* const scene = getScene();
 
     /*
@@ -543,15 +567,14 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
             // In the common case when we don't have a viewing camera, cameraInfo.view is
             // already the culling view matrix
             return Frustum{ mat4f{ highPrecisionMultiply(cameraInfo.cullingProjection, cameraInfo.view) }};
-        } else {
-            // Otherwise, we need to recalculate it from the culling camera.
-            // Note: it is correct to always do the math from mCullingCamera, but it hides the
-            // intent of the code, which is that we should only depend on CameraInfo here.
-            // This is an extremely uncommon case.
-            const mat4 projection = mCullingCamera->getCullingProjectionMatrix();
-            const mat4 view = inverse(cameraInfo.worldTransform * mCullingCamera->getModelMatrix());
-            return Frustum{ mat4f{ projection * view }};
         }
+        // Otherwise, we need to recalculate it from the culling camera.
+        // Note: it is correct to always do the math from mCullingCamera, but it hides the
+        // intent of the code, which is that we should only depend on CameraInfo here.
+        // This is an extremely uncommon case.
+        const mat4 projection = mCullingCamera->getCullingProjectionMatrix();
+        const mat4 view = inverse(cameraInfo.worldTransform * mCullingCamera->getModelMatrix());
+        return Frustum{ mat4f{ projection * view }};
     };
 
     const Frustum cullingFrustum = getFrustum();
@@ -596,9 +619,9 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     setFroxelizerSync(froxelizeLightsJob);
 
     Range merged;
-    FScene::RenderableSoa& renderableData = scene->getRenderableData();
 
     { // all the operations in this scope must happen sequentially
+        FScene::RenderableSoa& renderableData = scene->getRenderableData();
 
         Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
         std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
@@ -643,7 +666,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
             }
             // We need to pass viewMatrix by value here because it extends the scope of this
             // function.
-            std::function<void(JobSystem&, JobSystem::Job*)> froxelizerWork =
+            std::function froxelizerWork =
                     [&froxelizer = mFroxelizer, &engine, viewMatrix = cameraInfo.view, &lightData]
                             (JobSystem&, JobSystem::Job*) {
                         froxelizer.froxelizeLights(engine, viewMatrix, lightData);
@@ -763,7 +786,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
             // FIXME: when only one is active the UBO handle of the other is null
             //        (probably a problem on vulkan)
-            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.handle)) {
+            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.buffer)) {
                 auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
                 FRenderableManager& rcm = engine.getRenderableManager();
                 auto& descriptorSet = rcm.getDescriptorSet(ci);
@@ -777,7 +800,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::OBJECT_UNIFORMS,
-                        instance.handle ? instance.handle : mRenderableUbh,
+                        instance.buffer ? instance.buffer->getHandle() : mRenderableUbh,
                         0, sizeof(PerRenderableUib));
 
                 descriptorSet.setBuffer(layout,
@@ -851,6 +874,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     auto const fogTransform = tcm.getWorldTransformAccurate(tcm.getInstance(mFogEntity));
 
     auto& colorPassDescriptorSet = getColorPassDescriptorSet();
+    colorPassDescriptorSet.prepareCamera(engine, cameraInfo);
     colorPassDescriptorSet.prepareTime(engine, userTime);
     colorPassDescriptorSet.prepareFog(engine, cameraInfo, fogTransform, mFogOptions,
             scene->getIndirectLight());
@@ -902,27 +926,13 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareUpscaler(float2 const scale,
-        TemporalAntiAliasingOptions const& taaOptions,
-        DynamicResolutionOptions const& dsrOptions) const noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    float bias = 0.0f;
-    float2 derivativesScale{ 1.0f };
-    if (dsrOptions.enabled && dsrOptions.quality >= QualityLevel::HIGH) {
-        bias = std::log2(std::min(scale.x, scale.y));
-    }
-    if (taaOptions.enabled) {
-        bias += taaOptions.lodBias;
-        if (taaOptions.upscaling) {
-            derivativesScale = 0.5f;
-        }
-    }
-    getColorPassDescriptorSet().prepareLodBias(bias, derivativesScale);
-}
-
 void FView::prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     getColorPassDescriptorSet().prepareCamera(engine, cameraInfo);
+}
+
+void FView::prepareLodBias(float const bias, float2 const derivativesScale) const noexcept {
+    getColorPassDescriptorSet().prepareLodBias(bias, derivativesScale);
 }
 
 void FView::prepareViewport(
@@ -1117,7 +1127,7 @@ void FView::prepareVisibleLights(FLightManager const& lcm,
         computeLightCameraDistances(distances, viewMatrix, spheres, visibleLightCount);
 
         // skip directional light
-        Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
+        Zip2Iterator b = { lightData.begin(), distances };
         std::sort(b + FScene::DIRECTIONAL_LIGHTS_COUNT, b + visibleLightCount,
                 [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
     }
@@ -1287,8 +1297,8 @@ void FView::setAmbientOcclusionOptions(AmbientOcclusionOptions options) noexcept
     options.ssct.lightDirection = normalize(options.ssct.lightDirection);
     options.ssct.depthBias = std::max(0.0f, options.ssct.depthBias);
     options.ssct.depthSlopeBias = std::max(0.0f, options.ssct.depthSlopeBias);
-    options.ssct.sampleCount = clamp((unsigned)options.ssct.sampleCount, 1u, 255u);
-    options.ssct.rayCount = clamp((unsigned)options.ssct.rayCount, 1u, 255u);
+    options.ssct.sampleCount = clamp(unsigned(options.ssct.sampleCount), 1u, 255u);
+    options.ssct.rayCount = clamp(unsigned(options.ssct.rayCount), 1u, 255u);
     mAmbientOcclusionOptions = options;
 }
 void FView::setVsmShadowOptions(VsmShadowOptions options) noexcept {
@@ -1316,7 +1326,6 @@ void FView::setFogOptions(FogOptions options) noexcept {
     options.maximumOpacity = clamp(options.maximumOpacity, 0.0f, 1.0f);
     options.density = std::max(0.0f, options.density);
     options.heightFalloff = std::max(0.0f, options.heightFalloff);
-    options.inScatteringSize = options.inScatteringSize;
     options.inScatteringStart = std::max(0.0f, options.inScatteringStart);
     mFogOptions = options;
 }

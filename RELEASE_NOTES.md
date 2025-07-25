@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.62.2
+
+- Metal: fix, respect alpha to coverage rasterization
+- engine: removed `Texture::generatePrefilterMipmap`, a new `libfilament-generatePrefilterMipmap` library can be used in its stead [⚠️ **API BREAKAGE**]
+
 ## v1.62.1
 
 - Add new shader define `VARIANT_DEPTH`, defined when a material is compiled for depth variants

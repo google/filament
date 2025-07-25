@@ -143,8 +143,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 using DebugUtils = VulkanDriver::DebugUtils;
 DebugUtils* DebugUtils::mSingleton = nullptr;
 
-DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const* context)
-    : mInstance(instance), mDevice(device), mEnabled(context->isDebugUtilsSupported()) {
+DebugUtils::DebugUtils(VkInstance instance, VkDevice device, VulkanContext const& context)
+    : mInstance(instance),
+      mDevice(device),
+      mEnabled(context.isDebugUtilsSupported()) {
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     // Also initialize debug utils messenger here
@@ -199,7 +201,7 @@ Dispatcher VulkanDriver::getDispatcher() const noexcept {
     return ConcreteDispatcher<VulkanDriver>::make();
 }
 
-VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& context,
+VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
         Platform::DriverConfig const& driverConfig)
     : mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
@@ -209,11 +211,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
       mContext(context),
       mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
-              mPlatform->getProtectedGraphicsQueueFamilyIndex(), &mContext),
+              mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext),
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
-      mBufferCache(context, mResourceManager, mAllocator),
+      mBufferCache(mContext, mResourceManager, mAllocator),
       mFramebufferCache(mPlatform->getDevice()),
       mYcbcrConversionCache(mPlatform->getDevice()),
       mSamplerCache(mPlatform->getDevice()),
@@ -229,13 +231,13 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
     DebugUtils::mSingleton =
-            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), &context);
+            new DebugUtils(mPlatform->getInstance(), mPlatform->getDevice(), mContext);
 #endif
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback
             = vkCreateDebugReportCallbackEXT;
-    if (!context.isDebugUtilsSupported() && createDebugReportCallback) {
+    if (!mContext.isDebugUtilsSupported() && createDebugReportCallback) {
         VkDebugReportCallbackCreateInfoEXT const cbinfo = {
                 .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
                 .flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
@@ -253,7 +255,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext const& contex
 VulkanDriver::~VulkanDriver() noexcept = default;
 
 UTILS_NOINLINE
-Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext const& context,
+Driver* VulkanDriver::create(VulkanPlatform* platform, VulkanContext& context,
          Platform::DriverConfig const& driverConfig) {
 #if 0
     // this is useful for development, but too verbose even for debug builds
@@ -420,7 +422,7 @@ void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 
 void VulkanDriver::endFrame(uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_ENDFRAME);
-    mCommands.flush();
+    endCommandRecording();
     collectGarbage();
 }
 
@@ -460,13 +462,13 @@ void VulkanDriver::updateDescriptorSetTexture(
 
 void VulkanDriver::flush(int) {
     FVK_SYSTRACE_SCOPE();
-    mCommands.flush();
+    endCommandRecording();
 }
 
 void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_SCOPE();
 
-    mCommands.flush();
+    endCommandRecording();
     mCommands.wait();
 
     mReadPixels.runUntilComplete();
@@ -530,8 +532,8 @@ void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType ele
         uint32_t indexCount, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
-    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mAllocator, mStagePool,
-            mBufferCache, elementSize, indexCount);
+    auto ib = resource_ptr<VulkanIndexBuffer>::make(&mResourceManager, ibh, mContext, mAllocator,
+            mStagePool, mBufferCache, elementSize, indexCount);
     ib.inc();
 }
 
@@ -547,8 +549,8 @@ void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
 void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage) {
     FVK_SYSTRACE_SCOPE();
-    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mAllocator, mStagePool,
-            mBufferCache, byteCount, bindingType);
+    auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mContext, mAllocator,
+            mStagePool, mBufferCache, byteCount, bindingType);
     bo.inc();
 }
 
@@ -1237,7 +1239,7 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
     VulkanCommandBuffer& commands = mCommands.get();
     auto ib = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, ibh);
     commands.acquire(ib);
-    ib->buffer.loadFromCpu(commands, p.buffer, byteOffset, p.size);
+    ib->loadFromCpu(commands, p.buffer, byteOffset, p.size);
 
     scheduleDestroy(std::move(p));
 }
@@ -1253,7 +1255,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
@@ -1264,7 +1266,7 @@ void VulkanDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     // TODO: implement unsynchronized version
-    bo->buffer.loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
     scheduleDestroy(std::move(bd));
 }
 
@@ -1633,7 +1635,7 @@ void VulkanDriver::stopCapture(int) {}
 void VulkanDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& pbd) {
     auto srcTarget = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, src);
-    mCommands.flush();
+    endCommandRecording();
     mReadPixels.run(
             srcTarget, x, y, width, height, mPlatform->getGraphicsQueueFamilyIndex(),
             std::move(pbd),
@@ -1913,7 +1915,7 @@ void VulkanDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     // avoid rebinding these if they are already bound, but since we do not (yet) support subranges
     // it would be rare for a client to make consecutive draw calls with the same render primitive.
     vkCmdBindVertexBuffers(cmdbuffer, 0, bufferCount, buffers, offsets);
-    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->buffer.getVkBuffer(), 0,
+    vkCmdBindIndexBuffer(cmdbuffer, prim->indexBuffer->getVkBuffer(), 0,
             prim->indexBuffer->indexType);
 }
 
@@ -2054,6 +2056,11 @@ void VulkanDriver::resetState(int) {
 
 void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
     mResourceManager.associateHandle(handleId, std::move(tag));
+}
+
+void VulkanDriver::endCommandRecording() {
+    mCommands.flush();
+    mPipelineCache.resetBoundPipeline();
 }
 
 // explicit instantiation of the Dispatcher

@@ -324,6 +324,76 @@ namespace {
 
 } // namespace
 
+size_t WebGPUTexture::getWGPUTextureFormatPixelSize(const wgpu::TextureFormat format) {
+    switch (format) {
+        // 1 byte
+        case wgpu::TextureFormat::R8Unorm:
+        case wgpu::TextureFormat::R8Snorm:
+        case wgpu::TextureFormat::R8Uint:
+        case wgpu::TextureFormat::R8Sint:
+        case wgpu::TextureFormat::Stencil8:
+            return 1;
+
+        // 2 bytes
+        case wgpu::TextureFormat::R16Uint:
+        case wgpu::TextureFormat::R16Sint:
+        case wgpu::TextureFormat::R16Float:
+        case wgpu::TextureFormat::RG8Unorm:
+        case wgpu::TextureFormat::RG8Snorm:
+        case wgpu::TextureFormat::RG8Uint:
+        case wgpu::TextureFormat::RG8Sint:
+        case wgpu::TextureFormat::Depth16Unorm:
+            return 2;
+
+        // 4 bytes
+        // -- 32-bit single-channel formats
+        case wgpu::TextureFormat::R32Float:
+        case wgpu::TextureFormat::R32Uint:
+        case wgpu::TextureFormat::R32Sint:
+        // -- 16-bit two-channel formats
+        case wgpu::TextureFormat::RG16Uint:
+        case wgpu::TextureFormat::RG16Sint:
+        case wgpu::TextureFormat::RG16Float:
+        // -- 8-bit four-channel formats
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8UnormSrgb:
+        case wgpu::TextureFormat::RGBA8Snorm:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGBA8Sint:
+        case wgpu::TextureFormat::BGRA8Unorm:
+        case wgpu::TextureFormat::BGRA8UnormSrgb:
+        // -- Packed 32-bit formats
+        case wgpu::TextureFormat::RGB10A2Unorm:
+        case wgpu::TextureFormat::RGB10A2Uint:
+        case wgpu::TextureFormat::RG11B10Ufloat:
+        case wgpu::TextureFormat::RGB9E5Ufloat:
+        // -- Depth/Stencil formats
+        case wgpu::TextureFormat::Depth32Float:
+        case wgpu::TextureFormat::Depth24Plus:
+        case wgpu::TextureFormat::Depth24PlusStencil8:
+            return 4;
+
+        // 8 bytes
+        case wgpu::TextureFormat::RG32Float:
+        case wgpu::TextureFormat::RG32Uint:
+        case wgpu::TextureFormat::RG32Sint:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA16Float:
+            return 8;
+
+        // 16 bytes
+        case wgpu::TextureFormat::RGBA32Float:
+        case wgpu::TextureFormat::RGBA32Uint:
+        case wgpu::TextureFormat::RGBA32Sint:
+            return 16;
+
+        // Non-copyable or compressed formats
+        case wgpu::TextureFormat::Depth32FloatStencil8: // Not copyable from texture to buffer
+        default:
+            return 0;
+    }
+}
 WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels,
         const TextureFormat format, const uint8_t samples, const uint32_t width,
         const uint32_t height, const uint32_t depth, const TextureUsage usage,
@@ -370,7 +440,7 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
     FILAMENT_CHECK_POSTCONDITION(mTexture)
             << "Failed to create texture for " << textureDescriptor.label;
     mDefaultTextureView = makeTextureView(mDefaultMipLevel, levels, mDefaultBaseArrayLayer,
-            mArrayLayerCount, samplerType);
+            mArrayLayerCount, toWebGPUTextureViewDimension(samplerType));
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
             << "Failed to create default texture view for " << textureDescriptor.label;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -402,7 +472,7 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
       mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              src->target) },
+              toWebGPUTextureViewDimension(src->target)) },
       mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
 
 wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
@@ -422,13 +492,15 @@ bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::Textu
     return storageBindingCompatibleFormatForViewFormat(format) != wgpu::TextureFormat::Undefined;
 }
 
-wgpu::TextureView WebGPUTexture::getOrMakeTextureView(const uint8_t mipLevel,
-        const uint32_t arrayLayer) {
+wgpu::TextureView WebGPUTexture::makeAttachmentTextureView(const uint8_t mipLevel,
+        const uint32_t arrayLayer, const uint32_t layerCount) {
     // TODO: there's an optimization to be made here to return mDefaultTextureView.
     //  Problem: mDefaultTextureView is a view of the entire texture,
     //  but this function (and its callers) expects a single-slice view.
     //  Returning the whole texture view for a single-slice request seems wrong.
-    return makeTextureView(mipLevel, 1, arrayLayer, 1, target);
+    return makeTextureView(mipLevel, 1, arrayLayer, layerCount,
+            layerCount > 1 ? wgpu::TextureViewDimension::e2DArray
+                           : wgpu::TextureViewDimension::e2D);
 }
 
 void WebGPUTexture::createMsaaSidecarTextureIfNotAlreadyCreated(const uint8_t samples,
@@ -663,14 +735,14 @@ wgpu::TextureFormat WebGPUTexture::fToWGPUTextureFormat(TextureFormat const& fFo
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
     }
 }
-
 wgpu::TextureView WebGPUTexture::makeTextureView(const uint8_t& baseLevel,
         const uint8_t& levelCount, const uint32_t& baseArrayLayer, const uint32_t& arrayLayerCount,
-        const SamplerType samplerType) const noexcept {
+        const wgpu::TextureViewDimension dimension) const noexcept {
+
     const wgpu::TextureViewDescriptor textureViewDescriptor{
         .label = getUserTextureViewLabel(target),
         .format = mViewFormat,
-        .dimension = toWebGPUTextureViewDimension(samplerType),
+        .dimension = dimension,
         .baseMipLevel = baseLevel,
         .mipLevelCount = levelCount,
         .baseArrayLayer = baseArrayLayer,

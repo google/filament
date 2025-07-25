@@ -1366,8 +1366,8 @@ float4 ShadowMap::getClampToEdgeCoords(ShadowMapInfo const& shadowMapInfo) const
 // ------------------------------------------------------------------------------------------------
 
 void ShadowMap::prepareCamera(Transaction const& transaction,
-        DriverApi& driver, const CameraInfo& cameraInfo) noexcept {
-    ShadowMapDescriptorSet::prepareCamera(transaction, driver, cameraInfo);
+        FEngine const& engine, const CameraInfo& cameraInfo) noexcept {
+    ShadowMapDescriptorSet::prepareCamera(transaction, engine, cameraInfo);
     ShadowMapDescriptorSet::prepareLodBias(transaction, 0.0f);
 }
 
@@ -1379,6 +1379,11 @@ void ShadowMap::prepareViewport(Transaction const& transaction,
 void ShadowMap::prepareTime(Transaction const& transaction,
         FEngine const& engine, float4 const& userTime) noexcept {
     ShadowMapDescriptorSet::prepareTime(transaction, engine, userTime);
+}
+
+void ShadowMap::prepareMaterialGlobals(Transaction const& transaction,
+        std::array<float4, 4> const& materialGlobals) noexcept {
+    ShadowMapDescriptorSet::prepareMaterialGlobals(transaction, materialGlobals);
 }
 
 void ShadowMap::prepareShadowMapping(Transaction const& transaction,

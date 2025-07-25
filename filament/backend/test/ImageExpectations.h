@@ -45,7 +45,7 @@ class ScreenshotParams {
 public:
     // TODO(b/422804941): Add a set of environments where this test should use a different golden.
     ScreenshotParams(int width, int height, std::string fileName, uint32_t expectedPixelHash,
-            bool isSrgb = false);
+            bool isSrgb = false, int numAllowedDeviations = 0, int pixelMatchThreshold = 0);
 
     int width() const;
     int height() const;
@@ -59,6 +59,8 @@ public:
     std::string expectedFileName() const;
     std::filesystem::path expectedFilePath() const;
     const std::string filePrefix() const;
+    int allowedPixelDeviations() const;
+    int pixelMatchThreshold() const;
 
 private:
     int mWidth;
@@ -66,6 +68,8 @@ private:
     bool mIsSrgb;
     uint32_t mExpectedPixelHash;
     std::string mFileName;
+    int mAllowedPixelDeviations;
+    int mPixelMatchThreshold;
 };
 
 /**
@@ -83,7 +87,7 @@ public:
     ~RenderTargetDump();
 
     /**
-     * Should only bue used if BytesFilled returns true.
+     * Should only be used if BytesFilled returns true.
      * @return The hash of the stored bytes.
      */
     uint32_t hash() const;

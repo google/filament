@@ -259,7 +259,7 @@ Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
 }
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainHeadlessS() noexcept {
-    return Handle<HwSwapChain>((Handle<HwSwapChain>::HandleId) mNextFakeHandle++);
+    return allocHandle<WebGPUSwapChain>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureS() noexcept {
@@ -343,8 +343,8 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), surfaceSize, mAdapter,
+    wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, std::move(surface), extent, mAdapter,
             mDevice, flags);
     assert_invariant(mSwapChain);
 
@@ -360,7 +360,12 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {}
+        uint32_t height, uint64_t flags) {
+     wgpu::Extent2D extent = { .width = width, .height = height };
+     mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
+            mDevice, flags);
+     assert_invariant(mSwapChain);
+}
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes) {
@@ -553,6 +558,16 @@ bool WebGPUDriver::isTextureSwizzleSupported() {
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
+    // passing 2D and sampleCount 1 to only check the format
+    const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
+        WebGPURenderPassMipmapGenerator::getCompatibilityFor(
+                WebGPUTexture::fToWGPUTextureFormat(format), wgpu::TextureDimension::e2D, 1)
+    };
+
+    if (renderPassCompatibility.compatible) {
+        return true;
+    }
+
     return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
             WebGPUTexture::fToWGPUTextureFormat(format));
 }
@@ -616,8 +631,23 @@ bool WebGPUDriver::isWorkaroundNeeded(Workaround) {
 }
 
 FeatureLevel WebGPUDriver::getFeatureLevel() {
-    //todo
-    return FeatureLevel::FEATURE_LEVEL_1;
+
+    // If the max sampler counts do not meet FeatureLevel2 standards, then this is an FeatureLevel1
+    // device.
+    const auto& featureLevel2 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_2];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel2.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_1;
+    }
+
+    // If the max sampler counts do not meet FeatureLevel3 standards, then this is an FeatureLevel2
+    // device.
+    const auto& featureLevel3 = FEATURE_LEVEL_CAPS[+FeatureLevel::FEATURE_LEVEL_3];
+    if (mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_VERTEX_SAMPLER_COUNT ||
+            mDeviceLimits.maxSamplersPerShaderStage < featureLevel3.MAX_FRAGMENT_SAMPLER_COUNT) {
+        return FeatureLevel::FEATURE_LEVEL_2;
+    }
+    return FeatureLevel::FEATURE_LEVEL_3;
 }
 
 math::float2 WebGPUDriver::getClipSpaceParams() {
@@ -822,6 +852,10 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
+    if (!mCommandEncoder) {
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    }
     assert_invariant(mCommandEncoder);
     auto renderTarget = handleCast<WebGPURenderTarget>(renderTargetHandle);
 
@@ -867,15 +901,10 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             if (colorInfos[i].handle) {
                 auto colorTexture = handleCast<WebGPUTexture>(colorInfos[i].handle);
                 if (colorTexture) {
-                    FILAMENT_CHECK_POSTCONDITION(
-                            colorInfos[i].layer < renderTarget->getLayerCount())
-                            << "Color attachment " << i << " requests layer " << colorInfos[i].layer
-                            << " but render target has only " << renderTarget->getLayerCount()
-                            << ".";
                     const uint8_t mipLevel = colorInfos[i].level;
                     const uint32_t arrayLayer = colorInfos[i].layer;
                     customColorViews[customColorViewCount] =
-                            colorTexture->getOrMakeTextureView(mipLevel, arrayLayer);
+                            colorTexture->makeAttachmentTextureView(mipLevel, arrayLayer, renderTarget->getLayerCount());
                     if (msaaSidecarsRequired) {
                         const wgpu::TextureView msaaSidecarView{
                             colorTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -918,8 +947,8 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         if (depthStencilSourceHandle) {
             auto dsTexture = handleCast<WebGPUTexture>(depthStencilSourceHandle);
             if (dsTexture) {
-                customDepthStencilView = dsTexture->getOrMakeTextureView(depthStencilMipLevel,
-                        depthStencilArrayLayer);
+                customDepthStencilView = dsTexture->makeAttachmentTextureView(depthStencilMipLevel,
+                        depthStencilArrayLayer, renderTarget->getLayerCount());
                 if (msaaSidecarsRequired) {
                     customDepthStencilMsaaSidecarTextureView =
                             dsTexture->makeMsaaSidecarTextureViewIfTextureSidecarExists(
@@ -990,8 +1019,13 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     auto swapChain = handleCast<WebGPUSwapChain>(drawSch);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-    wgpu::Extent2D surfaceSize = mPlatform.getSurfaceExtent(mNativeWindow);
-    mTextureView = mSwapChain->getCurrentSurfaceTextureView(surfaceSize);
+    if(!mSwapChain->isHeadless()){
+         wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
+         mTextureView = mSwapChain->getCurrentTextureView(extent);
+    } else {
+        mTextureView = mSwapChain->getCurrentHeadlessTextureView();
+    }
+
     assert_invariant(mTextureView);
 
     assert_invariant(mDefaultRenderTarget);
@@ -1011,8 +1045,10 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     }
     mDefaultRenderTarget->setTargetFlags(newTargetFlags);
 
-    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
-    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    if (!mCommandEncoder) {
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    }
     assert_invariant(mCommandEncoder);
 }
 
@@ -1074,8 +1110,129 @@ void WebGPUDriver::stopCapture(int) {
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
-    // todo
-    scheduleDestroy(std::move(pixelBufferDescriptor));
+    auto srcTarget = handleCast<WebGPURenderTarget>(sourceRenderTargetHandle);
+    assert_invariant(srcTarget);
+
+    wgpu::Texture srcTexture = nullptr;
+    if (srcTarget->isDefaultRenderTarget()) {
+        assert_invariant(mSwapChain);
+        srcTexture = mSwapChain->getCurrentTexture(mPlatform.getSurfaceExtent(mNativeWindow));
+    } else {
+        // Handle custom render targets. Read from the first color attachment.
+        const auto& colorAttachmentInfos = srcTarget->getColorAttachmentInfos();
+        // TODO we are currently assuming the first attachment is the desired texture.
+        if (colorAttachmentInfos[0].handle) {
+            auto texture = handleCast<WebGPUTexture>(colorAttachmentInfos[0].handle);
+            if (texture) {
+                srcTexture = texture->getTexture();
+            }
+        }
+    }
+
+    if (!srcTexture) {
+        FWGPU_LOGE << "readPixels: Could not find a valid source texture for the render target.";
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+    const uint32_t srcWidth = srcTexture.GetWidth();
+    const uint32_t srcHeight = srcTexture.GetHeight();
+
+    // Clamp read region to texture bounds
+    if (x >= srcWidth || y >= srcHeight) {
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+    auto actualWidth = std::min(width, srcWidth - x);
+    auto actualHeight = std::min(height, srcHeight - y);
+    if (actualWidth == 0 || actualHeight == 0) {
+        scheduleDestroy(std::move(pixelBufferDescriptor));
+        return;
+    }
+    const size_t dstBytesPerPixel = PixelBufferDescriptor::computePixelSize(
+            pixelBufferDescriptor.format, pixelBufferDescriptor.type);
+    const size_t srcBytesPerPixel =
+            WebGPUTexture::getWGPUTextureFormatPixelSize(srcTexture.GetFormat());
+
+    FILAMENT_CHECK_PRECONDITION(dstBytesPerPixel == srcBytesPerPixel && dstBytesPerPixel > 0)
+            << "Source texture pixel size (" << srcBytesPerPixel
+            << ") does not match destination pixel buffer pixel size (" << dstBytesPerPixel
+            << "), or the format is not supported for readPixels.";
+
+    // Create a staging buffer to copy the texture to. WebGPU requires 256 byte alignment
+    const size_t bytesPerPixel = dstBytesPerPixel;
+    const size_t unpaddedBytesPerRow = actualWidth * bytesPerPixel;
+    const size_t alignment = 256;
+    const size_t paddedBytesPerRow = (unpaddedBytesPerRow + alignment - 1) & ~(alignment - 1);
+
+    size_t bufferSize = paddedBytesPerRow * height;
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = bufferSize;
+    bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
+    wgpu::Buffer stagingBuffer = mDevice.CreateBuffer(&bufferDesc);
+    assert_invariant(stagingBuffer);
+
+    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder();
+    assert_invariant(encoder);
+
+    // WebGPU flips the y axis like Metal does
+    const uint32_t flippedY = srcHeight - y - height;
+    wgpu::TexelCopyTextureInfo source{
+        .texture = srcTexture,
+        .mipLevel = 0,
+        .origin = { .x = x, .y = flippedY, .z = 0 },
+    };
+    wgpu::TexelCopyBufferInfo destination {
+        .layout = {
+            .offset = 0,
+            .bytesPerRow = static_cast<uint32_t>(paddedBytesPerRow),
+            .rowsPerImage = actualHeight,
+        },
+        .buffer = stagingBuffer
+    };
+    wgpu::Extent3D copySize{ .width = actualWidth,
+        .height = actualHeight,
+        .depthOrArrayLayers = 1 };
+    encoder.CopyTextureToBuffer(&source, &destination, &copySize);
+    wgpu::CommandBuffer commandBuffer = encoder.Finish();
+    mQueue.Submit(1, &commandBuffer);
+
+    // Map the buffer to read the data
+    struct UserData {
+        PixelBufferDescriptor pixelBufferDescriptor;
+        wgpu::Buffer buffer;
+        size_t unpaddedBytesPerRow;
+        size_t paddedBytesPerRow;
+        uint32_t height;
+        WebGPUDriver* driver;
+    };
+    auto userData = std::make_unique<UserData>(UserData{
+        .pixelBufferDescriptor = std::move(pixelBufferDescriptor),
+        .buffer = std::move(stagingBuffer),
+        .unpaddedBytesPerRow = unpaddedBytesPerRow,
+        .paddedBytesPerRow = paddedBytesPerRow,
+        .height = height,
+        .driver = this,
+    });
+
+    userData->buffer.MapAsync(
+            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous,
+            [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
+                std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
+                if (status == wgpu::MapAsyncStatus::Success) {
+                    const char* src = static_cast<const char*>(
+                            data->buffer.GetConstMappedRange(0, data->buffer.GetSize()));
+                    char* dst = static_cast<char*>(data->pixelBufferDescriptor.buffer);
+                    for (uint32_t i = 0; i < data->height; ++i) {
+                        memcpy(dst + i * data->unpaddedBytesPerRow,
+                                src + i * data->paddedBytesPerRow, data->unpaddedBytesPerRow);
+                    }
+                    data->buffer.Unmap();
+                } else {
+                    FWGPU_LOGE << "Failed to map staging buffer for readPixels: " << message;
+                }
+                data->driver->scheduleDestroy(std::move(data->pixelBufferDescriptor));
+            },
+            userData.release());
 }
 
 void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,

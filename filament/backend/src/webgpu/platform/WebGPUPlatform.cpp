@@ -96,6 +96,7 @@ constexpr void forEachLimitToValidate(std::function<bool(LimitToValidate const)>
     for (auto limit = static_cast<uint8_t>(LimitToValidate::begin) + 1;
             limit < static_cast<uint8_t>(LimitToValidate::end); limit++) {
         auto castedLimit = static_cast<LimitToValidate>(limit);
+#ifndef NDEBUG
         bool castedToValidValue = false;
         switch (castedLimit) {
             case LimitToValidate::begin:
@@ -112,6 +113,7 @@ constexpr void forEachLimitToValidate(std::function<bool(LimitToValidate const)>
         assert_invariant(castedToValidValue &&
                          "LimitToValidate enum values are not sequentially incremented by 1? "
                          "Compilers normally do this by default; which compiler was used here?");
+#endif
         if (func(castedLimit)) {
             break;
         }

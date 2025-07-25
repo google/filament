@@ -1,5 +1,7 @@
 # Web Docs
 
+## [This page is under construction. Links are not working at the moment]
+
 ## tutorials
 
 1. [Triangle Tutorial](tutorial_triangle.html)
@@ -14,6 +16,4 @@
 - [knotess](https://prideout.net/knotess/)
 
 ## other documentation
-
-- [JavaScript API reference](reference.html)
 - [WebGL Meetup Slides](https://prideout.net/slides/filawasm) (2018)

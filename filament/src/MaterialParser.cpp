@@ -481,7 +481,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
         uint8_t fieldType = 0;
         uint8_t fieldFormat = 0;
         uint8_t fieldPrecision = 0;
-        bool fieldUnfilterable = false;
+        bool fieldFilterable = false;
         bool fieldMultisample = false;
 
         if (!unflattener.read(&fieldName)) {
@@ -504,7 +504,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        if (!unflattener.read(&fieldUnfilterable)) {
+        if (!unflattener.read(&fieldFilterable)) {
             return false;
         }
 
@@ -517,7 +517,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
                 SamplerInterfaceBlock::Type(fieldType),
                 SamplerInterfaceBlock::Format(fieldFormat),
                 SamplerInterfaceBlock::Precision(fieldPrecision),
-                fieldUnfilterable,
+                fieldFilterable,
                 fieldMultisample);
     }
 
