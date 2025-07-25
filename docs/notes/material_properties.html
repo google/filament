@@ -1,0 +1,713 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Material Properties - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="crafting-physically-based-materials"><a class="header" href="#crafting-physically-based-materials">CRAFTING PHYSICALLY-BASED MATERIALS</a></h1>
+<h2 id="base-colorsrgb"><a class="header" href="#base-colorsrgb">BASE COLOR/sRGB</a></h2>
+<p>Defines the perceived color of an object (sometimes called <strong>albedo</strong>). More precisely:</p>
+<p>→ the <strong>diffuse color</strong> of a <strong>non-metallic</strong> object<br />
+→ the <strong>specular color</strong> of a <strong>metallic object</strong></p>
+<h3 id="base-color-luminosity"><a class="header" href="#base-color-luminosity">BASE COLOR LUMINOSITY</a></h3>
+<div style="display:flex;width:100%;flex-direction:column;font-size:12px;color:#aaa">
+  <div style="display:flex;min-height:25px;min-width:10px;flex-grow:1;background-image:linear-gradient(to right, black, white);"></div>
+  <div style="display:flex;width:100%;flex-grow:1;margin-top:10px">
+    <div style="flex-grow:10">&nbsp </div>
+    <div style="display:flex;flex-direction:row;flex-grow:230;border-style:none;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+      <div style="display:flex;flex-direction:column">
+        <div> Non-metal range </div>
+        <div> 10 - 240 </div>
+      </div>
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+    <div style="flex-grow:15">&nbsp </div>
+  </div>
+  <div style="display:flex;width:100%;flex-grow:1;">
+    <div style="flex-grow:170">&nbsp </div>
+    <div style="display:flex;flex-direction:row;flex-grow:85;border-style:none;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+      <div style="display:flex;flex-direction:column">
+        <div> Metal range </div>
+        <div> 170 - 255 </div>
+      </div>
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+  </div>
+</div>
+<h3 id="metallic-samples"><a class="header" href="#metallic-samples">METALLIC SAMPLES</a></h3>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <tbody>
+    <tr>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#faf9f5">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#faf5f5">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#d6d1c8">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#c0bdba">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#cec8c2">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#fbd8b8">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#fedc9d">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#f4e4ad">
+            </div>
+        </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> Silver </td>
+        <td style="border-color:transparent;padding:3px 10px"> Aluminum </td>
+        <td style="border-color:transparent;padding:3px 10px"> Platinum </td>
+        <td style="border-color:transparent;padding:3px 10px"> Iron </td>
+        <td style="border-color:transparent;padding:3px 10px"> Titanium </td>
+        <td style="border-color:transparent;padding:3px 10px"> Copper </td>
+        <td style="border-color:transparent;padding:3px 10px"> Gold </td>
+        <td style="border-color:transparent;padding:3px 10px"> Brass </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> 250,249,245 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 244,245,245 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 214,209,200 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 192,189,186 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 206,200,194 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 251,216,184 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 255,220,157 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 244,228,173 </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> #faf9f5 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #faf5f5 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #d6d1c8 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #c0bdba </td>
+        <td style="border-color:transparent;padding:3px 10px"> #cec8c2 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #fbd8b8 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #fedc9d </td>
+        <td style="border-color:transparent;padding:3px 10px"> #f4e4ad </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h3 id="non-metallic-samples"><a class="header" href="#non-metallic-samples">NON-METALLIC SAMPLES</a></h3>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <tbody>
+    <tr>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#323232">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#353535">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#553d31">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#875c3c">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#7b824e">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#947d75">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#b1a884">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:#c0bfbb">
+            </div>
+        </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> Coal </td>
+        <td style="border-color:transparent;padding:3px 10px"> Rubber </td>
+        <td style="border-color:transparent;padding:3px 10px"> Mud </td>
+        <td style="border-color:transparent;padding:3px 10px"> Wood </td>
+        <td style="border-color:transparent;padding:3px 10px"> Vegetation </td>
+        <td style="border-color:transparent;padding:3px 10px"> Brick </td>
+        <td style="border-color:transparent;padding:3px 10px"> Sand </td>
+        <td style="border-color:transparent;padding:3px 10px"> Concrete </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> 50,50,50 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 53,53,53 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 85,61,49 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 135,92,60 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 123,130,78 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 148,125,117 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 177,168,132 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 192,191,187 </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> #323232 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #353535 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #553d31 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #875c3c </td>
+        <td style="border-color:transparent;padding:3px 10px"> #7b824e </td>
+        <td style="border-color:transparent;padding:3px 10px"> #947d75 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #b1a884 </td>
+        <td style="border-color:transparent;padding:3px 10px"> #c0bfbb </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="metallicgrayscale"><a class="header" href="#metallicgrayscale">METALLIC/GRAYSCALE</a></h2>
+<p>Defines whether a surface is <strong>dielectric</strong> (0.0, <strong>non-metal</strong>) or <strong>conductor</strong> (1.0, <strong>metal</strong>).
+Pure, unweathered surfaces are rare and will be either <strong>0.0</strong> or <strong>1.0</strong>.
+Rust is not a conductor.</p>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_grayscale_10.png"></img></td>
+    </tr>
+    <tr style="background-color:transparent">
+      <td colspan="5" style="border-color:transparent">NON-METAL/DIELECTRIC</td>
+      <td colspan="6" style="border-color:transparent;text-align:right">METAL/CONDUCTOR</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="roughnessgrayscale"><a class="header" href="#roughnessgrayscale">ROUGHNESS/GRAYSCALE</a></h2>
+<p>Defines the perceived <strong>smoothness</strong> (0.0) or <strong>roughness</strong> (1.0).
+It is sometimes called <strong>glossiness</strong>.</p>
+<h3 id="non-metallic"><a class="header" href="#non-metallic">NON-METALLIC</a></h3>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/non_metallic_10.png"></img></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h3 id="metallic"><a class="header" href="#metallic">METALLIC</a></h3>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/metallic_10.png"></img></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="reflectancegrayscale"><a class="header" href="#reflectancegrayscale">REFLECTANCE/GRAYSCALE</a></h2>
+<p>Specular intensity for <strong>non-metals</strong>. The default is <strong>0.5</strong>, or <strong>4%</strong> reflectance.</p>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/reflectance_10.png"></img></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div style="display:flex;width:100%;flex-direction:column;font-size:12px;color:#aaa">
+  <div style="display:flex;width:100%;flex-grow:1;margin-top:10px">
+    <div style="display:flex;flex-direction:row;flex-grow:28;border-style:none;border-width:2px;border-radius:7px;border-color:#5a5a5a;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+      <div style="display:flex;flex-direction:column">
+        <div> No real-world material </div>
+      </div>
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+    <div style="display:flex">
+        2%
+    </div>
+    <div style="display:flex;flex-direction:row;flex-grow:7;border-style:none;border-width:2px;border-radius:7px;border-color:#5a5a5a;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+      <div style="display:flex;flex-direction:column">
+        <div> Common dielectrics </div>
+      </div>
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+    <div style="display:flex">
+        5%
+    </div>
+    <div style="display:flex;flex-direction:row;flex-grow:62;border-style:none;border-width:2px;border-radius:7px;border-color:#5a5a5a;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+    <div style="display:flex">
+        16%
+    </div>
+  </div>
+  <div style="align-self:end">
+      Gemstones
+  </div>
+  <div style="display:flex;width:100%;flex-grow:1">
+    <div style="flex-grow:35">&nbsp </div>
+    <div style="display:flex;flex-direction:row;flex-grow:53;border-style:none;border-width:2px;border-radius:7px;border-color:#5a5a5a;text-align:center;padding:2px 0;align-items:center">
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+      <div style="display:flex;flex-direction:column">
+        <div> All dielectrics </div>
+      </div>
+      <div style="display:flex;flex-grow:1;height:3px;background:#aaa;margin:0 5px"></div>
+    </div>
+  </div>
+</div>
+<h3 id="samples"><a class="header" href="#samples">SAMPLES</a></h3>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <tbody>
+    <tr>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:rgba(90,90,90,1);">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:rgba(119,119,119,1);">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;flex-direction:row;width:100%;height:100%">
+                <div style="background-color:rgb(90,90,90);flex-grow:1"></div>
+                <div style="background-color:rgb(119,119,119);flex-grow:1"></div>
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:rgba(127,127,127,1);">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;flex-direction:row;width:100%;height:100%">
+                <div style="background-color:rgb(90,90,90);flex-grow:1"></div>
+                <div style="background-color:rgb(119,119,119);flex-grow:1"></div>
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:rgba(180,180,180,1);">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;width:100%;height:100%;background-color:rgba(255,255,255,1);">
+            </div>
+        </td>
+        <td style="min-width:70px;height:42px;padding-left:0px;border-color:transparent;">
+            <div style="display:flex;flex-direction:row;width:100%;height:100%">
+                <div style="background-color:#8e8e8e;flex-grow:1"></div>
+                <div style="background-color:white;flex-grow:1"></div>
+            </div>
+        </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> Water </td>
+        <td style="border-color:transparent;padding:3px 10px"> Glass </td>
+        <td style="border-color:transparent;padding:3px 10px"> Liquids </td>
+        <td style="border-color:transparent;padding:3px 10px"> Defaults </td>
+        <td style="border-color:transparent;padding:3px 10px"> Others </td>
+        <td style="border-color:transparent;padding:3px 10px"> Ruby </td>
+        <td style="border-color:transparent;padding:3px 10px"> Diamond </td>
+        <td style="border-color:transparent;padding:3px 10px"> Gemstones </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> 90,90,90 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 119,119,119 </td>
+        <td style="border-color:transparent;padding:3px 10px">  </td>
+        <td style="border-color:transparent;padding:3px 10px"> 127,127,127 </td>
+        <td style="border-color:transparent;padding:3px 10px">  </td>
+        <td style="border-color:transparent;padding:3px 10px"> 180,180,180 </td>
+        <td style="border-color:transparent;padding:3px 10px"> 255,255,255 </td>
+        <td style="border-color:transparent;padding:3px 10px">  </td>
+    </tr>
+    <tr style="background-color:transparent">
+        <td style="border-color:transparent;padding:3px 10px"> 2% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 3.5% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 2% to 4% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 4%</td>
+        <td style="border-color:transparent;padding:3px 10px"> 2% to 5% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 8% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 16% </td>
+        <td style="border-color:transparent;padding:3px 10px"> 5% to 16% </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="clear-coatgrayscale"><a class="header" href="#clear-coatgrayscale">CLEAR COAT/GRAYSCALE</a></h2>
+<p>Strength of the clear coat layer on top of a base <strong>dielectric</strong> or <strong>conductor</strong> layer.
+The clear coat layer will commonly be set to <strong>0.0</strong> or <strong>1.0</strong>.
+This layer has a fixed index of refraction of 1.5.</p>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_10.png"></img></td>
+    </tr>
+    <tr style="background-color:transparent">
+      <td colspan="5" style="border-color:transparent">NO CLEAR COAT</td>
+      <td colspan="6" style="border-color:transparent;text-align:right">FULL CLEAR COAT</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="clear-coat-roughnessgrayscale"><a class="header" href="#clear-coat-roughnessgrayscale">CLEAR COAT ROUGHNESS/GRAYSCALE</a></h2>
+<p>Defines the perceived <strong>smoothness</strong> (0.0) or <strong>roughness</strong> (1.0) of the clear coat layer.
+It is sometimes called <strong>glossiness</strong>.
+This may affect the roughness of the base layer.</p>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/clear_coat_roughness_10.png"></img></td>
+    </tr>
+    <tr style="background-color:transparent">
+      <td colspan="5" style="border-color:transparent">GLOSSY CLEAR COAT</td>
+      <td colspan="6" style="border-color:transparent;text-align:right">ROUGH CLEAR COAT</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="anisotropygrayscale"><a class="header" href="#anisotropygrayscale">ANISOTROPY/GRAYSCALE</a></h2>
+<p>Defines whether the material appearance is <strong>directionally dependent</strong>, that is <strong>isotropic</strong> (0.0)
+or <strong>anisotropic</strong> (1.0). Brushed metals are <strong>anisotropic</strong>.
+Values can be <strong>negative</strong> to change the orientation of the specular reflections.</p>
+<div style="overflow-x:auto;font-size:12px">
+<table>
+  <thead style="background-color:transparent">
+    <tr style="border-color:transparent">
+      <th>0.0</th><th>0.1</th><th>0.2</th><th>0.3</th><th>0.4</th><th>0.5</th><th>0.6</th><th>0.7</th><th>0.8</th><th>0.9</th><th>1.0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_00.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_01.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_02.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_03.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_04.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_05.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_06.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_07.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_08.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_09.png"></img></td>
+        <td style="padding:0;border-color:transparent"><img style="min-width:40px" src="../images/anisotropy_10.png"></img></td>
+    </tr>
+    <tr style="background-color:transparent">
+      <td colspan="5" style="border-color:transparent">ISOTROPIC</td>
+      <td colspan="6" style="border-color:transparent;text-align:right">ANISOTROPIC</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../notes/versioning.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../notes/versioning.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

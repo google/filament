@@ -42,6 +42,7 @@ public:
 
     [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent);
     [[nodiscard]] wgpu::TextureView getCurrentHeadlessTextureView();
+    [[nodiscard]] wgpu::Texture getCurrentTexture(wgpu::Extent2D const& extent);
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
