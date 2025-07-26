@@ -26,7 +26,7 @@
 
 #include <filamat/MaterialBuilder.h>
 
-namespace matc {
+namespace matp {
 
 class ParametersProcessor {
 
@@ -48,6 +48,6 @@ private:
     std::unordered_map<std::string, ParameterInfo> mParameters;
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif //TNT_PARAMETERSPROCESSOR_H

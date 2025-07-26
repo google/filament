@@ -17,15 +17,14 @@
 #ifndef TNT_COMPILERPARAMETERS_H
 #define TNT_COMPILERPARAMETERS_H
 
+#include <filament-matp/Config.h>
 #include <fstream>
 #include <iostream>
 #include <string>
 
-#include "Config.h"
-
 namespace matc {
 
-class FilesystemOutput : public Config::Output {
+class FilesystemOutput : public matp::Config::Output {
 public:
     explicit FilesystemOutput(const char* path) : mPath(path) {
     }
@@ -55,7 +54,7 @@ private:
     std::ofstream mFile;
 };
 
-class FilesystemInput : public Config::Input {
+class FilesystemInput : public matp::Config::Input {
 public:
     explicit FilesystemInput(const char* path) : mPath(path) {
     }
@@ -97,7 +96,7 @@ private:
     ssize_t mFilesize = 0;
 };
 
-class CommandlineConfig : public Config {
+class CommandlineConfig : public matp::Config {
 public:
 
     CommandlineConfig(int argc, char** argv);
@@ -106,11 +105,11 @@ public:
         delete mOutput;
     };
 
-    Output* getOutput()  const noexcept override  {
+    matp::Config::Output* getOutput()  const noexcept override  {
         return mOutput;
     }
 
-    Input* getInput() const noexcept override {
+    matp::Config::Input* getInput() const noexcept override {
         return mInput;
     }
 

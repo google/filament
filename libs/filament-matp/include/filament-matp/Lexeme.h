@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace matc {
+namespace matp {
 
 // A lexeme MUST be templated on the family, e.g: Material config, json or glsl.
 template <class T>
@@ -65,6 +65,6 @@ protected:
     T mType;
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif // TNT_LEXEME_H

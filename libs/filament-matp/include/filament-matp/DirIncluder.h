@@ -21,7 +21,7 @@
 
 #include <utils/Path.h>
 
-namespace matc {
+namespace matp {
 
 // Functor callback handler used to resolve includes relative to a root include directory.
 class DirIncluder {
@@ -38,6 +38,6 @@ private:
 
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif
