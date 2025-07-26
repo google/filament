@@ -33,6 +33,7 @@
 
 #include <array>
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <tuple>
@@ -133,6 +134,8 @@ private:
 
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
+
+    std::list<program_token_t> mCanceledTokens;
 
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);

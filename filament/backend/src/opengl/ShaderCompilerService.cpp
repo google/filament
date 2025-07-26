@@ -136,29 +136,17 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
     // Indicate this program was created from the cache blob.
     bool retrievedFromBlobCache = false;
 
-    // Indicate whether this token was canceled. Used for THREAD_POOL mode.
-    std::atomic_bool cancelled = false;
+    // The current state of token. Used for THREAD_POOL mode.
+    enum class State : uint8_t {
+        WAITING,
+        LOADING,
+        COMPLETED,
+        CANCELED,
+    };
+    std::atomic<State> state = State::WAITING;
 };
 
 ShaderCompilerService::OpenGLProgramToken::~OpenGLProgramToken() {
-    // Clean up OpenGL resources. Typically, shader objects are destroyed, and ownership of the
-    // created program is transferred to `OpenGLProgram` if everything goes well. However, these GL
-    // resources may persist if the token was cancelled. This ensures thorough cleanup for the case.
-    for (GLuint& shader: gl.shaders) {
-        if (!shader) {
-            continue;
-        }
-        if (gl.program) {
-            glDetachShader(gl.program, shader);
-        }
-        glDeleteShader(shader);
-        shader = 0;
-    }
-    if (gl.program) {
-        glDeleteProgram(gl.program);
-        gl.program = 0;
-    }
-
     // Notify the caller that the resource loading has concluded.
     trySubmittingCallback();
 }
@@ -291,10 +279,14 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, program = std::move(program), token]() mutable {
-                        // If the token is canceled, we exit early. Even if the cancellation occurs
-                        // immediately after this check, the created GL resources will be properly
-                        // cleaned up within the token's destructor.
-                        if (token->cancelled.load(std::memory_order_relaxed)) {
+                        // If the token was canceled, we exit early. If the cancellation occurs
+                        // after this check, the created GL resources will be properly cleaned up
+                        // later in the `tick`.
+                        OpenGLProgramToken::State tokenState = OpenGLProgramToken::State::WAITING;
+                        if (!token->state.compare_exchange_strong(tokenState,
+                                    OpenGLProgramToken::State::LOADING,
+                                    std::memory_order_relaxed)) {
+                            assert_invariant(tokenState == OpenGLProgramToken::State::CANCELED);
                             return;
                         }
                         // Try retrieving the program from the cache first. If no program found,
@@ -313,6 +305,11 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         // to unblock the engine thread as soon as the token is ready while
                         // performing an expensive caching operation still in the pool.
                         tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
+                        // Updates the token's state. If the token is canceled while this function
+                        // executes, this update notifies `tick` that GL resource loading is
+                        // complete, allowing `tick` to proceed with resource destruction.
+                        token->state.store(OpenGLProgramToken::State::COMPLETED,
+                                std::memory_order_relaxed);
                     });
             break;
         }
@@ -376,10 +373,16 @@ GLuint ShaderCompilerService::getProgram(program_token_t& token) {
     assert_invariant(token);// This function should be called when the token is still alive.
 
     if (token->compiler.mMode == Mode::THREAD_POOL) {
-        // Flag the token as canceled. The compiler thread will later discard this token, allowing
-        // the current engine thread to proceed without blocking while the cancellation is processed
-        // in the background.
-        token->cancelled.store(true, std::memory_order_relaxed);
+        // Attempt to cancel the token. If the token's resource loading has already begun, the
+        // token will be monitored until completion so that it proceeds with resource destruction
+        // afterward.
+        OpenGLProgramToken::State tokenState = OpenGLProgramToken::State::WAITING;
+        if (!token->state.compare_exchange_strong(tokenState, OpenGLProgramToken::State::CANCELED,
+                    std::memory_order_relaxed)) {
+            assert_invariant(tokenState == OpenGLProgramToken::State::LOADING ||
+                             tokenState == OpenGLProgramToken::State::COMPLETED);
+            token->compiler.mCanceledTokens.push_back(token);
+        }
     }
 
     // Cleanup the token.
@@ -391,6 +394,38 @@ void ShaderCompilerService::tick() {
     // we don't need to run executeTickOps() if we're using the thread-pool
     if (UTILS_UNLIKELY(mMode != Mode::THREAD_POOL)) {
         executeTickOps();
+    } else {
+        // TODO: refactor (or rename) `executeTickOps` so that it performs properly
+        // (including below) based on mMode.
+        for (auto it = mCanceledTokens.begin(); it != mCanceledTokens.end();) {
+            auto token = *it;
+            OpenGLProgramToken::State tokenState = token->state.load(std::memory_order_relaxed);
+
+            if (tokenState != OpenGLProgramToken::State::COMPLETED) {
+                ++it;
+                continue;
+            }
+
+            mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, token,
+                    [token]() mutable {
+                        for (GLuint& shader: token->gl.shaders) {
+                            if (!shader) {
+                                continue;
+                            }
+                            if (token->gl.program) {
+                                glDetachShader(token->gl.program, shader);
+                            }
+                            glDeleteShader(shader);
+                            shader = 0;
+                        }
+                        if (token->gl.program) {
+                            glDeleteProgram(token->gl.program);
+                            token->gl.program = 0;
+                        }
+                    });
+
+            it = mCanceledTokens.erase(it);
+        }
     }
 }
 
