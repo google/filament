@@ -33,6 +33,7 @@
 
 #include <array>
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <tuple>
@@ -134,6 +135,8 @@ private:
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 
+    std::list<program_token_t> mCanceledTokens;
+
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);
 
@@ -178,9 +181,6 @@ private:
     // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
     static void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
             program_token_t const& token) noexcept;
-
-    // Cleanup GL resources.
-    static void cleanupProgramAndShaders(program_token_t const& token) noexcept;
 };
 
 } // namespace filament::backend
