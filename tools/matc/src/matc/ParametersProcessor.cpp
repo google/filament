@@ -355,6 +355,19 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
         return false;
     }
 
+    const JsonishValue* mutableValue = jsonObject.getValue("mutable");
+    bool isMutable;
+    if (mutableValue) {
+        const JsonishBool* mutableBool = mutableValue->toJsonBool();
+        if (!mutableBool) {
+            std::cerr << "constants: mutable value must be BOOL." << std::endl;
+            return false;
+        }
+        isMutable = mutableBool->getBool();
+    } else {
+        isMutable = false;
+    }
+
     auto typeString = typeValue->toJsonString()->getString();
     auto nameString = nameValue->toJsonString()->getString();
     const JsonishValue* defaultValue = jsonObject.getValue("default");
@@ -373,7 +386,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     // FIXME: Jsonish doesn't distinguish between integers and floats.
                     intDefault = (int32_t)defaultValue->toJsonNumber()->getFloat();
                 }
-                builder.constant(nameString.c_str(), type, intDefault);
+                builder.constant(nameString.c_str(), type, isMutable, intDefault);
                 break;
             }
             case ConstantType::FLOAT: {
@@ -386,7 +399,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     }
                     floatDefault = defaultValue->toJsonNumber()->getFloat();
                 }
-                builder.constant(nameString.c_str(), type, floatDefault);
+                builder.constant(nameString.c_str(), type, isMutable, floatDefault);
                 break;
             }
             case ConstantType::BOOL:
@@ -399,7 +412,7 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                     }
                     boolDefault = defaultValue->toJsonBool()->getBool();
                 }
-                builder.constant(nameString.c_str(), type, boolDefault);
+                builder.constant(nameString.c_str(), type, isMutable, boolDefault);
                 break;
         }
     } else {
