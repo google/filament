@@ -41,6 +41,7 @@
 #include <private/backend/BackendUtils.h>
 
 #include <math/mat3.h>
+#include <utils/debug.h>
 #include <utils/CString.h>
 #include <utils/Hash.h>
 #include <utils/Panic.h>
@@ -50,6 +51,7 @@
 
 #include <algorithm>
 #include <array>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -135,24 +137,42 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
 }
 
 void WebGPUDriver::flush(int) {
+    if (mCommandEncoder == nullptr) {
+        return;
+    }
+    // submit the command buffer thus far...
+    assert_invariant(mRenderPassEncoder == nullptr);
+    wgpu::CommandBufferDescriptor commandBufferDescriptor{
+        .label = "command_buffer",
+    };
+    mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
+    assert_invariant(mCommandBuffer);
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandBuffer = nullptr;
+    // create a new command buffer encoder to continue recording the next command for frame...
+    wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "command_encoder" };
+    mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+    assert_invariant(mCommandEncoder);
 }
 
 void WebGPUDriver::finish(int /* dummy */) {
-    if (mCommandEncoder != nullptr) {
-        // submit the command buffer thus far...
-        assert_invariant(mRenderPassEncoder == nullptr);
-        wgpu::CommandBufferDescriptor commandBufferDescriptor{
-            .label = "command_buffer",
-        };
-        mCommandBuffer = mCommandEncoder.Finish(&commandBufferDescriptor);
-        assert_invariant(mCommandBuffer);
-        mQueue.Submit(1, &mCommandBuffer);
-        mCommandBuffer = nullptr;
-        // create a new command buffer encoder to continue recording the next command for frame...
-        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "command_encoder" };
-        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
-        assert_invariant(mCommandEncoder);
+    if (mCommandEncoder == nullptr) {
+        return;
     }
+
+    flush();
+    std::mutex syncPoint;
+    std::condition_variable syncCondition;
+    bool done = false;
+    mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
+            [&syncPoint, &syncCondition, &done](wgpu::QueueWorkDoneStatus status) {
+                assert_invariant(status == wgpu::QueueWorkDoneStatus::Success);
+                std::unique_lock<std::mutex> lock(syncPoint);
+                done = true;
+                syncCondition.notify_one();
+            });
+    std::unique_lock<std::mutex> lock(syncPoint);
+    syncCondition.wait(lock, [&done] { return done; });
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1148,6 +1168,11 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
+
+    // Once we're ready to read the pixels, we need to flush all the previous work of this frame.
+    // This ensures that the readPixels will be ordered after all the draws.
+    flush();
+
     const size_t dstBytesPerPixel = PixelBufferDescriptor::computePixelSize(
             pixelBufferDescriptor.format, pixelBufferDescriptor.type);
     const size_t srcBytesPerPixel =
