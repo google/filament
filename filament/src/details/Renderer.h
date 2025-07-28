@@ -189,7 +189,7 @@ private:
     void renderInternal(FView const* view);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
 
-    std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
+    static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
             TemporalAntiAliasingOptions const& taaOptions,
             DynamicResolutionOptions const& dsrOptions);
 
@@ -200,7 +200,6 @@ private:
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
-    uint32_t mViewRenderedCount = 0;
     FrameInfoManager mFrameInfoManager;
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;
