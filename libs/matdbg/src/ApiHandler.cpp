@@ -243,7 +243,7 @@ bool ApiHandler::handleGetApiShader(struct mg_connection* conn,
         extractor.getShader(item.shaderModel, item.variant, item.pipelineStage, content);
 
         if (language == wgsl) {
-            std::string const shader = mFormatter.format((char const*) content.data());
+            std::string const shader{ (char const*) content.data() };
             mg_printf(conn, kSuccessHeader.data(), "application/txt");
             mg_write(conn, shader.c_str(), shader.size());
             return true;
