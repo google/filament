@@ -138,9 +138,17 @@ struct ShaderCompilerService::OpenGLProgramToken : ProgramToken {
 
     // The current state of token. Used for THREAD_POOL mode.
     enum class State : uint8_t {
+        // The token is currently in the queue, awaiting the start of shader compilation.
+        // From this state, the token can transition to either LOADING or CANCELED.
         WAITING,
+        // This state indicates that shader compilation is currently underway for the token.
+        // From this state, the token can transition to either COMPLETED or CANCELED.
         LOADING,
+        // This state indicates that shader compilation for the token has finished.
+        // No state transitions can occur from this state.
         COMPLETED,
+        // This state indicates that shader compilation for the token has been canceled.
+        // No state transitions can occur from this state.
         CANCELED,
     };
     std::atomic<State> state = State::WAITING;
@@ -279,6 +287,10 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
         case Mode::THREAD_POOL: {
             mCompilerThreadPool.queue(priorityQueue, token,
                     [this, &gl, program = std::move(program), token]() mutable {
+                        // The compilation job has just begun. At this point, the token's state must
+                        // be either WAITING or CANCELED.
+                        assert_invariant(token->state == OpenGLProgramToken::State::WAITING ||
+                                         token->state == OpenGLProgramToken::State::CANCELED);
                         // If the token was canceled, we exit early. If the cancellation occurs
                         // after this check, the created GL resources will be properly cleaned up
                         // later in the `tick`.
@@ -286,6 +298,9 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
                         if (!token->state.compare_exchange_strong(tokenState,
                                     OpenGLProgramToken::State::LOADING,
                                     std::memory_order_relaxed)) {
+                            // If the token's state is not WAITING, it must be CANCELED. Other
+                            // states (LOADING or COMPLETED) are not possible here, as jobs in those
+                            // states cannot be re-added to the queue.
                             assert_invariant(tokenState == OpenGLProgramToken::State::CANCELED);
                             return;
                         }
@@ -408,6 +423,7 @@ void ShaderCompilerService::tick() {
 
             mCompilerThreadPool.queue(CompilerPriorityQueue::LOW, token,
                     [token]() mutable {
+                        assert_invariant(token->state == OpenGLProgramToken::State::COMPLETED);
                         for (GLuint& shader: token->gl.shaders) {
                             if (!shader) {
                                 continue;
