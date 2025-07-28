@@ -241,7 +241,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mEquirectMaterial->createInstance();
+    MaterialInstance* const mi = mEquirectMaterial->createInstance();
 
     FILAMENT_CHECK_PRECONDITION(equirect != nullptr) << "equirect is null!";
 
@@ -276,7 +276,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
     environmentSampler.setAnisotropy(16.0f); // maybe make this an option
 
-    defaultMi->setParameter("equirect", equirect, environmentSampler);
+    mi->setParameter("equirect", equirect, environmentSampler);
 
     // We need mipmaps because we're sampling down
     equirect->generateMipmaps(engine);
@@ -288,20 +288,20 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
            .texture(RenderTarget::AttachmentPoint::COLOR1, outCube)
            .texture(RenderTarget::AttachmentPoint::COLOR2, outCube);
 
-    defaultMi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
+    mi->setParameter("mirror", mConfig.mirror ? -1.0f : 1.0f);
 
     for (size_t i = 0; i < 2; i++) {
         // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
         // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
-        MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+        MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
 #else
-        MaterialInstance *const mi = defaultMi;
+        MaterialInstance *const tempMi = mi;
 #endif
-        rcm.setMaterialInstanceAt(ci, 0, mi);
+        rcm.setMaterialInstanceAt(ci, 0, tempMi);
 
-        mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-        mi->commit(engine);
+        tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        tempMi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -313,12 +313,12 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         engine.destroy(rt);
 
 #if defined(__EMSCRIPTEN__)
-        cleanupMaterialInstance(mi, engine, rcm, ci);
+        cleanupMaterialInstance(tempMi, engine, rcm, ci);
 #endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-    engine.destroy(defaultMi);
+    engine.destroy(mi);
 
     return outCube;
 }
@@ -436,7 +436,7 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIrradianceIntegrationMaterial->createInstance();
+    MaterialInstance* const mi = mContext.mIrradianceIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -451,11 +451,11 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
 
-    defaultMi->setParameter("environment", environmentCubemap, environmentSampler);
-    defaultMi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
-    defaultMi->setParameter("compress", float2{ linear, compress });
-    defaultMi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
-    defaultMi->setParameter("sampleCount", sampleCount);
+    mi->setParameter("environment", environmentCubemap, environmentSampler);
+    mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
+    mi->setParameter("compress", float2{ linear, compress });
+    mi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
+    mi->setParameter("sampleCount", sampleCount);
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -474,14 +474,14 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
         // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
         // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
-        MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+        MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
 #else
-        MaterialInstance *const mi = defaultMi;
+        MaterialInstance *const tempMi = mi;
 #endif
-        rcm.setMaterialInstanceAt(ci, 0, mi);
+        rcm.setMaterialInstanceAt(ci, 0, tempMi);
 
-        mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-        mi->commit(engine);
+        tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+        tempMi->commit(engine);
 
         builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -493,12 +493,12 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
         engine.destroy(rt);
 
 #if defined(__EMSCRIPTEN__)
-        cleanupMaterialInstance(mi, engine, rcm, ci);
+        cleanupMaterialInstance(tempMi, engine, rcm, ci);
 #endif
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-    engine.destroy(defaultMi);
+    engine.destroy(mi);
 
     return outIrradianceTexture;
 }
@@ -684,7 +684,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     Engine& engine = mContext.mEngine;
     View* const view = mContext.mView;
     Renderer* const renderer = mContext.mRenderer;
-    MaterialInstance* const defaultMi = mContext.mIntegrationMaterial->createInstance();
+    MaterialInstance* const mi = mContext.mIntegrationMaterial->createInstance();
 
     RenderableManager& rcm = engine.getRenderableManager();
     auto const ci = rcm.getInstance(mContext.mFullScreenQuadEntity);
@@ -700,10 +700,10 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     environmentSampler.setMagFilter(SamplerMagFilter::LINEAR);
     environmentSampler.setMinFilter(SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
 
-    defaultMi->setParameter("environment", environmentCubemap, environmentSampler);
-    defaultMi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
-    defaultMi->setParameter("compress", float2{ linear, compress });
-    defaultMi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
+    mi->setParameter("environment", environmentCubemap, environmentSampler);
+    mi->setParameter("kernel", mKernelTexture, TextureSampler{ SamplerMagFilter::NEAREST });
+    mi->setParameter("compress", float2{ linear, compress });
+    mi->setParameter("lodOffset", options.lodOffset - log4(omegaP));
 
     if (options.generateMipmap) {
         // We need mipmaps for prefiltering
@@ -718,14 +718,14 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     for (size_t lod = 0; lod < levels; lod++) {
         FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "executeFilterLOD");
 
-        defaultMi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
-        defaultMi->setParameter("attachmentLevel", uint32_t(lod));
+        mi->setParameter("sampleCount", uint32_t(lod == 0 ? 1u : sampleCount));
+        mi->setParameter("attachmentLevel", uint32_t(lod));
 
         if (lod == levels - 1) {
             // this is the last lod, use a more aggressive filtering because this level is also
             // used for the diffuse brdf by filament, and we need it to be very smooth.
             // So we set the lod offset to at least 2.
-            defaultMi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));
+            mi->setParameter("lodOffset", std::max(2.0f, options.lodOffset) - log4(omegaP));
         }
 
         builder.mipLevel(RenderTarget::AttachmentPoint::COLOR0, lod)
@@ -738,14 +738,14 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
             // This is a workaround for internal bug b/419664914 to duplicate same material for each draw.
             // TODO: properly address the bug and remove this workaround.
 #if defined(__EMSCRIPTEN__)
-            MaterialInstance *const mi = MaterialInstance::duplicate(defaultMi);
+            MaterialInstance *const tempMi = MaterialInstance::duplicate(mi);
 #else
-            MaterialInstance *const mi = defaultMi;
+            MaterialInstance *const tempMi = mi;
 #endif
-            rcm.setMaterialInstanceAt(ci, 0, mi);
+            rcm.setMaterialInstanceAt(ci, 0, tempMi);
 
-            mi->setParameter("side", i == 0 ? 1.0f : -1.0f);
-            mi->commit(engine);
+            tempMi->setParameter("side", i == 0 ? 1.0f : -1.0f);
+            tempMi->commit(engine);
 
             builder.face(RenderTarget::AttachmentPoint::COLOR0, faces[i][0])
                    .face(RenderTarget::AttachmentPoint::COLOR1, faces[i][1])
@@ -757,7 +757,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
             engine.destroy(rt);
 
 #if defined(__EMSCRIPTEN__)
-            cleanupMaterialInstance(mi, engine, rcm, ci);
+            cleanupMaterialInstance(tempMi, engine, rcm, ci);
 #endif
         }
 
@@ -765,7 +765,7 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
     }
 
     rcm.clearMaterialInstanceAt(ci, 0);
-    engine.destroy(defaultMi);
+    engine.destroy(mi);
 
     return outReflectionsTexture;
 }
