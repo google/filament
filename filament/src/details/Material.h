@@ -123,7 +123,9 @@ public:
     FEngine& getEngine() const noexcept  { return mEngine; }
 
     bool isCached(Variant const variant,
-            const backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept;
+            const backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept {
+        return bool(mCachedPrograms[getCachedProgramIndex(variant, mutableSpecConstants)]);
+    }
 
     void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
 

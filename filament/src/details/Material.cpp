@@ -516,11 +516,6 @@ FMaterialInstance* FMaterial::getDefaultInstance() noexcept {
     return mDefaultMaterialInstance;
 }
 
-bool FMaterial::isCached(Variant const variant,
-        const backend::Program::MutableSpecConstantsInfo mutableSpecConstants) const noexcept {
-    return bool(mCachedPrograms[getCachedProgramIndex(variant, mutableSpecConstants)]);
-}
-
 bool FMaterial::hasParameter(const char* name) const noexcept {
     return mUniformInterfaceBlock.hasField(name) ||
            mSamplerInterfaceBlock.hasSampler(name) ||
