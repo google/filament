@@ -129,14 +129,6 @@ fragment {
     #include "MaterialHelpersShading.fxh"
 
     void material(inout MaterialInputs material) {
-        ApplyEditorScalers(material);
-
-        FragmentData fragmentData = GetPositionAndNormal();
-
-        ApplyAllPrePrepare(material, fragmentData);
-
-        prepareMaterial(material);
-
-        ApplyAllPostPrepare(material, fragmentData);
+        ApplyStandardMaterialFragment(material);
     }
 }
