@@ -21,9 +21,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "JsonishLexeme.h"
-#include "JsonishParser.h"
-#include "MaterialLexeme.h"
 #include "Config.h"
 
 namespace filamat {
@@ -34,6 +31,8 @@ class TestMaterialParser;
 namespace matp {
 
 class JsonishValue;
+class MaterialLexeme;
+
 class MaterialParser {
 public:
     MaterialParser();

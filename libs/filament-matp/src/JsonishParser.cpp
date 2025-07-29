@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filament-matp/JsonishParser.h>
+#include "JsonishParser.h"
 
 #include <stdlib.h>
 

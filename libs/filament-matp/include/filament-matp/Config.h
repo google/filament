@@ -17,8 +17,8 @@
 #ifndef TNT_CONFIG_H
 #define TNT_CONFIG_H
 
-#include <backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <filamat/MaterialBuilder.h>
 

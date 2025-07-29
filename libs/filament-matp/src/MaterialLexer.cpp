@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filament-matp/MaterialLexer.h>
+#include "MaterialLexer.h"
 
 namespace matp {
 

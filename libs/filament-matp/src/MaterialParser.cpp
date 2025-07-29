@@ -27,12 +27,12 @@
 #include <utils/Log.h>
 #include <utils/JobSystem.h>
 
-#include <filament-matp/DirIncluder.h>
-#include <filament-matp/JsonishLexer.h>
-#include <filament-matp/JsonishParser.h>
-#include <filament-matp/MaterialLexeme.h>
-#include <filament-matp/MaterialLexer.h>
-#include <filament-matp/ParametersProcessor.h>
+#include "DirIncluder.h"
+#include "JsonishLexer.h"
+#include "JsonishParser.h"
+#include "MaterialLexeme.h"
+#include "MaterialLexer.h"
+#include "ParametersProcessor.h"
 #include <filament-matp/Config.h>
 
 using namespace utils;

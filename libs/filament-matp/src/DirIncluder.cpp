@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filament-matp/DirIncluder.h>
+#include "DirIncluder.h"
 
 #include <utils/Log.h>
 
