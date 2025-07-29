@@ -205,3 +205,40 @@ TEST(BitSetTest, NotOperator) {
     EXPECT_TRUE(b3[0]);
     EXPECT_TRUE(b3[2]);
 }
+
+TEST(BitSetTest, FirstSetBit) {
+    bitset256 b;
+    // Without a set bit, we expect an value out-of-bounds.
+    EXPECT_GT(b.firstSetBit(), b.size() - 1);
+
+    b.set(64);
+    EXPECT_EQ(64, b.firstSetBit());
+
+    b.set(63);
+    EXPECT_EQ(63, b.firstSetBit());
+
+    b.set(0);
+    EXPECT_EQ(0, b.firstSetBit());
+
+    b.set(128);
+    EXPECT_EQ(0, b.firstSetBit());
+
+    b.set(255);
+    EXPECT_EQ(0, b.firstSetBit());
+
+    b.unset(0);
+    EXPECT_EQ(63, b.firstSetBit());
+
+    b.unset(63);
+    EXPECT_EQ(64, b.firstSetBit());
+
+    b.unset(64);
+    EXPECT_EQ(128, b.firstSetBit());
+
+    b.unset(128);
+    EXPECT_EQ(255, b.firstSetBit());
+
+    b.unset(255);
+    // Without a set bit, we expect an value out-of-bounds.
+    EXPECT_GT(b.firstSetBit(), b.size() - 1);
+}

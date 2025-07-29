@@ -165,7 +165,7 @@ public:
 
 
     inline Box const& getAABB(Instance instance) const noexcept;
-    inline Box const& getAxisAlignedBoundingBox(Instance const instance) const noexcept { return getAABB(instance); }
+    Box const& getAxisAlignedBoundingBox(Instance const instance) const noexcept { return getAABB(instance); }
     inline Visibility getVisibility(Instance instance) const noexcept;
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
@@ -189,18 +189,15 @@ public:
     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
 
     struct InstancesInfo {
-        union {
-            FInstanceBuffer* buffer;
-            uint64_t padding;          // ensures the pointer is 64 bits on all archs
-        };
-        backend::Handle<backend::HwBufferObject> handle;
-        uint16_t count;
-        char padding0[2];
+        FInstanceBuffer* buffer = nullptr;
+        alignas(8) // ensures the pointer is 64 bits on all archs
+        uint16_t count = 0;
+        char padding0[6] = {};
     };
     static_assert(sizeof(InstancesInfo) == 16);
     inline InstancesInfo getInstancesInfo(Instance instance) const noexcept;
 
-    inline size_t getLevelCount(Instance) const noexcept { return 1u; }
+    size_t getLevelCount(Instance) const noexcept { return 1u; }
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance);
