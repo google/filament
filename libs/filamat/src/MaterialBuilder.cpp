@@ -631,6 +631,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
     const bool isPostProcessMaterial = mMaterialDomain == MaterialDomain::POST_PROCESS;
+    // TODO: Currently, for surface materials, we rely on the presence of a custom vertex shader to
+    // infer the default shader stages. We could do better by analyzing the AST of the vertex shader
+    // to see if the sampler is actually used.
     const ShaderStageFlags defaultShaderStages =
             isPostProcessMaterial || hasEmptyVertexCode
                     ? (ShaderStageFlags::FRAGMENT)
