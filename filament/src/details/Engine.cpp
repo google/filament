@@ -101,6 +101,8 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
+        .disableAmortizedShaderCompile =
+                instance->features.backend.disable_amortized_shader_compile,
         .disableHandleUseAfterFreeCheck =
                 instance->features.backend.disable_handle_use_after_free_check,
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
