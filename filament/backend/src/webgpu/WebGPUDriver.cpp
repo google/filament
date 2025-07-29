@@ -1154,11 +1154,11 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     auto swapChain = handleCast<WebGPUSwapChain>(drawSch);
     mSwapChain = swapChain;
     assert_invariant(mSwapChain);
-    if(!mSwapChain->isHeadless()){
-         wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
-         mTextureView = mSwapChain->getCurrentTextureView(extent);
+
+    if (mSwapChain->isHeadless()) {
+        mTextureView = mSwapChain->getNextTextureView();
     } else {
-        mTextureView = mSwapChain->getCurrentHeadlessTextureView();
+        mTextureView = mSwapChain->getNextTextureView(mPlatform.getSurfaceExtent(mNativeWindow));
     }
 
     assert_invariant(mTextureView);
@@ -1251,7 +1251,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     wgpu::Texture srcTexture = nullptr;
     if (srcTarget->isDefaultRenderTarget()) {
         assert_invariant(mSwapChain);
-        srcTexture = mSwapChain->getCurrentTexture(mPlatform.getSurfaceExtent(mNativeWindow));
+        srcTexture = mSwapChain->getCurrentTexture();
     } else {
         // Handle custom render targets. Read from the first color attachment.
         const auto& colorAttachmentInfos = srcTarget->getColorAttachmentInfos();
