@@ -206,7 +206,7 @@ void generatePrefilterMipmap(Texture* const texture, Engine& engine,
                             PixelBufferDescriptor::PixelDataFormat::RGB,
                             PixelBufferDescriptor::PixelDataType::FLOAT, 1,
                             0, 0, uint32_t(faceImage.getStride()),
-                            [j, &image](void const*, size_t) {
+                            [j, image](void const*, size_t) {
                                 // free the buffer only when processing the last image
                                 if (j == 5) {
                                     delete image;
