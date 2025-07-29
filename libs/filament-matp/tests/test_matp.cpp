@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2018 The Android Open Source Project
+* Copyright (C) 2025 The Android Open Source Project
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@
 #include "TestMaterialParser.h"
 
 #include <filament-matp/MaterialParser.h>
-#include <filament-matp/JsonishLexer.h>
-#include <filament-matp/JsonishParser.h>
-#include <filament-matp/MaterialLexer.h>
+#include "../src/JsonishLexer.h"
+#include "../src/JsonishParser.h"
+#include "../src/MaterialLexer.h"
 
 class MaterialLexer: public ::testing::Test {
 protected:

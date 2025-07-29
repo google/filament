@@ -25,7 +25,7 @@
 #include <utils/Log.h>
 #include <utils/JobSystem.h>
 
-#include <filament-matp/DirIncluder.h>
+#include "../../../../libs/filament-matp/src/DirIncluder.h"
 #include <filament-matp/Config.h>
 
 #include "SPIRV/GlslangToSpv.h"

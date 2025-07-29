@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filament-matp/ParametersProcessor.h>
+#include "ParametersProcessor.h"
 
 #include <filamat/Enums.h>
 

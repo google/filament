@@ -8,26 +8,26 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/filament-matp/JsonishLexeme.h
-        include/filament-matp/JsonishLexer.h
-        include/filament-matp/JsonishParser.h
-        include/filament-matp/Lexeme.h
-        include/filament-matp/Lexer.h
-        include/filament-matp/MaterialLexeme.h
-        include/filament-matp/MaterialLexer.h
-        include/filament-matp/ParametersProcessor.h
-        include/filament-matp/DirIncluder.h
         include/filament-matp/Config.h
         include/filament-matp/MaterialParser.h
 )
 
 set(SRCS
+        src/DirIncluder.h
+        src/JsonishLexeme.h
+        src/JsonishLexer.h
+        src/JsonishParser.h
+        src/Lexeme.h
+        src/Lexer.h
+        src/MaterialLexeme.h
+        src/MaterialLexer.h
+        src/ParametersProcessor.h
+        src/DirIncluder.cpp
         src/JsonishLexer.cpp
         src/JsonishParser.cpp
         src/MaterialLexer.cpp
-        src/ParametersProcessor.cpp
-        src/DirIncluder.cpp
         src/MaterialParser.cpp
+        src/ParametersProcessor.cpp
 )
 
 # ==================================================================================================

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filament-matp/JsonishLexer.h>
+#include "JsonishLexer.h"
 
 #include <string.h>
 
