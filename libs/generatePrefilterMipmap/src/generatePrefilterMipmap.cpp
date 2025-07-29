@@ -193,29 +193,23 @@ void generatePrefilterMipmap(Texture* const texture, Engine& engine,
         const float lod = saturate(float(level) / float(numLevels - 1));
         const float linearRoughness = lod * lod;
 
-        Image image;
-        Cubemap dst = CubemapUtils::create(image, dim);
+        Image* image = new Image;
+        Cubemap dst = CubemapUtils::create(*image, dim);
         CubemapIBL::roughnessFilter(js, dst, { levels.begin(), uint32_t(levels.size()) },
                 linearRoughness, numSamples, mirror, true);
 
-        PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
-                PixelBufferDescriptor::PixelDataFormat::RGB,
-                PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
-
-        uintptr_t const base = uintptr_t(image.getData());
         for (size_t j = 0; j < 6; j++) {
             Image const& faceImage = dst.getImageForFace(Cubemap::Face(j));
-            auto offset = uintptr_t(faceImage.getData()) - base;
             texture->setImage(engine, level, 0, 0, j, dim, dim, 1,
-                    PixelBufferDescriptor::make((char*) image.getData() + offset,
-                            dim * dim * 3 * sizeof(float),
+                    PixelBufferDescriptor::make((char*) faceImage.getData(),
+                            dim * faceImage.getStride() * 3 * sizeof(float),
                             PixelBufferDescriptor::PixelDataFormat::RGB,
                             PixelBufferDescriptor::PixelDataType::FLOAT, 1,
-                            0, 0, uint32_t(image.getStride()),
+                            0, 0, uint32_t(faceImage.getStride()),
                             [j, &image](void const*, size_t) {
                                 // free the buffer only when processing the last image
                                 if (j == 5) {
-                                    image.detach();
+                                    delete image;
                                 }
                             }));
         }
