@@ -445,6 +445,12 @@ private:
 
     MaterialInstanceManager mMaterialInstanceManager;
 
+    struct {
+        int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
+    } mFixedMaterialInstanceIndex;
+
     backend::Handle<backend::HwTexture> mStarburstTexture;
 
     std::uniform_real_distribution<float> mUniformDistribution{0.0f, 1.0f};

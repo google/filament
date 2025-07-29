@@ -233,6 +233,7 @@ const PostProcessManager::JitterSequence<32>
 
 PostProcessManager::PostProcessManager(FEngine& engine) noexcept
         : mEngine(engine),
+          mFixedMaterialInstanceIndex {},
           mWorkaroundSplitEasu(false),
           mWorkaroundAllowReadOnlyAncillaryFeedbackLoop(false) {
     // don't use Engine here, it's not fully initialized yet
@@ -416,6 +417,7 @@ Handle<HwTexture> PostProcessManager::getZeroTextureArray() const {
 
 void PostProcessManager::resetForRender() {
     mMaterialInstanceManager.reset();
+    mFixedMaterialInstanceIndex = {};
 }
 
 UTILS_NOINLINE
@@ -584,14 +586,15 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 auto in = resources.getTexture(data.depth);
                 auto& material = getPostProcessMaterial("mipmapDepth");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                auto pipeline = getPipelineState(ma);
-
                 FMaterialInstance* const mi = getMaterialInstance(ma);
+                // Only the depth texture is changing in the material instance (no UBO updates),
+                // we do not move getMaterialInstance() inside the loop.
+
+                auto pipeline = getPipelineState(ma);
 
                 // The first mip already exists, so we process n-1 lods
                 for (size_t level = 0; level < levelCount - 1; level++) {
                     auto out = resources.getRenderPassInfo(level);
-
                     auto th = driver.createTextureView(in, level, 1);
                     mi->setParameter("depth", th, {
                         .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
@@ -1299,60 +1302,69 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                             "separableGaussianBlur4L"sv : "separableGaussianBlur4"sv;   break;
                 }
                 auto const& separableGaussianBlur = getPostProcessMaterial(materialName);
-                FMaterialInstance* const mi = getMaterialInstance(mEngine, separableGaussianBlur);
+                auto ma = separableGaussianBlur.getMaterial(mEngine);
 
-                const size_t kernelStorageSize = mi->getMaterial()->reflect("kernel")->size;
-
-
-                // Initialize the samplers with dummy textures because vulkan requires a sampler to
-                // be bound to a texture even if sampler might be unused.
-                mi->setParameter("sourceArray"sv, getZeroTextureArray(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-                mi->setParameter("source"sv, getZeroTexture(), {
-                        .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-
-
+                const size_t kernelStorageSize = ma->reflect("kernel")->size;
                 float2 kernel[64];
                 size_t const m = computeGaussianCoefficients(kernel,
                         std::min(std::size(kernel), kernelStorageSize));
-
                 std::string_view const sourceParameterName = is2dArray ? "sourceArray"sv : "source"sv;
-                // horizontal pass
-                mi->setParameter(sourceParameterName, hwIn, {
+
+                auto setCommonParams = [&](FMaterialInstance* const mi) {
+                    // Initialize the samplers with dummy textures because vulkan requires a sampler to
+                    // be bound to a texture even if sampler might be unused.
+                    mi->setParameter("sourceArray"sv, getZeroTextureArray(), {
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-                });
-                mi->setParameter("level", float(inSubDesc.level));
-                mi->setParameter("layer", float(inSubDesc.layer));
-                mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
-                mi->setParameter("axis",float2{ 1.0f / inDesc.width, 0 });
-                mi->setParameter("count", int32_t(m));
-                mi->setParameter("kernel", kernel, m);
-
-                // The framegraph only computes discard flags at FrameGraphPass boundaries
-                hwTempRT.params.flags.discardEnd = TargetBufferFlags::NONE;
-
-                commitAndRenderFullScreenQuad(driver, hwTempRT, mi);
-
-                // vertical pass
-                UTILS_UNUSED_IN_RELEASE auto width = outDesc.width;
-                UTILS_UNUSED_IN_RELEASE auto height = outDesc.height;
-                assert_invariant(width == hwOutRT.params.viewport.width);
-                assert_invariant(height == hwOutRT.params.viewport.height);
-
-                mi->setParameter(sourceParameterName, hwTemp, {
+                    });
+                    mi->setParameter("source"sv, getZeroTexture(), {
                         .filterMag = SamplerMagFilter::LINEAR,
-                        .filterMin = SamplerMinFilter::LINEAR /* level is always 0 */
-                });
-                mi->setParameter("level", 0.0f);
-                mi->setParameter("layer", 0.0f);
-                mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
+                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+                    });
+                    mi->setParameter("reinhard", reinhard ? uint32_t(1) : uint32_t(0));
+                    mi->setParameter("count", int32_t(m));
+                    mi->setParameter("kernel", kernel, m);
+                };
 
-                commitAndRenderFullScreenQuad(driver, hwOutRT, mi);
+                {
+                    // horizontal pass
+                    auto mi = getMaterialInstance(mEngine, separableGaussianBlur);
+                    setCommonParams(mi);
+                    mi->setParameter(sourceParameterName, hwIn,
+                            {
+                                .filterMag = SamplerMagFilter::LINEAR,
+                                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST,
+                            });
+                    mi->setParameter("level", float(inSubDesc.level));
+                    mi->setParameter("layer", float(inSubDesc.layer));
+                    mi->setParameter("axis", float2{ 1.0f / inDesc.width, 0 });
+
+                    // The framegraph only computes discard flags at FrameGraphPass boundaries
+                    hwTempRT.params.flags.discardEnd = TargetBufferFlags::NONE;
+
+                    commitAndRenderFullScreenQuad(driver, hwTempRT, mi);
+                }
+
+                {
+                    // vertical pass
+                    auto mi = getMaterialInstance(mEngine, separableGaussianBlur);
+                    setCommonParams(mi);
+                    UTILS_UNUSED_IN_RELEASE auto width = outDesc.width;
+                    UTILS_UNUSED_IN_RELEASE auto height = outDesc.height;
+                    assert_invariant(width == hwOutRT.params.viewport.width);
+                    assert_invariant(height == hwOutRT.params.viewport.height);
+
+                    mi->setParameter(sourceParameterName, hwTemp,
+                            {
+                                .filterMag = SamplerMagFilter::LINEAR,
+                                .filterMin = SamplerMinFilter::LINEAR, /* level is always 0 */
+                            });
+                    mi->setParameter("level", 0.0f);
+                    mi->setParameter("layer", 0.0f);
+                    mi->setParameter("axis", float2{ 0, 1.0f / tempDesc.height });
+
+                    commitAndRenderFullScreenQuad(driver, hwOutRT, mi);
+                }
             });
 
     return blurPass->out;
@@ -1802,7 +1814,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
 
                 auto const& material = getPostProcessMaterial("dofMipmap");
                 FMaterial const* const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 auto const pipeline = getPipelineState(ma, variant);
 
@@ -1812,6 +1823,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     auto const& out = resources.getRenderPassInfo(data.rp[level]);
                     auto inColor = driver.createTextureView(inOutColor, level, 1);
                     auto inCoc = driver.createTextureView(inOutCoc, level, 1);
+                    FMaterialInstance* const mi = getMaterialInstance(ma);
+
                     mi->setParameter("color", inColor, { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("coc",   inCoc,   { .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
                     mi->setParameter("weightScale", 0.5f / float(1u << level));   // FIXME: halfres?
@@ -2253,6 +2266,8 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
 
                 auto const& material13 = getPostProcessMaterial("bloomDownsample");
                 auto* mi13 = getMaterialInstance(mEngine, material13);
+                // These material instances have no UBO updates in the loop, so we do not move
+                // getMaterialInstance() inside the loop.
 
                 for (size_t i = 1; i < inoutBloomOptions.levels; i++) {
                     auto hwDstRT = resources.getRenderPassInfo(data.outRT[i]);
@@ -2432,7 +2447,11 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
     auto const& material = getPostProcessMaterial("colorGradingAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine, variant);
     // the UBO has been set and committed in colorGradingPrepareSubpass()
-    FMaterialInstance const* mi = getMaterialInstance(ma);
+    int32_t const fixedIndex = colorGradingConfig.translucent
+                                       ? mFixedMaterialInstanceIndex.colorGradingTranslucent
+                                       : mFixedMaterialInstanceIndex.colorGradingOpaque;
+
+    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma, fixedIndex);
     mi->use(driver);
     auto const pipeline = getPipelineState(ma, variant);
     driver.nextSubpass();
@@ -2442,23 +2461,26 @@ void PostProcessManager::colorGradingSubpass(DriverApi& driver,
 
 void PostProcessManager::customResolvePrepareSubpass(DriverApi& driver, CustomResolveOp const op) noexcept {
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
-    FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
+    auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
+    auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
+    mFixedMaterialInstanceIndex.customResolve = fixedIndex;
     mi->setParameter("direction", op == CustomResolveOp::COMPRESS ? 1.0f : -1.0f),
     mi->commit(driver);
     material.getMaterial(mEngine);
 }
 
 void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
-
     bindPostProcessDescriptorSet(driver);
 
     FEngine const& engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine);
-    // the UBO has been set and committed in colorGradingPrepareSubpass()
-    FMaterialInstance const* mi = getMaterialInstance(ma);
+    // the UBO has been set and committed in customResolvePrepareSubpass()
+    FMaterialInstance const* mi = mMaterialInstanceManager.getMaterialInstance(ma,
+            mFixedMaterialInstanceIndex.customResolve);
     mi->use(driver);
+
     auto const pipeline = getPipelineState(ma);
     driver.nextSubpass();
     driver.scissor(mi->getScissor());
@@ -2760,7 +2782,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
         PostProcessMaterial& material, FColorGrading const* colorGrading,
         ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
-    FMaterial* const ma = material.getMaterial(mEngine);
+    FMaterial* ma = material.getMaterial(mEngine);
     bool dirty = false;
 
     setConstantParameter(ma, "isOneDimensional", colorGrading->isOneDimensional(), dirty);
@@ -2772,10 +2794,15 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
         //       with surface materials
     }
 
-    PostProcessVariant const variant = colorGradingConfig.translucent ?
-            PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
-    FMaterialInstance* const mi =
-            getMaterialInstance(mEngine, material, variant);
+    PostProcessVariant const variant = colorGradingConfig.translucent
+                                               ? PostProcessVariant::TRANSLUCENT
+                                               : PostProcessVariant::OPAQUE;
+    ma = material.getMaterial(mEngine, variant);
+    FMaterialInstance* mi = nullptr;
+    int32_t& fixedIndex = colorGradingConfig.translucent
+                                  ? mFixedMaterialInstanceIndex.colorGradingTranslucent
+                                  : mFixedMaterialInstanceIndex.colorGradingOpaque;
+    std::tie(mi, fixedIndex) = mMaterialInstanceManager.getFixedMaterialInstance(ma);
 
     const SamplerParams params = {
             .filterMag = SamplerMagFilter::LINEAR,
@@ -3716,6 +3743,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
 
                 PostProcessMaterial const& material = getPostProcessMaterial("blitArray");
                 FMaterial const* const ma = material.getMaterial(mEngine);
+                // It should be ok to not move this getMaterialInstance to inside the loop, since
+                // this is a pass meant for debug.
                 auto* mi = getMaterialInstance(ma);
                 mi->setParameter("color", color, {
                         .filterMag = filterMag,
