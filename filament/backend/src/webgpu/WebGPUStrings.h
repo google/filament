@@ -36,7 +36,9 @@
 
 namespace filament::backend {
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)
 template<typename WebGPUPrintable>
 [[nodiscard]] inline std::string webGPUPrintableToString(const WebGPUPrintable printable) {
     std::stringstream out;
@@ -238,6 +240,36 @@ template<typename WebGPUPrintable>
         case wgpu::TextureFormat::External:                    return "External";
     }
 }
+
+[[nodiscard]] constexpr std::string_view webGPUTextureDimensionToString(
+        const wgpu::TextureDimension dimension) {
+    switch (dimension) {
+        case wgpu::TextureDimension::Undefined: return "Undefined";
+        case wgpu::TextureDimension::e1D:       return "e1D";
+        case wgpu::TextureDimension::e2D:       return "e2D";
+        case wgpu::TextureDimension::e3D:       return "e3D";
+    }
+}
+
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)
+[[nodiscard]] std::string webGPUTextureToString(wgpu::Texture const& texture) {
+    if (texture == nullptr) {
+        return "nullptr (no wgpu::Texture)";
+    }
+    std::stringstream out;
+    out << "wgpu::Texture("
+        << " format:" << webGPUTextureFormatToString(texture.GetFormat())
+        << " dimension:" << webGPUTextureDimensionToString(texture.GetDimension())
+        << " " << webGPUPrintableToString(texture.GetUsage())
+        << " mipLevelCount:" << texture.GetMipLevelCount()
+        << " sampleCount:" << texture.GetSampleCount() << " width:" << texture.GetWidth()
+        << " height:" << texture.GetHeight()
+        << " depthOrArrayLayers:" << texture.GetDepthOrArrayLayers() << ")";
+    return out.str();
+}
+#endif
 
 [[nodiscard]] constexpr std::string_view filamentShaderStageToString(const ShaderStage stage) {
     switch (stage) {
