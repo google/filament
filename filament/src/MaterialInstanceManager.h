@@ -33,7 +33,8 @@ public:
     class Record {
     public:
         Record(FMaterial const* material)
-            : mMaterial(material) {}
+            : mMaterial(material),
+              mAvailable(0) {}
         ~Record() = default;
 
         Record(Record const& rhs) noexcept;
@@ -42,22 +43,25 @@ public:
         Record& operator=(Record&& rhs) noexcept;
 
         void terminate(FEngine& engine);
-        void reset() { mAvailable = utils::bitset32{ (1 << (mInstances.size() + 1)) - 1 }; }
-        FMaterialInstance* getInstance();
+        void reset() { mAvailable = 0; }
+        std::pair<FMaterialInstance*, int32_t> getInstance();
+        FMaterialInstance* getInstance(int32_t fixedInstanceindex);
 
     private:
         FMaterial const* mMaterial = nullptr;
         std::vector<FMaterialInstance*> mInstances;
-        utils::bitset32 mAvailable = {};
+        uint32_t mAvailable;
 
         friend class MaterialInstanceManager;
     };
+
+    constexpr static int32_t INVALID_FIXED_INDEX = -1;
 
     MaterialInstanceManager() noexcept;
     MaterialInstanceManager(MaterialInstanceManager const& rhs) noexcept;
     MaterialInstanceManager(MaterialInstanceManager&& rhs) noexcept;
     MaterialInstanceManager& operator=(MaterialInstanceManager const& rhs) noexcept;
-    MaterialInstanceManager& operator=(MaterialInstanceManager&& rhs) noexcept;    
+    MaterialInstanceManager& operator=(MaterialInstanceManager&& rhs) noexcept;
 
     ~MaterialInstanceManager();
 
@@ -74,6 +78,20 @@ public:
      */
     FMaterialInstance* getMaterialInstance(FMaterial const* ma);
 
+    /*
+     * This returns a material instance given a material and an index. The `fixedIndex` should be
+     * a value returned by getiFixedMaterialInstance.
+     */
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma, int32_t const fixedIndex);
+
+    /*
+     * This returns a material instance and an index given a material. This is needed for the
+     * case when two framegraph passes need to refer to the same material instance.
+     * The returned index can be used with `getFixedMaterialInstance` to get a specific instance
+     * of a material (and not a random entry in the record cache).
+     */
+    std::pair<FMaterialInstance*, int32_t> getFixedMaterialInstance(FMaterial const* ma);
+
 
     /*
      * Marks all of the material instances as unused. Typically, you'd call this at the beginning of
@@ -84,6 +102,8 @@ public:
     }
 
 private:
+    Record& getRecord(FMaterial const* material);
+
     std::vector<Record> mMaterials;
 };
 
