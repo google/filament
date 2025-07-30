@@ -63,6 +63,8 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
+#include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <limits>
 #include <memory>
@@ -173,7 +175,7 @@ void FRenderer::terminate(FEngine& engine) {
     // Before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
-    if (UTILS_HAS_THREADING) {
+    if constexpr (UTILS_HAS_THREADING) {
         Fence::waitAndDestroy(engine.createFence());
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
@@ -326,7 +328,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
-    mViewRenderedCount = 0;
 
     FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
 
@@ -508,9 +509,9 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     // destination.
     driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
 
-    RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
+        RenderPassParams params = {};
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
         params.flags.clear = TargetBufferFlags::COLOR;
         params.flags.discardStart = TargetBufferFlags::ALL;
@@ -583,7 +584,7 @@ void FRenderer::render(FView const* view) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
-        // this should not happen, the user should not call render() if we returned false from
+        // This is unlikely to happen, the user should not call render() if we returned false from
         // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
@@ -593,13 +594,7 @@ void FRenderer::render(FView const* view) {
     assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
-        if (mViewRenderedCount) {
-            // This is a good place to kick the GPU, since we've rendered a View before,
-            // and we're about to render another one.
-            mEngine.getDriverApi().flush();
-        }
         renderInternal(view);
-        mViewRenderedCount++;
     }
 }
 
@@ -632,6 +627,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
+    ppm.resetForRender();
     ppm.setFrameUniforms(driver, view.getFrameUniforms());
 
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.

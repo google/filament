@@ -254,11 +254,6 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 driver.beginRenderPass(out.target, out.params);
                 passExecutor.execute(engine, driver);
                 driver.endRenderPass();
-
-                // color pass is typically heavy, and we don't have much CPU work left after
-                // this point, so flushing now allows us to start the GPU earlier and reduce
-                // latency, without creating bubbles.
-                driver.flush();
             }
     );
 

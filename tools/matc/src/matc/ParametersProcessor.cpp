@@ -205,8 +205,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
     const JsonishValue* stagesValue = jsonObject.getValue("stages");
     using filament::backend::ShaderStageFlags;
-    auto stages = ShaderStageFlags::NONE;
+    std::optional<ShaderStageFlags> stages;
     if (stagesValue) {
+        ShaderStageFlags parsedStages = ShaderStageFlags::NONE;
         if (stagesValue->getType() != JsonishValue::ARRAY) {
             std::cerr << "parameters: stages must be an ARRAY." << std::endl;
             return false;
@@ -217,7 +218,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 using Qualifier = filament::BufferInterfaceBlock::Qualifier;
                 auto stageString = value->toJsonString()->getString();
                 if (Enums::isValid<ShaderStageType>(stageString)) {
-                    stages |= Enums::toEnum<ShaderStageType>(stageString);
+                    parsedStages |= Enums::toEnum<ShaderStageType>(stageString);
                 } else {
                     std::cerr << "stages: the stage '" << stageString
                               << "' for parameter with name '" << nameString
@@ -229,12 +230,13 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             std::cerr << "parameters: stages must be an array of STRINGs." << std::endl;
             return false;
         }
+        stages = parsedStages;
     }
 
     size_t const arraySize = extractArraySize(typeString);
 
     if (Enums::isValid<UniformType>(typeString)) {
-        if (stages != ShaderStageFlags::NONE) {
+        if (stages.has_value()) {
             std::cerr << "parameters: the uniform parameter with name '" << nameString << "'"
                       << " has shader stages specified. Shader stages are only supported for"
                       << " samplers." << std::endl;
@@ -288,11 +290,6 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
-        if (stages == ShaderStageFlags::NONE) {
-            // TODO: Infer the default shader stages based on which blocks are present in the
-            // material.
-            stages = ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT;
-        }
         if (transformNameValue) {
             if (type != MaterialBuilder::SamplerType::SAMPLER_EXTERNAL) {
                 std::cerr << "parameters: the parameter with name '" << nameString << "'"
