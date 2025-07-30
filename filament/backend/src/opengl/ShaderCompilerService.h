@@ -140,6 +140,10 @@ private:
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);
 
+    // Methods for THREAD_POOL mode.
+    void handleCanceledTokensForThreadPool();
+
+    // Methods for SYNCHRONOUS and ASYNCHRONOUS modes.
     void runAtNextTick(CompilerPriorityQueue priority, program_token_t const& token,
             Job job) noexcept;
     void executeTickOps() noexcept;
