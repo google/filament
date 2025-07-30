@@ -574,12 +574,20 @@ void FRenderer::renderStandaloneView(FView const* view) {
                         1'000'000'000.0 / mDisplayInfo.refreshRate),
                 mFrameId);
 
-        renderInternal(view);
+        // because we don't have a "present" call, we use flush so the driver can submit
+        // the command buffer; we do this before driver.endFrame() to mimic what would
+        // happen with Renderer::beginFrame/endFrame.
+        renderInternal(view, true);
 
         driver.endFrame(mFrameId);
 
-        // This is a workaround for internal bug b/361822355.
-        // TODO: properly address the bug and remove this workaround.
+        // engine.flush() has already been called by renderInternal(), but we need an extra one
+        // for endFrame() above. This operation in actually not too heavy, it just kicks the
+        // driver thread, which is mostlikely already running.
+        engine.flush();
+
+        // FIXME: This is a workaround for internal bug b/361822355.
+        //        properly address the bug and remove this workaround.
         if (engine.getBackend() == Backend::VULKAN) {
             engine.flushAndWait();
         }
@@ -600,11 +608,11 @@ void FRenderer::render(FView const* view) {
     assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
-        renderInternal(view);
+        renderInternal(view, false);
     }
 }
 
-void FRenderer::renderInternal(FView const* view) {
+void FRenderer::renderInternal(FView const* view, bool flush) {
     FEngine& engine = mEngine;
 
     FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
@@ -620,6 +628,10 @@ void FRenderer::renderInternal(FView const* view) {
 
     // execute the render pass
     renderJob(rootArenaScope, const_cast<FView&>(*view));
+
+    if (flush) {
+        engine.getDriverApi().flush();
+    }
 
     // make sure to flush the command buffer
     engine.flush();
