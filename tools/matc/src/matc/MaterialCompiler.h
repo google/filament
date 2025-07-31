@@ -20,7 +20,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "../../../../libs/filament-matp/src/MaterialLexeme.h"
 #include <filament-matp/Config.h>
 #include <filament-matp/MaterialParser.h>
 #include "Compiler.h"
