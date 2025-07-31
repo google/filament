@@ -58,7 +58,6 @@ class ShaderCompilerService {
 public:
     using program_token_t = std::shared_ptr<OpenGLProgramToken>;
     using shaders_t = std::array<GLuint, Program::SHADER_TYPE_COUNT>;
-    using shaders_source_t = std::array<utils::CString, Program::SHADER_TYPE_COUNT>;
 
     explicit ShaderCompilerService(OpenGLDriver& driver);
 

@@ -358,7 +358,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     // Constrain the sample count according to both kinds of sample count masks obtained from
     // VkPhysicalDeviceProperties. This is consistent with the VulkanTexture constructor.
     auto const& limits = context.getPhysicalDeviceLimits();
-    samples = samples = fvkutils::reduceSampleCount(samples,
+    samples = fvkutils::reduceSampleCount(samples,
             limits.framebufferDepthSampleCounts & limits.framebufferColorSampleCounts);
 
     auto& rpkey = mInfo->rpkey;
@@ -372,7 +372,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
     fbkey.samples = samples;
 
     std::vector<VulkanAttachment>& attachments = mInfo->attachments;
-    std::vector<VulkanAttachment> msaa;
+    std::vector<VulkanAttachment> msaaAttachments;
 
     for (int index = 0; index < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; index++) {
         VulkanAttachment& attachment = color[index];
@@ -415,13 +415,13 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 };
             }
             fbkey.color[index] = msaaAttachment.getImageView();
-            msaa.push_back(msaaAttachment);
+            msaaAttachments.push_back(msaaAttachment);
         }
     }
 
-    if (attachments.size() > 0 && samples > 1 && msaa.size() > 0) {
+    if (attachments.size() > 0 && samples > 1 && msaaAttachments.size() > 0) {
         mInfo->msaaIndex = (uint8_t) attachments.size();
-        attachments.insert(attachments.end(), msaa.begin(), msaa.end());
+        attachments.insert(attachments.end(), msaaAttachments.begin(), msaaAttachments.end());
     }
 
     if (depth.texture) {
@@ -436,10 +436,15 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
                 uint8_t const msLevel = 1;
                 // Create sidecar MSAA texture for the depth attachment if it does not already
                 // exist.
-                auto msaa = initMsaaTexture(depthTexture, device, physicalDevice, context,
+                auto msaaTexture = initMsaaTexture(depthTexture, device, physicalDevice, context,
                         allocator, commands, resourceManager, msLevel, samples, stagePool);
                 mInfo->msaaDepthIndex = (uint8_t) attachments.size();
-                attachments.push_back({ .texture = msaa, .layerCount = layerCount });
+                VulkanAttachment msaaAttachment = {
+                    .texture = msaaTexture,
+                    .layerCount = layerCount,
+                };
+                attachments.push_back(msaaAttachment);
+                fbkey.depth = msaaAttachment.getImageView();
             }
         }
     }

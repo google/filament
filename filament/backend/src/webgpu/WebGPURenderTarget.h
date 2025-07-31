@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 #define TNT_FILAMENT_BACKEND_WEBGPUHANDLES_H
 
+#include "WebGPUTexture.h"
+
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
@@ -24,6 +26,7 @@
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace filament::backend {
@@ -34,24 +37,27 @@ public:
 
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
-            Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags);
+            Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags,
+            std::function<WebGPUTexture*(const Handle<HwTexture>)> const&, wgpu::Device const&);
 
     // Default constructor for the default render target
     WebGPURenderTarget();
 
-    void setUpRenderPassAttachments(
-            wgpu::RenderPassDescriptor& outDescriptor,
+    void setUpRenderPassAttachments(wgpu::RenderPassDescriptor& outDescriptor,
             RenderPassParams const& params,
             // For default render target:
             wgpu::TextureView const& defaultColorTextureView,
             wgpu::TextureView const& defaultDepthStencilTextureView,
             // For custom render targets:
-            wgpu::TextureView const* customColorTextureViews, // Array of views
+            wgpu::TextureView const* customColorTextureViews,            // Array of views
+            wgpu::TextureView const* customColorMsaaSidecarTextureViews, // nullptrs if N/A
             uint32_t customColorTextureViewCount,
-            wgpu::TextureView const& customDepthStencilTextureView);
+            wgpu::TextureView const& customDepthStencilTextureView,
+            wgpu::TextureView const& customDepthStencilMsaaSidecarTextureView /* nullptr if N/A */);
 
     [[nodiscard]] bool isDefaultRenderTarget() const { return mDefaultRenderTarget; }
     [[nodiscard]] uint8_t getSamples() const { return mSamples; }
+    [[nodiscard]] uint8_t getSampleCountPerAttachment() const { return mSampleCountPerAttachment; }
     [[nodiscard]] uint8_t getLayerCount() const { return mLayerCount; }
 
     [[nodiscard]] MRT const& getColorAttachmentInfos() const { return mColorAttachments; }
@@ -77,6 +83,8 @@ private:
     //      mDepthStencilAttachment?
     Attachment mDepthAttachment{};
     Attachment mStencilAttachment{};
+
+    uint8_t mSampleCountPerAttachment = 0;
 
     // Cached descriptors for the render pass
     std::vector<wgpu::RenderPassColorAttachment> mColorAttachmentDesc;

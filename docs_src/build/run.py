@@ -16,12 +16,18 @@ import json
 import os
 import re
 from utils import execute, ArgParseImpl
+import shutil
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCS_SRC_DIR = os.path.join(CUR_DIR, '../')
 ROOT_DIR = os.path.join(CUR_DIR, '../../')
-SRC_DIR = os.path.join(CUR_DIR, '../src')
-MARKDEEP_DIR = os.path.join(CUR_DIR, '../markdeep')
+
+MDBOOK_DIR = os.path.join(CUR_DIR, '../src_mdbook')
+BOOK_OUPUT_DIR = os.path.join(MDBOOK_DIR, 'book')
+SRC_DIR = os.path.join(MDBOOK_DIR, 'src')
+
+MARKDEEP_DIR = os.path.join(CUR_DIR, '../src_markdeep')
+RAW_COPIES_DIR = os.path.join(CUR_DIR, '../src_raw')
 DUP_DIR = os.path.join(SRC_DIR, 'dup')
 MAIN_DIR = os.path.join(SRC_DIR, 'main')
 
@@ -124,5 +130,7 @@ if __name__ == "__main__":
   pull_duplicates()
   pull_markdeep_docs()
 
-  res, err = execute('mdbook build', cwd=DOCS_SRC_DIR)
+  res, err = execute('mdbook build', cwd=MDBOOK_DIR)
   assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
+
+  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)

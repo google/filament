@@ -14,15 +14,12 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None):
                   for f in all_files)
   all_results = []
   for test_dir in test_dirs:
-    results_meta = {}
     results = []
-    output_test_dir = None if not out_dir else os.path.join(out_dir, test_dir)
+    output_test_dir = None if not out_dir else os.path.abspath(os.path.join(out_dir, test_dir))
     if output_test_dir:
       mkdir_p(output_test_dir)
     base_test_dir = os.path.abspath(os.path.join(base_dir, test_dir))
     comp_test_dir = os.path.abspath(os.path.join(comparison_dir, test_dir))
-    results_meta['base_dir'] = base_test_dir
-    results_meta['comparison_dir'] = comp_test_dir
     for golden_file in \
         glob.glob(os.path.join(base_test_dir, "*.tif")):
       base_fname = os.path.abspath(golden_file)
@@ -45,8 +42,12 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None):
         result['result'] = RESULT_OK
       results.append(result)
     if output_test_dir:
-      results_meta['results'] = results
       output_fname = os.path.join(output_test_dir, "compare_results.json")
+      results_meta = {
+        'results': results,
+        'base_dir': os.path.relpath(output_fname, base_test_dir),
+        'comparison_dir': os.path.relpath(output_fname, comp_test_dir),
+      }
       with open(output_fname, 'w') as f:
         f.write(json.dumps(results_meta, indent=2))
       important_print(f'Written comparison results for {test_dir} to \n    {output_fname}')
@@ -64,7 +65,7 @@ if __name__ == '__main__':
   dest = args.dest
   if not dest:
     print('Assume the default renderdiff output folder')
-    dest = os.path.join(os.getcwd(), './out/renderdiff_tests')
+    dest = os.path.join(os.getcwd(), './out/renderdiff')
   assert os.path.exists(dest), f"Destination folder={dest} does not exist."
 
   results = _compare_goldens(args.src, dest, out_dir=args.out)
