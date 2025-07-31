@@ -36,6 +36,7 @@
 
 #include "details/Engine.h"
 
+#include "ds/DescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
@@ -555,6 +556,11 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
                 driver.endRenderPass();
+
+                // unbind all descriptor sets to avoid false dependencies with the next pass
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
             });
 
     auto const depth = structurePass->depth;
@@ -660,6 +666,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                         driver.beginRenderPass(target, params);
                         pass.getExecutor().execute(mEngine, driver);
                         driver.endRenderPass();
+
+                        // unbind all descriptor sets to avoid false dependencies with the next pass
+                        DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                        DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                        DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
                 });
 
     return pickingRenderPass->picking;
@@ -766,6 +777,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::ssr(FrameGraph& fg,
                 driver.beginRenderPass(out.target, out.params);
                 pass.getExecutor().execute(mEngine, driver);
                 driver.endRenderPass();
+
+                // unbind all descriptor sets to avoid false dependencies with the next pass
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
             });
 
     return ssrPass->reflections;
