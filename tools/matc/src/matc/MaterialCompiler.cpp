@@ -22,18 +22,18 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include <utils/Log.h>
-#include <utils/JobSystem.h>
-
-#include "../../../../libs/filament-matp/src/DirIncluder.h"
 #include <filament-matp/Config.h>
 
-#include "SPIRV/GlslangToSpv.h"
+#include <utils/JobSystem.h>
+#include <utils/Log.h>
+#include <utils/Path.h>
+
+#include <GlslangToSpv.h>
 #include "glslang/Include/intermediate.h"
 
 #include "sca/builtinResource.h"
 
-#include "smolv.h"
+#include <smolv.h>
 
 using namespace utils;
 using namespace filamat;
