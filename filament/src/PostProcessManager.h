@@ -396,6 +396,8 @@ public:
 
 private:
 
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
+
     // Helper to get a MaterialInstance from a FMaterial
     // This currently just call FMaterial::getDefaultInstance().
     FMaterialInstance* getMaterialInstance(FMaterial const* ma) {
@@ -412,6 +414,11 @@ private:
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
     backend::DescriptorSetLayoutHandle mPerRenderableDslh;
+
+    // We need to have a dummy descriptor set because each post processing pass is expected to have
+    // a descriptor set bound at the renderable bind point. But the set itself contains dummy
+    // values.
+    backend::DescriptorSetHandle mDummyPerRenderableDsh;
 
     FEngine& mEngine;
 
