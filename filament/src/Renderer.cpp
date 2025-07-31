@@ -50,6 +50,10 @@ void Renderer::skipFrame(uint64_t const vsyncSteadyClockTimeNano) {
     downcast(this)->skipFrame(vsyncSteadyClockTimeNano);
 }
 
+bool Renderer::shouldRenderFrame() const noexcept {
+    return downcast(this)->shouldRenderFrame();
+}
+
 bool Renderer::beginFrame(SwapChain* swapChain, uint64_t const vsyncSteadyClockTimeNano) {
     return downcast(this)->beginFrame(downcast(swapChain), vsyncSteadyClockTimeNano);
 }

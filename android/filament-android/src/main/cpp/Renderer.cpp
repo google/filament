@@ -37,6 +37,12 @@ Java_com_google_android_filament_Renderer_nSkipFrame(JNIEnv *, jclass, jlong nat
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Renderer_nShouldRenderFrame(JNIEnv *, jclass, jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    return (jboolean) renderer->shouldRenderFrame();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Renderer_nBeginFrame(JNIEnv *, jclass, jlong nativeRenderer,
         jlong nativeSwapChain, jlong frameTimeNanos) {
     Renderer *renderer = (Renderer *) nativeRenderer;

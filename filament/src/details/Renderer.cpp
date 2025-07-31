@@ -296,6 +296,12 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     js.waitAndRelease(job);
 }
 
+bool FRenderer::shouldRenderFrame() const noexcept {
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    return mFrameSkipper.shouldRenderFrame(driver);
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
@@ -389,7 +395,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare();
     };
 
-    if (mFrameSkipper.beginFrame(driver)) {
+    if (mFrameSkipper.shouldRenderFrame(driver)) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
         // so do the beginFrame work right now, instead of requiring a call to render()
         beginFrameInternal();
@@ -436,7 +442,7 @@ void FRenderer::endFrame() {
     }
 
     mFrameInfoManager.endFrame(driver);
-    mFrameSkipper.endFrame(driver);
+    mFrameSkipper.submitFrame(driver);
 
     driver.endFrame(mFrameId);
 
