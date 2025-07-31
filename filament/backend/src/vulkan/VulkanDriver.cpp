@@ -2061,6 +2061,7 @@ void VulkanDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag
 void VulkanDriver::endCommandRecording() {
     mCommands.flush();
     mPipelineCache.resetBoundPipeline();
+    mDescriptorSetCache.resetCachedState();
 }
 
 // explicit instantiation of the Dispatcher
