@@ -61,7 +61,9 @@ constexpr std::array REQUIRED_FEATURES = {
     // Qualcomm 500 and 600 GPUs do not support this so it is not part of core webgpu spec. To
     // support such devices, we will either need Filament to not attempt this, or find another
     // workaround. https://github.com/gpuweb/gpuweb/issues/2648
-    wgpu::FeatureName::RG11B10UfloatRenderable
+    wgpu::FeatureName::RG11B10UfloatRenderable,
+    // necessary for blit conversions of formats like RGBA32Float...
+    wgpu::FeatureName::Float32Filterable,
 };
 
 constexpr std::array OPTIONAL_FEATURES = {

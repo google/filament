@@ -94,6 +94,9 @@ public:
     // skip a frame
     void skipFrame(uint64_t vsyncSteadyClockTimeNano);
 
+    // Whether a frame should be rendered or not.
+    bool shouldRenderFrame() const noexcept;
+
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
 
