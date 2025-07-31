@@ -21,10 +21,14 @@
 #include "details/Engine.h"
 #include "details/View.h"
 
+#include "ds/DescriptorSet.h"
+
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
+
+#include <private/filament/EngineEnums.h>
 
 #include <filament/Options.h>
 #include <filament/RenderableManager.h>
@@ -113,7 +117,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     clearDepthFlags = TargetBufferFlags::DEPTH;
                     clearStencilFlags = config.enabledStencilBuffer ?
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
-                    const char* const name = config.enabledStencilBuffer ?
+                    const char* const textureName = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
 
                     bool const isES2 =
@@ -128,7 +132,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     TextureFormat const format = config.enabledStencilBuffer ?
                             stencilFormat : depthOnlyFormat;
 
-                    data.depth = builder.createTexture(name, {
+                    data.depth = builder.createTexture(textureName, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
                             // If the color attachment requested MS, we assume this means the MS
@@ -254,6 +258,11 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 driver.beginRenderPass(out.target, out.params);
                 passExecutor.execute(engine, driver);
                 driver.endRenderPass();
+
+                // unbind all descriptor sets to avoid false dependencies with the next pass
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
             }
     );
 
