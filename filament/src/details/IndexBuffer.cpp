@@ -83,10 +83,8 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
     mHandle = driver.createIndexBuffer(
             backend::ElementType(builder->mIndexType),
             uint32_t(builder->mIndexCount),
-            backend::BufferUsage::STATIC);
-    if (!name.empty()) {
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    }
+            backend::BufferUsage::STATIC,
+            std::move(name));
 }
 
 void FIndexBuffer::terminate(FEngine& engine) {

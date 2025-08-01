@@ -66,7 +66,7 @@ TEST_F(BackendTest, MRT) {
 
         TrianglePrimitive triangle(api);
 
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         // Create two Textures.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;

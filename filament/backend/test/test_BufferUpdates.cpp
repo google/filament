@@ -70,7 +70,7 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 
         Shader shader = createShader();
 
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         // To test large buffers (which exercise a different code path) create an extra large
         // buffer. Only the first 3 vertices will be used.

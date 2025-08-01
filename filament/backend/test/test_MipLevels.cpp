@@ -154,7 +154,7 @@ TEST_F(BackendTest, TextureViewLod) {
         }
 
         backend::Handle<HwRenderTarget> defaultRenderTarget =
-                cleanup.add(api.createDefaultRenderTarget(0));
+                cleanup.add(api.createDefaultRenderTarget());
 
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);

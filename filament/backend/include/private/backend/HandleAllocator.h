@@ -249,8 +249,9 @@ public:
     }
 
     void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
-        // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
-        // those
+        if (tag.empty()) {
+            return;
+        }
         uint32_t key = id;
         if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag

@@ -639,24 +639,29 @@ void OpenGLDriver::createVertexBufferInfoR(
         Handle<HwVertexBufferInfo> vbih,
         uint8_t bufferCount,
         uint8_t attributeCount,
-        AttributeArray attributes) {
+        AttributeArray attributes,
+        utils::CString tag) {
     DEBUG_MARKER()
     construct<GLVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
+    mHandleAllocator.associateTagToHandle(vbih.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBuffer> vbh,
         uint32_t vertexCount,
-        Handle<HwVertexBufferInfo> vbih) {
+        Handle<HwVertexBufferInfo> vbih,
+        utils::CString tag) {
     DEBUG_MARKER()
     construct<GLVertexBuffer>(vbh, vertexCount, vbih);
+    mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createIndexBufferR(
         Handle<HwIndexBuffer> ibh,
         ElementType elementType,
         uint32_t indexCount,
-        BufferUsage usage) {
+        BufferUsage usage,
+        utils::CString tag) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -668,10 +673,11 @@ void OpenGLDriver::createIndexBufferR(
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(ibh.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
-        uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage) {
+void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, BufferUsage usage, utils::CString tag) {
     DEBUG_MARKER()
     assert_invariant(byteCount > 0);
 
@@ -693,11 +699,12 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh,
     }
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(boh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType pt) {
+        PrimitiveType pt, utils::CString tag) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -730,9 +737,10 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     gl.bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(rph.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
+void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program, utils::CString tag) {
     DEBUG_MARKER()
 
 
@@ -760,6 +768,7 @@ void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(ph.getId(), std::move(tag));
 }
 
 UTILS_NOINLINE
@@ -864,7 +873,7 @@ void OpenGLDriver::textureStorage(GLTexture* t,
 
 void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
-        TextureUsage usage) {
+        TextureUsage usage, utils::CString tag) {
     DEBUG_MARKER()
 
     GLenum internalFormat = getInternalFormat(format);
@@ -953,10 +962,11 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     }
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount) {
+        Handle<HwTexture> srch, uint8_t baseLevel, uint8_t levelCount, utils::CString tag) {
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
 
@@ -999,10 +1009,12 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
     ref->count++;
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
-        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a) {
+        TextureSwizzle r, TextureSwizzle g, TextureSwizzle b, TextureSwizzle a,
+        utils::CString tag) {
 
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
@@ -1062,11 +1074,12 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
     ref->count++;
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerType target,
     TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
-    Platform::ExternalImageHandleRef image) {
+    Platform::ExternalImageHandleRef image, utils::CString tag) {
     DEBUG_MARKER()
 
     usage |= TextureUsage::SAMPLEABLE;
@@ -1113,10 +1126,12 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
     }
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
-    TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image) {
+        TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image,
+        utils::CString tag) {
     DEBUG_MARKER()
 
     usage |= TextureUsage::SAMPLEABLE;
@@ -1162,17 +1177,18 @@ void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType
         t->gl.target = t->externalTexture->target;
         t->gl.id = t->externalTexture->id;
     }
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
-        void* image, uint32_t plane) {
+        void* image, uint32_t plane, utils::CString tag) {
     // not relevant for the OpenGL backend
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
         SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t w, uint32_t h, uint32_t depth, TextureUsage usage) {
+        uint32_t w, uint32_t h, uint32_t depth, TextureUsage usage, utils::CString tag) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -1225,6 +1241,7 @@ void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t id,
     }
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
 void OpenGLDriver::updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb) {
@@ -1626,7 +1643,7 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
 }
 
 void OpenGLDriver::createDefaultRenderTargetR(
-        Handle<HwRenderTarget> rth, int) {
+        Handle<HwRenderTarget> rth, utils::CString tag) {
     DEBUG_MARKER()
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
@@ -1637,6 +1654,7 @@ void OpenGLDriver::createDefaultRenderTargetR(
     rt->gl.samples = 1;
     // FIXME: these flags should reflect the actual attachments present
     rt->targets = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+    mHandleAllocator.associateTagToHandle(rth.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
@@ -1647,7 +1665,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint8_t layerCount,
         MRT color,
         TargetBufferInfo depth,
-        TargetBufferInfo stencil) {
+        TargetBufferInfo stencil,
+        utils::CString tag) {
     DEBUG_MARKER()
 
     GLRenderTarget* rt = construct<GLRenderTarget>(rth, width, height);
@@ -1760,9 +1779,10 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     assert_invariant(tmin == tmax);
 
     CHECK_GL_ERROR()
+    mHandleAllocator.associateTagToHandle(rth.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
+void OpenGLDriver::createFenceR(Handle<HwFence> fh, utils::CString tag) {
     DEBUG_MARKER()
 
     GLFence* f = handle_cast<GLFence*>(fh);
@@ -1784,9 +1804,11 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
         });
     }
 #endif
+    mHandleAllocator.associateTagToHandle(fh.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
+        utils::CString tag) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
@@ -1803,10 +1825,12 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         sc->rec709 = ((flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
                 !mPlatform.isSRGBSwapChainSupported());
     }
+
+    mHandleAllocator.associateTagToHandle(sch.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
-        uint32_t width, uint32_t height, uint64_t flags) {
+        uint32_t width, uint32_t height, uint64_t flags, utils::CString tag) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
@@ -1824,25 +1848,30 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         sc->rec709 = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE &&
                       !mPlatform.isSRGBSwapChainSupported());
     }
+
+    mHandleAllocator.associateTagToHandle(sch.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {
+void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::CString tag) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mContext.createTimerQuery(tq);
+    mHandleAllocator.associateTagToHandle(tqh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        DescriptorSetLayout&& info) {
+        DescriptorSetLayout&& info, utils::CString tag) {
     DEBUG_MARKER()
     construct<GLDescriptorSetLayout>(dslh, std::move(info));
+    mHandleAllocator.associateTagToHandle(dslh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
-        Handle<HwDescriptorSetLayout> dslh) {
+        Handle<HwDescriptorSetLayout> dslh, utils::CString tag) {
     DEBUG_MARKER()
     GLDescriptorSetLayout const* dsl = handle_cast<GLDescriptorSetLayout*>(dslh);
     construct<GLDescriptorSet>(dsh, mContext, dslh, dsl);
+    mHandleAllocator.associateTagToHandle(dslh.getId(), std::move(tag));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2088,13 +2117,17 @@ void OpenGLDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 // These are called on the application's thread
 // ------------------------------------------------------------------------------------------------
 
-Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream) {
+Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream, utils::CString tag) {
     Platform::Stream* stream = mPlatform.createStream(nativeStream);
-    return initHandle<GLStream>(stream);
+    auto handle = initHandle<GLStream>(stream);
+    mHandleAllocator.associateTagToHandle(handle.getId(), std::move(tag));
+    return handle;
 }
 
-Handle<HwStream> OpenGLDriver::createStreamAcquired() {
-    return initHandle<GLStream>();
+Handle<HwStream> OpenGLDriver::createStreamAcquired(utils::CString tag) {
+    auto handle = initHandle<GLStream>();
+    mHandleAllocator.associateTagToHandle(handle.getId(), std::move(tag));
+    return handle;
 }
 
 // Stashes an acquired external image and a release callback. The image is not bound to OpenGL until
@@ -2575,10 +2608,6 @@ void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> 
 // ------------------------------------------------------------------------------------------------
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
-
-void OpenGLDriver::setDebugTag(HandleBase::HandleId handleId, CString tag) {
-    mHandleAllocator.associateTagToHandle(handleId, std::move(tag));
-}
 
 void OpenGLDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh,
         uint32_t index, Handle<HwBufferObject> boh) {

@@ -364,7 +364,8 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
     return allocHandle<WebGPUTexture>();
 }
 
-void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
+void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
+        utils::CString tag) {
     mNativeWindow = nativeWindow;
     assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
@@ -383,92 +384,105 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ...";
 #endif
+    setDebugTag(sch.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-        uint32_t height, uint64_t flags) {
-     wgpu::Extent2D extent = { .width = width, .height = height };
-     mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
-            mDevice, flags);
-     assert_invariant(mSwapChain);
+        uint32_t height, uint64_t flags, utils::CString tag) {
+    wgpu::Extent2D extent = { .width = width, .height = height };
+    mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter, mDevice, flags);
+    assert_invariant(mSwapChain);
+    setDebugTag(sch.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
-        const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes) {
+        const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes,
+        utils::CString tag) {
     constructHandle<WebGPUVertexBufferInfo>(vertexBufferInfoHandle, bufferCount, attributeCount,
             attributes, mDeviceLimits);
+    setDebugTag(vertexBufferInfoHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createVertexBufferR(Handle<HwVertexBuffer> vertexBufferHandle,
-        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle) {
+        const uint32_t vertexCount, Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
+        utils::CString tag) {
     const auto vertexBufferInfo = handleCast<WebGPUVertexBufferInfo>(vertexBufferInfoHandle);
     constructHandle<WebGPUVertexBuffer>(vertexBufferHandle, vertexCount,
             vertexBufferInfo->bufferCount, vertexBufferInfoHandle);
+    setDebugTag(vertexBufferHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createIndexBufferR(Handle<HwIndexBuffer> indexBufferHandle,
-        const ElementType elementType, const uint32_t indexCount, const BufferUsage usage) {
+        const ElementType elementType, const uint32_t indexCount, const BufferUsage usage,
+        utils::CString tag) {
     const auto elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
     constructHandle<WebGPUIndexBuffer>(indexBufferHandle, mDevice, elementSize, indexCount);
+    setDebugTag(indexBufferHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createBufferObjectR(Handle<HwBufferObject> bufferObjectHandle,
-        const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage) {
+        const uint32_t byteCount, const BufferObjectBinding bindingType, const BufferUsage usage,
+        utils::CString tag) {
     constructHandle<WebGPUBufferObject>(bufferObjectHandle, mDevice, bindingType, byteCount);
+    setDebugTag(bufferObjectHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createTextureR(Handle<HwTexture> textureHandle, const SamplerType target,
         const uint8_t levels, const TextureFormat format, const uint8_t samples,
         const uint32_t width, const uint32_t height, const uint32_t depth,
-        const TextureUsage usage) {
+        const TextureUsage usage, utils::CString tag) {
     constructHandle<WebGPUTexture>(textureHandle, target, levels, format, samples, width, height,
             depth, usage, mDevice);
+    setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createTextureViewR(Handle<HwTexture> textureHandle,
-        Handle<HwTexture> sourceTextureHandle, const uint8_t baseLevel, const uint8_t levelCount) {
+        Handle<HwTexture> sourceTextureHandle, const uint8_t baseLevel, const uint8_t levelCount,
+        utils::CString tag) {
     auto source = handleCast<WebGPUTexture>(sourceTextureHandle);
 
     constructHandle<WebGPUTexture>(textureHandle, source, baseLevel, levelCount);
+
+    setDebugTag(textureHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
-        const backend::TextureSwizzle a) {
+        const backend::TextureSwizzle a, utils::CString tag) {
     PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
         const backend::SamplerType target, const backend::TextureFormat format,
         const uint32_t width, const uint32_t height, const backend::TextureUsage usage,
-        Platform::ExternalImageHandleRef externalImage) {
+        Platform::ExternalImageHandleRef externalImage, utils::CString tag) {
     PANIC_POSTCONDITION("External WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::createTextureExternalImageR(Handle<HwTexture> textureHandle,
         const backend::SamplerType target, const backend::TextureFormat format,
         const uint32_t width, const uint32_t height, const backend::TextureUsage usage,
-        void* externalImage) {
+        void* externalImage, utils::CString tag) {
     PANIC_POSTCONDITION("External WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::createTextureExternalImagePlaneR(Handle<HwTexture> textureHandle,
         const backend::TextureFormat format, const uint32_t width, const uint32_t height,
-        const backend::TextureUsage usage, void* image, const uint32_t plane) {
+        const backend::TextureUsage usage, void* image, const uint32_t plane, utils::CString tag) {
     PANIC_POSTCONDITION("External WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::importTextureR(Handle<HwTexture> textureHandle, const intptr_t id,
         const SamplerType target, const uint8_t levels, const TextureFormat format,
         const uint8_t samples, const uint32_t width, const uint32_t height, const uint32_t depth,
-        const TextureUsage usage) {
+        const TextureUsage usage, utils::CString tag) {
     PANIC_POSTCONDITION("Import WebGPU Texture is not supported");
 }
 
 void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimitiveHandle,
         Handle<HwVertexBuffer> vertexBufferHandle, Handle<HwIndexBuffer> indexBufferHandle,
-        const PrimitiveType primitiveType) {
+        const PrimitiveType primitiveType, utils::CString tag) {
     assert_invariant(mDevice);
     const auto renderPrimitive = constructHandle<WebGPURenderPrimitive>(renderPrimitiveHandle);
     const auto vertexBuffer = handleCast<WebGPUVertexBuffer>(vertexBufferHandle);
@@ -476,23 +490,27 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimit
     renderPrimitive->vertexBuffer = vertexBuffer;
     renderPrimitive->indexBuffer = indexBuffer;
     renderPrimitive->type = primitiveType;
+    setDebugTag(renderPrimitiveHandle.getId(), std::move(tag));
 }
 
-void WebGPUDriver::createProgramR(Handle<HwProgram> programHandle, Program&& program) {
+void WebGPUDriver::createProgramR(Handle<HwProgram> programHandle, Program&& program,
+        utils::CString tag) {
     constructHandle<WebGPUProgram>(programHandle, mDevice, program);
+    setDebugTag(programHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
-        const int /* dummy */) {
+        utils::CString tag) {
     assert_invariant(!mDefaultRenderTarget);
     mDefaultRenderTarget = constructHandle<WebGPURenderTarget>(renderTargetHandle);
     assert_invariant(mDefaultRenderTarget);
+    setDebugTag(renderTargetHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
         const TargetBufferFlags targetFlags, const uint32_t width, const uint32_t height,
         const uint8_t samples, const uint8_t layerCount, const MRT color,
-        const TargetBufferInfo depth, const TargetBufferInfo stencil) {
+        const TargetBufferInfo depth, const TargetBufferInfo stencil, utils::CString tag) {
     constructHandle<WebGPURenderTarget>(
             renderTargetHandle, width, height, samples, layerCount, color, depth, stencil,
             targetFlags,
@@ -500,37 +518,41 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
                 return handleCast<WebGPUTexture>(textureHandle);
             },
             mDevice);
+    setDebugTag(renderTargetHandle.getId(), std::move(tag));
 }
 
-void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {
+void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, utils::CString tag) {
     // the handle was already constructed in createFenceS
     const auto fence = handleCast<WebGPUFence>(fenceHandle);
     assert_invariant(mQueue);
     fence->addMarkerToQueueState(mQueue);
+    setDebugTag(fenceHandle.getId(), std::move(tag));
 }
 
-void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, int) {}
+void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::CString tag) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(
         Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle,
-        backend::DescriptorSetLayout&& info) {
+        backend::DescriptorSetLayout&& info, utils::CString tag) {
     constructHandle<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle, std::move(info), mDevice);
+    setDebugTag(descriptorSetLayoutHandle.getId(), std::move(tag));
 }
 
 void WebGPUDriver::createDescriptorSetR(Handle<HwDescriptorSet> descriptorSetHandle,
-        Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle) {
+        Handle<HwDescriptorSetLayout> descriptorSetLayoutHandle, utils::CString tag) {
     auto layout = handleCast<WebGPUDescriptorSetLayout>(descriptorSetLayoutHandle);
     constructHandle<WebGPUDescriptorSet>(descriptorSetHandle, layout->getLayout(),
             layout->getBindGroupEntries());
+    setDebugTag(descriptorSetHandle.getId(), std::move(tag));
 }
 
-Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream) {
+Handle<HwStream> WebGPUDriver::createStreamNative(void* nativeStream, utils::CString tag) {
     return {
         //todo
     };
 }
 
-Handle<HwStream> WebGPUDriver::createStreamAcquired() {
+Handle<HwStream> WebGPUDriver::createStreamAcquired(utils::CString tag) {
     return {
         //todo
     };

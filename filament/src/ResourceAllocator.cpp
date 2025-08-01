@@ -148,8 +148,7 @@ RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
         uint8_t const samples, uint8_t const layerCount, MRT const color, TargetBufferInfo const depth,
         TargetBufferInfo const stencil) noexcept {
     auto handle = mBackend.createRenderTarget(targetBufferFlags,
-            width, height, samples ? samples : 1u, layerCount, color, depth, stencil);
-    mBackend.setDebugTag(handle.getId(), CString{ name });
+            width, height, samples ? samples : 1u, layerCount, color, depth, stencil, CString(name));
     return handle;
 }
 
@@ -184,26 +183,25 @@ TextureHandle ResourceAllocator::createTexture(const char* name,
         } else {
             // we don't, allocate a new texture and populate the in-use list
             handle = mBackend.createTexture(
-                    target, levels, format, samples, width, height, depth, usage);
+                    target, levels, format, samples, width, height, depth, usage, CString(name));
             if (swizzle != defaultSwizzle) {
                 TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
-                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], CString(name));
                 mBackend.destroyTexture(handle);
                 handle = swizzledHandle;
             }
         }
     } else {
         handle = mBackend.createTexture(
-                target, levels, format, samples, width, height, depth, usage);
+                target, levels, format, samples, width, height, depth, usage, CString(name));
         if (swizzle != defaultSwizzle) {
             TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
-                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], CString(name));
             mBackend.destroyTexture(handle);
             handle = swizzledHandle;
         }
     }
     mDisposer->checkout(handle, key);
-    mBackend.setDebugTag(handle.getId(), CString{ name });
     return handle;
 }
 

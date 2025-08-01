@@ -58,7 +58,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     Shader shader = createShader(api, cleanup, sBackend);
 
     backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
-            api.createDefaultRenderTarget(0));
+            api.createDefaultRenderTarget());
 
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
@@ -122,7 +122,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
     backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
-            api.createDefaultRenderTarget(0));
+            api.createDefaultRenderTarget());
 
     // require users to create two Filament textures and have two material parameters
     // add a "plane" parameter to setExternalImage

@@ -85,13 +85,9 @@ FStream::FStream(FEngine& engine, const Builder& builder) noexcept
 
     if (mNativeStream) {
         // Note: this is a synchronous call. On Android, this calls back into Java.
-        mStreamHandle = engine.getDriverApi().createStreamNative(mNativeStream);
+        mStreamHandle = engine.getDriverApi().createStreamNative(mNativeStream, builder.getName());
     } else {
-        mStreamHandle = engine.getDriverApi().createStreamAcquired();
-    }
-
-    if (auto name = builder.getName(); !name.empty()) {
-        engine.getDriverApi().setDebugTag(mStreamHandle.getId(), std::move(name));
+        mStreamHandle = engine.getDriverApi().createStreamAcquired(builder.getName());
     }
 }
 
