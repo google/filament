@@ -87,6 +87,8 @@ public:
 
     void gc();
 
+    void resetCachedState() noexcept { mLastBoundInfo = {}; }
+
 private:
     void updateSamplerImpl(VkDescriptorSet set, uint8_t binding,
             fvkmemory::resource_ptr<VulkanTexture> texture, VkSampler sampler) noexcept;

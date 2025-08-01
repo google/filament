@@ -475,23 +475,6 @@ void ColorPassDescriptorSet::commit(DriverApi& driver) noexcept {
     }
 }
 
-void ColorPassDescriptorSet::unbindSamplers(FEngine& engine) noexcept {
-    // this needs to reset the sampler that are only set in RendererUtils::colorPass(), because
-    // this descriptor-set is also used for ssr/picking/structure and these could be stale
-    // it would be better to use a separate descriptor-set for those two cases so that we don't
-    // have to do this
-    setBuffer(+PerViewBindingPoints::SHADOWS,
-            engine.getDummyUniformBuffer(), 0, sizeof(ShadowUib));
-    setSampler(+PerViewBindingPoints::STRUCTURE,
-            engine.getZeroTexture(), {});
-    setSampler(+PerViewBindingPoints::SHADOW_MAP,
-            engine.getOneTextureArrayDepth(), {});
-    setSampler(+PerViewBindingPoints::SSAO,
-            engine.getZeroTextureArray(), {});
-    setSampler(+PerViewBindingPoints::SSR,
-            engine.getZeroTextureArray(), {});
-}
-
 void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
         TextureHandle th, SamplerParams const params) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {

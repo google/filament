@@ -63,6 +63,8 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
+#include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <limits>
 #include <memory>
@@ -173,7 +175,7 @@ void FRenderer::terminate(FEngine& engine) {
     // Before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
-    if (UTILS_HAS_THREADING) {
+    if constexpr (UTILS_HAS_THREADING) {
         Fence::waitAndDestroy(engine.createFence());
     } else {
         // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
@@ -294,6 +296,12 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
     js.waitAndRelease(job);
 }
 
+bool FRenderer::shouldRenderFrame() const noexcept {
+    FEngine& engine = mEngine;
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    return mFrameSkipper.shouldRenderFrame(driver);
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano) {
     assert_invariant(swapChain);
 
@@ -326,7 +334,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
     const time_point appVsync(vsyncSteadyClockTimeNano ? userVsync : now);
 
     mFrameId++;
-    mViewRenderedCount = 0;
 
     FILAMENT_TRACING_FRAME_ID(FILAMENT_TRACING_CATEGORY_FILAMENT, mFrameId);
 
@@ -388,7 +395,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         engine.prepare();
     };
 
-    if (mFrameSkipper.beginFrame(driver)) {
+    if (mFrameSkipper.shouldRenderFrame(driver)) {
         // if beginFrame() returns true, we are expecting a call to endFrame(),
         // so do the beginFrame work right now, instead of requiring a call to render()
         beginFrameInternal();
@@ -435,7 +442,7 @@ void FRenderer::endFrame() {
     }
 
     mFrameInfoManager.endFrame(driver);
-    mFrameSkipper.endFrame(driver);
+    mFrameSkipper.submitFrame(driver);
 
     driver.endFrame(mFrameId);
 
@@ -508,9 +515,9 @@ void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& ds
     // destination.
     driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
 
-    RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
+        RenderPassParams params = {};
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
         params.flags.clear = TargetBufferFlags::COLOR;
         params.flags.discardStart = TargetBufferFlags::ALL;
@@ -567,12 +574,20 @@ void FRenderer::renderStandaloneView(FView const* view) {
                         1'000'000'000.0 / mDisplayInfo.refreshRate),
                 mFrameId);
 
-        renderInternal(view);
+        // because we don't have a "present" call, we use flush so the driver can submit
+        // the command buffer; we do this before driver.endFrame() to mimic what would
+        // happen with Renderer::beginFrame/endFrame.
+        renderInternal(view, true);
 
         driver.endFrame(mFrameId);
 
-        // This is a workaround for internal bug b/361822355.
-        // TODO: properly address the bug and remove this workaround.
+        // engine.flush() has already been called by renderInternal(), but we need an extra one
+        // for endFrame() above. This operation in actually not too heavy, it just kicks the
+        // driver thread, which is mostlikely already running.
+        engine.flush();
+
+        // FIXME: This is a workaround for internal bug b/361822355.
+        //        properly address the bug and remove this workaround.
         if (engine.getBackend() == Backend::VULKAN) {
             engine.flushAndWait();
         }
@@ -583,7 +598,7 @@ void FRenderer::render(FView const* view) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     if (UTILS_UNLIKELY(mBeginFrameInternal)) {
-        // this should not happen, the user should not call render() if we returned false from
+        // This is unlikely to happen, the user should not call render() if we returned false from
         // beginFrame(). But because this is allowed, we handle it gracefully.
         mBeginFrameInternal();
         mBeginFrameInternal = {};
@@ -593,17 +608,11 @@ void FRenderer::render(FView const* view) {
     assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
-        if (mViewRenderedCount) {
-            // This is a good place to kick the GPU, since we've rendered a View before,
-            // and we're about to render another one.
-            mEngine.getDriverApi().flush();
-        }
-        renderInternal(view);
-        mViewRenderedCount++;
+        renderInternal(view, false);
     }
 }
 
-void FRenderer::renderInternal(FView const* view) {
+void FRenderer::renderInternal(FView const* view, bool flush) {
     FEngine& engine = mEngine;
 
     FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
@@ -620,6 +629,10 @@ void FRenderer::renderInternal(FView const* view) {
     // execute the render pass
     renderJob(rootArenaScope, const_cast<FView&>(*view));
 
+    if (flush) {
+        engine.getDriverApi().flush();
+    }
+
     // make sure to flush the command buffer
     engine.flush();
 
@@ -632,6 +645,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
+    ppm.resetForRender();
     ppm.setFrameUniforms(driver, view.getFrameUniforms());
 
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.

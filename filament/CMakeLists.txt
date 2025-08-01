@@ -84,6 +84,7 @@ set(SRCS
         src/LightManager.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
+        src/MaterialInstanceManager.cpp
         src/MaterialParser.cpp
         src/MorphTargetBuffer.cpp
         src/PostProcessManager.cpp
@@ -171,6 +172,7 @@ set(PRIVATE_HDRS
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h
         src/MaterialParser.h
+        src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
         src/RenderPass.h

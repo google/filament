@@ -187,7 +187,7 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
         wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& extent,
         bool useSRGBColorSpace) {
     config.device = device;
-    config.usage = wgpu::TextureUsage::RenderAttachment;
+    config.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
     config.width = extent.width;
     config.height = extent.height;
     config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
@@ -352,35 +352,45 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentTextureView( wgpu::Extent2D const& extent) {
+wgpu::TextureView WebGPUSwapChain::getNextTextureView() {
+    assert_invariant(isHeadless());
+
+    mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    return mRenderTargetViews[mHeadlessBufferIndex];
+}
+
+wgpu::TextureView WebGPUSwapChain::getNextTextureView( wgpu::Extent2D const& extent) {
     setExtent(extent);
-    wgpu::SurfaceTexture surfaceTexture;
-    mSurface.GetCurrentTexture(&surfaceTexture);
-    if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
+
+    mSurface.GetCurrentTexture(&mCurrentTexture);
+    if (mCurrentTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
 
     // TODO: review these initializations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "surface_texture_view",
-        .format = surfaceTexture.texture.GetFormat(),
+        .format = mCurrentTexture.texture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
         .baseArrayLayer = 0,
         .arrayLayerCount = 1
     };
-    return surfaceTexture.texture.CreateView(&textureViewDescriptor);
+    return mCurrentTexture.texture.CreateView(&textureViewDescriptor);
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentHeadlessTextureView() {
-    return mRenderTargetViews[mHeadlessBufferIndex];
+wgpu::Texture WebGPUSwapChain::getCurrentTexture() {
+    if (isHeadless()) {
+        return mRenderTargetTextures[mHeadlessBufferIndex];
+    }
+    // We return the texture that was in use
+    return mCurrentTexture.texture;
+
 }
 
 void WebGPUSwapChain::present() {
-    if (isHeadless()) {
-        mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
-    } else {
+    if (!isHeadless()) {
         mSurface.Present();
     }
 }

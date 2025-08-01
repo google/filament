@@ -247,6 +247,105 @@ const char* toString(backend::ConstantType type) noexcept {
     return "--";
 }
 
+inline
+const char* toString(backend::DescriptorType type) noexcept {
+    switch (type) {
+        case backend::DescriptorType::SAMPLER_2D_FLOAT:
+            return "sampler2d float";
+        case backend::DescriptorType::SAMPLER_2D_INT:
+            return "sampler2d int";
+        case backend::DescriptorType::SAMPLER_2D_UINT:
+            return "sampler2d uint";
+        case backend::DescriptorType::SAMPLER_2D_DEPTH:
+            return "sampler2d depth";
+        case backend::DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+            return "sampler2d array float";
+        case backend::DescriptorType::SAMPLER_2D_ARRAY_INT:
+            return "sampler2d array int";
+        case backend::DescriptorType::SAMPLER_2D_ARRAY_UINT:
+            return "sampler2d array uint";
+        case backend::DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+            return "sampler2d array depth";
+        case backend::DescriptorType::SAMPLER_CUBE_FLOAT:
+            return "samplercube float";
+        case backend::DescriptorType::SAMPLER_CUBE_INT:
+            return "samplercube int";
+        case backend::DescriptorType::SAMPLER_CUBE_UINT:
+            return "samplercube uint";
+        case backend::DescriptorType::SAMPLER_CUBE_DEPTH:
+            return "samplercube depth";
+        case backend::DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+            return "samplercube array float";
+        case backend::DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+            return "samplercube array int";
+        case backend::DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+            return "samplercube array uint";
+        case backend::DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return "samplercube array depth";
+        case backend::DescriptorType::SAMPLER_3D_FLOAT:
+            return "sampler3d float";
+        case backend::DescriptorType::SAMPLER_3D_INT:
+            return "sampler3d int";
+        case backend::DescriptorType::SAMPLER_3D_UINT:
+            return "sampler3d uint";
+        case backend::DescriptorType::SAMPLER_2D_MS_FLOAT:
+            return "sampler2d ms float";
+        case backend::DescriptorType::SAMPLER_2D_MS_INT:
+            return "sampler2d ms int";
+        case backend::DescriptorType::SAMPLER_2D_MS_UINT:
+            return "sampler2d ms uint";
+        case backend::DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            return "sampler2d ms array float";
+        case backend::DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            return "sampler2d ms array int";
+        case backend::DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return "sampler2d ms array uint";
+        case backend::DescriptorType::SAMPLER_EXTERNAL:
+            return "sampler external";
+        case backend::DescriptorType::UNIFORM_BUFFER:
+            return "uniform buffer";
+        case backend::DescriptorType::SHADER_STORAGE_BUFFER:
+            return "shader storage buffer";
+        case backend::DescriptorType::INPUT_ATTACHMENT:
+            return "input attachment";
+    }
+    return "--";
+}
+
+inline
+const char* toString(backend::ShaderStageFlags flags) noexcept {
+    switch (uint8_t(flags)) {
+        case uint8_t(backend::ShaderStageFlags::VERTEX):
+            return "vertex";
+        case uint8_t(backend::ShaderStageFlags::FRAGMENT):
+            return "fragment";
+        case uint8_t(backend::ShaderStageFlags::VERTEX | backend::ShaderStageFlags::FRAGMENT):
+            return "vertex | fragment";
+        case uint8_t(backend::ShaderStageFlags::COMPUTE):
+            return "compute";
+        case uint8_t(backend::ShaderStageFlags::VERTEX | backend::ShaderStageFlags::COMPUTE):
+            return "vertex | compute";
+        case uint8_t(backend::ShaderStageFlags::FRAGMENT | backend::ShaderStageFlags::COMPUTE):
+            return "fragment | compute";
+        case uint8_t(backend::ShaderStageFlags::ALL_SHADER_STAGE_FLAGS):
+            return "vertex | fragment | compute";
+    }
+    return "--";
+}
+
+inline
+const char* toString(backend::DescriptorFlags flags) noexcept {
+    switch (uint8_t(flags)) {
+        case uint8_t(backend::DescriptorFlags::DYNAMIC_OFFSET):
+            return "dynamic offset";
+        case uint8_t(backend::DescriptorFlags::UNFILTERABLE):
+            return "unfilterable";
+        case uint8_t(backend::DescriptorFlags::DYNAMIC_OFFSET | backend::DescriptorFlags::UNFILTERABLE):
+            return "dynamic offset | unfilterable";
+    }
+    return "--";
+}
+
 // Returns a human-readable variant description.
 // For example: DYN|DIR
 std::string formatVariantString(Variant variant, MaterialDomain domain) noexcept;
