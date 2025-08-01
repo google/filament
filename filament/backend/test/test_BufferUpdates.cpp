@@ -65,12 +65,12 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         Cleanup cleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         Shader shader = createShader();
-
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // To test large buffers (which exercise a different code path) create an extra large
         // buffer. Only the first 3 vertices will be used.
@@ -155,15 +155,14 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "All values including alpha are written as 0, see b/417254943");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
     const TrianglePrimitive triangle(api);
 
     // Create a platform-specific SwapChain and make it current.
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
