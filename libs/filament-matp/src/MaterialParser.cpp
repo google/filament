@@ -465,8 +465,8 @@ bool MaterialParser::parse(filamat::MaterialBuilder& builder,
     assert(materialFilePath.isFile());
 
     if (builder.getFeatureLevel() > config.getFeatureLevel()) {
-        std::cerr << "Material feature level (" << +builder.getFeatureLevel() << ") is higher "
-                                                                                 "than maximum allowed (" << +config.getFeatureLevel() << ")" << std::endl;
+        std::cerr << "Material feature level (" << +builder.getFeatureLevel()
+            << ") is higher than maximum allowed (" << +config.getFeatureLevel() << ")" << std::endl;
         return false;
     }
 
