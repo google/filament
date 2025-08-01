@@ -19,11 +19,11 @@
 
 #include <utils/Panic.h>
 #include <utils/Range.h>
-#include <utils/debug.h>
 
 #include <map>
 #include <utility>
 
+#include <assert.h>
 #include <stddef.h>
 
 namespace utils {
@@ -200,8 +200,8 @@ private:
 
     // Private helper that assumes there is no existing range that overlaps the given range.
     void insert(KeyType first, KeyType last, const ValueType& value) noexcept {
-        assert_invariant(!has(first));
-        assert_invariant(!has(last - 1));
+        assert(!has(first));
+        assert(!has(last - 1));
 
         // Check if there is an adjacent range to the left than can be extended.
         KeyType previous = first;
@@ -266,8 +266,8 @@ private:
 
     // Private helper that clips one end of an existing range.
     Iterator shrink(Iterator iter, KeyType first, KeyType last) {
-        assert_invariant(first < last);
-        assert_invariant(getRange(iter).first == first || getRange(iter).last == last);
+        assert(first < last);
+        assert(getRange(iter).first == first || getRange(iter).last == last);
         std::pair<Range<KeyType>, ValueType> value = {{first, last}, iter->second.second};
         mMap.erase(iter);
         return mMap.insert({first, value}).first;

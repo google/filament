@@ -190,6 +190,7 @@ public:
     using FeatureLevel = backend::FeatureLevel;
     using StereoscopicType = backend::StereoscopicType;
     using Driver = backend::Driver;
+    using GpuContextPriority = backend::Platform::GpuContextPriority;
 
     /**
      * Config is used to define the memory footprint used by the engine, such as the
@@ -318,6 +319,15 @@ public:
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
         /**
+         * The action to take if a Drawable cannot be acquired.
+         *
+         * Each frame rendered requires a CAMetalDrawable texture, which is
+         * presented on-screen at the completion of each frame. These are
+         * limited and provided round-robin style by the system.
+         */
+        bool metalDisablePanicOnDrawableFailure = false;
+
+        /**
          * Set to `true` to forcibly disable parallel shader compilation in the backend.
          * Currently only honored by the GL and Metal backends.
          * @deprecated use "backend.disable_parallel_shader_compile" feature flag instead
@@ -401,6 +411,11 @@ public:
          * @deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
         bool assertNativeWindowIsValid = false;
+
+        /**
+         * GPU context priority level. Controls GPU work scheduling and preemption.
+         */
+        GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
     };
 
 
@@ -1017,7 +1032,7 @@ public:
      *
      * @see setPaused
      */
-    bool isPaused() const noexcept;
+    bool isPaused() const noexcept(UTILS_HAS_THREADING);
 
     /**
      * Pause or resume rendering thread.

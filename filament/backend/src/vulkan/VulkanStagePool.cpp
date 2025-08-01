@@ -28,68 +28,154 @@ static constexpr uint32_t TIME_BEFORE_EVICTION = 3;
 
 namespace filament::backend {
 
-VulkanStagePool::VulkanStagePool(VmaAllocator allocator, VulkanCommands* commands)
-    : mAllocator(allocator),
-      mCommands(commands) {}
+namespace {
 
-VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
-    // First check if a stage exists whose capacity is greater than or equal to the requested size.
-    auto iter = mFreeStages.lower_bound(numBytes);
-    if (iter != mFreeStages.end()) {
-        auto stage = iter->second;
-        mFreeStages.erase(iter);
-        stage->lastAccessed = mCurrentFrame;
-        mUsedStages.push_back(stage);
-        return stage;
+// Note: these are temporary values, they will be configurable.
+static constexpr uint32_t MAX_EMPTY_STAGES_TO_RETAIN = 1;
+constexpr uint32_t STAGE_SIZE = 1048576;
+
+uint32_t alignValue(uint32_t valueToAlign, uint32_t alignment) {
+    if (alignment == 0) {
+        return valueToAlign;
     }
-    // We were not able to find a sufficiently large stage, so create a new one.
-    VulkanStage* stage = new VulkanStage({
-        .memory = VK_NULL_HANDLE,
-        .buffer = VK_NULL_HANDLE,
-        .capacity = numBytes,
-        .lastAccessed = mCurrentFrame,
-    });
 
-    // Create the VkBuffer.
-    mUsedStages.push_back(stage);
-    VkBufferCreateInfo bufferInfo {
+    uint32_t remainder = valueToAlign % alignment;
+    return remainder == 0 ? valueToAlign : valueToAlign + (alignment - remainder);
+}
+
+}// namespace
+
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStage::acquireSegment(
+        fvkmemory::ResourceManager* resManager, uint32_t segmentOffset, uint32_t numBytes) {
+    auto segment = fvkmemory::resource_ptr<Segment>::construct(resManager, this, numBytes,
+            segmentOffset, [this](uint32_t offset) { mSegments.erase(offset); });
+    mSegments.insert({ segmentOffset, segment.get() });
+    mCurrentOffset = segmentOffset + numBytes;
+    return segment;
+}
+
+VulkanStagePool::VulkanStagePool(VmaAllocator allocator, fvkmemory::ResourceManager* resManager,
+        VulkanCommands* commands, const VkPhysicalDeviceLimits* deviceLimits)
+    : mAllocator(allocator),
+      mResManager(resManager),
+      mCommands(commands),
+      mDeviceLimits(deviceLimits) {}
+
+fvkmemory::resource_ptr<VulkanStage::Segment> VulkanStagePool::acquireStage(uint32_t numBytes,
+        uint32_t alignment) {
+    // Apply alignment to the byte count to ensure that, when we later flush
+    // data written by the host, we only flush the atoms that we modified, and
+    // no adjacent atoms.
+    numBytes = alignToNonCoherentAtomSize(numBytes);
+
+    // First check if a stage segment exists whose capacity is greater than or
+    // equal to the requested size.
+    auto iter = mStages.lower_bound(numBytes);
+
+    // If we have potential buffer candidates, loop through and try to find one
+    // that works with our alignment. Also, set the offset for the buffer.
+    // If we have no buffer, create a new one.
+    VulkanStage* pStage = nullptr;
+    uint32_t segmentOffset = 0;
+    while (iter != mStages.end()) {
+        segmentOffset = alignValue(iter->second->currentOffset(), alignment);
+
+        // Check for overflow + if there's space.
+        if (segmentOffset >= iter->second->currentOffset() &&
+                iter->second->capacity() - numBytes >= segmentOffset) {
+            // This buffer has enough space.
+            pStage = iter->second;
+            mStages.erase(iter);
+            break;
+        }
+
+        // This buffer wasn't suitable. Check the next larger one.
+        ++iter;
+    }
+
+    if (!pStage) {
+        pStage = allocateNewStage(std::max(numBytes, STAGE_SIZE));
+    }
+
+    // Note: this allocation updates `currentOffset` and `segments` within
+    // the parent stage. When destroyed, it will update `segments`.
+    fvkmemory::resource_ptr<VulkanStage::Segment> pSegment =
+            pStage->acquireSegment(mResManager, segmentOffset, numBytes);
+
+    // Update the stage's metadata, and reinsert it with the remaining segment
+    // capacity.
+    uint32_t spaceRemaining = pStage->capacity() - pStage->currentOffset();
+    mStages.insert({ spaceRemaining, pStage });
+
+    return pSegment;
+}
+
+uint32_t VulkanStagePool::alignToNonCoherentAtomSize(uint32_t bytes) {
+    VkDeviceSize alignment = mDeviceLimits->nonCoherentAtomSize;
+    return alignValue(bytes, alignment);
+}
+
+VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
+    VkBufferCreateInfo bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = numBytes,
+        .size = alignToNonCoherentAtomSize(capacity),
         .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     };
     VmaAllocationCreateInfo allocInfo { .usage = VMA_MEMORY_USAGE_CPU_ONLY };
-    UTILS_UNUSED_IN_RELEASE VkResult result = vmaCreateBuffer(mAllocator, &bufferInfo,
-            &allocInfo, &stage->buffer, &stage->memory, nullptr);
+    VkBuffer buffer;
+    VmaAllocation memory;
+    VkResult result =
+            vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &buffer, &memory, nullptr);
 
 #if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
     if (result != VK_SUCCESS) {
-        FVK_LOGE << "Allocation error: " << result << utils::io::endl;
+        FVK_LOGE << "Allocation error: " << result;
+    } else {
+        FVK_LOGD << "Allocated stage with hndl " << buffer;
     }
 #endif
 
-    return stage;
-}
+    void* pMapping = nullptr;
+    if (result == VK_SUCCESS) {
+        result = vmaMapMemory(mAllocator, memory, &pMapping);
 
-VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, PixelDataType type,
-        uint32_t width, uint32_t height) {
-    const VkFormat vkformat = fvkutils::getVkFormat(format, type);
-    for (auto image : mFreeImages) {
-        if (image->format == vkformat && image->width == width && image->height == height) {
-            mFreeImages.erase(image);
-            image->lastAccessed = mCurrentFrame;
-            mUsedImages.push_back(image);
-            return image;
+#if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
+        if (result != VK_SUCCESS) {
+            FVK_LOGE << "Memory mapping erryr: " << result << utils::io::endl;
         }
+#endif
     }
 
-    VulkanStageImage* image = new VulkanStageImage({
-        .format = vkformat,
-        .width = width,
-        .height = height,
-        .lastAccessed = mCurrentFrame,
-    });
+    return new VulkanStage(memory, buffer, capacity, pMapping);
+}
 
-    mUsedImages.push_back(image);
+void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
+    assert(stage->isSafeToReset());  // Ensure all segments have been reset already.
+    vmaUnmapMemory(mAllocator, stage->memory());
+    vmaDestroyBuffer(mAllocator, stage->buffer(), stage->memory());
+    delete stage;
+}
+
+fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImage(
+        PixelDataFormat format, PixelDataType type, uint32_t width, uint32_t height) {
+    // Helper lambda so we can return stage images wrapped as resources that can
+    // be held by command buffers until no longer needed.
+    auto wrapAsResource = [this](VulkanStageImage* image) {
+        auto recycleFn = [this](VulkanStageImage* image) {
+            this->mFreeImages.insert(image);
+        };
+        return fvkmemory::resource_ptr<VulkanStageImage::Resource>::construct(
+            this->mResManager, image, recycleFn);
+    };
+
+    const VkFormat vkformat = fvkutils::getVkFormat(format, type);
+    for (auto stageImage : mFreeImages) {
+        if (stageImage->format() == vkformat && stageImage->width() == width && stageImage->height() == height) {
+            mFreeImages.erase(stageImage);
+            stageImage->mLastAccessed = mCurrentFrame;
+            return wrapAsResource(stageImage);
+        }
+    }
 
     const VkImageCreateInfo imageInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -108,13 +194,18 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
         .usage = VMA_MEMORY_USAGE_CPU_TO_GPU
     };
 
+    VkImage image;
+    VmaAllocation memory;
     const UTILS_UNUSED VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
-            &image->image, &image->memory, nullptr);
+            &image, &memory, nullptr);
 
     assert_invariant(result == VK_SUCCESS);
 
     VkImageAspectFlags const aspectFlags = fvkutils::getImageAspect(vkformat);
     VkCommandBuffer const cmdbuffer = mCommands->get().buffer();
+
+    VulkanStageImage* stageImage = new VulkanStageImage(
+        vkformat, width, height, memory, image, mCurrentFrame);
 
     // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
     // "Host access to image memory is only well-defined for linear images and for image
@@ -123,12 +214,13 @@ VulkanStageImage const* VulkanStagePool::acquireImage(PixelDataFormat format, Pi
     // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
     // valid for either of those image layouts."
     fvkutils::transitionLayout(cmdbuffer, {
-            .image = image->image,
+            .image = stageImage->image(),
             .oldLayout = VulkanLayout::UNDEFINED,
-            .newLayout = VulkanLayout::READ_WRITE, // (= VK_IMAGE_LAYOUT_GENERAL)
+            .newLayout = VulkanLayout::STAGING, // (= VK_IMAGE_LAYOUT_GENERAL)
             .subresources = { aspectFlags, 0, 1, 0, 1 },
         });
-    return image;
+
+    return wrapAsResource(stageImage);
 }
 
 void VulkanStagePool::gc() noexcept {
@@ -141,27 +233,34 @@ void VulkanStagePool::gc() noexcept {
     }
     const uint64_t evictionTime = mCurrentFrame - TIME_BEFORE_EVICTION;
 
-    // Destroy buffers that have not been used for several frames.
-    decltype(mFreeStages) freeStages;
-    freeStages.swap(mFreeStages);
-    for (auto pair : freeStages) {
-        if (pair.second->lastAccessed < evictionTime) {
-            vmaDestroyBuffer(mAllocator, pair.second->buffer, pair.second->memory);
-            delete pair.second;
-        } else {
-            mFreeStages.insert(pair);
-        }
-    }
+    decltype(mStages) freeStages;
+    freeStages.swap(mStages);
+    uint8_t freeStageCount = 0;  // Assuming we'll never have > 255 free stages
+    for (auto& pair : freeStages) {
+        // First, find any stages that have no segments within them.
+        if (pair.second->isSafeToReset()) {
+            if (++freeStageCount > MAX_EMPTY_STAGES_TO_RETAIN) {
+#if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
+                FVK_LOGD << "Destroying a staging buffer with hndl " << pair.second->buffer()
+                         << utils::io::endl;
+#endif
+                destroyStage(std::move(pair.second));
+                continue;
+            }
 
-    // Reclaim buffers that are no longer being used by any command buffer.
-    decltype(mUsedStages) usedStages;
-    usedStages.swap(mUsedStages);
-    for (auto stage : usedStages) {
-        if (stage->lastAccessed < evictionTime) {
-            stage->lastAccessed = mCurrentFrame;
-            mFreeStages.insert(std::make_pair(stage->capacity, stage));
+#if FVK_ENABLED(FVK_DEBUG_STAGING_ALLOCATION)
+            if (pair.first == 0) {
+                FVK_LOGD << "Recycling an unused staging buffer with hndl " << pair.second->buffer()
+                         << utils::io::endl;
+            }
+#endif
+
+            // Note - this segment is free, make sure the structure is cleared
+            // and reinsert it into our free stage list.
+            pair.second->reset();
+            mStages.insert({ pair.second->capacity(), pair.second });
         } else {
-            mUsedStages.push_back(stage);
+            mStages.insert(pair);
         }
     }
 
@@ -169,49 +268,25 @@ void VulkanStagePool::gc() noexcept {
     decltype(mFreeImages) freeImages;
     freeImages.swap(mFreeImages);
     for (auto image : freeImages) {
-        if (image->lastAccessed < evictionTime) {
-            vmaDestroyImage(mAllocator, image->image, image->memory);
+        if (image->mLastAccessed < evictionTime) {
+            vmaDestroyImage(mAllocator, image->image(), image->memory());
             delete image;
         } else {
             mFreeImages.insert(image);
         }
     }
 
-    // Reclaim images that are no longer being used by any command buffer.
-    decltype(mUsedImages) usedImages;
-    usedImages.swap(mUsedImages);
-    for (auto image : usedImages) {
-        if (image->lastAccessed < evictionTime) {
-            image->lastAccessed = mCurrentFrame;
-            mFreeImages.insert(image);
-        } else {
-            mUsedImages.push_back(image);
-        }
-    }
     FVK_SYSTRACE_END();
 }
 
 void VulkanStagePool::terminate() noexcept {
-    for (auto stage : mUsedStages) {
-        vmaDestroyBuffer(mAllocator, stage->buffer, stage->memory);
-        delete stage;
+    for (auto& pair : mStages) {
+        destroyStage(std::move(pair.second));
     }
-    mUsedStages.clear();
-
-    for (auto pair : mFreeStages) {
-        vmaDestroyBuffer(mAllocator, pair.second->buffer, pair.second->memory);
-        delete pair.second;
-    }
-    mFreeStages.clear();
-
-    for (auto image : mUsedImages) {
-        vmaDestroyImage(mAllocator, image->image, image->memory);
-        delete image;
-    }
-    mUsedImages.clear();
+    mStages.clear();
 
     for (auto image : mFreeImages) {
-        vmaDestroyImage(mAllocator, image->image, image->memory);
+        vmaDestroyImage(mAllocator, image->image(), image->memory());
         delete image;
     }
     mFreeImages.clear();

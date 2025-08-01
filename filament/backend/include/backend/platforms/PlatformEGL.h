@@ -109,11 +109,11 @@ protected:
 
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
-            SwapChain* readSwapChain) noexcept override;
+            SwapChain* readSwapChain) override;
 
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain,
             utils::Invocable<void()> preContextChange,
-            utils::Invocable<void(size_t index)> postContextChange) noexcept override;
+            utils::Invocable<void(size_t index)> postContextChange) override;
 
     void commit(SwapChain* swapChain) noexcept override;
 
@@ -128,7 +128,7 @@ protected:
     bool setExternalImage(ExternalImageHandleRef externalImage, ExternalTexture* texture) noexcept override;
 
     /**
-     * Logs glGetError() to slog.e
+     * Logs glGetError() to LOG(ERROR)
      * @param name a string giving some context on the error. Typically __func__.
      */
     static void logEglError(const char* name) noexcept;
@@ -148,12 +148,12 @@ protected:
     EGLContext getContextForType(ContextType type) const noexcept;
 
     // makes the draw and read surface current without changing the current context
-    EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+    EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) {
         return egl.makeCurrent(drawSurface, readSurface);
     }
 
     // makes context current and set draw and read surfaces to EGL_NO_SURFACE
-    EGLBoolean makeCurrent(EGLContext context) noexcept {
+    EGLBoolean makeCurrent(EGLContext context) {
         return egl.makeCurrent(context, mEGLDummySurface, mEGLDummySurface);
     }
 
@@ -211,9 +211,9 @@ private:
     public:
         explicit EGL(EGLDisplay& dpy) : mEGLDisplay(dpy) {}
         EGLBoolean makeCurrent(EGLContext context,
-                EGLSurface drawSurface, EGLSurface readSurface) noexcept;
+                EGLSurface drawSurface, EGLSurface readSurface);
 
-        EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+        EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) {
             return makeCurrent(mCurrentContext, drawSurface, readSurface);
         }
     } egl{ mEGLDisplay };

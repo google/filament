@@ -54,7 +54,8 @@ enum class PerViewBindingPoints : uint8_t  {
     IBL_DFG_LUT     =  7,   // user defined (128x128), RGB16F
     IBL_SPECULAR    =  8,   // user defined, user defined, CUBEMAP
     SSAO            =  9,   // variable, RGB8 {AO, [depth]}
-    SSR             = 10,   // variable, RGB_11_11_10, mipmapped
+    SSR             = 10,   // variable, 2d array, RGB_11_11_10, mipmapped
+    SSR_HISTORY     = 10,   // variable, 2d texture, RGB_11_11_10
     FOG             = 11    // variable, user defined, CUBEMAP
 };
 

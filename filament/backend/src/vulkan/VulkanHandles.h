@@ -21,20 +21,22 @@
 #include "DriverBase.h"
 
 #include "VulkanAsyncHandles.h"
-#include "VulkanBuffer.h"
+#include "VulkanBufferCache.h"
+#include "VulkanBufferProxy.h"
 #include "VulkanFboCache.h"
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
+#include "vulkan/VulkanCommands.h"
 #include "vulkan/memory/Resource.h"
-#include "vulkan/utils/StaticVector.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/StaticVector.h"
 
 #include <backend/Program.h>
 
-#include <utils/bitset.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 #include <utils/StructureOfArrays.h>
+#include <utils/bitset.h>
 
 #include <array>
 
@@ -199,8 +201,15 @@ public:
         return &mOffsets;
     }
 
-    void acquire(fvkmemory::resource_ptr<VulkanTexture> texture);
-    void acquire(fvkmemory::resource_ptr<VulkanBufferObject> buffer);
+    template<typename Resource>
+    void acquire(fvkmemory::resource_ptr<Resource> res) {
+        if (res->template isType<VulkanBufferObject>()) {
+            mUboMask.set(mResources.size());
+        }
+        mResources.push_back(res);
+    }
+
+    void referencedBy(VulkanCommandBuffer& commands);
 
     fvkutils::UniformBufferBitmask const dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
@@ -213,6 +222,7 @@ private:
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
     OnRecycle mOnRecycleFn;
     OnRecycle mOnRecycleExternalSamplerFn;
+    fvkutils::UniformBufferBitmask mUboMask;
 };
 
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
@@ -418,6 +428,9 @@ struct VulkanVertexBuffer : public HwVertexBuffer, fvkmemory::Resource {
             fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi);
     void setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> bufferObject, uint32_t index);
 
+    // TODO: because VulkanBufferObject is backed by VulkanBufferProxy, which could switch out the
+    // backing VkBuffer, we cannot store the VkBuffers for optimization here. We could store a dirty
+    // bit to indicate if a VkBuffer has changed maybe.
     inline VkBuffer const* getVkBuffers() const { return mBuffers.data(); }
     inline VkBuffer* getVkBuffers() { return mBuffers.data(); }
     fvkmemory::resource_ptr<VulkanVertexBufferInfo> vbi;
@@ -428,22 +441,47 @@ private:
 };
 
 struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
-    VulkanIndexBuffer(VmaAllocator allocator, VulkanStagePool& stagePool, uint8_t elementSize,
+    VulkanIndexBuffer(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint8_t elementSize,
             uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
-          buffer(allocator, stagePool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, elementSize * indexCount),
-          indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32) {}
+          indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
+          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
+                  elementSize * indexCount) {}
 
-    VulkanBuffer buffer;
-    const VkIndexType indexType;
+    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
+            uint32_t numBytes) {
+        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    }
+
+    inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
+
+    VkIndexType const indexType;
+
+private:
+    VulkanBufferProxy mBuffer;
 };
 
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
-    VulkanBufferObject(VmaAllocator allocator, VulkanStagePool& stagePool, uint32_t byteCount,
+    VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
             BufferObjectBinding bindingType);
 
-    VulkanBuffer buffer;
-    const BufferObjectBinding bindingType;
+    inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
+            uint32_t numBytes) {
+        mBuffer.loadFromCpu(commands, cpuData, byteOffset, numBytes);
+    }
+
+    inline VkBuffer getVkBuffer() const noexcept { return mBuffer.getVkBuffer(); }
+
+    inline void referencedBy(VulkanCommandBuffer& commands) {
+        mBuffer.referencedBy(commands);
+    }
+
+    BufferObjectBinding const bindingType;
+
+private:
+    VulkanBufferProxy mBuffer;
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
@@ -454,20 +492,6 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive, fvkmemory::Resource {
     fvkmemory::resource_ptr<VulkanVertexBuffer> vertexBuffer;
     fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
 };
-
-inline constexpr VkBufferUsageFlagBits getBufferObjectUsage(
-        BufferObjectBinding bindingType) noexcept {
-    switch(bindingType) {
-        case BufferObjectBinding::VERTEX:
-            return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        case BufferObjectBinding::UNIFORM:
-            return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        case BufferObjectBinding::SHADER_STORAGE:
-            return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
-        // if necessary.
-    }
-}
 
 } // namespace filament::backend
 

@@ -26,6 +26,8 @@ template ResourceType getTypeEnum<VulkanIndexBuffer>() noexcept;
 template ResourceType getTypeEnum<VulkanProgram>() noexcept;
 template ResourceType getTypeEnum<VulkanRenderTarget>() noexcept;
 template ResourceType getTypeEnum<VulkanSwapChain>() noexcept;
+template ResourceType getTypeEnum<VulkanStage::Segment>() noexcept;
+template ResourceType getTypeEnum<VulkanStageImage::Resource>() noexcept;
 template ResourceType getTypeEnum<VulkanRenderPrimitive>() noexcept;
 template ResourceType getTypeEnum<VulkanTexture>() noexcept;
 template ResourceType getTypeEnum<VulkanTextureState>() noexcept;
@@ -35,6 +37,7 @@ template ResourceType getTypeEnum<VulkanVertexBufferInfo>() noexcept;
 template ResourceType getTypeEnum<VulkanDescriptorSetLayout>() noexcept;
 template ResourceType getTypeEnum<VulkanDescriptorSet>() noexcept;
 template ResourceType getTypeEnum<VulkanFence>() noexcept;
+template ResourceType getTypeEnum<VulkanBuffer>() noexcept;
 
 template<typename D>
 ResourceType getTypeEnum() noexcept {
@@ -52,6 +55,12 @@ ResourceType getTypeEnum() noexcept {
     }
     if constexpr (std::is_same_v<D, VulkanSwapChain>) {
         return ResourceType::SWAP_CHAIN;
+    }
+    if constexpr (std::is_same_v<D, VulkanStage::Segment>) {
+        return ResourceType::STAGE_SEGMENT;
+    }
+    if constexpr (std::is_same_v<D, VulkanStageImage::Resource>) {
+        return ResourceType::STAGE_IMAGE;
     }
     if constexpr (std::is_same_v<D, VulkanRenderPrimitive>) {
         return ResourceType::RENDER_PRIMITIVE;
@@ -80,6 +89,9 @@ ResourceType getTypeEnum() noexcept {
     if constexpr (std::is_same_v<D, VulkanFence>) {
         return ResourceType::FENCE;
     }
+    if constexpr (std::is_same_v<D, VulkanBuffer>) {
+        return ResourceType::VULKAN_BUFFER;
+    }
     return ResourceType::UNDEFINED_TYPE;
 }
 
@@ -95,6 +107,10 @@ std::string getTypeStr(ResourceType type) {
             return "RenderTarget";
         case ResourceType::SWAP_CHAIN:
             return "SwapChain";
+        case ResourceType::STAGE_SEGMENT:
+            return "Stage::Segment";
+        case ResourceType::STAGE_IMAGE:
+            return "Stage::Image";
         case ResourceType::RENDER_PRIMITIVE:
             return "RenderPrimitive";
         case ResourceType::TEXTURE:
@@ -113,6 +129,8 @@ std::string getTypeStr(ResourceType type) {
             return "DescriptorSet";
         case ResourceType::FENCE:
             return "Fence";
+        case ResourceType::VULKAN_BUFFER:
+            return "VulkanBuffer";
         case ResourceType::UNDEFINED_TYPE:
             return "";
     }

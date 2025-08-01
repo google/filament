@@ -1146,8 +1146,8 @@ export enum View$BlendMode {
  *
  * \note
  * Dynamic resolution is only supported on platforms where the time to render
- * a frame can be measured accurately. Dynamic resolution is currently only
- * supported on Android.
+ * a frame can be measured accurately. On platform where this is not supported,
+ * Dynamic Resolution can't be enabled unless minScale == maxScale.
  *
  * @see Renderer::FrameRateOptions
  *
@@ -1516,6 +1516,11 @@ export interface View$RenderQuality {
     hdrColorBuffer?: View$QualityLevel;
 }
 
+export enum View$AmbientOcclusionOptions$AmbientOcclusionType {
+    SAO, // use Scalable Ambient Occlusion
+    GTAO, // use Ground Truth-Based Ambient Occlusion
+}
+
 /**
  * Screen Space Cone Tracing (SSCT) options
  * Ambient shadows from dominant light
@@ -1564,10 +1569,32 @@ export interface View$AmbientOcclusionOptions$Ssct {
 }
 
 /**
+ * Ground Truth-base Ambient Occlusion (GTAO) options
+ */
+export interface View$AmbientOcclusionOptions$Gtao {
+    /**
+     * # of slices. Higher value makes less noise.
+     */
+    sampleSliceCount?: number;
+    /**
+     * # of steps the radius is divided into for integration. Higher value makes less bias.
+     */
+    sampleStepsPerSlice?: number;
+    /**
+     * thickness heuristic, should be closed to 0
+     */
+    thicknessHeuristic?: number;
+}
+
+/**
  * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
  * @see setAmbientOcclusionOptions()
  */
 export interface View$AmbientOcclusionOptions {
+    /**
+     * Type of ambient occlusion algorithm.
+     */
+    aoType?: View$AmbientOcclusionOptions$AmbientOcclusionType;
     /**
      * Ambient Occlusion radius in meters, between 0 and ~10.
      */
@@ -1577,7 +1604,8 @@ export interface View$AmbientOcclusionOptions {
      */
     power?: number;
     /**
-     * Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+     * Self-occlusion bias in meters. Use to avoid self-occlusion.
+     * Between 0 and a few mm. No effect when aoType set to GTAO
      */
     bias?: number;
     /**
@@ -1593,11 +1621,11 @@ export interface View$AmbientOcclusionOptions {
      */
     bilateralThreshold?: number;
     /**
-     * affects # of samples used for AO.
+     * affects # of samples used for AO and params for filtering
      */
     quality?: View$QualityLevel;
     /**
-     * affects AO smoothness
+     * affects AO smoothness. Recommend setting to HIGH when aoType set to GTAO.
      */
     lowPassFilter?: View$QualityLevel;
     /**
@@ -1613,10 +1641,11 @@ export interface View$AmbientOcclusionOptions {
      */
     bentNormals?: boolean;
     /**
-     * min angle in radian to consider
+     * min angle in radian to consider. No effect when aoType set to GTAO.
      */
     minHorizonAngleRad?: number;
     // JavaScript binding for ssct is not yet supported, must use default value.
+    // JavaScript binding for gtao is not yet supported, must use default value.
 }
 
 /**

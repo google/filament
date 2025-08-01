@@ -50,22 +50,24 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Allocator.h>
 #include <utils/CallStack.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
-#include <utils/Systrace.h>
 #include <utils/ThreadUtils.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <math/vec3.h>
 #include <math/vec4.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <initializer_list>
 #include <memory>
@@ -92,6 +94,30 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
+namespace {
+
+backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
+    return {
+        .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
+        .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
+        .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
+        .disableHandleUseAfterFreeCheck =
+                instance->features.backend.disable_handle_use_after_free_check,
+        .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
+        .forceGLES2Context = instance->getConfig().forceGLES2Context,
+        .stereoscopicType = instance->getConfig().stereoscopicType,
+        .assertNativeWindowIsValid =
+                instance->features.backend.opengl.assert_native_window_is_valid,
+        .metalDisablePanicOnDrawableFailure =
+                instance->getConfig().metalDisablePanicOnDrawableFailure,
+        .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanEnableStagingBufferBypass =
+                instance->features.backend.vulkan.enable_staging_buffer_bypass,
+    };
+}
+
+} // anonymous
+
 struct Engine::BuilderDetails {
     Backend mBackend = Backend::DEFAULT;
     Platform* mPlatform = nullptr;
@@ -105,8 +131,8 @@ struct Engine::BuilderDetails {
 };
 
 Engine* FEngine::create(Builder const& builder) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -125,21 +151,11 @@ Engine* FEngine::create(Builder const& builder) {
             instance->mOwnPlatform = true;
         }
         if (platform == nullptr) {
-            slog.e << "Selected backend not supported in this build." << io::endl;
+            LOG(ERROR) << "Selected backend not supported in this build.";
             delete instance;
             return nullptr;
         }
-        DriverConfig const driverConfig{
-                .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
-                .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
-                .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
-                .disableHandleUseAfterFreeCheck = instance->features.backend.disable_handle_use_after_free_check,
-                .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
-                .forceGLES2Context = instance->getConfig().forceGLES2Context,
-                .stereoscopicType = instance->getConfig().stereoscopicType,
-                .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
-        };
-        instance->mDriver = platform->createDriver(sharedContext, driverConfig);
+        instance->mDriver = platform->createDriver(sharedContext, getDriverConfig(instance));
 
     } else {
         // start the driver thread
@@ -169,8 +185,8 @@ Engine* FEngine::create(Builder const& builder) {
 #if UTILS_HAS_THREADING
 
 void FEngine::create(Builder const& builder, Invocable<void(void*)>&& callback) {
-    SYSTRACE_ENABLE();
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_ENABLE(FILAMENT_TRACING_CATEGORY_FILAMENT);
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     FEngine* instance = new FEngine(builder);
 
@@ -278,8 +294,8 @@ FEngine::FEngine(Builder const& builder) :
     // (it may not be the case)
     mJobSystem.adopt();
 
-    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
-           << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
+    LOG(INFO) << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << this << " "
+              << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)");
 }
 
 uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
@@ -300,7 +316,7 @@ uint32_t FEngine::getJobSystemThreadPoolSize(Config const& config) noexcept {
  */
 
 void FEngine::init() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // this must be first.
     assert_invariant( intptr_t(&mDriverApiStorage) % alignof(DriverApi) == 0 );
@@ -314,8 +330,8 @@ void FEngine::init() {
     assert_invariant(mActiveFeatureLevel > FeatureLevel::FEATURE_LEVEL_0);
 #endif
 
-    slog.i << "Backend feature level: " << int(driverApi.getFeatureLevel()) << io::endl;
-    slog.i << "FEngine feature level: " << int(mActiveFeatureLevel) << io::endl;
+    LOG(INFO) << "Backend feature level: " << int(driverApi.getFeatureLevel());
+    LOG(INFO) << "FEngine feature level: " << int(mActiveFeatureLevel);
 
 
     mResourceAllocatorDisposer = std::make_shared<ResourceAllocatorDisposer>(driverApi);
@@ -343,7 +359,8 @@ void FEngine::init() {
 
     // Compute a clip-space [-1 to 1] to texture space [0 to 1] matrix, taking into account
     // backend differences.
-    const bool textureSpaceYFlipped = mBackend == Backend::METAL || mBackend == Backend::VULKAN;
+    const bool textureSpaceYFlipped = mBackend == Backend::METAL || mBackend == Backend::VULKAN ||
+                                      mBackend == Backend::WEBGPU;
     if (textureSpaceYFlipped) {
         mUvFromClipMatrix = mat4f(mat4f::row_major_init{
                 0.5f,  0.0f,   0.0f, 0.5f,
@@ -361,8 +378,6 @@ void FEngine::init() {
     }
 
     // initialize the dummy textures so that their contents are not undefined
-    static constexpr uint32_t zeroes[6] = {};
-    static constexpr uint32_t ones = 0xffffffff;
 
     mDefaultIblTexture = downcast(Texture::Builder()
             .width(1).height(1).levels(1)
@@ -370,8 +385,16 @@ void FEngine::init() {
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
             .build(*this));
 
+    static constexpr std::array<uint32_t, 6> zeroCubemap{};
+    static constexpr std::array<uint32_t, 1> zeroRGBA{};
+    static constexpr std::array<uint32_t, 1> oneRGBA{ 0xffffffff };
+    static constexpr std::array<float   , 1> oneFloat{ 1.0f };
+    auto const size = [](auto&& array) {
+        return array.size() * sizeof(decltype(array[0]));
+    };
+
     driverApi.update3DImage(mDefaultIblTexture->getHwHandle(), 0, 0, 0, 0, 1, 1, 6,
-            { zeroes, sizeof(zeroes), Texture::Format::RGBA, Texture::Type::UBYTE });
+            { zeroCubemap.data(), size(zeroCubemap), Texture::Format::RGBA, Texture::Type::UBYTE });
 
     // 3 bands = 9 float3
     constexpr float sh[9 * 3] = { 0.0f };
@@ -393,10 +416,10 @@ void FEngine::init() {
             TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
     driverApi.update3DImage(mDummyOneTexture, 0, 0, 0, 0, 1, 1, 1,
-            { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { oneRGBA.data(), size(oneRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
 
     driverApi.update3DImage(mDummyZeroTexture, 0, 0, 0, 0, 1, 1, 1,
-            { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+            { zeroRGBA.data(), size(zeroRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
 
 
     mPerViewDescriptorSetLayoutSsrVariant = {
@@ -423,25 +446,28 @@ void FEngine::init() {
     } else
 #endif
     {
-        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
-
         FMaterial::DefaultMaterialBuilder defaultMaterialBuilder;
         switch (mConfig.stereoscopicType) {
             case StereoscopicType::NONE:
             case StereoscopicType::INSTANCED:
                 defaultMaterialBuilder.package(
-                    MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
+                        MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE);
                 break;
             case StereoscopicType::MULTIVIEW:
 #ifdef FILAMENT_ENABLE_MULTIVIEW
                 defaultMaterialBuilder.package(
-                    MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA, MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
+                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_DATA,
+                        MATERIALS_DEFAULTMATERIAL_MULTIVIEW_SIZE);
 #else
                 assert_invariant(false);
 #endif
                 break;
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
+    }
+
+    if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
+        mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
 
         constexpr float3 dummyPositions[1] = {};
         constexpr short4 dummyTangents[1] = {};
@@ -451,14 +477,23 @@ void FEngine::init() {
         mDummyOneTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
+        mDummyOneTextureArrayDepth = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
+                TextureFormat::DEPTH32F, 1, 1, 1, 1, TextureUsage::DEFAULT);
+
         mDummyZeroTextureArray = driverApi.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
                 TextureFormat::RGBA8, 1, 1, 1, 1, TextureUsage::DEFAULT);
 
         driverApi.update3DImage(mDummyOneTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { &ones, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { oneRGBA.data(), size(oneRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        driverApi.update3DImage(mDummyOneTextureArrayDepth, 0, 0, 0, 0, 1, 1, 1,
+                { oneFloat.data(), size(oneFloat), Texture::Format::DEPTH_COMPONENT, Texture::Type::FLOAT });
 
         driverApi.update3DImage(mDummyZeroTextureArray, 0, 0, 0, 0, 1, 1, 1,
-                { zeroes, 4, Texture::Format::RGBA, Texture::Type::UBYTE });
+                { zeroRGBA.data(), size(zeroRGBA), Texture::Format::RGBA, Texture::Type::UBYTE });
+
+        mDummyUniformBuffer = driverApi.createBufferObject(CONFIG_MINSPEC_UBO_SIZE,
+                BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
 
         mLightManager.init(*this);
         mDFG.init(*this);
@@ -502,7 +537,7 @@ void FEngine::init() {
 }
 
 FEngine::~FEngine() noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     assert_invariant(!mResourceAllocatorDisposer);
     delete mDriver;
     if (mOwnPlatform) {
@@ -511,7 +546,7 @@ FEngine::~FEngine() noexcept {
 }
 
 void FEngine::shutdown() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // by construction this should never be nullptr
     assert_invariant(mResourceAllocatorDisposer);
@@ -523,8 +558,7 @@ void FEngine::shutdown() {
     // print out some statistics about this run
     size_t const wm = mCommandBufferQueue.getHighWatermark();
     size_t const wmpct = wm / (getCommandBufferSize() / 100);
-    slog.d << "CircularBuffer: High watermark "
-           << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    DLOG(INFO) << "CircularBuffer: High watermark " << wm / 1024 << " KiB (" << wmpct << "%)";
 #endif
 
     DriverApi& driver = getDriverApi();
@@ -607,6 +641,9 @@ void FEngine::shutdown() {
     driver.destroyTexture(std::move(mDummyOneTextureArray));
     driver.destroyTexture(std::move(mDummyZeroTexture));
     driver.destroyTexture(std::move(mDummyZeroTextureArray));
+    driver.destroyTexture(std::move(mDummyOneTextureArrayDepth));
+
+    driver.destroyBufferObject(std::move(mDummyUniformBuffer));
 
     driver.destroyRenderTarget(std::move(mDefaultRenderTarget));
 
@@ -645,7 +682,7 @@ void FEngine::shutdown() {
 }
 
 void FEngine::prepare() {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped if the UBO hasn't changed. Still we could have a lot of these.
@@ -653,8 +690,12 @@ void FEngine::prepare() {
 
     for (auto& materialInstanceList: mMaterialInstances) {
         materialInstanceList.second.forEach([&driver](FMaterialInstance* item) {
-            item->commitStreamUniformAssociations(driver);
-            item->commit(driver);
+            // post-process materials instances must be commited explicitly because their
+            // parameters are typically not set at this point in time.
+            if (item->getMaterial()->getMaterialDomain() == MaterialDomain::SURFACE) {
+                item->commitStreamUniformAssociations(driver);
+                item->commit(driver);
+            }
         });
     }
 
@@ -712,10 +753,9 @@ int FEngine::loop() {
     if (mPlatform == nullptr) {
         mPlatform = PlatformFactory::create(&mBackend);
         mOwnPlatform = true;
-        const char* const backend = backendToString(mBackend);
-        slog.i << "FEngine resolved backend: " << backend << io::endl;
+        LOG(INFO) << "FEngine resolved backend: " << to_string(mBackend);
         if (mPlatform == nullptr) {
-            slog.e << "Selected backend not supported in this build." << io::endl;
+            LOG(ERROR) << "Selected backend not supported in this build.";
             mDriverBarrier.latch();
             return 0;
         }
@@ -724,17 +764,7 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig const driverConfig {
-            .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
-            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
-            .disableHeapHandleTags = features.backend.disable_heap_handle_tags,
-            .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-    };
-    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+    mDriver = mPlatform->createDriver(mSharedGLContext, getDriverConfig(this));
 
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
@@ -794,9 +824,9 @@ int FEngine::loop() {
 #if FILAMENT_ENABLE_MATDBG
     if(debug.server) {
         delete debug.server;
-    } 
+    }
 #endif
-#if FILAMENT_ENABLE_FGVIEWER 
+#if FILAMENT_ENABLE_FGVIEWER
     if(debug.fgviewerServer) {
         delete debug.fgviewerServer;
     }
@@ -1015,8 +1045,8 @@ UTILS_NOINLINE
 void FEngine::cleanupResourceList(ResourceList<T>&& list) {
     if (UTILS_UNLIKELY(!list.empty())) {
 #ifndef NDEBUG
-        slog.d << "cleaning up " << list.size()
-               << " leaked " << CallStack::typeName<T>().c_str() << io::endl;
+        DLOG(INFO) << "cleaning up " << list.size() << " leaked "
+                   << CallStack::typeName<T>().c_str();
 #endif
         list.forEach([this, &allocator = mHeapAllocator](T* item) {
             item->terminate(*this);
@@ -1213,11 +1243,10 @@ bool FEngine::destroy(const FMaterialInstance* p) {
                             << ri.asValue() << ", index=" << j << ")";
                 } else {
                     if (UTILS_UNLIKELY(mi == p)) {
-                        slog.e  << "destroying MaterialInstance \""
-                                << mi->getName() << "\" which is still in use by Renderable (entity="
-                                << entity.getId() << ", instance="
-                                << ri.asValue() << ", index=" << j << ")"
-                                << io::endl;
+                        LOG(ERROR) << "destroying MaterialInstance \"" << mi->getName()
+                                   << "\" which is still in use by Renderable (entity="
+                                   << entity.getId() << ", instance=" << ri.asValue()
+                                   << ", index=" << j << ")";
                     }
                 }
             }

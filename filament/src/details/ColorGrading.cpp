@@ -29,9 +29,10 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/JobSystem.h>
 #include <utils/Mutex.h>
-#include <utils/Systrace.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -49,7 +50,7 @@ using namespace backend;
 //------------------------------------------------------------------------------
 
 struct ColorGrading::BuilderDetails {
-    std::shared_ptr<ToneMapper> toneMapper = nullptr;
+    const ToneMapper* toneMapper = nullptr;
 
 #if defined(__clang__)
 #pragma clang diagnostic push
@@ -173,7 +174,7 @@ ColorGrading::Builder& ColorGrading::Builder::dimensions(uint8_t const dim) noex
     return *this;
 }
 
-ColorGrading::Builder& ColorGrading::Builder::toneMapper(std::shared_ptr<ToneMapper> toneMapper) noexcept {
+ColorGrading::Builder& ColorGrading::Builder::toneMapper(const ToneMapper* toneMapper) noexcept {
     mImpl->toneMapper = toneMapper;
     return *this;
 }
@@ -271,110 +272,6 @@ ColorGrading::Builder& ColorGrading::Builder::outputColorSpace(
     return *this;
 }
 
-ColorGrading::LutFormat ColorGrading::getLutFormat() const noexcept {
-    return mSettings.lutFormat;
-}
-
-uint8_t ColorGrading::getLutDimensions() const noexcept {
-    return mSettings.lutDimensions;
-}
-
-const ToneMapper& ColorGrading::getToneMapper() const noexcept {
-    return *mSettings.toneMapper;
-}
-
-bool ColorGrading::isLuminanceScalingEnabled() const noexcept {
-    return mSettings.luminanceScaling;
-}
-
-bool ColorGrading::isGamutMappingEnabled() const noexcept {
-    return mSettings.gummapMapping;
-}
-
-float ColorGrading::getExposure() const noexcept {
-    return mSettings.exposure;
-}
-
-float ColorGrading::getNightAdaptation() const noexcept {
-    return mSettings.nightAdaptation;
-}
-
-float ColorGrading::getWhiteBalanceTemperature() const noexcept {
-    return mSettings.whiteBalanceTemperature;
-}
-
-float ColorGrading::getWhiteBalanceTint() const noexcept {
-    return mSettings.whiteBalanceTint;
-}
-
-math::float3 ColorGrading::getChannelMixerOutRed() const noexcept {
-    return mSettings.channelMixerOutRed;
-}
-
-math::float3 ColorGrading::getChannelMixerOutGreen() const noexcept {
-    return mSettings.channelMixerOutGreen;
-}
-
-math::float3 ColorGrading::getChannelMixerOutBlue() const noexcept {
-    return mSettings.channelMixerOutBlue;
-}
-
-math::float3 ColorGrading::getShadows() const noexcept {
-    return mSettings.shadows;
-}
-
-math::float3 ColorGrading::getMidtones() const noexcept {
-    return mSettings.midtones;
-}
-
-math::float3 ColorGrading::getHighlights() const noexcept {
-    return mSettings.highlights;
-}
-
-math::float4 ColorGrading::getShadowMidtonesHighlightsRanges() const noexcept {
-    return mSettings.ShadowMidtonesHighlightsRanges;
-}
-
-math::float3 ColorGrading::getSlope() const noexcept {
-    return mSettings.slope;
-}
-
-math::float3 ColorGrading::getOffset() const noexcept {
-    return mSettings.offset;
-}
-
-math::float3 ColorGrading::getPower() const noexcept {
-    return mSettings.power;
-}
-
-float ColorGrading::getContrast() const noexcept {
-    return mSettings.contrast;
-}
-
-float ColorGrading::getVibrance() const noexcept {
-    return mSettings.vibrance;
-}
-
-float ColorGrading::getSaturation() const noexcept {
-    return mSettings.saturation;
-}
-
-math::float3 ColorGrading::getCurvesShadowGamma() const noexcept {
-    return mSettings.curvesShadowGamma;
-}
-
-math::float3 ColorGrading::getCurvesMidPoint() const noexcept {
-    return mSettings.curvesMidPoint;
-}
-
-math::float3 ColorGrading::getCurvesHighlightScale() const noexcept {
-    return mSettings.curvesHighlightScale;
-}
-
-const color::ColorSpace& ColorGrading::getOutputColorSpace() const noexcept {
-    return mSettings.colorSpace;
-}
-
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -391,24 +288,29 @@ ColorGrading* ColorGrading::Builder::build(Engine& engine) {
     if (needToneMapper) {
         switch (mImpl->toneMapping) {
             case ToneMapping::LINEAR:
-                mImpl->toneMapper = std::make_shared<LinearToneMapper>();
+                mImpl->toneMapper = new LinearToneMapper();
                 break;
             case ToneMapping::ACES_LEGACY:
-                mImpl->toneMapper = std::make_shared<ACESLegacyToneMapper>();
+                mImpl->toneMapper = new ACESLegacyToneMapper();
                 break;
             case ToneMapping::ACES:
-                mImpl->toneMapper = std::make_shared<ACESToneMapper>();
+                mImpl->toneMapper = new ACESToneMapper();
                 break;
             case ToneMapping::FILMIC:
-                mImpl->toneMapper = std::make_shared<FilmicToneMapper>();
+                mImpl->toneMapper = new FilmicToneMapper();
                 break;
             case ToneMapping::DISPLAY_RANGE:
-                mImpl->toneMapper = std::make_shared<DisplayRangeToneMapper>();
+                mImpl->toneMapper = new DisplayRangeToneMapper();
                 break;
         }
     }
 
     FColorGrading* colorGrading = downcast(engine).createColorGrading(*this);
+
+    if (needToneMapper) {
+        delete mImpl->toneMapper;
+        mImpl->toneMapper = nullptr;
+    }
 
     return colorGrading;
 }
@@ -755,7 +657,7 @@ struct Config {
 // we force TSAN off to silence the warning.
 UTILS_NO_SANITIZE_THREAD
 FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     DriverApi& driver = engine.getDriverApi();
 
@@ -966,7 +868,7 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
     }
 
     //std::chrono::duration<float, std::milli> duration = std::chrono::steady_clock::now() - now;
-    //slog.d << "LUT generation time: " << duration.count() << " ms" << io::endl;
+    //DLOG(INFO) << "LUT generation time: " << duration.count() << " ms";
 
     if (converted) {
         free(data);
@@ -985,9 +887,6 @@ FColorGrading::FColorGrading(FEngine& engine, const Builder& builder) {
                 data, lutElementCount * elementSize, format, type,
                         [](void* buffer, size_t, void*) { free(buffer); }
                         });
-
-    // Initialize settings from builder
-    initializeSettings(builder, mSettings);
 }
 
 FColorGrading::~FColorGrading() noexcept = default;
@@ -995,35 +894,6 @@ FColorGrading::~FColorGrading() noexcept = default;
 void FColorGrading::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyTexture(mLutHandle);
-}
-
-void FColorGrading::initializeSettings(const Builder& builder, Settings& settings) noexcept {
-    settings.lutFormat = builder->format;
-    settings.lutDimensions = builder->dimension;
-    settings.toneMapper = builder->toneMapper;
-    settings.luminanceScaling = builder->luminanceScaling;
-    settings.gummapMapping = builder->gamutMapping;
-    settings.exposure = builder->exposure;
-    settings.nightAdaptation = builder->nightAdaptation;
-    settings.whiteBalanceTemperature = builder->whiteBalance.x;
-    settings.whiteBalanceTint = builder->whiteBalance.y;
-    settings.channelMixerOutRed = builder->outRed;
-    settings.channelMixerOutGreen = builder->outGreen;
-    settings.channelMixerOutBlue = builder->outBlue;
-    settings.shadows = builder->shadows;
-    settings.midtones = builder->midtones;
-    settings.highlights = builder->highlights;
-    settings.ShadowMidtonesHighlightsRanges = builder->tonalRanges;
-    settings.slope = builder->slope;
-    settings.offset = builder->offset;
-    settings.power = builder->power;
-    settings.contrast = builder->contrast;
-    settings.vibrance = builder->vibrance;
-    settings.saturation = builder->saturation;
-    settings.curvesShadowGamma = builder->shadowGamma;
-    settings.curvesMidPoint = builder->midPoint;
-    settings.curvesHighlightScale = builder->highlightScale;
-    settings.colorSpace = builder->outputColorSpace;
 }
 
 } //namespace filament

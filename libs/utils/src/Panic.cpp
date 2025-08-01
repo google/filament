@@ -18,6 +18,7 @@
 
 #include "ostream_.h"
 
+#include <utils/CallStack.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/ostream.h>
@@ -68,7 +69,7 @@ public:
         getCallback().call(panic);
     }
 
-    void set(Panic::PanicHandlerCallback handler, void* user) noexcept {
+    void set(Panic::PanicHandlerCallback const handler, void* user) noexcept {
         std::lock_guard const lock(mLock);
         mCallBack = { handler, user };
     }
@@ -96,7 +97,7 @@ static std::string sprintfToString(const char* format, va_list args) noexcept {
     return s;
 }
 
-static inline std::string sprintfToString(const char* format, ...) noexcept {
+static std::string sprintfToString(const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
     std::string const s{ sprintfToString(format, args) };
@@ -120,14 +121,14 @@ static std::string buildPanicString(
 
 Panic::~Panic() noexcept = default;
 
-void Panic::setPanicHandler(PanicHandlerCallback handler, void* user) noexcept {
+void Panic::setPanicHandler(PanicHandlerCallback const handler, void* user) noexcept {
     UserPanicHandler::get().set(handler, user);
 }
 
 // ------------------------------------------------------------------------------------------------
 
 template<typename T>
-TPanic<T>::TPanic(const char* function, const char* file, int line, char const* literal,
+TPanic<T>::TPanic(const char* function, const char* file, int const line, char const* literal,
         std::string reason)
         : mFile(file),
           mFunction(function),
@@ -188,13 +189,13 @@ void TPanic<T>::log() const noexcept {
 }
 
 UTILS_ALWAYS_INLINE
-inline static const char* formatFile(char const* file) noexcept {
+static const char* formatFile(char const* file) noexcept {
     const char * p = std::strstr(file, "filament/");
     return p ? p : file;
 }
 
 template<typename T>
-void TPanic<T>::panic(char const* function, char const* file, int line, char const* literal,
+void TPanic<T>::panic(char const* function, char const* file, int const line, char const* literal,
         const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -233,7 +234,7 @@ void TPanic<T>::panic(char const* function, char const* file, int line, char con
 
 namespace details {
 
-void panicLog(char const* function, char const* file, int line, const char* format, ...) noexcept {
+void panicLog(char const* function, char const* file, int const line, const char* format, ...) noexcept {
     va_list args;
     va_start(args, format);
     std::string const reason{ sprintfToString(format, args) };
@@ -249,79 +250,79 @@ void panicLog(char const* function, char const* file, int line, const char* form
 PanicStream::PanicStream(
         char const* function,
         char const* file,
-        int line,
+        int const line,
         char const* condition) noexcept
         : mFunction(function), mFile(file), mLine(line), mLiteral(condition) {
 }
 
 PanicStream::~PanicStream() = default;
 
-PanicStream& PanicStream::operator<<(short value) noexcept {
+PanicStream& PanicStream::operator<<(short const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(unsigned short value) noexcept {
+PanicStream& PanicStream::operator<<(unsigned short const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(char value) noexcept {
+PanicStream& PanicStream::operator<<(char const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(unsigned char value) noexcept {
+PanicStream& PanicStream::operator<<(unsigned char const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(int value) noexcept {
+PanicStream& PanicStream::operator<<(int const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(unsigned int value) noexcept {
+PanicStream& PanicStream::operator<<(unsigned int const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(long value) noexcept {
+PanicStream& PanicStream::operator<<(long const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(unsigned long value) noexcept {
+PanicStream& PanicStream::operator<<(unsigned long const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(long long int value) noexcept {
+PanicStream& PanicStream::operator<<(long long int const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(unsigned long long int value) noexcept {
+PanicStream& PanicStream::operator<<(unsigned long long int const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(float value) noexcept {
+PanicStream& PanicStream::operator<<(float const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(double value) noexcept {
+PanicStream& PanicStream::operator<<(double const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(long double value) noexcept {
+PanicStream& PanicStream::operator<<(long double const value) noexcept {
     mStream << value;
     return *this;
 }
 
-PanicStream& PanicStream::operator<<(bool value) noexcept {
+PanicStream& PanicStream::operator<<(bool const value) noexcept {
     mStream << value;
     return *this;
 }

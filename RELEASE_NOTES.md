@@ -7,10 +7,47 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.63.0
+
+- Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]
+- Added `Renderer::shouldRenderFrame()`
+
+## v1.62.2
+
+- Metal: fix, respect alpha to coverage rasterization
+- engine: removed `Texture::generatePrefilterMipmap`, a new `libfilament-generatePrefilterMipmap` library can be used in its stead [⚠️ **API BREAKAGE**]
+
+## v1.62.1
+
+- Add new shader define `VARIANT_DEPTH`, defined when a material is compiled for depth variants
+  (e.g., shadows) [**Requires recompiling materials**]
+
+## v1.62.0
+
+- Add new `unfilterable` field to Filament Material's `sampler` [⚠️ **New Material Version**]
+
+## v1.61.2
+
+- samples: samples now have a CLI to select backend api
+
+## v1.61.1
+
+
+## v1.61.0
+
+- materials: sampler now export their type in the material binary [⚠️ **New Material Version**]
+- samples/texturedquad.cpp now has CLI to select backend api
+- samples/hellopbr.cpp CLI now allows for selecting webgpu
+
+## v1.60.1
+
+
 ## v1.60.0
 
 - materials: remove dependence on per-view descset layout from filamat. [⚠️ **New Material Version**]
-- `ColorGrading::Builder::toneMapper` now takes a `shared_ptr<ToneMapper>`
+- matc non-functional change: Update GLSL postprocessor to
+  isolate calls to SPVRemap from calls to SPIRV-Cross.
+
 
 ## v1.59.5
 

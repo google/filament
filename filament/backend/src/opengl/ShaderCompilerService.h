@@ -33,6 +33,7 @@
 
 #include <array>
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <tuple>
@@ -58,7 +59,6 @@ class ShaderCompilerService {
 public:
     using program_token_t = std::shared_ptr<OpenGLProgramToken>;
     using shaders_t = std::array<GLuint, Program::SHADER_TYPE_COUNT>;
-    using shaders_source_t = std::array<utils::CString, Program::SHADER_TYPE_COUNT>;
 
     explicit ShaderCompilerService(OpenGLDriver& driver);
 
@@ -135,9 +135,15 @@ private:
     using ContainerType = std::tuple<CompilerPriorityQueue, program_token_t, Job>;
     std::vector<ContainerType> mRunAtNextTickOps;
 
+    std::list<program_token_t> mCanceledTokens;
+
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);
 
+    // Methods for THREAD_POOL mode.
+    void handleCanceledTokensForThreadPool();
+
+    // Methods for SYNCHRONOUS and ASYNCHRONOUS modes.
     void runAtNextTick(CompilerPriorityQueue priority, program_token_t const& token,
             Job job) noexcept;
     void executeTickOps() noexcept;
@@ -172,12 +178,13 @@ private:
     // Also cleanup shaders regardless of the result.
     static bool checkLinkStatusAndCleanupShaders(program_token_t const& token) noexcept;
 
+    // Try retrieving the program from the cache. Return `true` if it's loaded from the cache.
+    static bool tryRetrievingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
+            Program const& program, program_token_t const& token) noexcept;
+
     // Try caching the program if we haven't done it yet. Cache it only when the program is valid.
     static void tryCachingProgram(OpenGLBlobCache& cache, OpenGLPlatform& platform,
             program_token_t const& token) noexcept;
-
-    // Cleanup GL resources.
-    static void cleanupProgramAndShaders(program_token_t const& token) noexcept;
 };
 
 } // namespace filament::backend

@@ -30,11 +30,12 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/BinaryTreeArray.h>
 #include <utils/JobSystem.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 
@@ -296,7 +297,7 @@ void Froxelizer::updateBoundingSpheres(
         float4 const* UTILS_RESTRICT planesY,
         float const* UTILS_RESTRICT planesZ) noexcept {
 
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // TODO: this could potentially be parallel_for'ized
 
@@ -365,14 +366,12 @@ bool Froxelizer::update() noexcept {
 
         uniformsNeedUpdating = true;
 
-#ifndef NDEBUG
-        slog.d << "Froxel: " << viewport.width << "x" << viewport.height << " / "
-               << froxelDimension.x << "x" << froxelDimension.y << io::endl
-               << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
-               << " = " << (froxelCountX * froxelCountY * froxelCountZ)
-               << " (" << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ << " lost)"
-               << io::endl;
-#endif
+        DLOG(INFO) << "Froxel: " << viewport.width << "x" << viewport.height << " / "
+                   << froxelDimension.x << "x" << froxelDimension.y << io::endl
+                   << "Froxel: " << froxelCountX << "x" << froxelCountY << "x" << froxelCountZ
+                   << " = " << (froxelCountX * froxelCountY * froxelCountZ) << " ("
+                   << getFroxelBufferEntryCount() - froxelCountX * froxelCountY * froxelCountZ
+                   << " lost)";
 
         mFroxelCountX = froxelCountX;
         mFroxelCountY = froxelCountY;
@@ -579,7 +578,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 void Froxelizer::froxelizeLoop(FEngine& engine,
         const mat4f& UTILS_RESTRICT viewMatrix,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     Slice<FroxelThreadData> froxelThreadData = mFroxelShardedData;
     memset(froxelThreadData.data(), 0, froxelThreadData.sizeInBytes());
@@ -593,7 +592,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
                      spheres, directions, instances, &viewMatrix, &lcm ]
             (size_t const count, size_t const offset, size_t const stride) {
 
-        SYSTRACE_NAME("FroxelizeLoop Job");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "FroxelizeLoop Job");
 
         const mat4f& projection = mProjection;
         const mat3f& vn = viewMatrix.upperLeft();
@@ -646,8 +645,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 }
 
 void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
-
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     Slice<FroxelThreadData> const froxelThreadData = mFroxelShardedData;
 
@@ -712,9 +710,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         const size_t lightCount = entry.count();
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
-#ifndef NDEBUG
-            slog.d << "out of space: " << i << ", at " << offset << io::endl;
-#endif
+            // DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
             do {
@@ -733,7 +729,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             const size_t word = l / LIGHT_PER_GROUP;
             const size_t bit  = l % LIGHT_PER_GROUP;
             l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
-            *point = (RecordBufferType)l;
+            *point = RecordBufferType(l);
             // we need to "cancel" the write operation if we have more than 255 spot or point lights
             // (this is a limitation of the data type used to store the light counts per froxel)
             point += (point - beginPoint < 255) ? 1 : 0;

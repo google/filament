@@ -289,7 +289,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v,
 }
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, size_t size, UniformType type,
-        ParameterPrecision precision) noexcept {
+        ParameterPrecision precision) {
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
     mParameters[mParameterCount++] = { name, type, size, precision };
     return *this;
@@ -300,18 +300,19 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
     return parameter(name, 1, type, precision);
 }
 
-
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision, bool multisample, const char* transformName) noexcept {
-    FILAMENT_CHECK_PRECONDITION(!multisample ||
-            (format != SamplerFormat::SHADOW &&
-                    (samplerType == SamplerType::SAMPLER_2D ||
-                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
+        SamplerFormat format, ParameterPrecision precision, bool filterable, bool multisample,
+        const char* transformName, std::optional<ShaderStageFlags> stages) {
+    FILAMENT_CHECK_PRECONDITION(
+            !multisample || (format != SamplerFormat::SHADOW &&
+                                    (samplerType == SamplerType::SAMPLER_2D ||
+                                            samplerType == SamplerType::SAMPLER_2D_ARRAY)))
             << "multisample samplers only possible with SAMPLER_2D or SAMPLER_2D_ARRAY,"
                " as long as type is not SHADOW";
 
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
-    mParameters[mParameterCount++] = { name, samplerType, format, precision, multisample, transformName };
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, filterable,
+        multisample, transformName, stages };
     return *this;
 }
 
@@ -363,14 +364,14 @@ template MaterialBuilder& MaterialBuilder::constant<float>(
 template MaterialBuilder& MaterialBuilder::constant<bool>(
         const char* name, ConstantType type, bool defaultValue);
 
-MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) noexcept {
+MaterialBuilder& MaterialBuilder::buffer(BufferInterfaceBlock bib) {
     FILAMENT_CHECK_POSTCONDITION(mBuffers.size() < MAX_BUFFERS_COUNT) << "Too many buffers";
     mBuffers.emplace_back(std::make_unique<BufferInterfaceBlock>(std::move(bib)));
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat format,
-        ParameterPrecision precision, const char* name) noexcept {
+        ParameterPrecision precision, const char* name) {
     FILAMENT_CHECK_PRECONDITION(format == SamplerFormat::FLOAT)
             << "Subpass parameters must have FLOAT format.";
 
@@ -380,16 +381,16 @@ MaterialBuilder& MaterialBuilder::subpass(SubpassType subpassType, SamplerFormat
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, SamplerFormat const format,
-        const char* name) noexcept {
+        const char* name) {
     return subpass(subpassType, format, ParameterPrecision::DEFAULT, name);
 }
 
 MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, ParameterPrecision const precision,
-        const char* name) noexcept {
+        const char* name) {
     return subpass(subpassType, SamplerFormat::FLOAT, precision, name);
 }
 
-MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, const char* name) noexcept {
+MaterialBuilder& MaterialBuilder::subpass(SubpassType const subpassType, const char* name) {
     return subpass(subpassType, SamplerFormat::FLOAT, ParameterPrecision::DEFAULT, name);
 }
 
@@ -628,6 +629,16 @@ bool MaterialBuilder::hasSamplerType(SamplerType const samplerType) const noexce
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     prepare(mEnableFramebufferFetch, mFeatureLevel);
 
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    const bool isPostProcessMaterial = mMaterialDomain == MaterialDomain::POST_PROCESS;
+    // TODO: Currently, for surface materials, we rely on the presence of a custom vertex shader to
+    // infer the default shader stages. We could do better by analyzing the AST of the vertex shader
+    // to see if the sampler is actually used.
+    const ShaderStageFlags defaultShaderStages =
+            isPostProcessMaterial || hasEmptyVertexCode
+                    ? (ShaderStageFlags::FRAGMENT)
+                    : (ShaderStageFlags::FRAGMENT | ShaderStageFlags::VERTEX);
+
     // Build the per-material sampler block and uniform block.
     SamplerInterfaceBlock::Builder sbb;
     BufferInterfaceBlock::Builder ibb;
@@ -637,11 +648,14 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
-            sbb.add({ param.name.data(), param.name.size() },
-                    binding, param.samplerType, param.format, param.precision, param.multisample);
+            ShaderStageFlags stages = param.stages.value_or(defaultShaderStages);
+            sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
+                    param.format, param.precision, param.filterable, param.multisample,
+                    stages);
             if (!param.transformName.empty()) {
-                ibb.add({{{ param.transformName.data(), param.transformName.size() }, uint8_t(binding),
-                          0, UniformType::MAT3, Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 }});
+                ibb.add({ { { param.transformName.data(), param.transformName.size() },
+                    uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,
+                    FeatureLevel::FEATURE_LEVEL_0 } });
             }
             binding++;
         } else if (param.isUniform()) {
@@ -1190,7 +1204,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
 }
 
 MaterialBuilder& MaterialBuilder::output(VariableQualifier qualifier, OutputTarget target,
-        Precision precision, OutputType type, const char* name, int location) noexcept {
+        Precision precision, OutputType type, const char* name, int location) {
     FILAMENT_CHECK_PRECONDITION(target != OutputTarget::DEPTH || type == OutputType::FLOAT)
             << "Depth outputs must be of type FLOAT.";
     FILAMENT_CHECK_PRECONDITION(

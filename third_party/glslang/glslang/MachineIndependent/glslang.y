@@ -146,7 +146,7 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> UTEXTURE2D UTEXTURE3D UTEXTURECUBE UTEXTURE2DARRAY
 
 %token <lex> ATTRIBUTE VARYING
-%token <lex> FLOAT16_T FLOAT32_T DOUBLE FLOAT64_T
+%token <lex> BFLOAT16_T FLOAT16_T FLOAT32_T DOUBLE FLOAT64_T
 %token <lex> INT64_T UINT64_T INT32_T UINT32_T INT16_T UINT16_T INT8_T UINT8_T
 %token <lex> I64VEC2 I64VEC3 I64VEC4
 %token <lex> U64VEC2 U64VEC3 U64VEC4
@@ -157,6 +157,7 @@ extern int yylex(YYSTYPE*, TParseContext&);
 %token <lex> I8VEC2  I8VEC3  I8VEC4
 %token <lex> U8VEC2  U8VEC3  U8VEC4
 %token <lex> DVEC2 DVEC3 DVEC4 DMAT2 DMAT3 DMAT4
+%token <lex> BF16VEC2 BF16VEC3 BF16VEC4
 %token <lex> F16VEC2 F16VEC3 F16VEC4 F16MAT2 F16MAT3 F16MAT4
 %token <lex> F32VEC2 F32VEC3 F32VEC4 F32MAT2 F32MAT3 F32MAT4
 %token <lex> F64VEC2 F64VEC3 F64VEC4 F64MAT2 F64MAT3 F64MAT4
@@ -1937,6 +1938,11 @@ type_specifier_nonarray
         $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         $$.basicType = EbtDouble;
     }
+    | BFLOAT16_T {
+        parseContext.bfloat16ScalarVectorCheck($1.loc, "bfloat16_t", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtBFloat16;
+    }
     | FLOAT16_T {
         parseContext.float16ScalarVectorCheck($1.loc, "float16_t", parseContext.symbolTable.atBuiltInLevel());
         $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
@@ -2014,6 +2020,24 @@ type_specifier_nonarray
             parseContext.doubleCheck($1.loc, "double vector");
         $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
         $$.basicType = EbtDouble;
+        $$.setVector(4);
+    }
+    | BF16VEC2 {
+        parseContext.bfloat16ScalarVectorCheck($1.loc, "half float vector", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtBFloat16;
+        $$.setVector(2);
+    }
+    | BF16VEC3 {
+        parseContext.bfloat16ScalarVectorCheck($1.loc, "half float vector", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtBFloat16;
+        $$.setVector(3);
+    }
+    | BF16VEC4 {
+        parseContext.bfloat16ScalarVectorCheck($1.loc, "half float vector", parseContext.symbolTable.atBuiltInLevel());
+        $$.init($1.loc, parseContext.symbolTable.atGlobalLevel());
+        $$.basicType = EbtBFloat16;
         $$.setVector(4);
     }
     | F16VEC2 {

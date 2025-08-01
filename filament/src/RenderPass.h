@@ -306,6 +306,12 @@ public:
     // allocated commands ARE NOT freed, they're owned by the Arena
     ~RenderPass() noexcept;
 
+    // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
+    // offset by the viewport's left-top and clipped to the viewport's width/height.
+    void setScissorViewport(backend::Viewport const viewport) noexcept {
+        mScissorViewport = viewport;
+    }
+
     Command const* begin() const noexcept { return mCommandBegin; }
     Command const* end() const noexcept { return mCommandEnd; }
     bool empty() const noexcept { return begin() == end(); }
@@ -461,7 +467,7 @@ private:
 
     FScene::RenderableSoa const& mRenderableSoa;
     ColorPassDescriptorSet const* const mColorPassDescriptorSet;
-    backend::Viewport const mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
+    backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     Command const* /* const */ mCommandBegin = nullptr;   // Pointer to the first command
     Command const* /* const */ mCommandEnd = nullptr;     // Pointer to one past the last command
     mutable BufferObjectSharedHandle mInstancedUboHandle; // ubo for instanced primitives
@@ -476,7 +482,6 @@ class RenderPassBuilder {
 
     RenderPass::Arena& mArena;
     RenderPass::CommandTypeFlags mCommandTypeFlags{};
-    backend::Viewport mScissorViewport{ 0, 0, INT32_MAX, INT32_MAX };
     FScene::RenderableSoa const* mRenderableSoa = nullptr;
     utils::Range<uint32_t> mVisibleRenderables{};
     math::float3 mCameraPosition{};
@@ -507,13 +512,6 @@ public:
         return *this;
     }
 
-    // Specifies the viewport for the scissor rectangle, that is, the final scissor rect is
-    // offset by the viewport's left-top and clipped to the viewport's width/height.
-    RenderPassBuilder& scissorViewport(backend::Viewport const viewport) noexcept {
-        mScissorViewport = viewport;
-        return *this;
-    }
-
     // specifies the geometry to generate commands for
     RenderPassBuilder& geometry(
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> const vr) noexcept {
@@ -523,9 +521,9 @@ public:
     }
 
     // Specifies camera information (e.g. used for sorting commands)
-    RenderPassBuilder& camera(const CameraInfo& camera) noexcept {
-        mCameraPosition = camera.getPosition();
-        mCameraForwardVector = camera.getForwardVector();
+    RenderPassBuilder& camera(math::float3 position, math::float3 forward) noexcept {
+        mCameraPosition = position;
+        mCameraForwardVector = forward;
         return *this;
     }
 

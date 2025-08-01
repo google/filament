@@ -19,6 +19,8 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+
 #include <backend/Platform.h>
 
 #include "private/backend/CommandBufferQueue.h"
@@ -31,15 +33,19 @@ namespace test {
 
 class BackendTest : public ::testing::Test {
 public:
-
-    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform);
+    static void init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform,
+            int argc, char** argv);
 
     static Backend sBackend;
     static OperatingSystem sOperatingSystem;
     static bool sIsMobilePlatform;
+    static int sArgc;
+    static char** sArgv;
 
     // Takes the name of the image that wasn't correct, without the .png suffix
     static void markImageAsFailure(std::string failedImageName);
+
+    static std::filesystem::path binaryDirectory();
 
 protected:
 
@@ -52,27 +58,22 @@ protected:
 
     filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain();
 
-    // Helper methods to set the viewport to the full extent of the swap chain.
-    static void fullViewport(filament::backend::RenderPassParams& params);
-    static void fullViewport(filament::backend::Viewport& viewport);
+    static filament::backend::PipelineState getColorWritePipelineState();
 
-    void renderTriangle(
-            filament::backend::PipelineLayout const& pipelineLayout,
-            filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
-            filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
-            filament::backend::Handle<filament::backend::HwProgram> program);
-
-    void renderTriangle(
-            filament::backend::PipelineLayout const& pipelineLayout,
-            filament::backend::Handle<filament::backend::HwRenderTarget> renderTarget,
-            filament::backend::Handle<filament::backend::HwSwapChain> swapChain,
-            filament::backend::Handle<filament::backend::HwProgram> program,
-            const filament::backend::RenderPassParams& params);
+    // Gets the full back buffer's viewport
+    filament::backend::Viewport getFullViewport() const;
+    // If color is unset this defaults to using opaque cyan
+    static filament::backend::RenderPassParams getClearColorRenderPass(
+            filament::math::float4 color = filament::math::float4(0, 1, 1, 1));
+    static filament::backend::RenderPassParams getNoClearRenderPass();
 
     filament::backend::DriverApi& getDriverApi() { return *commandStream; }
     filament::backend::Driver& getDriver() { return *driver; }
 
     ImageExpectations& getExpectations() { return *mImageExpectations; }
+
+    std::size_t screenWidth() const;
+    std::size_t screenHeight() const;
 
     static bool matchesEnvironment(Backend backend);
     static bool matchesEnvironment(OperatingSystem operatingSystem);
@@ -93,6 +94,8 @@ private:
     // This isn't truly optional, it just needs to delay construction until after the driver has
     // been initialized
     std::optional<ImageExpectations> mImageExpectations;
+
+    std::array<size_t, 2> mScreenSize;
 };
 
 } // namespace test

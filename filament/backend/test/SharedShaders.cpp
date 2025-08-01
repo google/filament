@@ -184,7 +184,7 @@ std::vector<UniformConfig> GetUniformConfig(ShaderUniformType type) {
                     "backend_test", "test_tex", 0,
                     SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
             return {{
-                            "test_tex", DescriptorType::SAMPLER, samplerInfo
+                            "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
                     }};
         }
         default:
@@ -215,18 +215,20 @@ Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cle
     std::optional<ShaderText> fragment;
     std::optional<std::string> uniform;
     if (getShaderLanguage(BackendTest::sBackend) != ShaderLanguage::GLSL) {
-        // TODO: If any shaders need backend/shader language specific shaders rather than transpiled
-        // versions of the GLSL shader, check environment.
+        // TODO(b/422803382): If any shaders need backend/shader language specific shaders rather
+        //  than transpiled versions of the GLSL shader, check here and create a shader with that
+        //  config instead
     }
     vertex = GetGlslVertexShader(request.mVertexType);
     fragment = GetGlslFragmentShader(request.mFragmentType);
     uniform = GetGlslUniform(request.mUniformType);
     if (vertex.has_value() && fragment.has_value() && uniform.has_value()) {
-        return Shader(
-                api, cleanup, ShaderConfig{
-                        vertex->withUniform(*uniform), fragment->withUniform(*uniform),
-                        GetUniformConfig(request.mUniformType)}
-        );
+        return Shader(api, cleanup,
+                ShaderConfig{ .vertexLanguage = filament::backend::ShaderLanguage::ESSL3,
+                    .vertexShader = vertex->withUniform(*uniform),
+                    .fragmentLanguage = filament::backend::ShaderLanguage::ESSL3,
+                    .fragmentShader = fragment->withUniform(*uniform),
+                    .uniforms = GetUniformConfig(request.mUniformType) });
     }
     abort();
 }

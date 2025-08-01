@@ -68,7 +68,7 @@ const CODE_VIEWER_BOTTOM_ROW_HEIGHT = 60;
 const REGULAR_FONT_SIZE = 12;
 
 // Set up the Monaco editor. See also CodeViewer
-const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.25.2/min/';
+const kMonacoBaseUrl = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/';
 require.config({
     paths: { "vs": `${kMonacoBaseUrl}vs` },
     'vs/css': { disabled: true },

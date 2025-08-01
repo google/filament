@@ -21,6 +21,7 @@
 #include <backend/Program.h>
 
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/Mutex.h>
 
 #include <chrono>
@@ -112,13 +113,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             case ShaderLanguage::MSL: {
                 // By default, Metal uses the most recent language version.
                 MTLCompileOptions* options = [MTLCompileOptions new];
-
-                // Disable Fast Math optimizations.
-                // This ensures that operations adhere to IEEE standards for floating-point
-                // arithmetic, which is crucial for half precision floats in scenarios where fast
-                // math optimizations lead to inaccuracies, such as in handling special values like
-                // NaN or Infinity.
-                options.fastMathEnabled = NO;
+                options.fastMathEnabled = YES;
 
                 assert_invariant(source[source.size() - 1] == '\0');
                 // the shader string is null terminated and the length includes the null character
@@ -147,7 +142,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             if (error) {
                 auto description =
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
+                LOG(WARNING) << description;
                 errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to compile Metal program.");
@@ -178,7 +173,7 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
             if (error) {
                 auto description =
                         [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
-                utils::slog.w << description << utils::io::endl;
+                LOG(WARNING) << description;
                 errorMessage = error.localizedDescription;
             }
             PANIC_LOG("Failed to load main0 in Metal program.");

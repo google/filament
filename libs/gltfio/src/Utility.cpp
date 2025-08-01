@@ -20,8 +20,9 @@
 #include "FFilamentAsset.h"
 #include "GltfEnums.h"
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Log.h>
-#include <utils/Systrace.h>
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -207,8 +208,8 @@ bool requiresPacking(cgltf_accessor const* accessor) {
 
 bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,
         UriDataCacheHandle uriDataCacheHandle) {
-    SYSTRACE_CONTEXT();
-    SYSTRACE_NAME_BEGIN("Load buffers");
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_GLTFIO);
+    FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_GLTFIO, "Load buffers");
     cgltf_options options{};
 
     // For emscripten and Android builds we supply a custom file reader callback that looks inside a
@@ -251,7 +252,7 @@ bool loadCgltfBuffers(cgltf_data const* gltf, char const* gltfPath,
         return false;
     }
 
-    SYSTRACE_NAME_END();
+    FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_GLTFIO);
 
 #ifndef NDEBUG
     if (cgltf_validate((cgltf_data*) gltf) != cgltf_result_success) {

@@ -27,6 +27,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <mutex>
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -40,6 +41,7 @@
 #include <utility>
 #include <vector>
 #include <variant>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -254,6 +256,7 @@ public:
     using FeatureLevel = filament::backend::FeatureLevel;
     using StereoscopicType = filament::backend::StereoscopicType;
     using ShaderStage = filament::backend::ShaderStage;
+    using ShaderStageFlags = filament::backend::ShaderStageFlags;
 
     enum class VariableQualifier : uint8_t {
         OUT
@@ -304,7 +307,7 @@ public:
 
     //! Add a parameter array to this material.
     MaterialBuilder& parameter(const char* name, size_t size, UniformType type,
-            ParameterPrecision precision = ParameterPrecision::DEFAULT) noexcept;
+            ParameterPrecision precision = ParameterPrecision::DEFAULT);
 
     //! Add a constant parameter to this material.
     template<typename T>
@@ -323,10 +326,11 @@ public:
     MaterialBuilder& parameter(const char* name, SamplerType samplerType,
             SamplerFormat format = SamplerFormat::FLOAT,
             ParameterPrecision precision = ParameterPrecision::DEFAULT,
-            bool multisample = false,
-            const char* transformName = "") noexcept;
+            bool filterable = true, /* defaulting to filterable because format is default to float */
+            bool multisample = false, const char* transformName = "",
+            std::optional<ShaderStageFlags> stages = {});
 
-    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib) noexcept;
+    MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
 
     //! Custom variables (all float4).
     MaterialBuilder& variable(Variable v, const char* name) noexcept;
@@ -616,7 +620,7 @@ public:
 
     //! Add a new fragment shader output variable. Only valid for materials in the POST_PROCESS domain.
     MaterialBuilder& output(VariableQualifier qualifier, OutputTarget target, Precision precision,
-            OutputType type, const char* name, int location = -1) noexcept;
+            OutputType type, const char* name, int location = -1);
 
     MaterialBuilder& enableFramebufferFetch() noexcept;
 
@@ -645,27 +649,51 @@ public:
      * Add a subpass parameter to this material.
      */
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, ParameterPrecision precision, const char* name) noexcept;
+            SamplerFormat format, ParameterPrecision precision, const char* name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            SamplerFormat format, const char* name) noexcept;
+            SamplerFormat format, const char* name);
     MaterialBuilder& subpass(SubpassType subpassType,
-            ParameterPrecision precision, const char* name) noexcept;
-    MaterialBuilder& subpass(SubpassType subpassType, const char* name) noexcept;
+            ParameterPrecision precision, const char* name);
+    MaterialBuilder& subpass(SubpassType subpassType, const char* name);
 
     struct Parameter {
         Parameter() noexcept: parameterType(INVALID) {}
 
         // Sampler
-        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p, bool ms, const char* tn)
-                : name(paramName), size(1), precision(p), samplerType(t), format(f), parameterType(SAMPLER), multisample(ms), transformName(tn) { }
+        Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
+                bool filterable, bool ms, const char* tn, std::optional<ShaderStageFlags> s)
+            : name(paramName),
+              size(1),
+              precision(p),
+              samplerType(t),
+              format(f),
+              filterable(filterable),
+              multisample(ms),
+              transformName(tn),
+              stages(s),
+              parameterType(SAMPLER) {}
 
         // Uniform
         Parameter(const char* paramName, UniformType t, size_t typeSize, ParameterPrecision p)
-                : name(paramName), size(typeSize), uniformType(t), precision(p), parameterType(UNIFORM) { }
+            : name(paramName),
+              size(typeSize),
+              uniformType(t),
+              precision(p),
+              format{ 0 },
+              filterable(false),
+              multisample(false),
+              parameterType(UNIFORM) {}
 
         // Subpass
         Parameter(const char* paramName, SubpassType t, SamplerFormat f, ParameterPrecision p)
-                : name(paramName), size(1), precision(p), subpassType(t), format(f), parameterType(SUBPASS) { }
+            : name(paramName),
+              size(1),
+              precision(p),
+              subpassType(t),
+              format(f),
+              filterable(false),
+              multisample(false),
+              parameterType(SUBPASS) {}
 
         utils::CString name;
         size_t size;
@@ -674,8 +702,10 @@ public:
         SamplerType samplerType;
         SubpassType subpassType;
         SamplerFormat format;
+        bool filterable;
         bool multisample;
         utils::CString transformName;
+        std::optional<ShaderStageFlags> stages;
         enum {
             INVALID,
             UNIFORM,

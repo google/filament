@@ -21,10 +21,14 @@
 #include "details/Engine.h"
 #include "details/View.h"
 
+#include "ds/DescriptorSet.h"
+
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
+
+#include <private/filament/EngineEnums.h>
 
 #include <filament/Options.h>
 #include <filament/RenderableManager.h>
@@ -40,7 +44,6 @@
 #include <utils/Panic.h>
 
 #include <algorithm>
-#include <optional>
 #include <utility>
 
 #include <stddef.h>
@@ -114,7 +117,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     clearDepthFlags = TargetBufferFlags::DEPTH;
                     clearStencilFlags = config.enabledStencilBuffer ?
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
-                    const char* const name = config.enabledStencilBuffer ?
+                    const char* const textureName = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
 
                     bool const isES2 =
@@ -129,7 +132,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     TextureFormat const format = config.enabledStencilBuffer ?
                             stencilFormat : depthOnlyFormat;
 
-                    data.depth = builder.createTexture(name, {
+                    data.depth = builder.createTexture(textureName, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
                             // If the color attachment requested MS, we assume this means the MS
@@ -205,11 +208,13 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 view.prepareSSAO(data.ssao ?
                         resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
-                view.prepareShadowMapping(view.getVsmShadowOptions().highPrecision);
+                view.prepareShadowMapping(engine, view.getVsmShadowOptions().highPrecision);
 
                 // set shadow sampler
                 view.prepareShadow(data.shadows ?
-                        resources.getTexture(data.shadows) : engine.getOneTextureArray());
+                        resources.getTexture(data.shadows) :
+                            (view.getShadowType() != ShadowType::PCF ?
+                                engine.getOneTextureArray() : engine.getOneTextureArrayDepth()));
 
                 // set structure sampler
                 view.prepareStructure(data.structure ?
@@ -254,10 +259,10 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 passExecutor.execute(engine, driver);
                 driver.endRenderPass();
 
-                // color pass is typically heavy, and we don't have much CPU work left after
-                // this point, so flushing now allows us to start the GPU earlier and reduce
-                // latency, without creating bubbles.
-                driver.flush();
+                // unbind all descriptor sets to avoid false dependencies with the next pass
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
             }
     );
 
@@ -268,87 +273,94 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
     };
 }
 
-std::optional<RendererUtils::ColorPassOutput> RendererUtils::refractionPass(
+
+RenderPass::Command const* RendererUtils::getFirstRefractionCommand(
+    RenderPass const& pass) noexcept {
+
+    // find the first refractive object in channel 2
+    RenderPass::Command const* const refraction = std::partition_point(pass.begin(), pass.end(),
+        [](auto const& command) {
+            constexpr uint64_t mask  = RenderPass::CHANNEL_MASK | RenderPass::PASS_MASK;
+            constexpr uint64_t channel = uint64_t(RenderableManager::Builder::DEFAULT_CHANNEL) << RenderPass::CHANNEL_SHIFT;
+            constexpr uint64_t value = channel | uint64_t(RenderPass::Pass::REFRACT);
+            return (command.key & mask) < value;
+        });
+
+    const bool hasScreenSpaceRefraction =
+            (refraction->key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::REFRACT);
+
+    return hasScreenSpaceRefraction ? refraction : nullptr;
+
+}
+
+RendererUtils::ColorPassOutput RendererUtils::refractionPass(
         FrameGraph& fg, FEngine& engine, FView const& view,
         ColorPassInput colorPassInput,
         ColorPassConfig config,
         PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
         PostProcessManager::ColorGradingConfig const colorGradingConfig,
-        RenderPass const& pass) noexcept {
+        RenderPass const& pass, RenderPass::Command const* const firstRefractionCommand) noexcept {
 
-    // find the first refractive object in channel 2
-    RenderPass::Command const* const refraction = std::partition_point(pass.begin(), pass.end(),
-            [](auto const& command) {
-                constexpr uint64_t mask  = RenderPass::CHANNEL_MASK | RenderPass::PASS_MASK;
-                constexpr uint64_t channel = uint64_t(RenderableManager::Builder::DEFAULT_CHANNEL) << RenderPass::CHANNEL_SHIFT;
-                constexpr uint64_t value = channel | uint64_t(RenderPass::Pass::REFRACT);
-                return (command.key & mask) < value;
-            });
-
-    const bool hasScreenSpaceRefraction =
-            (refraction->key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::REFRACT);
+    assert_invariant(firstRefractionCommand);
+    RenderPass::Command const* const refraction = firstRefractionCommand;
 
     // if there wasn't any refractive object, just skip everything below.
-    if (UTILS_UNLIKELY(hasScreenSpaceRefraction)) {
-        assert_invariant(!colorPassInput.linearColor);
-        assert_invariant(!colorPassInput.depth);
-        config.hasScreenSpaceReflectionsOrRefractions = true;
+    assert_invariant(!colorPassInput.linearColor);
+    assert_invariant(!colorPassInput.depth);
+    config.hasScreenSpaceReflectionsOrRefractions = true;
 
-        PostProcessManager& ppm = engine.getPostProcessManager();
-        auto const opaquePassOutput = colorPass(fg,
-                "Color Pass (opaque)", engine, view, colorPassInput, {
-                        // When rendering the opaques, we need to conserve the sample buffer,
-                        // so create a config that specifies the sample count.
-                        .width = config.physicalViewport.width,
-                        .height = config.physicalViewport.height,
-                        .samples = config.msaa,
-                        .format = config.hdrFormat
-                },
-                config, { .asSubpass = false, .customResolve = false },
-                pass.getExecutor(pass.begin(), refraction));
+    PostProcessManager& ppm = engine.getPostProcessManager();
+    auto const opaquePassOutput = colorPass(fg,
+            "Color Pass (opaque)", engine, view, colorPassInput, {
+                    // When rendering the opaques, we need to conserve the sample buffer,
+                    // so create a config that specifies the sample count.
+                    .width = config.physicalViewport.width,
+                    .height = config.physicalViewport.height,
+                    .samples = config.msaa,
+                    .format = config.hdrFormat
+            },
+            config, { .asSubpass = false, .customResolve = false },
+            pass.getExecutor(pass.begin(), refraction));
 
 
-        // Generate the mipmap chain
-        // Note: we can run some post-processing effects while the "color pass" descriptor set
-        // in bound because only the descriptor 0 (frame uniforms) matters, and it's
-        // present in both.
-        PostProcessManager::generateMipmapSSR(ppm, fg,
-                opaquePassOutput.linearColor,
-                ssrConfig.refraction,
-                true, ssrConfig);
+    // Generate the mipmap chain
+    // Note: we can run some post-processing effects while the "color pass" descriptor set
+    // in bound because only the descriptor 0 (frame uniforms) matters, and it's
+    // present in both.
+    PostProcessManager::generateMipmapSSR(ppm, fg,
+            opaquePassOutput.linearColor,
+            ssrConfig.refraction,
+            true, ssrConfig);
 
-        // Now we're doing the refraction pass proper.
-        // This uses the same framebuffer (color and depth) used by the opaque pass.
-        // For this reason, the `colorBufferDesc` parameter of colorPass() below is only used  for
-        // the width and height.
-        colorPassInput.linearColor = opaquePassOutput.linearColor;
-        colorPassInput.depth = opaquePassOutput.depth;
+    // Now we're doing the refraction pass proper.
+    // This uses the same framebuffer (color and depth) used by the opaque pass.
+    // For this reason, the `colorBufferDesc` parameter of colorPass() below is only used  for
+    // the width and height.
+    colorPassInput.linearColor = opaquePassOutput.linearColor;
+    colorPassInput.depth = opaquePassOutput.depth;
 
-        // Since we're reusing the existing target we don't want to clear any of its buffer.
-        // Important: if this target ended up being an imported target, then the clearFlags
-        // specified here wouldn't apply (the clearFlags of the imported target take precedence),
-        // and we'd end up clearing the opaque pass. This scenario never happens because it is
-        // prevented in Renderer.cpp's final blit.
-        config.clearFlags = TargetBufferFlags::NONE;
-        auto transparentPassOutput = colorPass(fg, "Color Pass (transparent)",
-                engine, view, colorPassInput, {
-                        .width = config.physicalViewport.width,
-                        .height = config.physicalViewport.height },
-                config, colorGradingConfig,
-                pass.getExecutor(refraction, pass.end()));
+    // Since we're reusing the existing target we don't want to clear any of its buffer.
+    // Important: if this target ended up being an imported target, then the clearFlags
+    // specified here wouldn't apply (the clearFlags of the imported target take precedence),
+    // and we'd end up clearing the opaque pass. This scenario never happens because it is
+    // prevented in Renderer.cpp's final blit.
+    config.clearFlags = TargetBufferFlags::NONE;
+    auto transparentPassOutput = colorPass(fg, "Color Pass (transparent)",
+            engine, view, colorPassInput, {
+                    .width = config.physicalViewport.width,
+                    .height = config.physicalViewport.height },
+            config, colorGradingConfig,
+            pass.getExecutor(refraction, pass.end()));
 
-        if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
-            // We need to do a resolve here because later passes (such as color grading or DoF) will
-            // need to sample from 'output'. However, because we have MSAA, we know we're not
-            // sampleable. And this is because in the SSR case, we had to use a renderbuffer to
-            // conserve the multi-sample buffer.
-            transparentPassOutput.linearColor = ppm.resolve(fg, "Resolved Color Buffer",
-                    transparentPassOutput.linearColor, { .levels = 1 });
-        }
-        return transparentPassOutput;
+    if (config.msaa > 1 && !colorGradingConfig.asSubpass) {
+        // We need to do a resolve here because later passes (such as color grading or DoF) will
+        // need to sample from 'output'. However, because we have MSAA, we know we're not
+        // sampleable. And this is because in the SSR case, we had to use a renderbuffer to
+        // conserve the multi-sample buffer.
+        transparentPassOutput.linearColor = ppm.resolve(fg, "Resolved Color Buffer",
+                transparentPassOutput.linearColor, { .levels = 1 });
     }
-
-    return std::nullopt;
+    return transparentPassOutput;
 }
 
 UTILS_NOINLINE

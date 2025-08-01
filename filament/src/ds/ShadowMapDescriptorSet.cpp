@@ -16,20 +16,21 @@
 
 #include "ShadowMapDescriptorSet.h"
 
+#include "PerViewDescriptorSetUtils.h"
+
 #include "details/Camera.h"
 #include "details/Engine.h"
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/DescriptorSets.h>
 #include <private/filament/UibStructs.h>
 
 #include <backend/DriverEnums.h>
 
 #include <utils/debug.h>
 
-#include <math/mat4.h>
+#include <math/vec4.h>
 
-#include <stdint.h>
+#include <array>
 
 namespace filament {
 
@@ -43,11 +44,12 @@ ShadowMapDescriptorSet::ShadowMapDescriptorSet(FEngine& engine) noexcept {
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     // create the descriptor-set from the layout
-    mDescriptorSet = DescriptorSet{ engine.getPerViewDescriptorSetLayoutDepthVariant() };
+    mDescriptorSet = DescriptorSet{
+            "ShadowMapDescriptorSet", engine.getPerViewDescriptorSetLayoutDepthVariant() };
 
     // initialize the descriptor-set
-    mDescriptorSet.setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
-            mUniformBufferHandle, 0, sizeof(PerViewUib));
+    mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutDepthVariant(),
+            +PerViewBindingPoints::FRAME_UNIFORMS, mUniformBufferHandle, 0, sizeof(PerViewUib));
 }
 
 void ShadowMapDescriptorSet::terminate(DriverApi& driver) {
@@ -61,54 +63,30 @@ PerViewUib& ShadowMapDescriptorSet::edit(Transaction const& transaction) noexcep
 }
 
 void ShadowMapDescriptorSet::prepareCamera(Transaction const& transaction,
-        DriverApi& driver, const CameraInfo& camera) noexcept {
-    mat4f const& viewFromWorld = camera.view;
-    mat4f const& worldFromView = camera.model;
-    mat4f const& clipFromView  = camera.projection;
-
-    const mat4f viewFromClip{ inverse((mat4)camera.projection) };
-    const mat4f clipFromWorld{ highPrecisionMultiply(clipFromView, viewFromWorld) };
-    const mat4f worldFromClip{ highPrecisionMultiply(worldFromView, viewFromClip) };
-
-    auto& s = edit(transaction);
-    s.viewFromWorldMatrix = viewFromWorld;    // view
-    s.worldFromViewMatrix = worldFromView;    // model
-    s.clipFromViewMatrix  = clipFromView;     // projection
-    s.viewFromClipMatrix  = viewFromClip;     // 1/projection
-    s.clipFromWorldMatrix[0] = clipFromWorld; // projection * view
-    s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
-    s.clipTransform = camera.clipTransform;
-    s.cameraFar = camera.zf;
-    s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
-    s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
-
-    // with a clip-space of [-w, w] ==> z' = -z
-    // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    s.clipControl = driver.getClipSpaceParams();
+        FEngine const& engine, const CameraInfo& camera) noexcept {
+    PerViewDescriptorSetUtils::prepareCamera(edit(transaction), engine, camera);
+    // TODO: stereo values didn't used to be set
 }
 
 void ShadowMapDescriptorSet::prepareLodBias(Transaction const& transaction, float const bias) noexcept {
-    auto& s = edit(transaction);
-    s.lodBias = bias;
+    PerViewDescriptorSetUtils::prepareLodBias(edit(transaction), bias, 0);
+    // TODO: check why derivativesScale was missing
 }
 
 void ShadowMapDescriptorSet::prepareViewport(Transaction const& transaction,
         backend::Viewport const& viewport) noexcept {
-    float2 const dimensions{ viewport.width, viewport.height };
-    auto& s = edit(transaction);
-    s.resolution = { dimensions, 1.0f / dimensions };
-    s.logicalViewportScale = 1.0f;
-    s.logicalViewportOffset = 0.0f;
+    PerViewDescriptorSetUtils::prepareViewport(edit(transaction), viewport, viewport);
+    // TODO: offset calculation is now different
 }
 
 void ShadowMapDescriptorSet::prepareTime(Transaction const& transaction,
         FEngine const& engine, float4 const& userTime) noexcept {
-    auto& s = edit(transaction);
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1'000'000'000;
-    const float fraction = float(double(oneSecondRemainder) / 1'000'000'000.0);
-    s.time = fraction;
-    s.userTime = userTime;
+    PerViewDescriptorSetUtils::prepareTime(edit(transaction), engine, userTime);
+}
+
+void ShadowMapDescriptorSet::prepareMaterialGlobals(Transaction const& transaction,
+        std::array<float4, 4> const& materialGlobals) noexcept {
+    PerViewDescriptorSetUtils::prepareMaterialGlobals(edit(transaction), materialGlobals);
 }
 
 void ShadowMapDescriptorSet::prepareShadowMapping(Transaction const& transaction,

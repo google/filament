@@ -16,7 +16,7 @@
 
 #include "private/backend/CircularBuffer.h"
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/architecture.h>
 #include <utils/ashmem.h>
@@ -65,7 +65,7 @@ CircularBuffer::~CircularBuffer() noexcept {
 // to each others and a special case in circularize()
 
 UTILS_NOINLINE
-void* CircularBuffer::alloc(size_t size) noexcept {
+void* CircularBuffer::alloc(size_t size) {
 #if HAS_MMAP
     void* data = nullptr;
     void* vaddr = MAP_FAILED;
@@ -127,7 +127,7 @@ void* CircularBuffer::alloc(size_t size) noexcept {
                 "couldn't allocate " << (size * 2 / 1024) <<
                 " KiB of virtual address space for the command buffer";
 
-        slog.w << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)" << io::endl;
+        LOG(WARNING) << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)";
 
         // guard page at the end
         void* guard = (void*)(uintptr_t(data) + size * 2);

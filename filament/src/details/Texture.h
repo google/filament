@@ -27,6 +27,9 @@
 
 #include <utils/compiler.h>
 
+#include <array>
+#include <cmath>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -62,10 +65,6 @@ public:
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
-    void generatePrefilterMipmap(FEngine& engine,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* options);
-
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
@@ -73,9 +72,6 @@ public:
 
     void generateMipmaps(FEngine& engine) const noexcept;
 
-    void setSampleCount(size_t const sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
-    size_t getSampleCount() const noexcept { return mSampleCount; }
-    bool isMultisample() const noexcept { return mSampleCount > 1; }
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
@@ -92,6 +88,9 @@ public:
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
     static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
 
+    // Returns whether particular format is compressed
+    static bool isTextureFormatCompressed(InternalFormat format) noexcept;
+
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
     static bool isProtectedTexturesSupported(FEngine& engine) noexcept;
 
@@ -105,18 +104,20 @@ public:
     // Size a of a pixel in bytes for the given format
     static size_t getFormatSize(InternalFormat format) noexcept;
 
+    backend::TextureType getTextureType() const noexcept;
+
     // Returns the with or height for a given mipmap level from the base value.
-    static inline size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
+    static size_t valueForLevel(uint8_t const level, size_t const baseLevelValue) {
         return std::max(size_t(1), baseLevelValue >> level);
     }
 
     // Returns the max number of levels for a texture of given max dimensions
-    static inline uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
+    static uint8_t maxLevelCount(uint32_t const maxDimension) noexcept {
         return std::max(1, std::ilogbf(float(maxDimension)) + 1);
     }
 
     // Returns the max number of levels for a texture of given dimensions
-    static inline uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
+    static uint8_t maxLevelCount(uint32_t const width, uint32_t const height) noexcept {
         uint32_t const maxDimension = std::max(width, height);
         return maxLevelCount(maxDimension);
     }
@@ -132,7 +133,7 @@ public:
     void updateLodRange(uint8_t level) noexcept;
 
     // TODO: remove in a future filament release.  See below for description.
-    inline bool hasBlitSrcUsage() const noexcept {
+    bool hasBlitSrcUsage() const noexcept {
         return mHasBlitSrc;
     }
 
@@ -166,23 +167,25 @@ private:
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
+
     InternalFormat mFormat = InternalFormat::RGBA8;
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
+
     std::array<Swizzle, 4> mSwizzle = {
            Swizzle::CHANNEL_0, Swizzle::CHANNEL_1,
            Swizzle::CHANNEL_2, Swizzle::CHANNEL_3 };
-    bool mTextureIsSwizzled;
 
     Usage mUsage = Usage::DEFAULT;
+    backend::TextureType mTextureType;
 
     // TODO: remove in a future filament release.
     // Indicates whether the user has set the TextureUsage::BLIT_SRC usage. This will be used to
     // temporarily validate whether this texture can be used for readPixels.
-    bool mHasBlitSrc = false;
-    bool mExternal = false;
-    // there is 4 bytes of padding here
+    bool mHasBlitSrc        : 1;
+    bool mExternal          : 1;
+    bool mTextureIsSwizzled : 1;
 
     FStream* mStream = nullptr; // only needed for streaming textures
 };

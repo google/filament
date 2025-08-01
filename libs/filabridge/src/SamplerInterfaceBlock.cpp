@@ -49,13 +49,13 @@ SamplerInterfaceBlock::Builder::stageFlags(backend::ShaderStageFlags stageFlags)
     return *this;
 }
 
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
-        std::string_view samplerName, Binding binding, Type type, Format format,
-        Precision precision, bool multisample) noexcept {
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(std::string_view samplerName,
+        Binding binding, Type type, Format format, Precision precision, bool filterable,
+        bool multisample, ShaderStageFlags stages) noexcept {
     mEntries.push_back({
-            { samplerName.data(), samplerName.size() }, // name
-            { }, // uniform name
-            binding, type, format, precision, multisample });
+        { samplerName.data(), samplerName.size() }, // name
+        {},                                         // uniform name
+        binding, type, format, precision, filterable, multisample, stages });
     return *this;
 }
 
@@ -65,8 +65,9 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
 
 SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
         std::initializer_list<ListEntry> list) noexcept {
-    for (auto& e : list) {
-        add(e.name, e.binding, e.type, e.format, e.precision, e.multisample);
+    for (auto& e: list) {
+        add(e.name, e.binding, e.type, e.format, e.precision, e.filterable, e.multisample,
+                e.stages);
     }
     return *this;
 }
@@ -90,7 +91,20 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
     for (auto const& e : builder.mEntries) {
         size_t const i = std::distance(builder.mEntries.data(), &e);
         SamplerInfo& info = samplersInfoList[i];
+
+        // We verify the following assumption.
+        //   - float sampler can be filterable or not, default to filterable
+        //   - int sampler is not filterable
+        //   - shadow sampler uses comparison operator and should be filterable.
+        FILAMENT_CHECK_PRECONDITION(
+                ((info.format == Format::INT || info.format == Format::UINT) && !info.filterable) ||
+                (info.format == Format::SHADOW && info.filterable) ||
+                (info.format == Format::FLOAT))
+                << "Format and filterable flag combination not allowed. "
+                << "format=" << (int) info.format << " filterable=" << info.filterable;
+
         info = e;
+        info.stages &= builder.mStageFlags;
         info.uniformName = generateUniformName(mName.c_str(), e.name.c_str());
         infoMap[{ info.name.data(), info.name.size() }] = i; // info.name.c_str() guaranteed constant
     }

@@ -70,6 +70,7 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtBool:               mangledName += 'b';      break;
     case EbtDouble:             mangledName += 'd';      break;
     case EbtFloat16:            mangledName += "f16";    break;
+    case EbtBFloat16:           mangledName += "bf16";   break;
     case EbtInt8:               mangledName += "i8";     break;
     case EbtUint8:              mangledName += "u8";     break;
     case EbtInt16:              mangledName += "i16";    break;

@@ -20,18 +20,20 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/ostream.h>
 
 #include <backend/DriverEnums.h>
 
 #include <array>
-#include <unordered_map>
 #include <tuple>
 #include <utility>
 #include <variant>
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 namespace filament::backend {
 
@@ -86,7 +88,8 @@ public:
 
     // sets the material name and variant for diagnostic purposes only
     Program& diagnostics(utils::CString const& name,
-            utils::Invocable<utils::io::ostream&(utils::io::ostream& out)>&& logger);
+            utils::Invocable<utils::io::ostream&(utils::CString const& name,
+                    utils::io::ostream& out)>&& logger);
 
     // Sets one of the program's shader (e.g. vertex, fragment)
     // string-based shaders are null terminated, consequently the size parameter must include the
@@ -171,7 +174,8 @@ private:
     utils::CString mName;
     uint64_t mCacheId{};
     CompilerPriorityQueue mPriorityQueue = CompilerPriorityQueue::HIGH;
-    utils::Invocable<utils::io::ostream&(utils::io::ostream& out)> mLogger;
+    utils::Invocable<utils::io::ostream&(utils::CString const& name, utils::io::ostream& out)>
+            mLogger;
     SpecializationConstantsInfo mSpecializationConstants;
     std::array<utils::FixedCapacityVector<PushConstant>, SHADER_TYPE_COUNT> mPushConstants;
     DescriptorSetInfo mDescriptorBindings;

@@ -16,7 +16,9 @@
 
 #include "ColorPassDescriptorSet.h"
 
+
 #include "Froxelizer.h"
+#include "PerViewDescriptorSetUtils.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
@@ -79,7 +81,7 @@ uint8_t ColorPassDescriptorSet::getIndex(
         index |= 0x2;
     }
 
-    if (!fog) {
+    if (fog) {
         // this will remove samplers needed for fog
         index |= 0x4;
     }
@@ -88,29 +90,21 @@ uint8_t ColorPassDescriptorSet::getIndex(
     return index;
 }
 
-
-ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
+ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine, bool const vsm,
         TypedUniformBuffer<PerViewUib>& uniforms) noexcept
-        : mUniforms(uniforms) {
-
-    constexpr UserVariantFilterMask filterFog = UserVariantFilterMask(UserVariantFilterBit::FOG);
-    constexpr UserVariantFilterMask keepFog = UserVariantFilterMask(0);
-
+    : mUniforms(uniforms), mIsVsm(vsm) {
     for (bool const lit: { false, true }) {
         for (bool const ssr: { false, true }) {
             for (bool const fog: { false, true }) {
-                auto index = getIndex(lit, ssr, fog);
+                auto const index = getIndex(lit, ssr, fog);
                 mDescriptorSetLayout[index] = {
                         engine.getDescriptorSetLayoutFactory(),
                         engine.getDriverApi(),
                         descriptor_sets::getPerViewDescriptorSetLayout(
-                                MaterialDomain::SURFACE,
-                                fog ? keepFog : filterFog,
-                                lit,
-                                ssr ? ReflectionMode::SCREEN_SPACE : ReflectionMode::DEFAULT,
-                                ssr ? RefractionMode::SCREEN_SPACE : RefractionMode::NONE)
+                                MaterialDomain::SURFACE, lit, ssr, fog, vsm)
                 };
-                mDescriptorSet[index] = DescriptorSet{ mDescriptorSetLayout[index] };
+                mDescriptorSet[index] = DescriptorSet{
+                        "ColorPassDescriptorSet", mDescriptorSetLayout[index] };
             }
         }
     }
@@ -118,11 +112,11 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine,
     setBuffer(+PerViewBindingPoints::FRAME_UNIFORMS,
             uniforms.getUboHandle(), 0, uniforms.getSize());
 
-    if (engine.getDFG().isValid()) {
-        TextureSampler const sampler(TextureSampler::MagFilter::LINEAR);
-        setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
-                engine.getDFG().getTexture(), sampler.getSamplerParams());
-    }
+    setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
+            engine.getDFG().isValid() ?
+                    engine.getDFG().getTexture() : engine.getZeroTexture(), {
+                    .filterMag = SamplerMagFilter::LINEAR
+            });
 }
 
 void ColorPassDescriptorSet::init(
@@ -130,12 +124,14 @@ void ColorPassDescriptorSet::init(
         BufferObjectHandle lights,
         BufferObjectHandle recordBuffer,
         BufferObjectHandle froxelBuffer) noexcept {
-    for (auto&& descriptorSet: mDescriptorSet) {
-        descriptorSet.setBuffer(+PerViewBindingPoints::LIGHTS,
+    for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
+        auto& descriptorSet = mDescriptorSet[i];
+        auto const& layout = mDescriptorSetLayout[i];
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::LIGHTS,
                 lights, 0, CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::RECORD_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::RECORD_BUFFER,
                 recordBuffer, 0, sizeof(FroxelRecordUib));
-        descriptorSet.setBuffer(+PerViewBindingPoints::FROXEL_BUFFER,
+        descriptorSet.setBuffer(layout, +PerViewBindingPoints::FROXEL_BUFFER,
                 froxelBuffer, 0, Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()));
     }
 }
@@ -150,44 +146,11 @@ void ColorPassDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, Dr
 }
 
 void ColorPassDescriptorSet::prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept {
-    mat4f const& viewFromWorld = camera.view;
-    mat4f const& worldFromView = camera.model;
-    mat4f const& clipFromView  = camera.projection;
-
-    const mat4f viewFromClip{ inverse((mat4)camera.projection) };
-    const mat4f worldFromClip{ highPrecisionMultiply(worldFromView, viewFromClip) };
-
-    auto& s = mUniforms.edit();
-    s.viewFromWorldMatrix = viewFromWorld;    // view
-    s.worldFromViewMatrix = worldFromView;    // model
-    s.clipFromViewMatrix  = clipFromView;     // projection
-    s.viewFromClipMatrix  = viewFromClip;     // 1/projection
-    s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
-    s.clipTransform = camera.clipTransform;
-    s.cameraFar = camera.zf;
-    s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
-    s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
-
-    mat4f const& headFromWorld = camera.view;
-    Engine::Config const& config = engine.getConfig();
-    for (int i = 0; i < config.stereoscopicEyeCount; i++) {
-        mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
-        mat4f const& clipFromEye = camera.eyeProjection[i];
-        // clipFromEye * eyeFromHead * headFromWorld
-        s.clipFromWorldMatrix[i] = highPrecisionMultiply(
-                clipFromEye, highPrecisionMultiply(eyeFromHead, headFromWorld));
-    }
-
-    // with a clip-space of [-w, w] ==> z' = -z
-    // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    s.clipControl = engine.getDriverApi().getClipSpaceParams();
+    PerViewDescriptorSetUtils::prepareCamera(mUniforms.edit(), engine, camera);
 }
 
 void ColorPassDescriptorSet::prepareLodBias(float const bias, float2 const derivativesScale) noexcept {
-    auto& s = mUniforms.edit();
-    s.lodBias = bias;
-    s.derivativesScale = derivativesScale;
+    PerViewDescriptorSetUtils::prepareLodBias(mUniforms.edit(), bias, derivativesScale);
 }
 
 void ColorPassDescriptorSet::prepareExposure(float const ev100) noexcept {
@@ -200,22 +163,11 @@ void ColorPassDescriptorSet::prepareExposure(float const ev100) noexcept {
 void ColorPassDescriptorSet::prepareViewport(
         const filament::Viewport& physicalViewport,
         const filament::Viewport& logicalViewport) noexcept {
-    float4 const physical{ physicalViewport.left, physicalViewport.bottom,
-                           physicalViewport.width, physicalViewport.height };
-    float4 const logical{ logicalViewport.left, logicalViewport.bottom,
-                          logicalViewport.width, logicalViewport.height };
-    auto& s = mUniforms.edit();
-    s.resolution = { physical.zw, 1.0f / physical.zw };
-    s.logicalViewportScale = physical.zw / logical.zw;
-    s.logicalViewportOffset = -logical.xy / logical.zw;
+    PerViewDescriptorSetUtils::prepareViewport(mUniforms.edit(), physicalViewport, logicalViewport);
 }
 
 void ColorPassDescriptorSet::prepareTime(FEngine& engine, float4 const& userTime) noexcept {
-    auto& s = mUniforms.edit();
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
-    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
-    s.time = fraction;
-    s.userTime = userTime;
+    PerViewDescriptorSetUtils::prepareTime(mUniforms.edit(), engine, userTime);
 }
 
 void ColorPassDescriptorSet::prepareTemporalNoise(FEngine& engine,
@@ -305,6 +257,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
 
 void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
         AmbientOcclusionOptions const& options) noexcept {
+
     // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
     // least set to high and of course only if upsampling is needed.
     const bool highQualitySampling = options.upsampling >= QualityLevel::HIGH
@@ -329,10 +282,7 @@ void ColorPassDescriptorSet::prepareBlending(bool const needsAlphaChannel) noexc
 
 void ColorPassDescriptorSet::prepareMaterialGlobals(
         std::array<float4, 4> const& materialGlobals) noexcept {
-    mUniforms.edit().custom[0] = materialGlobals[0];
-    mUniforms.edit().custom[1] = materialGlobals[1];
-    mUniforms.edit().custom[2] = materialGlobals[2];
-    mUniforms.edit().custom[3] = materialGlobals[3];
+    PerViewDescriptorSetUtils::prepareMaterialGlobals(mUniforms.edit(), materialGlobals);
 }
 
 void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
@@ -348,25 +298,6 @@ void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
     auto& s = mUniforms.edit();
     s.refractionLodOffset = refractionLodOffset;
     s.ssrDistance = (ssrOptions.enabled && !disableSSR) ? ssrOptions.maxDistance : 0.0f;
-}
-
-void ColorPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
-        mat4f const& historyProjection,
-        mat4f const& uvFromViewMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
-
-    setSampler(+PerViewBindingPoints::SSR, ssr, {
-        .filterMag = SamplerMagFilter::LINEAR,
-        .filterMin = SamplerMinFilter::LINEAR
-    });
-
-    auto& s = mUniforms.edit();
-    s.ssrReprojection = historyProjection;
-    s.ssrUvFromViewMatrix = uvFromViewMatrix;
-    s.ssrThickness = ssrOptions.thickness;
-    s.ssrBias = ssrOptions.bias;
-    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
-    s.ssrStride = ssrOptions.stride;
 }
 
 void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexcept {
@@ -537,20 +468,11 @@ void ColorPassDescriptorSet::commit(DriverApi& driver) noexcept {
         driver.updateBufferObject(mUniforms.getUboHandle(),
                 mUniforms.toBufferDescriptor(driver), 0);
     }
+
+
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         mDescriptorSet[i].commit(mDescriptorSetLayout[i], driver);
     }
-}
-
-void ColorPassDescriptorSet::unbindSamplers(DriverApi&) noexcept {
-    // this needs to reset the sampler that are only set in RendererUtils::colorPass(), because
-    // this descriptor-set is also used for ssr/picking/structure and these could be stale
-    // it would be better to use a separate descriptor-set for those two cases so that we don't
-    // have to do this
-    setSampler(+PerViewBindingPoints::STRUCTURE, {}, {});
-    setSampler(+PerViewBindingPoints::SHADOW_MAP, {}, {});
-    setSampler(+PerViewBindingPoints::SSAO, {}, {});
-    setSampler(+PerViewBindingPoints::SSR, {}, {});
 }
 
 void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
@@ -558,7 +480,7 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
         auto samplers = mDescriptorSetLayout[i].getSamplerDescriptors();
         if (samplers[binding]) {
-            mDescriptorSet[i].setSampler(binding, th, params);
+            mDescriptorSet[i].setSampler(mDescriptorSetLayout[i], binding, th, params);
         }
     }
 }
@@ -566,9 +488,10 @@ void ColorPassDescriptorSet::setSampler(descriptor_binding_t const binding,
 void ColorPassDescriptorSet::setBuffer(descriptor_binding_t const binding,
         BufferObjectHandle boh, uint32_t const offset, uint32_t const size) noexcept {
     for (size_t i = 0; i < DESCRIPTOR_LAYOUT_COUNT; i++) {
-        auto ubos = mDescriptorSetLayout[i].getUniformBufferDescriptors();
+        auto const& layout = mDescriptorSetLayout[i];
+        auto ubos = layout.getUniformBufferDescriptors();
         if (ubos[binding]) {
-            mDescriptorSet[i].setBuffer(binding, boh, offset, size);
+            mDescriptorSet[i].setBuffer(layout, binding, boh, offset, size);
         }
     }
 }

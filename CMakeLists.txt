@@ -41,6 +41,8 @@ option(FILAMENT_ENABLE_ASAN_UBSAN "Enable Address and Undefined Behavior Sanitiz
 
 option(FILAMENT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
 
+option(FILAMENT_ENABLE_COVERAGE "Enable LLVM code coverage" OFF)
+
 option(FILAMENT_ENABLE_FEATURE_LEVEL_0 "Enable Feature Level 0" ON)
 
 option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
@@ -48,6 +50,12 @@ option(FILAMENT_ENABLE_MULTIVIEW "Enable multiview for Filament" OFF)
 option(FILAMENT_SUPPORTS_OSMESA "Enable OSMesa (headless GL context) for Filament" OFF)
 
 option(FILAMENT_ENABLE_FGVIEWER "Enable the frame graph viewer" OFF)
+
+option(FILAMENT_USE_ABSEIL_LOGGING "Use Abseil to log, may increase binary size" OFF)
+
+# This is to disable GTAO for the short-term while we investigate a way to better manage size increases.
+# On the regular filament build (where size is of less concern), we enable GTAO by default.
+option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
 
 set(FILAMENT_NDK_VERSION "" CACHE STRING
     "Android NDK version or version prefix to be used when building for Android."
@@ -454,6 +462,10 @@ if (NOT MSVC AND NOT WEBGL)
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 
+if (FILAMENT_ENABLE_COVERAGE)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fprofile-instr-generate -fcoverage-mapping")
+endif()
+
 # Disable the stack check for macOS to workaround a known issue in clang 11.0.0.
 # See: https://forums.developer.apple.com/thread/121887
 if (APPLE)
@@ -585,6 +597,10 @@ endif ()
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT FILAMENT_BACKEND_DEBUG_FLAG STREQUAL "")
     add_definitions(-DFILAMENT_BACKEND_DEBUG_FLAG=${FILAMENT_BACKEND_DEBUG_FLAG})
     unset(FILAMENT_BACKEND_DEBUG_FLAG)
+endif()
+
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    add_definitions(-DFILAMENT_USE_ABSEIL_LOGGING)
 endif()
 
 # ==================================================================================================
@@ -776,6 +792,7 @@ add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filagui)
 add_subdirectory(${LIBRARIES}/filameshio)
+add_subdirectory(${LIBRARIES}/generatePrefilterMipmap)
 add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
 add_subdirectory(${LIBRARIES}/iblprefilter)

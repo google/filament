@@ -21,7 +21,9 @@
 #include <backend/Platform.h>
 #include <backend/Program.h>
 
-#include <utils/Systrace.h>
+#include <private/utils/Tracing.h>
+
+#include <utils/Logger.h>
 
 namespace filament::backend {
 
@@ -36,7 +38,7 @@ OpenGLBlobCache::OpenGLBlobCache(OpenGLContext& gl) noexcept
 
 GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
         Program const& program) const noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (!mCachingSupported || !platform.hasRetrieveBlobFunc()) {
         // the key is never updated in that case
         return 0;
@@ -68,12 +70,24 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
         programId = glCreateProgram();
 
         { // scope for systrace
-            SYSTRACE_NAME("glProgramBinary");
+            FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glProgramBinary");
             glProgramBinary(programId, blob->format, blob->data, programBinarySize);
         }
 
-        if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
-            // glProgramBinary can fail if for instance the driver has been updated
+        // Verify the program retrieved from the blob cache. `glProgramBinary` can succeed but
+        // result in an unlinked program, so we must check both `glGetError()` and the
+        // `GL_LINK_STATUS`. This can happen if, for instance, the graphics driver has been updated.
+        // If loading fails, we return 0 to fall back to a normal compilation and link.
+        GLenum glError = glGetError();
+        GLint linkStatus = GL_FALSE;
+        if (glError == GL_NO_ERROR) {
+            glGetProgramiv(programId, GL_LINK_STATUS, &linkStatus);
+        }
+
+        if (UTILS_UNLIKELY(glError != GL_NO_ERROR || linkStatus != GL_TRUE)) {
+            LOG(WARNING) << "Failed to load program binary, name=" << program.getName().c_str_safe()
+                         << ", size=" << blobSize << ", format=" << blob->format
+                         << ", glError=" << glError << ", linkStatus=" << linkStatus;
             glDeleteProgram(programId);
             programId = 0;
         }
@@ -90,7 +104,7 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
 
 void OpenGLBlobCache::insert(Platform& platform,
         BlobCacheKey const& key, GLuint program) noexcept {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
     if (!mCachingSupported || !platform.hasInsertBlobFunc()) {
         // the key is never updated in that case
         return;
@@ -100,7 +114,7 @@ void OpenGLBlobCache::insert(Platform& platform,
     GLenum format;
     GLint programBinarySize = 0;
     { // scope for systrace
-        SYSTRACE_NAME("glGetProgramiv");
+        FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glGetProgramiv");
         glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &programBinarySize);
     }
     if (programBinarySize) {
@@ -108,7 +122,7 @@ void OpenGLBlobCache::insert(Platform& platform,
         std::unique_ptr<Blob, decltype(&::free)> blob{ (Blob*)malloc(size), &::free };
         if (UTILS_LIKELY(blob)) {
             { // scope for systrace
-                SYSTRACE_NAME("glGetProgramBinary");
+                FILAMENT_TRACING_NAME(FILAMENT_TRACING_CATEGORY_FILAMENT, "glGetProgramBinary");
                 glGetProgramBinary(program, programBinarySize,
                         &programBinarySize, &format, blob->data);
             }

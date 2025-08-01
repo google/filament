@@ -86,6 +86,10 @@ bool Texture::isTextureFormatMipmappable(Engine& engine, InternalFormat const fo
     return FTexture::isTextureFormatMipmappable(downcast(engine), format);
 }
 
+bool Texture::isTextureFormatCompressed(InternalFormat const format) noexcept {
+    return FTexture::isTextureFormatCompressed(format);
+}
+
 bool Texture::isProtectedTexturesSupported(Engine& engine) noexcept {
     return FTexture::isProtectedTexturesSupported(downcast(engine));
 }
@@ -97,11 +101,6 @@ bool Texture::isTextureSwizzleSupported(Engine& engine) noexcept {
 size_t Texture::computeTextureDataSize(Format const format, Type const type, size_t const stride,
         size_t const height, size_t const alignment) noexcept {
     return FTexture::computeTextureDataSize(format, type, stride, height, alignment);
-}
-
-void Texture::generatePrefilterMipmap(Engine& engine, PixelBufferDescriptor&& buffer,
-        const FaceOffsets& faceOffsets, PrefilterOptions const* options) {
-    downcast(this)->generatePrefilterMipmap(downcast(engine), std::move(buffer), faceOffsets, options);
 }
 
 bool Texture::validatePixelFormatAndType(InternalFormat internalFormat, Format format, Type type) noexcept {

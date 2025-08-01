@@ -98,6 +98,14 @@ namespace filament::fgviewer {
 } // namespace filament::fgviewer
 #endif
 
+// We have added correctness assertions that breaks clients' projects. We add this define to allow
+// for the client's to address these assertions at a more gradual pace.
+#if defined(FILAMENT_RELAXED_CORRECTNESS_ASSERTIONS)
+#define CORRECTNESS_ASSERTION_DEFAULT false
+#else
+#define CORRECTNESS_ASSERTION_DEFAULT true
+#endif
+
 namespace filament {
 
 class Renderer;
@@ -486,10 +494,29 @@ public:
         return mPerRenderableDescriptorSetLayout;
     }
 
-    backend::Handle<backend::HwTexture> getOneTexture() const { return mDummyOneTexture; }
-    backend::Handle<backend::HwTexture> getZeroTexture() const { return mDummyZeroTexture; }
-    backend::Handle<backend::HwTexture> getOneTextureArray() const { return mDummyOneTextureArray; }
-    backend::Handle<backend::HwTexture> getZeroTextureArray() const { return mDummyZeroTextureArray; }
+    backend::Handle<backend::HwTexture> getOneTexture() const {
+        return mDummyOneTexture;
+    }
+
+    backend::Handle<backend::HwTexture> getOneTextureArray() const {
+        return mDummyOneTextureArray;
+    }
+
+    backend::Handle<backend::HwTexture> getOneTextureArrayDepth() const {
+        return mDummyOneTextureArrayDepth;
+    }
+
+    backend::Handle<backend::HwTexture> getZeroTexture() const {
+        return mDummyZeroTexture;
+    }
+
+    backend::Handle<backend::HwTexture> getZeroTextureArray() const {
+        return mDummyZeroTextureArray;
+    }
+
+    backend::Handle<backend::HwBufferObject> getDummyUniformBuffer() const {
+        return mDummyUniformBuffer;
+    }
 
     static constexpr size_t MiB = 1024u * 1024u;
     size_t getMinCommandBufferSize() const noexcept { return mConfig.minCommandBufferSizeMB * MiB; }
@@ -628,8 +655,10 @@ private:
 
     backend::Handle<backend::HwTexture> mDummyOneTexture;
     backend::Handle<backend::HwTexture> mDummyOneTextureArray;
+    backend::Handle<backend::HwTexture> mDummyOneTextureArrayDepth;
     backend::Handle<backend::HwTexture> mDummyZeroTextureArray;
     backend::Handle<backend::HwTexture> mDummyZeroTexture;
+    backend::Handle<backend::HwBufferObject> mDummyUniformBuffer;
 
     std::thread::id mMainThreadId{};
 
@@ -694,15 +723,26 @@ public:
                 bool use_shadow_atlas = false;
             } shadows;
             struct {
-                // TODO: default the following two flags to true.
-                bool assert_material_instance_in_use = false;
-                bool assert_destroy_material_before_material_instance = false;
+                // TODO: clean-up the following flags (equivalent to setting them to true) when
+                // clients have addressed their usages.
+                bool assert_material_instance_in_use = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_destroy_material_before_material_instance =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_attribute_stride_mult_of_4 =
+                        CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
             struct {
                 bool assert_native_window_is_valid = false;
             } opengl;
+            struct {
+                // On Unified Memory Architecture device, it is possible to bypass using the staging
+                // buffer. This is an experimental feature that still needs to be implemented fully
+                // before it can be fully enabled.
+                bool enable_staging_buffer_bypass = false;
+            } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
@@ -728,12 +768,21 @@ public:
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
               &features.engine.shadows.use_shadow_atlas, false },
-            { "features.engine.debug.assert_material_instance_in_use",
+            { "engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
               &features.engine.debug.assert_material_instance_in_use, false },
-            { "features.engine.debug.assert_destroy_material_before_material_instance",
+            { "engine.debug.assert_destroy_material_before_material_instance",
               "Assert when a Material is destroyed but its instances are still alive.",
               &features.engine.debug.assert_destroy_material_before_material_instance, false },
+            { "engine.debug.assert_vertex_buffer_count_exceeds_8",
+              "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
+              &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
+            { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
+              "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
+              &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+            { "backend.vulkan.enable_staging_buffer_bypass",
+              "vulkan: enable a staging bypass logic for unified memory architecture",
+              &features.backend.vulkan.enable_staging_buffer_bypass, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

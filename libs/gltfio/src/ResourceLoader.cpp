@@ -34,10 +34,11 @@
 
 #include <geometry/Transcoder.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/compiler.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
-#include <utils/Systrace.h>
 #include <utils/Path.h>
 
 #include <cgltf.h>
@@ -365,8 +366,8 @@ void ResourceLoader::Impl::addResourceData(const char* uri, BufferDescriptor&& b
     // finalization begins. This marker provides a rough indicator of how long
     // the client is taking to load raw data blobs from storage.
     if (mUriDataCache->empty()) {
-        SYSTRACE_CONTEXT();
-        SYSTRACE_ASYNC_BEGIN("addResourceData", 1);
+        FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_GLTFIO);
+        FILAMENT_TRACING_ASYNC_BEGIN(FILAMENT_TRACING_CATEGORY_GLTFIO, "addResourceData", 1);
     }
     // NOTE: replacing an existing item in a robin map does not seem to behave as expected.
     // To work around this, we explicitly erase the old element if it already exists.
@@ -405,8 +406,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 }
 
 bool ResourceLoader::loadResources(FFilamentAsset* asset, bool async) {
-    SYSTRACE_CONTEXT();
-    SYSTRACE_ASYNC_END("addResourceData", 1);
+    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_GLTFIO);
+    FILAMENT_TRACING_ASYNC_END(FILAMENT_TRACING_CATEGORY_GLTFIO, "addResourceData", 1);
 
     if (asset->mResourcesLoaded) {
         return false;
@@ -671,7 +672,7 @@ void ResourceLoader::Impl::createTextures(FFilamentAsset* asset, bool async) {
 }
 
 void ResourceLoader::Impl::computeTangents(FFilamentAsset* asset) {
-    SYSTRACE_CALL();
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_GLTFIO);
 
     const cgltf_accessor* kGenerateTangents = &asset->mGenerateTangents;
     const cgltf_accessor* kGenerateNormals = &asset->mGenerateNormals;

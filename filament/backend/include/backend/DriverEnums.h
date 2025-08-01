@@ -25,21 +25,25 @@
 #include <backend/PresentCallable.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
-#include <utils/compiler.h>
-#include <utils/debug.h>
-#include <utils/ostream.h>
 #include <utils/StaticString.h>
+#include <utils/debug.h>
 
 #include <math/vec4.h>
 
 #include <array>
 #include <type_traits>
 #include <variant>
+#include <string_view>
 
 #include <stddef.h>
 #include <stdint.h>
+
+namespace utils::io {
+class ostream;
+} // namespace utils::io
 
 /**
  * Types and enums used by filament's driver.
@@ -115,8 +119,8 @@ static constexpr struct {
     const size_t MAX_FRAGMENT_SAMPLER_COUNT;
 } FEATURE_LEVEL_CAPS[4] = {
         {  0,  0 }, // do not use
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
         { 31, 31 }, // guaranteed by Metal
 };
 
@@ -159,7 +163,7 @@ enum class TimerQueryResult : int8_t {
     AVAILABLE = 1,  // result is available
 };
 
-static constexpr const char* backendToString(Backend backend) {
+constexpr std::string_view to_string(Backend const backend) noexcept {
     switch (backend) {
         case Backend::NOOP:
             return "Noop";
@@ -171,9 +175,10 @@ static constexpr const char* backendToString(Backend backend) {
             return "Metal";
         case Backend::WEBGPU:
             return "WebGPU";
-        default:
-            return "Unknown";
+        case Backend::DEFAULT:
+            return "Default";
     }
+    return "Unknown";
 }
 
 /**
@@ -190,7 +195,7 @@ enum class ShaderLanguage {
     WGSL = 5,
 };
 
-static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) {
+constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noexcept {
     switch (shaderLanguage) {
         case ShaderLanguage::ESSL1:
             return "ESSL 1.0";
@@ -205,6 +210,7 @@ static constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguag
         case ShaderLanguage::WGSL:
             return "WGSL";
     }
+    return "UNKNOWN";
 }
 
 enum class ShaderStage : uint8_t {
@@ -222,7 +228,7 @@ enum class ShaderStageFlags : uint8_t {
     ALL_SHADER_STAGE_FLAGS = VERTEX | FRAGMENT | COMPUTE
 };
 
-static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
+constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage type) noexcept {
     switch (type) {
         case ShaderStage::VERTEX:
             return bool(uint8_t(flags) & uint8_t(ShaderStageFlags::VERTEX));
@@ -233,17 +239,247 @@ static inline constexpr bool hasShaderType(ShaderStageFlags flags, ShaderStage t
     }
 }
 
-enum class DescriptorType : uint8_t {
-    UNIFORM_BUFFER,
-    SHADER_STORAGE_BUFFER,
-    SAMPLER,
-    INPUT_ATTACHMENT,
-    SAMPLER_EXTERNAL
+enum class TextureType : uint8_t {
+    FLOAT,
+    INT,
+    UINT,
+    DEPTH,
+    STENCIL,
+    DEPTH_STENCIL
 };
+
+constexpr std::string_view to_string(TextureType type) noexcept {
+    switch (type) {
+        case TextureType::FLOAT:            return "FLOAT";
+        case TextureType::INT:              return "INT";
+        case TextureType::UINT:             return "UINT";
+        case TextureType::DEPTH:            return "DEPTH";
+        case TextureType::STENCIL:          return "STENCIL";
+        case TextureType::DEPTH_STENCIL:    return "DEPTH_STENCIL";
+    }
+    return "UNKNOWN";
+}
+
+ enum class DescriptorType : uint8_t {
+     SAMPLER_2D_FLOAT,
+     SAMPLER_2D_INT,
+     SAMPLER_2D_UINT,
+     SAMPLER_2D_DEPTH,
+
+     SAMPLER_2D_ARRAY_FLOAT,
+     SAMPLER_2D_ARRAY_INT,
+     SAMPLER_2D_ARRAY_UINT,
+     SAMPLER_2D_ARRAY_DEPTH,
+
+     SAMPLER_CUBE_FLOAT,
+     SAMPLER_CUBE_INT,
+     SAMPLER_CUBE_UINT,
+     SAMPLER_CUBE_DEPTH,
+
+     SAMPLER_CUBE_ARRAY_FLOAT,
+     SAMPLER_CUBE_ARRAY_INT,
+     SAMPLER_CUBE_ARRAY_UINT,
+     SAMPLER_CUBE_ARRAY_DEPTH,
+
+     SAMPLER_3D_FLOAT,
+     SAMPLER_3D_INT,
+     SAMPLER_3D_UINT,
+
+     SAMPLER_2D_MS_FLOAT,
+     SAMPLER_2D_MS_INT,
+     SAMPLER_2D_MS_UINT,
+
+     SAMPLER_2D_MS_ARRAY_FLOAT,
+     SAMPLER_2D_MS_ARRAY_INT,
+     SAMPLER_2D_MS_ARRAY_UINT,
+
+     SAMPLER_EXTERNAL,
+     UNIFORM_BUFFER,
+     SHADER_STORAGE_BUFFER,
+     INPUT_ATTACHMENT,
+ };
+
+constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isUnsignedIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is3dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_3D_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isMultiSampledTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr std::string_view to_string(DescriptorType type) noexcept {
+    #define DESCRIPTOR_TYPE_CASE(TYPE)  case DescriptorType::TYPE: return #TYPE;
+    switch (type) {
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_CUBE_ARRAY_DEPTH)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_3D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_EXTERNAL)
+        DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
+        DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
+        DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
+    }
+    return "UNKNOWN";
+    #undef DESCRIPTOR_TYPE_CASE
+}
 
 enum class DescriptorFlags : uint8_t {
     NONE = 0x00,
-    DYNAMIC_OFFSET = 0x01
+
+    // Indicate a UNIFORM_BUFFER will have dynamic offsets.
+    DYNAMIC_OFFSET = 0x01,
+
+    // To indicate a texture/sampler type should be unfiltered.
+    UNFILTERABLE = 0x02,
 };
 
 using descriptor_set_t = uint8_t;
@@ -251,24 +487,25 @@ using descriptor_set_t = uint8_t;
 using descriptor_binding_t = uint8_t;
 
 struct DescriptorSetLayoutBinding {
+    static bool isSampler(DescriptorType type) noexcept {
+        return int(type) <= int(DescriptorType::SAMPLER_EXTERNAL);
+    }
+    static bool isBuffer(DescriptorType type) noexcept {
+        return type == DescriptorType::UNIFORM_BUFFER ||
+               type == DescriptorType::SHADER_STORAGE_BUFFER;
+    }
     DescriptorType type;
     ShaderStageFlags stageFlags;
     descriptor_binding_t binding;
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    //  TODO: uncomment when needed.  Note that this class is used as hash key.  We need to ensure
-    //  no uninitialized padding bytes.
-    //    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
-
-    friend inline bool operator==(DescriptorSetLayoutBinding const& lhs,
+    friend bool operator==(DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
                lhs.stageFlags == rhs.stageFlags;
-//               lhs.stageFlags == rhs.stageFlags &&
-//               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
     }
 };
 
@@ -294,7 +531,7 @@ enum class TargetBufferFlags : uint32_t {
     ALL = COLOR_ALL | DEPTH | STENCIL       //!< Color, depth and stencil buffer selected.
 };
 
-inline constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
+constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
     if (index == 0u) return TargetBufferFlags::COLOR0;
     if (index == 1u) return TargetBufferFlags::COLOR1;
     if (index == 2u) return TargetBufferFlags::COLOR2;
@@ -451,6 +688,24 @@ enum class SamplerType : uint8_t {
     SAMPLER_CUBEMAP_ARRAY,  //!< Cube map array texture (feature level 2)
 };
 
+constexpr std::string_view to_string(SamplerType const type) noexcept {
+    switch (type) {
+        case SamplerType::SAMPLER_2D:
+            return "SAMPLER_2D";
+        case SamplerType::SAMPLER_2D_ARRAY:
+            return "SAMPLER_2D_ARRAY";
+        case SamplerType::SAMPLER_CUBEMAP:
+            return "SAMPLER_CUBEMAP";
+        case SamplerType::SAMPLER_EXTERNAL:
+            return "SAMPLER_EXTERNAL";
+        case SamplerType::SAMPLER_3D:
+            return "SAMPLER_3D";
+        case SamplerType::SAMPLER_CUBEMAP_ARRAY:
+            return "SAMPLER_CUBEMAP_ARRAY";
+    }
+    return "Unknown";
+}
+
 //! Subpass type
 enum class SubpassType : uint8_t {
     SUBPASS_INPUT
@@ -463,6 +718,20 @@ enum class SamplerFormat : uint8_t {
     FLOAT = 2,      //!< float sampler
     SHADOW = 3      //!< shadow sampler (PCF)
 };
+
+constexpr std::string_view to_string(SamplerFormat const format) noexcept {
+    switch (format) {
+        case SamplerFormat::INT:
+            return "INT";
+        case SamplerFormat::UINT:
+            return "UINT";
+        case SamplerFormat::FLOAT:
+            return "FLOAT";
+        case SamplerFormat::SHADOW:
+            return "SHADOW";
+    }
+    return "Unknown";
+}
 
 /**
  * Supported element types
@@ -502,6 +771,15 @@ enum class BufferObjectBinding : uint8_t {
     UNIFORM,
     SHADER_STORAGE
 };
+
+constexpr std::string_view to_string(BufferObjectBinding type) noexcept {
+    switch (type) {
+        case BufferObjectBinding::VERTEX:           return "VERTEX";
+        case BufferObjectBinding::UNIFORM:          return "UNIFORM";
+        case BufferObjectBinding::SHADER_STORAGE:   return "SHADER_STORAGE";
+    }
+    return "UNKNOWN";
+}
 
 //! Face culling Mode
 enum class CullingMode : uint8_t {
@@ -764,6 +1042,8 @@ enum class TextureFormat : uint16_t {
     SRGB_ALPHA_BPTC_UNORM,  // BC7 sRGB
 };
 
+TextureType getTextureType(TextureFormat format) noexcept;
+
 //! Bitmask describing the intended Texture Usage
 enum class TextureUsage : uint16_t {
     NONE                = 0x0000,
@@ -791,7 +1071,7 @@ enum class TextureSwizzle : uint8_t {
 };
 
 //! returns whether this format a depth format
-static constexpr bool isDepthFormat(TextureFormat format) noexcept {
+constexpr bool isDepthFormat(TextureFormat format) noexcept {
     switch (format) {
         case TextureFormat::DEPTH32F:
         case TextureFormat::DEPTH24:
@@ -804,7 +1084,7 @@ static constexpr bool isDepthFormat(TextureFormat format) noexcept {
     }
 }
 
-static constexpr bool isStencilFormat(TextureFormat format) noexcept {
+constexpr bool isStencilFormat(TextureFormat format) noexcept {
     switch (format) {
         case TextureFormat::STENCIL8:
         case TextureFormat::DEPTH24_STENCIL8:
@@ -815,7 +1095,7 @@ static constexpr bool isStencilFormat(TextureFormat format) noexcept {
     }
 }
 
-inline constexpr bool isColorFormat(TextureFormat format) noexcept {
+constexpr bool isColorFormat(TextureFormat format) noexcept {
     switch (format) {
         // Standard color formats
         case TextureFormat::R8:
@@ -842,7 +1122,7 @@ inline constexpr bool isColorFormat(TextureFormat format) noexcept {
     return false;
 }
 
-static constexpr bool isUnsignedIntFormat(TextureFormat format) {
+constexpr bool isUnsignedIntFormat(TextureFormat format) {
     switch (format) {
         case TextureFormat::R8UI:
         case TextureFormat::R16UI:
@@ -863,7 +1143,7 @@ static constexpr bool isUnsignedIntFormat(TextureFormat format) {
     }
 }
 
-static constexpr bool isSignedIntFormat(TextureFormat format) {
+constexpr bool isSignedIntFormat(TextureFormat format) {
     switch (format) {
         case TextureFormat::R8I:
         case TextureFormat::R16I:
@@ -885,35 +1165,35 @@ static constexpr bool isSignedIntFormat(TextureFormat format) {
 }
 
 //! returns whether this format is a compressed format
-static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
+constexpr bool isCompressedFormat(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11;
 }
 
 //! returns whether this format is an ETC2 compressed format
-static constexpr bool isETC2Compression(TextureFormat format) noexcept {
+constexpr bool isETC2Compression(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11 && format <= TextureFormat::ETC2_EAC_SRGBA8;
 }
 
 //! returns whether this format is an S3TC compressed format
-static constexpr bool isS3TCCompression(TextureFormat format) noexcept {
+constexpr bool isS3TCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_RGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
-static constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
+constexpr bool isS3TCSRGBCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::DXT1_SRGB && format <= TextureFormat::DXT5_SRGBA;
 }
 
 //! returns whether this format is an RGTC compressed format
-static constexpr bool isRGTCCompression(TextureFormat format) noexcept {
+constexpr bool isRGTCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::RED_RGTC1 && format <= TextureFormat::SIGNED_RED_GREEN_RGTC2;
 }
 
 //! returns whether this format is an BPTC compressed format
-static constexpr bool isBPTCCompression(TextureFormat format) noexcept {
+constexpr bool isBPTCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::RGB_BPTC_SIGNED_FLOAT && format <= TextureFormat::SRGB_ALPHA_BPTC_UNORM;
 }
 
-static constexpr bool isASTCCompression(TextureFormat format) noexcept {
+constexpr bool isASTCCompression(TextureFormat format) noexcept {
     return format >= TextureFormat::RGBA_ASTC_4x4 && format <= TextureFormat::SRGB8_ALPHA8_ASTC_12x12;
 }
 
@@ -973,26 +1253,6 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
-//! this API is copied from (and only applies to) the Vulkan spec.
-//! These specify YUV to RGB conversions.
-enum class SamplerYcbcrModelConversion : uint8_t {
-    RGB_IDENTITY = 0,
-    YCBCR_IDENTITY = 1,
-    YCBCR_709 = 2,
-    YCBCR_601 = 3,
-    YCBCR_2020 = 4,
-};
-
-enum class SamplerYcbcrRange : uint8_t {
-    ITU_FULL = 0,
-    ITU_NARROW = 1,
-};
-
-enum class ChromaLocation : uint8_t {
-    COSITED_EVEN = 0,
-    MIDPOINT = 1,
-};
-
 //! Sampler parameters
 struct SamplerParams {             // NOLINT
     SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
@@ -1034,19 +1294,23 @@ struct SamplerParams {             // NOLINT
             assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
+            return *pLhs < *pRhs;
         }
     };
 
+    bool isFiltered() const noexcept {
+        return filterMag != SamplerMagFilter::NEAREST || filterMin != SamplerMinFilter::NEAREST;
+    }
+
 private:
-    friend inline bool operator == (SamplerParams lhs, SamplerParams rhs) noexcept {
-        return SamplerParams::EqualTo{}(lhs, rhs);
+    friend bool operator == (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return EqualTo{}(lhs, rhs);
     }
-    friend inline bool operator != (SamplerParams lhs, SamplerParams rhs) noexcept {
-        return  !SamplerParams::EqualTo{}(lhs, rhs);
+    friend bool operator != (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return  !EqualTo{}(lhs, rhs);
     }
-    friend inline bool operator < (SamplerParams lhs, SamplerParams rhs) noexcept {
-        return SamplerParams::LessThan{}(lhs, rhs);
+    friend bool operator < (SamplerParams lhs, SamplerParams rhs) noexcept {
+        return LessThan{}(lhs, rhs);
     }
 };
 
@@ -1057,94 +1321,9 @@ static_assert(sizeof(SamplerParams) == 4);
 static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
         "SamplerParams must be no more than 64 bits");
 
-//! Sampler parameters
-struct SamplerYcbcrConversion {// NOLINT
-    SamplerYcbcrModelConversion ycbcrModel : 4;
-    TextureSwizzle r : 4;
-    TextureSwizzle g : 4;
-    TextureSwizzle b : 4;
-    TextureSwizzle a : 4;
-    SamplerYcbcrRange ycbcrRange : 1;
-    ChromaLocation xChromaOffset : 1;
-    ChromaLocation yChromaOffset : 1;
-    SamplerMagFilter chromaFilter : 1;
-    uint8_t padding;
-
-    struct Hasher {
-        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
-            // we don't use std::hash<> here, so we don't have to include <functional>
-            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
-        }
-    };
-
-    struct EqualTo {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
-            assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
-        }
-    };
-
-    struct LessThan {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
-            assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs < *pRhs;
-        }
-    };
-
-private:
-    friend inline bool operator == (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
-    }
-    friend inline bool operator != (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return  !SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
-    }
-    friend inline bool operator < (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
-    }
-};
-
-static_assert(sizeof(SamplerYcbcrConversion) == 4);
-
-static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
-        "SamplerYcbcrConversion must be no more than 64 bits");
-
-struct ExternalSamplerDatum {
-    ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
-        : YcbcrConversion(ycbcr),
-          samplerParams(spm),
-          externalFormat(extFmt) {}
-    bool operator==(ExternalSamplerDatum const& rhs) const {
-        return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
-                externalFormat == rhs.externalFormat);
-    }
-    struct EqualTo {
-        bool operator()(const ExternalSamplerDatum& lhs,
-                const ExternalSamplerDatum& rhs) const noexcept {
-            return (lhs.YcbcrConversion == rhs.YcbcrConversion &&
-                lhs.samplerParams == rhs.samplerParams &&
-                lhs.externalFormat == rhs.externalFormat);
-        }
-    };
-    SamplerYcbcrConversion YcbcrConversion;
-    SamplerParams samplerParams;
-    uint32_t externalFormat;
-};
-// No implicit padding allowed due to it being a hash key.
-static_assert(sizeof(ExternalSamplerDatum) == 12);
-
 struct DescriptorSetLayout {
     std::variant<utils::StaticString, utils::CString, std::monostate> label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-
-//  TODO: uncomment when needed
-//    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
 };
 
 //! blending equation function

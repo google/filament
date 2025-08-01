@@ -39,7 +39,6 @@
 #endif
 
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/MaterialChunk.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/CallbackHandler.h>
@@ -50,7 +49,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -61,6 +60,7 @@
 #include <array>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <optional>
 #include <string>
@@ -94,9 +94,9 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
             }
         }
 
-        FILAMENT_CHECK_PRECONDITION(
+        FILAMENT_CHECK_POSTCONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
-                << "the material was not built for any of the " << backendToString(backend)
+                << "the material was not built for any of the " << to_string(backend)
                 << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
     }
 
@@ -104,12 +104,12 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
         return materialParser;
     }
 
-    FILAMENT_CHECK_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
+    FILAMENT_CHECK_POSTCONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
             << "could not parse the material package";
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
-    FILAMENT_CHECK_PRECONDITION(version == MATERIAL_VERSION)
+    FILAMENT_CHECK_POSTCONDITION(version == MATERIAL_VERSION)
             << "Material version mismatch. Expected " << MATERIAL_VERSION << " but received "
             << version << ".";
 
@@ -169,6 +169,16 @@ template Material::Builder& Material::Builder::constant<int32_t>(const char*, si
 template Material::Builder& Material::Builder::constant<float>(const char*, size_t, float);
 template Material::Builder& Material::Builder::constant<bool>(const char*, size_t, bool);
 
+
+const char* toString(ShaderModel model) {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
+
 Material* Material::Builder::build(Engine& engine) const {
     std::unique_ptr<MaterialParser> materialParser = createParser(
         downcast(engine).getBackend(), downcast(engine).getShaderLanguage(),
@@ -187,17 +197,11 @@ Material* Material::Builder::build(Engine& engine) const {
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
-        slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
-        switch (shaderModel) {
-            case ShaderModel::MOBILE:
-                slog.e << "mobile.\n";
-                break;
-            case ShaderModel::DESKTOP:
-                slog.e << "desktop.\n";
-                break;
-        }
-        slog.e << "Compiled material contains shader models 0x"
-                << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
+        char shaderModelsString[16];
+        snprintf(shaderModelsString, sizeof(shaderModelsString), "%#x", shaderModels.getValue());
+        LOG(ERROR) << "The material '" << name.c_str_safe() << "' was not built for "
+                   << toString(shaderModel) << ".";
+        LOG(ERROR) << "Compiled material contains shader models " << shaderModelsString << ".";
         return nullptr;
     }
 
@@ -217,10 +221,10 @@ Material* Material::Builder::build(Engine& engine) const {
             if (materialStereoscopicType != engineStereoscopicType) {
                 CString name;
                 materialParser->getName(&name);
-                slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
-                        << "' is " << (int)materialStereoscopicType
-                        << ", which is not compatiable with the engine's setting "
-                        << (int)engineStereoscopicType << "." << io::endl;
+                LOG(WARNING) << "The stereoscopic type in the compiled material '"
+                             << name.c_str_safe() << "' is " << (int) materialStereoscopicType
+                             << ", which is not compatiable with the engine's setting "
+                             << (int) engineStereoscopicType << ".";
             }
         }
     }
@@ -329,11 +333,12 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder,
 
     parser->hasCustomDepthShader(&mHasCustomDepthShader);
 
-    mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(
-            mIsVariantLit,
-            mReflectionMode == ReflectionMode::SCREEN_SPACE ||
-            mRefractionMode == RefractionMode::SCREEN_SPACE,
-            !(mVariantFilterMask & +UserVariantFilterBit::FOG));
+    bool const isLit = mIsVariantLit || mHasShadowMultiplier;
+    bool const isSSR = mReflectionMode == ReflectionMode::SCREEN_SPACE ||
+            mRefractionMode == RefractionMode::SCREEN_SPACE;
+    bool const hasFog = !(mVariantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+
+    mPerViewLayoutIndex = ColorPassDescriptorSet::getIndex(isLit, isSSR, hasFog);
 
     processBlendingMode(parser);
     processSpecializationConstants(engine, builder, parser);
@@ -361,9 +366,12 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
         !mHasCustomDepthShader) {
         // it would be unsafe to invalidate any of the cached depth variant
         if (UTILS_UNLIKELY(!((variantMask & Variant::DEP) && !(variantValue & Variant::DEP)))) {
-            slog.w << io::hex << "FMaterial::invalidate("
-                   << +variantMask << ", " << +variantValue
-                   << ") would corrupt the depth variant cache" << io::endl;
+            char variantMaskString[16];
+            snprintf(variantMaskString, sizeof(variantMaskString), "%#x", +variantMask);
+            char variantValueString[16];
+            snprintf(variantValueString, sizeof(variantValueString), "%#x", +variantValue);
+            LOG(WARNING) << "FMaterial::invalidate(" << variantMaskString << ", "
+                         << variantValueString << ") would corrupt the depth variant cache";
         }
         variantMask |= Variant::DEP;
         variantValue &= ~Variant::DEP;
@@ -389,8 +397,8 @@ void FMaterial::terminate(FEngine& engine) {
                     << pos->second.size() << " instances still alive.";
         } else {
             if (UTILS_UNLIKELY(!pos->second.empty())) {
-                slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                              << pos->second.size() << " instances still alive." << io::endl;
+                LOG(ERROR) << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                           << pos->second.size() << " instances still alive.";
             }
         }
     }
@@ -407,7 +415,25 @@ void FMaterial::terminate(FEngine& engine) {
 
     DriverApi& driver = engine.getDriverApi();
     mPerViewDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+    mPerViewDescriptorSetLayoutVsm.terminate(engine.getDescriptorSetLayoutFactory(), driver);
     mDescriptorSetLayout.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+}
+
+filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
+        Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept {
+    if (Variant::isValidDepthVariant(variant)) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mEngine.getPerViewDescriptorSetLayoutDepthVariant();
+    }
+    if (Variant::isSSRVariant(variant)) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mEngine.getPerViewDescriptorSetLayoutSsrVariant();
+    }
+    if (useVsmDescriptorSetLayout) {
+        assert_invariant(mMaterialDomain == MaterialDomain::SURFACE);
+        return mPerViewDescriptorSetLayoutVsm;
+    }
+    return mPerViewDescriptorSetLayout;
 }
 
 void FMaterial::compile(CompilerPriorityQueue const priority,
@@ -446,7 +472,7 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
             }
         };
         auto* const user = new(std::nothrow) Callback{ std::move(callback), this };
-        mEngine.getDriverApi().compilePrograms(priority, handler, &Callback::func, static_cast<void*>(user));
+        mEngine.getDriverApi().compilePrograms(priority, handler, &Callback::func, user);
     } else {
         mEngine.getDriverApi().compilePrograms(priority, nullptr, nullptr, nullptr);
     }
@@ -554,7 +580,7 @@ void FMaterial::getPostProcessProgramSlow(Variant const variant,
 Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
-        Variant fragmentVariant) const noexcept {
+        Variant fragmentVariant) const {
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;
@@ -593,10 +619,10 @@ Program FMaterial::getProgramWithVariants(
             .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
             .shaderLanguage(mMaterialParser->getShaderLanguage())
             .diagnostics(mName,
-                    [this, variant, vertexVariant, fragmentVariant](
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
                             io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe() << ", variant=(" << io::hex
-                                   << +variant.key << io::dec << "), vertexVariant=(" << io::hex
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
                                    << +vertexVariant.key << io::dec << "), fragmentVariant=("
                                    << io::hex << +fragmentVariant.key << io::dec << ")";
                     });
@@ -712,7 +738,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 // source strings, so here we trigger a rebuild of the HwProgram objects.
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
-    slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
+    DLOG(INFO) << "Applying edits to " << (name ? name : "(untitled)");
     destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
     latchPendingEdits();
 }
@@ -762,6 +788,29 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pActiveVariants) {
 
 #endif // FILAMENT_ENABLE_MATDBG
 
+[[nodiscard]] Handle<HwProgram> FMaterial::getProgramWithMATDBG(Variant const variant) const noexcept {
+#if FILAMENT_ENABLE_MATDBG
+    assert_invariant((size_t)variant.key < VARIANT_COUNT);
+    std::unique_lock lock(mActiveProgramsLock);
+    if (getMaterialDomain() == MaterialDomain::SURFACE) {
+        auto vert = Variant::filterVariantVertex(variant);
+        auto frag = Variant::filterVariantFragment(variant);
+        mActivePrograms.set(vert.key);
+        mActivePrograms.set(frag.key);
+    } else {
+        mActivePrograms.set(variant.key);
+    }
+    lock.unlock();
+    if (isSharedVariant(variant)) {
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (pDefaultMaterial && pDefaultMaterial->mCachedPrograms[variant.key]) {
+            return pDefaultMaterial->getProgram(variant);
+        }
+    }
+#endif
+    assert_invariant(mCachedPrograms[variant.key]);
+    return mCachedPrograms[variant.key];
+}
 
 void FMaterial::destroyPrograms(FEngine& engine,
         Variant::type_t const variantMask, Variant::type_t const variantValue) {
@@ -1149,17 +1198,23 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
     backend::DescriptorSetLayout descriptorSetLayout;
     success = parser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
-    auto perMatLabel = mName;
-    perMatLabel.append("_perMat");
-    descriptorSetLayout.label = std::move(perMatLabel);
 
     // get the PER_VIEW descriptor binding info
-    auto perViewDescriptorSetLayout =
-            descriptor_sets::getPerViewDescriptorSetLayout(mMaterialDomain, mVariantFilterMask,
-            mIsVariantLit || mHasShadowMultiplier, mReflectionMode, mRefractionMode);
-    auto perViewLabel = mName;
-    perViewLabel.append("_perView");
-    perViewDescriptorSetLayout.label = std::move(perViewLabel);
+    bool const isLit = mIsVariantLit || mHasShadowMultiplier;
+    bool const isSSR = mReflectionMode == ReflectionMode::SCREEN_SPACE ||
+            mRefractionMode == RefractionMode::SCREEN_SPACE;
+    bool const hasFog = !(mVariantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+
+    auto perViewDescriptorSetLayout = descriptor_sets::getPerViewDescriptorSetLayout(
+            mMaterialDomain, isLit, isSSR, hasFog, false);
+
+    auto perViewDescriptorSetLayoutVsm = descriptor_sets::getPerViewDescriptorSetLayout(
+            mMaterialDomain, isLit, isSSR, hasFog, true);
+
+    // set the labels
+    descriptorSetLayout.label = CString{ mName }.append("_perMat");
+    perViewDescriptorSetLayout.label = CString{ mName }.append("_perView");
+    perViewDescriptorSetLayoutVsm.label = CString{ mName }.append("_perViewVsm");
 
     // get the PER_RENDERABLE and PER_VIEW descriptor binding info
     for (auto&& [bindingPoint, descriptorSetLayout] : {
@@ -1181,7 +1236,11 @@ void FMaterial::processDescriptorSets(FEngine& engine, MaterialParser const* con
 
     mPerViewDescriptorSetLayout = {
             engine.getDescriptorSetLayoutFactory(),
-            engine.getDriverApi(), perViewDescriptorSetLayout };
+            engine.getDriverApi(), std::move(perViewDescriptorSetLayout) };
+
+    mPerViewDescriptorSetLayoutVsm = {
+            engine.getDescriptorSetLayoutFactory(),
+            engine.getDriverApi(), std::move(perViewDescriptorSetLayoutVsm) };
 }
 
 descriptor_binding_t FMaterial::getSamplerBinding(

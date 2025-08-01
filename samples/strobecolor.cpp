@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Engine.h>
 #include <filament/View.h>
 #include <filament/Scene.h>
@@ -29,6 +31,7 @@ using namespace filament;
 int main(int argc, char** argv) {
     Config config;
     config.title = "strobecolor";
+    config.backend = samples::parseArgumentsForBackend(argc, argv);
     Skybox* skybox;
 
     auto setup = [&skybox](Engine* engine, View* view, Scene* scene) {

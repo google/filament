@@ -25,7 +25,7 @@
 #include <backend/Handle.h>
 
 #include <utils/Hash.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 
 #include <fstream>
 #include <string>
@@ -99,6 +99,8 @@ struct MaterialParams {
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
+    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
+            "Image is unexpectedly darker, see b/417226296");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
             "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
             "data");
@@ -118,7 +120,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         Shader shader = Shader(api, cleanup, ShaderConfig {
             .vertexShader = fullscreenVs,
             .fragmentShader = fullscreenFs,
-            .uniforms = {{"test_tex", DescriptorType::SAMPLER, samplerInfo}, {"Params"}}
+            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}, {"Params"}}
         });
 
         TrianglePrimitive const triangle(getDriverApi());
@@ -135,8 +137,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
-            slog.i << "Level " << int(level) << ": " <<
-                    (kTexWidth >> level) << "x" << (kTexHeight >> level) << io::endl;
+            LOG(INFO) << "Level " << int(level) << ": " << (kTexWidth >> level) << "x" << (kTexHeight >> level);
             renderTargets[level] = cleanup.add(api.createRenderTarget( TargetBufferFlags::COLOR,
                     kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {}));
         }
@@ -159,15 +160,10 @@ TEST_F(BackendTest, FeedbackLoops) {
         for (int frame = 0; frame < kNumFrames; frame++) {
 
             // Prep for rendering.
-            RenderPassParams params = {};
-            params.flags.clear = TargetBufferFlags::NONE;
-            params.flags.discardEnd = TargetBufferFlags::NONE;
-            PipelineState state;
-            state.rasterState.colorWrite = true;
-            state.rasterState.depthWrite = false;
-            state.rasterState.depthFunc = RasterState::DepthFunc::A;
-            state.program = shader.getProgram();
-            state.pipelineLayout.setLayout[0] = { shader.getDescriptorSetLayout() };
+            PipelineState state = getColorWritePipelineState();
+            shader.addProgramToPipelineState(state);
+
+            RenderPassParams params = getNoClearRenderPass();
 
             api.makeCurrent(swapChain, swapChain);
             api.beginFrame(0, 0, 0);
@@ -200,7 +196,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 
@@ -233,7 +233,11 @@ TEST_F(BackendTest, FeedbackLoops) {
                 });
 
                 api.beginRenderPass(renderTargets[targetLevel], params);
-                api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+                state.primitiveType = PrimitiveType::TRIANGLES;
+                state.vertexBufferInfo = triangle.getVertexBufferInfo();
+                api.bindPipeline(state);
+                api.bindRenderPrimitive(triangle.getRenderPrimitive());
+                api.draw2(0, 3, 1);
                 api.endRenderPass();
             }
 

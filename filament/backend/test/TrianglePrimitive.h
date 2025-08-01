@@ -55,6 +55,8 @@ public:
     void updateIndices(const index_type* indices) noexcept;
     void updateIndices(const index_type* indices, int count, int offset) noexcept;
 
+    VertexInfoHandle getVertexBufferInfo() const { return mVertexBufferInfo; }
+
 private:
 
     size_t mVertexCount = 3;

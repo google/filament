@@ -32,6 +32,7 @@ static constexpr size_t CONFIG_COMMAND_BUFFERS_SIZE     = 3 * CONFIG_MIN_COMMAND
 
 using namespace filament;
 using namespace filament::backend;
+using namespace filament::math;
 
 #ifndef FILAMENT_IOS
 #include <imageio/ImageEncoder.h>
@@ -39,24 +40,32 @@ using namespace filament::backend;
 
 using namespace image;
 #endif
+#include <iostream>
 
 namespace test {
 
 Backend BackendTest::sBackend = Backend::NOOP;
 OperatingSystem BackendTest::sOperatingSystem = OperatingSystem::OTHER;
 bool BackendTest::sIsMobilePlatform = false;
+int BackendTest::sArgc = 0;
+char** BackendTest::sArgv = nullptr;
 std::vector<std::string> BackendTest::sFailedImages;
 
-void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform) {
+void BackendTest::init(Backend backend, OperatingSystem operatingSystem, bool isMobilePlatform,
+        int argc, char** argv) {
     sBackend = backend;
     sOperatingSystem = operatingSystem;
     sIsMobilePlatform = isMobilePlatform;
+    sArgc = argc;
+    sArgv = argv;
 }
 
 BackendTest::BackendTest() : commandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE,
         CONFIG_COMMAND_BUFFERS_SIZE, /*mPaused=*/false) {
     initializeDriver();
     mImageExpectations.emplace(getDriverApi());
+    NativeView nativeView = getNativeView();
+    mScreenSize = {nativeView.width, nativeView.height};
 }
 
 BackendTest::~BackendTest() {
@@ -106,59 +115,43 @@ Handle<HwSwapChain> BackendTest::createSwapChain() {
     return getDriverApi().createSwapChain(view.ptr, 0);
 }
 
-void BackendTest::fullViewport(RenderPassParams& params) {
-    fullViewport(params.viewport);
+PipelineState BackendTest::getColorWritePipelineState() {
+    PipelineState result;
+    result.rasterState.colorWrite = true;
+    result.rasterState.depthWrite = false;
+    result.rasterState.depthFunc = RasterState::DepthFunc::A;
+    return result;
 }
 
-void BackendTest::fullViewport(Viewport& viewport) {
-    const NativeView& view = getNativeView();
-    viewport.left = 0;
-    viewport.bottom = 0;
-    viewport.width = view.width;
-    viewport.height = view.height;
+filament::backend::Viewport BackendTest::getFullViewport() const {
+   const NativeView& view = getNativeView();
+   return Viewport {
+       .left = 0,
+       .bottom = 0,
+       .width = static_cast<uint32_t>(view.width),
+       .height = static_cast<uint32_t>(view.height)
+   };
 }
 
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<filament::backend::HwRenderTarget> renderTarget,
-        Handle<filament::backend::HwSwapChain> swapChain,
-        Handle<filament::backend::HwProgram> program) {
+filament::backend::RenderPassParams BackendTest::getClearColorRenderPass(float4 color) {
     RenderPassParams params = {};
-    fullViewport(params);
     params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = {0.f, 0.f, 1.f, 1.f};
     params.flags.discardStart = TargetBufferFlags::ALL;
     params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = 512;
-    params.viewport.width = 512;
-    renderTriangle(pipelineLayout, renderTarget, swapChain, program, params);
+    params.clearColor = color;
+    return params;
 }
 
-void BackendTest::renderTriangle(
-        PipelineLayout const& pipelineLayout,
-        Handle<HwRenderTarget> renderTarget,
-        Handle<HwSwapChain> swapChain,
-        Handle<HwProgram> program,
-        const RenderPassParams& params) {
-    auto& api = getDriverApi();
+filament::backend::RenderPassParams BackendTest::getNoClearRenderPass() {
+    return RenderPassParams{};
+}
 
-    TrianglePrimitive triangle(api);
+std::size_t BackendTest::screenWidth() const {
+    return mScreenSize[0];
+}
 
-    api.makeCurrent(swapChain, swapChain);
-
-    api.beginRenderPass(renderTarget, params);
-
-    PipelineState state;
-    state.program = program;
-    state.pipelineLayout = pipelineLayout;
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
-
-    api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
-
-    api.endRenderPass();
+std::size_t BackendTest::screenHeight() const {
+    return mScreenSize[1];
 }
 
 bool BackendTest::matchesEnvironment(Backend backend) {
@@ -171,6 +164,11 @@ bool BackendTest::matchesEnvironment(OperatingSystem operatingSystem) {
 
 void BackendTest::markImageAsFailure(std::string failedImageName) {
     sFailedImages.emplace_back(std::move(failedImageName));
+}
+
+std::filesystem::path BackendTest::binaryDirectory() {
+    assert(sArgc >= 1);
+    return std::filesystem::path(sArgv[0]).remove_filename().string();
 }
 
 void BackendTest::recordFailedImages() {
@@ -200,8 +198,9 @@ public:
     }
 };
 
-void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc, char* argv[]) {
-    BackendTest::init(backend, operatingSystem, isMobile);
+void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, int& argc,
+        char* argv[]) {
+    BackendTest::init(backend, operatingSystem, isMobile, argc, argv);
     ::testing::InitGoogleTest(&argc, argv);
     ::testing::AddGlobalTestEnvironment(new Environment);
 }

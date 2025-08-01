@@ -23,7 +23,7 @@
 #include <filament/LightManager.h>
 #include <filament/Options.h>
 
-#include <iterator>
+
 #include <private/filament/EngineEnums.h>
 
 #include "components/RenderableManager.h"
@@ -32,6 +32,8 @@
 #include "details/DebugRegistry.h"
 #include "details/Texture.h"
 #include "details/View.h"
+
+#include "ds/DescriptorSet.h"
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
@@ -57,6 +59,7 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <new>
 #include <memory>
@@ -385,9 +388,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                     auto transaction = ShadowMap::open(driver);
-                    ShadowMap::prepareCamera(transaction, driver, cameraInfo);
+                    ShadowMap::prepareCamera(transaction, engine, cameraInfo);
                     ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                     ShadowMap::prepareTime(transaction, engine, userTime);
+                    ShadowMap::prepareMaterialGlobals(transaction, view.getMaterialGlobals());
                     ShadowMap::prepareShadowMapping(transaction,
                             vsmShadowOptions.highPrecision);
                     shadowMap.commit(transaction, engine, driver);
@@ -412,7 +416,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     RenderPass const pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
-                            .camera(cameraInfo)
+                            .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)
@@ -559,14 +563,19 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                         // if we know there are no visible shadows, we can skip rendering, but
                         // we need the render-pass to clear/initialize the shadow-map
                         // Note: this is always true for directional/cascade shadows.
-                        if (curr->shadowMap->hasVisibleShadows()) {
-                            curr->shadowMap->bind(driver);
-                            curr->executor.overrideScissor(curr->shadowMap->getScissor());
+                        if (ShadowMap const* const shadowMap = curr->shadowMap; shadowMap->hasVisibleShadows()) {
+                            shadowMap->bind(driver);
+                            curr->executor.overrideScissor(shadowMap->getScissor());
                             curr->executor.execute(engine, driver);
                         }
                     }
 
                     driver.endRenderPass();
+
+                    // unbind all descriptor sets to avoid false dependencies with the next pass
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
                 });
 
         first = last;
@@ -629,7 +638,8 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateCascadeShadowMaps(FEng
             .textureDimension    = uint16_t(options.mapSize),
             .shadowDimension     = uint16_t(options.mapSize - 2u),
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
-                                   engine.getBackend() == Backend::VULKAN,
+                                   engine.getBackend() == Backend::VULKAN ||
+                                   engine.getBackend() == Backend::WEBGPU,
             .vsm                 = view.hasVSM()
     };
 
@@ -806,7 +816,8 @@ void ShadowMapManager::prepareSpotShadowMap(ShadowMap& shadowMap, FEngine& engin
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize - 2u),
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
-                                   engine.getBackend() == Backend::VULKAN,
+                                   engine.getBackend() == Backend::VULKAN ||
+                                   engine.getBackend() == Backend::WEBGPU,
             .vsm                 = view.hasVSM()
     };
 
@@ -898,7 +909,8 @@ void ShadowMapManager::preparePointShadowMap(ShadowMap& shadowMap,
             .textureDimension    = uint16_t(options->mapSize),
             .shadowDimension     = uint16_t(options->mapSize), // point-lights don't have a border
             .textureSpaceFlipped = engine.getBackend() == Backend::METAL ||
-                                   engine.getBackend() == Backend::VULKAN,
+                                   engine.getBackend() == Backend::VULKAN ||
+                                   engine.getBackend() == Backend::WEBGPU,
             .vsm                 = view.hasVSM()
     };
 

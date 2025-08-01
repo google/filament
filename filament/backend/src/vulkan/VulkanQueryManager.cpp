@@ -42,7 +42,7 @@ fvkmemory::resource_ptr<VulkanTimerQuery> VulkanQueryManager::getNextQuery(
         fvkmemory::ResourceManager* resourceManager) {
     auto unused = ~mUsed;
     if (unused.empty()) {
-        FVK_LOGE << "More than " << mUsed.size() << " timers are not supported." << utils::io::endl;
+        FVK_LOGE << "More than " << mUsed.size() << " timers are not supported.";
         return {};
     }
 

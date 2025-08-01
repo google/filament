@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_UTILS_INVOKABLE_H
-#define TNT_UTILS_INVOKABLE_H
-
-#include <utils/ostream.h>
+#ifndef TNT_UTILS_INVOCABLE_H
+#define TNT_UTILS_INVOCABLE_H
 
 #include <type_traits>
 #include <utility>
@@ -25,6 +23,9 @@
 #include <assert.h>
 
 namespace utils {
+namespace io {
+class ostream;
+}
 
 /*
  * Invocable is a move-only general purpose function wrapper. Instances can
@@ -50,11 +51,16 @@ template<typename Fn, typename R, typename... Args>
 using EnableIfFnMatchesInvocable = std::enable_if_t<true, int>;
 #endif
 
+class InvocableBase {
+protected:
+    static io::ostream& printInvocable(io::ostream& out, const char* name);
+};
+
 template<typename Signature>
 class Invocable;
 
 template<typename R, typename... Args>
-class Invocable<R(Args...)> {
+class Invocable<R(Args...)> : protected InvocableBase {
 public:
     // Creates an Invocable that does not contain a functor.
     // Will evaluate to false.
@@ -85,7 +91,7 @@ public:
 private:
 #if !defined(NDEBUG)
     friend io::ostream& operator<<(io::ostream& out, const Invocable&) {
-        return out << "Invocable<>"; // TODO: is there a way to do better here?
+        return printInvocable(out, "Invocable<>"); // TODO: is there a way to do better here?
     }
 #endif
     void* mInvocable = nullptr;
@@ -156,4 +162,4 @@ Invocable<R(Args...)>::operator bool() const noexcept {
 
 } // namespace utils
 
-#endif // TNT_UTILS_INVOKABLE_H
+#endif // TNT_UTILS_INVOCABLE_H

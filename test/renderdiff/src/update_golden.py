@@ -34,7 +34,7 @@ CONFIG_NEW_SRC_DIR = 'goldens_dir'
 CONFIG_GOLDENS_BRANCH = 'goldens_branch'
 CONFIG_GOLDENS_UPDATES = 'goldens_updates'
 CONFIG_GOLDENS_DELETES = 'goldens_deletes'
-CONFIG_AUTO_COMMIT = 'auto-commit'
+CONFIG_PUSH_TO_REMOTE = 'push-to-remote'
 CONFIG_COMMIT_MSG = 'commit_msg'
 
 def _get_current_branch():
@@ -54,12 +54,12 @@ def _do_update(golden_manager, config):
 
   branch = config[CONFIG_GOLDENS_BRANCH]
   src_dir = config[CONFIG_NEW_SRC_DIR]
-  auto_commit = config[CONFIG_AUTO_COMMIT]
+  push_to_remote = config[CONFIG_PUSH_TO_REMOTE]
   commit_msg = config[CONFIG_COMMIT_MSG]
   golden_manager.source_from(src_dir, commit_msg, branch,
                              updates=updates,
                              deletes=deletes,
-                             push_to_remote=auto_commit)
+                             push_to_remote=push_to_remote)
 
 def _get_deletes_updates(update_dir, golden_dir):
   ret_delete = []
@@ -90,12 +90,13 @@ def _interactive_mode(base_golden_dir):
   if prompt_helper(
           f'Generate the new goldens from your local ' \
           f'Filament branch? (branch={cur_branch})') == PROMPT_YES:
-    code, res = execute('bash ./test/renderdiff/test.sh generate',
+    code, res = execute('bash ./test/renderdiff/generate.sh',
             capture_output=False)
     if code != 0:
       print('Failed to generate new goldens')
       exit(1)
-    config[CONFIG_NEW_SRC_DIR] = os.path.join(os.getcwd(), './out/renderdiff_tests/')
+    # Note that this matches RENDER_OUTPUT_DIR in preamble.sh
+    config[CONFIG_NEW_SRC_DIR] = os.path.join(os.getcwd(), './out/renderdiff/renders')
   else:
     def validator(src_dir):
       if not os.path.exists(src_dir):
@@ -136,16 +137,23 @@ def _interactive_mode(base_golden_dir):
     config[CONFIG_GOLDENS_DELETES] = []
     config[CONFIG_GOLDENS_UPDATES] = []
 
-  config[CONFIG_AUTO_COMMIT] = \
+  config[CONFIG_PUSH_TO_REMOTE] = \
       prompt_helper(f'Commit golden repo changes to remote?') == PROMPT_YES
   return config
 
 if __name__ == "__main__":
   parser = ArgParseImpl()
   parser.add_argument('--branch', help='Branch of the golden repo to write to')
+  parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
+  parser.add_argument('--push-to-remote', action="store_true", help='Access token for the golden repo')
+
+  # write-to-branch mode
   parser.add_argument('--source', help='Directory containing the new goldens')
   parser.add_argument('--commit-msg', help='Message for the commit to the golden repo')
-  parser.add_argument('--golden-repo-token', help='Access token for the golden repo')
+
+  # merge-to-main mode (used in postsubmit)
+  parser.add_argument('--merge-to-main', action="store_true", help='Merge to main the given branch')
+  parser.add_argument('--filament-tag', help='Tag to append to the commit message on merge')
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   config = {}
@@ -155,17 +163,24 @@ if __name__ == "__main__":
       access_token=args.golden_repo_token
   )
   base_golden_dir = golden_manager.directory()
+
+  # This is the write-to-branch mode
   if args.branch and args.source and args.commit_msg:
     assert os.path.exists(args.source), f'{args.source} (--source) directory not found'
     deletes, updates = _get_deletes_updates(args.source, base_golden_dir)
     config = {
-        CONFIG_AUTO_COMMIT: True,
+        CONFIG_PUSH_TO_REMOTE: args.push_to_remote,
         CONFIG_GOLDENS_BRANCH: args.branch,
         CONFIG_NEW_SRC_DIR: args.source,
         CONFIG_GOLDENS_UPDATES: updates,
         CONFIG_GOLDENS_DELETES: deletes,
         CONFIG_COMMIT_MSG: args.commit_msg,
     }
+    _do_update(golden_manager, config)
+  # This is the merge-to-main mode
+  elif args.branch and args.merge_to_main and args.filament_tag:
+    golden_manager.merge_to_main(branch=args.branch, tag=args.filament_tag, push_to_remote=True)
+  # Else, we're in interactive mode of write-to-branch (for local execution).
   else:
     config = _interactive_mode(base_golden_dir)
-  _do_update(golden_manager, config)
+    _do_update(golden_manager, config)

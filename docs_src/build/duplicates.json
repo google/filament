@@ -12,7 +12,10 @@
         "dest": "dup/building.md"
     },
     "CONTRIBUTING.md": {
-        "dest": "dup/contributing.md"
+        "dest": "dup/contributing.md",
+        "link_transforms": {
+            "/CODE_STYLE.md": "code_style.md"
+        }
     },
     "CODE_STYLE.md": {
         "dest": "dup/code_style.md"

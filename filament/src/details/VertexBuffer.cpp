@@ -27,14 +27,14 @@
 #include <backend/DriverEnums.h>
 #include <backend/BufferDescriptor.h>
 
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
+#include <utils/StaticString.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
-#include <utils/CString.h>
-#include <utils/StaticString.h>
 #include <utils/debug.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
 
 #include <algorithm>
 #include <array>
@@ -46,6 +46,13 @@
 #include <stdint.h>
 
 namespace filament {
+
+namespace {
+
+// TODO: reconcile this value (defined in VertexBuffer.h) with DriverEnums' MAX_VERTEX_BUFFER_COUNT
+constexpr size_t DOCUMENTED_MAX_VERTEX_BUFFER_COUNT = 8;
+
+} // anonymous
 
 using namespace backend;
 using namespace filament::math;
@@ -96,23 +103,11 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
 
     size_t const attributeSize = Driver::getElementTypeSize(attributeType);
     if (byteStride == 0) {
-        byteStride = (uint8_t)attributeSize;
+        byteStride = uint8_t(attributeSize);
     }
 
     if (size_t(attribute) < MAX_VERTEX_ATTRIBUTE_COUNT &&
-        size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
-
-#ifndef NDEBUG
-        if (byteOffset & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteOffset not multiple of 4" << utils::io::endl;
-        }
-        if (byteStride & 0x3u) {
-            utils::slog.d << "[performance] VertexBuffer::Builder::attribute() "
-                             "byteStride not multiple of 4" << utils::io::endl;
-        }
-#endif
-
+            size_t(bufferIndex) < MAX_VERTEX_ATTRIBUTE_COUNT) {
         auto& entry = mImpl->mAttributes[attribute];
         entry.buffer = bufferIndex;
         entry.offset = byteOffset;
@@ -125,8 +120,8 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute const at
 
         mImpl->mDeclaredAttributes.set(attribute);
     } else {
-        utils::slog.w << "Ignoring VertexBuffer attribute, the limit of " <<
-                MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded" << utils::io::endl;
+        LOG(WARNING) << "Ignoring VertexBuffer attribute, the limit of "
+                     << MAX_VERTEX_ATTRIBUTE_COUNT << " attributes has been exceeded";
     }
     return *this;
 }
@@ -160,8 +155,15 @@ VertexBuffer::Builder& VertexBuffer::Builder::name(utils::StaticString const& na
 VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     FILAMENT_CHECK_PRECONDITION(mImpl->mVertexCount > 0) << "vertexCount cannot be 0";
     FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount > 0) << "bufferCount cannot be 0";
-    FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= MAX_VERTEX_BUFFER_COUNT)
-            << "bufferCount cannot be more than " << MAX_VERTEX_BUFFER_COUNT;
+
+    static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
+
+    if (downcast(engine).features.engine.debug.assert_vertex_buffer_count_exceeds_8) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT)
+                << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
+    } else if (mImpl->mBufferCount > DOCUMENTED_MAX_VERTEX_BUFFER_COUNT) {
+        LOG(WARNING) << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
+    }
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.
@@ -169,9 +171,21 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     auto const& attributes = mImpl->mAttributes;
     utils::bitset32 attributedBuffers;
 
-    declaredAttributes.forEachSetBit([&](size_t const j){
-        // update set of used buffers
-        attributedBuffers.set(attributes[j].buffer);
+    declaredAttributes.forEachSetBit([&](size_t const j) {
+
+        FILAMENT_CHECK_PRECONDITION((attributes[j].offset & 0x3u) == 0)
+                << "attribute " << j << " offset=" << attributes[j].offset
+                << " is not multiple of 4";
+
+        FEngine* fengine = static_cast<FEngine*>(&engine);
+        if (fengine->features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4) {
+            FILAMENT_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0)
+                    << "attribute " << j << " stride=" << attributes[j].stride
+                    << " is not multiple of 4";
+        } else if ((attributes[j].stride & 0x3u) != 0) {
+            LOG(WARNING) << "attribute " << j << " stride=" << attributes[j].stride
+                         << " is not multiple of 4";
+        }
 
         if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
             FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))
@@ -181,18 +195,22 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
         // also checks that we don't use an invalid type with integer attributes
         if (attributes[j].flags & Attribute::FLAG_INTEGER_TARGET) {
             using ET = ElementType;
-            constexpr uint32_t const invalidIntegerTypes =
-                    (1 << (int)ET::FLOAT) |
-                    (1 << (int)ET::FLOAT2) |
-                    (1 << (int)ET::FLOAT3) |
-                    (1 << (int)ET::FLOAT4) |
-                    (1 << (int)ET::HALF) |
-                    (1 << (int)ET::HALF2) |
-                    (1 << (int)ET::HALF3) |
-                    (1 << (int)ET::HALF4);
-            FILAMENT_CHECK_PRECONDITION(!(invalidIntegerTypes & (1 << (int)attributes[j].type)))
+            constexpr uint32_t invalidIntegerTypes =
+                    (1 << int(ET::FLOAT)) |
+                    (1 << int(ET::FLOAT2)) |
+                    (1 << int(ET::FLOAT3)) |
+                    (1 << int(ET::FLOAT4)) |
+                    (1 << int(ET::HALF)) |
+                    (1 << int(ET::HALF2)) |
+                    (1 << int(ET::HALF3)) |
+                    (1 << int(ET::HALF4));
+
+            FILAMENT_CHECK_PRECONDITION(!(invalidIntegerTypes & (1 << int(attributes[j].type))))
                     << "invalid integer vertex attribute type " << int(attributes[j].type);
         }
+
+        // update set of used buffers
+        attributedBuffers.set(attributes[j].buffer);
     });
 
     FILAMENT_CHECK_PRECONDITION(attributedBuffers.count() == mImpl->mBufferCount)
@@ -270,7 +288,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle);
     if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mHandle.getId(), name);
+        driver.setDebugTag(mHandle.getId(), std::move(name));
     }
 
     // calculate buffer sizes
@@ -297,10 +315,10 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             if (i != Attribute::BUFFER_UNUSED) {
                 assert_invariant(bufferSizes[i] > 0);
                 if (!mBufferObjects[i]) {
-                    BufferObjectHandle bo = driver.createBufferObject(bufferSizes[i],
+                    BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                             BufferObjectBinding::VERTEX, BufferUsage::STATIC);
                     if (auto name = builder.getName(); !name.empty()) {
-                        driver.setDebugTag(bo.getId(), name);
+                        driver.setDebugTag(bo.getId(), std::move(name));
                     }
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
@@ -311,7 +329,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
         // in advanced skinning mode, we manage the BONE_INDICES and BONE_WEIGHTS arrays ourselves,
         // so we have to set the corresponding buffer objects.
         if (mAdvancedSkinningEnabled) {
-            for (auto index : { BONE_INDICES, BONE_WEIGHTS }) {
+            for (auto const index : { BONE_INDICES, BONE_WEIGHTS }) {
                 size_t const i = mAttributes[index].buffer;
                 assert_invariant(i != Attribute::BUFFER_UNUSED);
                 assert_invariant(bufferSizes[i] > 0);
@@ -319,7 +337,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                     BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                             BufferObjectBinding::VERTEX, BufferUsage::STATIC);
                     if (auto name = builder.getName(); !name.empty()) {
-                        driver.setDebugTag(bo.getId(), name);
+                        driver.setDebugTag(bo.getId(), std::move(name));
                     }
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
@@ -332,7 +350,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
 void FVertexBuffer::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (!mBufferObjectsEnabled) {
-        for (BufferObjectHandle bo : mBufferObjects) {
+        for (BufferObjectHandle const& bo : mBufferObjects) {
             driver.destroyBufferObject(bo);
         }
     }
@@ -346,32 +364,38 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t const bufferIndex,
         backend::BufferDescriptor&& buffer, uint32_t const byteOffset) {
-    FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled) << "Please use setBufferObjectAt()";
-    if (bufferIndex < mBufferCount) {
-        assert_invariant(mBufferObjects[bufferIndex]);
-        engine.getDriverApi().updateBufferObject(mBufferObjects[bufferIndex],
-               std::move(buffer), byteOffset);
-    } else {
-        FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
-                << "bufferIndex must be < bufferCount";
-    }
+
+    FILAMENT_CHECK_PRECONDITION(!mBufferObjectsEnabled)
+            << "buffer objects enabled, use setBufferObjectAt() instead";
+
+    FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+            << "bufferIndex must be < bufferCount";
+
+    FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
+        << "byteOffset must be a multiple of 4";
+
+    engine.getDriverApi().updateBufferObject(mBufferObjects[bufferIndex],
+            std::move(buffer), byteOffset);
 }
 
 void FVertexBuffer::setBufferObjectAt(FEngine& engine, uint8_t const bufferIndex,
         FBufferObject const * bufferObject) {
-    FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled) << "Please use setBufferAt()";
+
+    FILAMENT_CHECK_PRECONDITION(mBufferObjectsEnabled)
+            << "buffer objects disabled, use setBufferAt() instead";
+
     FILAMENT_CHECK_PRECONDITION(bufferObject->getBindingType() == BufferObject::BindingType::VERTEX)
-            << "Binding type must be VERTEX.";
-    if (bufferIndex < mBufferCount) {
-        auto hwBufferObject = bufferObject->getHwHandle();
-        engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
-        // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
-        // used only in buffer object mode
-        mBufferObjects[bufferIndex] = hwBufferObject;
-    } else {
-        FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
-                << "bufferIndex must be < bufferCount";
-    }
+            << "bufferObject binding type must be VERTEX but is "
+            << to_string(bufferObject->getBindingType());
+
+    FILAMENT_CHECK_PRECONDITION(bufferIndex < mBufferCount)
+            << "bufferIndex must be < bufferCount";
+
+    auto const hwBufferObject = bufferObject->getHwHandle();
+    engine.getDriverApi().setVertexBufferObject(mHandle, bufferIndex, hwBufferObject);
+    // store handle to recreate VertexBuffer in the case extra bone indices and weights definition
+    // used only in buffer object mode
+    mBufferObjects[bufferIndex] = hwBufferObject;
 }
 
 void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
@@ -381,15 +405,15 @@ void FVertexBuffer::updateBoneIndicesAndWeights(FEngine& engine,
     auto jointsData = skinJoints.release();
     uint8_t const indicesIndex = mAttributes[BONE_INDICES].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[indicesIndex],
-            {jointsData, mVertexCount * 8,
-                    [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); }},
+            { jointsData, mVertexCount * 8,
+              [](void* buffer, size_t, void*) { delete[] static_cast<uint16_t*>(buffer); } },
             0);
 
     auto weightsData = skinWeights.release();
     uint8_t const weightsIndex = mAttributes[BONE_WEIGHTS].buffer;
     engine.getDriverApi().updateBufferObject(mBufferObjects[weightsIndex],
-            {weightsData, mVertexCount * 16,
-                    [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); }},
+            { weightsData, mVertexCount * 16,
+              [](void* buffer, size_t, void*) { delete[] static_cast<float*>(buffer); } },
             0);
 }
 

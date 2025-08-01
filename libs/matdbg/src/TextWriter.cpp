@@ -120,6 +120,7 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
     printFloatChunk(text, container, MaterialSpecularAntiAliasingVariance, "    Variance: ");
     printFloatChunk(text, container, MaterialSpecularAntiAliasingThreshold, "    Threshold: ");
     printChunk<bool, bool>(text, container, MaterialClearCoatIorChange, "Clear coat IOR change: ");
+    printChunk<bool, bool>(text, container, MaterialHasCustomDepthShader, "Has custom depth: ");
 
     text << endl;
 
@@ -151,6 +152,61 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
             text << endl;
         }
     }
+
+    return true;
+}
+
+static bool printDescriptorSetLayout(ostream& text, const ChunkContainer& container) {
+    if (!container.hasChunk(ChunkType::MaterialDescriptorSetLayoutInfo)) {
+        return true;
+    }
+
+    auto [startDsli, endDsli] = container.getChunkRange(ChunkType::MaterialDescriptorSetLayoutInfo);
+    Unflattener dsli(startDsli, endDsli);
+
+    uint8_t descriptorCount;
+    if (!dsli.read(&descriptorCount)) {
+        return false;
+    }
+
+    text << "Descriptors:" << endl;
+
+    for (int i = 0; i < descriptorCount; i++) {
+        uint8_t type;
+        uint8_t stages;
+        uint8_t binding;
+        uint8_t flags;
+
+        if (!dsli.read(&type)) {
+            return false;
+        }
+
+        if (!dsli.read(&stages)) {
+            return false;
+        }
+
+        if (!dsli.read(&binding)) {
+            return false;
+        }
+
+        if (!dsli.read(&flags)) {
+            return false;
+        }
+
+        uint16_t padding;
+        if (!dsli.read(&padding)) {
+            return false;
+        }
+
+        text << "    "
+                  << setw(alignment) << toString(DescriptorType(type))
+                  << setw(alignment) << toString(ShaderStageFlags(stages))
+                  << setw(shortAlignment) << static_cast<int>(binding)
+                  << setw(alignment) << toString(DescriptorFlags(flags))
+                  << endl;
+    }
+
+    text << endl;
 
     return true;
 }
@@ -196,6 +252,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         uint64_t fieldSize;
         uint8_t fieldType;
         uint8_t fieldPrecision;
+        uint8_t fieldAssociatedSampler;
 
         if (!uib.read(&fieldName)) {
             return false;
@@ -213,6 +270,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
         }
 
+        if (!uib.read(&fieldAssociatedSampler)) {
+            return false;
+        }
+
         text << "    "
                   << setw(alignment) << fieldName.c_str()
                   << setw(shortAlignment) << toString(UniformType(fieldType))
@@ -227,6 +288,7 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;
+        bool fieldFilterable;
         bool fieldMultisample;
 
         if (!sib.read(&fieldName)) {
@@ -245,6 +307,10 @@ static bool printParametersInfo(ostream& text, const ChunkContainer& container) 
             return false;
 
         if (!sib.read(&fieldPrecision)) {
+            return false;
+        }
+
+        if (!sib.read(&fieldFilterable)) {
             return false;
         }
 
@@ -447,6 +513,9 @@ bool TextWriter::writeMaterialInfo(const filaflat::ChunkContainer& container) {
         return false;
     }
     if (!printParametersInfo(text, container)) {
+        return false;
+    }
+    if (!printDescriptorSetLayout(text, container)) {
         return false;
     }
     if (!printConstantInfo(text, container)) {

@@ -32,9 +32,11 @@ enum class VulkanLayout : uint8_t {
     // any transition.
     UNDEFINED,
     // Fragment/vertex shader accessible layout for reading and writing.
-    READ_WRITE,
-    // Fragment/vertex shader accessible layout for reading only.
-    READ_ONLY,
+    STAGING,
+    // Fragment shader accessible layout for reading only.
+    FRAG_READ,
+    // Vertex shader accessible layout for reading only.
+    VERT_READ,
     // For the source of a copy operation.
     TRANSFER_SRC,
     // For the destination of a copy operation.
@@ -65,9 +67,10 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
     switch (layout) {
         case VulkanLayout::UNDEFINED:
             return VK_IMAGE_LAYOUT_UNDEFINED;
-        case VulkanLayout::READ_WRITE:
+        case VulkanLayout::STAGING:
             return VK_IMAGE_LAYOUT_GENERAL;
-        case VulkanLayout::READ_ONLY:
+        case VulkanLayout::FRAG_READ:
+        case VulkanLayout::VERT_READ:
             return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case VulkanLayout::TRANSFER_SRC:
             return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -80,9 +83,8 @@ constexpr inline VkImageLayout getVkLayout(VulkanLayout layout) {
         case VulkanLayout::PRESENT:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         // Filament sometimes samples from one miplevel while writing to another level in the
-        // same texture (e.g. bloom does this). Moreover we'd like to avoid lots of expensive
-        // layout transitions. So, keep it simple and use GENERAL for all color-attachable
-        // textures.
+        // same texture (e.g. bloom does this). So, keep it simple and use GENERAL for all
+        // color-attachable textures.
         case VulkanLayout::COLOR_ATTACHMENT:
             return VK_IMAGE_LAYOUT_GENERAL;
         case VulkanLayout::COLOR_ATTACHMENT_RESOLVE:
@@ -110,6 +112,8 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
 
+namespace utils::io {
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::VulkanLayout& layout);
+}
 
 #endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H

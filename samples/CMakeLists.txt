@@ -217,6 +217,23 @@ endif()
 target_sources(gltf-demo-resources PRIVATE ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Common Sample Utilities
+# ==================================================================================================
+
+add_library(samples-common STATIC
+    common/arguments.cpp
+    common/configuration.h
+    common/configuration.cpp
+)
+
+target_include_directories(samples-common PRIVATE
+    ${ROOT_DIR}/third_party/getopt/include
+)
+target_link_libraries(samples-common filament)
+
+set_target_properties(samples-common PROPERTIES FOLDER Samples/Common)
+
+# ==================================================================================================
 # Compiler flags
 # ==================================================================================================
 
@@ -234,7 +251,7 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp)
+    target_link_libraries(${NAME} PRIVATE sample-resources filamentapp samples-common)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
     set_target_properties(${NAME} PROPERTIES FOLDER Samples)
 
@@ -259,6 +276,7 @@ if (NOT ANDROID)
     add_demo(helloskinningbuffer)
     add_demo(helloskinningbuffer_morebones)
     add_demo(hellostereo)
+    add_demo(hybrid_instancing)
     add_demo(image_viewer)
     add_demo(lightbulb)
     add_demo(material_sandbox)
@@ -273,6 +291,7 @@ if (NOT ANDROID)
     add_demo(sample_full_pbr)
     add_demo(sample_normal_map)
     add_demo(shadowtest)
+    add_demo(simple_gltf_test)
     add_demo(skinningtest)
     add_demo(strobecolor)
     add_demo(suzanne)
@@ -291,6 +310,7 @@ if (NOT ANDROID)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)
     target_link_libraries(sample_normal_map PRIVATE filameshio)
+    target_link_libraries(simple_gltf_test PRIVATE gltf-demo-resources uberarchive gltfio viewer)
     target_link_libraries(suzanne PRIVATE filameshio suzanne-resources)
 
     if (FILAMENT_DISABLE_MATOPT)

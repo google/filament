@@ -28,30 +28,53 @@ namespace filament::backend {
 
 class WebGPUSwapChain final : public Platform::SwapChain, HwSwapChain {
 public:
-    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+    WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
             wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+
+    WebGPUSwapChain( wgpu::Extent2D const& extent,
+            wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags);
+
     ~WebGPUSwapChain();
 
     [[nodiscard]] wgpu::TextureFormat getColorFormat() const { return mConfig.format; }
 
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
-    [[nodiscard]] wgpu::TextureView getCurrentSurfaceTextureView(wgpu::Extent2D const&);
+    [[nodiscard]] wgpu::TextureView getNextTextureView();
+    [[nodiscard]] wgpu::TextureView getNextTextureView(wgpu::Extent2D const& extent);
+
+    [[nodiscard]] wgpu::Texture getCurrentTexture();
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
+
+    [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
     void present();
 
 private:
+
     void setExtent(wgpu::Extent2D const&);
 
     wgpu::Device mDevice = nullptr;
+    enum class SwapChainType {
+        HEADLESS,
+        SURFACE
+    };
+
     wgpu::Surface mSurface = {};
     wgpu::SurfaceConfiguration mConfig = {};
     bool mNeedStencil = false;
     wgpu::TextureFormat mDepthFormat = wgpu::TextureFormat::Undefined;
     wgpu::Texture mDepthTexture = nullptr;
     wgpu::TextureView mDepthTextureView = nullptr;
+    const SwapChainType mType;
+    const uint32_t mHeadlessWidth;
+    const uint32_t mHeadlessHeight;
+    wgpu::SurfaceTexture mCurrentTexture;
+    static constexpr uint32_t mHeadlessBufferCount = 3;
+    uint8_t mHeadlessBufferIndex = 0;
+    std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;
+    std::array<wgpu::TextureView, mHeadlessBufferCount> mRenderTargetViews;
 };
 
 } // namespace filament::backend

@@ -1,0 +1,22 @@
+[book]
+authors = []
+language = "en"
+multilingual = false
+src = "src"
+title = "Filament"
+
+[build]
+create-missing = false
+
+[output.html]
+mathjax-support = true
+default-theme = "light"
+preferred-dark-theme = "light"
+git-repository-url = "https://github.com/google/filament"
+git-repository-icon = "fa-github"
+
+[output.html.print]
+enable = false
+
+[output.html.fold]
+enable = false

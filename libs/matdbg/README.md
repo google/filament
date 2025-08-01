@@ -21,6 +21,7 @@ At the time of this writing, the following capabilities are supported.
 - OpenGL: Editing GLSL
 - Metal: Editing MSL
 - Vulkan: Editing transpiled GLSL, displaying disassembled SPIR-V
+- WebGPU: Editing WGSL
 
 Note that a given material can be built with multiple backends, even though only one backend
 is active in a particular session. For example, if the current app is using Vulkan, it is still
@@ -121,17 +122,18 @@ couple methods that are called from the Filament engine:
 
 ## JavaScript Client
 
-The web app is written in simple, modern JavaScript and avoids frameworks like React or Angular. It
-uses the following third-party libraries which are fetched from a CDN using `<script>`. This allows
-us to avoid adding them to our git repo, and leads to good caching behavior.
+The web app is written in simple, modern JavaScript. It uses third-party libraries
+which are fetched from a CDN using `<script>`. This allows us to avoid adding them to our git repo,
+and leads to good caching behavior.
 
-- **mustache** Popular tiny library that converts template strings into HTML.
+- **lit-html** A small wrapper around web-components for fast, iterative development.
 - **monaco** The engine behind Visual Studio Code.
     - We've configured this for C++ for somewhat reasonable syntax highlighting.
     - If desired we could extend the editor to better handle GLSL and SPIR-V.
 
-All the source code for our web app is contained in a single file (`script.js`) and the mustache
-template strings are specified using `<template>` tags in `index.html`.
+All the source code for our web app is contained in a single file (`app.js`), and there is a
+corresponding `api.js` to handle the protocol between the server (the running filament app) 
+the client (the browser).
 
 The web app basically provides a view over a pseudo-database which is a just a global variable
 that holds a dictionary that maps from material id's to objects that conform to the JSON described
@@ -219,38 +221,11 @@ used to create the SPIR-V is not available.
 
 ---
 
-## WebSocket messages
-
-Unlike HTTP requests, WebSocket messages can be pushed at any time and can travel in either
-direction. In our homegrown protocol, every WebSocket message starts with a command that matches
-\[A-Z\_]+ followed by a space character. Command arguments are delimited with spaces.
-
-Currently we support only one command. It travels from client to server.
-
-    EDIT [material id] [api index] [shader index] [shader length] [entire shader source....]
-
-The `material id` is 8 hex digits.
-
-The `api index` chooses between GL/VK/Metal and matches the values of the Backend enum (except that
-zero is invalid).
-
-The `shader index` is a zero-based index into the list of variants using the order that
-they appear in the package, where each API (GL / VK / Metal) has its own list.
-
-The `shader length` is the number of bytes required for UTF-8 encoding of the shader source string,
-not including the terminating null.
-
 ## Wish List
 
 - Allow editing of the original GLSL, perhaps by enhancing the `-g` option in matc and adding new chunk types.
-- Port the web side to TypeScript
-    - This will clarify the structure of the pseudo-database, which is currently a total hack.
-    - Allows us to use enums instead of strings in several places (e.g. getShaderAPI)
-    - Try using https://github.com/basarat/typescript-script because webpack etc is painful.
-    - If the above idea is too slow then use https://github.com/evanw/esbuild.
 - Expose the entire `engine.debug` struct in the web UI.
 - When shader errors occur, send them back over the wire to the web client.
-- Resizing the Chrome window causes layout issues.
 - The sidebar in the web app is not resizeable.
 - For the material ids, SHA-1 would be better than murmur since the latter can easily have collisions.
 - It would be easy to add diff decorations to the editor in our `onEdit` function:
@@ -265,4 +240,3 @@ not including the terminating null.
 [1]: https://github.com/civetweb/civetweb
 [2]: https://microsoft.github.io/monaco-editor/
 [3]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template
-[4]: https://mustache.github.io/

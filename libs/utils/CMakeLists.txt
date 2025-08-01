@@ -27,6 +27,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
         ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
         ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
@@ -65,6 +66,8 @@ set(SRCS
         src/CyclicBarrier.cpp
         src/EntityManager.cpp
         src/EntityManagerImpl.h
+        src/FixedCapacityVectorBase.cpp
+        src/Invocable.cpp
         src/JobSystem.cpp
         src/Log.cpp
         src/NameComponentManager.cpp
@@ -84,6 +87,7 @@ if (ANDROID)
     list(APPEND SRCS src/android/ThermalManager.cpp)
     list(APPEND SRCS src/android/PerformanceHintManager.cpp)
     list(APPEND SRCS src/android/Systrace.cpp)
+    list(APPEND SRCS src/android/Tracing.cpp)
 endif()
 if (LINUX OR ANDROID)
     list(APPEND SRCS src/linux/Condition.cpp)
@@ -93,6 +97,7 @@ endif()
 if (APPLE)
     list(APPEND SRCS src/darwin/Path.mm)
     list(APPEND SRCS src/darwin/Systrace.cpp)
+    list(APPEND SRCS src/darwin/Tracing.cpp)
 endif()
 if (WEBGL)
     list(APPEND SRCS src/web/Path.cpp)

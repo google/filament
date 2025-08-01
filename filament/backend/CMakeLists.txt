@@ -180,8 +180,11 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
-            src/vulkan/VulkanBuffer.cpp
             src/vulkan/VulkanBuffer.h
+            src/vulkan/VulkanBufferCache.h
+            src/vulkan/VulkanBufferCache.cpp
+            src/vulkan/VulkanBufferProxy.h
+            src/vulkan/VulkanBufferProxy.cpp
             src/vulkan/VulkanCommands.cpp
             src/vulkan/VulkanCommands.h
             src/vulkan/VulkanConstants.h
@@ -254,16 +257,49 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     list(APPEND SRCS
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
+            src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.h
+            src/webgpu/WebGPUBlitter.cpp
+            src/webgpu/WebGPUBlitter.h
+            src/webgpu/WebGPUBufferBase.cpp
+            src/webgpu/WebGPUBufferBase.h
+            src/webgpu/WebGPUBufferObject.cpp
+            src/webgpu/WebGPUBufferObject.h
             src/webgpu/WebGPUConstants.h
+            src/webgpu/WebGPUDescriptorSet.cpp
+            src/webgpu/WebGPUDescriptorSet.h
+            src/webgpu/WebGPUDescriptorSetLayout.cpp
+            src/webgpu/WebGPUDescriptorSetLayout.h
             src/webgpu/WebGPUDriver.cpp
             src/webgpu/WebGPUDriver.h
-            src/webgpu/WebGPUHandles.cpp
-            src/webgpu/WebGPUHandles.h
-            src/webgpu/WebGPUPipelineCreation.cpp
-            src/webgpu/WebGPUPipelineCreation.h
+            src/webgpu/WebGPUFence.cpp
+            src/webgpu/WebGPUFence.h
+            src/webgpu/WebGPUIndexBuffer.cpp
+            src/webgpu/WebGPUIndexBuffer.h
+            src/webgpu/WebGPUMsaaTextureResolver.cpp
+            src/webgpu/WebGPUMsaaTextureResolver.h
+            src/webgpu/WebGPUPipelineCache.cpp
+            src/webgpu/WebGPUPipelineCache.h
+            src/webgpu/WebGPUPipelineLayoutCache.cpp
+            src/webgpu/WebGPUPipelineLayoutCache.h
+            src/webgpu/WebGPUProgram.cpp
+            src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPURenderPassMipmapGenerator.cpp
+            src/webgpu/WebGPURenderPassMipmapGenerator.h
+            src/webgpu/WebGPURenderPrimitive.h
+            src/webgpu/WebGPURenderTarget.cpp
+            src/webgpu/WebGPURenderTarget.h
+            src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
-            src/webgpu/WGPUProgram.cpp
+            src/webgpu/WebGPUTexture.cpp
+            src/webgpu/WebGPUTexture.h
+            src/webgpu/WebGPUTextureHelpers.h
+            src/webgpu/WebGPUVertexBuffer.cpp
+            src/webgpu/WebGPUVertexBuffer.h
+            src/webgpu/WebGPUVertexBufferInfo.cpp
+            src/webgpu/WebGPUVertexBufferInfo.h
     )
     if (WIN32)
         list(APPEND SRCS src/webgpu/platform/WebGPUPlatformWindows.cpp)
@@ -289,12 +325,6 @@ endif()
 if (ANDROID)
     list(APPEND SRCS src/BackendUtilsAndroid.cpp)
 endif()
-
-# ==================================================================================================
-# Definitions
-# ==================================================================================================
-# "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
-add_definitions(-DSYSTRACE_TAG=2 )
 
 # ==================================================================================================
 # Includes & target definition
@@ -386,6 +416,10 @@ endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
+
+if (FILAMENT_USE_ABSEIL_LOGGING)
+    target_link_libraries(${TARGET} PRIVATE absl::log)
+endif()
 
 # Android, iOS, and WebGL do not use bluegl.
 if(FILAMENT_SUPPORTS_OPENGL AND NOT IOS AND NOT ANDROID AND NOT WEBGL)
@@ -482,10 +516,19 @@ if (FILAMENT_SUPPORTS_WEBGPU)
     target_compile_definitions(${TARGET} PRIVATE $<$<BOOL:${FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING}>:FILAMENT_WEBGPU_IMMEDIATE_ERROR_HANDLING>)
 endif()
 
+# ==================================================================================================
+# Linker flags
+# ==================================================================================================
+
 target_link_libraries(${TARGET} PRIVATE
-        ${OSMESA_LINKER_FLAGS}
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
 )
+
+if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
+    # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
+    # WebGPU to build on linux.
+    target_link_libraries(${TARGET} PRIVATE -lxcb)
+endif()
 
 # ==================================================================================================
 # Installation
@@ -529,6 +572,8 @@ if (APPLE OR LINUX)
         test/test_Scissor.cpp
         test/test_MipLevels.cpp
         test/test_Handles.cpp
+        test/test_CircularBuffer.cpp
+        test/test_CommandBufferQueue.cpp
     )
     set(BACKEND_TEST_LIBS
         absl::str_format

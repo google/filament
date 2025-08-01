@@ -54,14 +54,15 @@ function print_help {
     echo "        Build arm64/x86_64 universal libraries."
     echo "        For iOS, this builds universal binaries for devices and the simulator (implies -s)."
     echo "        For macOS, this builds universal binaries for both Apple silicon and Intel-based Macs."
-    echo "    -w"
-    echo "        Build Web documents (compiles .md.html files to .html)."
     echo "    -k sample1,sample2,..."
     echo "        When building for Android, also build select sample APKs."
     echo "        sampleN is an Android sample, e.g., sample-gltf-viewer."
     echo "        This automatically performs a partial desktop build and install."
     echo "    -b"
     echo "        Enable Address and Undefined Behavior Sanitizers (asan/ubsan) for debugging."
+    echo "        This is only for the desktop build."
+    echo "    -V"
+    echo "        Enable LLVM code coverage for debug builds."
     echo "        This is only for the desktop build."
     echo "    -x value"
     echo "        Define a preprocessor flag FILAMENT_BACKEND_DEBUG_FLAG with [value]. This is useful for"
@@ -151,7 +152,7 @@ function print_fgviewer_help {
 }
 
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
-FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | cut -f 1 -d ".")}
+FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")}
 
 # Requirements
 CMAKE_MAJOR=3
@@ -182,8 +183,6 @@ BUILD_JS_DOCS=false
 
 ISSUE_CMAKE_ALWAYS=false
 
-ISSUE_WEB_DOCS=false
-
 ANDROID_SAMPLES=()
 BUILD_ANDROID_SAMPLES=false
 
@@ -208,6 +207,7 @@ MATOPT_OPTION=""
 MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
+COVERAGE_OPTION=""
 
 BACKEND_DEBUG_FLAG_OPTION=""
 
@@ -275,6 +275,7 @@ function build_desktop_target {
             ${MATDBG_OPTION} \
             ${MATOPT_OPTION} \
             ${ASAN_UBSAN_OPTION} \
+            ${COVERAGE_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
             ${OSMESA_OPTION} \
@@ -462,16 +463,6 @@ function ensure_android_build {
     if [[ -z $(ls "${ANDROID_HOME}/ndk/" | sort -V | grep "^${FILAMENT_NDK_VERSION}") ]]; then
         echo "Error: Android NDK side-by-side version ${FILAMENT_NDK_VERSION} or compatible must be installed, exiting"
         exit 1
-    fi
-
-    local cmake_version=$(cmake --version)
-    if [[ "${cmake_version}" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
-        if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
-           [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
-            echo "Error: cmake version ${CMAKE_MAJOR}.${CMAKE_MINOR}+ is required," \
-                 "${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
-            exit 1
-        fi
     fi
 }
 
@@ -736,21 +727,6 @@ function build_ios {
     fi
 }
 
-function build_web_docs {
-    echo "Building Web documents..."
-
-    mkdir -p out/web-docs
-    cp -f docs/web-docs-package.json out/web-docs/package.json
-    pushd out/web-docs > /dev/null
-
-    npm install > /dev/null
-
-    # Generate documents
-    npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/
-
-    popd > /dev/null
-}
-
 function validate_build_command {
     set +e
     # Make sure CMake is installed
@@ -781,16 +757,6 @@ function validate_build_command {
     if [[ "${EMSDK}" == "" ]] && [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
         echo "Error: EMSDK is not set, exiting"
         exit 1
-    fi
-    # Web documents require node and npm for processing
-    if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
-        local node_binary=$(command -v node)
-        local npm_binary=$(command -v npm)
-        local npx_binary=$(command -v npx)
-        if [[ ! "${node_binary}" ]] || [[ ! "${npm_binary}" ]] || [[ ! "${npx_binary}" ]]; then
-            echo "Error: Web documents require node, npm and npx to be installed"
-            exit 1
-        fi
     fi
 
     # Make sure FILAMENT_BACKEND_DEBUG_FLAG is only meant for debug builds
@@ -831,8 +797,7 @@ function run_tests {
 function check_debug_release_build {
     if [[ "${ISSUE_DEBUG_BUILD}" == "true" || \
           "${ISSUE_RELEASE_BUILD}" == "true" || \
-          "${ISSUE_CLEAN}" == "true" || \
-          "${ISSUE_WEB_DOCS}" == "true" ]]; then
+          "${ISSUE_CLEAN}" == "true" ]]; then
         "$@";
     else
         echo "You must declare a debug or release target for $@ builds."
@@ -845,7 +810,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
     case ${opt} in
         h)
             print_help
@@ -983,15 +948,15 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bx:S:X:" opt; do
             BUILD_UNIVERSAL_LIBRARIES=true
             echo "Building universal libraries."
             ;;
-        w)
-            ISSUE_WEB_DOCS=true
-            ;;
         k)
             BUILD_ANDROID_SAMPLES=true
             ANDROID_SAMPLES=$(echo "${OPTARG}" | tr ',' '\n')
             ;;
         b)  ASAN_UBSAN_OPTION="-DFILAMENT_ENABLE_ASAN_UBSAN=ON"
             echo "Enabled ASAN/UBSAN"
+            ;;
+        V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
+            echo "Enabled coverage"
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;
@@ -1067,10 +1032,6 @@ fi
 
 if [[ "${ISSUE_WEBGL_BUILD}" == "true" ]]; then
     check_debug_release_build build_webgl
-fi
-
-if [[ "${ISSUE_WEB_DOCS}" == "true" ]]; then
-    build_web_docs
 fi
 
 if [[ "${RUN_TESTS}" == "true" ]]; then

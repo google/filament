@@ -119,7 +119,7 @@ CocoaTouchExternalImage::CocoaTouchExternalImage(const CVOpenGLESTextureCacheRef
 
     glGenFramebuffers(1, &mFBO);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 }
 
 CocoaTouchExternalImage::~CocoaTouchExternalImage() noexcept {
@@ -247,7 +247,7 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     // source textures
     glBindSampler(0, mSharedGl.sampler);
@@ -261,8 +261,8 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
     glBindFramebuffer(GL_FRAMEBUFFER, mFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
-    CHECK_GL_ERROR(utils::slog.e)
-    CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e, GL_FRAMEBUFFER)
+    CHECK_GL_ERROR()
+    CHECK_GL_FRAMEBUFFER_STATUS(GL_FRAMEBUFFER)
 
     // geometry
     glBindVertexArray(0);
@@ -275,7 +275,7 @@ GLuint CocoaTouchExternalImage::encodeColorConversionPass(GLuint yPlaneTexture,
     glUseProgram(mSharedGl.program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    CHECK_GL_ERROR(utils::slog.e)
+    CHECK_GL_ERROR()
 
     mState.restore();
 

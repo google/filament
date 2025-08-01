@@ -19,19 +19,27 @@
 
 #include "MetalDriverFactory.h"
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 
 #import <Foundation/Foundation.h>
 
 #include <atomic>
+#include <mutex>
 
 namespace filament::backend {
 
 struct PlatformMetalImpl {
+    std::mutex mLock;   // locks mDevice and mCommandQueue
+    id<MTLDevice> mDevice = nil;
     id<MTLCommandQueue> mCommandQueue = nil;
+
     // read form driver thread, read/written to from client thread
     std::atomic<PlatformMetal::DrawableFailureBehavior> mDrawableFailureBehavior =
             PlatformMetal::DrawableFailureBehavior::PANIC;
+
+    // These methods must be called with mLock held
+    void createDeviceImpl(MetalDevice& outDevice);
+    void createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue);
 };
 
 Platform* createDefaultMetalPlatform() {
@@ -45,10 +53,65 @@ PlatformMetal::~PlatformMetal() noexcept {
 }
 
 Driver* PlatformMetal::createDriver(void* /*sharedContext*/, const Platform::DriverConfig& driverConfig) noexcept {
+    pImpl->mDrawableFailureBehavior = driverConfig.metalDisablePanicOnDrawableFailure
+            ? DrawableFailureBehavior::ABORT_FRAME
+            : DrawableFailureBehavior::PANIC;
     return MetalDriverFactory::create(this, driverConfig);
 }
 
+
+bool PlatformMetal::initialize() noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+
+    MetalDevice device{};
+    pImpl->createDeviceImpl(device);
+    if (device.device == nil) {
+        return false;
+    }
+
+    MetalCommandQueue commandQueue{};
+    pImpl->createCommandQueueImpl(device, commandQueue);
+    if (commandQueue.commandQueue == nil) {
+        return false;
+    }
+
+    return true;
+}
+
 void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    pImpl->createDeviceImpl(outDevice);
+}
+
+void PlatformMetal::createCommandQueue(
+        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    pImpl->createCommandQueueImpl(device, outCommandQueue);
+}
+
+void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
+    std::lock_guard<std::mutex> lock(pImpl->mLock);
+    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
+    [commandBuffer enqueue];
+    outCommandBuffer.commandBuffer = commandBuffer;
+}
+
+void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
+    pImpl->mDrawableFailureBehavior = behavior;
+}
+
+PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
+    return pImpl->mDrawableFailureBehavior;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+void PlatformMetalImpl::createDeviceImpl(MetalDevice& outDevice) {
+    if (mDevice) {
+        outDevice.device = mDevice;
+        return;
+    }
+
     id<MTLDevice> result;
 
 #if !defined(FILAMENT_IOS)
@@ -69,32 +132,21 @@ void PlatformMetal::createDevice(MetalDevice& outDevice) noexcept {
         result = MTLCreateSystemDefaultDevice();
     }
 
-    utils::slog.i << "Selected physical device '"
-                  << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'"
-                  << utils::io::endl;
+    LOG(INFO) << "Selected physical device '"
+              << [result.name cStringUsingEncoding:NSUTF8StringEncoding] << "'";
 
     outDevice.device = result;
+    mDevice = result;
 }
 
-void PlatformMetal::createCommandQueue(
-        MetalDevice& device, MetalCommandQueue& outCommandQueue) noexcept {
-    pImpl->mCommandQueue = [device.device newCommandQueue];
-    pImpl->mCommandQueue.label = @"Filament";
-    outCommandQueue.commandQueue = pImpl->mCommandQueue;
-}
-
-void PlatformMetal::createAndEnqueueCommandBuffer(MetalCommandBuffer& outCommandBuffer) noexcept {
-    id<MTLCommandBuffer> commandBuffer = [pImpl->mCommandQueue commandBuffer];
-    [commandBuffer enqueue];
-    outCommandBuffer.commandBuffer = commandBuffer;
-}
-
-void PlatformMetal::setDrawableFailureBehavior(DrawableFailureBehavior behavior) noexcept {
-    pImpl->mDrawableFailureBehavior = behavior;
-}
-
-PlatformMetal::DrawableFailureBehavior PlatformMetal::getDrawableFailureBehavior() const noexcept {
-    return pImpl->mDrawableFailureBehavior;
+void PlatformMetalImpl::createCommandQueueImpl(MetalDevice& device, MetalCommandQueue& outCommandQueue) {
+    if (mCommandQueue) {
+        outCommandQueue.commandQueue = mCommandQueue;
+        return;
+    }
+    mCommandQueue = [device.device newCommandQueue];
+    mCommandQueue.label = @"Filament";
+    outCommandQueue.commandQueue = mCommandQueue;
 }
 
 } // namespace filament

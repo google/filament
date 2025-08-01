@@ -20,12 +20,13 @@
 
 #include <backend/DriverEnums.h>
 
+#include <private/utils/Tracing.h>
+
+#include <utils/FixedCapacityVector.h>
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
-#include <utils/Log.h>
 #include <utils/ostream.h>
-#include <utils/Systrace.h>
 
 #include <algorithm>
 #include <atomic>
@@ -90,8 +91,8 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
                 mLast = (mLast + 1) % POOL_COUNT;
                 break;
             case TimerQueryResult::AVAILABLE: {
-                SYSTRACE_CONTEXT();
-                SYSTRACE_VALUE32("FrameInfo::elapsed", uint32_t(elapsed));
+                FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameInfo::elapsed", uint32_t(elapsed));
                 // conversion to our duration happens here
                 pFront = mQueries[mLast].pInfo;
                 pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
@@ -111,13 +112,11 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
         using namespace utils;
         auto h = getFrameInfoHistory(1);
         if (!h.empty()) {
-            slog.d << frameId << ": "
-                   << h[0].frameId << " (" << frameId - h[0].frameId << ")"
-                   << ", Dm=" << h[0].endFrame - h[0].beginFrame
-                   << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
-                   << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
-                   << ", T =" << h[0].frameTime
-                   << io::endl;
+            DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId << ")"
+                       << ", Dm=" << h[0].endFrame - h[0].beginFrame
+                       << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
+                       << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
+                       << ", T =" << h[0].frameTime;
         }
     }
 }

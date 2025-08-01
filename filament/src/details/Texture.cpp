@@ -28,11 +28,6 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <ibl/Cubemap.h>
-#include <ibl/CubemapIBL.h>
-#include <ibl/CubemapUtils.h>
-#include <ibl/Image.h>
-
 #include <math/half.h>
 #include <math/scalar.h>
 #include <math/vec3.h>
@@ -64,7 +59,7 @@ using namespace math;
 
 // this is a hack to be able to create a std::function<> with a non-copyable closure
 template<class F>
-auto make_copyable_function(F&& f) {
+static auto make_copyable_function(F&& f) {
     using dF = std::decay_t<F>;
     auto spf = std::make_shared<dF>(std::forward<F>(f));
     return [spf](auto&& ... args) -> decltype(auto) {
@@ -78,6 +73,7 @@ struct Texture::BuilderDetails {
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     uint8_t mLevels = 1;
+    uint8_t mSamples = 1;
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
     Usage mUsage = Usage::NONE;
@@ -115,6 +111,11 @@ Texture::Builder& Texture::Builder::depth(uint32_t const depth) noexcept {
 
 Texture::Builder& Texture::Builder::levels(uint8_t const levels) noexcept {
     mImpl->mLevels = std::max(uint8_t(1), levels);
+    return *this;
+}
+
+Texture::Builder& Texture::Builder::samples(uint8_t const samples) noexcept {
+    mImpl->mSamples = std::max(uint8_t(1), samples);
     return *this;
 }
 
@@ -169,6 +170,13 @@ Texture* Texture::Builder::build(Engine& engine) {
                 << "Texture has invalid dimensions: (" << mImpl->mWidth << ", " << mImpl->mHeight
                 << "), texture name=" << getNameOrDefault().c_str_safe();
     }
+
+    if (mImpl->mSamples > 1) {
+        FILAMENT_CHECK_PRECONDITION(any(mImpl->mUsage & Texture::Usage::SAMPLEABLE))
+                << "Multisample (" << unsigned(mImpl->mSamples)
+                << ") texture is not sampleable, texture name=" << getNameOrDefault().c_str_safe();
+    }
+
     const bool isProtectedTexturesSupported =
             downcast(engine).getDriverApi().isProtectedTexturesSupported();
     const bool useProtectedMemory = bool(mImpl->mUsage & TextureUsage::PROTECTED);
@@ -274,7 +282,9 @@ Texture* Texture::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FTexture::FTexture(FEngine& engine, const Builder& builder) {
+FTexture::FTexture(FEngine& engine, const Builder& builder)
+    : mHasBlitSrc(false),
+      mExternal(false) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mDriver = &driver; // this is unfortunately needed for getHwHandleForSampling()
     mWidth  = static_cast<uint32_t>(builder->mWidth);
@@ -284,10 +294,12 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mLevelCount = builder->mLevels;
+    mSampleCount = builder->mSamples;
     mSwizzle = builder->mSwizzle;
     mTextureIsSwizzled = builder->mTextureIsSwizzled;
     mHasBlitSrc = builder->mHasBlitSrc;
     mExternal = builder->mExternal;
+    mTextureType = backend::getTextureType(mFormat);
 
     bool const isImported = builder->mImportedId != 0;
     if (mExternal && !isImported) {
@@ -366,8 +378,12 @@ void FTexture::setImage(FEngine& engine, size_t const level,
     FILAMENT_CHECK_PRECONDITION(!mExternal)
             << "External Texture not supported for this operation.";
 
-    FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1) << "Operation not supported with multisample ("
-                                                   << unsigned(mSampleCount) << ") texture.";
+    FILAMENT_CHECK_PRECONDITION(any(mUsage & Texture::Usage::UPLOADABLE))
+            << "Texture is not uploadable.";
+
+    FILAMENT_CHECK_PRECONDITION(mSampleCount <= 1)
+            << "Operation not supported with multisample ("
+            << unsigned(mSampleCount) << ") texture.";
 
     FILAMENT_CHECK_PRECONDITION(xoffset + width <= valueForLevel(level, mWidth))
             << "xoffset (" << unsigned(xoffset) << ") + width (" << unsigned(width)
@@ -381,7 +397,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
 
     FILAMENT_CHECK_PRECONDITION(p.buffer) << "Data buffer is nullptr.";
 
-    uint32_t effectiveTextureDepthOrLayers;
+    uint32_t effectiveTextureDepthOrLayers = 0;
     switch (mTarget) {
         case SamplerType::SAMPLER_EXTERNAL:
             // can't happen by construction, fallthrough...
@@ -408,22 +424,50 @@ void FTexture::setImage(FEngine& engine, size_t const level,
             << ") > texture depth (" << effectiveTextureDepthOrLayers << ") at level ("
             << unsigned(level) << ")";
 
-    using PBD = PixelBufferDescriptor;
-    size_t const stride = p.stride ? p.stride : width;
-    size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
-    size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
-    size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
-    // TODO: PBD should have a p.depth (# layers to skip)
-    FILAMENT_CHECK_PRECONDITION(bpp * p.left + bpr * p.top + bpl * (0 + depth) <= p.size)
-            << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
-            << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
-            << ") smaller than specified region "
-               "{{"
-            << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
-            << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
+    if (UTILS_UNLIKELY(!width || !height || !depth)) {
+        // The operation is a no-op, return immediately. The PixelBufferDescriptor callback
+        // should be called automatically when the object is destroyed.
+        // The precondition check below assumes width, height, depth non null.
+        return;
+    }
 
-    engine.getDriverApi().update3DImage(mHandle,
-            uint8_t(level), xoffset, yoffset, zoffset, width, height, depth, std::move(p));
+    if (p.type != PixelDataType::COMPRESSED) {
+        using PBD = PixelBufferDescriptor;
+        size_t const stride = p.stride ? p.stride : width;
+        size_t const bpp = PBD::computeDataSize(p.format, p.type, 1, 1, 1);
+        size_t const bpr = PBD::computeDataSize(p.format, p.type, stride, 1, p.alignment);
+        size_t const bpl = bpr * height; // TODO: PBD should have a "layer stride"
+        // TODO: PBD should have a p.depth (# layers to skip)
+
+        /* Calculates the byte offset of the last pixel in a 3D sub-region. */
+        auto const calculateLastPixelOffset = [bpp, bpr, bpl](
+                size_t xoff, size_t yoff, size_t zoff,
+                size_t width, size_t height, size_t depth) {
+            // The 0-indexed coordinates of the last pixel are:
+            // x = xoff + width - 1
+            // y = yoff + height - 1
+            // z = zoff + depth - 1
+            // The offset is calculated as: (z * bpl) + (y * bpr) + (x * bpp)
+            return ((zoff + depth  - 1) * bpl) +
+                   ((yoff + height - 1) * bpr) +
+                   ((xoff + width  - 1) * bpp);
+        };
+
+        size_t const lastPixelOffset = calculateLastPixelOffset(
+                p.left, p.top, 0, width, height, depth);
+
+        // make sure the whole last pixel is in the buffer
+        FILAMENT_CHECK_PRECONDITION(lastPixelOffset + bpp <= p.size)
+                << "buffer overflow: (size=" << size_t(p.size) << ", stride=" << size_t(p.stride)
+                << ", left=" << unsigned(p.left) << ", top=" << unsigned(p.top)
+                << ") smaller than specified region "
+                   "{{"
+                << unsigned(xoffset) << "," << unsigned(yoffset) << "," << unsigned(zoffset) << "},{"
+                << unsigned(width) << "," << unsigned(height) << "," << unsigned(depth) << ")}}";
+    }
+
+    engine.getDriverApi().update3DImage(mHandle, uint8_t(level), xoffset, yoffset, zoffset, width,
+            height, depth, std::move(p));
 
     // this method shouldn't have been const
     const_cast<FTexture*>(this)->updateLodRange(level);
@@ -444,6 +488,7 @@ void FTexture::setImage(FEngine& engine, size_t const level,
             case SamplerType::SAMPLER_EXTERNAL:
                 return false;
         }
+        return false;
     };
 
     // this should have been validated already
@@ -691,6 +736,10 @@ bool FTexture::isTextureFormatMipmappable(FEngine& engine, InternalFormat const 
     return engine.getDriverApi().isTextureFormatMipmappable(format);
 }
 
+bool FTexture::isTextureFormatCompressed(InternalFormat const format) noexcept {
+    return isCompressedFormat(format);
+}
+
 bool FTexture::isProtectedTexturesSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isProtectedTexturesSupported();
 }
@@ -716,184 +765,8 @@ size_t FTexture::getFormatSize(InternalFormat const format) noexcept {
     return backend::getFormatSize(format);
 }
 
-
-void FTexture::generatePrefilterMipmap(FEngine& engine,
-        PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-        PrefilterOptions const* options) {
-    using namespace ibl;
-    using namespace backend;
-    using namespace math;
-
-    const size_t size = getWidth();
-    const size_t stride = buffer.stride ? buffer.stride : size;
-
-    /* validate input data */
-
-    FILAMENT_CHECK_PRECONDITION(
-            buffer.format == PixelDataFormat::RGB || buffer.format == PixelDataFormat::RGBA)
-            << "input data format must be RGB or RGBA";
-
-    FILAMENT_CHECK_PRECONDITION(buffer.type == PixelDataType::FLOAT ||
-            buffer.type == PixelDataType::HALF ||
-            buffer.type == PixelDataType::UINT_10F_11F_11F_REV)
-            << "input data type must be FLOAT, HALF or UINT_10F_11F_11F_REV";
-
-    /* validate texture */
-
-    FILAMENT_CHECK_PRECONDITION(!(size & (size - 1)))
-            << "input data cubemap dimensions must be a power-of-two";
-
-    FILAMENT_CHECK_PRECONDITION(!isCompressed()) << "reflections texture cannot be compressed";
-
-    PrefilterOptions const defaultOptions;
-    options = options ? options : &defaultOptions;
-
-    JobSystem& js = engine.getJobSystem();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-
-    auto generateMipmaps = [](JobSystem& js,
-            FixedCapacityVector<Cubemap>& levels, FixedCapacityVector<Image>& images) {
-        Image temp;
-        const Cubemap& base(levels[0]);
-        size_t dim = base.getDimensions();
-        size_t mipLevel = 0;
-        while (dim > 1) {
-            dim >>= 1u;
-            Cubemap dst = CubemapUtils::create(temp, dim);
-            const Cubemap& src(levels[mipLevel++]);
-            CubemapUtils::downsampleCubemapLevelBoxFilter(js, dst, src);
-            dst.makeSeamless();
-            images.push_back(std::move(temp));
-            levels.push_back(std::move(dst));
-        }
-    };
-
-
-    /*
-     * Create a Cubemap data structure
-     */
-
-    size_t bytesPerPixel = 0;
-
-    switch (buffer.format) {
-        case PixelDataFormat::RGB:
-            bytesPerPixel = 3;
-            break;
-        case PixelDataFormat::RGBA:
-            bytesPerPixel = 4;
-            break;
-        default:
-            // this cannot happen due to the checks above
-            break;
-    }
-
-    switch (buffer.type) { // NOLINT
-        case PixelDataType::FLOAT:
-            bytesPerPixel *= 4;
-            break;
-        case PixelDataType::HALF:
-            bytesPerPixel *= 2;
-            break;
-        default:
-            // this cannot happen due to the checks above
-            break;
-    }
-    assert_invariant(bytesPerPixel);
-
-    Image temp;
-    Cubemap cml = CubemapUtils::create(temp, size);
-    for (size_t j = 0; j < 6; j++) {
-        Cubemap::Face const face = (Cubemap::Face)j;
-        Image const& image = cml.getImageForFace(face);
-        for (size_t y = 0; y < size; y++) {
-            Cubemap::Texel* out = (Cubemap::Texel*)image.getPixelRef(0, y);
-            if (buffer.type == PixelDataType::FLOAT) {
-                float3 const* src = pointermath::add((float3 const*)buffer.buffer, faceOffsets[j]);
-                src = pointermath::add(src, y * stride * bytesPerPixel);
-                for (size_t x = 0; x < size; x++, out++) {
-                    Cubemap::writeAt(out, *src);
-                    src = pointermath::add(src, bytesPerPixel);
-                }
-            } else if (buffer.type == PixelDataType::HALF) {
-                half3 const* src = pointermath::add((half3 const*)buffer.buffer, faceOffsets[j]);
-                src = pointermath::add(src, y * stride * bytesPerPixel);
-                for (size_t x = 0; x < size; x++, out++) {
-                    Cubemap::writeAt(out, *src);
-                    src = pointermath::add(src, bytesPerPixel);
-                }
-            } else if (buffer.type == PixelDataType::UINT_10F_11F_11F_REV) {
-                // this doesn't depend on buffer.format
-                uint32_t const* src = reinterpret_cast<uint32_t const*>(
-                                              static_cast<char const*>(buffer.buffer)
-                                              + faceOffsets[j]) + y * stride;
-                for (size_t x = 0; x < size; x++, out++, src++) {
-                    using fp10 = fp<0, 5, 5>;
-                    using fp11 = fp<0, 5, 6>;
-                    fp11 const r{ uint16_t( *src         & 0x7FFu) };
-                    fp11 const g{ uint16_t((*src >> 11u) & 0x7FFu) };
-                    fp10 const b{ uint16_t((*src >> 22u) & 0x3FFu) };
-                    Cubemap::Texel const texel{ fp11::tof(r), fp11::tof(g), fp10::tof(b) };
-                    Cubemap::writeAt(out, texel);
-                }
-            }
-        }
-    }
-
-    /*
-     * Create the mipmap chain
-     */
-
-    auto images = FixedCapacityVector<Image>::with_capacity(getLevels());
-    auto levels = FixedCapacityVector<Cubemap>::with_capacity(getLevels());
-
-    images.push_back(std::move(temp));
-    levels.push_back(std::move(cml));
-
-    const float3 mirror = options->mirror ? float3{ -1, 1, 1 } : float3{ 1, 1, 1 };
-
-    // make the cubemap seamless
-    levels[0].makeSeamless();
-
-    // Now generate all the mipmap levels
-    generateMipmaps(js, levels, images);
-
-    // Finally generate each pre-filtered mipmap level
-    const size_t baseExp = ctz(size);
-    size_t const numSamples = options->sampleCount;
-    const size_t numLevels = baseExp + 1;
-    for (ssize_t i = (ssize_t)baseExp; i >= 0; --i) {
-        const size_t dim = 1U << i;
-        const size_t level = baseExp - i;
-        const float lod = saturate(float(level) / float(numLevels - 1));
-        const float linearRoughness = lod * lod;
-
-        Image image;
-        Cubemap dst = CubemapUtils::create(image, dim);
-        CubemapIBL::roughnessFilter(js, dst, { levels.begin(), uint32_t(levels.size()) },
-                linearRoughness, numSamples, mirror, true);
-
-        PixelBufferDescriptor const pbd(image.getData(), image.getSize(),
-                PixelBufferDescriptor::PixelDataFormat::RGB,
-                PixelBufferDescriptor::PixelDataType::FLOAT, 1, 0, 0, image.getStride());
-
-        uintptr_t const base = uintptr_t(image.getData());
-        for (size_t j = 0; j < 6; j++) {
-            Image const& faceImage = dst.getImageForFace((Cubemap::Face)j);
-            auto offset = uintptr_t(faceImage.getData()) - base;
-            driver.update3DImage(mHandle, level, 0, 0, j, dim, dim, 1, {
-                    (char*)image.getData() + offset, dim * dim * 3 * sizeof(float),
-                    PixelBufferDescriptor::PixelDataFormat::RGB,
-                    PixelBufferDescriptor::PixelDataType::FLOAT, 1,
-                    0, 0, uint32_t(image.getStride())
-            });
-        }
-
-        // enqueue a commands that holds the image data until it's executed
-        driver.queueCommand(make_copyable_function([data = image.detach()]() {}));
-    }
-
-    // no need to call the user callback because buffer is a reference, and it'll be destroyed
-    // by the caller (without being move()d here).
+TextureType FTexture::getTextureType() const noexcept {
+    return mTextureType;
 }
 
 bool FTexture::validatePixelFormatAndType(TextureFormat const internalFormat,

@@ -17,93 +17,71 @@
 #include "webgpu/WebGPUSwapChain.h"
 
 #include "webgpu/WebGPUConstants.h"
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#include "webgpu/WebGPUStrings.h"
+#endif
 
 #include "backend/DriverEnums.h"
 
 #include <utils/Panic.h>
-#include <utils/ostream.h>
 
-#include <dawn/webgpu_cpp_print.h>
 #include <webgpu/webgpu_cpp.h>
 
 #include <algorithm>
 #include <cstdint>
-#include <sstream>
+
+namespace filament::backend {
 
 namespace {
 
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printSurfaceCapabilitiesDetails(wgpu::SurfaceCapabilities const& capabilities) {
-    std::stringstream usagesStream{};
-    usagesStream << capabilities.usages;
-    FWGPU_LOGI << "WebGPU surface capabilities:" << utils::io::endl;
-    FWGPU_LOGI << "  surface usages: " << usagesStream.str().data() << utils::io::endl;
-    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU surface capabilities:";
+    FWGPU_LOGI << "  surface usages: " << webGPUPrintableToString(capabilities.usages);
+    FWGPU_LOGI << "  surface formats (" << capabilities.formatCount << "):";
     if (capabilities.formatCount > 0 && capabilities.formats != nullptr) {
         std::for_each(capabilities.formats, capabilities.formats + capabilities.formatCount,
                 [](wgpu::TextureFormat const format) {
-                    std::stringstream formatStream{};
-                    formatStream << format;
-                    FWGPU_LOGI << "    " << formatStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "    " << webGPUTextureFormatToString(format);
                 });
     }
-    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "  surface present modes (" << capabilities.presentModeCount << "):";
     if (capabilities.presentModeCount > 0 && capabilities.presentModes != nullptr) {
         std::for_each(capabilities.presentModes,
                 capabilities.presentModes + capabilities.presentModeCount,
                 [](wgpu::PresentMode const presentMode) {
-                    std::stringstream presentModeStream{};
-                    presentModeStream << presentMode;
-                    FWGPU_LOGI << "    " << presentModeStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "    " << webGPUPrintableToString(presentMode);
                 });
     }
-    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount
-               << "):" << utils::io::endl;
+    FWGPU_LOGI << "  surface alpha modes (" << capabilities.alphaModeCount << "):";
     if (capabilities.alphaModeCount > 0 && capabilities.alphaModes != nullptr) {
         std::for_each(capabilities.alphaModes,
                 capabilities.alphaModes + capabilities.alphaModeCount,
                 [](wgpu::CompositeAlphaMode const alphaMode) {
-                    std::stringstream alphaModeStream{};
-                    alphaModeStream << alphaMode;
-                    FWGPU_LOGI << "    " << alphaModeStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "    " << webGPUPrintableToString(alphaMode);
                 });
     }
 }
-#endif
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         wgpu::TextureFormat depthFormat) {
-    std::stringstream formatStream{};
-    formatStream << config.format;
-    std::stringstream usageStream{};
-    usageStream << config.usage;
-    std::stringstream alphaModeStream{};
-    alphaModeStream << config.alphaMode;
-    std::stringstream presentModeStream{};
-    presentModeStream << config.presentMode;
-    std::stringstream depthFormatStream;
-    depthFormatStream << depthFormat;
-    FWGPU_LOGI << "WebGPU surface configuration:" << utils::io::endl;
-    FWGPU_LOGI << "  surface format: " << formatStream.str() << utils::io::endl;
-    FWGPU_LOGI << "  surface usage: " << usageStream.str() << utils::io::endl;
-    FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):" << utils::io::endl;
+    FWGPU_LOGI << "WebGPU surface configuration:";
+    FWGPU_LOGI << "  surface format: " << webGPUTextureFormatToString(config.format);
+    FWGPU_LOGI << "  surface usage: " << webGPUPrintableToString(config.usage);
+    FWGPU_LOGI << "  surface view formats (" << config.viewFormatCount << "):";
     if (config.viewFormatCount > 0 && config.viewFormats != nullptr) {
         std::for_each(config.viewFormats, config.viewFormats + config.viewFormatCount,
                 [](wgpu::TextureFormat const viewFormat) {
-                    std::stringstream viewFormatStream{};
-                    viewFormatStream << viewFormat;
-                    FWGPU_LOGI << "    " << viewFormatStream.str().data() << utils::io::endl;
+                    FWGPU_LOGI << "    " << webGPUPrintableToString(viewFormat);
                 });
     }
-    FWGPU_LOGI << "  surface alpha mode: " << alphaModeStream.str() << utils::io::endl;
-    FWGPU_LOGI << "  surface width: " << config.width << utils::io::endl;
-    FWGPU_LOGI << "  surface height: " << config.height << utils::io::endl;
-    FWGPU_LOGI << "  surface present mode: " << presentModeStream.str() << utils::io::endl;
-    FWGPU_LOGI << "WebGPU selected depth format: " << depthFormatStream.str() << utils::io::endl;
+    FWGPU_LOGI << "  surface alpha mode: " << webGPUPrintableToString(config.alphaMode);
+    FWGPU_LOGI << "  surface width: " << config.width;
+    FWGPU_LOGI << "  surface height: " << config.height;
+    FWGPU_LOGI << "  surface present mode: " << webGPUPrintableToString(config.presentMode);
+    FWGPU_LOGI << "WebGPU selected depth format: " << webGPUTextureFormatToString(depthFormat);
 }
-#endif
+#endif// FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 
 [[nodiscard]] constexpr wgpu::TextureFormat selectColorFormat(size_t availableFormatsCount,
         wgpu::TextureFormat const* availableFormats, bool useSRGBColorSpace) {
@@ -132,7 +110,6 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
             return wgpu::TextureFormat::Depth24PlusStencil8;
         }
     } else {
-        // other options: Depth16Unorm or Depth24Plus
         return wgpu::TextureFormat::Depth32Float;
     }
 }
@@ -191,8 +168,7 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         // We prefer premultiplied to unpremuliplied until that assumption should be adjusted.
         FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
                       "historically used these. Premultiplied alpha composite mode for "
-                      "transparency is being selected as a fallback, but may not work as expected."
-                   << utils::io::endl;
+                      "transparency is being selected as a fallback, but may not work as expected.";
         return wgpu::CompositeAlphaMode::Premultiplied;
     } else {
         FILAMENT_CHECK_POSTCONDITION(unpremultipliedAvailable)
@@ -202,23 +178,20 @@ void printSurfaceConfiguration(wgpu::SurfaceConfiguration const& config,
         FWGPU_LOGW << "Auto, Inherit, & Opaque composite alpha modes not supported. Filament has "
                       "historically used these. Unpremultiplied alpha composite mode for "
                       "transparency is being selected as a fallback "
-                      "(premulitipled is not available either), but may not work as expected."
-                   << utils::io::endl;
+                      "(premulitipled is not available either), but may not work as expected.";
         return wgpu::CompositeAlphaMode::Unpremultiplied;
     }
 }
 
 void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
-        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& surfaceSize,
+        wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& extent,
         bool useSRGBColorSpace) {
     config.device = device;
-    config.usage = wgpu::TextureUsage::RenderAttachment;
-    config.width = surfaceSize.width;
-    config.height = surfaceSize.height;
-    config.format =
-            selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
-    config.presentMode =
-            selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
+    config.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    config.width = extent.width;
+    config.height = extent.height;
+    config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);
+    config.presentMode = selectPresentMode(capabilities.presentModeCount, capabilities.presentModes);
     config.alphaMode = selectAlphaMode(capabilities.alphaModeCount, capabilities.alphaModes);
 }
 
@@ -241,10 +214,9 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 }
 
 [[nodiscard]] wgpu::TextureView createDepthTextureView(wgpu::Texture const& depthTexture,
-        wgpu::TextureFormat depthFormat, bool needStencil) {
+        wgpu::TextureFormat const& depthFormat, bool const needStencil) {
     wgpu::TextureViewDescriptor descriptor{
         .label = "depth_texture_view",
-        .format = depthFormat,
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
@@ -255,6 +227,16 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
     };
     if (needStencil) {
         descriptor.aspect = wgpu::TextureAspect::All;
+        descriptor.format = depthFormat;
+    } else {
+        descriptor.aspect = wgpu::TextureAspect::DepthOnly;
+        if (depthFormat == wgpu::TextureFormat::Depth32FloatStencil8) {
+            descriptor.format = wgpu::TextureFormat::Depth32Float;
+        } else if (depthFormat == wgpu::TextureFormat::Depth24PlusStencil8) {
+            descriptor.format = wgpu::TextureFormat::Depth24Plus;
+        } else {
+            descriptor.format = depthFormat;
+        }
     }
     wgpu::TextureView depthTextureView = depthTexture.CreateView(&descriptor);
     FILAMENT_CHECK_POSTCONDITION(depthTextureView) << "Failed to create depth texture view";
@@ -263,34 +245,93 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
 
 }// namespace
 
-namespace filament::backend {
-
-WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& surfaceSize,
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& extent,
         wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
-    : mDevice(device),
-      mSurface(surface),
-      mNeedStencil((flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0),
-      mDepthFormat(selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-              mNeedStencil)),
-      mDepthTexture(createDepthTexture(device, surfaceSize, mDepthFormat)),
-      mDepthTextureView(createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)) {
+    : mDevice{device},
+      mSurface{surface},
+      mNeedStencil{(flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0},
+      mDepthFormat{selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+              mNeedStencil)},
+      mDepthTexture{createDepthTexture(device, extent, mDepthFormat)},
+      mDepthTextureView{createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)},
+      mType{SwapChainType::SURFACE},
+      mHeadlessWidth{0},
+      mHeadlessHeight{0} {
+
     wgpu::SurfaceCapabilities capabilities = {};
     if (!mSurface.GetCapabilities(adapter, &capabilities)) {
-        FWGPU_LOGW << "Failed to get WebGPU surface capabilities" << utils::io::endl;
+        FWGPU_LOGW << "Failed to get WebGPU surface capabilities";
     } else {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         printSurfaceCapabilitiesDetails(capabilities);
 #endif
     }
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
-    initConfig(mConfig, device, capabilities, surfaceSize, useSRGBColorSpace);
+
+    initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
+    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+            mNeedStencil);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif
     mSurface.Configure(&mConfig);
 }
 
-WebGPUSwapChain::~WebGPUSwapChain() { mSurface.Unconfigure(); }
+WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
+        wgpu::Adapter const& adapter, wgpu::Device const& device, uint64_t flags)
+    : mDevice{device},
+      mNeedStencil{(flags & SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0},
+      mDepthFormat{selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+            mNeedStencil)},
+      mDepthTexture{createDepthTexture(device, extent, mDepthFormat)},
+      mDepthTextureView{createDepthTextureView(mDepthTexture, mDepthFormat, mNeedStencil)},
+      mType{SwapChainType::HEADLESS},
+      mHeadlessWidth{extent.width},
+      mHeadlessHeight{extent.height}{
+
+    mConfig.format = wgpu::TextureFormat::RGBA8Unorm;
+    mConfig.device = device;
+    mConfig.usage = wgpu::TextureUsage::RenderAttachment;
+    mConfig.width = extent.width;
+    mConfig.height = extent.height;
+    mConfig.presentMode = wgpu::PresentMode::Fifo;
+    mConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
+
+    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
+                mNeedStencil);
+    const wgpu::TextureDescriptor textureDescriptor = {
+        .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
+        .dimension = wgpu::TextureDimension::e2D,
+        .size = { .width = mHeadlessWidth, .height = mHeadlessHeight, .depthOrArrayLayers = 1 },
+        .format = wgpu::TextureFormat::RGBA8Unorm,
+        .mipLevelCount = 1,
+        .sampleCount = 1,
+    };
+
+    const wgpu::TextureViewDescriptor viewDesc = {
+        .format = textureDescriptor.format,
+        .dimension = wgpu::TextureViewDimension::e2D,
+        .baseMipLevel = 0,
+        .mipLevelCount = 1,
+        .baseArrayLayer = 0,
+        .arrayLayerCount = 1,
+        .aspect = wgpu::TextureAspect::All,
+    };
+
+    for (size_t i = 0; i < mHeadlessBufferCount; ++i) {
+        mRenderTargetTextures[i] = device.CreateTexture(&textureDescriptor);
+        mRenderTargetViews[i] = mRenderTargetTextures[i].CreateView(&viewDesc);
+        FILAMENT_CHECK_POSTCONDITION( mRenderTargetViews[i]) << "Failed to create headless texture with width "
+                                               << extent.width << " and height " << extent.height;
+    }
+}
+
+WebGPUSwapChain::~WebGPUSwapChain() {
+    if (!isHeadless()) {
+        mSurface.Unconfigure();
+    }
+}
+
 
 void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     FILAMENT_CHECK_POSTCONDITION(currentSurfaceSize.width > 0 || currentSurfaceSize.height > 0)
@@ -299,8 +340,7 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     if (mConfig.width != currentSurfaceSize.width || mConfig.height != currentSurfaceSize.height) {
         mConfig.width = currentSurfaceSize.width;
         mConfig.height = currentSurfaceSize.height;
-        FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height
-                   << utils::io::endl;
+        FWGPU_LOGD << "Resizing to width " << mConfig.width << " height " << mConfig.height;
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
         printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif
@@ -312,31 +352,47 @@ void WebGPUSwapChain::setExtent(wgpu::Extent2D const& currentSurfaceSize) {
     }
 }
 
-wgpu::TextureView WebGPUSwapChain::getCurrentSurfaceTextureView(
-        wgpu::Extent2D const& currentSurfaceSize) {
-    setExtent(currentSurfaceSize);
-    wgpu::SurfaceTexture surfaceTexture;
-    mSurface.GetCurrentTexture(&surfaceTexture);
-    if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
+wgpu::TextureView WebGPUSwapChain::getNextTextureView() {
+    assert_invariant(isHeadless());
+
+    mHeadlessBufferIndex = (mHeadlessBufferIndex + 1) % mHeadlessBufferCount;
+    return mRenderTargetViews[mHeadlessBufferIndex];
+}
+
+wgpu::TextureView WebGPUSwapChain::getNextTextureView( wgpu::Extent2D const& extent) {
+    setExtent(extent);
+
+    mSurface.GetCurrentTexture(&mCurrentTexture);
+    if (mCurrentTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal) {
         return nullptr;
     }
-    // Create a view for this surface texture
-    // TODO: review these initiliazations as webgpu pipeline gets mature
+
+    // TODO: review these initializations as webgpu pipeline gets mature
     wgpu::TextureViewDescriptor textureViewDescriptor = {
         .label = "surface_texture_view",
-        .format = surfaceTexture.texture.GetFormat(),
+        .format = mCurrentTexture.texture.GetFormat(),
         .dimension = wgpu::TextureViewDimension::e2D,
         .baseMipLevel = 0,
         .mipLevelCount = 1,
         .baseArrayLayer = 0,
         .arrayLayerCount = 1
     };
-    return surfaceTexture.texture.CreateView(&textureViewDescriptor);
+    return mCurrentTexture.texture.CreateView(&textureViewDescriptor);
+}
+
+wgpu::Texture WebGPUSwapChain::getCurrentTexture() {
+    if (isHeadless()) {
+        return mRenderTargetTextures[mHeadlessBufferIndex];
+    }
+    // We return the texture that was in use
+    return mCurrentTexture.texture;
+
 }
 
 void WebGPUSwapChain::present() {
-    assert_invariant(mSurface);
-    mSurface.Present();
+    if (!isHeadless()) {
+        mSurface.Present();
+    }
 }
 
 }// namespace filament::backend

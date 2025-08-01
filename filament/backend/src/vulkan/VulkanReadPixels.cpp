@@ -143,7 +143,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         mTaskHandler = std::make_unique<TaskHandler>();
     }
 
-    VkCommandPool& cmdpool = mCommandPool;
+    VkCommandPool const cmdpool = mCommandPool;
 
     fvkmemory::resource_ptr<VulkanTexture> srcTexture = srcTarget->getColor0().texture;
     assert_invariant(srcTexture);
@@ -152,17 +152,17 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
             = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
 
     // Create a host visible, linearly tiled image as a staging area.
-    VkImageCreateInfo const imageInfo{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = srcFormat,
-            .extent = {width, height, 1},
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_LINEAR,
-            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    VkImageCreateInfo const imageInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = srcFormat,
+        .extent = { width, height, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
     VkImage stagingImage;
@@ -171,7 +171,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 #if FVK_ENABLED(FVK_DEBUG_READ_PIXELS)
     FVK_LOGD << "readPixels created image=" << stagingImage
              << " to copy from image=" << srcTexture->getVkImage()
-             << " src-layout=" << srcTexture->getLayout(0, 0) << utils::io::endl;
+             << " src-layout=" << srcTexture->getLayout(0, 0);
 #endif
 
     VkMemoryRequirements memReqs;
@@ -188,28 +188,27 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
         memoryTypeIndex = selectMemoryFunc(memReqs.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         FVK_LOGW
-                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available"
-                << utils::io::endl;
+                << "readPixels is slow because VK_MEMORY_PROPERTY_HOST_CACHED_BIT is not available";
     }
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
             << "VulkanReadPixels: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo const allocInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memReqs.size,
-            .memoryTypeIndex = memoryTypeIndex,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = memoryTypeIndex,
     };
 
     vkAllocateMemory(device, &allocInfo, VKALLOC, &stagingMemory);
     vkBindImageMemory(device, stagingImage, stagingMemory, 0);
 
     VkCommandBuffer cmdbuffer;
-    VkCommandBufferAllocateInfo const allocateInfo{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = cmdpool,
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
+    VkCommandBufferAllocateInfo const allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = cmdpool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
     };
     vkAllocateCommandBuffers(device, &allocateInfo, &cmdbuffer);
 
@@ -234,6 +233,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
 
     VulkanAttachment const srcAttachment = srcTarget->getColor0();
     VkImageSubresourceRange const srcRange = srcAttachment.getSubresourceRange();
+    VulkanLayout const srcLayout = srcAttachment.getLayout();
     srcTexture->transitionLayout(cmdbuffer, srcRange, VulkanLayout::TRANSFER_SRC);
 
     VkImageCopy const imageCopyRegion = {
@@ -270,7 +270,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
             fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST), 1, &imageCopyRegion);
 
     // Restore the source image layout.
-    srcTexture->transitionLayout(cmdbuffer, srcRange, srcTexture->getDefaultLayout());
+    srcTexture->transitionLayout(cmdbuffer, srcRange, srcLayout);
 
     vkEndCommandBuffer(cmdbuffer);
 
@@ -303,9 +303,8 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
                                  cmdpool, cmdbuffer, pUserBuffer,
                                  fence = readCompleteFence]() mutable {
         VkResult status = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-        // Fence hasn't been reached. Try waiting again.
         if (status != VK_SUCCESS) {
-            FVK_LOGE << "Failed to wait for readPixels fence" << utils::io::endl;
+            FVK_LOGE << "Failed to wait for readPixels fence";
             return;
         }
 
@@ -323,7 +322,7 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanRenderTarget> srcTarget
                     fvkutils::getComponentCount(srcFormat), srcPixels,
                     static_cast<int>(subResourceLayout.rowPitch), static_cast<int>(width),
                     static_cast<int>(height), swizzle)) {
-            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType" << utils::io::endl;
+            FVK_LOGE << "Unsupported PixelDataFormat or PixelDataType";
         }
 
         vkUnmapMemory(device, stagingMemory);
