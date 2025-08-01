@@ -114,9 +114,7 @@ public:
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
             RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
-            CameraInfo const& cameraInfo,
             FrameGraphId<FrameGraphTexture> structure,
-            ScreenSpaceReflectionsOptions const& options,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
@@ -395,6 +393,7 @@ public:
     void resetForRender();
 
 private:
+    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
 
     void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
 
