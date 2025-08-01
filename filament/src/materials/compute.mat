@@ -1,0 +1,52 @@
+material {
+    name: test_compute,
+    domain: compute,
+    groupSize: [8, 8, 1],
+    parameters: [
+        {
+            type : sampler2d,
+            name : color,
+            precision: medium
+        },
+        {
+            type : float4,
+            name : resolution,
+            precision: high
+        }
+    ],
+    buffers: [
+        {
+            name: inputData,
+            qualifiers: [restrict, readonly],
+            fields: [
+                {
+                    type: float3,
+                    name: windDirection
+                },
+                {
+                    type: float3[],
+                    name: elements
+                }
+            ]
+        },
+        {
+            name: outputData,
+            qualifiers: [restrict, writeonly],
+            fields: [
+                {
+                    type: float3[],
+                    name: positions
+                }
+            ]
+        }
+   ]
+}
+
+compute {
+
+void compute() {
+    uint i = getGlobalInvocationID().x;
+    outputData.positions[i] = inputData.elements[i];
+}
+
+}
