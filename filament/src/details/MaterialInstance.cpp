@@ -222,6 +222,7 @@ void FMaterialInstance::commit(FEngine& engine) const {
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
+        mUniforms.clean();
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (!mTextureParameters.empty()) {

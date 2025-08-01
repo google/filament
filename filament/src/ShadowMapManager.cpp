@@ -436,6 +436,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                 // Finally update our UBO in one batch
                 if (mShadowUb.isDirty()) {
+                    mShadowUb.clean();
                     driver.updateBufferObject(mShadowUbh,
                             mShadowUb.toBufferDescriptor(driver), 0);
                 }

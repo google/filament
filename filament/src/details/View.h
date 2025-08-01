@@ -173,15 +173,19 @@ public:
     void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
-            float refractionLodOffset,
-            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
+    void prepareSSAO(AmbientOcclusionOptions const& options) const noexcept;
+
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void prepareSSR(FEngine& engine, CameraInfo const& cameraInfo,
+            float refractionLodOffset, ScreenSpaceReflectionsOptions const& options) const noexcept;
+
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMapping(FEngine const& engine, bool highPrecision) const noexcept;
+    void prepareShadowMapping(FEngine const& engine, backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadowMapping() const noexcept;
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
-    void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
+    void commitUniforms(backend::DriverApi& driver) const noexcept;
+    void commitDescriptorSet(backend::DriverApi& driver) const noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
