@@ -18,3 +18,4 @@ test*.json
 results
 /compile_commands.json
 /.cache
+local_build

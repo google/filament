@@ -21,8 +21,6 @@
 #include <map>
 #include <vector>
 
-#include <getopt/getopt.h>
-
 #include <utils/EntityManager.h>
 #include <utils/Path.h>
 
@@ -46,6 +44,7 @@
 #include <filamentapp/Cube.h>
 #include <filamentapp/IcoSphere.h>
 #include <filamentapp/Sphere.h>
+#include <getopt/getopt.h>
 
 #include "generated/resources/resources.h"
 

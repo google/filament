@@ -21,8 +21,6 @@
 #include <map>
 #include <vector>
 
-#include <getopt/getopt.h>
-
 #include <imgui.h>
 
 #include <filagui/ImGuiExtensions.h>
@@ -54,6 +52,7 @@
 #include <filamentapp/IBL.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/MeshAssimp.h>
+#include <getopt/getopt.h>
 
 #include "material_sandbox.h"
 

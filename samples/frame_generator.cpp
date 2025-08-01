@@ -27,8 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include <getopt/getopt.h>
-
 #include <utils/Path.h>
 
 #include <backend/PixelBufferDescriptor.h>
@@ -57,6 +55,8 @@
 #include <filamentapp/IBL.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/MeshAssimp.h>
+
+#include <getopt/getopt.h>
 
 using namespace filament::math;
 using namespace filament;

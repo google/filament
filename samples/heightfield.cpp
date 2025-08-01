@@ -34,9 +34,8 @@
 #include <utils/JobSystem.h>
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
-
 #include <filamentapp/FilamentApp.h>
+#include <getopt/getopt.h>
 
 #define STB_PERLIN_IMPLEMENTATION
 #include <stb_perlin.h>
