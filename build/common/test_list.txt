@@ -5,7 +5,7 @@ libs/math/test_math
 libs/image/test_image compare libs/image/tests/reference/
 libs/utils/test_utils
 libs/filamat/test_filamat
-tools/matc/test_matc
+libs/matp/test_matp
 tools/cmgen/test_cmgen compare
 tools/glslminifier/test_glslminifier
 libs/filameshio/test_filameshio
