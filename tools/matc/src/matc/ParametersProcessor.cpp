@@ -1350,6 +1350,13 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
     return true;
 }
 
+static bool processUseDefaultDepthVariant(MaterialBuilder& builder, const JsonishValue& value) {
+    if (value.toJsonBool()->getBool()) {
+        builder.useDefaultDepthVariant();
+    }
+    return true;
+}
+
 ParametersProcessor::ParametersProcessor() {
     using Type = JsonishValue::Type;
     mParameters["name"]                          = { &processName, Type::STRING };
@@ -1397,6 +1404,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
     mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
+    mParameters["useDefaultDepthVariant"]        = { &processUseDefaultDepthVariant, Type::BOOL };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
