@@ -19,16 +19,12 @@
 
 #include "DescriptorSet.h"
 
-#include "DescriptorSetLayout.h"
-
 #include "TypedUniformBuffer.h"
 
 #include <private/filament/UibStructs.h>
 
 #include <backend/DriverApiForward.h>
 #include <backend/Handle.h>
-
-#include <math/mat4.h>
 
 namespace filament {
 
@@ -51,11 +47,7 @@ public:
 
     void prepareStructure(FEngine const& engine, TextureHandle structure) noexcept;
 
-    void prepareHistorySSR(FEngine const& engine, TextureHandle ssr,
-            math::mat4f const& historyProjection,
-            math::mat4f const& uvFromViewMatrix,
-            ScreenSpaceReflectionsOptions const& ssrOptions) noexcept;
-
+    void prepareHistorySSR(FEngine const& engine, TextureHandle ssr) noexcept;
 
     // update local data into GPU UBO
     void commit(FEngine& engine) noexcept;
@@ -64,7 +56,6 @@ public:
     void bind(backend::DriverApi& driver) noexcept;
 
 private:
-    TypedUniformBuffer<PerViewUib>* mUniforms = nullptr;
     DescriptorSet mDescriptorSet;
     backend::BufferObjectHandle mShadowUbh;
 };
