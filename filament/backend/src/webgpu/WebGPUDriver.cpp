@@ -136,6 +136,10 @@ void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     mPipelineLayoutCache.onFrameEnd();
     mPipelineCache.onFrameEnd();
+
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        mCurrentDescriptorSets[i] = {};
+    }
 }
 
 void WebGPUDriver::flush(int) {
@@ -1480,8 +1484,8 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     assert_invariant(bindGroupLayouts.size() >= pipelineState.pipelineLayout.setLayout.size());
     size_t bindGroupLayoutCount{ 0 };
     for (size_t i{ 0 }; i < bindGroupLayouts.size(); i++) {
-        const auto handle{ pipelineState.pipelineLayout.setLayout[bindGroupLayoutCount] };
-        if (handle.getId() == HandleBase::nullid) {
+        const auto handle{ pipelineState.pipelineLayout.setLayout[i] };
+        if (!handle) {
             continue;
         }
         bindGroupLayouts[bindGroupLayoutCount++] =
@@ -1661,6 +1665,12 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> descriptorSetHandle,
         const backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
     assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
+
+    // An empty handle signifies we need to release this bind point
+    if (!descriptorSetHandle) {
+        mCurrentDescriptorSets[setIndex] = {};
+        return;
+    }
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
 
