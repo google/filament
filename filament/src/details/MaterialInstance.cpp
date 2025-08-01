@@ -380,7 +380,7 @@ const char* FMaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
@@ -399,6 +399,12 @@ void FMaterialInstance::use(FEngine::DriverApi& driver) const {
             });
         });
         mMissingSamplerDescriptors.clear();
+    }
+
+    // Checks if this variant is shared. If so, FMaterial takes responsibility for binding the
+    // descriptor sets.
+    if (mMaterial->useShared(driver, variant)) {
+        return;
     }
 
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
