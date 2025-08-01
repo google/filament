@@ -1263,6 +1263,45 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: useDefaultDepthVariant
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    This parameter forces Filament to use its default variant for depth passes, such as those used
+     in shadow rendering. This provides an optimization for materials with expensive custom vertex
+     shaders. For example, custom vertex shader computations intended to be consumed by the fragment
+     stage can be skipped during the depth-only pass. This parameter is only meaningful if the
+     material has a vertex block.
+     This parameter should not be set to `true` for vertex blocks that modify geometry (i.e.,
+     modifying `worldPosition`), otherwise shadows may render incorrectly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    variables : [
+        customColor
+    ],
+    useDefaultDepthVariant : true
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.customColor = /* expensive computation that can be skipped for depth-only passes */
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = variable_customColor;
+    }
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### Vertex and attributes: requires
 
 Type
