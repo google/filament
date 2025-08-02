@@ -32,10 +32,9 @@
 #include <utils/EntityManager.h>
 #include <utils/Path.h>
 
-#include <getopt/getopt.h>
-
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
+#include <getopt/getopt.h>
 
 #include <cmath>
 #include <iostream>
