@@ -316,7 +316,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         // Create a platform-specific SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -400,7 +400,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -488,7 +488,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -568,7 +568,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     // Create a platform-specific SwapChain and make it current.
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,

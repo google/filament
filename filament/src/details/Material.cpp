@@ -669,8 +669,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
         }
     }
 
-    auto const program = driverApi.createProgram(std::move(p));
-    driverApi.setDebugTag(program.getId(), mName);
+    auto const program = driverApi.createProgram(std::move(p), mName);
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 
@@ -680,8 +679,6 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
     if (isShared) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
-            // set the tag to the default material name
-            driverApi.setDebugTag(program.getId(), mName);
             pDefaultMaterial->mCachedPrograms[variant.key] = program;
         }
     }

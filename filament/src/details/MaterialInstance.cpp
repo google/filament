@@ -80,9 +80,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     // expected by the per-material descriptor-set layout
     size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
     mUniforms = UniformBuffer(uboSize);
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+            BufferUsage::STATIC, material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
@@ -148,9 +147,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FMaterial const* const material = other->getMaterial();
 
     mUniforms.setUniforms(other->getUniformBuffer());
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+            BufferUsage::DYNAMIC, material->getName());
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),

@@ -20,6 +20,7 @@
 // NOTE: this header should not include STL headers
 
 #include <utils/compiler.h>
+#include <utils/StaticString.h>
 
 #include <string_view>
 #include <utility>
@@ -85,6 +86,9 @@ public:
     CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
             : CString(other, N - 1) {
     }
+
+    CString(StaticString const& other) noexcept
+        : CString(other.c_str(), other.length()) {}
 
     CString(const CString& rhs);
 

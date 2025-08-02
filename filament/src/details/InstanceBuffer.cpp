@@ -105,10 +105,7 @@ FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
     // full size of the UBO.
     DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createBufferObject(sizeof(PerRenderableUib),
-        BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-    if (auto name = mName; !name.empty()) {
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    }
+        BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC, mName);
 }
 
 void FInstanceBuffer::terminate(FEngine& engine) {
