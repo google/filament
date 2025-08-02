@@ -54,9 +54,10 @@ std::string processPlaceholderTemplate(std::string_view const& stringTemplate,
                 positionAfterPlaceholder - positionOfPlaceholder) };
         if (const auto iter{ valueByPlaceholderName.find(placeholderName) };
                 iter == valueByPlaceholderName.end()) {
+            // wrapping placeholderName in a std::string to null terminate the C string....
             PANIC_POSTCONDITION("Found placeholder '%s' in template, but this is not present in "
                                 "valueByPlaceholderName",
-                    placeholderName.data());
+                    std::string{ placeholderName }.data());
         } else {
             const std::string_view value{ iter->second };
             out << value;
