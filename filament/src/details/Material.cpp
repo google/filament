@@ -391,16 +391,11 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
-            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                    << pos->second.size() << " instances still alive.";
-        } else {
-            if (UTILS_UNLIKELY(!pos->second.empty())) {
-                LOG(ERROR) << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                           << pos->second.size() << " instances still alive.";
-            }
-        }
+        auto const& featureFlags = engine.features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(pos->second.empty(),
+                featureFlags.assert_destroy_material_before_material_instance)
+                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                << pos->second.size() << " instances still alive.";
     }
 
 #if FILAMENT_ENABLE_MATDBG
