@@ -1091,7 +1091,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     }
 
                     // Each MaterialInstance has its own descriptor set. This binds it.
-                    mi->use(driver);
+                    mi->use(driver, info.materialVariant);
                 }
 
                 assert_invariant(ma);

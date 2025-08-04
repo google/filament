@@ -150,6 +150,23 @@ public:
         return mCachedPrograms[variant.key];
     }
 
+    // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
+    // however, the material instance will call useShared() to bind the default material's sets
+    // instead.
+    // Returns true if this is a shared variant.
+    bool useShared(backend::DriverApi& driver, Variant variant) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return false;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return false;
+        }
+        FMaterialInstance const* const pDefaultInstance = pDefaultMaterial->getDefaultInstance();
+        pDefaultInstance->use(driver, variant);
+        return true;
+    }
+
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant) const noexcept;
 
