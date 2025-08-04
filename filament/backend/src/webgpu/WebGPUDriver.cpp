@@ -16,6 +16,7 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUBufferObject.h"
+#include "WebGPUConstants.h"
 #include "WebGPUDescriptorSet.h"
 #include "WebGPUDescriptorSetLayout.h"
 #include "WebGPUFence.h"
@@ -1699,6 +1700,23 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
             .binding = static_cast<uint32_t>(binding * 2 + 1),
             .sampler = sampler };
         bindGroup->addEntry(sEntry.binding, std::move(sEntry));
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+        FWGPU_LOGD << "updateDescriptorSetTexture:";
+        FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << bindGroup->getLayout().Get();
+        FWGPU_LOGD << "  texture: binding:" << tEntry.binding
+                   << " wgpu handle:" << texture->getTexture().Get()
+                   << " " << webGPUTextureToString(texture->getTexture())
+                   << " " << webGPUPrintableToString(texture->getAspect());
+        FWGPU_LOGD << "  sampler: binding:" << sEntry.binding
+                   << " filterMag:" << filamentSamplerMagFilterToString(params.filterMag)
+                   << " filterMin:" << filamentSamplerMinFilterToString(params.filterMin)
+                   << " wrapS:" << filamentSamplerWrapModeToString(params.wrapS)
+                   << " wrapT:" << filamentSamplerWrapModeToString(params.wrapT)
+                   << " wrapR:" << filamentSamplerWrapModeToString(params.wrapR)
+                   << " anisotropyLog2:" << +params.anisotropyLog2
+                   << " compareMode:" << filamentSamplerCompareModeToString(params.compareMode)
+                   << " compareFunc:" << filamentSamplerCompareFuncToString(params.compareFunc);
+#endif
     }
 }
 

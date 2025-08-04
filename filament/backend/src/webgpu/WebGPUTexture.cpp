@@ -329,6 +329,12 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
                    << viewFormatStream.str() << " and texture format " << textureFormatStream.str();
     }
 #endif
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+    FWGPU_LOGD << "WebGPUTexture: wgpu handle " << mTexture.Get()
+               << " samplerType:" << to_string(samplerType)
+               << " usage flags:" << filamentTextureUsageFlagsToString(usage)
+               << " " << webGPUTextureToString(mTexture);
+#endif
 }
 
 WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
