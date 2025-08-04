@@ -1,0 +1,9 @@
+[
+  {
+    "name": "Base",
+    "base": {
+      "view.postProcessingEnabled": true,
+      "view.dithering": "NONE"
+    }
+  }
+]
