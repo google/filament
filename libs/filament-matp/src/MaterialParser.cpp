@@ -296,7 +296,7 @@ bool MaterialParser::parseMaterialAsJSON(const char* buffer, size_t size,
     }
 
     for (auto& entry : json->getEntries()) {
-        const std::string& key = entry.first;
+        std::string_view key = entry.first;
         if (mConfigProcessorJSON.find(key) == mConfigProcessorJSON.end()) {
             std::cerr << "Unknown identifier '" << key << "'" << std::endl;
             return false;
@@ -362,13 +362,13 @@ bool MaterialParser::parseMaterial(const char* buffer, size_t size,
     }
 
 
-    std::string identifier;
+    std::string_view identifier;
     for (auto lexeme : lexemes) {
         if (lexeme.getType() == MaterialType::IDENTIFIER) {
             identifier = lexeme.getStringValue();
             if (mConfigProcessor.find(identifier) == mConfigProcessor.end()) {
                 std::cerr << "Unknown identifier '"
-                          << lexeme.getStringValue()
+                          << identifier
                           << "' at line:" << lexeme.getLine()
                           << " position:" << lexeme.getLinePosition() << std::endl;
                 return false;
