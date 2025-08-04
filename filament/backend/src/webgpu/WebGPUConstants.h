@@ -44,6 +44,10 @@ constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 // which would otherwise spam the logs.
 #define FWGPU_DEBUG_BLIT 0x00000010
 
+// Set this to enable logging relating to bind groups (bind group layouts, bind groups themselves,
+// textures, samplers, and buffers,...), which would otherwise spam the logs.
+#define FWGPU_DEBUG_BIND_GROUPS 0x00000020
+
 // Useful default combinations
 #define FWGPU_DEBUG_EVERYTHING     0xFFFFFFFF
 
