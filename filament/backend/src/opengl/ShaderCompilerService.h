@@ -157,7 +157,6 @@ private:
     void compilePendingSynchronousProgramNow(program_token_t const& token) noexcept;
     void cancelPendingSynchronousProgram(program_token_t const& token) noexcept;
 
-    // Compile the program. Does NOT attempt to use the shader blob cache.
     void compileProgram(program_token_t const& token, Program&& program) noexcept;
 
     // Compile shaders with the given `shaderSource`. `gl.shaders` is always populated with valid

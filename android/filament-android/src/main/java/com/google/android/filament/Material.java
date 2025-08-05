@@ -254,7 +254,7 @@ public class Material {
          * Runnable)}, if the platform doesn't support parallel compilation, but does support
          * amortized shader compilation, the given shader program will be synchronously compiled.
          */
-        IMMEDIATE,
+        CRITICAL,
         /** We will need this program soon. */
         HIGH,
         /** We will need this program eventually. */

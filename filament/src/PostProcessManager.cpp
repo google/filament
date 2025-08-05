@@ -199,7 +199,7 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
         loadMaterial(engine);
     }
     mMaterial->prepareProgram(Variant{ Variant::type_t(variant) },
-            CompilerPriorityQueue::IMMEDIATE);
+            CompilerPriorityQueue::CRITICAL);
     return mMaterial;
 }
 

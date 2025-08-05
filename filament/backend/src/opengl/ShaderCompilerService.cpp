@@ -289,7 +289,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
     }
 
     if (mMode == Mode::SYNCHRONOUS) {
-        if (priorityQueue == CompilerPriorityQueue::IMMEDIATE ||
+        if (priorityQueue == CompilerPriorityQueue::CRITICAL ||
                 shouldCompileSynchronousProgramThisTick()) {
             // We should immediately compile this program this frame.
             compileProgram(token, std::move(program));

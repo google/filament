@@ -683,7 +683,7 @@ enum class CompilerPriorityQueue : uint8_t {
      * compilation, but does support amortized shader compilation, the given shader program will be
      * synchronously compiled.
      */
-    IMMEDIATE,
+    CRITICAL,
     /** We will need this program soon. */
     HIGH,
     /** We will need this program eventually. */
