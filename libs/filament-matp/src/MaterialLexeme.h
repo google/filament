@@ -19,7 +19,7 @@
 
 #include "Lexeme.h"
 
-namespace matc {
+namespace matp {
 
 enum MaterialType {
     BLOCK,
@@ -38,6 +38,6 @@ public:
     }
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif //TNT_MATERIALLEXEME_H

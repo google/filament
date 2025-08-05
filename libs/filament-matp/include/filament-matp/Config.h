@@ -28,7 +28,7 @@
 
 #include <utils/compiler.h>
 
-namespace matc {
+namespace matp {
 
 class Config {
 public:
@@ -167,6 +167,6 @@ protected:
     bool mIncludeEssl1 = true;
 };
 
-}
+} // namespace matp
 
 #endif //TNT_CONFIG_H

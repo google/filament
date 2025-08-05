@@ -331,6 +331,7 @@ and tools.
   - `filamesh`:               Mesh converter
   - `glslminifier`:           Minifies GLSL source code
   - `matc`:                   Material compiler
+  - `filament-matp`:          Material parser
   - `matinfo`                 Displays information about materials compiled with `matc`
   - `mipgen`                  Generates a series of miplevels from a source image
   - `normal-blending`:        Tool to blend normal maps

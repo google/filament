@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-namespace matc {
+namespace matp {
 
 JsonType JsonishLexer::readIdentifier() noexcept {
     const char* lexemeStart = mCursor;
@@ -148,4 +148,4 @@ bool JsonishLexer::readLexeme() noexcept {
     return true;
 }
 
-} // namespace matc
+} // namespace matp

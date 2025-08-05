@@ -24,7 +24,7 @@
 
 #include <utils/string.h>
 
-namespace matc {
+namespace matp {
 
 static std::string resolveEscapes(const std::string& s) {
     std::string out;
@@ -318,4 +318,4 @@ void JsonishParser::reportError(const char* message) noexcept {
     mErrorReported = true;
 }
 
-} // namespace matc
+} // namespace matp

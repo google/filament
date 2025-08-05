@@ -23,7 +23,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace matc {
+namespace matp {
 
 // Follows the LL(1) grammar described at http://json.org:
 //   with the following productions.
@@ -279,6 +279,6 @@ private:
     bool mErrorReported = false;
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif //TNT_JSONPARSER_H

@@ -1,28 +1,27 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Copyright (C) 2025 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 #include <gtest/gtest.h>
 
-#include "MockConfig.h"
-#include "TestMaterialCompiler.h"
+#include "TestMaterialParser.h"
 
-#include <matc/MaterialCompiler.h>
-#include <matc/MaterialLexer.h>
-#include <matc/JsonishLexer.h>
-#include <matc/JsonishParser.h>
+#include <filament-matp/MaterialParser.h>
+#include "../src/JsonishLexer.h"
+#include "../src/JsonishParser.h"
+#include "../src/MaterialLexer.h"
 
 class MaterialLexer: public ::testing::Test {
 protected:
@@ -80,7 +79,7 @@ static std::string materialSourceWithCommentedBraces(R"(
 )");
 
 TEST_F(MaterialLexer, NormalMaterialLexing) {
-    matc::MaterialLexer materialLexer;
+    matp::MaterialLexer materialLexer;
     materialLexer.lex(materialSource.c_str(), materialSource.size(), 1);
     auto lexemes = materialLexer.getLexemes();
     // A material grammar is made of identifiers and blocks. The source provided has one identifier,
@@ -88,27 +87,27 @@ TEST_F(MaterialLexer, NormalMaterialLexing) {
     EXPECT_EQ(lexemes.size(), 4);
 }
 
-TEST_F(MaterialLexer, MaterialCompiler) {
-  matc::MaterialCompiler rawCompiler;
-  TestMaterialCompiler compiler(rawCompiler);
-  filamat::MaterialBuilder unused;
-  bool result = compiler.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
-  EXPECT_EQ(result, true);
-}
-
-TEST_F(MaterialLexer, MaterialCompilerWithToolSection) {
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+TEST_F(MaterialLexer, MaterialParser) {
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = compiler.parseMaterial(materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
+    bool result = testParser.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
     EXPECT_EQ(result, true);
 }
 
-TEST_F(MaterialLexer, MaterialCompilerWithCommentedBraces) {
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+TEST_F(MaterialLexer, MaterialParserWithToolSection) {
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = compiler.parseMaterial(materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
+    bool result = testParser.parseMaterial(materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
+    EXPECT_EQ(result, true);
+}
+
+TEST_F(MaterialLexer, MaterialParserWithCommentedBraces) {
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    bool result = testParser.parseMaterial(materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
     EXPECT_EQ(result, true);
 }
 
@@ -116,46 +115,46 @@ TEST_F(MaterialLexer, MaterialParserErrorOnlyIdentifier) {
     std::string sourceMissingIdentifier(R"(
         singleIdentifier
     )");
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = compiler.parseMaterial(
+    bool result = testParser.parseMaterial(
             sourceMissingIdentifier.c_str(), sourceMissingIdentifier.size(), unused);
     EXPECT_EQ(result, false);
 }
 
 TEST_F(MaterialLexer, MaterialParserErrorMissingBlock) {
-      std::string sourceMissingBlock(R"(
+    std::string sourceMissingBlock(R"(
         identifier1 {}
         identifier1
     )");
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = compiler.parseMaterial(
+    bool result = testParser.parseMaterial(
             sourceMissingBlock.c_str(), sourceMissingBlock.size(), unused);
     EXPECT_EQ(result, false);
 }
 
 TEST_F(MaterialLexer, MaterialParserErrorTwoBlock) {
-  std::string sourceTwoBlock(R"(
+    std::string sourceTwoBlock(R"(
         identifier1 {} {}
     )");
-  matc::MaterialCompiler rawCompiler;
-  TestMaterialCompiler compiler(rawCompiler);
-  filamat::MaterialBuilder unused;
-  bool result = compiler.parseMaterial(sourceTwoBlock.c_str(), sourceTwoBlock.size(), unused);
-  EXPECT_EQ(result, false);
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    bool result = testParser.parseMaterial(sourceTwoBlock.c_str(), sourceTwoBlock.size(), unused);
+    EXPECT_EQ(result, false);
 }
 
 TEST_F(MaterialLexer, MaterialParserSyntaxError) {
     std::string sourceSyntaxError(R"(
         identifier1 {} # identified2 {}
     )");
-    matc::MaterialCompiler rawCompiler;
-    TestMaterialCompiler compiler(rawCompiler);
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = compiler.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
+    bool result = testParser.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
     EXPECT_EQ(result, false);
 }
 
@@ -245,14 +244,14 @@ material: {
 })");
 
 TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
-    matc::JsonishLexer jsonishLexer;
+    matp::JsonishLexer jsonishLexer;
     jsonishLexer.lex(jsonMaterialSource.c_str(), jsonMaterialSource.size(), 1);
     auto lexemes = jsonishLexer.getLexemes();
 
     EXPECT_TRUE(!lexemes.empty());
 
-    matc::JsonishParser jsonishParser(lexemes);
-    std::unique_ptr<matc::JsonishObject> root = jsonishParser.parse();
+    matp::JsonishParser jsonishParser(lexemes);
+    std::unique_ptr<matp::JsonishObject> root = jsonishParser.parse();
 
     auto entries = root->getEntries();
     EXPECT_TRUE(entries.size() == 2);
@@ -261,26 +260,26 @@ TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
 }
 
 TEST_F(MaterialLexer, JsonMaterialLexingAndParsingNoQuotes) {
-    matc::JsonishLexer jsonishLexer;
+    matp::JsonishLexer jsonishLexer;
     jsonishLexer.lex(jsonMaterialSourceNoQuotes.c_str(), jsonMaterialSourceNoQuotes.size(), 1);
     auto lexemes = jsonishLexer.getLexemes();
 
     EXPECT_TRUE(!lexemes.empty());
 
-    matc::JsonishParser jsonishParser(lexemes);
-    std::unique_ptr<matc::JsonishObject> root = jsonishParser.parse();
+    matp::JsonishParser jsonishParser(lexemes);
+    std::unique_ptr<matp::JsonishObject> root = jsonishParser.parse();
 
     auto entries = root->getEntries();
     EXPECT_TRUE(entries.size() == 1);
     EXPECT_TRUE(entries.find("material") != entries.end());
 }
 
-TEST_F(MaterialLexer, JsonMaterialCompiler) {
-  matc::MaterialCompiler rawCompiler;
-  TestMaterialCompiler compiler(rawCompiler);
-  filamat::MaterialBuilder unused;
-  bool result = compiler.parseMaterialAsJSON(jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
-  EXPECT_EQ(result, true);
+TEST_F(MaterialLexer, JsonMaterialParser) {
+    matp::MaterialParser parser;
+    TestMaterialParser testParser(parser);
+    filamat::MaterialBuilder unused;
+    bool result = testParser.parseMaterialAsJSON(jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
+    EXPECT_EQ(result, true);
 }
 
 int main(int argc, char** argv) {

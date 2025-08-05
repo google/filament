@@ -36,6 +36,18 @@ constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 // appear in order of calls).
 #define FWGPU_DEBUG_FORCE_LOG_TO_I 0x00000004
 
+// Set this to enable logging related to the WebGPU backend's update3DImage function, which would
+// otherwise spam the logs.
+#define FWGPU_DEBUG_UPDATE_IMAGE 0x00000008
+
+// Set this to enable logging related to the WebGPU backend's WebGPUBlitter functionality,
+// which would otherwise spam the logs.
+#define FWGPU_DEBUG_BLIT 0x00000010
+
+// Set this to enable logging relating to bind groups (bind group layouts, bind groups themselves,
+// textures, samplers, and buffers,...), which would otherwise spam the logs.
+#define FWGPU_DEBUG_BIND_GROUPS 0x00000020
+
 // Useful default combinations
 #define FWGPU_DEBUG_EVERYTHING     0xFFFFFFFF
 

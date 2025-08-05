@@ -34,7 +34,7 @@
 using namespace filamat;
 using namespace utils;
 
-namespace matc {
+namespace matp {
 
 template <class T>
 static bool logEnumIssue(const std::string& key, const JsonishString& value,
@@ -1467,4 +1467,4 @@ bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::
     return true;
 }
 
-} // namespace matc
+} // namespace matp
