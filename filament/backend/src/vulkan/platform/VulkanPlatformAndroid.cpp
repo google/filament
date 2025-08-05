@@ -165,6 +165,11 @@ VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid()
     }
 }
 
+Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(void* buffer,
+        bool sRGB) noexcept {
+    return createExternalImage(const_cast<AHardwareBuffer*>(buffer), sRGB);
+}
+
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
         AHardwareBuffer const* buffer, bool sRGB) noexcept {
     if (__builtin_available(android 26, *)) {

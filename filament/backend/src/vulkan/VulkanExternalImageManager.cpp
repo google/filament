@@ -91,6 +91,7 @@ VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
 void VulkanExternalImageManager::terminate() {
     mSetBindings.clear();
+    mSetSreamBindings.clear();
     mImages.clear();
 }
 
@@ -262,6 +263,21 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
     mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
 }
 
+void VulkanExternalImageManager::bindStream(
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanStream> stream,
+        SamplerParams samplerParams) {
+    mSetSreamBindings.push_back({ bindingPoint, stream, set, samplerParams });
+}
+
+void VulkanExternalImageManager::bindStreamFrame(fvkmemory::resource_ptr<VulkanStream> stream,
+        fvkmemory::resource_ptr<VulkanTexture> frame){
+    auto it = std::find_if(mSetSreamBindings.begin(), mSetSreamBindings.end(),
+            [&](const auto& slot) { return slot.stream == stream; });
+    // We should have had this image already bound as a pseudo binding
+    assert(it != mSetSreamBindings.end());
+    bindExternallySampledTexture(it->set, it->binding, frame, it->samplerParams);
+}
+
 void VulkanExternalImageManager::addExternallySampledTexture(
        fvkmemory::resource_ptr<VulkanTexture> image,
         Platform::ExternalImageHandleRef platformHandleRef) {
@@ -275,6 +291,11 @@ void VulkanExternalImageManager::removeExternallySampledTexture(
     erasep<ImageData>(mImages, [&](auto const& imageData) {
         return imageData.image == image;
     });
+}
+
+bool VulkanExternalImageManager::isStreamedTexture(
+        fvkmemory::resource_ptr<VulkanTexture> image) const {
+    return bool(image->getStream());
 }
 
 bool VulkanExternalImageManager::isExternallySampledTexture(

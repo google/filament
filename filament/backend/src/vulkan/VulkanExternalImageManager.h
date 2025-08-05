@@ -65,6 +65,8 @@ public:
     void bindExternallySampledTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanTexture> image,
             SamplerParams samplerParams);
+    void bindStream(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint,
+            fvkmemory::resource_ptr<VulkanStream> stream, SamplerParams samplerParams);
 
     void clearTextureBinding(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
                              uint8_t bindingPoint);
@@ -75,6 +77,11 @@ public:
     void removeExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> image);
 
     bool isExternallySampledTexture(fvkmemory::resource_ptr<VulkanTexture> image) const;
+    bool isStreamedTexture(fvkmemory::resource_ptr<VulkanTexture> image) const;
+
+    // For a stream backed VulkanTexture, we are receiving new frames periodically, add them to the tracking system
+    void bindStreamFrame(fvkmemory::resource_ptr<VulkanStream> stream,
+            fvkmemory::resource_ptr<VulkanTexture> frame);
 
     VkSamplerYcbcrConversion getVkSamplerYcbcrConversion(
             VulkanPlatform::ExternalImageMetadata const& metadata);
@@ -110,9 +117,17 @@ private:
         SamplerParams samplerParams;
         bool bound = false;
     };
+    struct SetStreamBindingInfo {
+        uint8_t binding = 0;
+        fvkmemory::resource_ptr<VulkanStream> stream;
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set;
+        SamplerParams samplerParams;
+        bool bound = false;
+    };
 
     // Use vectors instead of hash maps because we only expect small number of entries.
     std::vector<SetBindingInfo> mSetBindings;
+    std::vector<SetStreamBindingInfo> mSetSreamBindings;
     std::vector<ImageData> mImages;
 };
 
