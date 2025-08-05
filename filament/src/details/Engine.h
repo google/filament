@@ -731,6 +731,8 @@ public:
                 bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_vertex_buffer_attribute_stride_mult_of_4 =
                         CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_material_instance_texture_descriptor_set_compatible =
+                        CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
@@ -783,6 +785,9 @@ public:
             { "backend.vulkan.enable_staging_buffer_bypass",
               "vulkan: enable a staging bypass logic for unified memory architecture",
               &features.backend.vulkan.enable_staging_buffer_bypass, false },
+            { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
+              "Assert that the textures in a material instance are compatible with descriptor set.",
+              &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
