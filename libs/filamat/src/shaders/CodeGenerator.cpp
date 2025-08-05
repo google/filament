@@ -539,13 +539,14 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage stage,
 
     const char* swizzleString = "";
 
-    // Metal doesn't support some 3-component texture formats, so the backend uses 4-component
+    // Metal and WebGPU don't support some 3-component texture formats, so the backend uses 4-component
     // formats behind the scenes. It's an error to output fewer components than the attachment
     // needs, so we always output a float4 instead of a float3. It's never an error to output extra
     // components.
     //
     // Meanwhile, ESSL 1.0 must always write to gl_FragColor, a vec4.
-    if (mTargetApi == TargetApi::METAL || mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (mTargetApi == TargetApi::METAL || mTargetApi == TargetApi::WEBGPU ||
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         if (outputType == MaterialBuilder::OutputType::FLOAT3) {
             outputType = MaterialBuilder::OutputType::FLOAT4;
             swizzleString = ".rgb";
