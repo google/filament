@@ -101,9 +101,7 @@ struct VulkanCommandBuffer {
         return mFenceStatus;
     }
 
-    VkFence getVkFence() const {
-        return mFence;
-    }
+    VkFence getVkFence() const { return mFenceStatus->getVkFence(); }
 
     VkCommandBuffer buffer() const {
         return mBuffer;
@@ -125,7 +123,6 @@ private:
     fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
-    VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
     uint32_t mAge;

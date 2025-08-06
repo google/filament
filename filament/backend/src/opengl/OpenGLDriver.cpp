@@ -2268,6 +2268,22 @@ FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::ERROR;
 }
 
+FenceConversionResult OpenGLDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
+    if (!fh) {
+        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+    }
+
+    GLFence* f = handle_cast<GLFence*>(fh);
+    if (f->fence == nullptr) {
+        if (!mPlatform.canCreateFence()) {
+            return FenceConversionResult::NOT_SUPPORTED;
+        }
+        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+    }
+
+    return mPlatform.getFenceFD(f->fence, fd);
+}
+
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     const auto& ext = mContext.ext;
     if (isETC2Compression(format)) {

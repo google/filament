@@ -599,6 +599,20 @@ enum class FenceStatus : int8_t {
     TIMEOUT_EXPIRED = 1,        //!< wait()'s timeout expired. The Fence condition is not satisfied.
 };
 
+/**
+ * Error codes for DriverApi::getFenceFD()
+ * @see Fence, DriverApi::getFenceFD()
+ */
+enum class FenceConversionResult : int8_t {
+    HANDLE_NOT_AVAILABLE =
+            -3, //!< The underlying handle hasn't been allocated yet. Likely was requested too soon.
+    NOT_SUPPORTED =
+            -2,  //!< The current platform doesn't support converting fences to external handles.
+    ERROR = -1,  //!< An error occurred while converting the fence to an external handle.
+    SUCCESS = 0, //!< Successfully converted to external handle.
+    PREVIOUSLY_SIGNALED = 1, //!< The fence has already been signaled, can't convert.
+};
+
 static constexpr uint64_t FENCE_WAIT_FOR_EVER = uint64_t(-1);
 
 /**

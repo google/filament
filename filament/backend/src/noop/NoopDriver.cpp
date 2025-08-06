@@ -147,6 +147,10 @@ int64_t NoopDriver::getStreamTimestamp(Handle<HwStream> sh) {
 void NoopDriver::updateStreams(CommandStream* driver) {
 }
 
+FenceConversionResult NoopDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
+    return FenceConversionResult::NOT_SUPPORTED;
+}
+
 void NoopDriver::destroyFence(Handle<HwFence> fh) {
 }
 

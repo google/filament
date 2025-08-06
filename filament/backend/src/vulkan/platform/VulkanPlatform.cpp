@@ -920,6 +920,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     context.mBlittableDepthStencilFormats =
             findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
 
+    context.mFenceExportFlags = getFenceExportFlags();
+
     assert_invariant(context.mDepthStencilFormats.size() > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -1036,6 +1038,15 @@ uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
+}
+
+VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const noexcept {
+    // By default, fences should not be exportable.
+    return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
+}
+
+FenceConversionResult VulkanPlatform::getFenceFD(VkFence fence, int32_t* fd) const noexcept {
+    return FenceConversionResult::NOT_SUPPORTED;
 }
 
 ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
