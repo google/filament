@@ -26,6 +26,7 @@
 
 #include <algorithm> // for std::fill
 #include <iterator>
+#include <limits>
 #include <type_traits>
 
 #if defined(__ARM_NEON)
