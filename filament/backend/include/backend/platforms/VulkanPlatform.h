@@ -406,7 +406,7 @@ public:
     virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const {
         return {};
     }
-    virtual ExternalImageHandle createExternalImageFromRaw(void* image, bool sRGB) const {
+    virtual ExternalImageHandle createExternalImageFromRaw(void* image, bool sRGB) {
         return {};
     }
 
