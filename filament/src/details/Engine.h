@@ -733,6 +733,8 @@ public:
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_material_instance_texture_descriptor_set_compatible =
                         CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_texture_format_mipmappable = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
@@ -787,11 +789,17 @@ public:
               "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
               &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
             { "backend.vulkan.enable_staging_buffer_bypass",
-              "vulkan: enable a staging bypass logic for unified memory architecture",
+              "vulkan: enable a staging bypass logic for unified memory architecture.",
               &features.backend.vulkan.enable_staging_buffer_bypass, false },
             { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
               "Assert that the textures in a material instance are compatible with descriptor set.",
               &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
+            { "engine.debug.assert_texture_format_mipmappable",
+              "Assert if a texture (with levels > 1) that the format is mipmappable.",
+              &features.engine.debug.assert_texture_format_mipmappable, false },
+            { "engine.debug.assert_texture_can_generate_mipmap",
+              "Assert if a texture has the correct usage set for generating mipmaps.",
+              &features.engine.debug.assert_texture_can_generate_mipmap, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

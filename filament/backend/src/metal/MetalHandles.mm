@@ -102,6 +102,9 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     if (any(usage & TextureUsage::BLIT_SRC)) {
         u |= MTLTextureUsageShaderRead;
     }
+    if (any(usage & TextureUsage::GEN_MIPMAPPABLE)) {
+        u |= (MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead);
+    }
 
     return MTLTextureUsage(u);
 }

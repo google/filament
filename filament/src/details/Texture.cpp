@@ -242,16 +242,28 @@ Texture* Texture::Builder::build(Engine& engine) {
 
     if (mImpl->mUsage == TextureUsage::NONE) {
         mImpl->mUsage = TextureUsage::DEFAULT;
-        if (mImpl->mLevels > 1 &&
-            (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
-            !mImpl->mExternal) {
-            const bool formatMipmappable =
-                    downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
-            if (formatMipmappable) {
-                // by default mipmappable textures have the BLIT usage bits set
-                mImpl->mUsage |= TextureUsage::BLIT_SRC | TextureUsage::BLIT_DST;
-            }
+    }
+
+    auto const& featureFlags = downcast(engine).features.engine.debug;
+    if (mImpl->mLevels > 1 && (mImpl->mWidth > 1 || mImpl->mHeight > 1) && !mImpl->mExternal) {
+        bool const formatMipmappable =
+                downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
+
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                formatMipmappable,
+                featureFlags.assert_texture_format_mipmappable)
+                << "Texture levels is > 1, but the format (" << int(mImpl->mFormat) << ") "
+                << " is not mipmppable";
+
+        if (formatMipmappable && !featureFlags.assert_texture_can_generate_mipmap) {
+            // Setting this for backwards compatibility,but should remove when safe.
+            mImpl->mUsage |= TextureUsage::GEN_MIPMAPPABLE;
         }
+    }
+
+    if (any(mImpl->mUsage & TextureUsage::GEN_MIPMAPPABLE)) {
+        FILAMENT_CHECK_PRECONDITION(mImpl->mLevels > 1)
+                << "Texture has GEN_MIPMAPPABLE usage set, but levels is 1.";
     }
 
     // TODO: remove in a future filament release.
@@ -639,6 +651,12 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     const bool formatMipmappable = engine.getDriverApi().isTextureFormatMipmappable(mFormat);
     FILAMENT_CHECK_PRECONDITION(formatMipmappable)
             << "Texture format " << (unsigned)mFormat << " is not mipmappable.";
+
+    auto const& featureFlags = engine.features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+            any(mUsage & TextureUsage::GEN_MIPMAPPABLE),
+            featureFlags.assert_texture_can_generate_mipmap)
+            << "Texture usage does not have GEN_MIPMAPPABLE set";
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
         return;
