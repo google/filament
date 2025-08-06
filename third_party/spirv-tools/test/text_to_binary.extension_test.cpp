@@ -70,9 +70,15 @@ TEST_F(TextToBinaryTest, MultiImport) {
               Eq("Import Id is being defined a second time"));
 }
 
-TEST_F(TextToBinaryTest, TooManyArguments) {
+TEST_F(TextToBinaryTest, TooManyArgumentsIdEqualQuote) {
   const std::string input = R"(%opencl = OpExtInstImport "OpenCL.std"
-                               %2 = OpExtInst %float %opencl cos %x %oops")";
+                               %2 = OpExtInst %float %opencl cos %x %oops=")";
+  EXPECT_THAT(CompileFailure(input), Eq("Expected '=', found end of stream."));
+}
+
+TEST_F(TextToBinaryTest, TooManyArgumentsIdEqual) {
+  const std::string input = R"(%opencl = OpExtInstImport "OpenCL.std"
+                               %2 = OpExtInst %float %opencl cos %x %oops=)";
   EXPECT_THAT(CompileFailure(input), Eq("Expected '=', found end of stream."));
 }
 
@@ -1374,6 +1380,119 @@ INSTANTIATE_TEST_SUITE_P(
             {"%2 = OpUntypedInBoundsPtrAccessChainKHR %1 %3 %4 %5 %6 %7\n",
              MakeInstruction(spv::Op::OpUntypedInBoundsPtrAccessChainKHR,
                              {1, 2, 3, 4, 5, 6, 7})},
+        })));
+
+// SPV_ARM_tensors
+INSTANTIATE_TEST_SUITE_P(
+    SPV_ARM_tensors, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_6, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2, SPV_ENV_VULKAN_1_3,
+               SPV_ENV_OPENCL_2_1),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_ARM_tensors\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_ARM_tensors"))},
+            {"OpCapability TensorsARM\n",
+             MakeInstruction(spv::Op::OpCapability,
+                             {(uint32_t)spv::Capability::TensorsARM})},
+            {"OpCapability StorageTensorArrayDynamicIndexingARM\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)
+                      spv::Capability::StorageTensorArrayDynamicIndexingARM})},
+            {"OpCapability StorageTensorArrayNonUniformIndexingARM\n",
+             MakeInstruction(spv::Op::OpCapability,
+                             {(uint32_t)spv::Capability::
+                                  StorageTensorArrayNonUniformIndexingARM})},
+            {"%1 = OpTypeTensorARM %2\n",
+             MakeInstruction(spv::Op::OpTypeTensorARM, {1, 2})},
+            {"%1 = OpTypeTensorARM %2 %3\n",
+             MakeInstruction(spv::Op::OpTypeTensorARM, {1, 2, 3})},
+            {"%1 = OpTypeTensorARM %2 %3 %4\n",
+             MakeInstruction(spv::Op::OpTypeTensorARM, {1, 2, 3, 4})},
+            {"%2 = OpTensorReadARM %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpTensorReadARM, {1, 2, 3, 4})},
+            {"%2 = OpTensorReadARM %1 %3 %4 NoneARM\n",
+             MakeInstruction(spv::Op::OpTensorReadARM,
+                             {1, 2, 3, 4,
+                              (uint32_t)spv::TensorOperandsMask::MaskNone})},
+            {"%2 = OpTensorReadARM %1 %3 %4 NontemporalARM\n",
+             MakeInstruction(
+                 spv::Op::OpTensorReadARM,
+                 {1, 2, 3, 4,
+                  (uint32_t)spv::TensorOperandsMask::NontemporalARM})},
+            {"%2 = OpTensorReadARM %1 %3 %4 OutOfBoundsValueARM %5\n",
+             MakeInstruction(
+                 spv::Op::OpTensorReadARM,
+                 {1, 2, 3, 4,
+                  (uint32_t)spv::TensorOperandsMask::OutOfBoundsValueARM, 5})},
+            {"%2 = OpTensorReadARM %1 %3 %4 MakeElementVisibleARM %5\n",
+             MakeInstruction(
+                 spv::Op::OpTensorReadARM,
+                 {1, 2, 3, 4,
+                  (uint32_t)spv::TensorOperandsMask::MakeElementVisibleARM,
+                  5})},
+            {"%2 = OpTensorReadARM %1 %3 %4 NonPrivateElementARM\n",
+             MakeInstruction(
+                 spv::Op::OpTensorReadARM,
+                 {1, 2, 3, 4,
+                  (uint32_t)spv::TensorOperandsMask::NonPrivateElementARM})},
+            {"OpTensorWriteARM %1 %2 %3\n",
+             MakeInstruction(spv::Op::OpTensorWriteARM, {1, 2, 3})},
+            {"OpTensorWriteARM %1 %2 %3 NoneARM\n",
+             MakeInstruction(spv::Op::OpTensorWriteARM,
+                             {1, 2, 3,
+                              (uint32_t)spv::TensorOperandsMask::MaskNone})},
+            {"OpTensorWriteARM %1 %2 %3 NontemporalARM\n",
+             MakeInstruction(
+                 spv::Op::OpTensorWriteARM,
+                 {1, 2, 3, (uint32_t)spv::TensorOperandsMask::NontemporalARM})},
+            {"OpTensorWriteARM %1 %2 %3 MakeElementAvailableARM %4\n",
+             MakeInstruction(
+                 spv::Op::OpTensorWriteARM,
+                 {1, 2, 3,
+                  (uint32_t)spv::TensorOperandsMask::MakeElementAvailableARM,
+                  4})},
+            {"OpTensorWriteARM %1 %2 %3 NonPrivateElementARM\n",
+             MakeInstruction(
+                 spv::Op::OpTensorWriteARM,
+                 {1, 2, 3,
+                  (uint32_t)spv::TensorOperandsMask::NonPrivateElementARM})},
+            {"%2 = OpTensorQuerySizeARM %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpTensorQuerySizeARM, {1, 2, 3, 4})},
+        })));
+
+// SPV_EXT_float8
+INSTANTIATE_TEST_SUITE_P(
+    SPV_EXT_float8, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_6, SPV_ENV_VULKAN_1_0,
+               SPV_ENV_VULKAN_1_1, SPV_ENV_VULKAN_1_2, SPV_ENV_VULKAN_1_3,
+               SPV_ENV_OPENCL_2_1),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_EXT_float8\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_EXT_float8"))},
+            {"OpCapability Float8EXT\n",
+             MakeInstruction(spv::Op::OpCapability,
+                             {(uint32_t)spv::Capability::Float8EXT})},
+            {"OpCapability Float8CooperativeMatrixEXT\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::Float8CooperativeMatrixEXT})},
+            {"%1 = OpTypeFloat 8 Float8E4M3EXT\n",
+             MakeInstruction(spv::Op::OpTypeFloat,
+                             {1, 8, (uint32_t)spv::FPEncoding::Float8E4M3EXT})},
+            {"%1 = OpTypeFloat 8 Float8E5M2EXT\n",
+             MakeInstruction(spv::Op::OpTypeFloat,
+                             {1, 8, (uint32_t)spv::FPEncoding::Float8E5M2EXT})},
+            {"OpDecorate %1 SaturatedToLargestFloat8NormalConversionEXT\n",
+             MakeInstruction(
+                 spv::Op::OpDecorate,
+                 {1,
+                  uint32_t(spv::Decoration::
+                               SaturatedToLargestFloat8NormalConversionEXT)})},
         })));
 
 }  // namespace

@@ -14,8 +14,8 @@
 
 #include <algorithm>
 
-#include "source/enum_string_mapping.h"
 #include "source/opcode.h"
+#include "source/table2.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"

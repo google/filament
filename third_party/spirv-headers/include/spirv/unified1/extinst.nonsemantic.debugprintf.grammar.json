@@ -5,7 +5,7 @@
       "opname" : "DebugPrintf",
       "opcode" : 1,
       "operands" : [
-        { "kind" : "IdRef",        "name" : "'Format'" },
+        { "kind" : "IdRef",        "name" : "Format" },
         { "kind" : "IdRef",        "quantifier" : "*" }
       ]
     }

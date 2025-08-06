@@ -24,6 +24,7 @@
 #include "source/ext_inst.h"
 #include "source/opcode.h"
 #include "source/table.h"
+#include "source/table2.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -83,9 +84,7 @@ class Instruction {
   const spv_parsed_instruction_t& c_inst() const { return inst_; }
 
   /// Provides direct access to instructions spv_ext_inst_type_t object.
-  const spv_ext_inst_type_t& ext_inst_type() const {
-    return inst_.ext_inst_type;
-  }
+  spv_ext_inst_type_t ext_inst_type() const { return inst_.ext_inst_type; }
 
   bool IsNonSemantic() const {
     return spvIsExtendedInstruction(opcode()) &&
@@ -113,7 +112,7 @@ class Instruction {
  private:
   const std::vector<uint32_t> words_;
   const std::vector<spv_parsed_operand_t> operands_;
-  spv_parsed_instruction_t inst_;
+  const spv_parsed_instruction_t inst_;
   size_t line_num_ = 0;
 
   /// The function in which this instruction was declared

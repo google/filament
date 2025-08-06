@@ -47,6 +47,7 @@ struct IdType {
   uint32_t bitwidth;  // Safe to assume that we will not have > 2^32 bits.
   bool isSigned;      // This is only significant if type_class is integral.
   IdTypeClass type_class;
+  spv_fp_encoding_t encoding;
 };
 
 // Default equality operator for IdType. Tests if all members are the same.
@@ -141,7 +142,14 @@ class AssemblyContext {
   spv_result_t advance();
 
   // Sets word to the next word in the input text. Fills next_position with
-  // the next location past the end of the word.
+  // the next location past the end of the word.  Returns an error if the
+  // context is invalid or has no more text. Otherwise returns SPV_SUCCESS.
+  // Assumes the next part of the input is not whitespace.
+  //
+  // A word ends at the next comment or whitespace.  However, double-quoted
+  // strings remain intact, and a backslash always escapes the next character.
+  // The input stream may end before a matching double-quote, or immediately
+  // after a backslash. Both such cases still count as success.
   spv_result_t getWord(std::string* word, spv_position next_position);
 
   // Returns true if the next word in the input is the start of a new Opcode.

@@ -338,7 +338,8 @@ class Instruction : public utils::IntrusiveNodeBase<Instruction> {
   // Updates lexical scope of DebugScope and OpLine.
   void UpdateLexicalScope(uint32_t scope);
   // Updates OpLine and DebugScope based on the information of |from|.
-  void UpdateDebugInfoFrom(const Instruction* from);
+  void UpdateDebugInfoFrom(const Instruction* from,
+                           const Instruction* line = nullptr);
   // Remove the |index|-th operand
   void RemoveOperand(uint32_t index) {
     operands_.erase(operands_.begin() + index);

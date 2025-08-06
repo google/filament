@@ -2466,7 +2466,7 @@ FoldingRule RedundantFDiv() {
 }
 
 FoldingRule RedundantFMod() {
-  return [](IRContext* context, Instruction* inst,
+  return [](IRContext*, Instruction* inst,
             const std::vector<const analysis::Constant*>& constants) {
     assert(inst->opcode() == spv::Op::OpFMod &&
            "Wrong opcode.  Should be OpFMod.");
@@ -2477,25 +2477,11 @@ FoldingRule RedundantFMod() {
     }
 
     FloatConstantKind kind0 = getFloatConstantKind(constants[0]);
-    FloatConstantKind kind1 = getFloatConstantKind(constants[1]);
 
     if (kind0 == FloatConstantKind::Zero) {
       inst->SetOpcode(spv::Op::OpCopyObject);
       inst->SetInOperands(
           {{SPV_OPERAND_TYPE_ID, {inst->GetSingleWordInOperand(0)}}});
-      return true;
-    }
-
-    if (kind1 == FloatConstantKind::One) {
-      auto type = context->get_type_mgr()->GetType(inst->type_id());
-      std::vector<uint32_t> zero_words;
-      zero_words.resize(ElementWidth(type) / 32);
-      auto const_mgr = context->get_constant_mgr();
-      auto zero = const_mgr->GetConstant(type, std::move(zero_words));
-      auto zero_id = const_mgr->GetDefiningInstruction(zero)->result_id();
-
-      inst->SetOpcode(spv::Op::OpCopyObject);
-      inst->SetInOperands({{SPV_OPERAND_TYPE_ID, {zero_id}}});
       return true;
     }
 

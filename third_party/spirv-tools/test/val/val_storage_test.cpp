@@ -249,6 +249,194 @@ TEST_F(ValidateStorage, RelaxedLogicalPointerFunctionParamBad) {
               HasSubstr("OpFunctionCall Argument <id> '"));
 }
 
+TEST_F(ValidateStorage, TileAttachmentQCOMBad1) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability Sampled1D
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %color1 Binding 2
+               OpDecorate %color1 DescriptorSet 0
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+         %44 = OpTypeImage %int 1D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Any OpTypeImage variable in the TileAttachmentQCOM "
+                        "Storage Class must have 2D as its dimension"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMBad2) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %color1 Binding 2
+       %void = OpTypeVoid 
+        %int = OpTypeInt 32 1
+         %44 = OpTypeImage %int 2D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
+                        "must be decorated with DescriptorSet and Binding"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMBad3) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %color1 DescriptorSet 0
+       %void = OpTypeVoid 
+        %int = OpTypeInt 32 1
+         %44 = OpTypeImage %int 2D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_ID, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
+                        "must be decorated with DescriptorSet and Binding"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMBad4) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpSource GLSL 450
+               OpDecorate %color1 Binding 2
+               OpDecorate %color1 DescriptorSet 0
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+         %44 = OpTypeImage %int 2D 0 0 0 0 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-OpTypeImage-04657"));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Sampled must be 1 or 2 in the Vulkan environment"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMBad5) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpCapability ImageQuery
+               OpCapability TileShadingQCOM
+               OpExtension "SPV_QCOM_tile_shading"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %color1 Binding 2
+               OpDecorate %color1 DescriptorSet 0
+       %void = OpTypeVoid 
+          %3 = OpTypeFunction %void
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2 
+      %int_2 = OpConstant %int 2
+         %44 = OpTypeImage %int 2D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+        %154 = OpLoad %44 %color1
+        %156 = OpImageQuerySizeLod %v2int %154 %int_2
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("Any variable in the TileAttachmentQCOM Storage Class "
+                "must not be consumed by an OpImageQuery* instruction"));
+}
+
+TEST_F(ValidateStorage, TileAttachmentQCOMBad6) {
+  const std::string spirv = R"(
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main"
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %color1 Binding 2
+               OpDecorate %color1 DescriptorSet 0
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+         %44 = OpTypeImage %int 2D 0 0 0 2 Rgba32i
+%_ptr_TileAttachmentQCOM_44 = OpTypePointer TileAttachmentQCOM %44
+     %color1 = OpVariable %_ptr_TileAttachmentQCOM_44 TileAttachmentQCOM
+          %3 = OpTypeFunction %void
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+               OpReturn
+               OpFunctionEnd
+  )";
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
 std::string GenerateExecutionModelCode(const std::string& execution_model,
                                        const std::string& storage_class,
                                        bool store) {
@@ -265,7 +453,8 @@ std::string GenerateExecutionModelCode(const std::string& execution_model,
               OpMemoryModel Logical GLSL450
               OpEntryPoint )"
      << execution_model << R"( %func "func" %var
-              )" << mode << R"(
+              )"
+     << mode << R"(
               OpDecorate %var Location 0
 %intt       = OpTypeInt 32 0
 %int0       = OpConstant %intt 0
@@ -273,10 +462,12 @@ std::string GenerateExecutionModelCode(const std::string& execution_model,
 %vfunct     = OpTypeFunction %voidt
 %ptr        = OpTypePointer )"
      << storage_class << R"( %intt
-%var        = OpVariable %ptr )" << storage_class << R"(
+%var        = OpVariable %ptr )"
+     << storage_class << R"(
 %func       = OpFunction %voidt None %vfunct
 %funcl      = OpLabel
-              )" << operation << R"(
+              )"
+     << operation << R"(
               OpReturn
               OpFunctionEnd
 )";
