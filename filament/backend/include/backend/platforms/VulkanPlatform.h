@@ -385,10 +385,6 @@ public:
         return {};
     }
 
-    virtual Platform::ExternalImageHandle createExternalImage(void* buffer, bool sRGB) noexcept {
-        return {};
-    }
-
     struct ImageData {
         struct Bundle {
             VkImage image = VK_NULL_HANDLE;
