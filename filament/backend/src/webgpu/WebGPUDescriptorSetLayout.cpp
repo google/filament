@@ -64,7 +64,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     std::string baseLabel;
     if (std::holds_alternative<utils::StaticString>(layout.label)) {
         const auto& temp = std::get_if<utils::StaticString>(&layout.label);
-        baseLabel = temp->c_str();
+        baseLabel = temp->c_str() == nullptr ? "" : temp->c_str();
     } else if (std::holds_alternative<utils::CString>(layout.label)) {
         const auto& temp = std::get_if<utils::CString>(&layout.label);
         baseLabel = temp->c_str();
