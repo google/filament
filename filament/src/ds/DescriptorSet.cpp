@@ -88,7 +88,7 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
         // point later.
         driver.destroyDescriptorSet(mDescriptorSetHandle);
     }
-    mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle());
+    mDescriptorSetHandle = driver.createDescriptorSet(layout.getHandle(), mName);
     mValid.forEachSetBit([&layout, &driver,
             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
             (backend::descriptor_binding_t const binding) {

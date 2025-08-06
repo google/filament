@@ -76,10 +76,7 @@ FBufferObject::FBufferObject(FEngine& engine, const Builder& builder)
         : mByteCount(builder->mByteCount), mBindingType(builder->mBindingType) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createBufferObject(builder->mByteCount, builder->mBindingType,
-            backend::BufferUsage::STATIC);
-    if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    }
+            backend::BufferUsage::STATIC, builder.getName());
 }
 
 void FBufferObject::terminate(FEngine& engine) {

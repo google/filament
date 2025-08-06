@@ -86,15 +86,12 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
     //     than the minimum required size of the uniform block (the value of
     //     UNIFORM_BLOCK_DATA_SIZE).
 
+    // TODO: We should also tag the texture created inside createIndicesAndWeightsHandle.
     mHandle = driver.createBufferObject(
             getPhysicalBoneCount(mBoneCount) * sizeof(PerRenderableBoneUib::BoneData),
             BufferObjectBinding::UNIFORM,
-            BufferUsage::DYNAMIC);
-
-    if (auto name = builder.getName(); !name.empty()) {
-        // TODO: We should also tag the texture created inside createIndicesAndWeightsHandle.
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    }
+            BufferUsage::DYNAMIC,
+            builder.getName());
 
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)

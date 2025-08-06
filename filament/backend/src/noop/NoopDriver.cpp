@@ -125,11 +125,11 @@ void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
 void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
-Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream) {
+Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::CString tag) {
     return {};
 }
 
-Handle<HwStream> NoopDriver::createStreamAcquired() {
+Handle<HwStream> NoopDriver::createStreamAcquired(utils::CString tag) {
     return {};
 }
 
@@ -413,9 +413,6 @@ void NoopDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
-}
-
-void NoopDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 
 } // namespace filament
