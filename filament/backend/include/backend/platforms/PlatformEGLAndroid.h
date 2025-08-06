@@ -92,6 +92,8 @@ protected:
 
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
+    Fence* createFence() noexcept override;
+    FenceConversionResult getFenceFD(Fence* fence, int32_t* fd) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;

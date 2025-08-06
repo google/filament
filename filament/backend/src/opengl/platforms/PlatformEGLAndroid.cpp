@@ -83,6 +83,7 @@ UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID
 UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
+UTILS_PRIVATE PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID = {};
 }
 using namespace glext;
 
@@ -226,6 +227,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
                 "eglGetFrameTimestampSupportedANDROID");
         eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
                 "eglGetFrameTimestampsANDROID");
+        eglDupNativeFenceFDANDROID =
+                (PFNEGLDUPNATIVEFENCEFDANDROIDPROC) eglGetProcAddress("eglDupNativeFenceFDANDROID");
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -393,6 +396,20 @@ Platform::Stream* PlatformEGLAndroid::createStream(void* nativeStream) noexcept 
 
 void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
+}
+
+// For PlatformEGL on Android, create a fence that is exportable to an fd.
+Platform::Fence* PlatformEGLAndroid::createFence() noexcept {
+    return (Fence*) eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+}
+
+FenceConversionResult PlatformEGLAndroid::getFenceFD(Platform::Fence* fence, int32_t* fd) noexcept {
+    EGLint tmpFd = eglDupNativeFenceFDANDROID(mEGLDisplay, (EGLSyncKHR) fence);
+    if (tmpFd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
+        return FenceConversionResult::ERROR;
+    }
+    *fd = tmpFd;
+    return FenceConversionResult::SUCCESS;
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t tname) noexcept {

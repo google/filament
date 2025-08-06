@@ -103,12 +103,19 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
     vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
 
     VkFenceCreateInfo fenceCreateInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
+    VkExportFenceCreateInfo exportFenceCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+        .handleTypes = context.getFenceExportFlags()
+    };
+    fenceCreateInfo.pNext = &exportFenceCreateInfo;
+
+    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFenceStatus->getVkFence());
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
     vkDestroySemaphore(mDevice, mSubmission, VKALLOC);
-    vkDestroyFence(mDevice, mFence, VKALLOC);
+    vkDestroyFence(mDevice, mFenceStatus->getVkFence(), VKALLOC);
+    mFenceStatus->getVkFence() = VK_NULL_HANDLE;
 }
 
 void VulkanCommandBuffer::reset() noexcept {
@@ -122,7 +129,7 @@ void VulkanCommandBuffer::reset() noexcept {
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
     mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE);
-    vkResetFences(mDevice, 1, &mFence);
+    vkResetFences(mDevice, 1, &mFenceStatus->getVkFence());
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
@@ -223,7 +230,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
 
     mFenceStatus->setStatus(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result =
-        vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
+            vkQueueSubmit(mQueue, 1, &submitInfo, mFenceStatus->getVkFence());
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {

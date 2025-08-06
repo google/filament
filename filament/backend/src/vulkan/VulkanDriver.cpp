@@ -1067,6 +1067,19 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::TIMEOUT_EXPIRED;
 }
 
+FenceConversionResult VulkanDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
+    if (!fh) {
+        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+    }
+
+    VkFence fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh)->getVkFence();
+    if (fence == VK_NULL_HANDLE) {
+        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+    }
+
+    return mPlatform->getFenceFD(fence, fd);
+}
+
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {

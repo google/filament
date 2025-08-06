@@ -44,12 +44,16 @@ public:
 
     virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
 
+    virtual FenceConversionResult getFenceFD(VkFence fence, int32_t* fd) const noexcept override;
+
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const override;
 
     using SurfaceBundle = VulkanPlatform::SurfaceBundle;
     virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
             uint64_t flags) const noexcept override;
+
+    virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept override;
 
 private:
     struct ExternalImageVulkanAndroid : public Platform::ExternalImage {

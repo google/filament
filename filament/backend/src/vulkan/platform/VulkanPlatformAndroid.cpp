@@ -389,6 +389,32 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     };
 }
 
+FenceConversionResult VulkanPlatformAndroid::getFenceFD(VkFence fence, int32_t* fd) const noexcept {
+    VkFenceGetFdInfoKHR info{
+        .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
+        .fence = fence,
+        .handleType = getFenceExportFlags(),
+    };
+
+    int32_t tmpFd;
+    VkResult result = vkGetFenceFdKHR(getDevice(), &info, &tmpFd);
+    if (result != VK_SUCCESS) {
+        return FenceConversionResult::ERROR;
+    }
+
+    if (tmpFd == -1) {
+        return FenceConversionResult::PREVIOUSLY_SIGNALED;
+    }
+
+    *fd = tmpFd;
+    return FenceConversionResult::SUCCESS;
+}
+
+VkExternalFenceHandleTypeFlagBits VulkanPlatformAndroid::getFenceExportFlags() const noexcept {
+    // On android, make fences that can be exported to fd's.
+    return VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+}
+
 VulkanPlatform::ExtensionSet VulkanPlatformAndroid::getSwapchainInstanceExtensions() const {
     return {
         VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
