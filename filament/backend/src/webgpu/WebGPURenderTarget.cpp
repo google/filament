@@ -125,7 +125,7 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
       mSamples{ samples },
-      mLayerCount{ layerCount },
+      mLayerCount{ layerCount <= 0 ? static_cast<uint8_t>(1) : layerCount },
       mColorAttachments{ colorAttachmentsMRT },
       mDepthAttachment{ depthAttachmentInfo },
       mStencilAttachment{ stencilAttachmentInfo },
