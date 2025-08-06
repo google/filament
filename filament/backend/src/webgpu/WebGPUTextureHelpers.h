@@ -550,6 +550,93 @@ namespace filament::backend {
     return source != destination && pixelDataType != PixelDataType::COMPRESSED;
 }
 
+/**
+ * @param fUsage Filament's requested texture usage
+ * @param samples How many samples to use for MSAA
+ * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
+ *                                   like a compute shader
+ * @param needsRenderAttachmentSupport if we need to use this texture as a render pass attachment
+ *                                     in something like a render pass blit (e.g. mipmap generation)
+ * @param deviceSupportsTransientAttachments if the device itself supports Render Attachments
+ * @return The appropriate texture usage flags for the underlying texture
+ */
+[[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
+        const uint8_t samples, const bool needsComputeStorageSupport,
+        const bool needsRenderAttachmentSupport, const bool deviceSupportsTransientAttachments) {
+    wgpu::TextureUsage retUsage{ wgpu::TextureUsage::None };
+
+    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::TextureBinding);
+    }
+    if (any(TextureUsage::BLIT_DST & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
+    }
+    if (any(TextureUsage::UPLOADABLE & fUsage)) {
+        retUsage |= wgpu::TextureUsage::CopyDst;
+    }
+    if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);
+    }
+    if (any(TextureUsage::SAMPLEABLE & fUsage)) {
+        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
+    // if needsComputeStorageSupport we need to read and write to the texture in a shader and thus
+    // require CopySrc, CopyDst, TextureBinding, & StorageBinding
+    if (needsComputeStorageSupport) {
+        retUsage |= (wgpu::TextureUsage::StorageBinding |
+                     wgpu::TextureUsage::CopySrc |
+                     wgpu::TextureUsage::CopyDst |
+                     wgpu::TextureUsage::TextureBinding);
+    }
+
+    wgpu::TextureUsage transientAttachmentNeeded{ wgpu::TextureUsage::None };
+    const bool useTransientAttachment {
+            deviceSupportsTransientAttachments &&
+            // Usage consists of attachment flags only.
+            none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
+            // Usage contains at least one attachment flag.
+            any(fUsage & TextureUsage::ALL_ATTACHMENTS) &&
+            // Depth resolve cannot use transient attachment because it uses a custom shader.
+            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
+            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1)};
+    if (useTransientAttachment) {
+        transientAttachmentNeeded |= wgpu::TextureUsage::TransientAttachment;
+    }
+
+    // A texture that is a blit destination or render attachment will often need to be
+    // a copy source for subsequent operations (e.g., mipmap generation, readbacks).
+    // However, we dont need to add the CopySrc IF its a transientAttachment
+    if (any((TextureUsage::BLIT_DST | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::DEPTH_ATTACHMENT) &
+                fUsage)) {
+        if (!useTransientAttachment) {
+            retUsage |= wgpu::TextureUsage::CopySrc;
+        }
+    }
+
+    if (needsRenderAttachmentSupport) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+    }
+    // WGPU Render attachment covers either color or stencil situation dependant
+    if (any((TextureUsage::COLOR_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT |
+                    TextureUsage::DEPTH_ATTACHMENT) &
+                fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+        retUsage |= transientAttachmentNeeded;
+    }
+
+    // NOTE: Unused wgpu flags:
+    //  StorageAttachment
+
+    // NOTE: Unused Filament flags:
+    //  SUBPASS_INPUT: VK goes to input attachment which we don't support right now
+    //  PROTECTED
+    return retUsage;
+}
+
 } // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_WEBGPUTEXTUREHELPERS_H
