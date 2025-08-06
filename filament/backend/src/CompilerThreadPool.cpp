@@ -32,6 +32,7 @@ CompilerThreadPool::~CompilerThreadPool() noexcept {
     assert_invariant(mCompilerThreads.empty());
     assert_invariant(mQueues[0].empty());
     assert_invariant(mQueues[1].empty());
+    assert_invariant(mQueues[2].empty());
 }
 
 void CompilerThreadPool::init(uint32_t threadCount,
@@ -55,7 +56,7 @@ void CompilerThreadPool::init(uint32_t threadCount,
                 });
 
                 FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "CompilerThreadPool Jobs",
-                        mQueues[0].size() + mQueues[1].size());
+                        mQueues[0].size() + mQueues[1].size() + mQueues[2].size());
 
                 if (UTILS_LIKELY(!mExitRequested)) {
                     Job job;

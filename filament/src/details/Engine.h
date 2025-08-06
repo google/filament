@@ -746,6 +746,7 @@ public:
                 bool enable_staging_buffer_bypass = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
+            bool disable_amortized_shader_compile = false;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
@@ -755,6 +756,9 @@ public:
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
               &features.backend.disable_parallel_shader_compile, true },
+            { "backend.disable_amortized_shader_compile",
+              "Disable amortized shader compilation in GL backend.",
+              &features.backend.disable_amortized_shader_compile, true },
             { "backend.disable_handle_use_after_free_check",
               "Disable Handle<> use-after-free checks.",
               &features.backend.disable_handle_use_after_free_check, true },
