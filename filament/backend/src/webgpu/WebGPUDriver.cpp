@@ -64,6 +64,28 @@ using namespace std::chrono_literals;
 
 namespace filament::backend {
 
+namespace {
+
+void setDefaultTargetFlags(WebGPURenderTarget& defaultRenderTarget,
+        WebGPUSwapChain const& swapChain) {
+    const wgpu::TextureFormat depthFormat{ swapChain.getDepthFormat() };
+    TargetBufferFlags newTargetFlags{ filament::backend::TargetBufferFlags::NONE };
+
+    // Assuming Color always present in default render target.
+    newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
+    if (depthFormat != wgpu::TextureFormat::Undefined) {
+        if (hasDepth(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
+        }
+        if (hasStencil(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
+        }
+    }
+    defaultRenderTarget.setTargetFlags(newTargetFlags);
+}
+
+} // namespace
+
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
     constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -384,6 +406,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ...";
 #endif
+    if (mDefaultRenderTarget) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
@@ -392,6 +417,9 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
      mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
      assert_invariant(mSwapChain);
+     if (mDefaultRenderTarget) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
@@ -488,6 +516,9 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> renderTarge
     assert_invariant(!mDefaultRenderTarget);
     mDefaultRenderTarget = constructHandle<WebGPURenderTarget>(renderTargetHandle);
     assert_invariant(mDefaultRenderTarget);
+    if (mSwapChain) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
@@ -1186,23 +1217,6 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
     }
 
     assert_invariant(mTextureView);
-
-    assert_invariant(mDefaultRenderTarget);
-
-    wgpu::TextureFormat depthFormat = mSwapChain->getDepthFormat();
-    TargetBufferFlags newTargetFlags = filament::backend::TargetBufferFlags::NONE;
-
-    //Assuming Color always present in default render target.
-    newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
-    if (depthFormat != wgpu::TextureFormat::Undefined) {
-        if (hasDepth(depthFormat)) {
-            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
-        }
-        if (hasStencil(depthFormat)) {
-            newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
-        }
-    }
-    mDefaultRenderTarget->setTargetFlags(newTargetFlags);
 
     if (!mCommandEncoder) {
         wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
