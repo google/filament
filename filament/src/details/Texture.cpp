@@ -245,25 +245,26 @@ Texture* Texture::Builder::build(Engine& engine) {
     }
 
     auto const& featureFlags = downcast(engine).features.engine.debug;
-    if (mImpl->mLevels > 1 && (mImpl->mWidth > 1 || mImpl->mHeight > 1) && !mImpl->mExternal) {
-        bool const formatMipmappable =
-                downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
 
-        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
-                formatMipmappable,
-                featureFlags.assert_texture_format_mipmappable)
-                << "Texture levels is > 1, but the format (" << int(mImpl->mFormat) << ") "
-                << " is not mipmppable";
+    bool const formatMipmappable =
+            downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
 
-        if (formatMipmappable && !featureFlags.assert_texture_can_generate_mipmap) {
-            // Setting this for backwards compatibility,but should remove when safe.
-            mImpl->mUsage |= TextureUsage::GEN_MIPMAPPABLE;
-        }
-    }
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(mImpl->mLevels == 1 || formatMipmappable,
+            featureFlags.assert_texture_format_mipmappable)
+            << "Texture levels is > 1 (levels=" << +mImpl->mLevels
+            << " dim=" << mImpl->mWidth << "x" << mImpl->mHeight
+            << ", but the format ("
+            << int(mImpl->mFormat) << ") "
+            << " is not mipmppable";
 
-    if (any(mImpl->mUsage & TextureUsage::GEN_MIPMAPPABLE)) {
-        FILAMENT_CHECK_PRECONDITION(mImpl->mLevels > 1)
-                << "Texture has GEN_MIPMAPPABLE usage set, but levels is 1.";
+    // TODO: This exists for backwards compatibility, but should remove when safe.
+    if (!featureFlags.assert_texture_can_generate_mipmap &&
+            // Guess whether GEN_MIPMAPPABLE should be added or not based the following criteria.
+            (formatMipmappable &&
+                    mImpl->mLevels > 1 &&
+                    (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
+                    !mImpl->mExternal)) {
+        mImpl->mUsage |= TextureUsage::GEN_MIPMAPPABLE;
     }
 
     // TODO: remove in a future filament release.
@@ -652,10 +653,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     FILAMENT_CHECK_PRECONDITION(formatMipmappable)
             << "Texture format " << (unsigned)mFormat << " is not mipmappable.";
 
-    auto const& featureFlags = engine.features.engine.debug;
-    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
-            any(mUsage & TextureUsage::GEN_MIPMAPPABLE),
-            featureFlags.assert_texture_can_generate_mipmap)
+    FILAMENT_CHECK_PRECONDITION(any(mUsage & TextureUsage::GEN_MIPMAPPABLE))
             << "Texture usage does not have GEN_MIPMAPPABLE set";
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
