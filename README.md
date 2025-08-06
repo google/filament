@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.62.2'
+    implementation 'com.google.android.filament:filament-android:1.63.0'
 }
 ```
 
@@ -51,7 +51,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.62.2'
+pod 'Filament', '~> 1.63.0'
 ```
 
 ## Documentation
@@ -63,7 +63,7 @@ pod 'Filament', '~> 1.62.2'
 - [Materials](https://google.github.io/filament/Materials.html), the full reference
   documentation for our material system. This document explains our different material models, how
   to use the material compiler `matc` and how to write custom materials.
-- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference
+- [Material Properties](https://google.github.io/filament/notes/material_properties.html), a reference
   sheet for the standard material model.
 
 ## Examples

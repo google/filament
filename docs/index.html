@@ -1,109 +1,563 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
-<head>
-  <link href="//gmpg.org/xfn/11" rel="profile">
-  <link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
-  <meta http-equiv="content-type" content="text/html; charset=utf-8">
-  <meta name="generator" content="Hugo 0.72.0" />
-
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Filament</title>
-
-  
-  <link type="text/css" rel="stylesheet" href="https://google.github.io/filament/css/print.css" media="print">
-  <link type="text/css" rel="stylesheet" href="https://google.github.io/filament/css/poole.css">
-  <link type="text/css" rel="stylesheet" href="https://google.github.io/filament/css/syntax.css">
-  <link type="text/css" rel="stylesheet" href="https://google.github.io/filament/css/hyde.css">
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Tangerine:700|Inconsolata" rel="stylesheet">
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Introduction - Filament</title>
 
 
-  
-  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
-  <link rel="shortcut icon" href="/favicon.png">
+        <!-- Custom HTML head -->
 
-  
-  <link href="https://google.github.io/filament/index.xml" rel="alternate" type="application/rss+xml" title="Filament" />
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
 
-  
-</head>
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
 
-  <body class="theme-base-0d ">
-  <aside class="sidebar">
-    <div class="container sidebar-sticky">
-        <div class="sidebar-about">
-            <a href="https://google.github.io/filament/">
-                
-                <div style="width:100%; height:150px">
-                <img src="https://google.github.io/filament/images/filament_logo_small.png" class="lightbulb" />
-                </div>
-                
-            </a>
-            <p class="lead">
-                
-            </p>
-        </div>
-        <nav>
-            <ul class="sidebar-nav">
-                <li>
-                    <a href="https://github.com/google/filament"> GitHub Project </a>
-                    
-                </li><li>
-                    <a href="/filament/documentation/"> Core Documentation </a>
-                    
-                </li><li>
-                    <a href="/filament/ios/"> iOS Tutorials </a>
-                    
-                </li><li>
-                    <a href="/filament/webgl/"> Web Docs / Demos </a>
-                    
-                </li>
-            </ul>
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
-    </div>
-</aside>
 
-    <main class="content container">
-    <p>
-Filament is a real-time physically-based renderer written in C++. It is mobile-first, but also
-multi-platform.
-</p>
+        <div id="page-wrapper" class="page-wrapper">
 
-<iframe src="https://google.github.io/filament/webgl/demo_suzanne.html"></iframe>
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
 
-<p>
-We are very conscientious about keeping Filament small, fast to load, and focused on
-rendering. For example, Filament does not compile materials at run time. Instead, we provide a
-command line tool
-(<a href="https://github.com/google/filament/tree/master/tools/matc">matc</a>)
-that does this offline.
-</p>
+                    <h1 class="menu-title">Filament</h1>
 
-<p>
-For more information, see:
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
 
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="filament"><a class="header" href="#filament">Filament</a></h1>
+<p><a href="https://github.com/google/filament/actions?query=workflow%3AAndroid"><img src="https://github.com/google/filament/workflows/Android/badge.svg" alt="Android Build Status" /></a>
+<a href="https://github.com/google/filament/actions?query=workflow%3AiOS"><img src="https://github.com/google/filament/workflows/iOS/badge.svg" alt="iOS Build Status" /></a>
+<a href="https://github.com/google/filament/actions?query=workflow%3ALinux"><img src="https://github.com/google/filament/workflows/Linux/badge.svg" alt="Linux Build Status" /></a>
+<a href="https://github.com/google/filament/actions?query=workflow%3AmacOS"><img src="https://github.com/google/filament/workflows/macOS/badge.svg" alt="macOS Build Status" /></a>
+<a href="https://github.com/google/filament/actions?query=workflow%3AWindows"><img src="https://github.com/google/filament/workflows/Windows/badge.svg" alt="Windows Build Status" /></a>
+<a href="https://github.com/google/filament/actions?query=workflow%3AWeb"><img src="https://github.com/google/filament/workflows/Web/badge.svg" alt="Web Build Status" /></a></p>
+<p>Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
+and WebGL. It is designed to be as small as possible and as efficient as possible on Android.</p>
+<h2 id="download"><a class="header" href="#download">Download</a></h2>
+<p><a href="https://github.com/google/filament/releases">Download Filament releases</a> to access stable builds.
+Filament release archives contains host-side tools that are required to generate assets.</p>
+<p>Make sure you always use tools from the same release as the runtime library. This is particularly
+important for <code>matc</code> (material compiler).</p>
+<p>If you'd rather build Filament yourself, please refer to our <a href="building.html">build manual</a>.</p>
+<h3 id="android"><a class="header" href="#android">Android</a></h3>
+<p>Android projects can simply declare Filament libraries as Maven dependencies:</p>
+<pre><code class="language-gradle">repositories {
+    // ...
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.android.filament:filament-android:1.62.1'
+}
+</code></pre>
+<p>Here are all the libraries available in the group <code>com.google.android.filament</code>:</p>
+<div class="table-wrapper"><table><thead><tr><th>Artifact</th><th>Description</th></tr></thead><tbody>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android/badge.svg?subject=filament-android" alt="filament-android" /></a></td><td>The Filament rendering engine itself.</td></tr>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android-debug"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-android-debug/badge.svg?subject=filament-android-debug" alt="filament-android-debug" /></a></td><td>Debug version of <code>filament-android</code>.</td></tr>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/gltfio-android/badge.svg?subject=gltfio-android" alt="gltfio-android" /></a></td><td>A glTF 2.0 loader for Filament, depends on <code>filament-android</code>.</td></tr>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filament-utils-android/badge.svg?subject=filament-utils-android" alt="filament-utils-android" /></a></td><td>KTX loading, Kotlin math, and camera utilities, depends on <code>gltfio-android</code>.</td></tr>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android/badge.svg?subject=filamat-android" alt="filamat-android" /></a></td><td>A runtime material builder/compiler. This library is large but contains a full shader compiler/validator/optimizer and supports both OpenGL and Vulkan.</td></tr>
+<tr><td><a href="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite"><img src="https://maven-badges.herokuapp.com/maven-central/com.google.android.filament/filamat-android-lite/badge.svg?subject=filamat-android-lite" alt="filamat-android-lite" /></a></td><td>A much smaller alternative to <code>filamat-android</code> that can only generate OpenGL shaders. It does not provide validation or optimizations.</td></tr>
+</tbody></table>
+</div>
+<h3 id="ios"><a class="header" href="#ios">iOS</a></h3>
+<p>iOS projects can use CocoaPods to install the latest release:</p>
+<pre><code class="language-shell">pod 'Filament', '~&gt; 1.62.1'
+</code></pre>
+<h2 id="documentation"><a class="header" href="#documentation">Documentation</a></h2>
 <ul>
-    <li><a href="documentation">core documentation</a></li>
-    <li><a href="webgl">JavaScript documentation</a></li>
-    <li><a href="ios">iOS tutorials</a></li>
+<li><a href="https://google.github.io/filament/Filament.html">Filament</a>, an in-depth explanation of
+real-time physically based rendering, the graphics capabilities and implementation of Filament.
+This document explains the math and reasoning behind most of our decisions. This document is a
+good introduction to PBR for graphics programmers.</li>
+<li><a href="https://google.github.io/filament/Materials.html">Materials</a>, the full reference
+documentation for our material system. This document explains our different material models, how
+to use the material compiler <code>matc</code> and how to write custom materials.</li>
+<li><a href="https://google.github.io/filament/notes/material_properties.html">Material Properties</a>, a reference
+sheet for the standard material model.</li>
 </ul>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<p><img src="../images/samples/example_bistro1.jpg" alt="Night scene" />
+<img src="../images/samples/example_bistro2.jpg" alt="Night scene" />
+<img src="../images/samples/example_materials1.jpg" alt="Materials" />
+<img src="../images/samples/example_materials2.jpg" alt="Materials" />
+<img src="../images/samples/example_helmet.jpg" alt="Helmet" />
+<img src="../images/samples/example_ssr.jpg" alt="Screen-space refraction" /></p>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<h3 id="apis"><a class="header" href="#apis">APIs</a></h3>
+<ul>
+<li>Native C++ API for Android, iOS, Linux, macOS and Windows</li>
+<li>Java/JNI API for Android</li>
+<li>JavaScript API</li>
+</ul>
+<h3 id="backends"><a class="header" href="#backends">Backends</a></h3>
+<ul>
+<li>OpenGL 4.1+ for Linux, macOS and Windows</li>
+<li>OpenGL ES 3.0+ for Android and iOS</li>
+<li>Metal for macOS and iOS</li>
+<li>Vulkan 1.0 for Android, Linux, macOS, and Windows</li>
+<li>WebGL 2.0 for all platforms</li>
+</ul>
+<h3 id="rendering"><a class="header" href="#rendering">Rendering</a></h3>
+<ul>
+<li>Clustered forward renderer</li>
+<li>Cook-Torrance microfacet specular BRDF</li>
+<li>Lambertian diffuse BRDF</li>
+<li>Custom lighting/surface shading</li>
+<li>HDR/linear lighting</li>
+<li>Metallic workflow</li>
+<li>Clear coat</li>
+<li>Anisotropic lighting</li>
+<li>Approximated translucent (subsurface) materials</li>
+<li>Cloth/fabric/sheen shading</li>
+<li>Normal mapping &amp; ambient occlusion mapping</li>
+<li>Image-based lighting</li>
+<li>Physically-based camera (shutter speed, sensitivity and aperture)</li>
+<li>Physical light units</li>
+<li>Point lights, spot lights, and directional light</li>
+<li>Specular anti-aliasing</li>
+<li>Point, spot, and directional light shadows</li>
+<li>Cascaded shadows</li>
+<li>EVSM, PCSS, DPCF, or PCF shadows</li>
+<li>Transparent shadows</li>
+<li>Contact shadows</li>
+<li>Screen-space ambient occlusion</li>
+<li>Screen-space reflections</li>
+<li>Screen-space refraction</li>
+<li>Global fog</li>
+<li>Dynamic resolution (with support for AMD FidelityFX FSR)</li>
+</ul>
+<h3 id="post-processing"><a class="header" href="#post-processing">Post processing</a></h3>
+<ul>
+<li>HDR bloom</li>
+<li>Depth of field bokeh</li>
+<li>Multiple tone mappers: generic (customizable), ACES, filmic, etc.</li>
+<li>Color and tone management: luminance scaling, gamut mapping</li>
+<li>Color grading: exposure, night adaptation, white balance, channel mixer,
+shadows/mid-tones/highlights, ASC CDL, contrast, saturation, etc.</li>
+<li>TAA, FXAA, MSAA</li>
+<li>Screen-space lens flares</li>
+</ul>
+<h3 id="gltf-20"><a class="header" href="#gltf-20">glTF 2.0</a></h3>
+<ul>
+<li>
+<p>Encodings</p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Embeded</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Binary</li>
+</ul>
+</li>
+<li>
+<p>Primitive Types</p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Points</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Lines</li>
+<li><input disabled="" type="checkbox"/>
+Line Loop</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Line Strip</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Triangles</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Triangle Strip</li>
+<li><input disabled="" type="checkbox"/>
+Triangle Fan</li>
+</ul>
+</li>
+<li>
+<p>Animation</p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Transform animation</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Linear interpolation</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Morph animation
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Sparse accessor</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Skin animation</li>
+<li><input disabled="" type="checkbox" checked=""/>
+Joint animation</li>
+</ul>
+</li>
+<li>
+<p>Extensions</p>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_draco_mesh_compression</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_lights_punctual</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_clearcoat</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_emissive_strength</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_ior</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_pbrSpecularGlossiness</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_sheen</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_transmission</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_unlit</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_variants</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_volume</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_materials_specular</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_mesh_quantization</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_texture_basisu</li>
+<li><input disabled="" type="checkbox" checked=""/>
+KHR_texture_transform</li>
+<li><input disabled="" type="checkbox" checked=""/>
+EXT_meshopt_compression</li>
+</ul>
+</li>
+</ul>
+<h2 id="rendering-with-filament"><a class="header" href="#rendering-with-filament">Rendering with Filament</a></h2>
+<h3 id="native-linux-macos-and-windows"><a class="header" href="#native-linux-macos-and-windows">Native Linux, macOS and Windows</a></h3>
+<p>You must create an <code>Engine</code>, a <code>Renderer</code> and a <code>SwapChain</code>. The <code>SwapChain</code> is created from a
+native window pointer (an <code>NSView</code> on macOS or a <code>HWND</code> on Windows for instance):</p>
+<pre><code class="language-c++">Engine* engine = Engine::create();
+SwapChain* swapChain = engine-&gt;createSwapChain(nativeWindow);
+Renderer* renderer = engine-&gt;createRenderer();
+</code></pre>
+<p>To render a frame you must then create a <code>View</code>, a <code>Scene</code> and a <code>Camera</code>:</p>
+<pre><code class="language-c++">Camera* camera = engine-&gt;createCamera(EntityManager::get().create());
+View* view = engine-&gt;createView();
+Scene* scene = engine-&gt;createScene();
 
-Check out our
-<a href="https://github.com/google/filament/blob/master/README.md">README</a>
-for downloads and build instructions.
-</p>
+view-&gt;setCamera(camera);
+view-&gt;setScene(scene);
+</code></pre>
+<p>Renderables are added to the scene:</p>
+<pre><code class="language-c++">Entity renderable = EntityManager::get().create();
+// build a quad
+RenderableManager::Builder(1)
+        .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
+        .material(0, materialInstance)
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer, 0, 6)
+        .culling(false)
+        .build(*engine, renderable);
+scene-&gt;addEntity(renderable);
+</code></pre>
+<p>The material instance is obtained from a material, itself loaded from a binary blob generated
+by <code>matc</code>:</p>
+<pre><code class="language-c++">Material* material = Material::Builder()
+        .package((void*) BAKED_MATERIAL_PACKAGE, sizeof(BAKED_MATERIAL_PACKAGE))
+        .build(*engine);
+MaterialInstance* materialInstance = material-&gt;createInstance();
+</code></pre>
+<p>To learn more about materials and <code>matc</code>, please refer to the
+<a href="./docs/Materials.html">materials documentation</a>.</p>
+<p>To render, simply pass the <code>View</code> to the <code>Renderer</code>:</p>
+<pre><code class="language-c++">// beginFrame() returns false if we need to skip a frame
+if (renderer-&gt;beginFrame(swapChain)) {
+    // for each View
+    renderer-&gt;render(view);
+    renderer-&gt;endFrame();
+}
+</code></pre>
+<p>For complete examples of Linux, macOS and Windows Filament applications, look at the source files
+in the <code>samples/</code> directory. These samples are all based on <code>libs/filamentapp/</code> which contains the
+code that creates a native window with SDL2 and initializes the Filament engine, renderer and views.</p>
+<p>For more information on how to prepare environment maps for image-based lighting please refer to
+<a href="https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples">BUILDING.md</a>.</p>
+<h3 id="android-1"><a class="header" href="#android-1">Android</a></h3>
+<p>See <code>android/samples</code> for examples of how to use Filament on Android.</p>
+<p>You must always first initialize Filament by calling <code>Filament.init()</code>.</p>
+<p>Rendering with Filament on Android is similar to rendering from native code (the APIs are largely
+the same across languages). You can render into a <code>Surface</code> by passing a <code>Surface</code> to the
+<code>createSwapChain</code> method. This allows you to render to a <code>SurfaceTexture</code>, a <code>TextureView</code> or
+a <code>SurfaceView</code>. To make things easier we provide an Android specific API called <code>UiHelper</code> in the
+package <code>com.google.android.filament.android</code>. All you need to do is set a render callback on the
+helper and attach your <code>SurfaceView</code> or <code>TextureView</code> to it. You are still responsible for
+creating the swap chain in the <code>onNativeWindowChanged()</code> callback.</p>
+<h3 id="ios-1"><a class="header" href="#ios-1">iOS</a></h3>
+<p>Filament is supported on iOS 11.0 and above. See <code>ios/samples</code> for examples of using Filament on
+iOS.</p>
+<p>Filament on iOS is largely the same as native rendering with C++. A <code>CAEAGLLayer</code> or <code>CAMetalLayer</code>
+is passed to the <code>createSwapChain</code> method. Filament for iOS supports both Metal (preferred) and
+OpenGL ES.</p>
+<h2 id="assets"><a class="header" href="#assets">Assets</a></h2>
+<p>To get started you can use the textures and environment maps found respectively in
+<code>third_party/textures</code> and <code>third_party/environments</code>. These assets are under CC0 license. Please
+refer to their respective <code>URL.txt</code> files to know more about the original authors.</p>
+<p>Environments must be pre-processed using
+<a href="https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples"><code>cmgen</code></a> or
+using the <code>libiblprefilter</code> library.</p>
+<h2 id="how-to-make-contributions"><a class="header" href="#how-to-make-contributions">How to make contributions</a></h2>
+<p>Please read and follow the steps in <a href="contributing.html">CONTRIBUTING.md</a>. Make sure you are
+familiar with the <a href="code_style.html">code style</a>.</p>
+<h2 id="directory-structure"><a class="header" href="#directory-structure">Directory structure</a></h2>
+<p>This repository not only contains the core Filament engine, but also its supporting libraries
+and tools.</p>
+<ul>
+<li><code>android</code>:                  Android libraries and projects
+<ul>
+<li><code>filamat-android</code>:        Filament material generation library (AAR) for Android</li>
+<li><code>filament-android</code>:       Filament library (AAR) for Android</li>
+<li><code>filament-utils-android</code>: Extra utilities (KTX loader, math types, etc.)</li>
+<li><code>gltfio-android</code>:         Filament glTF loading library (AAR) for Android</li>
+<li><code>samples</code>:                Android-specific Filament samples</li>
+</ul>
+</li>
+<li><code>art</code>:                      Source for various artworks (logos, PDF manuals, etc.)</li>
+<li><code>assets</code>:                   3D assets to use with sample applications</li>
+<li><code>build</code>:                    CMake build scripts</li>
+<li><code>docs</code>:                     Documentation
+<ul>
+<li><code>math</code>:                   Mathematica notebooks used to explore BRDFs, equations, etc.</li>
+</ul>
+</li>
+<li><code>filament</code>:                 Filament rendering engine (minimal dependencies)
+<ul>
+<li><code>backend</code>:                Rendering backends/drivers (Vulkan, Metal, OpenGL/ES)</li>
+</ul>
+</li>
+<li><code>ide</code>:                      Configuration files for IDEs (CLion, etc.)</li>
+<li><code>ios</code>:                      Sample projects for iOS</li>
+<li><code>libs</code>:                     Libraries
+<ul>
+<li><code>bluegl</code>:                 OpenGL bindings for macOS, Linux and Windows</li>
+<li><code>bluevk</code>:                 Vulkan bindings for macOS, Linux, Windows and Android</li>
+<li><code>camutils</code>:               Camera manipulation utilities</li>
+<li><code>filabridge</code>:             Library shared by the Filament engine and host tools</li>
+<li><code>filaflat</code>:               Serialization/deserialization library used for materials</li>
+<li><code>filagui</code>:                Helper library for <a href="https://github.com/ocornut/imgui">Dear ImGui</a></li>
+<li><code>filamat</code>:                Material generation library</li>
+<li><code>filamentapp</code>:            SDL2 skeleton to build sample apps</li>
+<li><code>filameshio</code>:             Tiny filamesh parsing library (see also <code>tools/filamesh</code>)</li>
+<li><code>geometry</code>:               Mesh-related utilities</li>
+<li><code>gltfio</code>:                 Loader for glTF 2.0</li>
+<li><code>ibl</code>:                    IBL generation tools</li>
+<li><code>image</code>:                  Image filtering and simple transforms</li>
+<li><code>imageio</code>:                Image file reading / writing, only intended for internal use</li>
+<li><code>matdbg</code>:                 DebugServer for inspecting shaders at run-time (debug builds only)</li>
+<li><code>math</code>:                   Math library</li>
+<li><code>mathio</code>:                 Math types support for output streams</li>
+<li><code>utils</code>:                  Utility library (threads, memory, data structures, etc.)</li>
+<li><code>viewer</code>:                 glTF viewer library (requires gltfio)</li>
+</ul>
+</li>
+<li><code>samples</code>:                  Sample desktop applications</li>
+<li><code>shaders</code>:                  Shaders used by <code>filamat</code> and <code>matc</code></li>
+<li><code>third_party</code>:              External libraries and assets
+<ul>
+<li><code>environments</code>:           Environment maps under CC0 license that can be used with <code>cmgen</code></li>
+<li><code>models</code>:                 Models under permissive licenses</li>
+<li><code>textures</code>:               Textures under CC0 license</li>
+</ul>
+</li>
+<li><code>tools</code>:                    Host tools
+<ul>
+<li><code>cmgen</code>:                  Image-based lighting asset generator</li>
+<li><code>filamesh</code>:               Mesh converter</li>
+<li><code>glslminifier</code>:           Minifies GLSL source code</li>
+<li><code>matc</code>:                   Material compiler</li>
+<li><code>matinfo</code>                 Displays information about materials compiled with <code>matc</code></li>
+<li><code>mipgen</code>                  Generates a series of miplevels from a source image</li>
+<li><code>normal-blending</code>:        Tool to blend normal maps</li>
+<li><code>resgen</code>                  Aggregates binary blobs into embeddable resources</li>
+<li><code>roughness-prefilter</code>:    Pre-filters a roughness map from a normal map to reduce aliasing</li>
+<li><code>specular-color</code>:         Computes the specular color of conductors based on spectral data</li>
+</ul>
+</li>
+<li><code>web</code>:                      JavaScript bindings, documentation, and samples</li>
+</ul>
+<h2 id="license"><a class="header" href="#license">License</a></h2>
+<p>Please see <a href="/LICENSE">LICENSE</a>.</p>
+<h2 id="disclaimer"><a class="header" href="#disclaimer">Disclaimer</a></h2>
+<p>This is not an officially supported Google product.</p>
 
-<p>
-    If you are running <tt>sample-gltf-viewer</tt> on your Android device, try our
-    <a href="remote">remote control</a> web app.
-</p>
+                    </main>
 
-<p>
-    If you would like to view a glTF model with WebGL 2.0, try our experimental <a href="viewer">web viewer</a>.
-</p>
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
 
-    </main>
-    
-  </body>
+                            <a rel="next prefetch" href="dup/building.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+                    <a rel="next prefetch" href="dup/building.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
 </html>

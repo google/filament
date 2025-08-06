@@ -20,33 +20,30 @@
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
 #include "VulkanMemory.h"
+#include "VulkanHandles.h"
 
 using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanBufferProxy::VulkanBufferProxy(VmaAllocator allocator, VulkanStagePool& stagePool,
-        VulkanBufferCache& bufferCache, VulkanBufferUsage usage, uint32_t numBytes)
-    : mAllocator(allocator),
+VulkanBufferProxy::VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
+        VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferUsage usage,
+        uint32_t numBytes)
+    : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
+      mAllocator(allocator),
       mStagePool(stagePool),
       mBufferCache(bufferCache),
       mBuffer(mBufferCache.acquire(usage, numBytes)),
-      mUpdatedOffset(0),
-      mUpdatedBytes(0) {}
+      mLastReadAge(0) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
-    // The VulkanBuffer is available if the only object reference is hold by the
-    // `VulkanBufferProxy`. This means that the buffer is not currently referenced by a
-    // `VulkanCommandBuffer`.
-    bool const isAvailable = mBuffer->getCount() == 1;
 
-    if (isAvailable) {
-        // We are up to date with all the update operations, so no need to synchronize with previous
-        // updates.
-        mUpdatedBytes = 0;
-        mUpdatedOffset = 0;
-    }
+    // This means that we're recording a write into a command buffer without a previous read, so it
+    // should be safe to
+    //   1) Do a direct memcpy in UMA mode
+    //   2) Skip adding a barrier (to protect the write from writing over a read).
+    bool const isAvailable = commands.age() != mLastReadAge;
 
     // Keep track of the VulkanBuffer usage
     commands.acquire(mBuffer);
@@ -57,8 +54,7 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     // buffer.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
     bool const isUniform = getUsage() == VulkanBufferUsage::UNIFORM;
-    bool const useMemcpy =
-            isUniform && isMemcopyable && isAvailable && !FVK_FORCE_STAGING_FOR_BUFFER_UPDATES;
+    bool const useMemcpy = isUniform && isMemcopyable && isAvailable && mStagingBufferBypassEnabled;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;
@@ -66,6 +62,10 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
         vmaFlushAllocation(mAllocator, mBuffer->getGpuBuffer()->vmaAllocation, byteOffset,
                 numBytes);
         return;
+
+        // TODO: to properly bypass staging buffer, we'd need to be able to swap out a VulkanBuffer,
+        // which represents a VkBuffer. This means that the corresponding descriptor sets also have
+        // to be updated.
     }
 
     // Note: this should be stored within the command buffer before going out of
@@ -76,10 +76,9 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     memcpy(stage->mapping(), cpuData, numBytes);
     vmaFlushAllocation(mAllocator, stage->memory(), stage->offset(), numBytes);
 
-    // If there was a previous update, then we need to make sure the following write is properly
+    // If there was a previous read, then we need to make sure the following write is properly
     // synced with the previous read.
-    if (mUpdatedBytes > 0 &&
-            (byteOffset >= mUpdatedOffset && byteOffset <= (mUpdatedOffset + mUpdatedBytes))) {
+    if (!isAvailable) {
         VkAccessFlags srcAccess = 0;
         VkPipelineStageFlags srcStage = 0;
         if (getUsage() == VulkanBufferUsage::UNIFORM) {
@@ -113,9 +112,6 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
         .size = numBytes,
     };
     vkCmdCopyBuffer(commands.buffer(), stage->buffer(), getVkBuffer(), 1, &region);
-
-    mUpdatedOffset = byteOffset;
-    mUpdatedBytes = numBytes;
 
     // Firstly, ensure that the copy finishes before the next draw call.
     // Secondly, in case the user decides to upload another chunk (without ever using the first one)
@@ -158,6 +154,11 @@ VkBuffer VulkanBufferProxy::getVkBuffer() const noexcept {
 
 VulkanBufferUsage VulkanBufferProxy::getUsage() const noexcept {
     return mBuffer->getGpuBuffer()->usage;
+}
+
+void VulkanBufferProxy::referencedBy(VulkanCommandBuffer& commands) {
+    commands.acquire(mBuffer);
+    mLastReadAge = commands.age();
 }
 
 } // namespace filament::backend

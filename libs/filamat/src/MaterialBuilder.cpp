@@ -301,8 +301,8 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, UniformType const 
 }
 
 MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType samplerType,
-        SamplerFormat format, ParameterPrecision precision, bool unfilterable, bool multisample,
-        const char* transformName, ShaderStageFlags stages) {
+        SamplerFormat format, ParameterPrecision precision, bool filterable, bool multisample,
+        const char* transformName, std::optional<ShaderStageFlags> stages) {
     FILAMENT_CHECK_PRECONDITION(
             !multisample || (format != SamplerFormat::SHADOW &&
                                     (samplerType == SamplerType::SAMPLER_2D ||
@@ -311,7 +311,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
                " as long as type is not SHADOW";
 
     FILAMENT_CHECK_POSTCONDITION(mParameterCount < MAX_PARAMETERS_COUNT) << "Too many parameters";
-    mParameters[mParameterCount++] = { name, samplerType, format, precision, unfilterable,
+    mParameters[mParameterCount++] = { name, samplerType, format, precision, filterable,
         multisample, transformName, stages };
     return *this;
 }
@@ -629,6 +629,16 @@ bool MaterialBuilder::hasSamplerType(SamplerType const samplerType) const noexce
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     prepare(mEnableFramebufferFetch, mFeatureLevel);
 
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    const bool isPostProcessMaterial = mMaterialDomain == MaterialDomain::POST_PROCESS;
+    // TODO: Currently, for surface materials, we rely on the presence of a custom vertex shader to
+    // infer the default shader stages. We could do better by analyzing the AST of the vertex shader
+    // to see if the sampler is actually used.
+    const ShaderStageFlags defaultShaderStages =
+            isPostProcessMaterial || hasEmptyVertexCode
+                    ? (ShaderStageFlags::FRAGMENT)
+                    : (ShaderStageFlags::FRAGMENT | ShaderStageFlags::VERTEX);
+
     // Build the per-material sampler block and uniform block.
     SamplerInterfaceBlock::Builder sbb;
     BufferInterfaceBlock::Builder ibb;
@@ -638,9 +648,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         auto const& param = mParameters[i];
         assert_invariant(!param.isSubpass());
         if (param.isSampler()) {
+            ShaderStageFlags stages = param.stages.value_or(defaultShaderStages);
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
-                    param.format, param.precision, param.unfilterable, param.multisample,
-                    param.stages);
+                    param.format, param.precision, param.filterable, param.multisample,
+                    stages);
             if (!param.transformName.empty()) {
                 ibb.add({ { { param.transformName.data(), param.transformName.size() },
                     uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,

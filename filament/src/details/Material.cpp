@@ -391,16 +391,11 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
-            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                    << pos->second.size() << " instances still alive.";
-        } else {
-            if (UTILS_UNLIKELY(!pos->second.empty())) {
-                LOG(ERROR) << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                           << pos->second.size() << " instances still alive.";
-            }
-        }
+        auto const& featureFlags = engine.features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(pos->second.empty(),
+                featureFlags.assert_destroy_material_before_material_instance)
+                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                << pos->second.size() << " instances still alive.";
     }
 
 #if FILAMENT_ENABLE_MATDBG
@@ -619,10 +614,10 @@ Program FMaterial::getProgramWithVariants(
             .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
             .shaderLanguage(mMaterialParser->getShaderLanguage())
             .diagnostics(mName,
-                    [this, variant, vertexVariant, fragmentVariant](
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
                             io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe() << ", variant=(" << io::hex
-                                   << +variant.key << io::dec << "), vertexVariant=(" << io::hex
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
                                    << +vertexVariant.key << io::dec << "), fragmentVariant=("
                                    << io::hex << +fragmentVariant.key << io::dec << ")";
                     });

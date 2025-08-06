@@ -87,12 +87,15 @@ public:
     void renderStandaloneView(FView const* view);
 
 
-    void setPresentationTime(int64_t monotonic_clock_ns);
+    void setPresentationTime(int64_t monotonic_clock_ns) const;
 
     void setVsyncTime(uint64_t steadyClockTimeNano) noexcept;
 
     // skip a frame
     void skipFrame(uint64_t vsyncSteadyClockTimeNano);
+
+    // Whether a frame should be rendered or not.
+    bool shouldRenderFrame() const noexcept;
 
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
@@ -108,7 +111,7 @@ public:
             backend::PixelBufferDescriptor&& buffer);
 
     // read pixel from a rendertarget. must be called between beginFrame/enfFrame.
-    void readPixels(FRenderTarget* renderTarget,
+    void readPixels(FRenderTarget const* renderTarget,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
 
@@ -189,6 +192,10 @@ private:
     void renderInternal(FView const* view);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
 
+    static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
+            TemporalAntiAliasingOptions const& taaOptions,
+            DynamicResolutionOptions const& dsrOptions);
+
     // keep a reference to our engine
     FEngine& mEngine;
     FrameSkipper mFrameSkipper;
@@ -196,7 +203,6 @@ private:
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
-    uint32_t mViewRenderedCount = 0;
     FrameInfoManager mFrameInfoManager;
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;

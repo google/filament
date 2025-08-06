@@ -1,0 +1,560 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Build - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h2 id="building-filament"><a class="header" href="#building-filament">Building Filament</a></h2>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
+<p>To build Filament, you must first install the following tools:</p>
+<ul>
+<li>CMake 3.19 (or more recent)</li>
+<li>clang 14.0 (or more recent)</li>
+<li><a href="https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages">ninja 1.10</a> (or more recent)</li>
+</ul>
+<p>Additional dependencies may be required for your operating system. Please refer to the appropriate
+section below.</p>
+<p>To build Filament for Android you must also install the following:</p>
+<ul>
+<li>Android Studio Flamingo or more recent</li>
+<li>Android SDK</li>
+<li>Android NDK 25.1 or higher</li>
+<li>Java 17</li>
+</ul>
+<h3 id="environment-variables"><a class="header" href="#environment-variables">Environment variables</a></h3>
+<p>To build Filament for Android, make sure the environment variable <code>ANDROID_HOME</code> points to the
+location of your Android SDK.</p>
+<p>When building for WebGL, you'll also need to set <code>EMSDK</code>. See <a href="#webassembly">WebAssembly</a>.</p>
+<h3 id="ide"><a class="header" href="#ide">IDE</a></h3>
+<p>We recommend using CLion to develop for Filament. Simply open the root directory's CMakeLists.txt
+in CLion to obtain a usable project.</p>
+<h3 id="easy-build"><a class="header" href="#easy-build">Easy build</a></h3>
+<p>Once the required OS specific dependencies listed below are installed, you can use the script
+located in <code>build.sh</code> to build Filament easily on macOS and Linux.</p>
+<p>This script can be invoked from anywhere and will produce build artifacts in the <code>out/</code> directory
+inside the Filament source tree.</p>
+<p>To trigger an incremental debug build:</p>
+<pre><code class="language-shell">./build.sh debug
+</code></pre>
+<p>To trigger an incremental release build:</p>
+<pre><code class="language-shell">./build.sh release
+</code></pre>
+<p>To trigger both incremental debug and release builds:</p>
+<pre><code class="language-shell">./build.sh debug release
+</code></pre>
+<p>If build fails for some reasons, it may leave the <code>out/</code> directory in a broken state. You can
+force a clean build by adding the <code>-c</code> flag in that case.</p>
+<p>To install the libraries and executables in <code>out/debug/</code> and <code>out/release/</code>, add the <code>-i</code> flag.
+The script offers more features described by executing <code>build.sh -h</code>.</p>
+<h3 id="filament-specific-cmake-options"><a class="header" href="#filament-specific-cmake-options">Filament-specific CMake Options</a></h3>
+<p>The following CMake options are boolean options specific to Filament:</p>
+<ul>
+<li><code>FILAMENT_ENABLE_LTO</code>:           Enable link-time optimizations if supported by the compiler</li>
+<li><code>FILAMENT_BUILD_FILAMAT</code>:        Build filamat and JNI buildings</li>
+<li><code>FILAMENT_SUPPORTS_OPENGL</code>:      Include the OpenGL backend</li>
+<li><code>FILAMENT_SUPPORTS_METAL</code>:       Include the Metal backend</li>
+<li><code>FILAMENT_SUPPORTS_VULKAN</code>:      Include the Vulkan backend</li>
+<li><code>FILAMENT_INSTALL_BACKEND_TEST</code>: Install the backend test library so it can be consumed on iOS</li>
+<li><code>FILAMENT_USE_EXTERNAL_GLES3</code>:   Experimental: Compile Filament against OpenGL ES 3</li>
+<li><code>FILAMENT_SKIP_SAMPLES</code>:         Don't build sample apps</li>
+</ul>
+<p>To turn an option on or off:</p>
+<pre><code class="language-shell">cd &lt;cmake-build-directory&gt;
+cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
+</code></pre>
+<p>Options can also be set with the CMake GUI.</p>
+<h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
+<p>Make sure you've installed the following dependencies:</p>
+<ul>
+<li><code>clang-14</code> or higher</li>
+<li><code>libglu1-mesa-dev</code></li>
+<li><code>libc++-14-dev</code> (<code>libcxx-devel</code> and <code>libcxx-static</code> on Fedora) or higher</li>
+<li><code>libc++abi-14-dev</code> (<code>libcxxabi-static</code> on Fedora) or higher</li>
+<li><code>ninja-build</code></li>
+<li><code>libxi-dev</code></li>
+<li><code>libxcomposite-dev</code> (<code>libXcomposite-devel</code> on Fedora)</li>
+<li><code>libxxf86vm-dev</code> (<code>libXxf86vm-devel</code> on Fedora)</li>
+</ul>
+<pre><code class="language-shell">sudo apt install clang-14 libglu1-mesa-dev libc++-14-dev libc++abi-14-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
+</code></pre>
+<p>After dependencies have been installed, we highly recommend using the <a href="#easy-build">easy build</a>
+script.</p>
+<p>If you'd like to run <code>cmake</code> directly rather than using the build script, it can be invoked as
+follows, with some caveats that are explained further down.</p>
+<pre><code class="language-shell">mkdir out/cmake-release
+cd out/cmake-release
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+</code></pre>
+<p>Your Linux distribution might default to <code>gcc</code> instead of <code>clang</code>, if that's the case invoke
+<code>cmake</code> with the following command:</p>
+<pre><code class="language-shell">mkdir out/cmake-release
+cd out/cmake-release
+# Or use a specific version of clang, for instance /usr/bin/clang-14
+CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+</code></pre>
+<p>You can also export the <code>CC</code> and <code>CXX</code> environment variables to always point to <code>clang</code>. Another
+solution is to use <code>update-alternatives</code> to both change the default compiler, and point to a
+specific version of clang:</p>
+<pre><code class="language-shell">update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
+update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+</code></pre>
+<p>Finally, invoke <code>ninja</code>:</p>
+<pre><code class="language-shell">ninja
+</code></pre>
+<p>This will build Filament, its tests and samples, and various host tools.</p>
+<h3 id="macos"><a class="header" href="#macos">macOS</a></h3>
+<p>To compile Filament you must have the most recent version of Xcode installed and you need to
+make sure the command line tools are setup by running:</p>
+<pre><code class="language-shell">xcode-select --install
+</code></pre>
+<p>If you wish to run the Vulkan backend instead of the default Metal backend, you must install
+the LunarG SDK, enable "System Global Components", and reboot your machine.</p>
+<p>Then run <code>cmake</code> and <code>ninja</code> to trigger a build:</p>
+<pre><code class="language-shell">mkdir out/cmake-release
+cd out/cmake-release
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+ninja
+</code></pre>
+<h3 id="ios"><a class="header" href="#ios">iOS</a></h3>
+<p>The easiest way to build Filament for iOS is to use <code>build.sh</code> and the
+<code>-p ios</code> flag. For instance to build the debug target:</p>
+<pre><code class="language-shell">./build.sh -p ios debug
+</code></pre>
+<p>See <a href="./ios/samples/README.html">ios/samples/README.md</a> for more information.</p>
+<h3 id="windows"><a class="header" href="#windows">Windows</a></h3>
+<h4 id="building-on-windows-with-visual-studio-2019-or-later"><a class="header" href="#building-on-windows-with-visual-studio-2019-or-later">Building on Windows with Visual Studio 2019 or later</a></h4>
+<p>Install the following components:</p>
+<ul>
+<li><a href="https://www.visualstudio.com/downloads">Visual Studio 2019 or later</a></li>
+<li><a href="https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/">Windows SDK</a></li>
+<li><a href="https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe">Python 3.7</a></li>
+<li><a href="https://github.com/Kitware/CMake/releases/download/v3.14.7/cmake-3.14.7-win64-x64.msi">CMake 3.14 or later</a></li>
+</ul>
+<p>The latest Windows SDK can also be installed by opening Visual Studio and selecting <em>Get Tools and
+Features...</em> under the <em>Tools</em> menu.</p>
+<p>By default, Windows treats the file system as case insensitive. Please do not enable case
+sensitivity in your repo, since this does not align with CMake expectations. This can be queried
+using <code>fsutil.exe file queryCaseSensitiveInfo</code>.</p>
+<p>Next, open <code>x64 Native Tools Command Prompt for VS 2019</code>, create a working directory, and run
+CMake in it:</p>
+<pre><code class="language-bat">mkdir out
+cd out
+cmake ..
+</code></pre>
+<p>Open the generated solution file <code>TNT.sln</code> in Visual Studio.</p>
+<p>To build all targets, run <em>Build Solution</em> from the <em>Build</em> menu. Alternatively, right click on a
+target in the <em>Solution Explorer</em> and choose <em>Build</em> to build a specific target.</p>
+<p>For example, build the <code>material_sandbox</code> sample and run it from the <code>out</code> directory with:</p>
+<pre><code class="language-bat">samples\Debug\material_sandbox.exe ..\assets\models\monkey\monkey.obj
+</code></pre>
+<p>You can also use CMake to invoke the build without opening Visual Studio. For example, from the
+<code>out</code> folder run the following command.</p>
+<pre><code class="language-bat">cmake --build . --target gltf_viewer --config Release
+</code></pre>
+<h3 id="android"><a class="header" href="#android">Android</a></h3>
+<p>Before building Filament for Android, make sure to build Filament for your host. Some of the
+host tools are required to successfully build for Android.</p>
+<p>Filament can be built for the following architectures:</p>
+<ul>
+<li>ARM 64-bit (<code>arm64-v8a</code>)</li>
+<li>ARM 32-bit (<code>armeabi-v7a</code>)</li>
+<li>Intel 64-bit (<code>x86_64</code>)</li>
+<li>Intel 32-bit (<code>x86</code>)</li>
+</ul>
+<p>Note that the main target is the ARM 64-bit target. Our implementation is optimized first and
+foremost for <code>arm64-v8a</code>.</p>
+<p>To build Android on Windows machines, see <a href="android/Windows.html">android/Windows.md</a>.</p>
+<h4 id="easy-android-build"><a class="header" href="#easy-android-build">Easy Android build</a></h4>
+<p>The easiest way to build Filament for Android is to use <code>build.sh</code> and the
+<code>-p android</code> flag. For instance to build the release target:</p>
+<pre><code class="language-shell">./build.sh -p android release
+</code></pre>
+<p>Run <code>build.sh -h</code> for more information.</p>
+<h4 id="manual-builds"><a class="header" href="#manual-builds">Manual builds</a></h4>
+<p>Invoke CMake in a build directory of your choice, inside of filament's directory. The commands
+below show how to build Filament for ARM 64-bit (<code>aarch64</code>).</p>
+<pre><code class="language-shell">mkdir out/android-build-release-aarch64
+cd out/android-build-release-aarch64
+cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-aarch64-linux-android.cmake \
+      -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
+</code></pre>
+<p>And then invoke <code>ninja</code>:</p>
+<pre><code class="language-shell">ninja install
+</code></pre>
+<p>or</p>
+<pre><code class="language-shell">ninja install/strip
+</code></pre>
+<p>This will generate Filament's Android binaries in <code>out/android-release</code>. This location is important
+to build the Android Studio projects located in <code>filament/android</code>. After install, the library
+binaries should be found in <code>out/android-release/filament/lib/arm64-v8a</code>.</p>
+<h4 id="aar"><a class="header" href="#aar">AAR</a></h4>
+<p>Before you attempt to build the AAR, make sure you've compiled and installed the native libraries
+as explained in the sections above. You must have the following ABIs built in
+<code>out/android-release/filament/lib/</code>:</p>
+<ul>
+<li><code>arm64-v8a</code></li>
+<li><code>armeabi-v7a</code></li>
+<li><code>x86_64</code></li>
+<li><code>x86</code></li>
+</ul>
+<p>To build Filament's AAR simply open the Android Studio project in <code>android/</code>. The
+AAR is a universal AAR that contains all supported build targets:</p>
+<ul>
+<li><code>arm64-v8a</code></li>
+<li><code>armeabi-v7a</code></li>
+<li><code>x86_64</code></li>
+<li><code>x86</code></li>
+</ul>
+<p>To filter out unneeded ABIs, rely on the <code>abiFilters</code> of the project that links against Filament's
+AAR.</p>
+<p>Alternatively you can build the AAR from the command line by executing the following in the
+<code>android/</code> directory:</p>
+<pre><code class="language-shell">./gradlew -Pcom.google.android.filament.dist-dir=../../out/android-release/filament assembleRelease
+</code></pre>
+<p>The <code>-Pcom.google.android.filament.dist-dir</code> can be used to specify a different installation
+directory (it must match the CMake install prefix used in the previous steps).</p>
+<h4 id="using-filaments-aar"><a class="header" href="#using-filaments-aar">Using Filament's AAR</a></h4>
+<p>Create a new module in your project and select <em>Import .JAR or .AAR Package</em> when prompted. Make
+sure to add the newly created module as a dependency to your application.</p>
+<p>If you do not wish to include all supported ABIs, make sure to create the appropriate flavors in
+your Gradle build file. For example:</p>
+<pre><code class="language-gradle">flavorDimensions 'cpuArch'
+productFlavors {
+    arm8 {
+        dimension 'cpuArch'
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+    arm7 {
+        dimension 'cpuArch'
+        ndk {
+            abiFilters 'armeabi-v7a'
+        }
+    }
+    x86_64 {
+        dimension 'cpuArch'
+        ndk {
+            abiFilters 'x86_64'.
+        }
+    }
+    x86 {
+        dimension 'cpuArch'
+        ndk {
+            abiFilters 'x86'
+        }
+    }
+    universal {
+        dimension 'cpuArch'
+    }
+}
+</code></pre>
+<h3 id="webassembly"><a class="header" href="#webassembly">WebAssembly</a></h3>
+<p>The core Filament library can be cross-compiled to WebAssembly from either macOS or Linux. To get
+started, follow the instructions for building Filament on your platform (<a href="#macos">macOS</a> or
+<a href="#linux">linux</a>), which will ensure you have the proper dependencies installed.</p>
+<p>Next, you need to install the Emscripten SDK. The following instructions show how to install the
+same version that our continuous builds use.</p>
+<pre><code class="language-shell">cd &lt;your chosen parent folder for the emscripten SDK&gt;
+curl -L https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.60.zip &gt; emsdk.zip
+unzip emsdk.zip ; mv emsdk-* emsdk ; cd emsdk
+python ./emsdk.py install latest
+python ./emsdk.py activate latest
+source ./emsdk_env.sh
+</code></pre>
+<p>Alternatively, you can try running the script <code>build/common/get-emscripten.sh</code>.</p>
+<p>After this you can invoke the <a href="#easy-build">easy build</a> script as follows:</p>
+<pre><code class="language-shell">export EMSDK=&lt;your chosen home for the emscripten SDK&gt;
+./build.sh -p webgl release
+</code></pre>
+<p>The EMSDK variable is required so that the build script can find the Emscripten SDK. The build
+creates a <code>samples</code> folder that can be used as the root of a simple static web server. Note that you
+cannot open the HTML directly from the filesystem due to CORS. We recommend using the emrun tool
+to create a quick localhost server:</p>
+<pre><code class="language-shell">emrun out/cmake-webgl-release/web/samples --no_browser --port 8000
+</code></pre>
+<p>You can then open http://localhost:8000/suzanne.html in your web browser.</p>
+<p>Alternatively, if you have node installed you can use the
+<a href="https://www.npmjs.com/package/live-server">live-server</a> package, which automatically refreshes the
+web page when it detects a change.</p>
+<p>Each sample app has its own handwritten html file. Additionally the server folder contains assets
+such as meshes, textures, and materials.</p>
+<h2 id="running-the-native-samples"><a class="header" href="#running-the-native-samples">Running the native samples</a></h2>
+<p>The <code>samples/</code> directory contains several examples of how to use Filament with SDL2.</p>
+<p>Some of the samples accept FBX/OBJ meshes while others rely on the <code>filamesh</code> file format. To
+generate a <code>filamesh </code> file from an FBX/OBJ asset, run the <code>filamesh</code> tool
+(<code>./tools/filamesh/filamesh</code> in your build directory):</p>
+<pre><code class="language-shell">filamesh ./assets/models/monkey/monkey.obj monkey.filamesh
+</code></pre>
+<p>Most samples accept an IBL that must be generated using the <code>cmgen</code> tool (<code>./tools/filamesh/cmgen</code>
+in your build directory). These sample apps expect a path to a directory containing the <code>.rgb32f</code>
+files for the IBL (which are PNGs containing <code>R11F_G11F_B10F</code> data) or a path to a directory
+containing two <code>.ktx</code> files (one for the IBL itself, one for the skybox). To generate an IBL
+simply use this command:</p>
+<pre><code class="language-shell">cmgen -f ktx -x ./ibls/ my_ibl.exr
+</code></pre>
+<p>The source environment map can be a PNG (8 or 16 bit), a PSD (16 or 32 bit), an HDR or an OpenEXR
+file. The environment map can be an equirectangular projection, a horizontal cross, a vertical
+cross, or a list of cubemap faces (horizontal or vertical).</p>
+<p><code>cmgen</code> will automatically create a directory based on the name of the source environment map. In
+the example above, the final directory will be <code>./ibls/my_ibl/</code>. This directory should contain the
+pre-filtered environment map (one file per cubemap face and per mip level), the environment map
+texture for the skybox and a text file containing the level harmonics for indirect diffuse
+lighting.</p>
+<p>If you prefer a blurred background, run <code>cmgen</code> with this flag: <code>--extract-blur=0.1</code>. The numerical
+value is the desired roughness between 0 and 1.</p>
+<h2 id="generating-c-documentation"><a class="header" href="#generating-c-documentation">Generating C++ documentation</a></h2>
+<p>To generate the documentation you must first install <code>doxygen</code> and <code>graphviz</code>, then run the
+following commands:</p>
+<pre><code class="language-shell">cd filament/filament
+doxygen docs/doxygen/filament.doxygen
+</code></pre>
+<p>Finally simply open <code>docs/html/index.html</code> in your web browser.</p>
+<h2 id="software-rasterization"><a class="header" href="#software-rasterization">Software Rasterization</a></h2>
+<p>We have tested swiftshader and Mesa for software rasterization on the Vulkan/GL backends.</p>
+<p>To use this for Vulkan, please first make sure that the <a href="https://www.lunarg.com/vulkan-sdk/">Vulkan SDK</a> is
+installed on your machine. If you are doing a manual installation of the SDK on Linux, you will have
+to source <code>setup-env.sh</code> in the SDK's root folder to make sure the Vulkan loader is the first lib loaded.</p>
+<h3 id="swiftshader-vulkan-tested-on-macos-and-linux"><a class="header" href="#swiftshader-vulkan-tested-on-macos-and-linux">Swiftshader (Vulkan) [tested on macOS and Linux]</a></h3>
+<p>First, build SwiftShader</p>
+<pre><code class="language-shell">git clone https://github.com/google/swiftshader.git
+cd swiftshader/build
+cmake .. &amp;&amp;  make -j
+</code></pre>
+<p>and then set <code>VK_ICD_FILENAMES</code> to the ICD json produced in the build. For example,</p>
+<pre><code class="language-shell">export VK_ICD_FILENAMES=/Users/user/swiftshader/build/Darwin/vk_swiftshader_icd.json
+</code></pre>
+<p>Build and run Filament as usual and specify the Vulkan backend when creating the Engine.</p>
+<h3 id="mesas-llvmpipe-gl-and-lavapipe-vulkan-tested-on-linux"><a class="header" href="#mesas-llvmpipe-gl-and-lavapipe-vulkan-tested-on-linux">Mesa's LLVMPipe (GL) and Lavapipe (Vulkan) [tested on Linux]</a></h3>
+<p>We will only cover steps that build Mesa from source. The official documentation of Mesa mentioned
+that in general precompiled libraries <a href="https://docs.mesa3d.org/precompiled.html">are <strong>not</strong> made available</a>.</p>
+<p>Download the repo and make sure you have the build depedencies. For example (assuming an Ubuntu/Debian distro),</p>
+<pre><code class="language-shell">git clone https://gitlab.freedesktop.org/mesa/mesa.git
+sudo apt-get build-dep mesa
+</code></pre>
+<p>To build both the GL and Vulkan rasterizers,</p>
+<pre><code class="language-shell">cd mesa
+mkdir -p out
+meson setup builddir/ -Dprefix=$(pwd)/out -Dglx=xlib -Dgallium-drivers=swrast -Dvulkan-drivers=swrast
+meson install -C builddir/
+</code></pre>
+<p>For GL, we need to ensure that we load the GL lib from the mesa output directory.  For example, to run
+the debug <code>gltf_viewer</code>, we would execute</p>
+<pre><code class="language-shell">LD_LIBRARY_PATH=/Users/user/mesa/out/lib/x86_64-linux-gnu \
+    ./out/cmake-debug/samples/gltf_viewer -a opengl
+</code></pre>
+<p>For Vulkan, we need to set the path to the ICD json, which tells the loader where to find the driver
+library. To run <code>gltf_viewer</code>, we would execute</p>
+<pre><code class="language-shell">VK_ICD_FILENAMES=/Users/user/mesa/out/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    ./out/cmake-debug/samples/gltf_viewer -a vulkan
+
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dup/intro.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../build/windows_android.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dup/intro.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../build/windows_android.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

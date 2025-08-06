@@ -1,0 +1,346 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>beamsplitter - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="beamsplitter"><a class="header" href="#beamsplitter">beamsplitter</a></h1>
+<ul>
+<li><a href="#description">Description</a></li>
+<li><a href="#instructions">Instructions</a></li>
+<li><a href="#emitter-flags">Emitter Flags</a></li>
+<li><a href="#source-files">Source Files</a></li>
+<li><a href="#output-files">Output Files</a></li>
+<li><a href="#input-format">Input Format</a></li>
+</ul>
+<h2 id="description"><a class="header" href="#description">Description</a></h2>
+<p>This Go program consumes C++ header file(s) and generates Java bindings, JavaScript bindings, and
+C++ code that performs JSON serialization.</p>
+<h2 id="instructions"><a class="header" href="#instructions">Instructions</a></h2>
+<p>To install the Go compiler on macOS, just do:</p>
+<pre><code>brew install go
+</code></pre>
+<p>To build and invoke the code generator, do:</p>
+<pre><code>cd tools/beamsplitter ; go run .
+</code></pre>
+<h2 id="emitter-flags"><a class="header" href="#emitter-flags">Emitter Flags</a></h2>
+<p>Special directives in the form <code>%codegen_foo%</code> are called <em>emitter flags</em>. They are typically
+embedded in a comment associated with a particular struct field.</p>
+<div class="table-wrapper"><table><thead><tr><th>flag</th><th>description</th></tr></thead><tbody>
+<tr><td><strong>codegen_skip_json</strong></td><td>Field is skipped when generating JSON serialization code.</td></tr>
+<tr><td><strong>codegen_skip_javascript</strong></td><td>Field is skipped when generating JavaScript and TypeScript bindings.</td></tr>
+<tr><td><strong>codegen_java_flatten</strong></td><td>Field is replaced with constituent sub-fields.</td></tr>
+<tr><td><strong>codegen_java_float</strong></td><td>Field will be forced to have a <code>float</code> representation in Java.</td></tr>
+</tbody></table>
+</div>
+<h2 id="source-files"><a class="header" href="#source-files">Source Files</a></h2>
+<ul>
+<li><code>filament/include/filament/Options.h</code></li>
+</ul>
+<h2 id="output-files"><a class="header" href="#output-files">Output Files</a></h2>
+<p>The following files are created:</p>
+<ul>
+<li><code>libs/viewer/src/Settings_generated.h</code></li>
+<li><code>libs/viewer/src/Settings_generated.cpp</code></li>
+<li><code>web/filament-js/jsbindings_generated.cpp</code></li>
+<li><code>web/filament-js/jsenums_generated.cpp</code></li>
+<li><code>web/filament-js/extensions_generated.js</code></li>
+</ul>
+<p>Additionally, in-place edits are made to the following files:</p>
+<ul>
+<li><code>web/filament-js/filament.d.ts</code></li>
+<li><code>android/filament-android/src/main/java/.../View.java</code></li>
+</ul>
+<h2 id="input-format"><a class="header" href="#input-format">Input Format</a></h2>
+<p>There are many ways in which the source file format is more restrictive than the full C++
+language, but here are some of the highlights:</p>
+<ul>
+<li>All enums must be class enums.</li>
+<li>External headers pulled in with <code>#include</code> files are ignored.</li>
+<li>Expressions in the RHS of default value assignments are not parsed, they are just exposed by
+the lexer as blobs.</li>
+<li>Struct fields, class fields, and method arguments must have fairly simple types. e.g. they cannot
+have parentheses. If a type is C style callback, then it should be specified with an alias.</li>
+<li>Multiline strings and macro definitions are not allowed.</li>
+<li>Enum values must be sequential and cannot have custom values.</li>
+</ul>
+<p>The following formal grammar describes the above limitations in greater detail, but with some
+caveats:</p>
+<ul>
+<li>All C preprocessor directives are discarded during lexical analysis; they do not exist in the AST.</li>
+<li>Whitespace is similarly discarded, so there is no "space" concept in the AST.</li>
+<li>Macro invocations are also removed by the lexer if they are known Filament-specific macros (e.g.
+<code>UTILS_PUBLIC</code> and <code>UTILS_DEPRECATED</code>).</li>
+<li>Comments are removed by the lexer and are generally not part of the resulting AST. However
+the lexer proffers a mapping from line numbers to comments to allow for docstring extraction.</li>
+<li>Emitter flags in the form <code>%codegen_foo%</code> are detected in a post-processing phase and removed from
+all comments.</li>
+</ul>
+<h3 id="grammar"><a class="header" href="#grammar">Grammar</a></h3>
+<pre><code class="language-eBNF">root = namespace ;
+namespace = "namespace" , [ ident ] , "{" , { block } , "}" ;
+block = class | struct | enum | namespace | using | forward_declaration;
+forward_declaration = ("class" | "struct" ) , ident , ";" ;
+template = "template" , "TemplateArgs" ;
+class = [template] , "class" , ident , [ ":" , [ "public" ] , "SimpleType" ]
+    , "{" , struct_body  , "}" , ";" ;
+struct = [template] , "struct" , ident , "{" , struct_body , "}" , ";" ;
+enum = "enum" , "class" , ident , [ ":" , type ]
+    , "{" , , ident , { "," , ident } , [ "," ] , "}" , ";" ;
+using = "using" , ident , "=", type , ";" ;
+struct_body = { access_specifier | field | method | block } ;
+access_specifier = ("public" | "private" | "protected" ) , ":" ;
+method = [template] , { "constexpr" , "friend" } ,
+    , type , ident , "MethodArgs" , specifiers , ( ";" | "MethodBody" ) ;
+specifiers = { "const" | "noexcept" } ;
+field = type , ident , [ array ] , [ "=" , "DefaultValue" ] ";" ;
+array = "[" , "ArrayLength", "]" ;
+type = "SimpleType" ;
+ident = "Identifier" ;
+</code></pre>
+<p>The above grammar uses the following notation:</p>
+<ul>
+<li><code>" ... "</code> denotes a terminal</li>
+<li><code>{ ... }</code> denotes zero or more repetition</li>
+<li><code>[ ... ]</code> denotes an optional quantity</li>
+<li><code>( ... )</code> is used for grouping</li>
+<li><code>a | b</code> denotes a choice</li>
+<li><code>a , b</code> denotes concatenation</li>
+<li><code>;</code> terminates a production</li>
+</ul>
+<div class="table-wrapper"><table><thead><tr><th>Terminal name</th><th>Description</th></tr></thead><tbody>
+<tr><td>SimpleType (*)</td><td>examples: <code>Texture* const</code>, <code>uint8_t</code>, <code>BlendMode</code></td></tr>
+<tr><td>MethodBody</td><td>unparsed implementation of a function or method, including outer <code>{}</code></td></tr>
+<tr><td>MethodArgs</td><td>similar to above; an unparsed blob, but delimited with <code>()</code></td></tr>
+<tr><td>TemplateArgs</td><td>similar to above; an unparsed blob, but delimited with <code>&lt;&gt;</code></td></tr>
+<tr><td>DefaultValue (**)</td><td>an unparsed expression with certain restrictions</td></tr>
+<tr><td>Identifier</td><td><code>[A-Za-z_][A-Za-z0-9_]*</code></td></tr>
+<tr><td>ArrayLength</td><td><code>[1-9][0-9]*</code></td></tr>
+</tbody></table>
+</div>
+<p>(*) <code>SimpleType</code> should not contain parentheses or commas, so C callbacks are not allowed unless
+you alias them first.</p>
+<p>(**) If <code>DefaultValue</code> is a vector, it must be in the form: <code>{ x, y, z }</code>.</p>
+<h2 id="references"><a class="header" href="#references">References</a></h2>
+<p>Initially inspired by the following Rob Pike talk.</p>
+<ul>
+<li>https://www.youtube.com/watch?v=HxaD_trXwRE</li>
+</ul>
+<p>Beamsplitter does not use the state machine described in the above prezo, but it does use a channel
+for separating the parser from the lexer. The beamsplitter lexer is actually a recursive descent
+parser with simple lookahead functionality. This makes it easy for the "real" parser to create a
+coarse-grained AST.</p>
+<p>The companion to the above talk is Go's template lexer, which can be studied here:</p>
+<ul>
+<li>https://cs.opensource.google/go/go/+/master:src/text/template/parse/lex.go</li>
+</ul>
+<p>Wikipedia has a good example of recursive descent:</p>
+<ul>
+<li>https://en.wikipedia.org/wiki/Recursive_descent_parser</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../notes/tools.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../dup/cmgen.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../notes/tools.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../dup/cmgen.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

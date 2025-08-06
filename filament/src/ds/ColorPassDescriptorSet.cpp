@@ -16,7 +16,9 @@
 
 #include "ColorPassDescriptorSet.h"
 
+
 #include "Froxelizer.h"
+#include "PerViewDescriptorSetUtils.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
@@ -144,44 +146,11 @@ void ColorPassDescriptorSet::terminate(HwDescriptorSetLayoutFactory& factory, Dr
 }
 
 void ColorPassDescriptorSet::prepareCamera(FEngine& engine, const CameraInfo& camera) noexcept {
-    mat4f const& viewFromWorld = camera.view;
-    mat4f const& worldFromView = camera.model;
-    mat4f const& clipFromView  = camera.projection;
-
-    const mat4f viewFromClip{ inverse((mat4)camera.projection) };
-    const mat4f worldFromClip{ highPrecisionMultiply(worldFromView, viewFromClip) };
-
-    auto& s = mUniforms.edit();
-    s.viewFromWorldMatrix = viewFromWorld;    // view
-    s.worldFromViewMatrix = worldFromView;    // model
-    s.clipFromViewMatrix  = clipFromView;     // projection
-    s.viewFromClipMatrix  = viewFromClip;     // 1/projection
-    s.worldFromClipMatrix = worldFromClip;    // 1/(projection * view)
-    s.userWorldFromWorldMatrix = mat4f(inverse(camera.worldTransform));
-    s.clipTransform = camera.clipTransform;
-    s.cameraFar = camera.zf;
-    s.oneOverFarMinusNear = 1.0f / (camera.zf - camera.zn);
-    s.nearOverFarMinusNear = camera.zn / (camera.zf - camera.zn);
-
-    mat4f const& headFromWorld = camera.view;
-    Engine::Config const& config = engine.getConfig();
-    for (int i = 0; i < config.stereoscopicEyeCount; i++) {
-        mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
-        mat4f const& clipFromEye = camera.eyeProjection[i];
-        // clipFromEye * eyeFromHead * headFromWorld
-        s.clipFromWorldMatrix[i] = highPrecisionMultiply(
-                clipFromEye, highPrecisionMultiply(eyeFromHead, headFromWorld));
-    }
-
-    // with a clip-space of [-w, w] ==> z' = -z
-    // with a clip-space of [0,  w] ==> z' = (w - z)/2
-    s.clipControl = engine.getDriverApi().getClipSpaceParams();
+    PerViewDescriptorSetUtils::prepareCamera(mUniforms.edit(), engine, camera);
 }
 
 void ColorPassDescriptorSet::prepareLodBias(float const bias, float2 const derivativesScale) noexcept {
-    auto& s = mUniforms.edit();
-    s.lodBias = bias;
-    s.derivativesScale = derivativesScale;
+    PerViewDescriptorSetUtils::prepareLodBias(mUniforms.edit(), bias, derivativesScale);
 }
 
 void ColorPassDescriptorSet::prepareExposure(float const ev100) noexcept {
@@ -194,22 +163,11 @@ void ColorPassDescriptorSet::prepareExposure(float const ev100) noexcept {
 void ColorPassDescriptorSet::prepareViewport(
         const filament::Viewport& physicalViewport,
         const filament::Viewport& logicalViewport) noexcept {
-    float4 const physical{ physicalViewport.left, physicalViewport.bottom,
-                           physicalViewport.width, physicalViewport.height };
-    float4 const logical{ logicalViewport.left, logicalViewport.bottom,
-                          logicalViewport.width, logicalViewport.height };
-    auto& s = mUniforms.edit();
-    s.resolution = { physical.zw, 1.0f / physical.zw };
-    s.logicalViewportScale = physical.zw / logical.zw;
-    s.logicalViewportOffset = -logical.xy / logical.zw;
+    PerViewDescriptorSetUtils::prepareViewport(mUniforms.edit(), physicalViewport, logicalViewport);
 }
 
 void ColorPassDescriptorSet::prepareTime(FEngine& engine, float4 const& userTime) noexcept {
-    auto& s = mUniforms.edit();
-    const uint64_t oneSecondRemainder = engine.getEngineTime().count() % 1000000000;
-    const float fraction = float(double(oneSecondRemainder) / 1000000000.0);
-    s.time = fraction;
-    s.userTime = userTime;
+    PerViewDescriptorSetUtils::prepareTime(mUniforms.edit(), engine, userTime);
 }
 
 void ColorPassDescriptorSet::prepareTemporalNoise(FEngine& engine,
@@ -324,10 +282,7 @@ void ColorPassDescriptorSet::prepareBlending(bool const needsAlphaChannel) noexc
 
 void ColorPassDescriptorSet::prepareMaterialGlobals(
         std::array<float4, 4> const& materialGlobals) noexcept {
-    mUniforms.edit().custom[0] = materialGlobals[0];
-    mUniforms.edit().custom[1] = materialGlobals[1];
-    mUniforms.edit().custom[2] = materialGlobals[2];
-    mUniforms.edit().custom[3] = materialGlobals[3];
+    PerViewDescriptorSetUtils::prepareMaterialGlobals(mUniforms.edit(), materialGlobals);
 }
 
 void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
@@ -343,25 +298,6 @@ void ColorPassDescriptorSet::prepareSSR(Handle<HwTexture> ssr,
     auto& s = mUniforms.edit();
     s.refractionLodOffset = refractionLodOffset;
     s.ssrDistance = (ssrOptions.enabled && !disableSSR) ? ssrOptions.maxDistance : 0.0f;
-}
-
-void ColorPassDescriptorSet::prepareHistorySSR(Handle<HwTexture> ssr,
-        mat4f const& historyProjection,
-        mat4f const& uvFromViewMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
-
-    setSampler(+PerViewBindingPoints::SSR, ssr, {
-        .filterMag = SamplerMagFilter::LINEAR,
-        .filterMin = SamplerMinFilter::LINEAR
-    });
-
-    auto& s = mUniforms.edit();
-    s.ssrReprojection = historyProjection;
-    s.ssrUvFromViewMatrix = uvFromViewMatrix;
-    s.ssrThickness = ssrOptions.thickness;
-    s.ssrBias = ssrOptions.bias;
-    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
-    s.ssrStride = ssrOptions.stride;
 }
 
 void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexcept {

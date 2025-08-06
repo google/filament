@@ -86,6 +86,8 @@ bool VulkanGroupMarkers::empty() const noexcept {
 }
 #endif // FVK_DEBUG_GROUP_MARKERS
 
+uint32_t VulkanCommandBuffer::sAgeCounter = 0;
+
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice device,
         VkQueue queue, VkCommandPool pool, bool isProtected)
     : mContext(context),
@@ -94,7 +96,8 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
       mDevice(device),
       mQueue(queue),
       mBuffer(createCommandBuffer(device, pool)),
-      mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)) {
+      mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)),
+      mAge(++sAgeCounter) {
     VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
 
@@ -111,6 +114,8 @@ void VulkanCommandBuffer::reset() noexcept {
     mMarkerCount = 0;
     mResources.clear();
     mWaitSemaphores.clear();
+    mWaitSemaphoreStages.clear();
+    mAge = ++sAgeCounter;
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
@@ -182,16 +187,11 @@ VkSemaphore VulkanCommandBuffer::submit() {
 
     vkEndCommandBuffer(mBuffer);
 
-    VkPipelineStageFlags const waitDestStageMasks[2] = {
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-    };
-
     VkSubmitInfo submitInfo{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = mWaitSemaphores.size(),
         .pWaitSemaphores = mWaitSemaphores.data(),
-        .pWaitDstStageMask = waitDestStageMasks,
+        .pWaitDstStageMask = mWaitSemaphoreStages.data(),
         .commandBufferCount = 1u,
         .pCommandBuffers = &mBuffer,
         .signalSemaphoreCount = 1u,
@@ -342,12 +342,12 @@ void CommandBufferPool::wait() {
     update();
 }
 
-void CommandBufferPool::waitFor(VkSemaphore previousAction) {
+void CommandBufferPool::waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage) {
     if (!isRecording()) {
         return;
     }
     auto& recording = mBuffers[mRecording];
-    recording->insertWait(previousAction);
+    recording->insertWait(previousAction, waitStage);
 }
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
@@ -430,10 +430,14 @@ bool VulkanCommands::flush() {
             continue;
         }
         if (dependency != VK_NULL_HANDLE) {
-            pool->waitFor(dependency);
+            pool->waitFor(dependency, mInjectedDependencyWaitStage);
         }
         if (lastSubmit != VK_NULL_HANDLE) {
-            pool->waitFor(lastSubmit);
+            // Note that the stage we're waiting on is the fragment shader stage.  This assumes
+            // that the subsequent command buffer will only dependent on the fragment output of the
+            // previous buffer, allowing for vertex work to proceed (more overlapping
+            // vertex/fragment work).
+            pool->waitFor(lastSubmit, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
             lastSubmit = VK_NULL_HANDLE;
         }
         dependency = pool->flush();

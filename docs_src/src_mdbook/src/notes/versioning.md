@@ -1,4 +1,4 @@
-## Versioning
+# Versioning
 
 Filament uses a 3-number versioning scheme that superficially resembles a [semantic
 version](https://semver.org/) but is actually more interesting because of our material system. Here

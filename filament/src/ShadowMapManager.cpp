@@ -385,9 +385,10 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                     const CameraInfo cameraInfo{ shadowMap.getCamera(), mainCameraInfo };
 
                     auto transaction = ShadowMap::open(driver);
-                    ShadowMap::prepareCamera(transaction, driver, cameraInfo);
+                    ShadowMap::prepareCamera(transaction, engine, cameraInfo);
                     ShadowMap::prepareViewport(transaction, shadowMap.getViewport());
                     ShadowMap::prepareTime(transaction, engine, userTime);
+                    ShadowMap::prepareMaterialGlobals(transaction, view.getMaterialGlobals());
                     ShadowMap::prepareShadowMapping(transaction,
                             vsmShadowOptions.highPrecision);
                     shadowMap.commit(transaction, engine, driver);
@@ -412,7 +413,7 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
 
                     RenderPass const pass = passBuilder
                             .renderFlags(RenderPass::HAS_DEPTH_CLAMP, renderPassFlags)
-                            .camera(cameraInfo)
+                            .camera(cameraInfo.getPosition(), cameraInfo.getForwardVector())
                             .visibilityMask(entry.visibilityMask)
                             .geometry(scene->getRenderableData(), entry.range)
                             .commandTypeFlags(RenderPass::CommandTypeFlags::SHADOW)

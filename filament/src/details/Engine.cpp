@@ -94,6 +94,30 @@ namespace filament {
 using namespace backend;
 using namespace filaflat;
 
+namespace {
+
+backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
+    return {
+        .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
+        .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
+        .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
+        .disableHandleUseAfterFreeCheck =
+                instance->features.backend.disable_handle_use_after_free_check,
+        .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
+        .forceGLES2Context = instance->getConfig().forceGLES2Context,
+        .stereoscopicType = instance->getConfig().stereoscopicType,
+        .assertNativeWindowIsValid =
+                instance->features.backend.opengl.assert_native_window_is_valid,
+        .metalDisablePanicOnDrawableFailure =
+                instance->getConfig().metalDisablePanicOnDrawableFailure,
+        .gpuContextPriority = instance->getConfig().gpuContextPriority,
+        .vulkanEnableStagingBufferBypass =
+                instance->features.backend.vulkan.enable_staging_buffer_bypass,
+    };
+}
+
+} // anonymous
+
 struct Engine::BuilderDetails {
     Backend mBackend = Backend::DEFAULT;
     Platform* mPlatform = nullptr;
@@ -131,19 +155,7 @@ Engine* FEngine::create(Builder const& builder) {
             delete instance;
             return nullptr;
         }
-        DriverConfig const driverConfig{
-                .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
-                .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
-                .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
-                .disableHandleUseAfterFreeCheck = instance->features.backend.disable_handle_use_after_free_check,
-                .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
-                .forceGLES2Context = instance->getConfig().forceGLES2Context,
-                .stereoscopicType = instance->getConfig().stereoscopicType,
-                .assertNativeWindowIsValid = instance->features.backend.opengl.assert_native_window_is_valid,
-                .metalDisablePanicOnDrawableFailure = instance->getConfig().metalDisablePanicOnDrawableFailure,
-                .gpuContextPriority = instance->getConfig().gpuContextPriority,
-        };
-        instance->mDriver = platform->createDriver(sharedContext, driverConfig);
+        instance->mDriver = platform->createDriver(sharedContext, getDriverConfig(instance));
 
     } else {
         // start the driver thread
@@ -752,19 +764,7 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    DriverConfig const driverConfig {
-            .handleArenaSize = getRequestedDriverHandleArenaSize(),
-            .metalUploadBufferSizeBytes = mConfig.metalUploadBufferSizeBytes,
-            .disableParallelShaderCompile = features.backend.disable_parallel_shader_compile,
-            .disableHandleUseAfterFreeCheck = features.backend.disable_handle_use_after_free_check,
-            .disableHeapHandleTags = features.backend.disable_heap_handle_tags,
-            .forceGLES2Context = mConfig.forceGLES2Context,
-            .stereoscopicType =  mConfig.stereoscopicType,
-            .assertNativeWindowIsValid = features.backend.opengl.assert_native_window_is_valid,
-            .metalDisablePanicOnDrawableFailure = mConfig.metalDisablePanicOnDrawableFailure,
-            .gpuContextPriority = mConfig.gpuContextPriority,
-    };
-    mDriver = mPlatform->createDriver(mSharedGLContext, driverConfig);
+    mDriver = mPlatform->createDriver(mSharedGLContext, getDriverConfig(this));
 
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
@@ -1235,20 +1235,13 @@ bool FEngine::destroy(const FMaterialInstance* p) {
             size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
             for (size_t j = 0; j < primitiveCount; j++) {
                 auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
-                if (features.engine.debug.assert_material_instance_in_use) {
-                    FILAMENT_CHECK_PRECONDITION(mi != p)
-                            << "destroying MaterialInstance \""
-                            << mi->getName() << "\" which is still in use by Renderable (entity="
-                            << entity.getId() << ", instance="
-                            << ri.asValue() << ", index=" << j << ")";
-                } else {
-                    if (UTILS_UNLIKELY(mi == p)) {
-                        LOG(ERROR) << "destroying MaterialInstance \"" << mi->getName()
-                                   << "\" which is still in use by Renderable (entity="
-                                   << entity.getId() << ", instance=" << ri.asValue()
-                                   << ", index=" << j << ")";
-                    }
-                }
+                auto const& featureFlags = features.engine.debug;
+                FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                        mi != p,
+                        featureFlags.assert_material_instance_in_use)
+                        << "destroying MaterialInstance \"" << mi->getName()
+                        << "\" which is still in use by Renderable (entity=" << entity.getId()
+                        << ", instance=" << ri.asValue() << ", index=" << j << ")";
             }
         }
     }

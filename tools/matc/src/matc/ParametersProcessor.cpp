@@ -154,7 +154,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         std::cerr << "parameters: name value must be STRING." << std::endl;
         return false;
     }
-    
+
     const JsonishValue* transformNameValue = jsonObject.getValue("transformName");
     if (transformNameValue && transformNameValue->getType() != JsonishValue::STRING) {
         std::cerr << "parameters: transformName value must be STRING." << std::endl;
@@ -185,10 +185,10 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     }
 
-    const JsonishValue* unfilterableValue = jsonObject.getValue("unfilterable");
-    if (unfilterableValue) {
-        if (unfilterableValue->getType() != JsonishValue::BOOL) {
-            std::cerr << "parameters: unfilterable must be a BOOL." << std::endl;
+    const JsonishValue* filterableValue = jsonObject.getValue("filterable");
+    if (filterableValue) {
+        if (filterableValue->getType() != JsonishValue::BOOL) {
+            std::cerr << "parameters: filterable must be a BOOL." << std::endl;
             return false;
         }
     }
@@ -205,8 +205,9 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
     const JsonishValue* stagesValue = jsonObject.getValue("stages");
     using filament::backend::ShaderStageFlags;
-    auto stages = ShaderStageFlags::NONE;
+    std::optional<ShaderStageFlags> stages;
     if (stagesValue) {
+        ShaderStageFlags parsedStages = ShaderStageFlags::NONE;
         if (stagesValue->getType() != JsonishValue::ARRAY) {
             std::cerr << "parameters: stages must be an ARRAY." << std::endl;
             return false;
@@ -217,7 +218,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 using Qualifier = filament::BufferInterfaceBlock::Qualifier;
                 auto stageString = value->toJsonString()->getString();
                 if (Enums::isValid<ShaderStageType>(stageString)) {
-                    stages |= Enums::toEnum<ShaderStageType>(stageString);
+                    parsedStages |= Enums::toEnum<ShaderStageType>(stageString);
                 } else {
                     std::cerr << "stages: the stage '" << stageString
                               << "' for parameter with name '" << nameString
@@ -229,12 +230,13 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
             std::cerr << "parameters: stages must be an array of STRINGs." << std::endl;
             return false;
         }
+        stages = parsedStages;
     }
 
     size_t const arraySize = extractArraySize(typeString);
 
     if (Enums::isValid<UniformType>(typeString)) {
-        if (stages != ShaderStageFlags::NONE) {
+        if (stages.has_value()) {
             std::cerr << "parameters: the uniform parameter with name '" << nameString << "'"
                       << " has shader stages specified. Shader stages are only supported for"
                       << " samplers." << std::endl;
@@ -267,14 +269,27 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         auto precision = precisionValue ? Enums::toEnum<ParameterPrecision>(
                 precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
 
-        auto unfilterable = unfilterableValue ? unfilterableValue->toJsonBool()->getBool() : false;
+        if (format == SamplerFormat::SHADOW) {
+            std::cerr << "Materials should not be able to define a shadow sampler";
+            return false;
+        }
+
+        if (format == SamplerFormat::INT && filterableValue) {
+            std::cerr << "parameters: the parameter with name '" << nameString << "'"
+                      << " is an integer sampler. The `filterable` attribute must not be defined."
+                      << std::endl;
+            return false;
+        }
+
+        // For samplers without `filterable` defined, we use the following logic
+        //   - float sampler can be filterable or not, default to filterable
+        //   - int sampler is not filterable (checked above)
+        //   - shadow sampler must be filterable (checked above)
+        auto filterable =
+                filterableValue ? filterableValue->toJsonBool()->getBool() : true;
+
         auto multisample = multiSampleValue ? multiSampleValue->toJsonBool()->getBool() : false;
 
-        if (stages == ShaderStageFlags::NONE) {
-            // TODO: Infer the default shader stages based on which blocks are present in the
-            // material.
-            stages = ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT;
-        }
         if (transformNameValue) {
             if (type != MaterialBuilder::SamplerType::SAMPLER_EXTERNAL) {
                 std::cerr << "parameters: the parameter with name '" << nameString << "'"
@@ -284,10 +299,10 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 return false;
             }
             auto transformName = transformNameValue->toJsonString()->getString();
-            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+            builder.parameter(nameString.c_str(), type, format, precision, filterable,
                     multisample, transformName.c_str(), stages);
         } else {
-            builder.parameter(nameString.c_str(), type, format, precision, unfilterable,
+            builder.parameter(nameString.c_str(), type, format, precision, filterable,
                     multisample, "", stages);
         }
 

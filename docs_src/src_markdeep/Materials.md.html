@@ -1030,8 +1030,10 @@ Samplers
 :     Sampler types can have the following fields:
        - `format` : which can be either `int` or `float` (defaults to `float`).
        - `multisample` : a boolean to indicate whether the sampler is meant for multisampling (defaults to `false`)
-       - `unfilterable` : a boolean to indicate whether the sampling is not filtered (defaults to `false`)
-
+       - `filterable` : a boolean to indicate whether the sampling is filterable
+          - When the `format` is `int`, `filterable` is assumed to be `false`, and setting this attribute is not allowed.
+          - When the `format` is `float`, the default of `filterable` is `true`. The client must explicitly
+            set it to `false` if they wish for unfiltered sampling.
 
 Arrays
 :     A parameter can define an array of values by appending `[size]` after the type name, where

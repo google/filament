@@ -731,12 +731,20 @@ public:
                 bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_vertex_buffer_attribute_stride_mult_of_4 =
                         CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_material_instance_texture_descriptor_set_compatible =
+                        CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
             struct {
                 bool assert_native_window_is_valid = false;
             } opengl;
+            struct {
+                // On Unified Memory Architecture device, it is possible to bypass using the staging
+                // buffer. This is an experimental feature that still needs to be implemented fully
+                // before it can be fully enabled.
+                bool enable_staging_buffer_bypass = false;
+            } vulkan;
             bool disable_parallel_shader_compile = false;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
@@ -762,18 +770,24 @@ public:
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
               &features.engine.shadows.use_shadow_atlas, false },
-            { "features.engine.debug.assert_material_instance_in_use",
+            { "engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
               &features.engine.debug.assert_material_instance_in_use, false },
-            { "features.engine.debug.assert_destroy_material_before_material_instance",
+            { "engine.debug.assert_destroy_material_before_material_instance",
               "Assert when a Material is destroyed but its instances are still alive.",
               &features.engine.debug.assert_destroy_material_before_material_instance, false },
-            { "features.engine.debug.assert_vertex_buffer_count_exceeds_8",
+            { "engine.debug.assert_vertex_buffer_count_exceeds_8",
               "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
               &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
-            { "features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
+            { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
               "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
               &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+            { "backend.vulkan.enable_staging_buffer_bypass",
+              "vulkan: enable a staging bypass logic for unified memory architecture",
+              &features.backend.vulkan.enable_staging_buffer_bypass, false },
+            { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
+              "Assert that the textures in a material instance are compatible with descriptor set.",
+              &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
