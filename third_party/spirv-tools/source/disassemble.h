@@ -37,7 +37,6 @@ std::string spvInstructionBinaryToText(const spv_target_env env,
                                        const size_t word_count,
                                        const uint32_t options);
 
-class AssemblyGrammar;
 namespace disassemble {
 
 // Shared code with other tools (than the disassembler) that might need to
@@ -45,8 +44,8 @@ namespace disassemble {
 // binary for an instruction to its assembly representation.
 class InstructionDisassembler {
  public:
-  InstructionDisassembler(const AssemblyGrammar& grammar, std::ostream& stream,
-                          uint32_t options, NameMapper name_mapper);
+  InstructionDisassembler(std::ostream& stream, uint32_t options,
+                          NameMapper name_mapper);
 
   // Emits the assembly header for the module.
   void EmitHeaderSpirv();
@@ -104,7 +103,6 @@ class InstructionDisassembler {
   // |id_comments_|.
   void GenerateCommentForDecoratedId(const spv_parsed_instruction_t& inst);
 
-  const spvtools::AssemblyGrammar& grammar_;
   std::ostream& stream_;
   const bool print_;  // Should we also print to the standard output stream?
   const bool color_;  // Should we print in colour?

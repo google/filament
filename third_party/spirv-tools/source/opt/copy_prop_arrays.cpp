@@ -95,17 +95,19 @@ Pass::Status CopyPropagateArrays::Process() {
     std::unique_ptr<MemoryObject> source_object =
         FindSourceObjectIfPossible(&*var_inst, store_inst);
 
-    if (source_object != nullptr) {
-      if (!IsPointerToArrayType(var_inst->type_id()) &&
-          source_object->GetStorageClass() != spv::StorageClass::Input) {
-        continue;
-      }
+    if (source_object == nullptr) {
+      continue;
+    }
 
-      if (CanUpdateUses(&*var_inst, source_object->GetPointerTypeId(this))) {
-        modified = true;
+    if (!IsPointerToArrayType(var_inst->type_id()) &&
+        source_object->GetStorageClass() != spv::StorageClass::Input) {
+      continue;
+    }
 
-        PropagateObject(&*var_inst, source_object.get(), store_inst);
-      }
+    if (CanUpdateUses(&*var_inst, source_object->GetPointerTypeId(this))) {
+      modified = true;
+
+      PropagateObject(&*var_inst, source_object.get(), store_inst);
     }
   }
 
@@ -219,6 +221,8 @@ bool CopyPropagateArrays::HasNoStores(Instruction* ptr_inst) {
       return true;
     } else if (IsInterpolationInstruction(use)) {
       return true;
+    } else if (use->IsCommonDebugInstr()) {
+      return true;
     }
     // Some other instruction.  Be conservative.
     return false;
@@ -252,11 +256,14 @@ bool CopyPropagateArrays::HasValidReferencesOnly(Instruction* ptr_inst,
         } else if (use->IsDecoration() || use->opcode() == spv::Op::OpName) {
           return true;
         } else if (use->opcode() == spv::Op::OpStore) {
-          // If we are storing to part of the object it is not an candidate.
+          // If we are storing to part of the object it is not a candidate.
           return ptr_inst->opcode() == spv::Op::OpVariable &&
                  store_inst->GetSingleWordInOperand(kStorePointerInOperand) ==
                      ptr_inst->result_id();
         } else if (IsDebugDeclareOrValue(use)) {
+          // The store does not have to dominate debug instructions. We do not
+          // want debugging info to stop the transformation. It will be fixed
+          // up later.
           return true;
         }
         // Some other instruction.  Be conservative.
@@ -652,6 +659,22 @@ void CopyPropagateArrays::UpdateUses(Instruction* original_ptr_inst,
     uint32_t index = pair.second;
 
     if (use->IsCommonDebugInstr()) {
+      // It is possible that the debug instructions are not dominated by
+      // `new_ptr_inst`. If not, move the debug instruction to just after
+      // `new_ptr_inst`.
+      BasicBlock* store_block = context()->get_instr_block(new_ptr_inst);
+      if (store_block) {
+        Function* function = store_block->GetParent();
+        DominatorAnalysis* dominator_analysis =
+            context()->GetDominatorAnalysis(function);
+        if (!dominator_analysis->Dominates(new_ptr_inst, use)) {
+          assert(dominator_analysis->Dominates(use, new_ptr_inst));
+          use->InsertAfter(new_ptr_inst);
+          context()->set_instr_block(use,
+                                     context()->get_instr_block(new_ptr_inst));
+        }
+      }
+
       switch (use->GetCommonDebugOpcode()) {
         case CommonDebugInfoDebugDeclare: {
           if (new_ptr_inst->opcode() == spv::Op::OpVariable ||
@@ -893,9 +916,7 @@ CopyPropagateArrays::MemoryObject::MemoryObject(Instruction* var_inst,
                                                 iterator begin, iterator end)
     : variable_inst_(var_inst) {
   std::transform(begin, end, std::back_inserter(access_chain_),
-                 [](uint32_t id) {
-                   return AccessChainEntry{true, {id}};
-                 });
+                 [](uint32_t id) { return AccessChainEntry{true, {id}}; });
 }
 
 std::vector<uint32_t> CopyPropagateArrays::MemoryObject::GetAccessIds() const {
