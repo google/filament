@@ -179,7 +179,6 @@ TEST_F(BackendTest, PushConstants) {
 
         api.commit(swapChain);
         api.endFrame(0);
-        api.finish();
 
         EXPECT_IMAGE(renderTarget, getExpectations(),
         ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",

@@ -466,7 +466,6 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.commit(swapChain);
     api.endFrame(0);
-    api.finish();
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
         ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
@@ -622,6 +621,8 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+        
+        api.commit(swapChain);
     }
 
     EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
