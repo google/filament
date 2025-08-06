@@ -28,6 +28,8 @@ class VulkanPlatformAndroid : public VulkanPlatform {
 public:
     ExternalImageHandle UTILS_PUBLIC createExternalImage(AHardwareBuffer const* buffer,
             bool sRGB) noexcept;
+    virtual ExternalImageHandle createExternalImageFromRaw(void* image,
+            bool sRGB) const override;
 
     struct UTILS_PUBLIC ExternalImageDescAndroid {
         uint32_t width;      // Texture width

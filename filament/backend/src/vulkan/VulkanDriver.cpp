@@ -1005,7 +1005,7 @@ void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
     auto frame = stream->getFrame(image);
     if (frame) {
         // If this is a new frame for the stream
-        auto externalImage = mPlatform->createExternalImage(image, false);
+        auto externalImage = mPlatform->createExternalImageFromRaw(image, false);
         auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
         auto imgData = mPlatform->createVkImageFromExternal(externalImage);
 
