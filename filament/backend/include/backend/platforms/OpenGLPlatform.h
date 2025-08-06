@@ -260,6 +260,18 @@ public:
     virtual Fence* UTILS_NULLABLE createFence() noexcept;
 
     /**
+     * Called by the driver to convert a fence to an external handle, if
+     * supported. Requires the fence to have been created with the appropriate
+     * flags, indicating that it can be exported. Will fail otherwise.
+     *
+     * @param fence The fence to convert to an external handle.
+     * @param fd A pointer that will be supplied with the external handle.
+     * @return A status code indicating if the conversion was successful.
+     */
+    virtual FenceConversionResult getFenceFD(Fence* UTILS_NONNULL fence,
+            int32_t* UTILS_NONNULL fd) noexcept;
+
+    /**
      * Destroys a Fence object. The default implementation does nothing.
      *
      * @param fence Fence to destroy.
