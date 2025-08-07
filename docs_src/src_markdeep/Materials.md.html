@@ -1199,6 +1199,24 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### General: linearFog
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    When set to `true`, a simplified fog equation is used for large-scale fog calculations. In this mode,
+     in-scattering is ignored as well as height falloff.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    linearFog : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### General: quality
 
 Type

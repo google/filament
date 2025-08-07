@@ -1185,6 +1185,11 @@ static bool processFlipUV(MaterialBuilder& builder, const JsonishValue& value) {
     return true;
 }
 
+static bool processLinearFog(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.linearFog(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processMultiBounceAO(MaterialBuilder& builder, const JsonishValue& value) {
     builder.multiBounceAmbientOcclusion(value.toJsonBool()->getBool());
     return true;
@@ -1397,6 +1402,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["featureLevel"]                  = { &processFeatureLevel, Type::NUMBER };
     mParameters["groupSize"]                     = { &processGroupSizes, Type::ARRAY };
     mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
+    mParameters["linearFog"]                     = { &processLinearFog, Type::BOOL };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
