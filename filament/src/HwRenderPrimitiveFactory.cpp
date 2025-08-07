@@ -82,7 +82,7 @@ auto HwRenderPrimitiveFactory::create(DriverApi& driver,
 
 void HwRenderPrimitiveFactory::destroy(DriverApi& driver, Handle handle) noexcept {
     // look for this handle in our map
-    auto pos = mBimap.find(Value{ handle });
+    auto pos = mBimap.findValue(Value{ handle });
     if (--pos->second.pKey->refs == 0) {
         mBimap.erase(pos);
         driver.destroyRenderPrimitive(handle);

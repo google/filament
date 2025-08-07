@@ -20,6 +20,7 @@
 #include "backend/DriverApiForward.h"
 
 #include "FrameHistory.h"
+#include "MaterialInstanceManager.h"
 
 #include "ds/PostProcessDescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
@@ -113,9 +114,7 @@ public:
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
             RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
-            CameraInfo const& cameraInfo,
             FrameGraphId<FrameGraphTexture> structure,
-            ScreenSpaceReflectionsOptions const& options,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
@@ -340,15 +339,6 @@ public:
         FMaterial* getMaterial(FEngine& engine,
                 PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
-        // Helper to get a MaterialInstance from a FMaterial
-        // This currently just call FMaterial::getDefaultInstance().
-        static FMaterialInstance* getMaterialInstance(FMaterial const* ma) noexcept;
-
-        // Helper to get a MaterialInstance from a PostProcessMaterial.
-        static FMaterialInstance* getMaterialInstance(FEngine& engine,
-                PostProcessMaterial const& material,
-                PostProcessVariant variant = PostProcessVariant::OPAQUE) noexcept;
-
     private:
         void loadMaterial(FEngine& engine) const noexcept;
 
@@ -400,10 +390,34 @@ public:
 
     StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
 
+    void resetForRender();
+
 private:
+    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
+
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
+
+    // Helper to get a MaterialInstance from a FMaterial
+    // This currently just call FMaterial::getDefaultInstance().
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma) {
+        return mMaterialInstanceManager.getMaterialInstance(ma);
+    }
+
+    // Helper to get a MaterialInstance from a PostProcessMaterial.
+    FMaterialInstance* getMaterialInstance(FEngine& engine, PostProcessMaterial const& material,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) {
+        FMaterial const* ma = material.getMaterial(engine, variant);
+        return getMaterialInstance(ma);
+    }
+
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
     backend::DescriptorSetLayoutHandle mPerRenderableDslh;
+
+    // We need to have a dummy descriptor set because each post processing pass is expected to have
+    // a descriptor set bound at the renderable bind point. But the set itself contains dummy
+    // values.
+    backend::DescriptorSetHandle mDummyPerRenderableDsh;
 
     FEngine& mEngine;
 
@@ -434,6 +448,14 @@ private:
             PostProcessMaterial>;
 
     MaterialRegistryMap mMaterialRegistry;
+
+    MaterialInstanceManager mMaterialInstanceManager;
+
+    struct {
+        int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
+    } mFixedMaterialInstanceIndex;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

@@ -243,7 +243,7 @@ void RenderPass::appendCommands(FEngine const& engine,
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
             auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(first->info.materialVariant);
+            ma->prepareProgram(first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -671,7 +671,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
         cmd.info.index = i;
-        cmd.info.hasHybridInstancing = bool(soaInstanceInfo[i].handle);
+        cmd.info.hasHybridInstancing = bool(soaInstanceInfo[i].buffer);
         cmd.info.instanceCount = soaInstanceInfo[i].count;
         cmd.info.hasMorphing = bool(morphing.handle);
         cmd.info.hasSkinning = bool(skinning.handle);
@@ -1091,7 +1091,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     }
 
                     // Each MaterialInstance has its own descriptor set. This binds it.
-                    mi->use(driver);
+                    mi->use(driver, info.materialVariant);
                 }
 
                 assert_invariant(ma);

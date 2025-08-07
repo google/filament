@@ -41,6 +41,7 @@
 #include <utility>
 #include <vector>
 #include <variant>
+#include <optional>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -327,7 +328,7 @@ public:
             ParameterPrecision precision = ParameterPrecision::DEFAULT,
             bool filterable = true, /* defaulting to filterable because format is default to float */
             bool multisample = false, const char* transformName = "",
-            ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS);
+            std::optional<ShaderStageFlags> stages = {});
 
     MaterialBuilder& buffer(filament::BufferInterfaceBlock bib);
 
@@ -531,6 +532,9 @@ public:
     //! Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
+    //! Enable / disable the cheapest linear fog, disabled by default.
+    MaterialBuilder& linearFog(bool enabled) noexcept;
+
     //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
@@ -660,7 +664,7 @@ public:
 
         // Sampler
         Parameter(const char* paramName, SamplerType t, SamplerFormat f, ParameterPrecision p,
-                bool filterable, bool ms, const char* tn, ShaderStageFlags s)
+                bool filterable, bool ms, const char* tn, std::optional<ShaderStageFlags> s)
             : name(paramName),
               size(1),
               precision(p),
@@ -704,7 +708,7 @@ public:
         bool filterable;
         bool multisample;
         utils::CString transformName;
-        ShaderStageFlags stages;
+        std::optional<ShaderStageFlags> stages;
         enum {
             INVALID,
             UNIFORM,
@@ -947,6 +951,7 @@ private:
     bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;
+    bool mLinearFog = false;
 
     bool mMultiBounceAO = false;
     bool mMultiBounceAOSet = false;

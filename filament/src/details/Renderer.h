@@ -94,6 +94,9 @@ public:
     // skip a frame
     void skipFrame(uint64_t vsyncSteadyClockTimeNano);
 
+    // Whether a frame should be rendered or not.
+    bool shouldRenderFrame() const noexcept;
+
     // start a frame
     bool beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeNano);
 
@@ -186,10 +189,10 @@ private:
         return mCommandsHighWatermark;
     }
 
-    void renderInternal(FView const* view);
+    void renderInternal(FView const* view, bool flush);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
 
-    std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
+    static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,
             TemporalAntiAliasingOptions const& taaOptions,
             DynamicResolutionOptions const& dsrOptions);
 
@@ -200,7 +203,6 @@ private:
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
-    uint32_t mViewRenderedCount = 0;
     FrameInfoManager mFrameInfoManager;
     backend::TextureFormat mHdrTranslucent;
     backend::TextureFormat mHdrQualityMedium;

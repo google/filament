@@ -74,6 +74,10 @@ if (FILAMENT_ENABLE_FGVIEWER)
 endif()
 
 if (FILAMENT_ENABLE_MATDBG)
+    add_library(filamat STATIC IMPORTED)
+    set_target_properties(filamat PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamat.a)
+
     add_library(matdbg STATIC IMPORTED)
     set_target_properties(matdbg PROPERTIES IMPORTED_LOCATION
             ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libmatdbg.a)

@@ -28,8 +28,11 @@
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <cstddef>
+
 namespace filament {
 
+class RenderableManager;
 class FEngine;
 
 struct PerRenderableData;
@@ -37,17 +40,19 @@ struct PerRenderableData;
 class FInstanceBuffer : public InstanceBuffer {
 public:
     FInstanceBuffer(FEngine& engine, const Builder& builder);
+    ~FInstanceBuffer() noexcept;
 
     void terminate(FEngine& engine);
 
-    inline size_t getInstanceCount() const noexcept { return mInstanceCount; }
+    size_t getInstanceCount() const noexcept { return mInstanceCount; }
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
-    void prepare(FEngine& engine, math::mat4f rootTransform, const PerRenderableData& ubo,
-            backend::Handle<backend::HwBufferObject> handle);
+    void prepare(FEngine& engine, math::mat4f const& rootTransform, const PerRenderableData& ubo);
 
     utils::CString const& getName() const noexcept { return mName; }
+
+    backend::BufferObjectHandle getHandle() const noexcept { return mHandle; }
 
 private:
     friend class RenderableManager;
@@ -55,6 +60,7 @@ private:
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
     utils::CString mName;
     size_t mInstanceCount;
+    backend::BufferObjectHandle mHandle;
 };
 
 FILAMENT_DOWNCAST(InstanceBuffer)

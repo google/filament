@@ -132,7 +132,7 @@ public:
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
-            backend::CompilerPriorityQueue const priorityQueue = CompilerPriorityQueue::HIGH) const noexcept {
+            backend::CompilerPriorityQueue const priorityQueue) const noexcept {
         // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
         if (UTILS_UNLIKELY(!isCached(variant))) {
             prepareProgramSlow(variant, priorityQueue);
@@ -148,6 +148,23 @@ public:
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
+    }
+
+    // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
+    // however, the material instance will call useShared() to bind the default material's sets
+    // instead.
+    // Returns true if this is a shared variant.
+    bool useShared(backend::DriverApi& driver, Variant variant) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return false;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return false;
+        }
+        FMaterialInstance const* const pDefaultInstance = pDefaultMaterial->getDefaultInstance();
+        pDefaultInstance->use(driver, variant);
+        return true;
     }
 
     [[nodiscard]]

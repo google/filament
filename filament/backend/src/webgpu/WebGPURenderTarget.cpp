@@ -125,7 +125,7 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
       mDefaultRenderTarget{ false },
       mTargetFlags{ targetFlags },
       mSamples{ samples },
-      mLayerCount{ layerCount },
+      mLayerCount{ layerCount <= 0 ? static_cast<uint8_t>(1) : layerCount },
       mColorAttachments{ colorAttachmentsMRT },
       mDepthAttachment{ depthAttachmentInfo },
       mStencilAttachment{ stencilAttachmentInfo },
@@ -140,7 +140,9 @@ WebGPURenderTarget::WebGPURenderTarget(const uint32_t width, const uint32_t heig
 WebGPURenderTarget::WebGPURenderTarget()
     : HwRenderTarget{ 0, 0 },
       mDefaultRenderTarget{ true },
-      mTargetFlags{ TargetBufferFlags::NONE },
+      // starting with the initial assumption that the default render target has a single color
+      // attachment and a depth attachment, not necessarily a depth attachment
+      mTargetFlags{ TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH },
       mSamples{ 1 },
       mLayerCount{ 1 },
       mSampleCountPerAttachment{ 1 } {}

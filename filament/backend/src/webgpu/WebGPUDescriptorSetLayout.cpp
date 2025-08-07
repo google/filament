@@ -16,6 +16,11 @@
 
 #include "WebGPUDescriptorSetLayout.h"
 
+#include "WebGPUConstants.h"
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+#include "WebGPUStrings.h"
+#endif
+
 #include <backend/DriverEnums.h>
 
 #include <utils/BitmaskEnum.h>
@@ -59,7 +64,7 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     std::string baseLabel;
     if (std::holds_alternative<utils::StaticString>(layout.label)) {
         const auto& temp = std::get_if<utils::StaticString>(&layout.label);
-        baseLabel = temp->c_str();
+        baseLabel = temp->c_str() == nullptr ? "" : temp->c_str();
     } else if (std::holds_alternative<utils::CString>(layout.label)) {
         const auto& temp = std::get_if<utils::CString>(&layout.label);
         baseLabel = temp->c_str();
@@ -184,6 +189,19 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
     mLayout = device.CreateBindGroupLayout(&layoutDescriptor);
     FILAMENT_CHECK_POSTCONDITION(mLayout)
             << "Failed to create bind group layout with label " << label;
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+    FWGPU_LOGD << "WebGPUDescriptorSetLayout:";
+    FWGPU_LOGD << "  label: " << label;
+    FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << mLayout.Get();
+    FWGPU_LOGD << "  Filament bindings (" << layout.bindings.size() << "):";
+    for (DescriptorSetLayoutBinding const& layoutBinding: layout.bindings) {
+        FWGPU_LOGD << "    binding:" << +layoutBinding.binding
+                   << " type:" << filamentDescriptorTypeToString(layoutBinding.type)
+                   << " stageFlags:" << filamentStageFlagsToString(layoutBinding.stageFlags)
+                   << " flags:" << filamentDescriptorFlagsToString(layoutBinding.flags)
+                   << " count:" << layoutBinding.count;
+    }
+#endif
 }
 
 } // namespace filament::backend

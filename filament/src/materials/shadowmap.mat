@@ -4,7 +4,8 @@ material {
         {
            type : sampler2dArray,
            name : shadowmap,
-           precision : high
+           precision : high,
+           filterable : false
         },
         {
            type : float,

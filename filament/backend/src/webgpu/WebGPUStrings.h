@@ -36,7 +36,10 @@
 
 namespace filament::backend {
 
-#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)\
+        || FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
 template<typename WebGPUPrintable>
 [[nodiscard]] inline std::string webGPUPrintableToString(const WebGPUPrintable printable) {
     std::stringstream out;
@@ -239,6 +242,37 @@ template<typename WebGPUPrintable>
     }
 }
 
+[[nodiscard]] constexpr std::string_view webGPUTextureDimensionToString(
+        const wgpu::TextureDimension dimension) {
+    switch (dimension) {
+        case wgpu::TextureDimension::Undefined: return "Undefined";
+        case wgpu::TextureDimension::e1D:       return "e1D";
+        case wgpu::TextureDimension::e2D:       return "e2D";
+        case wgpu::TextureDimension::e3D:       return "e3D";
+    }
+}
+
+#if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
+        || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)         \
+        || FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+[[nodiscard]] std::string webGPUTextureToString(wgpu::Texture const& texture) {
+    if (texture == nullptr) {
+        return "nullptr (no wgpu::Texture)";
+    }
+    std::stringstream out;
+    out << "wgpu::Texture("
+        << " format:" << webGPUTextureFormatToString(texture.GetFormat())
+        << " dimension:" << webGPUTextureDimensionToString(texture.GetDimension())
+        << " " << webGPUPrintableToString(texture.GetUsage())
+        << " mipLevelCount:" << texture.GetMipLevelCount()
+        << " sampleCount:" << texture.GetSampleCount() << " width:" << texture.GetWidth()
+        << " height:" << texture.GetHeight()
+        << " depthOrArrayLayers:" << texture.GetDepthOrArrayLayers() << ")";
+    return out.str();
+}
+#endif
+
 [[nodiscard]] constexpr std::string_view filamentShaderStageToString(const ShaderStage stage) {
     switch (stage) {
         case ShaderStage::VERTEX:   return "vertex";
@@ -246,6 +280,206 @@ template<typename WebGPUPrintable>
         case ShaderStage::COMPUTE:  return "compute";
     }
 }
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+[[nodiscard]] constexpr std::string_view filamentDescriptorTypeToString(const DescriptorType type) {
+    switch (type) {
+     case DescriptorType::SAMPLER_2D_FLOAT:          return "SAMPLER_2D_FLOAT";
+     case DescriptorType::SAMPLER_2D_INT:            return "SAMPLER_2D_INT";
+     case DescriptorType::SAMPLER_2D_UINT:           return "SAMPLER_2D_UINT";
+     case DescriptorType::SAMPLER_2D_DEPTH:          return "SAMPLER_2D_DEPTH";
+     case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:    return "SAMPLER_2D_ARRAY_FLOAT";
+     case DescriptorType::SAMPLER_2D_ARRAY_INT:      return "SAMPLER_2D_ARRAY_INT";
+     case DescriptorType::SAMPLER_2D_ARRAY_UINT:     return "SAMPLER_2D_ARRAY_UINT";
+     case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:    return "SAMPLER_2D_ARRAY_DEPTH";
+     case DescriptorType::SAMPLER_CUBE_FLOAT:        return "SAMPLER_CUBE_FLOAT";
+     case DescriptorType::SAMPLER_CUBE_INT:          return "SAMPLER_CUBE_INT";
+     case DescriptorType::SAMPLER_CUBE_UINT:         return "SAMPLER_CUBE_UINT";
+     case DescriptorType::SAMPLER_CUBE_DEPTH:        return "SAMPLER_CUBE_DEPTH";
+     case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:  return "SAMPLER_CUBE_ARRAY_FLOAT";
+     case DescriptorType::SAMPLER_CUBE_ARRAY_INT:    return "SAMPLER_CUBE_ARRAY_INT";
+     case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:   return "SAMPLER_CUBE_ARRAY_UINT";
+     case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:  return "SAMPLER_CUBE_ARRAY_DEPTH";
+     case DescriptorType::SAMPLER_3D_FLOAT:          return "SAMPLER_3D_FLOAT";
+     case DescriptorType::SAMPLER_3D_INT:            return "SAMPLER_3D_INT";
+     case DescriptorType::SAMPLER_3D_UINT:           return "SAMPLER_3D_UINT";
+     case DescriptorType::SAMPLER_2D_MS_FLOAT:       return "SAMPLER_2D_MS_FLOAT";
+     case DescriptorType::SAMPLER_2D_MS_INT:         return "SAMPLER_2D_MS_INT";
+     case DescriptorType::SAMPLER_2D_MS_UINT:        return "SAMPLER_2D_MS_UINT";
+     case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT: return "SAMPLER_2D_MS_ARRAY_FLOAT";
+     case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:   return "SAMPLER_2D_MS_ARRAY_INT";
+     case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:  return "SAMPLER_2D_MS_ARRAY_UINT";
+     case DescriptorType::SAMPLER_EXTERNAL:          return "SAMPLER_EXTERNAL";
+     case DescriptorType::UNIFORM_BUFFER:            return "UNIFORM_BUFFER";
+     case DescriptorType::SHADER_STORAGE_BUFFER:     return "SHADER_STORAGE_BUFFER";
+     case DescriptorType::INPUT_ATTACHMENT:          return "INPUT_ATTACHMENT";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view filamentStageFlagsToString(const ShaderStageFlags flags) {
+    if (flags == ShaderStageFlags::FRAGMENT) {
+        return "FRAGMENT";
+    }
+    if (flags == (ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT)) {
+        return "VERTEX | FRAGMENT";
+    }
+    if (flags == ShaderStageFlags::VERTEX) {
+        return "VERTEX";
+    }
+    if (flags == ShaderStageFlags::COMPUTE) {
+        return "COMPUTE";
+    }
+    if (flags == ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) {
+        return "VERTEX | FRAGMENT | COMPUTE";
+    }
+    if (flags == (ShaderStageFlags::FRAGMENT | ShaderStageFlags::COMPUTE)) {
+        return "FRAGMENT | COMPUTE";
+    }
+    if (flags == (ShaderStageFlags::VERTEX | ShaderStageFlags::COMPUTE)) {
+        return "VERTEX | COMPUTE";
+    }
+    if (flags == ShaderStageFlags::NONE) {
+        return "NONE";
+    }
+    return "UNKNOWN/UNHANDLED"; // should not be possible
+}
+
+[[nodiscard]] constexpr std::string_view filamentDescriptorFlagsToString(const DescriptorFlags flags) {
+    if (flags == DescriptorFlags::NONE) {
+        return "NONE";
+    }
+    if (flags == DescriptorFlags::DYNAMIC_OFFSET) {
+        return "DYNAMIC_OFFSET";
+    }
+    if (flags == DescriptorFlags::UNFILTERABLE) {
+        return "UNFILTERABLE";
+    }
+    if (flags == (DescriptorFlags::DYNAMIC_OFFSET | DescriptorFlags::UNFILTERABLE)) {
+        return "DYNAMIC_OFFSET | UNFILTERABLE";
+    }
+    return "UNKNOWN/UNHANDLED"; // should not be possible
+}
+
+[[nodiscard]] constexpr std::string_view filamentSamplerMagFilterToString(
+        const SamplerMagFilter filter) {
+    switch (filter) {
+        case SamplerMagFilter::NEAREST: return "NEAREST";
+        case SamplerMagFilter::LINEAR:  return "LINEAR";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view filamentSamplerMinFilterToString(
+        const SamplerMinFilter filter) {
+    switch (filter) {
+        case SamplerMinFilter::NEAREST:                return "NEAREST";
+        case SamplerMinFilter::LINEAR:                 return "LINEAR";
+        case SamplerMinFilter::NEAREST_MIPMAP_NEAREST: return "NEAREST_MIPMAP_NEAREST";
+        case SamplerMinFilter::LINEAR_MIPMAP_NEAREST:  return "LINEAR_MIPMAP_NEAREST";
+        case SamplerMinFilter::NEAREST_MIPMAP_LINEAR:  return "NEAREST_MIPMAP_LINEAR";
+        case SamplerMinFilter::LINEAR_MIPMAP_LINEAR:   return "LINEAR_MIPMAP_LINEAR";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view filamentSamplerWrapModeToString(
+        const SamplerWrapMode mode) {
+    switch (mode) {
+        case SamplerWrapMode::CLAMP_TO_EDGE:   return "CLAMP_TO_EDGE";
+        case SamplerWrapMode::REPEAT:          return "REPEAT";
+        case SamplerWrapMode::MIRRORED_REPEAT: return "MIRRORED_REPEAT";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view filamentSamplerCompareModeToString(
+        const SamplerCompareMode mode) {
+    switch (mode) {
+        case SamplerCompareMode::NONE:               return "NONE";
+        case SamplerCompareMode::COMPARE_TO_TEXTURE: return "COMPARE_TO_TEXTURE";
+    }
+}
+
+[[nodiscard]] constexpr std::string_view filamentSamplerCompareFuncToString(
+        const SamplerCompareFunc func) {
+    switch (func) {
+        case SamplerCompareFunc::LE: return "LE";
+        case SamplerCompareFunc::GE: return "GE";
+        case SamplerCompareFunc::L:  return "L";
+        case SamplerCompareFunc::G:  return "G";
+        case SamplerCompareFunc::E:  return "E";
+        case SamplerCompareFunc::NE: return "NE";
+        case SamplerCompareFunc::A:  return "A";
+        case SamplerCompareFunc::N:  return "N";
+    }
+}
+
+[[nodiscard]] std::string filamentTextureUsageFlagsToString(const TextureUsage flags) {
+    if (flags == TextureUsage::NONE) {
+        return "NONE";
+    }
+    bool first{ true };
+    std::stringstream out;
+    if (any(flags & TextureUsage::COLOR_ATTACHMENT)) {
+        first = false;
+        out << "COLOR_ATTACHMENT";
+    }
+    if (any(flags & TextureUsage::DEPTH_ATTACHMENT)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "DEPTH_ATTACHMENT";
+    }
+    if (any(flags & TextureUsage::STENCIL_ATTACHMENT)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "STENCIL_ATTACHMENT";
+    }
+    if (any(flags & TextureUsage::UPLOADABLE)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "UPLOADABLE";
+    }
+    if (any(flags & TextureUsage::SAMPLEABLE)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "SAMPLEABLE";
+    }
+    if (any(flags & TextureUsage::SUBPASS_INPUT)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "SUBPASS_INPUT";
+    }
+    if (any(flags & TextureUsage::BLIT_SRC)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "BLIT_SRC";
+    }
+    if (any(flags & TextureUsage::BLIT_DST)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "BLIT_DST";
+    }
+    if (any(flags & TextureUsage::PROTECTED)) {
+        if (!first) {
+            out << " | ";
+        }
+        first = false;
+        out << "PROTECTED";
+    }
+    return out.str();
+}
+#endif // FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
 
 }// namespace filament::backend
 

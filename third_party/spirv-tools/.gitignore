@@ -11,6 +11,7 @@ compile_commands.json
 /external/effcee
 /external/re2
 /external/protobuf
+/external/mimalloc
 /out
 /TAGS
 /third_party/llvm-build/

@@ -11,7 +11,8 @@ material {
         },
         {
            type : samplerCubemap,
-           name : skybox
+           name : skybox,
+           stages : [ "fragment" ]
         },
         {
            type : float4,

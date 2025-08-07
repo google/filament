@@ -628,6 +628,7 @@ class_<Renderer>("Renderer")
     .function("setPresentationTime", &Renderer::setPresentationTime)
     .function("setVsyncTime", &Renderer::setVsyncTime)
     .function("skipFrame", &Renderer::skipFrame)
+    .function("shouldRenderFrame", &Renderer::shouldRenderFrame)
     .function("beginFrame", EMBIND_LAMBDA(bool, (Renderer* self, SwapChain* swapChain), {
         return self->beginFrame(swapChain);
     }), allow_raw_pointers())

@@ -258,6 +258,8 @@ VulkanDescriptorSetCache::~VulkanDescriptorSetCache() = default;
 
 void VulkanDescriptorSetCache::terminate() noexcept{
     mDescriptorPool.reset();
+    mStashedSets = {};
+    mLastBoundInfo = {};
 }
 
 // bind() is not really binding the set but just stashing until we have all the info

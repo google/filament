@@ -53,7 +53,7 @@ class PrivateToLocalPass : public Pass {
   // Returns true is |inst| is a valid use of a pointer.  In this case, a
   // valid use is one where the transformation is able to rewrite the type to
   // match a change in storage class of the original variable.
-  bool IsValidUse(const Instruction* inst) const;
+  bool IsValidUse(const Instruction* inst, uint32_t private_variable_id) const;
 
   // Given the result id of a pointer type, |old_type_id|, this function
   // returns the id of a the same pointer type except the storage class has

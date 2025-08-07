@@ -66,29 +66,14 @@ void SsrPassDescriptorSet::setFrameUniforms(FEngine const& engine,
     // and GL would be okay without this, but Vulkan's validation layer would complain.
     mDescriptorSet.setBuffer(engine.getPerViewDescriptorSetLayoutSsrVariant(),
             +PerViewBindingPoints::SHADOWS, mShadowUbh, 0, sizeof(ShadowUib));
-
-    mUniforms = std::addressof(uniforms);
 }
 
-void SsrPassDescriptorSet::prepareHistorySSR(FEngine const& engine, Handle<HwTexture> ssr,
-        mat4f const& historyProjection,
-        mat4f const& uvFromViewMatrix,
-        ScreenSpaceReflectionsOptions const& ssrOptions) noexcept {
-
+void SsrPassDescriptorSet::prepareHistorySSR(FEngine const& engine, Handle<HwTexture> ssr) noexcept {
     mDescriptorSet.setSampler(engine.getPerViewDescriptorSetLayoutSsrVariant(),
             +PerViewBindingPoints::SSR_HISTORY, ssr, {
                 .filterMag = SamplerMagFilter::LINEAR,
                 .filterMin = SamplerMinFilter::LINEAR
             });
-
-    assert_invariant(mUniforms);
-    auto& s = mUniforms->edit();
-    s.ssrReprojection = historyProjection;
-    s.ssrUvFromViewMatrix = uvFromViewMatrix;
-    s.ssrThickness = ssrOptions.thickness;
-    s.ssrBias = ssrOptions.bias;
-    s.ssrDistance = ssrOptions.enabled ? ssrOptions.maxDistance : 0.0f;
-    s.ssrStride = ssrOptions.stride;
 }
 
 void SsrPassDescriptorSet::prepareStructure(FEngine const& engine,
@@ -99,12 +84,7 @@ void SsrPassDescriptorSet::prepareStructure(FEngine const& engine,
 }
 
 void SsrPassDescriptorSet::commit(FEngine& engine) noexcept {
-    assert_invariant(mUniforms);
     DriverApi& driver = engine.getDriverApi();
-    if (mUniforms->isDirty()) {
-        driver.updateBufferObject(mUniforms->getUboHandle(),
-                mUniforms->toBufferDescriptor(driver), 0);
-    }
     mDescriptorSet.commit(engine.getPerViewDescriptorSetLayoutSsrVariant(), driver);
 }
 

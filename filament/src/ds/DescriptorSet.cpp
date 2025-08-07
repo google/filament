@@ -139,6 +139,11 @@ void DescriptorSet::bind(FEngine::DriverApi& driver, DescriptorSetBindingPoints 
     driver.bindDescriptorSet(mDescriptorSetHandle, +set, std::move(dynamicOffsets));
 }
 
+void DescriptorSet::unbind(backend::DriverApi& driver,
+        DescriptorSetBindingPoints set) noexcept {
+    driver.bindDescriptorSet({}, +set, {});
+}
+
 void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
         backend::descriptor_binding_t const binding,
         backend::Handle<backend::HwBufferObject> boh, uint32_t const offset, uint32_t const size) {

@@ -1166,6 +1166,50 @@ TEST_F(ValidateArithmetics, OuterProductRightOperandWrongDimension) {
                 "vector size of the right operand: OuterProduct"));
 }
 
+std::string GenerateBFloatCode(const std::string& main_body) {
+  const std::string prefix =
+      R"(
+OpCapability Shader
+OpCapability BFloat16TypeKHR
+OpCapability BFloat16DotProductKHR
+OpCapability BFloat16CooperativeMatrixKHR
+OpExtension "SPV_KHR_bfloat16"
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 1 1 1
+OpSource GLSL 450
+OpName %main "main"
+%void = OpTypeVoid
+%func = OpTypeFunction %void
+%bfloat16 = OpTypeFloat 16 BFloat16KHR
+%_ptr_Function_bfloat16 = OpTypePointer Function %bfloat16
+%v2bfloat16 = OpTypeVector %bfloat16 2
+%_ptr_Function_v2bfloat16 = OpTypePointer Function %v2bfloat16
+%main = OpFunction %void None %func
+%main_entry = OpLabel)";
+
+  const std::string suffix =
+      R"(
+OpReturn
+OpFunctionEnd)";
+
+  return prefix + main_body + suffix;
+}
+
+TEST_F(ValidateArithmetics, DotBfloat16) {
+  const std::string body = R"(
+%v1 = OpVariable %_ptr_Function_v2bfloat16 Function
+%v2 = OpVariable %_ptr_Function_v2bfloat16 Function
+%12 = OpLoad %v2bfloat16 %v1
+%14 = OpLoad %v2bfloat16 %v2
+%15 = OpDot %bfloat16 %12 %14
+)";
+
+  CompileSuccessfully(GenerateBFloatCode(body).c_str());
+  ASSERT_EQ(SPV_SUCCESS, ValidateInstructions());
+}
+
 std::string GenerateCoopMatCode(const std::string& extra_types,
                                 const std::string& main_body) {
   const std::string prefix =

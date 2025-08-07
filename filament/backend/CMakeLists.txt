@@ -258,6 +258,10 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
             src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
+            src/webgpu/utils/StringPlaceholderTemplateProcessor.h
+            src/webgpu/WebGPUBlitter.cpp
+            src/webgpu/WebGPUBlitter.h
             src/webgpu/WebGPUBufferBase.cpp
             src/webgpu/WebGPUBufferBase.h
             src/webgpu/WebGPUBufferObject.cpp
@@ -291,6 +295,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUSwapChain.h
             src/webgpu/WebGPUTexture.cpp
             src/webgpu/WebGPUTexture.h
+            src/webgpu/WebGPUTextureHelpers.h
             src/webgpu/WebGPUVertexBuffer.cpp
             src/webgpu/WebGPUVertexBuffer.h
             src/webgpu/WebGPUVertexBufferInfo.cpp
@@ -567,6 +572,8 @@ if (APPLE OR LINUX)
         test/test_Scissor.cpp
         test/test_MipLevels.cpp
         test/test_Handles.cpp
+        test/test_CircularBuffer.cpp
+        test/test_CommandBufferQueue.cpp
     )
     set(BACKEND_TEST_LIBS
         absl::str_format

@@ -222,6 +222,7 @@ void FMaterialInstance::commit(FEngine& engine) const {
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
+        mUniforms.clean();
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (!mTextureParameters.empty()) {
@@ -285,9 +286,11 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
         DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
         TextureType const textureType = texture->getTextureType();
         SamplerType const samplerType = texture->getTarget();
-
-        FILAMENT_CHECK_PRECONDITION(
-                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, samplerType, descriptorType))
+        auto const& featureFlags = mMaterial->getEngine().features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                DescriptorSet::isTextureCompatibleWithDescriptor(
+                        textureType, samplerType, descriptorType),
+                featureFlags.assert_material_instance_texture_descriptor_set_compatible)
                 << "Texture format " << int(texture->getFormat())
                 << " of type " << to_string(textureType)
                 << " with sampler type " << to_string(samplerType)
@@ -380,7 +383,7 @@ const char* FMaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
@@ -399,6 +402,12 @@ void FMaterialInstance::use(FEngine::DriverApi& driver) const {
             });
         });
         mMissingSamplerDescriptors.clear();
+    }
+
+    // Checks if this variant is shared. If so, FMaterial takes responsibility for binding the
+    // descriptor sets.
+    if (mMaterial->useShared(driver, variant)) {
+        return;
     }
 
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);

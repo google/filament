@@ -26,6 +26,7 @@
 
 #include <algorithm> // for std::fill
 #include <iterator>
+#include <limits>
 #include <type_traits>
 
 #if defined(__ARM_NEON)
@@ -94,6 +95,17 @@ public:
                 exec(size_t(k + BITS_PER_WORD * i));
             }
         }
+    }
+
+    size_t firstSetBit() const noexcept {
+        for (size_t i = 0; i < N; i++) {
+            if (T v = storage[i]) {
+                T k = utils::ctz(v);
+                v &= ~(T(1) << k);
+                return size_t(k + BITS_PER_WORD * i);
+            }
+        }
+        return std::numeric_limits<size_t>::max();
     }
 
     size_t size() const noexcept { return N * BITS_PER_WORD; }

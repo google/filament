@@ -16,27 +16,50 @@
 
 #include "details/Scene.h"
 
+#include "Allocators.h"
+#include "BufferPoolAllocator.h"
+
+#include "backend/Handle.h"
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
-
-#include <private/filament/UibStructs.h>
+#include "components/TransformManager.h"
 
 #include "details/Engine.h"
-#include "details/IndirectLight.h"
 #include "details/InstanceBuffer.h"
 #include "details/Skybox.h"
 
-#include "BufferPoolAllocator.h"
-
+#include <private/filament/UibStructs.h>
 #include <private/utils/Tracing.h>
 
+#include <filament/Box.h>
+#include <filament/TransformManager.h>
+#include <filament/RenderableManager.h>
+#include <filament/LightManager.h>
+
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <utils/Allocator.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/EntityManager.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/JobSystem.h>
 #include <utils/Range.h>
 
-#include <math/quat.h>
-
 #include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <functional>
+#include <memory>
+#include <utility>
+#include <new>
+
+#include <cstddef>
 
 using namespace filament::backend;
 using namespace filament::math;
@@ -65,7 +88,7 @@ void FScene::prepare(JobSystem& js,
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // This will reset the allocator upon exiting
-    ArenaScope<RootArenaScope::Arena> localArenaScope(rootArenaScope.getArena());
+    ArenaScope localArenaScope(rootArenaScope.getArena());
 
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
@@ -139,7 +162,7 @@ void FScene::prepare(JobSystem& js,
 
     // The light data list will always contain at least one entry for the
     // dominating directional light, even if there are no entities.
-    // we need the capacity to be multiple of 16 for SIMD loops
+    // We need the capacity to be multiple of 16 for SIMD loops
     size_t lightDataCapacity = std::max<size_t>(DIRECTIONAL_LIGHTS_COUNT, entities.size());
     lightDataCapacity = (lightDataCapacity + 0xFu) & ~0xFu;
 
@@ -314,7 +337,7 @@ void FScene::prepare(JobSystem& js,
 
     // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
     // unused scene elements between the end of the array and the rounded-up count.
-    if (UTILS_HAS_SANITIZE_MEMORY) {
+    if constexpr (UTILS_HAS_SANITIZE_MEMORY) {
         for (size_t i = sceneData.size(), e = sceneData.capacity(); i < e; i++) {
             sceneData.data<LAYERS>()[i] = 0;
             sceneData.data<VISIBLE_MASK>()[i] = 0;
@@ -396,7 +419,7 @@ void FScene::updateUBOs(
         if (count >= MAX_STREAM_ALLOCATION_COUNT) {
             // use the heap allocator
             auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
-            return (PerRenderableData*)bufferPoolAllocator.get(count * sizeof(PerRenderableData));
+            return static_cast<PerRenderableData*>(bufferPoolAllocator.get(count * sizeof(PerRenderableData)));
         } else {
             // allocate space into the command stream directly
             return driver.allocatePod<PerRenderableData>(count);
@@ -412,7 +435,7 @@ void FScene::updateUBOs(
         auto& instancesInfo = instancesData[i];
         if (UTILS_UNLIKELY(instancesInfo.buffer)) {
             instancesInfo.buffer->prepare(
-                    mEngine, worldTransformData[i], uboData[i], instancesInfo.handle);
+                    mEngine, worldTransformData[i], uboData[i]);
         }
     }
 
@@ -423,7 +446,8 @@ void FScene::updateUBOs(
 
     // We capture state shared between Scene and the update buffer callback, because the Scene could
     // be destroyed before the callback executes.
-    std::weak_ptr<SharedState>* const weakShared = new std::weak_ptr<SharedState>(mSharedState);
+    std::weak_ptr<SharedState>* const weakShared =
+            new (std::nothrow) std::weak_ptr<SharedState>(mSharedState);
 
     // update the UBO
     driver.resetBufferObject(renderableUbh);

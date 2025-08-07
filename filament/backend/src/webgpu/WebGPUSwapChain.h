@@ -40,8 +40,10 @@ public:
 
     [[nodiscard]] wgpu::TextureFormat getDepthFormat() const { return mDepthFormat; }
 
-    [[nodiscard]] wgpu::TextureView getCurrentTextureView(wgpu::Extent2D const& extent);
-    [[nodiscard]] wgpu::TextureView getCurrentHeadlessTextureView();
+    [[nodiscard]] wgpu::TextureView getNextTextureView();
+    [[nodiscard]] wgpu::TextureView getNextTextureView(wgpu::Extent2D const& extent);
+
+    [[nodiscard]] wgpu::Texture getCurrentTexture();
 
     [[nodiscard]] wgpu::TextureView getDepthTextureView() const { return mDepthTextureView; }
 
@@ -68,7 +70,7 @@ private:
     const SwapChainType mType;
     const uint32_t mHeadlessWidth;
     const uint32_t mHeadlessHeight;
-
+    wgpu::SurfaceTexture mCurrentTexture;
     static constexpr uint32_t mHeadlessBufferCount = 3;
     uint8_t mHeadlessBufferIndex = 0;
     std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;

@@ -45,7 +45,7 @@ public:
     public:
 
         /**
-         * @param instanceCount the number of instances this InstanceBuffer will support, must be
+         * @param instanceCount The number of instances this InstanceBuffer will support, must be
          *                      >= 1 and <= \c Engine::getMaxAutomaticInstances()
          * @see Engine::getMaxAutomaticInstances
          */
@@ -101,7 +101,7 @@ public:
         /**
          * Creates the InstanceBuffer object and returns a pointer to it.
          */
-        InstanceBuffer* UTILS_NONNULL build(Engine& engine);
+        InstanceBuffer* UTILS_NONNULL build(Engine& engine) const;
 
     private:
         friend class FInstanceBuffer;

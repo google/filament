@@ -9,4 +9,6 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 ## Release notes for next branch cut
 
 - Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]
+- engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
+- opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
 - internal

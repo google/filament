@@ -17,7 +17,7 @@
 #include "WebGPUPipelineCache.h"
 
 #include "WebGPUConstants.h"
-#include "WebGPUTexture.h"
+#include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBufferInfo.h"
 
 #include <backend/DriverEnums.h>
