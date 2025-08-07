@@ -39,8 +39,16 @@ struct MetalBlitterTest
 constexpr int kTextureSize = 32;
 
 template<typename T>
-void fillTextureWithRed(id<MTLTexture> texture, T redValue) {
-    std::vector<T> textureData(kTextureSize * kTextureSize, redValue);
+constexpr T redValue() {
+    if constexpr (T::SIZE == 1) return T{ 1 };
+    if constexpr (T::SIZE == 2) return T{ 1, 0 };
+    if constexpr (T::SIZE == 3) return T{ 1, 0, 0 };
+    if constexpr (T::SIZE == 4) return T{ 1, 0, 0, 1 };
+}
+
+template<typename T>
+void fillTextureWithRed(id<MTLTexture> texture) {
+    std::vector<T> textureData(kTextureSize * kTextureSize, redValue<T>());
     [texture replaceRegion:MTLRegionMake2D(0, 0, kTextureSize, kTextureSize)
                mipmapLevel:0
                  withBytes:textureData.data()
@@ -55,17 +63,7 @@ void verifyTextureIsRed(id<MTLTexture> texture) {
            fromRegion:MTLRegionMake2D(0, 0, kTextureSize, kTextureSize)
           mipmapLevel:0];
 
-    constexpr T redValue = []() constexpr -> T {
-        if constexpr (std::is_same_v<T, float4>) return float4(1.0f, 0.0f, 0.0f, 1.0f);
-        else if constexpr (std::is_same_v<T, float2>) return float2(1.0f, 0.0f);
-        else if constexpr (std::is_same_v<T, uint4>) return uint4(1, 0, 0, 1);
-        else if constexpr (std::is_same_v<T, uint2>)  return uint2(1, 0);
-        else if constexpr (std::is_same_v<T, int4>) return int4(1, 0, 0, 1);
-        else if constexpr (std::is_same_v<T, int2>) return int2(1, 0);
-        else static_assert(false, "redValue(): not implemented for this type");
-    }();
-
-    std::vector<T> expectedData(kTextureSize * kTextureSize, redValue);
+    std::vector<T> expectedData(kTextureSize * kTextureSize, redValue<T>());
     EXPECT_EQ(resultData, expectedData);
 }
 
@@ -94,22 +92,22 @@ TEST_P(MetalBlitterTest, Blit) {
     // Fill the source texture with red.
     switch (srcFormat) {
         case MTLPixelFormatRGBA32Float:
-            fillTextureWithRed<float4>(srcTexture, float4(1.0, 0.0, 0.0, 1.0));
+            fillTextureWithRed<float4>(srcTexture);
             break;
         case MTLPixelFormatRG32Float:
-            fillTextureWithRed<float2>(srcTexture, float2(1.0, 0.0));
+            fillTextureWithRed<float2>(srcTexture);
             break;
         case MTLPixelFormatRGBA32Uint:
-            fillTextureWithRed<uint4>(srcTexture, uint4(1, 0, 0, 0));
+            fillTextureWithRed<uint4>(srcTexture);
             break;
         case MTLPixelFormatRG32Uint:
-            fillTextureWithRed<uint2>(srcTexture, uint2(1, 0));
+            fillTextureWithRed<uint2>(srcTexture);
             break;
         case MTLPixelFormatRGBA32Sint:
-            fillTextureWithRed<int4>(srcTexture, int4(1, 0, 0, 1));
+            fillTextureWithRed<int4>(srcTexture);
             break;
         case MTLPixelFormatRG32Sint:
-            fillTextureWithRed<int2>(srcTexture, int2(1, 0));
+            fillTextureWithRed<int2>(srcTexture);
             break;
         default:
             FAIL() << "Source format not implemented in test";
