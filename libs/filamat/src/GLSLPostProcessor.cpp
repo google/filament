@@ -1090,6 +1090,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
+    RegisterPass(CreateCanonicalizeIdsPass());
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
@@ -1132,6 +1133,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateRedundancyEliminationPass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
+    RegisterPass(CreateCanonicalizeIdsPass());
 }
 
 } // namespace filamat

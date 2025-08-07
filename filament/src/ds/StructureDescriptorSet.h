@@ -45,8 +45,7 @@ public:
 
     void terminate(backend::DriverApi& driver);
 
-    void commit(backend::DriverApi& driver) noexcept;
-
+    // this commits the UBO if needed and binds the descriptor set
     void bind(backend::DriverApi& driver) const noexcept;
 
 
@@ -65,7 +64,7 @@ public:
 
 private:
     DescriptorSetLayout const* mDescriptorSetLayout = nullptr;
-    DescriptorSet mDescriptorSet;
+    mutable DescriptorSet mDescriptorSet;
     TypedUniformBuffer<PerViewUib> mUniforms;
 };
 

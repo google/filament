@@ -446,7 +446,8 @@ void FScene::updateUBOs(
 
     // We capture state shared between Scene and the update buffer callback, because the Scene could
     // be destroyed before the callback executes.
-    std::weak_ptr<SharedState>* const weakShared = new(std::nothrow) std::weak_ptr(mSharedState);
+    std::weak_ptr<SharedState>* const weakShared =
+            new (std::nothrow) std::weak_ptr<SharedState>(mSharedState);
 
     // update the UBO
     driver.resetBufferObject(renderableUbh);

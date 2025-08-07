@@ -948,54 +948,137 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     getColorPassDescriptorSet().prepareSSAO(ssao, mAmbientOcclusionOptions);
 }
 
-void FView::prepareSSR(Handle<HwTexture> ssr,
-        bool const disableSSR,
-        float const refractionLodOffset,
-        ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept {
-    getColorPassDescriptorSet().prepareSSR(ssr, disableSSR, refractionLodOffset, ssrOptions);
+void FView::prepareSSAO(AmbientOcclusionOptions const& options) const noexcept {
+    // High quality sampling is enabled only if AO itself is enabled and upsampling quality is at
+    // least set to high and of course only if upsampling is needed.
+    const bool highQualitySampling = options.upsampling >= QualityLevel::HIGH
+            && options.resolution < 1.0f;
+
+    const float edgeDistance = 1.0f / options.bilateralThreshold;
+    auto& s = mUniforms.edit();
+    s.aoSamplingQualityAndEdgeDistance =
+            options.enabled ? (highQualitySampling ? edgeDistance : 0.0f) : -1.0f;
+    s.aoBentNormals = options.enabled && options.bentNormals ? 1.0f : 0.0f;
 }
+
+void FView::prepareSSR(Handle<HwTexture> ssr) const noexcept {
+    getColorPassDescriptorSet().prepareScreenSpaceRefraction(ssr);
+}
+
+void FView::prepareSSR(FEngine& engine, CameraInfo const& cameraInfo,
+        float const refractionLodOffset,
+        ScreenSpaceReflectionsOptions const& options) const noexcept {
+
+    auto const& ssr = getFrameHistory().getPrevious().ssr;
+
+    bool const disableSSR = !ssr.color.handle;
+    mat4 const& historyProjection = ssr.projection;
+    mat4f const& uvFromClipMatrix = engine.getUvFromClipMatrix();
+    mat4f const projection = cameraInfo.projection;
+    mat4 const userViewMatrix = cameraInfo.getUserViewMatrix();
+
+    // set screen-space reflections and screen-space refractions
+    mat4f const uvFromViewMatrix = uvFromClipMatrix * projection;
+    mat4f const reprojection = uvFromClipMatrix *
+            mat4f{ historyProjection * inverse(userViewMatrix) };
+
+    auto& s = mUniforms.edit();
+    s.ssrReprojection = reprojection;
+    s.ssrUvFromViewMatrix = uvFromViewMatrix;
+    s.ssrThickness = options.thickness;
+    s.ssrBias = options.bias;
+    s.ssrStride = options.stride;
+    s.refractionLodOffset = refractionLodOffset;
+    s.ssrDistance = (options.enabled && !disableSSR) ? options.maxDistance : 0.0f;
+}
+
 
 void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
     // sampler must be NEAREST
     getColorPassDescriptorSet().prepareStructure(structure);
 }
 
-void FView::prepareShadow(Handle<HwTexture> texture) const noexcept {
+void FView::prepareShadowMapping(FEngine const& engine, Handle<HwTexture> texture) const noexcept {
     // when needsShadowMap() is not set, this method only just sets a dummy texture
     // in the needed samplers (in that case `texture` is actually a dummy texture).
-    ShadowMapManager::ShadowMappingUniforms uniforms;
-    if (needsShadowMap()) {
-        uniforms = mShadowMapManager->getShadowMappingUniforms();
-    }
-    switch (mShadowType) {
-        case ShadowType::PCF:
-            getColorPassDescriptorSet().prepareShadowPCF(texture, uniforms);
-            break;
-        case ShadowType::VSM:
-            getColorPassDescriptorSet().prepareShadowVSM(texture, uniforms, mVsmShadowOptions);
-            break;
-        case ShadowType::DPCF:
-            getColorPassDescriptorSet().prepareShadowDPCF(texture, uniforms, mSoftShadowOptions);
-            break;
-        case ShadowType::PCSS:
-            getColorPassDescriptorSet().prepareShadowPCSS(texture, uniforms, mSoftShadowOptions);
-            break;
-        case ShadowType::PCFd:
-            getColorPassDescriptorSet().prepareShadowPCFDebug(texture, uniforms);
-            break;
-    }
-}
 
-void FView::prepareShadowMapping(FEngine const& engine, bool const highPrecision) const noexcept {
     BufferObjectHandle ubo{ engine.getDummyUniformBuffer() };
     if (mHasShadowing) {
         assert_invariant(mShadowMapManager);
         ubo = mShadowMapManager->getShadowUniformsHandle();
     }
-    getColorPassDescriptorSet().prepareShadowMapping(ubo, highPrecision);
+    getColorPassDescriptorSet().prepareShadowMapping(ubo);
+
+    switch (mShadowType) {
+        case ShadowType::PCF:
+            getColorPassDescriptorSet().prepareShadowPCF(texture);
+            break;
+        case ShadowType::VSM:
+            getColorPassDescriptorSet().prepareShadowVSM(texture, mVsmShadowOptions);
+            break;
+        case ShadowType::DPCF:
+            getColorPassDescriptorSet().prepareShadowDPCF(texture);
+            break;
+        case ShadowType::PCSS:
+            getColorPassDescriptorSet().prepareShadowPCSS(texture);
+            break;
+        case ShadowType::PCFd:
+            getColorPassDescriptorSet().prepareShadowPCFDebug(texture);
+            break;
+    }
 }
 
-void FView::commitUniformsAndSamplers(DriverApi& driver) const noexcept {
+void FView::prepareShadowMapping() const noexcept {
+
+    ShadowMapManager::ShadowMappingUniforms uniforms{};
+    if (needsShadowMap()) {
+        uniforms = mShadowMapManager->getShadowMappingUniforms();
+    }
+
+    constexpr float low  = 5.54f; // ~ std::log(std::numeric_limits<math::half>::max()) * 0.5f;
+    constexpr float high = 42.0f; // ~ std::log(std::numeric_limits<float>::max()) * 0.5f;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCF = 0u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_EVSM = 1u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_DPCF = 2u;
+    constexpr uint32_t SHADOW_SAMPLING_RUNTIME_PCSS = 3u;
+    auto& s = mUniforms.edit();
+    s.cascadeSplits = uniforms.cascadeSplits;
+    s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
+    s.directionalShadows = int32_t(uniforms.directionalShadows);
+    s.cascades = int32_t(uniforms.cascades);
+    switch (mShadowType) {
+        case ShadowType::PCF:
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
+            break;
+        case ShadowType::VSM:
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_EVSM;
+            s.vsmExponent = mVsmShadowOptions.highPrecision ? high : low;
+            s.vsmDepthScale = mVsmShadowOptions.minVarianceScale * 0.01f * s.vsmExponent;
+            s.vsmLightBleedReduction = mVsmShadowOptions.lightBleedReduction;
+            break;
+        case ShadowType::DPCF:
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_DPCF;
+            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
+            break;
+        case ShadowType::PCSS:
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCSS;
+            s.shadowPenumbraRatioScale = mSoftShadowOptions.penumbraRatioScale;
+            break;
+        case ShadowType::PCFd:
+            s.shadowSamplingType = SHADOW_SAMPLING_RUNTIME_PCF;
+            break;
+    }
+}
+
+void FView::commitUniforms(DriverApi& driver) const noexcept {
+    if (mUniforms.isDirty()) {
+        mUniforms.clean();
+        driver.updateBufferObject(mUniforms.getUboHandle(),
+                mUniforms.toBufferDescriptor(driver), 0);
+    }
+}
+
+void FView::commitDescriptorSet(DriverApi& driver) const noexcept {
     getColorPassDescriptorSet().commit(driver);
 }
 

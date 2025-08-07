@@ -2978,7 +2978,9 @@ TEST_F(LocalSSAElimTest, DebugValueForReferenceVariableInBB) {
 
 ; CHECK:      OpExtInst %void [[ext]] DebugScope [[dbg_main]]
 ; CHECK:      OpStore %f %float_0
+; CHECK-NEXT: OpExtInst %void [[ext]] DebugScope [[dbg_bb]]
 ; CHECK-NEXT: OpExtInst %void [[ext]] DebugValue [[dbg_x]] %float_0
+; CHECK-NEXT: OpExtInst %void [[ext]] DebugScope [[dbg_main]]
 ; CHECK-NEXT: OpExtInst %void [[ext]] DebugValue [[dbg_f]] %float_0
 ; CHECK-NEXT: OpStore %i %int_0
 ; CHECK-NEXT: OpExtInst %void [[ext]] DebugValue [[dbg_i]] %int_0
@@ -5434,6 +5436,7 @@ float4 main([[vk::location(0)]] float2 inUV : TEXCOORD0) : SV_TARGET
        %1614 = OpLabel
 ;CHECK:      %1614 = OpLabel
 ;CHECK-NEXT: [[phi:%\w+]] = OpPhi 
+;CHECK-NEXT: {{%\w+}} = OpExtInst %void {{%\w+}} DebugScope %179
 ;CHECK-NEXT: {{%\w+}} = OpExtInst %void {{%\w+}} DebugValue %233
        %2335 = OpExtInst %void %2 DebugScope %179
        %1795 = OpExtInst %void %2 DebugLine %64 %uint_149 %uint_149 %uint_16 %uint_16
@@ -5453,6 +5456,50 @@ float4 main([[vk::location(0)]] float2 inUV : TEXCOORD0) : SV_TARGET
 
   SetTargetEnv(SPV_ENV_VULKAN_1_2);
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndMatch<SSARewritePass>(text, true);
+}
+
+TEST_F(LocalSSAElimTest, StoreWithLoadedPtr) {
+  const std::string text =
+      R"(OpCapability Shader
+OpCapability VariablePointersStorageBuffer
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %2 "pointer_branch_buffer" %3
+OpExecutionMode %2 LocalSize 8 8 1
+OpDecorate %3 DescriptorSet 0
+OpDecorate %3 Binding 0
+%bool = OpTypeBool
+%uint = OpTypeInt 32 0
+%uint_2 = OpConstant %uint 2
+%void = OpTypeVoid
+%8 = OpTypeFunction %void
+%_ptr_StorageBuffer_uint = OpTypePointer StorageBuffer %uint
+%_ptr_Function__ptr_StorageBuffer_uint = OpTypePointer Function %_ptr_StorageBuffer_uint
+%3 = OpVariable %_ptr_StorageBuffer_uint StorageBuffer
+%11 = OpUndef %bool
+%2 = OpFunction %void None %8
+%12 = OpLabel
+%13 = OpVariable %_ptr_Function__ptr_StorageBuffer_uint Function
+OpSelectionMerge %14 None
+OpBranchConditional %11 %15 %16
+%15 = OpLabel
+OpBranch %14
+%16 = OpLabel
+OpStore %13 %3
+OpBranch %14
+%14 = OpLabel
+; CHECK: [[phi:%\w+]] = OpPhi %_ptr_StorageBuffer_uint
+; CHECK-NEXT: [[ld:%\w+]] = OpLoad %uint %20
+; CHECK-NEXT: OpIAdd %uint [[ld]] %uint_2
+%17 = OpLoad %_ptr_StorageBuffer_uint %13
+%18 = OpLoad %uint %17
+%19 = OpIAdd %uint %18 %uint_2
+OpReturn
+OpFunctionEnd
+)";
+
+  SetTargetEnv(SPV_ENV_UNIVERSAL_1_6);
   SinglePassRunAndMatch<SSARewritePass>(text, true);
 }
 

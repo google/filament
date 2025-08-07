@@ -532,6 +532,9 @@ public:
     //! Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
+    //! Enable / disable the cheapest linear fog, disabled by default.
+    MaterialBuilder& linearFog(bool enabled) noexcept;
+
     //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
@@ -948,6 +951,7 @@ private:
     bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;
+    bool mLinearFog = false;
 
     bool mMultiBounceAO = false;
     bool mMultiBounceAOSet = false;

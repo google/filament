@@ -641,6 +641,8 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag,
     RegisterPass(CreateSplitCombinedImageSamplerPass());
   } else if (pass_name == "resolve-binding-conflicts") {
     RegisterPass(CreateResolveBindingConflictsPass());
+  } else if (pass_name == "canonicalize-ids") {
+    RegisterPass(CreateCanonicalizeIdsPass());
   } else {
     Errorf(consumer(), nullptr, {},
            "Unknown flag '--%s'. Use --help for a list of valid flags",
@@ -1200,6 +1202,11 @@ Optimizer::PassToken CreateSplitCombinedImageSamplerPass() {
 Optimizer::PassToken CreateResolveBindingConflictsPass() {
   return MakeUnique<Optimizer::PassToken::Impl>(
       MakeUnique<opt::ResolveBindingConflictsPass>());
+}
+
+Optimizer::PassToken CreateCanonicalizeIdsPass() {
+  return MakeUnique<Optimizer::PassToken::Impl>(
+      MakeUnique<opt::CanonicalizeIdsPass>());
 }
 
 }  // namespace spvtools

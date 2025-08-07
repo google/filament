@@ -156,6 +156,12 @@ public:
         bool disableParallelShaderCompile = false;
 
         /**
+         * Set to `true` to forcibly disable amortized shader compilation in the backend.
+         * Currently only honored by the GL backend.
+         */
+        bool disableAmortizedShaderCompile = false;
+
+        /**
          * Disable backend handles use-after-free checks.
          */
         bool disableHandleUseAfterFreeCheck = false;
@@ -223,7 +229,7 @@ public:
      * @param sharedContext an optional shared context. This is not meaningful with all graphic
      *                      APIs and platforms.
      *                      For EGL platforms, this is an EGLContext.
-     * 
+     *
      * @param driverConfig  specifies driver initialization parameters
      *
      * @return nullptr on failure, or a pointer to the newly created driver.

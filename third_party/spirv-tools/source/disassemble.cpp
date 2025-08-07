@@ -31,7 +31,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include "source/assembly_grammar.h"
 #include "source/binary.h"
 #include "source/diagnostic.h"
 #include "source/ext_inst.h"
@@ -40,6 +39,7 @@
 #include "source/print.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_endian.h"
+#include "source/table2.h"
 #include "source/util/hex_float.h"
 #include "source/util/make_unique.h"
 #include "spirv-tools/libspirv.h"
@@ -115,8 +115,7 @@ struct ControlFlowGraph {
 // representation.
 class Disassembler {
  public:
-  Disassembler(const AssemblyGrammar& grammar, uint32_t options,
-               NameMapper name_mapper)
+  Disassembler(uint32_t options, NameMapper name_mapper)
       : print_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_PRINT, options)),
         nested_indent_(
             spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_NESTED_INDENT, options)),
@@ -124,7 +123,7 @@ class Disassembler {
             spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_REORDER_BLOCKS, options)),
         text_(),
         out_(print_ ? out_stream() : out_stream(text_)),
-        instruction_disassembler_(grammar, out_.get(), options, name_mapper),
+        instruction_disassembler_(out_.get(), options, name_mapper),
         header_(!spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_NO_HEADER, options)),
         byte_offset_(0) {}
 
@@ -624,12 +623,10 @@ constexpr uint32_t kCommentColumn = 50;
 }  // namespace
 
 namespace disassemble {
-InstructionDisassembler::InstructionDisassembler(const AssemblyGrammar& grammar,
-                                                 std::ostream& stream,
+InstructionDisassembler::InstructionDisassembler(std::ostream& stream,
                                                  uint32_t options,
                                                  NameMapper name_mapper)
-    : grammar_(grammar),
-      stream_(stream),
+    : stream_(stream),
       print_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_PRINT, options)),
       color_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_COLOR, options)),
       indent_(spvIsInBitfield(SPV_BINARY_TO_TEXT_OPTION_INDENT, options)
@@ -771,7 +768,7 @@ void InstructionDisassembler::EmitInstructionImpl(
         {line_length + 2, last_instruction_comment_alignment_, kCommentColumn});
     // Round up the alignment to a multiple of 4 for more niceness.
     align = (align + 3) & ~0x3u;
-    last_instruction_comment_alignment_ = align;
+    last_instruction_comment_alignment_ = std::min({align, 256u});
 
     stream_ << std::string(align - line_length, ' ') << "; " << comments.str();
   } else {
@@ -870,11 +867,10 @@ void InstructionDisassembler::EmitOperand(std::ostream& stream,
       stream << "%" << name_mapper_(word);
       break;
     case SPV_OPERAND_TYPE_EXTENSION_INSTRUCTION_NUMBER: {
-      spv_ext_inst_desc ext_inst;
       SetRed(stream);
-      if (grammar_.lookupExtInst(inst.ext_inst_type, word, &ext_inst) ==
-          SPV_SUCCESS) {
-        stream << ext_inst->name;
+      const ExtInstDesc* desc = nullptr;
+      if (LookupExtInst(inst.ext_inst_type, word, &desc) == SPV_SUCCESS) {
+        stream << desc->name().data();
       } else {
         if (!spvExtInstIsNonSemantic(inst.ext_inst_type)) {
           assert(false && "should have caught this earlier");
@@ -885,11 +881,11 @@ void InstructionDisassembler::EmitOperand(std::ostream& stream,
       }
     } break;
     case SPV_OPERAND_TYPE_SPEC_CONSTANT_OP_NUMBER: {
-      spv_opcode_desc opcode_desc;
-      if (grammar_.lookupOpcode(spv::Op(word), &opcode_desc))
+      const spvtools::InstructionDesc* opcodeEntry = nullptr;
+      if (LookupOpcode(spv::Op(word), &opcodeEntry))
         assert(false && "should have caught this earlier");
       SetRed(stream);
-      stream << opcode_desc->name;
+      stream << opcodeEntry->name().data();
     } break;
     case SPV_OPERAND_TYPE_LITERAL_INTEGER:
     case SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER:
@@ -948,10 +944,10 @@ void InstructionDisassembler::EmitOperand(std::ostream& stream,
     case SPV_OPERAND_TYPE_QUANTIZATION_MODES:
     case SPV_OPERAND_TYPE_FPENCODING:
     case SPV_OPERAND_TYPE_OVERFLOW_MODES: {
-      spv_operand_desc entry;
-      if (grammar_.lookupOperand(operand.type, word, &entry))
+      const spvtools::OperandDesc* entry = nullptr;
+      if (spvtools::LookupOperand(operand.type, word, &entry))
         assert(false && "should have caught this earlier");
-      stream << entry->name;
+      stream << entry->name().data();
     } break;
     case SPV_OPERAND_TYPE_FP_FAST_MATH_MODE:
     case SPV_OPERAND_TYPE_FUNCTION_CONTROL:
@@ -968,10 +964,10 @@ void InstructionDisassembler::EmitOperand(std::ostream& stream,
       if (spvOperandIsConcreteMask(operand.type)) {
         EmitMaskOperand(stream, operand.type, word);
       } else if (spvOperandIsConcrete(operand.type)) {
-        spv_operand_desc entry;
-        if (grammar_.lookupOperand(operand.type, word, &entry))
+        const spvtools::OperandDesc* entry = nullptr;
+        if (spvtools::LookupOperand(operand.type, word, &entry))
           assert(false && "should have caught this earlier");
-        stream << entry->name;
+        stream << entry->name().data();
       } else {
         assert(false && "unhandled or invalid case");
       }
@@ -991,20 +987,20 @@ void InstructionDisassembler::EmitMaskOperand(std::ostream& stream,
   for (mask = 1; remaining_word; mask <<= 1) {
     if (remaining_word & mask) {
       remaining_word ^= mask;
-      spv_operand_desc entry;
-      if (grammar_.lookupOperand(type, mask, &entry))
+      const spvtools::OperandDesc* entry = nullptr;
+      if (spvtools::LookupOperand(type, mask, &entry))
         assert(false && "should have caught this earlier");
       if (num_emitted) stream << "|";
-      stream << entry->name;
+      stream << entry->name().data();
       num_emitted++;
     }
   }
   if (!num_emitted) {
     // An operand value of 0 was provided, so represent it by the name
     // of the 0 value. In many cases, that's "None".
-    spv_operand_desc entry;
-    if (SPV_SUCCESS == grammar_.lookupOperand(type, 0, &entry))
-      stream << entry->name;
+    const spvtools::OperandDesc* entry = nullptr;
+    if (SPV_SUCCESS == spvtools::LookupOperand(type, 0, &entry))
+      stream << entry->name().data();
   }
 }
 
@@ -1042,11 +1038,6 @@ std::string spvInstructionBinaryToText(const spv_target_env env,
                                        const size_t wordCount,
                                        const uint32_t options) {
   spv_context context = spvContextCreate(env);
-  const AssemblyGrammar grammar(context);
-  if (!grammar.isValid()) {
-    spvContextDestroy(context);
-    return "";
-  }
 
   // Generate friendly names for Ids if requested.
   std::unique_ptr<FriendlyNameMapper> friendly_mapper;
@@ -1057,7 +1048,7 @@ std::string spvInstructionBinaryToText(const spv_target_env env,
   }
 
   // Now disassemble!
-  Disassembler disassembler(grammar, options, name_mapper);
+  Disassembler disassembler(options, name_mapper);
   WrappedDisassembler wrapped(&disassembler, instCode, instWordCount);
   spvBinaryParse(context, &wrapped, code, wordCount, DisassembleTargetHeader,
                  DisassembleTargetInstruction, nullptr);
@@ -1086,9 +1077,6 @@ spv_result_t spvBinaryToText(const spv_const_context context,
     spvtools::UseDiagnosticAsMessageConsumer(&hijack_context, pDiagnostic);
   }
 
-  const spvtools::AssemblyGrammar grammar(&hijack_context);
-  if (!grammar.isValid()) return SPV_ERROR_INVALID_TABLE;
-
   // Generate friendly names for Ids if requested.
   std::unique_ptr<spvtools::FriendlyNameMapper> friendly_mapper;
   spvtools::NameMapper name_mapper = spvtools::GetTrivialNameMapper();
@@ -1099,7 +1087,7 @@ spv_result_t spvBinaryToText(const spv_const_context context,
   }
 
   // Now disassemble!
-  spvtools::Disassembler disassembler(grammar, options, name_mapper);
+  spvtools::Disassembler disassembler(options, name_mapper);
   if (auto error =
           spvBinaryParse(&hijack_context, &disassembler, code, wordCount,
                          spvtools::DisassembleHeader,

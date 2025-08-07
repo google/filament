@@ -114,9 +114,7 @@ public:
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
             RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
-            CameraInfo const& cameraInfo,
             FrameGraphId<FrameGraphTexture> structure,
-            ScreenSpaceReflectionsOptions const& options,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
@@ -395,6 +393,9 @@ public:
     void resetForRender();
 
 private:
+    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
+
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
 
     // Helper to get a MaterialInstance from a FMaterial
     // This currently just call FMaterial::getDefaultInstance().
@@ -412,6 +413,11 @@ private:
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
     backend::DescriptorSetLayoutHandle mPerRenderableDslh;
+
+    // We need to have a dummy descriptor set because each post processing pass is expected to have
+    // a descriptor set bound at the renderable bind point. But the set itself contains dummy
+    // values.
+    backend::DescriptorSetHandle mDummyPerRenderableDsh;
 
     FEngine& mEngine;
 

@@ -1,5 +1,70 @@
 Revision history for SPIRV-Tools
 
+v2025.3 2025-06-23
+  - General
+    - Add mimalloc to improve multithreaded performance (#6188)
+    - python: Use type annotations compatible with python 3.8 (#6119)
+    - fix clang-20 build issue (#6103)
+  - Optimizer
+    - Add --canonicalize-ids pass (#6174)
+    - Keep instructions used by the DebugBuildIdentifier (#6189)
+    - opt: Pass DebugDeclare scope to DebugValue (#6178)
+    - Add SPV_NV_linear_swept_spheres to allow list. (#6168)
+    - Add initial support for SPV_EXT_float8 (#6170)
+    - Keep DebugBuildIdentifier during dce (#6166)
+    - Add SPV_NV_cluster_acceleration_structure to allow lists (#6163)
+    - [OPT] prevent private_to_local_pass optimizing double pointer (#6161)
+    - [OPT] Use conservative default case for `GetPtr` (#6158)
+    - [OPT] Set the BB for the debug instruction when moved. (#6153)
+    - Add support for SPV_ARM_tensors (#6134)
+    - [opt] Move debug instruction when neccessary in copy prop arrays. (#6142)
+    - [OPT] Remove recursion from redundancy_elimination (#6141)
+    - opt: add SPV_NV_shader_invocation_reorder to allowlist (#6122)
+  - Validator
+    - spirv-val: tidy up validation of type constraints for IDs (#6185)
+    - Add validation support for MeshEXT based on the spec update PR https://github.com/KhronosGroup/Vulkan-Docs/pull/2475 (#6171)
+    - spirv-val: Label maintenance9 new VUID (#6176)
+    - spirv-val: add positive test for FP8 cooperative matrices (#6175)
+    - spirv-val: Give hints when user is forgetting feature bit (#6164)
+    - val: Fix CullPrimitiveEXT array of bool (#6155)
+    - [spirv-val] Add the validation checks for SPV_QCOM_tile_shading (#6130)
+    - spirv-val: allow Float16 in OpenCL environments (#6110)
+    - spirv-val: Update 1.4.312 VUID churn (#6082)
+  - Assembler
+    - Add minimal as/dis support for TOSA.001000.1 extended instruction set (#6183)
+  - Disassembler
+    - spirv-dis: Set a hard limit on last_instruction_comment_alignment_ (#6149)
+
+v2025.2 2025-04-22
+  - General
+    - Add SPV_KHR_bfloat16 support (#6057)
+  - Optimizer
+    - Fold bitwise operator and arithmetic with 0 (#6013)
+    - Support scalar replacement of large structs (#6019)
+    - Support optimization of OpCopyLogical (#6016)
+    - add pass to split combined image samplers (#6035)
+    - value numbering: preserve loads of image, sampler, sampled image (#6059)
+    - Delete decoration for OpPhi when unrolling (#6064)
+    - Add QuadControlKHR to trim pass and allow lists (#6068)
+    - In copy propagate arrays, debug instructions are not stores. (#6078)
+    - Minimal opt support for SPV_KHR_untyped_pointers (#6087)
+  - Validator
+    - Add validation for invalid layout decoration usage (#6012, #6020)
+    - Add Vulkan Aligned PowerOfTwo check (#6027)
+    - Validate PhysicalStorageBuffer Stage Interface (#6000)
+    - Update location/component conflict validation (#5993)
+    - add resolve-binding-conflicts pass (#6044)
+    - Check that layouts match runtime array requirement (#6048)
+    - Validation for relaxed control barrier with storage class semantics (#5984)
+    - Validate version requirement for Vulkan Memory Model (#6042)
+    - Add support for pointer types in vector when using extension SPV_INTEL_masked_gather_scatter (#6041)
+    - Restrict VUID 09557 to Vulkan environments (#6080)
+    - Add Vulkan 1.3 and 1.4 capability checks (#6063)
+  - Assembler
+    - Add OpUnknown pseudo-instruction (#6024)
+  - Diff
+    - Try to pair functions by their complete type. (#6021)
+
 v2025.1 2025-02-28
   - General
     - diff: Fix crash in OpString matching (#5988)

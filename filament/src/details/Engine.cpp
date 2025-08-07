@@ -101,6 +101,8 @@ backend::Platform::DriverConfig getDriverConfig(FEngine* instance) {
         .handleArenaSize = instance->getRequestedDriverHandleArenaSize(),
         .metalUploadBufferSizeBytes = instance->getConfig().metalUploadBufferSizeBytes,
         .disableParallelShaderCompile = instance->features.backend.disable_parallel_shader_compile,
+        .disableAmortizedShaderCompile =
+                instance->features.backend.disable_amortized_shader_compile,
         .disableHandleUseAfterFreeCheck =
                 instance->features.backend.disable_handle_use_after_free_check,
         .disableHeapHandleTags = instance->features.backend.disable_heap_handle_tags,
@@ -1235,20 +1237,13 @@ bool FEngine::destroy(const FMaterialInstance* p) {
             size_t const primitiveCount = rcm.getPrimitiveCount(ri, 0);
             for (size_t j = 0; j < primitiveCount; j++) {
                 auto const* const mi = rcm.getMaterialInstanceAt(ri, 0, j);
-                if (features.engine.debug.assert_material_instance_in_use) {
-                    FILAMENT_CHECK_PRECONDITION(mi != p)
-                            << "destroying MaterialInstance \""
-                            << mi->getName() << "\" which is still in use by Renderable (entity="
-                            << entity.getId() << ", instance="
-                            << ri.asValue() << ", index=" << j << ")";
-                } else {
-                    if (UTILS_UNLIKELY(mi == p)) {
-                        LOG(ERROR) << "destroying MaterialInstance \"" << mi->getName()
-                                   << "\" which is still in use by Renderable (entity="
-                                   << entity.getId() << ", instance=" << ri.asValue()
-                                   << ", index=" << j << ")";
-                    }
-                }
+                auto const& featureFlags = features.engine.debug;
+                FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                        mi != p,
+                        featureFlags.assert_material_instance_in_use)
+                        << "destroying MaterialInstance \"" << mi->getName()
+                        << "\" which is still in use by Renderable (entity=" << entity.getId()
+                        << ", instance=" << ri.asValue() << ", index=" << j << ")";
             }
         }
     }

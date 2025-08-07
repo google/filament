@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_SHADERCOMPILERSERVICE_H
 #define TNT_FILAMENT_BACKEND_OPENGL_SHADERCOMPILERSERVICE_H
 
-#include "gl_headers.h"
-
 #include "CallbackManager.h"
 #include "CompilerThreadPool.h"
 #include "OpenGLBlobCache.h"
@@ -35,7 +33,6 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include <mutex>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -136,6 +133,12 @@ private:
     std::vector<ContainerType> mRunAtNextTickOps;
 
     std::list<program_token_t> mCanceledTokens;
+    // These members are only ever accessed on the main thread and are completely unused when mMode
+    // is not SYNCHRONOUS.
+    uint32_t mNumProgramsCreatedSynchronouslyThisTick = 0u;
+    uint32_t mNumTicksUntilNextSynchronousProgram = 0u;
+    using PendingSynchronousProgram = std::tuple<program_token_t, Program>;
+    std::vector<PendingSynchronousProgram> mPendingSynchronousPrograms;
 
     GLuint initialize(program_token_t& token);
     void ensureTokenIsReady(program_token_t const& token);
@@ -148,6 +151,13 @@ private:
             Job job) noexcept;
     void executeTickOps() noexcept;
     bool cancelTickOp(program_token_t const& token) noexcept;
+
+    bool shouldCompileSynchronousProgramThisTick() const noexcept;
+    void compilePendingSynchronousPrograms() noexcept;
+    void compilePendingSynchronousProgramNow(program_token_t const& token) noexcept;
+    void cancelPendingSynchronousProgram(program_token_t const& token) noexcept;
+
+    void compileProgram(program_token_t const& token, Program&& program) noexcept;
 
     // Compile shaders with the given `shaderSource`. `gl.shaders` is always populated with valid
     // shader IDs after this method. But this doesn't necessarily mean the shaders are successfully

@@ -898,6 +898,120 @@ TEST(ParseAndEncodeFloat16, Sample) {
   EXPECT_EQ("Invalid 16-bit float literal: -1e400", err_msg);
 }
 
+TEST(ParseAndEncodeFloat8_E4M3, Sample) {
+  EncodeNumberStatus rc = EncodeNumberStatus::kSuccess;
+  std::string err_msg;
+  NumberType type = {8, SPV_NUMBER_FLOATING, SPV_FP_ENCODING_FLOAT8_E4M3};
+
+  // Invalid
+  rc = ParseAndEncodeFloatingPointNumber("", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: ", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("0=", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: 0=", err_msg);
+
+  // Representative samples
+  rc = ParseAndEncodeFloatingPointNumber(
+      "0.0", type, [](uint32_t word) { EXPECT_EQ(0x0u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "-0.0", type, [](uint32_t word) { EXPECT_EQ(0x80u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "1.0", type, [](uint32_t word) { EXPECT_EQ(0x38u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "2.5", type, [](uint32_t word) { EXPECT_EQ(0x42u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "-0.625", type, [](uint32_t word) { EXPECT_EQ(0xB2u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+
+  // Overflow
+  rc =
+      ParseAndEncodeFloatingPointNumber("1e38", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: 1e38", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e38", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: -1e38", err_msg);
+  rc =
+      ParseAndEncodeFloatingPointNumber("1e40", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: 1e40", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e40", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: -1e40", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("1e400", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: 1e400", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e400", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E4M3 float literal: -1e400", err_msg);
+}
+
+TEST(ParseAndEncodeFloat8_E5M2, Sample) {
+  EncodeNumberStatus rc = EncodeNumberStatus::kSuccess;
+  std::string err_msg;
+  NumberType type = {8, SPV_NUMBER_FLOATING, SPV_FP_ENCODING_FLOAT8_E5M2};
+
+  // Invalid
+  rc = ParseAndEncodeFloatingPointNumber("", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: ", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("0=", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: 0=", err_msg);
+
+  // Representative samples
+  rc = ParseAndEncodeFloatingPointNumber(
+      "0.0", type, [](uint32_t word) { EXPECT_EQ(0x0u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "-0.0", type, [](uint32_t word) { EXPECT_EQ(0x80u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "1.0", type, [](uint32_t word) { EXPECT_EQ(0x3cu, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "2.5", type, [](uint32_t word) { EXPECT_EQ(0x41u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+  rc = ParseAndEncodeFloatingPointNumber(
+      "-0.625", type, [](uint32_t word) { EXPECT_EQ(0xB9u, word); }, nullptr);
+  EXPECT_EQ(EncodeNumberStatus::kSuccess, rc);
+
+  // Overflow
+  rc =
+      ParseAndEncodeFloatingPointNumber("1e38", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: 1e38", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e38", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: -1e38", err_msg);
+  rc =
+      ParseAndEncodeFloatingPointNumber("1e40", type, AssertEmitFunc, &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: 1e40", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e40", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: -1e40", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("1e400", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: 1e400", err_msg);
+  rc = ParseAndEncodeFloatingPointNumber("-1e400", type, AssertEmitFunc,
+                                         &err_msg);
+  EXPECT_EQ(EncodeNumberStatus::kInvalidText, rc);
+  EXPECT_EQ("Invalid E5M2 float literal: -1e400", err_msg);
+}
+
 TEST(ParseAndEncodeFloatingPointNumber, TypeNone) {
   EncodeNumberStatus rc = EncodeNumberStatus::kSuccess;
   std::string err_msg;

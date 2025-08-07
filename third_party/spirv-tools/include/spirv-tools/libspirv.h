@@ -327,6 +327,22 @@ typedef enum spv_operand_type_t {
   SPV_OPERAND_TYPE_COOPERATIVE_VECTOR_MATRIX_LAYOUT,
   SPV_OPERAND_TYPE_COMPONENT_TYPE,
 
+  // From nonesmantic.clspvreflection
+  SPV_OPERAND_TYPE_KERNEL_PROPERTY_FLAGS,
+
+  // From nonesmantic.shader.debuginfo.100
+  SPV_OPERAND_TYPE_SHDEBUG100_BUILD_IDENTIFIER_FLAGS,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_BASE_TYPE_ATTRIBUTE_ENCODING,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_COMPOSITE_TYPE,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_IMPORTED_ENTITY,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_INFO_FLAGS,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_OPERATION,
+  SPV_OPERAND_TYPE_SHDEBUG100_DEBUG_TYPE_QUALIFIER,
+
+  // SPV_ARM_tensors
+  SPV_OPERAND_TYPE_TENSOR_OPERANDS,
+  SPV_OPERAND_TYPE_OPTIONAL_TENSOR_OPERANDS,
+
   // This is a sentinel value, and does not represent an operand type.
   // It should come last.
   SPV_OPERAND_TYPE_NUM_OPERAND_TYPES,
@@ -353,6 +369,7 @@ typedef enum spv_ext_inst_type_t {
   SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
   SPV_EXT_INST_TYPE_NONSEMANTIC_SHADER_DEBUGINFO_100,
   SPV_EXT_INST_TYPE_NONSEMANTIC_VKSPREFLECTION,
+  SPV_EXT_INST_TYPE_TOSA_001000_1,
 
   // Multiple distinct extended instruction set types could return this
   // value, if they are prefixed with NonSemantic. and are otherwise
@@ -373,6 +390,18 @@ typedef enum spv_number_kind_t {
   SPV_NUMBER_SIGNED_INT,
   SPV_NUMBER_FLOATING,
 } spv_number_kind_t;
+
+// Represent the encoding of floating point values
+typedef enum spv_fp_encoding_t {
+  SPV_FP_ENCODING_UNKNOWN =
+      0,  // The encoding is not specified. Has to be deduced from bitwidth
+  SPV_FP_ENCODING_IEEE754_BINARY16,  // half float
+  SPV_FP_ENCODING_IEEE754_BINARY32,  // single float
+  SPV_FP_ENCODING_IEEE754_BINARY64,  // double float
+  SPV_FP_ENCODING_BFLOAT16,
+  SPV_FP_ENCODING_FLOAT8_E4M3,
+  SPV_FP_ENCODING_FLOAT8_E5M2,
+} spv_fp_encoding_t;
 
 typedef enum spv_text_to_binary_options_t {
   SPV_TEXT_TO_BINARY_OPTION_NONE = SPV_BIT(0),
@@ -429,6 +458,8 @@ typedef struct spv_parsed_operand_t {
   spv_number_kind_t number_kind;
   // The number of bits for a literal number type.
   uint32_t number_bit_width;
+  // The encoding used for floating point values
+  spv_fp_encoding_t fp_encoding;
 } spv_parsed_operand_t;
 
 // An instruction parsed from a binary SPIR-V module.
@@ -741,6 +772,7 @@ SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetAllowOffsetTextureOperand(
     spv_validator_options options, bool val);
 
 // Allow base operands of some bit operations to be non-32-bit wide.
+// Was added for VK_KHR_maintenance9
 SPIRV_TOOLS_EXPORT void spvValidatorOptionsSetAllowVulkan32BitBitwise(
     spv_validator_options options, bool val);
 

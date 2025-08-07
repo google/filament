@@ -208,37 +208,23 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 view.prepareSSAO(data.ssao ?
                         resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
-                view.prepareShadowMapping(engine, view.getVsmShadowOptions().highPrecision);
-
-                // set shadow sampler
-                view.prepareShadow(data.shadows ?
-                        resources.getTexture(data.shadows) :
-                            (view.getShadowType() != ShadowType::PCF ?
-                                engine.getOneTextureArray() : engine.getOneTextureArrayDepth()));
+                // set screen-space reflections and screen-space refractions
+                view.prepareSSR(data.ssr ?
+                        resources.getTexture(data.ssr) : engine.getOneTextureArray());
 
                 // set structure sampler
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : engine.getOneTexture());
 
-                // set screen-space reflections and screen-space refractions
-                TextureHandle const ssr = data.ssr ?
-                        resources.getTexture(data.ssr) : engine.getOneTextureArray();
+                // set shadow sampler
+                view.prepareShadowMapping(engine,
+                        data.shadows
+                            ? resources.getTexture(data.shadows)
+                            : (view.getShadowType() != ShadowType::PCF
+                                   ? engine.getOneTextureArray()
+                                   : engine.getOneTextureArrayDepth()));
 
-                view.prepareSSR(ssr, config.screenSpaceReflectionHistoryNotReady,
-                        config.ssrLodOffset, view.getScreenSpaceReflectionsOptions());
-
-                // Note: here we can't use data.color's descriptor for the viewport because
-                // the actual viewport might be offset when the target is the swapchain.
-                // However, the width/height should be the same.
-                assert_invariant(
-                        out.params.viewport.width == resources.getDescriptor(data.color).width);
-                assert_invariant(
-                        out.params.viewport.height == resources.getDescriptor(data.color).height);
-
-                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
-                        config.logicalViewport);
-
-                view.commitUniformsAndSamplers(driver);
+                view.commitDescriptorSet(driver);
 
                 // TODO: this should be a parameter of FrameGraphRenderPass::Descriptor
                 out.params.clearStencil = config.clearStencil;
