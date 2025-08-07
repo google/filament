@@ -96,6 +96,9 @@ public:
     DescriptorSetLayout const& getPerViewDescriptorSetLayout(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
+    // Returns the layout that should be used when this material is bound to the pipeline for the
+    // given variant. Shared variants use the Engine's default material's variants, so we should
+    // also use the default material's layout.
     DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
         if (!isSharedVariant(variant)) {
             return mDescriptorSetLayout;
