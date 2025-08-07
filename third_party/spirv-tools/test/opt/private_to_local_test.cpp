@@ -173,6 +173,43 @@ OpCapability SampledBuffer
   SinglePassRunAndMatch<PrivateToLocalPass>(text, false);
 }
 
+TEST_F(PrivateToLocalTest, IgnorePointerToPrivateVariable) {
+  // Should not change because the pointer to the private variable
+  // has been stored inside a function variable.
+  const std::string text = R"(
+               OpCapability Shader
+               OpCapability VariablePointersStorageBuffer
+               OpCapability VariablePointers
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %load_thread_local "load_thread_local" %v
+               OpExecutionMode %load_thread_local LocalSize 8 8 1
+       %uint = OpTypeInt 32 0
+     %uint_0 = OpConstant %uint 0
+       %void = OpTypeVoid
+%function_type__1561_ = OpTypeFunction %void
+%_ptr_Private_uint = OpTypePointer Private %uint
+%_ptr_Function__ptr_Private_uint = OpTypePointer Function %_ptr_Private_uint
+%_ptr_Function_uint = OpTypePointer Function %uint
+          %v = OpVariable %_ptr_Private_uint Private %uint_0
+%load_thread_local = OpFunction %void None %function_type__1561_
+         %37 = OpLabel
+         %31 = OpVariable %_ptr_Function__ptr_Private_uint Function
+         %32 = OpVariable %_ptr_Function_uint Function
+         %33 = OpVariable %_ptr_Function_uint Function
+               OpStore %31 %v
+         %35 = OpLoad %uint %v
+               OpStore %32 %35
+         %36 = OpLoad %uint %v
+               OpStore %33 %36
+               OpReturn
+               OpFunctionEnd
+  )";
+  auto result = SinglePassRunAndDisassemble<PrivateToLocalPass>(
+      text, /* skip_nop = */ true, /* do_validation = */ false);
+  EXPECT_EQ(Pass::Status::SuccessWithoutChange, std::get<1>(result));
+}
+
 TEST_F(PrivateToLocalTest, UsedInTwoFunctions) {
   // Should not change because it is used in multiple functions.
   const std::string text = R"(

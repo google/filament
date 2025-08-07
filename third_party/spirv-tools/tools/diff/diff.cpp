@@ -87,7 +87,8 @@ std::unique_ptr<spvtools::opt::IRContext> load_module(const char* path) {
     return spvtools::BuildModule(
         kDefaultEnvironment, spvtools::utils::CLIMessageConsumer,
         std::string(contents.begin(), contents.end()),
-        spvtools::SpirvTools::kDefaultAssembleOption |
+        static_cast<spv_text_to_binary_options_t>(
+            spvtools::SpirvTools::kDefaultAssembleOption) |
             SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   }
 

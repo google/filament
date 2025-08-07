@@ -33,12 +33,7 @@ Pass::Status RedundancyEliminationPass::Process() {
     DominatorTree& dom_tree =
         context()->GetDominatorAnalysis(&func)->GetDomTree();
 
-    // Keeps track of all ids that contain a given value number. We keep
-    // track of multiple values because they could have the same value, but
-    // different decorations.
-    std::map<uint32_t, uint32_t> value_to_ids;
-
-    if (EliminateRedundanciesFrom(dom_tree.GetRoot(), vnTable, value_to_ids)) {
+    if (EliminateRedundanciesFrom(dom_tree.GetRoot(), vnTable)) {
       modified = true;
     }
   }
@@ -46,14 +41,21 @@ Pass::Status RedundancyEliminationPass::Process() {
 }
 
 bool RedundancyEliminationPass::EliminateRedundanciesFrom(
-    DominatorTreeNode* bb, const ValueNumberTable& vnTable,
-    std::map<uint32_t, uint32_t> value_to_ids) {
-  bool modified = EliminateRedundanciesInBB(bb->bb_, vnTable, &value_to_ids);
-
-  for (auto dominated_bb : bb->children_) {
-    modified |= EliminateRedundanciesFrom(dominated_bb, vnTable, value_to_ids);
+    DominatorTreeNode* bb, const ValueNumberTable& vnTable) {
+  struct State {
+    DominatorTreeNode* node;
+    std::map<uint32_t, uint32_t> value_to_id_map;
+  };
+  std::vector<State> todo;
+  todo.push_back({bb, std::map<uint32_t, uint32_t>()});
+  bool modified = false;
+  for (size_t next_node = 0; next_node < todo.size(); next_node++) {
+    modified |= EliminateRedundanciesInBB(todo[next_node].node->bb_, vnTable,
+                                          &todo[next_node].value_to_id_map);
+    for (DominatorTreeNode* child : todo[next_node].node->children_) {
+      todo.push_back({child, todo[next_node].value_to_id_map});
+    }
   }
-
   return modified;
 }
 }  // namespace opt

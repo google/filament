@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "source/table.h"
+#include "source/util/span.h"
 #include "spirv-tools/libspirv.h"
 
 // A sequence of operand types.
@@ -35,25 +36,6 @@
 // performance.
 using spv_operand_pattern_t = std::vector<spv_operand_type_t>;
 
-// Finds the named operand in the table. The type parameter specifies the
-// operand's group. A handle of the operand table entry for this operand will
-// be written into *entry.
-spv_result_t spvOperandTableNameLookup(spv_target_env,
-                                       const spv_operand_table table,
-                                       const spv_operand_type_t type,
-                                       const char* name,
-                                       const size_t name_length,
-                                       spv_operand_desc* entry);
-
-// Finds the operand with value in the table. The type parameter specifies the
-// operand's group. A handle of the operand table entry for this operand will
-// be written into *entry.
-spv_result_t spvOperandTableValueLookup(spv_target_env,
-                                        const spv_operand_table table,
-                                        const spv_operand_type_t type,
-                                        const uint32_t value,
-                                        spv_operand_desc* entry);
-
 // Gets the name string of the non-variable operand type.
 const char* spvOperandTypeStr(spv_operand_type_t type);
 
@@ -68,10 +50,10 @@ bool spvOperandIsOptional(spv_operand_type_t type);
 bool spvOperandIsVariable(spv_operand_type_t type);
 
 // Append a list of operand types to the end of the pattern vector.
-// The types parameter specifies the source array of types, ending with
-// SPV_OPERAND_TYPE_NONE.
-void spvPushOperandTypes(const spv_operand_type_t* types,
-                         spv_operand_pattern_t* pattern);
+// The types parameter specifies the source span of types.
+void spvPushOperandTypes(
+    const spvtools::utils::Span<const spv_operand_type_t>& types,
+    spv_operand_pattern_t* pattern);
 
 // Appends the operands expected after the given typed mask onto the
 // end of the given pattern.
@@ -81,9 +63,7 @@ void spvPushOperandTypes(const spv_operand_type_t* types,
 // appear after operands for a more significant bit.
 //
 // If a set bit is unknown, then we assume it has no operands.
-void spvPushOperandTypesForMask(spv_target_env,
-                                const spv_operand_table operand_table,
-                                const spv_operand_type_t mask_type,
+void spvPushOperandTypesForMask(const spv_operand_type_t mask_type,
                                 const uint32_t mask,
                                 spv_operand_pattern_t* pattern);
 
@@ -141,5 +121,8 @@ std::function<bool(unsigned)> spvOperandCanBeForwardDeclaredFunction(
 // used in the SSA validation stage of the pipeline
 std::function<bool(unsigned)> spvDbgInfoExtOperandCanBeForwardDeclaredFunction(
     spv::Op opcode, spv_ext_inst_type_t ext_type, uint32_t key);
+
+// Converts an spv::FPEncoding to spv_fp_encoding_t
+spv_fp_encoding_t spvFPEncodingFromOperandFPEncoding(spv::FPEncoding encoding);
 
 #endif  // SOURCE_OPERAND_H_

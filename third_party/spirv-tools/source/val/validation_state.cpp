@@ -23,6 +23,7 @@
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
 #include "source/spirv_target_env.h"
+#include "source/table2.h"
 #include "source/util/make_unique.h"
 #include "source/val/basic_block.h"
 #include "source/val/construct.h"
@@ -73,6 +74,7 @@ ModuleLayoutSection InstructionLayoutSection(
     case spv::Op::OpMemberDecorateStringGOOGLE:
       return kLayoutAnnotations;
     case spv::Op::OpTypeForwardPointer:
+    case spv::Op::OpTypeTaskSequenceINTEL:
       return kLayoutTypes;
     case spv::Op::OpVariable:
     case spv::Op::OpUntypedVariableKHR:
@@ -367,11 +369,11 @@ void ValidationState_t::RegisterCapability(spv::Capability cap) {
   if (module_capabilities_.contains(cap)) return;
 
   module_capabilities_.insert(cap);
-  spv_operand_desc desc;
-  if (SPV_SUCCESS == grammar_.lookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
-                                            uint32_t(cap), &desc)) {
-    for (auto capability :
-         CapabilitySet(desc->numCapabilities, desc->capabilities)) {
+  const spvtools::OperandDesc* desc = nullptr;
+  if (SPV_SUCCESS == spvtools::LookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
+                                             uint32_t(cap), &desc)) {
+    for (auto capability : CapabilitySet(desc->capabilities_range.count(),
+                                         desc->capabilities().data())) {
       RegisterCapability(capability);
     }
   }
@@ -396,6 +398,9 @@ void ValidationState_t::RegisterCapability(spv::Capability cap) {
     case spv::Capability::Float16:
     case spv::Capability::Float16Buffer:
       features_.declare_float16_type = true;
+      break;
+    case spv::Capability::Float8EXT:
+      features_.declare_float8_type = true;
       break;
     case spv::Capability::StorageUniformBufferBlock16:
     case spv::Capability::StorageUniform16:
@@ -886,6 +891,9 @@ uint32_t ValidationState_t::GetComponentType(uint32_t id) const {
     case spv::Op::OpTypeCooperativeVectorNV:
       return inst->word(2);
 
+    case spv::Op::OpTypeTensorARM:
+      return inst->word(2);
+
     default:
       break;
   }
@@ -944,6 +952,67 @@ uint32_t ValidationState_t::GetBitWidth(uint32_t id) const {
 bool ValidationState_t::IsVoidType(uint32_t id) const {
   const Instruction* inst = FindDef(id);
   return inst && inst->opcode() == spv::Op::OpTypeVoid;
+}
+
+bool ValidationState_t::IsScalarType(uint32_t id) const {
+  return IsIntScalarType(id) || IsFloatScalarType(id) || IsBoolScalarType(id);
+}
+
+bool ValidationState_t::IsBfloat16ScalarType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (inst && inst->opcode() == spv::Op::OpTypeFloat) {
+    if (inst->words().size() > 3) {
+      if (inst->GetOperandAs<spv::FPEncoding>(2) ==
+          spv::FPEncoding::BFloat16KHR) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ValidationState_t::IsBfloat16VectorType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (!inst) {
+    return false;
+  }
+
+  if (inst->opcode() == spv::Op::OpTypeVector) {
+    return IsBfloat16ScalarType(GetComponentType(id));
+  }
+
+  return false;
+}
+
+bool ValidationState_t::IsFP8ScalarType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (inst && inst->opcode() == spv::Op::OpTypeFloat) {
+    if (inst->words().size() > 3) {
+      auto encoding = inst->GetOperandAs<spv::FPEncoding>(2);
+      if ((encoding == spv::FPEncoding::Float8E4M3EXT) ||
+          (encoding == spv::FPEncoding::Float8E5M2EXT)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ValidationState_t::IsFP8VectorType(uint32_t id) const {
+  const Instruction* inst = FindDef(id);
+  if (!inst) {
+    return false;
+  }
+
+  if (inst->opcode() == spv::Op::OpTypeVector) {
+    return IsFP8ScalarType(GetComponentType(id));
+  }
+
+  return false;
+}
+
+bool ValidationState_t::IsFP8ScalarOrVectorType(uint32_t id) const {
+  return IsFP8ScalarType(id) || IsFP8VectorType(id);
 }
 
 bool ValidationState_t::IsFloatScalarType(uint32_t id) const {
@@ -1013,17 +1082,31 @@ bool ValidationState_t::IsIntScalarType(uint32_t id) const {
   return inst && inst->opcode() == spv::Op::OpTypeInt;
 }
 
-bool ValidationState_t::IsIntArrayType(uint32_t id) const {
+bool ValidationState_t::IsIntArrayType(uint32_t id, uint64_t length) const {
   const Instruction* inst = FindDef(id);
   if (!inst) {
     return false;
   }
 
-  if (inst->opcode() == spv::Op::OpTypeArray) {
-    return IsIntScalarType(GetComponentType(id));
+  if (inst->opcode() != spv::Op::OpTypeArray) {
+    return false;
   }
 
-  return false;
+  if (!IsIntScalarType(GetComponentType(id))) {
+    return false;
+  }
+
+  if (length != 0) {
+    const auto len_id = inst->GetOperandAs<uint32_t>(2);
+    const auto len = FindDef(len_id);
+    uint64_t len_value = 0;
+    if (!len || !spvOpcodeIsConstant(len->opcode()) ||
+        (EvalConstantValUint64(len_id, &len_value) && (length != len_value))) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool ValidationState_t::IsIntVectorType(uint32_t id) const {
@@ -1768,6 +1851,10 @@ bool ValidationState_t::ContainsSizedIntOrFloatType(uint32_t id, spv::Op type,
 
   const auto f = [type, width](const Instruction* inst) {
     if (inst->opcode() == type) {
+      // Bfloat16 is a special type.
+      if (type == spv::Op::OpTypeFloat && inst->words().size() > 3)
+        return false;
+
       return inst->GetOperandAs<uint32_t>(1u) == width;
     }
     return false;
@@ -1852,6 +1939,7 @@ bool ValidationState_t::IsValidStorageClass(
       case spv::StorageClass::HitObjectAttributeNV:
       case spv::StorageClass::TileImageEXT:
       case spv::StorageClass::NodePayloadAMDX:
+      case spv::StorageClass::TileAttachmentQCOM:
         return true;
       default:
         return false;
@@ -1859,6 +1947,14 @@ bool ValidationState_t::IsValidStorageClass(
   }
 
   return true;
+}
+
+std::string ValidationState_t::MissingFeature(const std::string& feature,
+                                              const std::string& cmdline,
+                                              bool hint) const {
+  return "\nThis is " + (hint ? std::string("may be ") : "") +
+         "allowed if you enable the " + feature + " (or use the " + cmdline +
+         " command line flag)";
 }
 
 #define VUID_WRAP(vuid) "[" #vuid "] "
@@ -2397,8 +2493,6 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
       return VUID_WRAP(VUID-StandaloneSpirv-OpImage-04777);
     case 4780:
       return VUID_WRAP(VUID-StandaloneSpirv-Result-04780);
-    case 4781:
-      return VUID_WRAP(VUID-StandaloneSpirv-Base-04781);
     case 4915:
       return VUID_WRAP(VUID-StandaloneSpirv-Location-04915);
     case 4916:
@@ -2536,8 +2630,41 @@ std::string ValidationState_t::VkErrorID(uint32_t id,
     case 10213:
       // This use to be a standalone, but maintenance8 will set allow_offset_texture_operand now
       return VUID_WRAP(VUID-RuntimeSpirv-Offset-10213);
+    case 10370:
+      return VUID_WRAP(VUID-StandaloneSpirv-OpTypeFloat-10370);
     case 10583:
       return VUID_WRAP(VUID-StandaloneSpirv-Component-10583);
+    case 10589:
+      return VUID_WRAP(VUID-CullPrimitiveEXT-CullPrimitiveEXT-10589);
+    case 10590:
+      return VUID_WRAP(VUID-CullPrimitiveEXT-CullPrimitiveEXT-10590);
+    case 10591:
+      return VUID_WRAP(VUID-CullPrimitiveEXT-CullPrimitiveEXT-10591);
+    case 10592:
+      return VUID_WRAP(VUID-Layer-Layer-10592);
+    case 10593:
+      return VUID_WRAP(VUID-Layer-Layer-10593);
+    case 10594:
+      return VUID_WRAP(VUID-Layer-Layer-10594);
+    case 10598:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-10598);
+    case 10599:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-10599);
+    case 10600:
+      return VUID_WRAP(VUID-PrimitiveShadingRateKHR-PrimitiveShadingRateKHR-10600);
+    case 10601:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-10601);
+    case 10602:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-10602);
+    case 10603:
+      return VUID_WRAP(VUID-ViewportIndex-ViewportIndex-10603);
+    case 10684:
+      return VUID_WRAP(VUID-StandaloneSpirv-None-10684);
+    case 10685:
+      return VUID_WRAP(VUID-StandaloneSpirv-None-10685);
+    case 10824:
+      // This use to be a standalone, but maintenance9 will set allow_vulkan_32_bit_bitwise now
+      return VUID_WRAP(VUID-RuntimeSpirv-None-10824);
     default:
       return "";  // unknown id
   }

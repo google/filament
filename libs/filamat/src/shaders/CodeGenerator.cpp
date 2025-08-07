@@ -250,6 +250,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
     }
     if (stage == ShaderStage::FRAGMENT) {
+        CodeGenerator::generateDefine(out, "FILAMENT_LINEAR_FOG",
+                material.linearFog);
         CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
                 material.userMaterialHasCustomDepth);
     }

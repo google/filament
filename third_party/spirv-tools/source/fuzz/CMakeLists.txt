@@ -438,7 +438,15 @@ if(SPIRV_BUILD_FUZZER)
 
   spvtools_pch(SPIRV_TOOLS_FUZZ_SOURCES pch_source_fuzz)
 
+  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+    list(APPEND SPIRV_TOOLS_DIFF_SOURCES ${spirv-tools_SOURCE_DIR}/source/mimalloc.cpp)
+  endif()
+
   add_library(SPIRV-Tools-fuzz ${SPIRV_TOOLS_FUZZ_SOURCES})
+
+  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+    target_link_libraries(SPIRV-Tools-fuzz PRIVATE mimalloc-static)
+  endif()
 
   spvtools_default_compile_options(SPIRV-Tools-fuzz)
 
@@ -470,7 +478,13 @@ if(SPIRV_BUILD_FUZZER)
   spvtools_check_symbol_exports(SPIRV-Tools-fuzz)
 
   if(ENABLE_SPIRV_TOOLS_INSTALL)
-      install(TARGETS SPIRV-Tools-fuzz EXPORT SPIRV-Tools-fuzzTargets)
+      set(SPIRV-Tools-fuzz-InstallTargets SPIRV-Tools-fuzz)
+
+      if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+        list(APPEND SPIRV-Tools-fuzz-InstallTargets mimalloc-static)
+      endif()
+
+      install(TARGETS ${SPIRV-Tools-fuzz-InstallTargets} EXPORT SPIRV-Tools-fuzzTargets)
       export(EXPORT SPIRV-Tools-fuzzTargets FILE SPIRV-Tools-fuzzTarget.cmake)
 
       spvtools_config_package_dir(SPIRV-Tools-fuzz PACKAGE_DIR)

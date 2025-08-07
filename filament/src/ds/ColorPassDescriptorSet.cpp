@@ -19,8 +19,6 @@
 
 #include "Froxelizer.h"
 #include "PerViewDescriptorSetUtils.h"
-#include "HwDescriptorSetLayoutFactory.h"
-#include "ShadowMapManager.h"
 #include "TypedUniformBuffer.h"
 
 #include "components/LightManager.h"
@@ -30,10 +28,8 @@
 #include "details/IndirectLight.h"
 #include "details/Texture.h"
 
-#include <filament/Engine.h>
 #include <filament/Exposure.h>
 #include <filament/Options.h>
-#include <filament/TextureSampler.h>
 #include <filament/MaterialEnums.h>
 #include <filament/Viewport.h>
 
@@ -56,9 +52,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
+#include <cstddef>
+#include <limits>
 #include <random>
 
-#include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
@@ -243,6 +241,22 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
             });
 
+    // Fog calculation details:
+    // Optical path: (
+    //   f = heightFalloff
+    //   Te(y, z) = z * density * (exp(-f * eye_y) - exp(-f * eye_y - f * y)) / (f * y)
+    // Transmittance:
+    //   t(y , z) = exp(-Te(y, z))
+
+    // In Linear Mode, formally the slope of the linear equation is: dt(y,z)/dz(0, eye_y)
+    // (the derivative of the transmittance at distance 0 and camera height). When the height
+    // falloff is disabled, the density parameter exactly represents this value.
+    constexpr double EPSILON = std::numeric_limits<float>::epsilon();
+    double const f = heightFalloff;
+    double const eye = userCameraPosition.y - options.height;
+    double const dt = options.density * (f <= EPSILON ? 1.0 : (std::exp(-f * eye) - std::exp(-2.0 * f * eye)) / (f * eye));
+    float const fogEndLinear = float(1.0 / dt);
+
     s.fogStart             = options.distance;
     s.fogMaxOpacity        = options.maximumOpacity;
     s.fogHeightFalloff     = heightFalloff;
@@ -253,6 +267,8 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     s.fogInscatteringSize  = options.inScatteringSize;
     s.fogColorFromIbl      = fogColorTextureHandle ? 1.0f : 0.0f;
     s.fogFromWorldMatrix   = mat3f{ cof(fogFromWorld) };
+    s.fogLinearParams       = { 1.0f / (fogEndLinear - options.distance),
+            -options.distance / (fogEndLinear - options.distance) };
 }
 
 void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
@@ -332,7 +348,7 @@ void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
     }
 }
 
-void ColorPassDescriptorSet::prepareAmbientLight(FEngine& engine, FIndirectLight const& ibl,
+void ColorPassDescriptorSet::prepareAmbientLight(FEngine const& engine, FIndirectLight const& ibl,
         float const intensity, float const exposure) noexcept {
     auto& s = mUniforms.edit();
 

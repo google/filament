@@ -373,6 +373,13 @@ class BuiltInsValidator {
   spv_result_t ValidateMeshShadingEXTBuiltinsAtDefinition(
       const Decoration& decoration, const Instruction& inst);
 
+  // Used as a common method for validating MeshEXT builtins
+  spv_result_t ValidateMeshEXTBuiltinInterfaceRules(
+      const Decoration& decoration, const Instruction& inst,
+      spv::Op scalar_type, uint32_t array_type_vuid, uint32_t array_size_vuid,
+      uint32_t block_array_size_vuid, uint32_t interface_vuid,
+      uint32_t perprim_deco_vuid);
+
   // The following section contains functions which are called when id defined
   // by |referenced_inst| is
   // 1. referenced by |referenced_from_inst|
@@ -590,6 +597,10 @@ class BuiltInsValidator {
   spv_result_t ValidateBool(
       const Decoration& decoration, const Instruction& inst,
       const std::function<spv_result_t(const std::string& message)>& diag);
+  spv_result_t ValidateBlockTypeOrArrayedType(
+      const Decoration& decoration, const Instruction& inst,
+      bool& present_in_block, spv::Op expected_scalar_type,
+      const std::function<spv_result_t(const std::string& message)>& diag);
   spv_result_t ValidateI(
       const Decoration& decoration, const Instruction& inst,
       const std::function<spv_result_t(const std::string& message)>& diag);
@@ -672,13 +683,18 @@ class BuiltInsValidator {
   // UniformConstant".
   std::string GetStorageClassDesc(const Instruction& inst) const;
 
+  uint64_t GetArrayLength(uint32_t interface_var_id);
+
   // Updates inner working of the class. Is called sequentially for every
   // instruction.
   void Update(const Instruction& inst);
 
-  // Check if "inst" is an interface variable
-  // or type of a interface varibale of any mesh entry point
-  bool isMeshInterfaceVar(const Instruction& inst) {
+  // Check if "inst" is an interface variable or type of a interface varibale
+  // of any mesh entry point. Populate entry_point_interface_id with all
+  // entry points and interface variables that refer to the "inst"
+  bool isMeshInterfaceVar(
+      const Instruction& inst,
+      std::map<uint32_t, uint32_t>& entry_point_interface_id) {
     auto getUnderlyingTypeId = [&](const Instruction* ifxVar) {
       auto pointerTypeInst = _.FindDef(ifxVar->type_id());
       auto typeInst = _.FindDef(pointerTypeInst->GetOperandAs<uint32_t>(2));
@@ -696,15 +712,34 @@ class BuiltInsValidator {
           for (auto interface : desc.interfaces) {
             if (inst.opcode() == spv::Op::OpTypeStruct) {
               auto varInst = _.FindDef(interface);
-              if (inst.id() == getUnderlyingTypeId(varInst)) return true;
+              if (inst.id() == getUnderlyingTypeId(varInst)) {
+                entry_point_interface_id[entry_point] = interface;
+                break;
+              }
             } else if (inst.id() == interface) {
-              return true;
+              entry_point_interface_id[entry_point] = interface;
+              break;
             }
           }
         }
       }
     }
-    return false;
+    return !entry_point_interface_id.empty();
+  }
+
+  bool HasInterfaceVariableForMeshEntryPoint(spv::BuiltIn builtin,
+                                             uint32_t entry_point) {
+    const auto& entry_points = mesh_builtin_entry_point_.find(builtin);
+    if (entry_points == mesh_builtin_entry_point_.end()) return false;
+
+    return std::any_of(
+        entry_points->second.begin(), entry_points->second.end(),
+        [entry_point](const uint32_t& ep) { return entry_point == ep; });
+  }
+  void RegisterMeshEntryPointForBuiltin(spv::BuiltIn builtin,
+                                        uint32_t entry_point) {
+    auto& entry_points = mesh_builtin_entry_point_[builtin];
+    entry_points.insert(entry_point);
   }
 
   ValidationState_t& _;
@@ -727,6 +762,10 @@ class BuiltInsValidator {
 
   // Execution models with which the current function can be called.
   std::set<spv::ExecutionModel> execution_models_;
+
+  // Mesh Builtins which are part of interface variables corresponding to an
+  // entry point
+  std::map<spv::BuiltIn, std::set<uint32_t>> mesh_builtin_entry_point_;
 };
 
 void BuiltInsValidator::Update(const Instruction& inst) {
@@ -804,6 +843,29 @@ std::string BuiltInsValidator::GetStorageClassDesc(
   return ss.str();
 }
 
+uint64_t BuiltInsValidator::GetArrayLength(uint32_t interface_var_id) {
+  uint32_t underlying_type;
+  spv::StorageClass storage_class;
+  uint64_t array_len = -1;
+  const Instruction* inst = _.FindDef(interface_var_id);
+  if (inst->opcode() != spv::Op::OpVariable) {
+    return -1;
+  }
+
+  if (!_.GetPointerTypeInfo(inst->type_id(), &underlying_type,
+                            &storage_class)) {
+    return 0;
+  }
+  if (_.GetIdOpcode(underlying_type) == spv::Op::OpTypeArray) {
+    // Get the array length
+    const auto length_id = _.FindDef(underlying_type)->word(3u);
+    if (!_.EvalConstantValUint64(length_id, &array_len)) {
+      return 0;
+    }
+  }
+  return array_len;
+}
+
 spv_result_t BuiltInsValidator::ValidateBool(
     const Decoration& decoration, const Instruction& inst,
     const std::function<spv_result_t(const std::string& message)>& diag) {
@@ -815,6 +877,55 @@ spv_result_t BuiltInsValidator::ValidateBool(
 
   if (!_.IsBoolScalarType(underlying_type)) {
     return diag(GetDefinitionDesc(decoration, inst) + " is not a bool scalar.");
+  }
+
+  return SPV_SUCCESS;
+}
+
+spv_result_t BuiltInsValidator::ValidateBlockTypeOrArrayedType(
+    const Decoration& decoration, const Instruction& inst, bool& isBlock,
+    spv::Op expected_scalar_type,
+    const std::function<spv_result_t(const std::string& message)>& diag) {
+  uint32_t underlying_type = 0;
+  int64_t array_len = -1;
+  isBlock = true;
+  if (spv_result_t error =
+          GetUnderlyingType(_, decoration, inst, &underlying_type)) {
+    return error;
+  }
+  // Strip the array, if present.
+  if (_.GetIdOpcode(underlying_type) == spv::Op::OpTypeArray) {
+    // Get the array length
+    const auto length_id = _.FindDef(underlying_type)->word(3u);
+    if (!_.EvalConstantValInt64(length_id, &array_len)) {
+      return diag(GetDefinitionDesc(decoration, inst) +
+                  " Failed to find the array length.");
+    }
+    underlying_type = _.FindDef(underlying_type)->word(2u);
+    isBlock = false;
+  } else if (!_.HasDecoration(inst.id(), spv::Decoration::Block)) {
+    // If not in array, and bool is in a struct, must be in a Block struct
+    return diag(GetDefinitionDesc(decoration, inst) +
+                " Scalar boolean must be in a Block.");
+  }
+
+  switch (expected_scalar_type) {
+    case spv::Op::OpTypeBool:
+      if (!_.IsBoolScalarType(underlying_type)) {
+        return diag(GetDefinitionDesc(decoration, inst) +
+                    " is not a bool scalar.");
+      }
+      break;
+    case spv::Op::OpTypeInt:
+      if (!_.IsSignedIntScalarType(underlying_type)) {
+        return diag(GetDefinitionDesc(decoration, inst) +
+                    " is not a signed integer scalar.");
+      }
+      break;
+    default:
+      assert(0 && "Unhandled scalar type");
+      return diag(GetDefinitionDesc(decoration, inst) +
+                  " is not a recognized scalar type.");
   }
 
   return SPV_SUCCESS;
@@ -2162,9 +2273,22 @@ spv_result_t BuiltInsValidator::ValidatePositionAtReference(
 spv_result_t BuiltInsValidator::ValidatePrimitiveIdAtDefinition(
     const Decoration& decoration, const Instruction& inst) {
   if (spvIsVulkanEnv(_.context()->target_env)) {
+    if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
+      uint32_t array_type_vuid = 10595;
+      uint32_t interface_vuid = 0;
+      uint32_t array_size_vuid = 10596;
+      uint32_t block_array_size_vuid = 10597;
+      uint32_t perprim_deco_vuid = 7040;
+      if (spv_result_t error = ValidateMeshEXTBuiltinInterfaceRules(
+              decoration, inst, spv::Op::OpTypeInt, array_type_vuid,
+              array_size_vuid, block_array_size_vuid, interface_vuid,
+              perprim_deco_vuid)) {
+        return error;
+      }
+    }
     // PrimitiveId can be a per-primitive variable for mesh shader stage.
     // In such cases variable will have an array of 32-bit integers.
-    if (decoration.struct_member_index() != Decoration::kInvalidMember) {
+    else if (decoration.struct_member_index() != Decoration::kInvalidMember) {
       // This must be a 32-bit int scalar.
       if (spv_result_t error = ValidateI32(
               decoration, inst,
@@ -2188,17 +2312,6 @@ spv_result_t BuiltInsValidator::ValidatePrimitiveIdAtDefinition(
                        << message;
               })) {
         return error;
-      }
-    }
-
-    if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
-      if (isMeshInterfaceVar(inst) &&
-          !_.HasDecoration(inst.id(), spv::Decoration::PerPrimitiveEXT)) {
-        return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-               << _.VkErrorID(7040)
-               << "According to the Vulkan spec the variable decorated with "
-                  "Builtin PrimitiveId within the MeshEXT Execution Model must "
-                  "also be decorated with the PerPrimitiveEXT decoration. ";
       }
     }
   }
@@ -2769,12 +2882,100 @@ spv_result_t BuiltInsValidator::ValidateVertexIndexAtReference(
   return SPV_SUCCESS;
 }
 
+spv_result_t BuiltInsValidator::ValidateMeshEXTBuiltinInterfaceRules(
+    const Decoration& decoration, const Instruction& inst, spv::Op scalar_type,
+    uint32_t array_type_vuid, uint32_t array_size_vuid,
+    uint32_t block_array_size_vuid, uint32_t interface_vuid,
+    uint32_t perprim_deco_vuid) {
+  bool is_block = false;
+  const spv::BuiltIn builtin = decoration.builtin();
+  // Validate the type of the builtin and if it's part of a block or an array
+  if (spv_result_t error = ValidateBlockTypeOrArrayedType(
+          decoration, inst, is_block, scalar_type,
+          [this, &inst, &decoration,
+           &array_type_vuid](const std::string& message) -> spv_result_t {
+            return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+                   << _.VkErrorID(array_type_vuid) << "According to the "
+                   << spvLogStringForEnv(_.context()->target_env)
+                   << " spec BuiltIn "
+                   << _.grammar().lookupOperandName(
+                          SPV_OPERAND_TYPE_BUILT_IN,
+                          (uint32_t)decoration.builtin())
+                   << " variable needs to be a either a boolean or an "
+                      "array of booleans."
+                   << message;
+          })) {
+    return error;
+  }
+
+  // Validate that the builtin is part of the mesh interface
+  std::map<uint32_t, uint32_t> entry_interface_id_map;
+  bool found = isMeshInterfaceVar(inst, entry_interface_id_map);
+  if (!found) {
+    return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+           << _.VkErrorID(interface_vuid) << "Declaration of builtin type"
+           << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
+                                            (uint32_t)builtin)
+           << " not found as interface variable of any meshEXT entry point. ";
+  }
+  for (const auto& id : entry_interface_id_map) {
+    uint32_t entry_point_id = id.first;
+    uint32_t interface_var_id = id.second;
+    if (!HasInterfaceVariableForMeshEntryPoint(builtin, entry_point_id)) {
+      RegisterMeshEntryPointForBuiltin(decoration.builtin(), entry_point_id);
+    } else {
+      return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+             << _.VkErrorID(interface_vuid)
+             << "There must be only one declaration of the "
+             << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
+                                              (uint32_t)builtin)
+             << " associated with a entry point's interface. "
+             << GetIdDesc(*_.FindDef(interface_var_id));
+    }
+    if (GetArrayLength(interface_var_id) !=
+        _.GetOutputPrimitivesEXT(entry_point_id)) {
+      return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+             << _.VkErrorID(is_block ? block_array_size_vuid : array_size_vuid)
+             << " The size of the array decorated with "
+             << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
+                                              (uint32_t)builtin)
+             << " must match the value specified by OutputPrimitivesEXT. ";
+    }
+  }
+  if (!_.HasDecoration(inst.id(), spv::Decoration::PerPrimitiveEXT)) {
+    return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+           << _.VkErrorID(perprim_deco_vuid)
+           << "According to the Vulkan spec the variable decorated with "
+              "Builtin "
+           << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
+                                            (uint32_t)builtin)
+           << " within the MeshEXT Execution Model must also be "
+           << "decorated with the PerPrimitiveEXT decoration. ";
+  }
+  return SPV_SUCCESS;
+}
+
 spv_result_t BuiltInsValidator::ValidateLayerOrViewportIndexAtDefinition(
     const Decoration& decoration, const Instruction& inst) {
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    // This can be a per-primitive variable for mesh shader stage.
+    if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
+      const spv::BuiltIn label = decoration.builtin();
+      uint32_t array_type_vuid = (label == spv::BuiltIn::Layer) ? 10592 : 10601;
+      uint32_t interface_vuid = 0;
+      uint32_t array_size_vuid = (label == spv::BuiltIn::Layer) ? 10593 : 10602;
+      uint32_t block_array_size_vuid =
+          (label == spv::BuiltIn::Layer) ? 10594 : 10603;
+      uint32_t perprim_deco_vuid = (label == spv::BuiltIn::Layer) ? 7039 : 7060;
+      if (spv_result_t error = ValidateMeshEXTBuiltinInterfaceRules(
+              decoration, inst, spv::Op::OpTypeInt, array_type_vuid,
+              array_size_vuid, block_array_size_vuid, interface_vuid,
+              perprim_deco_vuid)) {
+        return error;
+      }
+    }
+    // This can be a per-primitive variable for NV mesh shader stage.
     // In such cases variable will have an array of 32-bit integers.
-    if (decoration.struct_member_index() != Decoration::kInvalidMember) {
+    else if (decoration.struct_member_index() != Decoration::kInvalidMember) {
       // This must be a 32-bit int scalar.
       if (spv_result_t error = ValidateI32(
               decoration, inst,
@@ -2793,39 +2994,23 @@ spv_result_t BuiltInsValidator::ValidateLayerOrViewportIndexAtDefinition(
               })) {
         return error;
       }
-    } else {
-      if (spv_result_t error = ValidateOptionalArrayedI32(
-              decoration, inst,
-              [this, &decoration,
-               &inst](const std::string& message) -> spv_result_t {
-                uint32_t vuid =
-                    (decoration.builtin() == spv::BuiltIn::Layer) ? 4276 : 4408;
-                return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-                       << _.VkErrorID(vuid)
-                       << "According to the Vulkan spec BuiltIn "
-                       << _.grammar().lookupOperandName(
-                              SPV_OPERAND_TYPE_BUILT_IN,
-                              (uint32_t)decoration.builtin())
-                       << "variable needs to be a 32-bit int scalar. "
-                       << message;
-              })) {
-        return error;
-      }
-    }
-
-    if (isMeshInterfaceVar(inst) &&
-        _.HasCapability(spv::Capability::MeshShadingEXT) &&
-        !_.HasDecoration(inst.id(), spv::Decoration::PerPrimitiveEXT)) {
-      const spv::BuiltIn label = spv::BuiltIn(decoration.params()[0]);
-      uint32_t vkerrid = (label == spv::BuiltIn::Layer) ? 7039 : 7060;
-      return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-             << _.VkErrorID(vkerrid)
-             << "According to the Vulkan spec the variable decorated with "
-                "Builtin "
-             << _.grammar().lookupOperandName(SPV_OPERAND_TYPE_BUILT_IN,
-                                              decoration.params()[0])
-             << " within the MeshEXT Execution Model must also be decorated "
-                "with the PerPrimitiveEXT decoration. ";
+    } else if (spv_result_t error = ValidateOptionalArrayedI32(
+                   decoration, inst,
+                   [this, &decoration,
+                    &inst](const std::string& message) -> spv_result_t {
+                     uint32_t vuid =
+                         (decoration.builtin() == spv::BuiltIn::Layer) ? 4276
+                                                                       : 4408;
+                     return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+                            << _.VkErrorID(vuid)
+                            << "According to the Vulkan spec BuiltIn "
+                            << _.grammar().lookupOperandName(
+                                   SPV_OPERAND_TYPE_BUILT_IN,
+                                   (uint32_t)decoration.builtin())
+                            << "variable needs to be a 32-bit int scalar. "
+                            << message;
+                   })) {
+      return error;
     }
   }
 
@@ -3960,29 +4145,32 @@ spv_result_t BuiltInsValidator::ValidateNVSMOrARMCoreBuiltinsAtReference(
 spv_result_t BuiltInsValidator::ValidatePrimitiveShadingRateAtDefinition(
     const Decoration& decoration, const Instruction& inst) {
   if (spvIsVulkanEnv(_.context()->target_env)) {
-    if (spv_result_t error = ValidateI32(
-            decoration, inst,
-            [this, &inst,
-             &decoration](const std::string& message) -> spv_result_t {
-              return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-                     << _.VkErrorID(4486)
-                     << "According to the Vulkan spec BuiltIn "
-                     << _.grammar().lookupOperandName(
-                            SPV_OPERAND_TYPE_BUILT_IN,
-                            (uint32_t)decoration.builtin())
-                     << " variable needs to be a 32-bit int scalar. "
-                     << message;
-            })) {
+    if (_.HasCapability(spv::Capability::MeshShadingEXT)) {
+      uint32_t array_type_vuid = 10598;
+      uint32_t interface_vuid = 0;
+      uint32_t array_size_vuid = 10599;
+      uint32_t block_array_size_vuid = 10600;
+      uint32_t perprim_deco_vuid = 7059;
+      if (spv_result_t error = ValidateMeshEXTBuiltinInterfaceRules(
+              decoration, inst, spv::Op::OpTypeInt, array_type_vuid,
+              array_size_vuid, block_array_size_vuid, interface_vuid,
+              perprim_deco_vuid)) {
+        return error;
+      }
+    } else if (spv_result_t error = ValidateI32(
+                   decoration, inst,
+                   [this, &inst,
+                    &decoration](const std::string& message) -> spv_result_t {
+                     return _.diag(SPV_ERROR_INVALID_DATA, &inst)
+                            << _.VkErrorID(4486)
+                            << "According to the Vulkan spec BuiltIn "
+                            << _.grammar().lookupOperandName(
+                                   SPV_OPERAND_TYPE_BUILT_IN,
+                                   (uint32_t)decoration.builtin())
+                            << " variable needs to be a 32-bit int scalar. "
+                            << message;
+                   })) {
       return error;
-    }
-    if (isMeshInterfaceVar(inst) &&
-        _.HasCapability(spv::Capability::MeshShadingEXT) &&
-        !_.HasDecoration(inst.id(), spv::Decoration::PerPrimitiveEXT)) {
-      return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-             << _.VkErrorID(7059)
-             << "The variable decorated with PrimitiveShadingRateKHR "
-                "within the MeshEXT Execution Model must also be "
-                "decorated with the PerPrimitiveEXT decoration";
     }
   }
 
@@ -4338,32 +4526,20 @@ spv_result_t BuiltInsValidator::ValidateMeshShadingEXTBuiltinsAtDefinition(
           return error;
         }
         break;
-      case spv::BuiltIn::CullPrimitiveEXT:
-        if (spv_result_t error = ValidateBool(
-                decoration, inst,
-                [this, &inst, &decoration,
-                 &vuid](const std::string& message) -> spv_result_t {
-                  return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-                         << _.VkErrorID(vuid) << "According to the "
-                         << spvLogStringForEnv(_.context()->target_env)
-                         << " spec BuiltIn "
-                         << _.grammar().lookupOperandName(
-                                SPV_OPERAND_TYPE_BUILT_IN,
-                                (uint32_t)decoration.builtin())
-                         << " variable needs to be a boolean value "
-                            "array."
-                         << message;
-                })) {
+      case spv::BuiltIn::CullPrimitiveEXT: {
+        uint32_t array_type_vuid = vuid;
+        uint32_t interface_vuid = 10591;
+        uint32_t array_size_vuid = 10589;
+        uint32_t block_array_size_vuid = 10590;
+        uint32_t perprim_deco_vuid = 7038;
+        if (spv_result_t error = ValidateMeshEXTBuiltinInterfaceRules(
+                decoration, inst, spv::Op::OpTypeBool, array_type_vuid,
+                array_size_vuid, block_array_size_vuid, interface_vuid,
+                perprim_deco_vuid)) {
           return error;
         }
-        if (!_.HasDecoration(inst.id(), spv::Decoration::PerPrimitiveEXT)) {
-          return _.diag(SPV_ERROR_INVALID_DATA, &inst)
-                 << _.VkErrorID(7038)
-                 << "The variable decorated with CullPrimitiveEXT within the "
-                    "MeshEXT Execution Model must also be decorated with the "
-                    "PerPrimitiveEXT decoration ";
-        }
         break;
+      }
       default:
         assert(0 && "Unexpected mesh EXT builtin");
     }
