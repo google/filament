@@ -105,6 +105,7 @@ void initPushConstants() {
 
 TEST_F(BackendTest, PushConstants) {
     SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
+    SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
 
     initPushConstants();
 

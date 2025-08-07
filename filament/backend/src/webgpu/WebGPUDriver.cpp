@@ -16,6 +16,7 @@
 #include "webgpu/WebGPUDriver.h"
 
 #include "WebGPUBufferObject.h"
+#include "WebGPUConstants.h"
 #include "WebGPUDescriptorSet.h"
 #include "WebGPUDescriptorSetLayout.h"
 #include "WebGPUFence.h"
@@ -62,6 +63,28 @@
 using namespace std::chrono_literals;
 
 namespace filament::backend {
+
+namespace {
+
+void setDefaultTargetFlags(WebGPURenderTarget& defaultRenderTarget,
+        WebGPUSwapChain const& swapChain) {
+    const wgpu::TextureFormat depthFormat{ swapChain.getDepthFormat() };
+    TargetBufferFlags newTargetFlags{ filament::backend::TargetBufferFlags::NONE };
+
+    // Assuming Color always present in default render target.
+    newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
+    if (depthFormat != wgpu::TextureFormat::Undefined) {
+        if (hasDepth(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
+        }
+        if (hasStencil(depthFormat)) {
+            newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
+        }
+    }
+    defaultRenderTarget.setTargetFlags(newTargetFlags);
+}
+
+} // namespace
 
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
     constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
@@ -136,6 +159,10 @@ void WebGPUDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     mPipelineLayoutCache.onFrameEnd();
     mPipelineCache.onFrameEnd();
+
+    for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
+        mCurrentDescriptorSets[i] = {};
+    }
 }
 
 void WebGPUDriver::flush(int) {
@@ -379,6 +406,9 @@ void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
                   "rebuilding Filament with that flag, e.g. ./build.sh -x "
                << FWGPU_PRINT_SYSTEM << " ...";
 #endif
+    if (mDefaultRenderTarget) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
@@ -387,6 +417,9 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
      mSwapChain = constructHandle<WebGPUSwapChain>(sch, extent, mAdapter,
             mDevice, flags);
      assert_invariant(mSwapChain);
+     if (mDefaultRenderTarget) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
@@ -483,6 +516,9 @@ void WebGPUDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> renderTarge
     assert_invariant(!mDefaultRenderTarget);
     mDefaultRenderTarget = constructHandle<WebGPURenderTarget>(renderTargetHandle);
     assert_invariant(mDefaultRenderTarget);
+    if (mSwapChain) {
+        setDefaultTargetFlags(*mDefaultRenderTarget, *mSwapChain);
+    }
 }
 
 void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle,
@@ -572,7 +608,7 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
-    return WebGPUTexture::fToWGPUTextureFormat(format) != wgpu::TextureFormat::Undefined;
+    return toWGPUTextureFormat(format) != wgpu::TextureFormat::Undefined;
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
@@ -580,18 +616,18 @@ bool WebGPUDriver::isTextureSwizzleSupported() {
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
+    const wgpu::TextureFormat webGpuFormat{ toWGPUTextureFormat(format) };
     // passing 2D and sampleCount 1 to only check the format
     const WebGPURenderPassMipmapGenerator::FormatCompatibility renderPassCompatibility{
-        WebGPURenderPassMipmapGenerator::getCompatibilityFor(
-                WebGPUTexture::fToWGPUTextureFormat(format), wgpu::TextureDimension::e2D, 1)
+        WebGPURenderPassMipmapGenerator::getCompatibilityFor(webGpuFormat,
+                wgpu::TextureDimension::e2D, 1)
     };
 
     if (renderPassCompatibility.compatible) {
         return true;
     }
 
-    return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(
-            WebGPUTexture::fToWGPUTextureFormat(format));
+    return WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(webGpuFormat);
 }
 
 bool WebGPUDriver::isRenderTargetFormatSupported(const TextureFormat format) {
@@ -768,16 +804,15 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-
     const wgpu::TextureFormat inputPixelFormat{ toWebGPUFormat(inputData->format,
             inputData->type) };
-    const wgpu::TextureFormat outputLinearFormat{ toWebGPULinearFormat(
+    const wgpu::TextureFormat outputLinearFormat{ toLinearFormat(
             texture->getTexture().GetFormat()) };
     const bool conversionNecessary{
         inputPixelFormat != outputLinearFormat && inputData->type != PixelDataType::COMPRESSED
     }; // compressed formats should never need conversion
     const bool doBlit{ conversionNecessary };
-#if FWGPU_ENABLED(FWGPU_DEBUG_VALIDATION)
+#if FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE)
     if (texture->width > 1000 && texture->height > 500) {
         FWGPU_LOGD << "Update3DImage(..., level=" << level << ", xoffset=" << xoffset
                    << ", yoffset=" << yoffset << ", zoffset=" << zoffset << ", width=" << width
@@ -877,6 +912,15 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
             mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
         }
         if (!reusedCommandEncoder) {
+            // TODO consider removing encoder finish + submit once we have test coverage and can
+            //      safely verify doing so will not result in strange errors. We don't think this
+            //      submit is necessary, as the encoder should get finished and the command
+            //      submitted in commit(), finish(), and/or flush() in this frame
+            //      or the next anyway. And, the blit bits will be encoded before other things.
+            //      Thus, not submitting here _seems_ ok. Nonetheless, doing the submit here likely
+            //      represents unnecessary inefficiency and higher bandwidth
+            //      between the CPU and GPU, but we are worried about functional correctness at this
+            //      stage.
             const wgpu::CommandBufferDescriptor commandBufferDescriptor{
                 .label = "blit_command_buffer",
             };
@@ -970,6 +1014,17 @@ void WebGPUDriver::generateMipmaps(Handle<HwTexture> textureHandle) {
             mSpdComputePassMipmapGenerator.Generate(encoder, wgpuTexture, spdConfig);
 
             // Finish the encoder and submit all the passes at once.
+            // TODO consider reusing the existing command encoder or creating it in this function
+            //      if it doesn't already exist and removing encoder finish + submit here once
+            //      we have test coverage and can safely verify doing so will not result in
+            //      strange errors. We don't think this submit is necessary, as the encoder
+            //      should get finished and the command submitted in
+            //      commit(), finish(), and/or flush() in this frame or the next anyway.
+            //      And, the mipmap generation bits will be encoded before other things.
+            //      Thus, not submitting here _seems_ ok. Nonetheless, doing the submit here likely
+            //      represents unnecessary inefficiency and higher bandwidth
+            //      between the CPU and GPU, but we are worried about functional correctness at this
+            //      stage.
             wgpu::CommandBufferDescriptor cmdBufferDesc = {};
             cmdBufferDesc.label = "Mipmap Command Buffer";
             wgpu::CommandBuffer commandBuffer = encoder.Finish(&cmdBufferDesc);
@@ -1163,23 +1218,6 @@ void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> 
 
     assert_invariant(mTextureView);
 
-    assert_invariant(mDefaultRenderTarget);
-
-    wgpu::TextureFormat depthFormat = mSwapChain->getDepthFormat();
-    TargetBufferFlags newTargetFlags = filament::backend::TargetBufferFlags::NONE;
-
-    //Assuming Color always present in default render target.
-    newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
-    if (depthFormat != wgpu::TextureFormat::Undefined) {
-        if (hasDepth(depthFormat)) {
-            newTargetFlags |= filament::backend::TargetBufferFlags::DEPTH;
-        }
-        if (hasStencil(depthFormat)) {
-            newTargetFlags |= filament::backend::TargetBufferFlags::STENCIL;
-        }
-    }
-    mDefaultRenderTarget->setTargetFlags(newTargetFlags);
-
     if (!mCommandEncoder) {
         wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
         mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
@@ -1290,8 +1328,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
 
     const size_t dstBytesPerPixel = PixelBufferDescriptor::computePixelSize(
             pixelBufferDescriptor.format, pixelBufferDescriptor.type);
-    const size_t srcBytesPerPixel =
-            WebGPUTexture::getWGPUTextureFormatPixelSize(srcTexture.GetFormat());
+    const size_t srcBytesPerPixel = getWGPUTextureFormatPixelSize(srcTexture.GetFormat());
 
     FILAMENT_CHECK_PRECONDITION(dstBytesPerPixel == srcBytesPerPixel && dstBytesPerPixel > 0)
             << "Source texture pixel size (" << srcBytesPerPixel
@@ -1332,6 +1369,15 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
     wgpu::Extent3D copySize{ .width = actualWidth,
         .height = actualHeight,
         .depthOrArrayLayers = 1 };
+    // TODO consider removing encoder finish + submit once we have test coverage and can
+    //      safely verify doing so will not result in strange errors. We don't think this
+    //      submit is necessary, as the encoder should get finished and the command
+    //      submitted in commit(), finish(), and/or flush() in this frame
+    //      or the next anyway. And, the read/copy bits will be encoded before other things.
+    //      Thus, not submitting here _seems_ ok. Nonetheless, doing the submit here likely
+    //      represents unnecessary inefficiency and higher bandwidth
+    //      between the CPU and GPU, but we are worried about functional correctness at this
+    //      stage.
     encoder.CopyTextureToBuffer(&source, &destination, &copySize);
     wgpu::CommandBuffer commandBuffer = encoder.Finish();
     mQueue.Submit(1, &commandBuffer);
@@ -1384,7 +1430,9 @@ void WebGPUDriver::readBufferSubData(Handle<HwBufferObject> bufferObjectHandle,
 void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> destinationRenderTargetHandle, const Viewport destinationViewport,
         Handle<HwRenderTarget> sourceRenderTargetHandle, const Viewport sourceViewport,
-        const SamplerMagFilter filter) {}
+        const SamplerMagFilter filter) {
+    PANIC_PRECONDITION("WebGPUDriver::blitDEPRECATED not supported");
+}
 
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
@@ -1422,45 +1470,56 @@ void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_
         const uint8_t sourceLayer, const math::uint2 destinationOrigin,
         Handle<HwTexture> sourceTextureHandle, const uint8_t destinationLevel,
         const uint8_t destinationLayer, const math::uint2 sourceOrigin, const math::uint2 size) {
-    // TODO uncomment when texture format is taken into account with sampler settings in the
-    //      blitter
-//    bool reusedCommandEncoder{ true };
-//    if (!mCommandEncoder) {
-//        reusedCommandEncoder = false;
-//        const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{
-//            .label = "blit_command",
-//        };
-//        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
-//        FILAMENT_CHECK_POSTCONDITION(mCommandEncoder)
-//                << "Failed to create command encoder for blit?";
-//    }
-//    const WebGPUBlitter::BlitArgs blitArgs{
-//        .source = {
-//            .texture = handleCast<WebGPUTexture>(sourceTextureHandle)->getTexture(),
-//            .origin = {.x = sourceOrigin.x, .y=sourceOrigin.y},
-//            .extent = {.width=size.x, .height =size.y},
-//            .mipLevel = sourceLevel,
-//            .layerOrDepth = sourceLayer,
-//        },
-//        .destination = {
-//            .texture = handleCast<WebGPUTexture>(destinationTextureHandle)->getTexture(),
-//            .origin = {.x = destinationOrigin.x, .y=destinationOrigin.y},
-//            .extent = {.width=size.x, .height =size.y},
-//            .mipLevel = destinationLevel,
-//            .layerOrDepth = destinationLayer,
-//        },
-//        .filter = SamplerMagFilter::NEAREST,
-//    };
-//    mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
-//    if (!reusedCommandEncoder) {
-//        const wgpu::CommandBufferDescriptor commandBufferDescriptor{
-//            .label = "blit_command_buffer",
-//        };
-//        const wgpu::CommandBuffer blitCommand{ mCommandEncoder.Finish(&commandBufferDescriptor) };
-//        FILAMENT_CHECK_POSTCONDITION(blitCommand) << "Failed to create command buffer for blit?";
-//        mQueue.Submit(1, &blitCommand);
-//        mCommandEncoder = nullptr;
-//    }
+    bool reusedCommandEncoder{ true };
+    if (!mCommandEncoder) {
+        reusedCommandEncoder = false;
+        const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{
+            .label = "blit_command",
+        };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(mCommandEncoder)
+                << "Failed to create command encoder for blit?";
+    }
+    const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    const auto destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+    const WebGPUBlitter::BlitArgs blitArgs{
+        .source = {
+            .texture = sourceTexture->getTexture(),
+            .aspect = sourceTexture->getAspect(),
+            .origin = {.x = sourceOrigin.x, .y=sourceOrigin.y},
+            .extent = {.width=size.x, .height =size.y},
+            .mipLevel = sourceLevel,
+            .layerOrDepth = sourceLayer,
+        },
+        .destination = {
+            .texture = destinationTexture->getTexture(),
+            .aspect = destinationTexture->getAspect(),
+            .origin = {.x = destinationOrigin.x, .y=destinationOrigin.y},
+            .extent = {.width=size.x, .height =size.y},
+            .mipLevel = destinationLevel,
+            .layerOrDepth = destinationLayer,
+        },
+        .filter = SamplerMagFilter::NEAREST,
+    };
+    mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
+    if (!reusedCommandEncoder) {
+        // TODO consider removing encoder finish + submit once we have test coverage and can
+        //      safely verify doing so will not result in strange errors. We don't think this
+        //      submit is necessary, as the encoder should get finished and the command submitted in
+        //      commit(), finish(), and/or flush() in this frame or the next anyway.
+        //      And, the blit bits will be encoded before other things.
+        //      Thus, not submitting here _seems_ ok. Nonetheless, doing the submit here likely
+        //      represents unnecessary inefficiency and higher bandwidth
+        //      between the CPU and GPU, but we are worried about functional correctness at this
+        //      stage.
+        const wgpu::CommandBufferDescriptor commandBufferDescriptor{
+            .label = "blit_command_buffer",
+        };
+        const wgpu::CommandBuffer blitCommand{ mCommandEncoder.Finish(&commandBufferDescriptor) };
+        FILAMENT_CHECK_POSTCONDITION(blitCommand) << "Failed to create command buffer for blit?";
+        mQueue.Submit(1, &blitCommand);
+        mCommandEncoder = nullptr;
+    }
 }
 
 void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
@@ -1480,8 +1539,8 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     assert_invariant(bindGroupLayouts.size() >= pipelineState.pipelineLayout.setLayout.size());
     size_t bindGroupLayoutCount{ 0 };
     for (size_t i{ 0 }; i < bindGroupLayouts.size(); i++) {
-        const auto handle{ pipelineState.pipelineLayout.setLayout[bindGroupLayoutCount] };
-        if (handle.getId() == HandleBase::nullid) {
+        const auto handle{ pipelineState.pipelineLayout.setLayout[i] };
+        if (!handle) {
             continue;
         }
         bindGroupLayouts[bindGroupLayoutCount++] =
@@ -1655,12 +1714,35 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
             .binding = static_cast<uint32_t>(binding * 2 + 1),
             .sampler = sampler };
         bindGroup->addEntry(sEntry.binding, std::move(sEntry));
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+        FWGPU_LOGD << "updateDescriptorSetTexture:";
+        FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << bindGroup->getLayout().Get();
+        FWGPU_LOGD << "  texture: binding:" << tEntry.binding
+                   << " wgpu handle:" << texture->getTexture().Get()
+                   << " " << webGPUTextureToString(texture->getTexture())
+                   << " " << webGPUPrintableToString(texture->getAspect());
+        FWGPU_LOGD << "  sampler: binding:" << sEntry.binding
+                   << " filterMag:" << filamentSamplerMagFilterToString(params.filterMag)
+                   << " filterMin:" << filamentSamplerMinFilterToString(params.filterMin)
+                   << " wrapS:" << filamentSamplerWrapModeToString(params.wrapS)
+                   << " wrapT:" << filamentSamplerWrapModeToString(params.wrapT)
+                   << " wrapR:" << filamentSamplerWrapModeToString(params.wrapR)
+                   << " anisotropyLog2:" << +params.anisotropyLog2
+                   << " compareMode:" << filamentSamplerCompareModeToString(params.compareMode)
+                   << " compareFunc:" << filamentSamplerCompareFuncToString(params.compareFunc);
+#endif
     }
 }
 
 void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> descriptorSetHandle,
         const backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
     assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
+
+    // An empty handle signifies we need to release this bind point
+    if (!descriptorSetHandle) {
+        mCurrentDescriptorSets[setIndex] = {};
+        return;
+    }
     const auto bindGroup = handleCast<WebGPUDescriptorSet>(descriptorSetHandle);
     const auto wbg = bindGroup->lockAndReturn(mDevice);
 

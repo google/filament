@@ -61,8 +61,8 @@ INSTANTIATE_TEST_SUITE_P(
         "SPV_AMD_shader_image_load_store_lod", "SPV_AMD_shader_fragment_mask",
         "SPV_GOOGLE_decorate_string", "SPV_GOOGLE_hlsl_functionality1",
         "SPV_NV_shader_subgroup_partitioned", "SPV_EXT_descriptor_indexing",
-        "SPV_KHR_terminate_invocation",
-        "SPV_KHR_relaxed_extended_instruction"));
+        "SPV_KHR_terminate_invocation", "SPV_KHR_relaxed_extended_instruction",
+        "SPV_EXT_float8"));
 
 INSTANTIATE_TEST_SUITE_P(FailSilently, ValidateUnknownExtensions,
                          Values("ERROR_unknown_extension", "SPV_KHR_",

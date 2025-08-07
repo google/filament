@@ -226,6 +226,7 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new Pointer(sts32f32, spv::StorageClass::Function));
   types.emplace_back(new Pointer(a42f32, spv::StorageClass::Function));
   types.emplace_back(new Pointer(voidt, spv::StorageClass::Function));
+  types.emplace_back(new Pointer(nullptr, spv::StorageClass::Uniform));
 
   // Function
   types.emplace_back(new Function(voidt, {}));
@@ -364,6 +365,20 @@ TEST(Types, FloatWidth) {
   }
 }
 
+TEST(Types, FloatFPEncoding) {
+  std::vector<spv::FPEncoding> encodings = {
+      spv::FPEncoding::BFloat16KHR,
+      spv::FPEncoding::Max,
+  };
+  std::vector<std::unique_ptr<Float>> types;
+  for (spv::FPEncoding encoding : encodings) {
+    types.emplace_back(new Float(16, encoding));
+  }
+  for (size_t i = 0; i < encodings.size(); i++) {
+    EXPECT_EQ(encodings[i], types[i]->encoding());
+  }
+}
+
 TEST(Types, VectorElementCount) {
   auto s32 = MakeUnique<Integer>(32, true);
   for (uint32_t c : {2, 3, 4}) {
@@ -441,6 +456,15 @@ TEST(Types, RemoveDecorations) {
               t->decoration_empty());
     EXPECT_NE(t.get(), decorationless.get());
   }
+}
+
+TEST(Types, UntypedPointer) {
+  std::unique_ptr<Type> type(new Pointer(nullptr, spv::StorageClass::Uniform));
+  const auto untyped = type->AsPointer();
+  EXPECT_NE(untyped, nullptr);
+  EXPECT_TRUE(untyped->is_untyped());
+  EXPECT_EQ(untyped->pointee_type(), nullptr);
+  EXPECT_EQ(untyped->storage_class(), spv::StorageClass::Uniform);
 }
 
 }  // namespace

@@ -31,3 +31,5 @@ python = use_extension(
 python.toolchain(python_version = "3.12",
                  is_default = True,
                  ignore_root_user_error = True)
+
+bazel_dep(name = "rules_cc", version = "0.1.1")

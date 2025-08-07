@@ -731,6 +731,10 @@ public:
                 bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_vertex_buffer_attribute_stride_mult_of_4 =
                         CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_material_instance_texture_descriptor_set_compatible =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_texture_format_mipmappable = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
@@ -744,6 +748,7 @@ public:
                 bool enable_staging_buffer_bypass = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
+            bool disable_amortized_shader_compile = false;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
@@ -753,6 +758,9 @@ public:
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
               &features.backend.disable_parallel_shader_compile, true },
+            { "backend.disable_amortized_shader_compile",
+              "Disable amortized shader compilation in GL backend.",
+              &features.backend.disable_amortized_shader_compile, true },
             { "backend.disable_handle_use_after_free_check",
               "Disable Handle<> use-after-free checks.",
               &features.backend.disable_handle_use_after_free_check, true },
@@ -781,8 +789,17 @@ public:
               "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
               &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
             { "backend.vulkan.enable_staging_buffer_bypass",
-              "vulkan: enable a staging bypass logic for unified memory architecture",
+              "vulkan: enable a staging bypass logic for unified memory architecture.",
               &features.backend.vulkan.enable_staging_buffer_bypass, false },
+            { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
+              "Assert that the textures in a material instance are compatible with descriptor set.",
+              &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
+            { "engine.debug.assert_texture_format_mipmappable",
+              "Assert if a texture (with levels > 1) that the format is mipmappable.",
+              &features.engine.debug.assert_texture_format_mipmappable, false },
+            { "engine.debug.assert_texture_can_generate_mipmap",
+              "Assert if a texture has the correct usage set for generating mipmaps.",
+              &features.engine.debug.assert_texture_can_generate_mipmap, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

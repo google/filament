@@ -104,6 +104,7 @@ TEST_F(BackendTest, FeedbackLoops) {
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
             "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
             "data");
+    FAIL_IF(Backend::WEBGPU, "BUG");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 

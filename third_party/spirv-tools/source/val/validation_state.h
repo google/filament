@@ -32,6 +32,7 @@
 #include "source/name_mapper.h"
 #include "source/spirv_definition.h"
 #include "source/spirv_validator_options.h"
+#include "source/table2.h"
 #include "source/val/decoration.h"
 #include "source/val/function.h"
 #include "source/val/instruction.h"
@@ -67,6 +68,7 @@ class ValidationState_t {
   struct Feature {
     bool declare_int16_type = false;     // Allow OpTypeInt with 16 bit width?
     bool declare_float16_type = false;   // Allow OpTypeFloat with 16 bit width?
+    bool declare_float8_type = false;    // Allow OpTypeFloat with 8 bit width?
     bool free_fp_rounding_mode = false;  // Allow the FPRoundingMode decoration
                                          // and its values to be used without
                                          // requiring any capability
@@ -633,6 +635,12 @@ class ValidationState_t {
   // Returns true iff |id| is a type corresponding to the name of the function.
   // Only works for types not for objects.
   bool IsVoidType(uint32_t id) const;
+  bool IsScalarType(uint32_t id) const;
+  bool IsBfloat16ScalarType(uint32_t id) const;
+  bool IsBfloat16VectorType(uint32_t id) const;
+  bool IsFP8ScalarType(uint32_t id) const;
+  bool IsFP8VectorType(uint32_t id) const;
+  bool IsFP8ScalarOrVectorType(uint32_t id) const;
   bool IsFloatScalarType(uint32_t id) const;
   bool IsFloatArrayType(uint32_t id) const;
   bool IsFloatVectorType(uint32_t id) const;
@@ -640,7 +648,7 @@ class ValidationState_t {
   bool IsFloatScalarOrVectorType(uint32_t id) const;
   bool IsFloatMatrixType(uint32_t id) const;
   bool IsIntScalarType(uint32_t id) const;
-  bool IsIntArrayType(uint32_t id) const;
+  bool IsIntArrayType(uint32_t id, uint64_t length = 0) const;
   bool IsIntVectorType(uint32_t id) const;
   bool IsIntScalarOrVectorType(uint32_t id) const;
   bool IsUnsignedIntScalarType(uint32_t id) const;
@@ -786,12 +794,12 @@ class ValidationState_t {
 
   // Returns the string name for |decoration|.
   std::string SpvDecorationString(uint32_t decoration) {
-    spv_operand_desc desc = nullptr;
-    if (grammar_.lookupOperand(SPV_OPERAND_TYPE_DECORATION, decoration,
-                               &desc) != SPV_SUCCESS) {
+    const spvtools::OperandDesc* desc = nullptr;
+    if (spvtools::LookupOperand(SPV_OPERAND_TYPE_DECORATION, decoration,
+                                &desc) != SPV_SUCCESS) {
       return std::string("Unknown");
     }
-    return std::string(desc->name);
+    return std::string(desc->name().data());
   }
   std::string SpvDecorationString(spv::Decoration decoration) {
     return SpvDecorationString(uint32_t(decoration));
@@ -835,6 +843,12 @@ class ValidationState_t {
 
   // Validates the storage class for the target environment.
   bool IsValidStorageClass(spv::StorageClass storage_class) const;
+
+  // Helps formulate a mesesage to user that setting one of the validator
+  // options might make their SPIR-V actually valid The |hint| option is because
+  // some checks are intertwined with each other, so hard to give confirmation
+  std::string MissingFeature(const std::string& feature,
+                             const std::string& cmdline, bool hint) const;
 
   // Takes a Vulkan Valid Usage ID (VUID) as |id| and optional |reference| and
   // will return a non-empty string only if ID is known and targeting Vulkan.

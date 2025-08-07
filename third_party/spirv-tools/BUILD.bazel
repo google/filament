@@ -5,12 +5,9 @@ load(
     "DEBUGINFO_GRAMMAR_JSON_FILE",
     "SHDEBUGINFO100_GRAMMAR_JSON_FILE",
     "TEST_COPTS",
-    "generate_core_tables",
-    "generate_enum_string_mapping",
+    "create_grammar_tables_target",
+    "ExtInst",
     "generate_extinst_lang_headers",
-    "generate_glsl_tables",
-    "generate_opencl_tables",
-    "generate_vendor_tables",
     "incompatible_with",
 )
 
@@ -29,8 +26,18 @@ exports_files([
 ])
 
 py_binary(
-    name = "generate_grammar_tables",
-    srcs = ["utils/generate_grammar_tables.py"],
+    # The script that generates compressed grammar tables for
+    # instructions and operands.
+    name = "ggt",
+    main = "utils/ggt.py", # The file found by $(location :ggt)
+    srcs = [
+        "utils/ggt.py",
+        "utils/Table/__init__.py",
+        "utils/Table/Context.py",
+        "utils/Table/IndexRange.py",
+        "utils/Table/Operand.py",
+        "utils/Table/StringList.py",
+    ],
 )
 
 py_binary(
@@ -38,36 +45,24 @@ py_binary(
     srcs = ["utils/generate_language_headers.py"],
 )
 
-generate_core_tables(version = "unified1")
-
-generate_enum_string_mapping(version = "unified1")
-
-generate_opencl_tables(version = "unified1")
-
-generate_glsl_tables(version = "unified1")
-
-generate_vendor_tables(extension = "spv-amd-shader-explicit-vertex-parameter")
-
-generate_vendor_tables(extension = "spv-amd-shader-trinary-minmax")
-
-generate_vendor_tables(extension = "spv-amd-gcn-shader")
-
-generate_vendor_tables(extension = "spv-amd-shader-ballot")
-
-generate_vendor_tables(extension = "debuginfo")
-
-generate_vendor_tables(extension = "nonsemantic.clspvreflection")
-
-generate_vendor_tables(extension = "nonsemantic.vkspreflection")
-
-generate_vendor_tables(
-    extension = "opencl.debuginfo.100",
-    operand_kind_prefix = "CLDEBUG100_",
-)
-
-generate_vendor_tables(
-    extension = "nonsemantic.shader.debuginfo.100",
-    operand_kind_prefix = "SHDEBUG100_",
+create_grammar_tables_target(
+    name="core", # unused
+    extinsts = [
+        ExtInst("glsl.std.450", target="spirv_glsl_grammar_unified1"),
+        ExtInst("opencl.std.100", target="spirv_opencl_grammar_unified1"),
+        ExtInst("opencl.debuginfo.100", prefix="CLDEBUG100_"),
+        ExtInst("nonsemantic.shader.debuginfo.100", prefix="SHDEBUG100_"),
+        ExtInst("tosa.001000.1", target="spirv_ext_inst_tosa_001000_1", prefix="TOSA_"),
+    ] + [ExtInst(e) for e in [
+            "spv-amd-shader-explicit-vertex-parameter",
+            "spv-amd-shader-trinary-minmax",
+            "spv-amd-gcn-shader",
+            "spv-amd-shader-ballot",
+            "debuginfo",
+            "nonsemantic.clspvreflection",
+            "nonsemantic.vkspreflection",
+        ]
+    ]
 )
 
 generate_extinst_lang_headers(
@@ -136,24 +131,14 @@ cc_library(
         "source/*.cpp",
         "source/util/*.cpp",
         "source/val/*.cpp",
+    ], exclude = [
+        "source/mimalloc.cpp"
     ]) + [
         ":build_version_inc",
-        ":gen_core_tables_unified1",
-        ":gen_enum_string_mapping",
+        ":gen_compressed_tables",
         ":gen_extinst_lang_headers_DebugInfo",
         ":gen_extinst_lang_headers_NonSemanticShaderDebugInfo100",
         ":gen_extinst_lang_headers_OpenCLDebugInfo100",
-        ":gen_glsl_tables_unified1",
-        ":gen_opencl_tables_unified1",
-        ":gen_vendor_tables_debuginfo",
-        ":gen_vendor_tables_nonsemantic_clspvreflection",
-        ":gen_vendor_tables_nonsemantic_vkspreflection",
-        ":gen_vendor_tables_nonsemantic_shader_debuginfo_100",
-        ":gen_vendor_tables_opencl_debuginfo_100",
-        ":gen_vendor_tables_spv_amd_gcn_shader",
-        ":gen_vendor_tables_spv_amd_shader_ballot",
-        ":gen_vendor_tables_spv_amd_shader_explicit_vertex_parameter",
-        ":gen_vendor_tables_spv_amd_shader_trinary_minmax",
         ":generators_inc",
     ],
     hdrs = [
@@ -191,9 +176,7 @@ cc_library(
 
 cc_library(
     name = "spirv_tools_opt_internal",
-    srcs = glob(["source/opt/*.cpp"]) + [
-        ":gen_vendor_tables_spv_amd_shader_ballot",
-    ],
+    srcs = glob(["source/opt/*.cpp"]),
     hdrs = glob(["source/opt/*.h"]) + [
         "include/spirv-tools/optimizer.hpp",
     ],
@@ -451,6 +434,7 @@ cc_library(
         ":tools_io",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
+        "@spirv_headers//:spirv_common_headers",
     ],
 ) for f in glob(
     [

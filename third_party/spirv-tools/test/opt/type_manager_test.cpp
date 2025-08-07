@@ -149,6 +149,7 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   types.emplace_back(new Pointer(f32, spv::StorageClass::Input));
   types.emplace_back(new Pointer(sts32f32, spv::StorageClass::Function));
   types.emplace_back(new Pointer(a42f32, spv::StorageClass::Function));
+  types.emplace_back(new Pointer(nullptr, spv::StorageClass::Uniform));
 
   // Function
   types.emplace_back(new Function(voidt, {}));
@@ -249,6 +250,7 @@ TEST(TypeManager, TypeStrings) {
     %cm   = OpTypeCooperativeMatrixNV %f64 %id4 %id4 %id4
     %id2    = OpConstant %u32 2
     %cmkhr  = OpTypeCooperativeMatrixKHR %f64 %id4 %id4 %id4 %id2
+    %untyped = OpTypeUntypedPointerKHR Uniform
   )";
 
   std::vector<std::pair<uint32_t, std::string>> type_id_strs = {
@@ -288,10 +290,11 @@ TEST(TypeManager, TypeStrings) {
       {38, "[sint32, id(34), words(2,34)]"},
       {39, "<float64, 6, 6, 6>"},
       {41, "<float64, 6, 6, 6, 40>"},
+      {42, "untyped_ptr 2*"},  // Include storage class number
   };
 
   std::unique_ptr<IRContext> context =
-      BuildModule(SPV_ENV_UNIVERSAL_1_1, nullptr, text);
+      BuildModule(SPV_ENV_UNIVERSAL_1_4, nullptr, text);
   ASSERT_NE(nullptr, context.get());  // It assembled
   TypeManager manager(nullptr, context.get());
 

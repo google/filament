@@ -914,6 +914,19 @@ bool AggressiveDCEPass::ProcessGlobalValues() {
       context()->AnalyzeUses(&dbg);
       continue;
     }
+    // Save debug build identifier even if no other instructions refer to it.
+    if (dbg.GetShader100DebugOpcode() ==
+        NonSemanticShaderDebugInfo100DebugBuildIdentifier) {
+      // The debug build identifier refers to other instructions that
+      // can potentially be removed, they also need to be kept alive.
+      dbg.ForEachInId([this](const uint32_t* id) {
+        Instruction* ref_inst = get_def_use_mgr()->GetDef(*id);
+        if (ref_inst) {
+          live_insts_.Set(ref_inst->unique_id());
+        }
+      });
+      continue;
+    }
     to_kill_.push_back(&dbg);
     modified = true;
   }
@@ -971,7 +984,6 @@ Pass::Status AggressiveDCEPass::Process() {
 void AggressiveDCEPass::InitExtensions() {
   extensions_allowlist_.clear();
 
-  // clang-format off
   extensions_allowlist_.insert({
       "SPV_AMD_shader_explicit_vertex_parameter",
       "SPV_AMD_shader_trinary_minmax",
@@ -1039,8 +1051,10 @@ void AggressiveDCEPass::InitExtensions() {
       "SPV_KHR_ray_tracing_position_fetch",
       "SPV_KHR_fragment_shading_rate",
       "SPV_KHR_quad_control",
+      "SPV_NV_shader_invocation_reorder",
+      "SPV_NV_cluster_acceleration_structure",
+      "SPV_NV_linear_swept_spheres",
   });
-  // clang-format on
 }
 
 Instruction* AggressiveDCEPass::GetHeaderBranch(BasicBlock* blk) {

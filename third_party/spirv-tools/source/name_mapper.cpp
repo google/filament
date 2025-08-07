@@ -27,6 +27,7 @@
 #include "source/binary.h"
 #include "source/latest_version_spirv_header.h"
 #include "source/parsed_operand.h"
+#include "source/table2.h"
 #include "source/to_string.h"
 #include "spirv-tools/libspirv.h"
 
@@ -211,7 +212,20 @@ spv_result_t FriendlyNameMapper::ParseInstruction(
     } break;
     case spv::Op::OpTypeFloat: {
       const auto bit_width = inst.words[2];
-      // TODO: Handle optional fpencoding enum once actually used.
+      if (inst.num_words > 3) {
+        if (spv::FPEncoding(inst.words[3]) == spv::FPEncoding::BFloat16KHR) {
+          SaveName(result_id, "bfloat16");
+          break;
+        }
+        if (spv::FPEncoding(inst.words[3]) == spv::FPEncoding::Float8E4M3EXT) {
+          SaveName(result_id, "fp8e4m3");
+          break;
+        }
+        if (spv::FPEncoding(inst.words[3]) == spv::FPEncoding::Float8E5M2EXT) {
+          SaveName(result_id, "fp8e5m2");
+          break;
+        }
+      }
       switch (bit_width) {
         case 16:
           SaveName(result_id, "half");
@@ -322,9 +336,9 @@ spv_result_t FriendlyNameMapper::ParseInstruction(
 
 std::string FriendlyNameMapper::NameForEnumOperand(spv_operand_type_t type,
                                                    uint32_t word) {
-  spv_operand_desc desc = nullptr;
-  if (SPV_SUCCESS == grammar_.lookupOperand(type, word, &desc)) {
-    return desc->name;
+  const spvtools::OperandDesc* desc = nullptr;
+  if (SPV_SUCCESS == spvtools::LookupOperand(type, word, &desc)) {
+    return desc->name().data();
   } else {
     // Invalid input.  Just give something.
     return std::string("StorageClass") + to_string(word);

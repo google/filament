@@ -18,6 +18,7 @@
 
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
+#include "source/table2.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
@@ -310,17 +311,84 @@ spv_result_t ValidateEntryPoint(ValidationState_t& _, const Instruction* inst) {
               }
             }
           }
+          if (!ok && _.HasCapability(spv::Capability::TileShadingQCOM)) {
+            ok =
+                execution_modes &&
+                execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM);
+          }
           if (!ok) {
             return _.diag(SPV_ERROR_INVALID_DATA, inst)
-                   << _.VkErrorID(6426)
+                   << (_.HasCapability(spv::Capability::TileShadingQCOM)
+                           ? _.VkErrorID(10685)
+                           : _.VkErrorID(6426))
                    << "In the Vulkan environment, GLCompute execution model "
-                      "entry points require either the LocalSize or "
-                      "LocalSizeId execution mode or an object decorated with "
-                      "WorkgroupSize must be specified.";
+                      "entry points require either the "
+                   << (_.HasCapability(spv::Capability::TileShadingQCOM)
+                           ? "TileShadingRateQCOM, "
+                           : "")
+                   << "LocalSize or LocalSizeId execution mode or an object "
+                      "decorated with WorkgroupSize must be specified.";
+          }
+        }
+
+        if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
+          if (execution_modes) {
+            if (execution_modes->count(
+                    spv::ExecutionMode::TileShadingRateQCOM) &&
+                (execution_modes->count(spv::ExecutionMode::LocalSize) ||
+                 execution_modes->count(spv::ExecutionMode::LocalSizeId))) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << "If the TileShadingRateQCOM execution mode is used, "
+                     << "LocalSize and LocalSizeId must not be specified.";
+            }
+            if (execution_modes->count(
+                    spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << "The NonCoherentTileAttachmentQCOM execution mode must "
+                        "not be used in any stage other than fragment.";
+            }
+          }
+        } else {
+          if (execution_modes &&
+              execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM)) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << "If the TileShadingRateQCOM execution mode is used, the "
+                      "TileShadingQCOM capability must be enabled.";
           }
         }
         break;
       default:
+        if (execution_modes &&
+            execution_modes->count(spv::ExecutionMode::TileShadingRateQCOM)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "The TileShadingRateQCOM execution mode must not be used "
+                    "in any stage other than compute.";
+        }
+        if (execution_model != spv::ExecutionModel::Fragment) {
+          if (execution_modes &&
+              execution_modes->count(
+                  spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+            return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                   << "The NonCoherentTileAttachmentQCOM execution mode must "
+                      "not be used in any stage other than fragment.";
+          }
+          if (_.HasCapability(spv::Capability::TileShadingQCOM)) {
+            return _.diag(SPV_ERROR_INVALID_CAPABILITY, inst)
+                   << "The TileShadingQCOM capability must not be enabled in "
+                      "any stage other than compute or fragment.";
+          }
+        } else {
+          if (execution_modes &&
+              execution_modes->count(
+                  spv::ExecutionMode::NonCoherentTileAttachmentReadQCOM)) {
+            if (!_.HasCapability(spv::Capability::TileShadingQCOM)) {
+              return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                     << "If the NonCoherentTileAttachmentReadQCOM execution "
+                        "mode is used, the TileShadingQCOM capability must be "
+                        "enabled.";
+            }
+          }
+        }
         break;
     }
   }
@@ -489,6 +557,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
               "Operands that are not id operands.";
   }
 
+  const bool is_vulkan_env = (spvIsVulkanEnv(_.context()->target_env));
   const auto* models = _.GetExecutionModels(entry_point_id);
   switch (mode) {
     case spv::ExecutionMode::Invocations:
@@ -599,7 +668,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
                     "tessellation execution model.";
         }
       }
-      if (spvIsVulkanEnv(_.context()->target_env)) {
+      if (is_vulkan_env) {
         if (_.HasCapability(spv::Capability::MeshShadingEXT) &&
             inst->GetOperandAs<uint32_t>(2) == 0) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -622,8 +691,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
                   "execution "
                   "model.";
       }
-      if (mode == spv::ExecutionMode::OutputPrimitivesEXT &&
-          spvIsVulkanEnv(_.context()->target_env)) {
+      if (mode == spv::ExecutionMode::OutputPrimitivesEXT && is_vulkan_env) {
         if (_.HasCapability(spv::Capability::MeshShadingEXT) &&
             inst->GetOperandAs<uint32_t>(2) == 0) {
           return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -693,9 +761,15 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
       break;
     case spv::ExecutionMode::LocalSize:
     case spv::ExecutionMode::LocalSizeId:
-      if (mode == spv::ExecutionMode::LocalSizeId && !_.IsLocalSizeIdAllowed())
+      if (mode == spv::ExecutionMode::LocalSizeId &&
+          !_.IsLocalSizeIdAllowed()) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "LocalSizeId mode is not allowed by the current environment.";
+               << "LocalSizeId mode is not allowed by the current environment."
+               << (is_vulkan_env
+                       ? _.MissingFeature("maintenance4 feature",
+                                          "--allow-localsizeid", false)
+                       : "");
+      }
 
       if (!std::all_of(
               models->begin(), models->end(),
@@ -744,7 +818,7 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
     }
   }
 
-  if (spvIsVulkanEnv(_.context()->target_env)) {
+  if (is_vulkan_env) {
     if (mode == spv::ExecutionMode::OriginLowerLeft) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << _.VkErrorID(4653)
@@ -756,6 +830,14 @@ spv_result_t ValidateExecutionMode(ValidationState_t& _,
              << _.VkErrorID(4654)
              << "In the Vulkan environment, the PixelCenterInteger execution "
                 "mode must not be used.";
+    }
+    if (mode == spv::ExecutionMode::TileShadingRateQCOM) {
+      const auto rateX = inst->GetOperandAs<int>(2);
+      const auto rateY = inst->GetOperandAs<int>(3);
+      if ((rateX & (rateX - 1)) != 0 || (rateY & (rateY - 1)) != 0)
+        return _.diag(SPV_ERROR_INVALID_DATA, inst)
+               << "The TileShadingRateQCOM execution mode's x and y values "
+                  "must be powers of 2.";
     }
   }
 
@@ -925,12 +1007,12 @@ spv_result_t ValidateDuplicateExecutionModes(ValidationState_t& _) {
   std::set<PerEntryKey> seen_per_entry;
   std::set<PerOperandKey> seen_per_operand;
 
-  const auto lookupMode = [&_](spv::ExecutionMode mode) -> std::string {
-    spv_operand_desc desc = nullptr;
-    if (_.grammar().lookupOperand(SPV_OPERAND_TYPE_EXECUTION_MODE,
-                                  static_cast<uint32_t>(mode),
-                                  &desc) == SPV_SUCCESS) {
-      return std::string(desc->name);
+  const auto lookupMode = [](spv::ExecutionMode mode) -> std::string {
+    const spvtools::OperandDesc* desc = nullptr;
+    if (spvtools::LookupOperand(SPV_OPERAND_TYPE_EXECUTION_MODE,
+                                static_cast<uint32_t>(mode),
+                                &desc) == SPV_SUCCESS) {
+      return std::string(desc->name().data());
     }
     return "Unknown";
   };

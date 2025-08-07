@@ -65,7 +65,13 @@ void main() {
 #if defined(VARIANT_HAS_FOG)
     highp vec3 view = getWorldPosition() - getWorldCameraPosition();
     view = frameUniforms.fogFromWorldMatrix * view;
+
+#if defined (FILAMENT_LINEAR_FOG)
+    fragColor = fogLinear(fragColor, view);
+#else
     fragColor = fog(fragColor, view);
+#endif
+
 #endif
 
 #if defined(VARIANT_HAS_SHADOWING) && defined(VARIANT_HAS_DIRECTIONAL_LIGHTING)

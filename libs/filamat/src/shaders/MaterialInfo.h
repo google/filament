@@ -44,6 +44,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool specularAntiAliasing;
     bool clearCoatIorChange;
     bool flipUV;
+    bool linearFog;
     bool multiBounceAO;
     bool multiBounceAOSet;
     bool specularAOSet;

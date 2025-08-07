@@ -26,11 +26,11 @@
 #include <vector>
 
 #include "source/enum_set.h"
-#include "source/enum_string_mapping.h"
 #include "source/ext_inst.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/reflect.h"
 #include "source/spirv_target_env.h"
+#include "source/table2.h"
 #include "source/util/string_utils.h"
 
 namespace spvtools {
@@ -447,19 +447,18 @@ constexpr std::array<std::pair<spv::Op, OpcodeHandler>, 14> kOpcodeHandlers{{
 // ==============  End opcode handler implementations.  =======================
 
 namespace {
-ExtensionSet getExtensionsRelatedTo(const CapabilitySet& capabilities,
-                                    const AssemblyGrammar& grammar) {
+ExtensionSet getExtensionsRelatedTo(const CapabilitySet& capabilities) {
   ExtensionSet output;
-  const spv_operand_desc_t* desc = nullptr;
+  const spvtools::OperandDesc* desc = nullptr;
   for (auto capability : capabilities) {
-    if (SPV_SUCCESS != grammar.lookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
-                                             static_cast<uint32_t>(capability),
-                                             &desc)) {
+    if (SPV_SUCCESS !=
+        spvtools::LookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
+                                static_cast<uint32_t>(capability), &desc)) {
       continue;
     }
 
-    for (uint32_t i = 0; i < desc->numExtensions; ++i) {
-      output.insert(desc->extensions[i]);
+    for (auto extension : desc->extensions()) {
+      output.insert(extension);
     }
   }
 
@@ -513,8 +512,8 @@ void TrimCapabilitiesPass::addInstructionRequirementsForOpcode(
     return;
   }
 
-  const spv_opcode_desc_t* desc = {};
-  auto result = context()->grammar().lookupOpcode(opcode, &desc);
+  const spvtools::InstructionDesc* desc;
+  auto result = spvtools::LookupOpcode(opcode, &desc);
   if (result != SPV_SUCCESS) {
     return;
   }
@@ -551,9 +550,9 @@ void TrimCapabilitiesPass::addInstructionRequirementsForOperand(
 
   // case 1: Operand is a single value, can directly lookup.
   if (!spvOperandIsConcreteMask(operand.type)) {
-    const spv_operand_desc_t* desc = {};
-    auto result = context()->grammar().lookupOperand(operand.type,
-                                                     operand.words[0], &desc);
+    const spvtools::OperandDesc* desc = nullptr;
+    auto result =
+        spvtools::LookupOperand(operand.type, operand.words[0], &desc);
     if (result != SPV_SUCCESS) {
       return;
     }
@@ -569,8 +568,8 @@ void TrimCapabilitiesPass::addInstructionRequirementsForOperand(
       continue;
     }
 
-    const spv_operand_desc_t* desc = {};
-    auto result = context()->grammar().lookupOperand(operand.type, mask, &desc);
+    const spvtools::OperandDesc* desc = nullptr;
+    auto result = spvtools::LookupOperand(operand.type, mask, &desc);
     if (result != SPV_SUCCESS) {
       continue;
     }
@@ -599,9 +598,8 @@ void TrimCapabilitiesPass::addInstructionRequirementsForExtInst(
   spv_ext_inst_type_t instructionSet =
       spvExtInstImportTypeGet(extInstSet.AsString().c_str());
 
-  spv_ext_inst_desc desc = {};
-  auto result =
-      context()->grammar().lookupExtInst(instructionSet, extInstruction, &desc);
+  const ExtInstDesc* desc = nullptr;
+  auto result = LookupExtInst(instructionSet, extInstruction, &desc);
   if (result != SPV_SUCCESS) {
     return;
   }
@@ -648,8 +646,8 @@ void TrimCapabilitiesPass::addInstructionRequirements(
 void TrimCapabilitiesPass::AddExtensionsForOperand(
     const spv_operand_type_t type, const uint32_t value,
     ExtensionSet* extensions) const {
-  const spv_operand_desc_t* desc = nullptr;
-  spv_result_t result = context()->grammar().lookupOperand(type, value, &desc);
+  const spvtools::OperandDesc* desc = nullptr;
+  spv_result_t result = spvtools::LookupOperand(type, value, &desc);
   if (result != SPV_SUCCESS) {
     return;
   }
@@ -724,7 +722,7 @@ Pass::Status TrimCapabilitiesPass::TrimUnrequiredCapabilities(
 Pass::Status TrimCapabilitiesPass::TrimUnrequiredExtensions(
     const ExtensionSet& required_extensions) const {
   const auto supported_extensions =
-      getExtensionsRelatedTo(supportedCapabilities_, context()->grammar());
+      getExtensionsRelatedTo(supportedCapabilities_);
 
   bool modified_module = false;
   for (auto extension : supported_extensions) {
