@@ -10,3 +10,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
 - opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
+- Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
+  depth-only passes. [**Requires recompiling materials**]

@@ -639,6 +639,12 @@ public:
     MaterialBuilder& groupSize(filament::math::uint3 groupSize) noexcept;
 
     /**
+     * Force Filament to use its default variant for depth passes. Useful if a material provides a
+     * custom vertex shader which can be skipped during depth-only passes.
+     */
+    MaterialBuilder& useDefaultDepthVariant() noexcept;
+
+    /**
      * Build the material. If you are using the Filament engine with this library, you should use
      * the job system provided by Engine.
      */
@@ -972,6 +978,8 @@ private:
     filament::UserVariantFilterMask mVariantFilter = {};
 
     bool mNoSamplerValidation = false;
+
+    bool mUseDefaultDepthVariant = false;
 };
 
 } // namespace filamat
