@@ -255,7 +255,7 @@ static void readMaterial(Engine* engine) {
 
     std::ifstream in(g_materialPath.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
-        g_materialBuffer.reserve(static_cast<unsigned long>(fileSize));
+        g_materialBuffer.resize(static_cast<unsigned long>(fileSize));
         if (in.read(g_materialBuffer.data(), fileSize)) {
             g_material = Material::Builder()
                     .package((void*) g_materialBuffer.data(), (size_t) fileSize)
