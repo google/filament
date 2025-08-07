@@ -224,6 +224,14 @@ spv_result_t ArithmeticsPass(ValidationState_t& _, const Instruction* inst) {
                << "Expected float scalar type as Result Type: "
                << spvOpcodeString(opcode);
 
+      if (_.IsBfloat16ScalarType(result_type)) {
+        if (!_.HasCapability(spv::Capability::BFloat16DotProductKHR)) {
+          return _.diag(SPV_ERROR_INVALID_DATA, inst)
+                 << "OpDot Result Type <id> " << _.getIdName(result_type)
+                 << "requires BFloat16DotProductKHR be declared.";
+        }
+      }
+
       uint32_t first_vector_num_components = 0;
 
       for (size_t operand_index = 2; operand_index < inst->operands().size();

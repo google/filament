@@ -4609,7 +4609,8 @@ INSTANTIATE_TEST_SUITE_P(FloatRedundantFoldingTest, GeneralInstructionFoldingTes
             "OpReturn\n" +
             "OpFunctionEnd",
         2, 3),
-    // Test case 9: Fold n % 1.0
+    // Test case 9: Don't fold n % 1.0
+    // If `n` is not a whole number, the answer is not 0.
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +
             "%main_lab = OpLabel\n" +
@@ -4618,7 +4619,7 @@ INSTANTIATE_TEST_SUITE_P(FloatRedundantFoldingTest, GeneralInstructionFoldingTes
             "%2 = OpFMod %float %3 %float_1\n" +
             "OpReturn\n" +
             "OpFunctionEnd",
-        2, FLOAT_0_ID),
+        2, 0),
     // Test case 10: Fold n * 0.0
     InstructionFoldingCase<uint32_t>(
         Header() + "%main = OpFunction %void None %void_func\n" +

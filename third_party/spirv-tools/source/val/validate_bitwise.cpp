@@ -39,9 +39,11 @@ spv_result_t ValidateBaseType(ValidationState_t& _, const Instruction* inst,
     if (_.GetBitWidth(base_type) != 32 &&
         !_.options()->allow_vulkan_32_bit_bitwise) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
-             << _.VkErrorID(4781)
+             << _.VkErrorID(10824)
              << "Expected 32-bit int type for Base operand: "
-             << spvOpcodeString(opcode);
+             << spvOpcodeString(opcode)
+             << _.MissingFeature("maintenance9 feature",
+                                 "--allow-vulkan-32-bit-bitwise", false);
     }
   }
 

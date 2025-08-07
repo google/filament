@@ -148,7 +148,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
 # Need to install libtint for filamat on Android.
 # See libs/filamat/CMakeLists.txt and android/filamat-android/CMakeLists.txt.
-if (ANDROID)
+if (ANDROID AND FILAMENT_SUPPORTS_WEBGPU)
    target_link_libraries(${TARGET} libtint_combined)
 endif()
 

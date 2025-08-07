@@ -23,6 +23,7 @@
 #include "source/operand.h"
 #include "source/spirv_target_env.h"
 #include "source/table.h"
+#include "source/table2.h"
 #include "spirv-tools/libspirv.h"
 #include "test/unit_spirv.h"
 
@@ -80,13 +81,13 @@ TEST_P(EnumCapabilityTest, Sample) {
   const auto env = std::get<0>(GetParam());
   const auto context = spvContextCreate(env);
   const AssemblyGrammar grammar(context);
-  spv_operand_desc entry;
+  const spvtools::OperandDesc* entry = nullptr;
 
   ASSERT_EQ(SPV_SUCCESS,
-            grammar.lookupOperand(std::get<1>(GetParam()).type,
-                                  std::get<1>(GetParam()).value, &entry));
-  const auto cap_set = grammar.filterCapsAgainstTargetEnv(
-      entry->capabilities, entry->numCapabilities);
+            spvtools::LookupOperand(std::get<1>(GetParam()).type,
+                                    std::get<1>(GetParam()).value, &entry));
+  const auto cap_set =
+      grammar.filterCapsAgainstTargetEnv(entry->capabilities());
 
   EXPECT_THAT(ElementsIn(cap_set),
               Eq(ElementsIn(std::get<1>(GetParam()).expected_capabilities)))

@@ -233,7 +233,8 @@ spv_result_t ValidateDecorationTarget(ValidationState_t& _, spv::Decoration dec,
       case spv::Decoration::DescriptorSet:
         if (sc != spv::StorageClass::StorageBuffer &&
             sc != spv::StorageClass::Uniform &&
-            sc != spv::StorageClass::UniformConstant) {
+            sc != spv::StorageClass::UniformConstant &&
+            sc != spv::StorageClass::TileAttachmentQCOM) {
           return fail(6491) << "must be in the StorageBuffer, Uniform, or "
                                "UniformConstant storage class";
         }

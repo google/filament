@@ -1415,12 +1415,7 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-  EXPECT_THAT(getDiagnosticString(),
-              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08722"));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Entry-point has conflicting output location "
-                        "assignment at location 0, component 0"));
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
 }
 
 TEST_F(ValidateInterfacesTest, VulkanLocationsArrayWithComponentBad) {
@@ -1433,7 +1428,7 @@ OpDecorate %11 Location 0
 OpDecorate %18 Component 0
 OpDecorate %18 Location 0
 OpDecorate %28 Component 1
-OpDecorate %28 Location 1
+OpDecorate %28 Location 0
 OpDecorate %36 Location 1
 OpDecorate %40 Component 1
 OpDecorate %40 Location 1
@@ -1548,12 +1543,7 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-  EXPECT_THAT(getDiagnosticString(),
-              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Entry-point has conflicting input location "
-                        "assignment at location 0, component 0"));
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
 }
 
 TEST_F(ValidateInterfacesTest, VulkanLocationArrayWithComponent2) {
@@ -1585,80 +1575,7 @@ OpFunctionEnd
 )";
 
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-  EXPECT_THAT(getDiagnosticString(),
-              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Entry-point has conflicting input location "
-                        "assignment at location 0, component 0"));
-}
-
-TEST_F(ValidateInterfacesTest, VulkanLocationMatrix2x2DoubleGood) {
-  const std::string text = R"(
-OpCapability Shader
-OpCapability Float64
-OpMemoryModel Logical GLSL450
-OpEntryPoint Fragment %main "main" %in
-OpExecutionMode %main OriginUpperLeft
-OpDecorate %struct Block
-OpMemberDecorate %struct 0 Location 0
-OpMemberDecorate %struct 1 Location 2
-%void = OpTypeVoid
-%void_fn = OpTypeFunction %void
-%float = OpTypeFloat 32
-%double = OpTypeFloat 64
-%int = OpTypeInt 32 0
-%int_2 = OpConstant %int 2
-%double2 = OpTypeVector %double 2
-%mat2x2_double = OpTypeMatrix %double2 2
-%struct = OpTypeStruct %mat2x2_double %int
-%ptr = OpTypePointer Input %struct
-%in = OpVariable %ptr Input
-%main = OpFunction %void None %void_fn
-%entry = OpLabel
-OpReturn
-OpFunctionEnd
-)";
-
-  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-}
-
-TEST_F(ValidateInterfacesTest, VulkanLocationMatrix2x2DoubleBad) {
-  const std::string text = R"(
-OpCapability Shader
-OpCapability Float64
-OpMemoryModel Logical GLSL450
-OpEntryPoint Fragment %main "main" %in
-OpExecutionMode %main OriginUpperLeft
-OpDecorate %struct Block
-OpMemberDecorate %struct 0 Location 0
-OpMemberDecorate %struct 1 Location 1
-OpMemberDecorate %struct 1 Component 3
-%void = OpTypeVoid
-%void_fn = OpTypeFunction %void
-%float = OpTypeFloat 32
-%double = OpTypeFloat 64
-%int = OpTypeInt 32 0
-%int_2 = OpConstant %int 2
-%double2 = OpTypeVector %double 2
-%mat2x2_double = OpTypeMatrix %double2 2
-%struct = OpTypeStruct %mat2x2_double %int
-%ptr = OpTypePointer Input %struct
-%in = OpVariable %ptr Input
-%main = OpFunction %void None %void_fn
-%entry = OpLabel
-OpReturn
-OpFunctionEnd
-)";
-
-  CompileSuccessfully(text, SPV_ENV_VULKAN_1_0);
-  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_0));
-  EXPECT_THAT(getDiagnosticString(),
-              AnyVUID("VUID-StandaloneSpirv-OpEntryPoint-08721"));
-  EXPECT_THAT(getDiagnosticString(),
-              HasSubstr("Entry-point has conflicting input location "
-                        "assignment at location 1, component 3"));
 }
 
 TEST_F(ValidateInterfacesTest, DuplicateInterfaceVariableSuccess) {
@@ -2020,6 +1937,101 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+}
+
+TEST_F(ValidateInterfacesTest,
+       InvalidBfloat16VariableWithInputOutputStorageClass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability BFloat16TypeKHR
+OpExtension "SPV_KHR_bfloat16"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in %out
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%bfloat16 = OpTypeFloat 16 BFloat16KHR
+%in_ptr = OpTypePointer Input %bfloat16
+%out_ptr = OpTypePointer Output %bfloat16
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("Bfloat16 OpVariable <id> '2[%2]' must not be declared "
+                        "with a Storage Class of Input or Output.\n"));
+}
+
+TEST_F(ValidateInterfacesTest,
+       InvalidFP8E4M3VariableWithInputOutputStorageClass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Float8EXT
+OpExtension "SPV_EXT_float8"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in %out
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%fp8e4m3 = OpTypeFloat 8 Float8E4M3EXT
+%in_ptr = OpTypePointer Input %fp8e4m3
+%out_ptr = OpTypePointer Output %fp8e4m3
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
+                "with a Storage Class of Input or Output.\n"));
+}
+
+TEST_F(ValidateInterfacesTest,
+       InvalidFP8E5M2VariableWithInputOutputStorageClass) {
+  const std::string text = R"(
+OpCapability Shader
+OpCapability Float8EXT
+OpExtension "SPV_EXT_float8"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %in %out
+OpExecutionMode %main OriginUpperLeft
+OpDecorate %in Location 0
+OpDecorate %out Location 0
+%void = OpTypeVoid
+%fp8e5m2 = OpTypeFloat 8 Float8E5M2EXT
+%in_ptr = OpTypePointer Input %fp8e5m2
+%out_ptr = OpTypePointer Output %fp8e5m2
+%in = OpVariable %in_ptr Input
+%out = OpVariable %out_ptr Output
+%void_fn = OpTypeFunction %void
+%main = OpFunction %void None %void_fn
+%entry = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("FP8 E4M3/E5M2 OpVariable <id> '2[%2]' must not be declared "
+                "with a Storage Class of Input or Output.\n"));
 }
 
 }  // namespace

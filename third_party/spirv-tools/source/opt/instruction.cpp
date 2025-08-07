@@ -250,8 +250,7 @@ Instruction* Instruction::GetBaseAddress() const {
       case spv::Op::OpInBoundsPtrAccessChain:
       case spv::Op::OpImageTexelPointer:
       case spv::Op::OpCopyObject:
-        // All of these instructions have the base pointer use a base pointer
-        // in in-operand 0.
+        // All of these instructions have their base pointer in in-operand 0.
         base = base_inst->GetSingleWordInOperand(0);
         base_inst = context()->get_def_use_mgr()->GetDef(base);
         break;
@@ -547,11 +546,13 @@ void Instruction::ClearDbgLineInsts() {
   clear_dbg_line_insts();
 }
 
-void Instruction::UpdateDebugInfoFrom(const Instruction* from) {
+void Instruction::UpdateDebugInfoFrom(const Instruction* from,
+                                      const Instruction* line) {
   if (from == nullptr) return;
   ClearDbgLineInsts();
-  if (!from->dbg_line_insts().empty())
-    AddDebugLine(&from->dbg_line_insts().back());
+  const Instruction* fromLine = line != nullptr ? line : from;
+  if (!fromLine->dbg_line_insts().empty())
+    AddDebugLine(&fromLine->dbg_line_insts().back());
   SetDebugScope(from->GetDebugScope());
   if (!IsLineInst() &&
       context()->AreAnalysesValid(IRContext::kAnalysisDebugInfo)) {

@@ -374,16 +374,21 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     }
     case Type::kPointer: {
       const Pointer* pointer = type->AsPointer();
-      uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
-      if (subtype == 0) {
-        return 0;
+      if (pointer->is_untyped()) {
+        typeInst = MakeUnique<Instruction>(
+            context(), spv::Op::OpTypeUntypedPointerKHR, 0, id,
+            std::initializer_list<Operand>{
+                {SPV_OPERAND_TYPE_STORAGE_CLASS,
+                 {static_cast<uint32_t>(pointer->storage_class())}}});
+      } else {
+        uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
+        typeInst = MakeUnique<Instruction>(
+            context(), spv::Op::OpTypePointer, 0, id,
+            std::initializer_list<Operand>{
+                {SPV_OPERAND_TYPE_STORAGE_CLASS,
+                 {static_cast<uint32_t>(pointer->storage_class())}},
+                {SPV_OPERAND_TYPE_ID, {subtype}}});
       }
-      typeInst = MakeUnique<Instruction>(
-          context(), spv::Op::OpTypePointer, 0, id,
-          std::initializer_list<Operand>{
-              {SPV_OPERAND_TYPE_STORAGE_CLASS,
-               {static_cast<uint32_t>(pointer->storage_class())}},
-              {SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
     case Type::kFunction: {
@@ -680,9 +685,13 @@ Type* TypeManager::RebuildType(uint32_t type_id, const Type& type) {
     }
     case Type::kPointer: {
       const Pointer* pointer_ty = type.AsPointer();
-      const Type* ele_ty = pointer_ty->pointee_type();
-      rebuilt_ty = MakeUnique<Pointer>(RebuildType(GetId(ele_ty), *ele_ty),
-                                       pointer_ty->storage_class());
+      if (pointer_ty->pointee_type()) {
+        const Type* ele_ty = pointer_ty->pointee_type();
+        rebuilt_ty = MakeUnique<Pointer>(RebuildType(GetId(ele_ty), *ele_ty),
+                                         pointer_ty->storage_class());
+      } else {
+        rebuilt_ty = MakeUnique<Pointer>(nullptr, pointer_ty->storage_class());
+      }
       break;
     }
     case Type::kFunction: {
@@ -792,9 +801,13 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       type = new Integer(inst.GetSingleWordInOperand(0),
                          inst.GetSingleWordInOperand(1));
       break;
-    case spv::Op::OpTypeFloat:
-      type = new Float(inst.GetSingleWordInOperand(0));
-      break;
+    case spv::Op::OpTypeFloat: {
+      const spv::FPEncoding encoding =
+          inst.NumInOperands() > 1
+              ? static_cast<spv::FPEncoding>(inst.GetSingleWordInOperand(1))
+              : spv::FPEncoding::Max;
+      type = new Float(inst.GetSingleWordInOperand(0), encoding);
+    } break;
     case spv::Op::OpTypeVector:
       type = new Vector(GetType(inst.GetSingleWordInOperand(0)),
                         inst.GetSingleWordInOperand(1));
@@ -923,6 +936,11 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       }
       id_to_incomplete_type_.erase(inst.result_id());
 
+    } break;
+    case spv::Op::OpTypeUntypedPointerKHR: {
+      type = new Pointer(nullptr, static_cast<spv::StorageClass>(
+                                      inst.GetSingleWordInOperand(0)));
+      id_to_incomplete_type_.erase(inst.result_id());
     } break;
     case spv::Op::OpTypeFunction: {
       bool incomplete_type = false;
