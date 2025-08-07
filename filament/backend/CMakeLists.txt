@@ -575,6 +575,12 @@ if (APPLE OR LINUX)
         test/test_CircularBuffer.cpp
         test/test_CommandBufferQueue.cpp
     )
+    if (APPLE)
+        # Metal-specific tests
+        list(APPEND BACKEND_TEST_SRC
+            test/test_MetalBlitter.mm
+        )
+    endif()
     set(BACKEND_TEST_LIBS
         absl::str_format
         backend
@@ -596,6 +602,7 @@ if (APPLE AND NOT IOS)
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
+    target_compile_options(backend_test PRIVATE "-fobjc-arc")
 
     set(BACKEND_TEST_DEPS
             OSDependent

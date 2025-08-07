@@ -236,32 +236,47 @@ inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     return format;
 }
 
-constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+constexpr inline bool isMetalFormatUnsignedInteger(MTLPixelFormat format) {
     switch (format) {
         case MTLPixelFormatR8Uint:
-        case MTLPixelFormatR8Sint:
         case MTLPixelFormatR16Uint:
-        case MTLPixelFormatR16Sint:
         case MTLPixelFormatRG8Uint:
-        case MTLPixelFormatRG8Sint:
         case MTLPixelFormatR32Uint:
-        case MTLPixelFormatR32Sint:
         case MTLPixelFormatRG16Uint:
-        case MTLPixelFormatRG16Sint:
         case MTLPixelFormatRGBA8Uint:
-        case MTLPixelFormatRGBA8Sint:
         case MTLPixelFormatRGB10A2Uint:
         case MTLPixelFormatRG32Uint:
-        case MTLPixelFormatRG32Sint:
         case MTLPixelFormatRGBA16Uint:
-        case MTLPixelFormatRGBA16Sint:
         case MTLPixelFormatRGBA32Uint:
+            return true;
+
+        default:
+            return false;
+    }
+    return false;
+}
+
+constexpr inline bool isMetalFormatSignedInteger(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatR8Sint:
+        case MTLPixelFormatR16Sint:
+        case MTLPixelFormatRG8Sint:
+        case MTLPixelFormatR32Sint:
+        case MTLPixelFormatRG16Sint:
+        case MTLPixelFormatRGBA8Sint:
+        case MTLPixelFormatRG32Sint:
+        case MTLPixelFormatRGBA16Sint:
         case MTLPixelFormatRGBA32Sint:
             return true;
 
         default:
             return false;
     }
+    return false;
+}
+
+constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+    return isMetalFormatUnsignedInteger(format) || isMetalFormatSignedInteger(format);
 }
 
 constexpr inline bool isMetalFormatStencil(MTLPixelFormat format) {
