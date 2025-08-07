@@ -178,7 +178,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogNearOverFarMinusNear;
     std140::mat33 fogFromWorldMatrix;
     math::float2 fogLinearParams; // { 1/(end-start), -start/(end-start) }
-    math::float2 fogReserved[1];
+    math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
     // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
