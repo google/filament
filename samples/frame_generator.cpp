@@ -224,6 +224,13 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {
+    for (auto& renderable: g_meshSet->getRenderables()) {
+        auto instance = engine->getRenderableManager().getInstance(renderable);
+        if (instance) {
+            engine->destroy(renderable);
+        }
+    }
+
     for (auto material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
