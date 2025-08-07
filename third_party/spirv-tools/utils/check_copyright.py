@@ -37,6 +37,7 @@ AUTHORS = ['The Khronos Group Inc.',
            'André Perez Maselco',
            'Vasyl Teliman',
            'Advanced Micro Devices, Inc.',
+           'Arm Ltd.',
            'Stefano Milizia',
            'Alastair F. Donaldson',
            'Mostafa Ashraf',
@@ -45,7 +46,7 @@ AUTHORS = ['The Khronos Group Inc.',
            'Nintendo',
            'Epic Games, Inc.',
            'NVIDIA Corporation']
-CURRENT_YEAR = 2023
+CURRENT_YEAR = 2025
 
 FIRST_YEAR = 2014
 FINAL_YEAR = CURRENT_YEAR + 5
@@ -65,7 +66,7 @@ YEAR_RANGE_REGEX = YEAR_RANGE_REGEX[:-1] + ')'
 YEAR_OR_RANGE_REGEX = '(' + YEAR_REGEX + '|' + YEAR_RANGE_REGEX + ')'
 
 # The final regular expression to match a valid copyright line.
-COPYRIGHT_RE = re.compile('Copyright \(c\) {} ({})'.format(
+COPYRIGHT_RE = re.compile('Copyright( \\(c\\))? {} ({})'.format(
     YEAR_OR_RANGE_REGEX, '|'.join(AUTHORS)))
 
 MIT_BEGIN_RE = re.compile('Permission is hereby granted, '
@@ -73,7 +74,7 @@ MIT_BEGIN_RE = re.compile('Permission is hereby granted, '
 MIT_END_RE = re.compile('MATERIALS OR THE USE OR OTHER DEALINGS IN '
                         'THE MATERIALS.')
 APACHE2_BEGIN_RE = re.compile('Licensed under the Apache License, '
-                              'Version 2.0 \(the "License"\);')
+                              'Version 2.0 \\(the "License"\\);')
 APACHE2_END_RE = re.compile('limitations under the License.')
 
 LICENSED = """Licensed under the Apache License, Version 2.0 (the "License");

@@ -544,6 +544,11 @@ MaterialBuilder& MaterialBuilder::flipUV(bool const flipUV) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::linearFog(bool const enabled) noexcept {
+    mLinearFog = enabled;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::customSurfaceShading(bool const customSurfaceShading) noexcept {
     mCustomSurfaceShading = customSurfaceShading;
     return *this;
@@ -713,6 +718,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAntiAliasing = mSpecularAntiAliasing;
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
+    info.linearFog = mLinearFog;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.postLightingBlendingMode = mPostLightingBlendingMode;

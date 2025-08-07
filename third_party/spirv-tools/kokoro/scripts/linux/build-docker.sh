@@ -45,7 +45,7 @@ function clean_dir() {
   mkdir "$dir"
 }
 
-if [ $TOOL != "cmake-smoketest" ]; then
+if [ $TOOL != "cmake-shaderc-smoketest" ] && [ $TOOL != "cmake-dxc-smoketest" ]; then
   # Get source for dependencies, as specified in the DEPS file
   /usr/bin/python3 utils/git-sync-deps --treeless
 fi
@@ -115,7 +115,7 @@ if [ $TOOL = "cmake" ]; then
   ninja install
   cd $KOKORO_ARTIFACTS_DIR
   tar czf install.tgz install
-elif [ $TOOL = "cmake-smoketest" ]; then
+elif [ $TOOL = "cmake-shaderc-smoketest" ]; then
   using cmake-3.31.2
   using ninja-1.10.0
 
@@ -156,6 +156,43 @@ elif [ $TOOL = "cmake-smoketest" ]; then
   echo $(date): Starting ctest...
   ctest --output-on-failure -j4
   echo $(date): ctest completed.
+elif [ $TOOL = "cmake-dxc-smoketest" ]; then
+  using cmake-3.31.2
+  using ninja-1.10.0
+
+  # Get shaderc.
+  DXC_DIR=/tmp/dxc
+  clean_dir "$DXC_DIR"
+  cd $DXC_DIR
+  git clone https://github.com/microsoft/DirectXShaderCompiler.git .
+  cd $DXC_DIR/external
+
+  # Get DXC dependencies. Link the appropriate SPIRV-Tools.
+  git submodule update --init DirectX-Headers
+  rm -rf SPIRV-Tools
+  ln -s $ROOT_DIR SPIRV-Tools
+  git clone https://github.com/KhronosGroup/SPIRV-Headers.git SPIRV-Headers
+
+  cd $DXC_DIR
+  mkdir build
+  cd $DXC_DIR/build
+
+  # Invoke the build.
+  echo $(date): Configuring build...
+  cmake $DXC_DIR \
+  -C $DXC_DIR/cmake/caches/PredefinedParams.cmake \
+  -DCMAKE_BUILD_TYPE="Release" \
+  -G Ninja
+
+  echo $(date): Building ClangSPIRVTests...
+  ninja ClangSPIRVTests
+
+  echo $(date): Testing ClangSPIRVTests...
+  tools/clang/unittests/SPIRV/ClangSPIRVTests
+
+  echo $(date): Testing check-clang-codegenspirv...
+  ninja check-clang-codegenspirv
+
 elif [ $TOOL = "cmake-android-ndk" ]; then
   using cmake-3.31.2
   using ndk-r27c

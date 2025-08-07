@@ -189,7 +189,7 @@ private:
         return mCommandsHighWatermark;
     }
 
-    void renderInternal(FView const* view);
+    void renderInternal(FView const* view, bool flush);
     void renderJob(RootArenaScope& rootArenaScope, FView& view);
 
     static std::pair<float, math::float2> prepareUpscaler(math::float2 scale,

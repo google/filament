@@ -19,7 +19,6 @@
 
 #include "ir_builder.h"
 #include "source/opt/ir_context.h"
-#include "spv-amd-shader-ballot.insts.inc"
 #include "type_manager.h"
 
 namespace spvtools {

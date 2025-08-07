@@ -21,10 +21,14 @@
 #include "details/Engine.h"
 #include "details/View.h"
 
+#include "ds/DescriptorSet.h"
+
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphId.h"
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
+
+#include <private/filament/EngineEnums.h>
 
 #include <filament/Options.h>
 #include <filament/RenderableManager.h>
@@ -113,7 +117,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     clearDepthFlags = TargetBufferFlags::DEPTH;
                     clearStencilFlags = config.enabledStencilBuffer ?
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
-                    const char* const name = config.enabledStencilBuffer ?
+                    const char* const textureName = config.enabledStencilBuffer ?
                              "Depth/Stencil Buffer" : "Depth Buffer";
 
                     bool const isES2 =
@@ -128,7 +132,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     TextureFormat const format = config.enabledStencilBuffer ?
                             stencilFormat : depthOnlyFormat;
 
-                    data.depth = builder.createTexture(name, {
+                    data.depth = builder.createTexture(textureName, {
                             .width = colorBufferDesc.width,
                             .height = colorBufferDesc.height,
                             // If the color attachment requested MS, we assume this means the MS
@@ -204,37 +208,23 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 view.prepareSSAO(data.ssao ?
                         resources.getTexture(data.ssao) : engine.getOneTextureArray());
 
-                view.prepareShadowMapping(engine, view.getVsmShadowOptions().highPrecision);
-
-                // set shadow sampler
-                view.prepareShadow(data.shadows ?
-                        resources.getTexture(data.shadows) :
-                            (view.getShadowType() != ShadowType::PCF ?
-                                engine.getOneTextureArray() : engine.getOneTextureArrayDepth()));
+                // set screen-space reflections and screen-space refractions
+                view.prepareSSR(data.ssr ?
+                        resources.getTexture(data.ssr) : engine.getOneTextureArray());
 
                 // set structure sampler
                 view.prepareStructure(data.structure ?
                         resources.getTexture(data.structure) : engine.getOneTexture());
 
-                // set screen-space reflections and screen-space refractions
-                TextureHandle const ssr = data.ssr ?
-                        resources.getTexture(data.ssr) : engine.getOneTextureArray();
+                // set shadow sampler
+                view.prepareShadowMapping(engine,
+                        data.shadows
+                            ? resources.getTexture(data.shadows)
+                            : (view.getShadowType() != ShadowType::PCF
+                                   ? engine.getOneTextureArray()
+                                   : engine.getOneTextureArrayDepth()));
 
-                view.prepareSSR(ssr, config.screenSpaceReflectionHistoryNotReady,
-                        config.ssrLodOffset, view.getScreenSpaceReflectionsOptions());
-
-                // Note: here we can't use data.color's descriptor for the viewport because
-                // the actual viewport might be offset when the target is the swapchain.
-                // However, the width/height should be the same.
-                assert_invariant(
-                        out.params.viewport.width == resources.getDescriptor(data.color).width);
-                assert_invariant(
-                        out.params.viewport.height == resources.getDescriptor(data.color).height);
-
-                view.prepareViewport(static_cast<filament::Viewport&>(out.params.viewport),
-                        config.logicalViewport);
-
-                view.commitUniformsAndSamplers(driver);
+                view.commitDescriptorSet(driver);
 
                 // TODO: this should be a parameter of FrameGraphRenderPass::Descriptor
                 out.params.clearStencil = config.clearStencil;
@@ -254,6 +244,11 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 driver.beginRenderPass(out.target, out.params);
                 passExecutor.execute(engine, driver);
                 driver.endRenderPass();
+
+                // unbind all descriptor sets to avoid false dependencies with the next pass
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_VIEW);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_RENDERABLE);
+                DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
             }
     );
 

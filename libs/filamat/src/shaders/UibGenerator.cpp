@@ -189,6 +189,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogOneOverFarMinusNear",  0, Type::FLOAT, Precision::HIGH },
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
             { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogReserved",             1, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]

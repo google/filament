@@ -18,7 +18,15 @@ set(SPIRV_TOOLS_DIFF_SOURCES
   diff.cpp
 )
 
+if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  list(APPEND SPIRV_TOOLS_DIFF_SOURCES ${spirv-tools_SOURCE_DIR}/source/mimalloc.cpp)
+endif()
+
 add_library(SPIRV-Tools-diff ${SPIRV_TOOLS_LIBRARY_TYPE} ${SPIRV_TOOLS_DIFF_SOURCES})
+
+if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+  target_link_libraries(SPIRV-Tools-diff PRIVATE mimalloc-static)
+endif()
 
 spvtools_default_compile_options(SPIRV-Tools-diff)
 target_include_directories(SPIRV-Tools-diff
@@ -39,7 +47,13 @@ set_property(TARGET SPIRV-Tools-diff PROPERTY FOLDER "SPIRV-Tools libraries")
 spvtools_check_symbol_exports(SPIRV-Tools-diff)
 
 if(ENABLE_SPIRV_TOOLS_INSTALL)
-  install(TARGETS SPIRV-Tools-diff EXPORT SPIRV-Tools-diffTargets)
+  set(SPIRV-Tools-diff-InstallTargets SPIRV-Tools-diff)
+
+  if (SPIRV_TOOLS_USE_MIMALLOC AND NOT SPIRV_TOOLS_BUILD_STATIC)
+    list(APPEND SPIRV-Tools-diff-InstallTargets mimalloc-static)
+  endif()
+
+  install(TARGETS ${SPIRV-Tools-diff-InstallTargets} EXPORT SPIRV-Tools-diffTargets)
   export(EXPORT SPIRV-Tools-diffTargets FILE SPIRV-Tools-diffTargets.cmake)
 
   spvtools_config_package_dir(SPIRV-Tools-diff PACKAGE_DIR)

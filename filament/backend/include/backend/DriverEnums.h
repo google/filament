@@ -672,9 +672,21 @@ enum class Precision : uint8_t {
 
 /**
  * Shader compiler priority queue
+ *
+ * On platforms which support parallel shader compilation, compilation requests will be processed in
+ * order of priority, then insertion order. See Material::compile().
  */
 enum class CompilerPriorityQueue : uint8_t {
+    /** We need this program NOW.
+     *
+     * When passed as an argument to Material::compile(), if the platform doesn't support parallel
+     * compilation, but does support amortized shader compilation, the given shader program will be
+     * synchronously compiled.
+     */
+    CRITICAL,
+    /** We will need this program soon. */
     HIGH,
+    /** We will need this program eventually. */
     LOW
 };
 
@@ -1056,6 +1068,7 @@ enum class TextureUsage : uint16_t {
     BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
+    GEN_MIPMAPPABLE     = 0x0200,            //!< Texture can be used with generateMipmaps()
     DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
     ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
 };

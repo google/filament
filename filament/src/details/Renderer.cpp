@@ -574,12 +574,20 @@ void FRenderer::renderStandaloneView(FView const* view) {
                         1'000'000'000.0 / mDisplayInfo.refreshRate),
                 mFrameId);
 
-        renderInternal(view);
+        // because we don't have a "present" call, we use flush so the driver can submit
+        // the command buffer; we do this before driver.endFrame() to mimic what would
+        // happen with Renderer::beginFrame/endFrame.
+        renderInternal(view, true);
 
         driver.endFrame(mFrameId);
 
-        // This is a workaround for internal bug b/361822355.
-        // TODO: properly address the bug and remove this workaround.
+        // engine.flush() has already been called by renderInternal(), but we need an extra one
+        // for endFrame() above. This operation in actually not too heavy, it just kicks the
+        // driver thread, which is mostlikely already running.
+        engine.flush();
+
+        // FIXME: This is a workaround for internal bug b/361822355.
+        //        properly address the bug and remove this workaround.
         if (engine.getBackend() == Backend::VULKAN) {
             engine.flushAndWait();
         }
@@ -600,11 +608,11 @@ void FRenderer::render(FView const* view) {
     assert_invariant(mSwapChain);
 
     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
-        renderInternal(view);
+        renderInternal(view, false);
     }
 }
 
-void FRenderer::renderInternal(FView const* view) {
+void FRenderer::renderInternal(FView const* view, bool flush) {
     FEngine& engine = mEngine;
 
     FILAMENT_CHECK_PRECONDITION(!view->hasPostProcessPass() ||
@@ -620,6 +628,10 @@ void FRenderer::renderInternal(FView const* view) {
 
     // execute the render pass
     renderJob(rootArenaScope, const_cast<FView&>(*view));
+
+    if (flush) {
+        engine.getDriverApi().flush();
+    }
 
     // make sure to flush the command buffer
     engine.flush();
@@ -818,29 +830,57 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         xvp.bottom = int32_t(guardBand);
     }
 
+    /*
+     * Frame graph
+     */
+    FrameGraph fg(*mResourceAllocator,
+        isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
+    auto& blackboard = fg.getBlackboard();
+
+    PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
+            fg, svp.width, svp.height,
+            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
+            view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), scale);
+
+    /*
+     * Update the PER_VIEW UBO used for the color, ssr and postfx passes. This UBO is never
+     * updated again during the frame.
+     */
+
     auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
-
     view.prepare(engine, driver, rootArenaScope, svp, cameraInfo, getShaderUserTime(), needsAlphaChannel);
-
     view.prepareLodBias(bias, derivativeScale);
+    view.prepareSSAO(aoOptions);
+    view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
+    view.prepareShadowMapping();
+    // There might be a bug here with svp's origin; normally the origin could offset when the
+    // target is the swapchain (width/height are the same though). This would mean that we'd have
+    // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
+    // get into such a case though.
+    view.prepareViewport(svp, xvp);
+    view.commitUniforms(driver);
+
+    /*
+     * Update the PER_VIEW UBO use for the structure pass. It never updated again after this point.
+     */
 
     // Set the PER_VIEW UBO for the passes that use the user materials, but are not the color pass
     // (e.g. structure, ssao). The PER_VIEW UBO may be different because these passes don't run
     // at the same resolution. We set only the values that are relevant to both user-materials
     // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
     // materials public APIs.
-    StructureDescriptorSet& descriptorSet = ppm.getStructureDescriptorSet();
-    descriptorSet.prepareCamera(engine, cameraInfo);
-    descriptorSet.prepareTime(engine, getShaderUserTime());
-    descriptorSet.prepareViewport(svp, {
+    { // the scope helps to guarantee that we're not modifying the descriptor-set later
+        StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
+        ds.prepareCamera(engine, cameraInfo);
+        ds.prepareTime(engine, getShaderUserTime());
+        ds.prepareViewport(svp, {
             int32_t(float(xvp.left) * aoOptions.resolution),
             int32_t(float(xvp.bottom) * aoOptions.resolution),
             uint32_t(float(xvp.width) * aoOptions.resolution),
             uint32_t(float(xvp.height) * aoOptions.resolution) });
-    descriptorSet.prepareLodBias(bias, derivativeScale);
-    descriptorSet.prepareMaterialGlobals(view.getMaterialGlobals());
-    descriptorSet.commit(driver);
-
+        ds.prepareLodBias(bias, derivativeScale);
+        ds.prepareMaterialGlobals(view.getMaterialGlobals());
+    }
 
     /*
      * Allocate command buffer
@@ -873,14 +913,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // type of sampler is used (samplerShadow or sampler2D).
     variant.setVsm(view.hasShadowing() && view.getShadowType() != ShadowType::PCF);
     variant.setStereo(view.hasStereo());
-
-    /*
-     * Frame graph
-     */
-
-    FrameGraph fg(*mResourceAllocator,
-            isProtectedContent ? FrameGraph::Mode::PROTECTED : FrameGraph::Mode::UNPROTECTED);
-    auto& blackboard = fg.getBlackboard();
 
     /*
      * Shadow pass
@@ -957,7 +989,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // the clearFlags and clearColor specified below will only apply when rendering into the
     // temporary color buffer. In particular, they won't apply when rendering into the main
     // swapchain (imported render target above)
-    RendererUtils::ColorPassConfig config{
+    RendererUtils::ColorPassConfig const config{
             .physicalViewport = svp,
             .logicalViewport = xvp,
             .scale = scale,
@@ -966,7 +998,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             .clearFlags = getClearFlags(),
             .clearColor = clearColor,
             .clearStencil = clearStencil,
-            .ssrLodOffset = 0.0f,
             .hasContactShadows = scene.hasContactShadows(),
             // at this point we don't know if we have refraction, but that's handled later
             .hasScreenSpaceReflectionsOrRefractions = ssReflectionsOptions.enabled,
@@ -1053,22 +1084,11 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     }
 
     // --------------------------------------------------------------------------------------------
-    // prepare screen-space reflection/refraction passes
-
-    PostProcessManager::ScreenSpaceRefConfig const ssrConfig = PostProcessManager::prepareMipmapSSR(
-            fg, svp.width, svp.height,
-            ssReflectionsOptions.enabled ? TextureFormat::RGBA16F : TextureFormat::R11F_G11F_B10F,
-            view.getCameraUser().getFieldOfView(Camera::Fov::VERTICAL), config.scale);
-    config.ssrLodOffset = ssrConfig.lodOffset;
-
-    // --------------------------------------------------------------------------------------------
     // screen-space reflections pass
 
     if (ssReflectionsOptions.enabled) {
         auto reflections = ppm.ssr(fg, passBuilder,
-                view.getFrameHistory(), cameraInfo,
-                structure,
-                ssReflectionsOptions,
+                view.getFrameHistory(), structure,
                 { .width = svp.width, .height = svp.height });
 
         if (UTILS_LIKELY(reflections)) {
@@ -1076,7 +1096,6 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             PostProcessManager::generateMipmapSSR(ppm, fg,
                     reflections, ssrConfig.reflection, false, ssrConfig);
         }
-        config.screenSpaceReflectionHistoryNotReady = !reflections;
     }
 
     // --------------------------------------------------------------------------------------------

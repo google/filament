@@ -154,7 +154,7 @@ CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(ar
     mIsValid = parse();
 }
 
-static void parseDefine(std::string defineString, Config::StringReplacementMap& defines) {
+static void parseDefine(std::string defineString, matp::Config::StringReplacementMap& defines) {
     const char* const defineArg = defineString.c_str();
     const size_t length = defineString.length();
 

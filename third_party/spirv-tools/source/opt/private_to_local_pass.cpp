@@ -90,13 +90,13 @@ Function* PrivateToLocalPass::FindLocalFunction(const Instruction& inst) const {
   Function* target_function = nullptr;
   context()->get_def_use_mgr()->ForEachUser(
       inst.result_id(),
-      [&target_function, &found_first_use, this](Instruction* use) {
+      [&target_function, &found_first_use, inst, this](Instruction* use) {
         BasicBlock* current_block = context()->get_instr_block(use);
         if (current_block == nullptr) {
           return;
         }
 
-        if (!IsValidUse(use)) {
+        if (!IsValidUse(use, inst.result_id())) {
           found_first_use = true;
           target_function = nullptr;
           return;
@@ -153,7 +153,8 @@ uint32_t PrivateToLocalPass::GetNewType(uint32_t old_type_id) {
   return new_type_id;
 }
 
-bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
+bool PrivateToLocalPass::IsValidUse(const Instruction* inst,
+                                    uint32_t private_variable_id) const {
   // The cases in this switch have to match the cases in |UpdateUse|.
   // If we don't know how to update it, it is not valid.
   if (inst->GetCommonDebugOpcode() == CommonDebugInfoDebugGlobalVariable) {
@@ -161,13 +162,14 @@ bool PrivateToLocalPass::IsValidUse(const Instruction* inst) const {
   }
   switch (inst->opcode()) {
     case spv::Op::OpLoad:
-    case spv::Op::OpStore:
     case spv::Op::OpImageTexelPointer:  // Treat like a load
       return true;
+    case spv::Op::OpStore:
+      return inst->GetOperand(1).AsId() != private_variable_id;
     case spv::Op::OpAccessChain:
       return context()->get_def_use_mgr()->WhileEachUser(
-          inst, [this](const Instruction* user) {
-            if (!IsValidUse(user)) return false;
+          inst, [this, inst](const Instruction* user) {
+            if (!IsValidUse(user, inst->result_id())) return false;
             return true;
           });
     case spv::Op::OpName:

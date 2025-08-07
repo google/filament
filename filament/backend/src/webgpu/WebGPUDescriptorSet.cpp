@@ -16,7 +16,11 @@
 
 #include "WebGPUDescriptorSet.h"
 
+#include "WebGPUConstants.h"
 #include "WebGPUDescriptorSetLayout.h"
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+#include "WebGPUStrings.h"
+#endif
 
 #include <backend/DriverEnums.h>
 
@@ -92,6 +96,29 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
     mBindGroup = device.CreateBindGroup(&descriptor);
     FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
     // once we have created the bind group itself we should no longer need any other state
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+    FWGPU_LOGD << "WebGPUDescriptorSet (lockAndReturn):";
+    FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << mLayout.Get();
+    FWGPU_LOGD << "  wgpu::BindGroup handle: " << mBindGroup.Get();
+    FWGPU_LOGD << "  Entries with DynamicOffsets: " << mEntriesWithDynamicOffsetsCount;
+    FWGPU_LOGD << "  Entries (" << mEntries.size() << "):";
+    for (wgpu::BindGroupEntry const& entry: mEntries) {
+        if (entry.buffer) {
+            FWGPU_LOGD << "    binding:" << entry.binding << " buffer "
+                       << webGPUPrintableToString(entry.buffer.GetUsage())
+                       << " buffer size:" << entry.buffer.GetSize() << " offset:" << entry.offset
+                       << " size:" << (entry.size == wgpu::kWholeSize
+                                          ? "Whole Size"
+                                          : ("Partial/specified Size (" + std::to_string(entry.size) + ")"));
+        }
+        if (entry.sampler) {
+            FWGPU_LOGD << "    binding:" << entry.binding << " sampler";
+        }
+        if (entry.textureView) {
+            FWGPU_LOGD << "    binding:" << entry.binding << " texture (view)";
+        }
+    }
+#endif
     mLayout = nullptr;
     mEntries.clear();
     mEntries.shrink_to_fit();

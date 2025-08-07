@@ -22,7 +22,6 @@ project(TNT)
 option(FILAMENT_USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(FILAMENT_ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
-
 option(FILAMENT_SKIP_SAMPLES "Don't build samples" OFF)
 
 option(FILAMENT_SUPPORTS_XCB "Include XCB support in Linux builds" ON)
@@ -819,6 +818,7 @@ add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
+add_subdirectory(${EXTERNAL}/zstd/tnt)
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)
@@ -871,6 +871,7 @@ if (IS_HOST_PLATFORM)
       add_subdirectory(${LIBRARIES}/filamentapp)
     endif()
     add_subdirectory(${LIBRARIES}/imageio)
+    add_subdirectory(${LIBRARIES}/filament-matp)
 
     add_subdirectory(${FILAMENT}/samples)
 

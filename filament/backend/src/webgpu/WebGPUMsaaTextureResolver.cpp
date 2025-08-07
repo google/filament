@@ -16,7 +16,7 @@
 
 #include "WebGPUMsaaTextureResolver.h"
 
-#include "WebGPUTexture.h"
+#include "WebGPUTextureHelpers.h"
 
 #include <utils/Panic.h>
 
