@@ -192,8 +192,8 @@ Material* Material::Builder::build(Engine& engine) const {
     if (downcast(engine).features.material.check_crc32_after_loading) {
         uint32_t parsedCrc32 = 0;
         if (materialParser->getMaterialCrc32(&parsedCrc32)) {
-            size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
-            size_t originalSize = mImpl->mSize - crc32ChunkSize;
+            constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+            const size_t originalSize = mImpl->mSize - crc32ChunkSize;
             assert_invariant(mImpl->mSize > crc32ChunkSize);
 
             std::vector<uint32_t> crc32Table;

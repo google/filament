@@ -1388,9 +1388,9 @@ error:
 
     // Flatten all container chunks into a single package and compute its CRC32 value, storing it as
     // a separate chunk.
-    size_t originalContainerSize = container.getSize();
-    size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
-    size_t signedContainerSize = originalContainerSize + crc32ChunkSize;
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    const size_t originalContainerSize = container.getSize();
+    const size_t signedContainerSize = originalContainerSize + crc32ChunkSize;
 
     Package package(signedContainerSize);
     Flattener f{ package.getData() };
