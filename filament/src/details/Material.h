@@ -96,8 +96,15 @@ public:
     DescriptorSetLayout const& getPerViewDescriptorSetLayout(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
-    DescriptorSetLayout const& getDescriptorSetLayout() const noexcept {
-        return mDescriptorSetLayout;
+    DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return mDescriptorSetLayout;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return mDescriptorSetLayout;
+        }
+        return pDefaultMaterial->getDescriptorSetLayout();
     }
 
     void compile(CompilerPriorityQueue priority,
