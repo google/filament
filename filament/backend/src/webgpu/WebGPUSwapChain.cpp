@@ -270,8 +270,6 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Surface&& surface, wgpu::Extent2D const& 
     const bool useSRGBColorSpace = (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0;
 
     initConfig(mConfig, device, capabilities, extent, useSRGBColorSpace);
-    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-            mNeedStencil);
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
     printSurfaceConfiguration(mConfig, mDepthFormat);
 #endif
@@ -298,8 +296,6 @@ WebGPUSwapChain::WebGPUSwapChain(wgpu::Extent2D const& extent,
     mConfig.presentMode = wgpu::PresentMode::Fifo;
     mConfig.alphaMode = wgpu::CompositeAlphaMode::Auto;
 
-    mDepthFormat = selectDepthFormat(device.HasFeature(wgpu::FeatureName::Depth32FloatStencil8),
-                mNeedStencil);
     const wgpu::TextureDescriptor textureDescriptor = {
         .usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
         .dimension = wgpu::TextureDimension::e2D,
