@@ -32,6 +32,11 @@
 
 namespace filament::backend {
 
+// A WebGPU-specific implementation of DescriptorSet.
+// This class manages a collection of resource bindings (e.g., textures, buffers) that are used by
+// a shader. It corresponds to a `wgpu::BindGroup` in WebGPU. The actual `wgpu::BindGroup` is
+// created lazily when `lockAndReturn` is called, at which point the descriptor set becomes
+// immutable.
 class WebGPUDescriptorSet final : public HwDescriptorSet {
 public:
     WebGPUDescriptorSet(wgpu::BindGroupLayout const&,
@@ -40,8 +45,11 @@ public:
 
     void addEntry(unsigned int index, wgpu::BindGroupEntry&& entry);
 
+    // Finalizes the descriptor set by creating the wgpu::BindGroup. After this call, the
+    // descriptor set is considered "locked" and cannot be modified further.
     [[nodiscard]] wgpu::BindGroup lockAndReturn(wgpu::Device const&);
 
+    // Returns true if the descriptor set has been locked (i.e., the wgpu::BindGroup has been created).
     [[nodiscard]] bool getIsLocked() const { return mBindGroup != nullptr; }
 
     [[nodiscard]] size_t getEntitiesWithDynamicOffsetsCount() const {
@@ -56,10 +64,15 @@ public:
 #endif
 
 private:
+    // The layout for this descriptor set.
     wgpu::BindGroupLayout mLayout = nullptr;
+    // A map from binding index to the index in the mEntries vector.
     std::array<uint8_t, MAX_DESCRIPTOR_COUNT> mEntryIndexByBinding{};
+    // The collection of bind group entries that define the resources for this descriptor set.
     std::vector<wgpu::BindGroupEntry> mEntries;
+    // The number of entries that have dynamic offsets.
     const size_t mEntriesWithDynamicOffsetsCount;
+    // The WebGPU bind group object. This is created lazily when lockAndReturn is called.
     wgpu::BindGroup mBindGroup = nullptr;
 };
 

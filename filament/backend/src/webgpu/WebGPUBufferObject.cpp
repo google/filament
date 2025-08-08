@@ -40,6 +40,10 @@ namespace {
 
 } // namespace
 
+// The constructor for WebGPUBufferObject initializes the base HwBufferObject with the byte count,
+// and the WebGPUBufferBase with the device, usage flags, byte count, and a label.
+// The usage flags are determined by the binding type, and always include CopyDst to allow for
+// updating the buffer.
 WebGPUBufferObject::WebGPUBufferObject(wgpu::Device const& device,
         const BufferObjectBinding bindingType, const uint32_t byteCount)
     : HwBufferObject{ byteCount },

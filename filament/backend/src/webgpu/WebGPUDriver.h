@@ -48,7 +48,9 @@ namespace filament::backend {
 
 class WebGPUSwapChain;
 /**
- * WebGPU backend (driver) implementation
+ * The concrete implementation of the WebGPU backend.
+ * This class is responsible for managing the WebGPU device, adapter, and queue, as well as
+ * creating and managing all WebGPU-specific resources.
  */
 class WebGPUDriver final : public DriverBase {
 public:
@@ -64,34 +66,60 @@ private:
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
 
-    // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
-    // handled in the WebGPUPlatform
+    // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
+    // handled in the WebGPUPlatform.
     WebGPUPlatform& mPlatform;
+    // The WebGPU adapter, which represents a physical GPU.
     wgpu::Adapter mAdapter = nullptr;
+    // The WebGPU device, which is a logical connection to the adapter.
     wgpu::Device mDevice = nullptr;
+    // The limits of the WebGPU device.
     wgpu::Limits mDeviceLimits = {};
+    // The WebGPU queue, which is used to submit command buffers.
     wgpu::Queue mQueue = nullptr;
+    // The native window handle, if any.
     void* mNativeWindow = nullptr;
+    // The WebGPU swap chain, which is used for presenting to the screen.
     WebGPUSwapChain* mSwapChain = nullptr;
+    // A counter for generating fake handles.
     uint64_t mNextFakeHandle = 1;
+    // The current command encoder, which is used to record commands.
     wgpu::CommandEncoder mCommandEncoder = nullptr;
+    // The current texture view, which is the target of the current render pass.
     wgpu::TextureView mTextureView = nullptr;
+    // The current render pass encoder, which is used to record rendering commands.
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
+    // The current command buffer, which contains the recorded commands.
     wgpu::CommandBuffer mCommandBuffer = nullptr;
+    // The default render target, which is the swap chain.
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
+    // The currently bound render target.
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    // A cache for WebGPU pipeline layouts.
     WebGPUPipelineLayoutCache mPipelineLayoutCache;
+    // A cache for WebGPU render pipelines.
     WebGPUPipelineCache mPipelineCache;
+    // A helper for generating mipmaps using render passes.
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;
+    // A helper for generating mipmaps using compute passes (SPD).
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
+    // A helper for resolving MSAA textures.
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
+    // A helper for blitting textures.
     WebGPUBlitter mBlitter;
 
+    /**
+     * Information about a bound descriptor set.
+     */
     struct DescriptorSetBindingInfo{
+        // The WebGPU bind group.
         wgpu::BindGroup bindGroup;
+        // The number of dynamic offsets.
         size_t offsetCount;
+        // The dynamic offsets.
         backend::DescriptorSetOffsetArray offsets;
     };
+    // The currently bound descriptor sets.
     std::array<DescriptorSetBindingInfo,MAX_DESCRIPTOR_SET_COUNT> mCurrentDescriptorSets;
 
     /*

@@ -33,6 +33,9 @@ namespace filament::backend {
 
 namespace {
 
+// Creates a wgpu::Buffer, ensuring its size is a multiple of FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS.
+// WebGPU's WriteBuffer requires the write size to be a multiple of 4. By ensuring the buffer
+// size is also a multiple of 4, we simplify the update logic.
 [[nodiscard]] wgpu::Buffer createBuffer(wgpu::Device const& device, const wgpu::BufferUsage usage,
         uint32_t size, const char* const label) {
     // Write size must be divisible by WEBGPU_BUFFER_SIZE_MODULUS (e.g. 4).
@@ -55,6 +58,11 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
         const uint32_t size, char const* const label)
     : mBuffer{ createBuffer(device, usage, size, label) } {}
 
+// Updates the GPU buffer with data from a BufferDescriptor.
+// WebGPU requires that the size of the data written to a buffer is a multiple of 4.
+// This function handles cases where the buffer descriptor's size is not a multiple of 4
+// by writing the bulk of the data first, and then copying the remaining bytes into a
+// padded temporary chunk which is then written to the buffer.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Queue const& queue) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
