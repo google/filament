@@ -1,0 +1,35 @@
+#version 460 core
+
+#extension GL_ARM_tensors : enable
+
+readonly layout(set=0, binding=1) uniform tensorARM<int, 2> roTens;
+writeonly layout(set=0, binding=0) uniform tensorARM<int, 2> woTens;
+readonly writeonly layout(set=0, binding=1) uniform tensorARM<int, 2> rowoTens;
+layout(set=0, binding=2) uniform tensorARM<int, 2> rwTens;
+shared uint x;
+
+void main() {
+  // tensorSizeARM should be callable with any tensor regardless of access qualifiers.
+  x = 0;
+  x += tensorSizeARM(roTens, 0);
+  x += tensorSizeARM(woTens, 0);
+  x += tensorSizeARM(rowoTens, 1);
+  x += tensorSizeARM(rwTens, 1);
+
+  int d = 4;
+  // Valid tensorWriteARM calls.
+  tensorWriteARM(woTens, uint[](0, 0), d);
+  tensorWriteARM(rwTens, uint[](0, 0), d);
+
+  // Invalid tensorWriteARM calls.
+  tensorWriteARM(rowoTens, uint[](0, 0), d);
+  tensorWriteARM(roTens, uint[](0, 0), d);
+
+  // Valid tensorReadARM calls.
+  tensorReadARM(roTens, uint[](0, 0), d);
+  tensorReadARM(rwTens, uint[](0, 0), d);
+
+  // Invalid tensorReadARM calls.
+  tensorReadARM(rowoTens, uint[](0, 0), d);
+  tensorReadARM(woTens, uint[](0, 0), d);
+}

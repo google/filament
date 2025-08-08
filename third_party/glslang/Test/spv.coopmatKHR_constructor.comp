@@ -1,0 +1,49 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+
+void main()
+{
+
+#define TESTCONST(T, BASE) \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<float,     gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+1.0)); \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+2.0)); \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<uint32_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+3));    \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<uint16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+4));    \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<uint8_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+5));    \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<int32_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+6));     \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<int16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+7));     \
+    coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(coopmat<int8_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+8));
+
+    TESTCONST(float, 0)
+    TESTCONST(float16_t, 10)
+    TESTCONST(uint32_t, 20)
+    TESTCONST(uint16_t, 30)
+    TESTCONST(uint8_t, 40)
+    TESTCONST(int32_t, 50)
+    TESTCONST(int16_t, 60)
+    TESTCONST(int8_t, 70)
+
+#define TESTVAR(T, BASE) \
+    { coopmat<float,     gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<float,     gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+1.0); coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+2.0); coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<uint32_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<uint32_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+3);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<uint16_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<uint16_t,  gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+4);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<uint8_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<uint8_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+5);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<int32_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<int32_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+6);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<int16_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<int16_t,   gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+7);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }  \
+    { coopmat<int8_t,    gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> v = coopmat<int8_t,    gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(BASE+8);   coopmat<T, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA>(v); }
+
+    TESTVAR(float, 100)
+    TESTVAR(float16_t, 110)
+    TESTVAR(uint32_t, 120)
+    TESTVAR(uint16_t, 130)
+    TESTVAR(uint8_t, 140)
+    TESTVAR(int32_t, 150)
+    TESTVAR(int16_t, 160)
+    TESTVAR(int8_t, 170)
+}

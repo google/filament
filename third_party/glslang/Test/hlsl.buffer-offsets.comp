@@ -1,0 +1,13 @@
+// See https://github.com/KhronosGroup/glslang/issues/3668
+
+struct GfxIterationData {
+    float mIntegrationTrafo[24];
+    float mWind[3];
+    uint mIsTurning;
+};
+
+StructuredBuffer<GfxIterationData> bIterData : register(t2);
+
+void main()
+{
+}
