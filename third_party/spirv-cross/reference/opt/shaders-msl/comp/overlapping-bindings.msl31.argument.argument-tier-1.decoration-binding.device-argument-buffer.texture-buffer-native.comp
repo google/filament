@@ -1,0 +1,162 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+template<typename T>
+struct spvDescriptor
+{
+    T value;
+};
+
+template<typename T>
+struct spvDescriptorArray
+{
+    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
+    {
+    }
+    const device T& operator [] (size_t i) const
+    {
+        return ptr[i];
+    }
+    const device T* ptr;
+};
+
+template <typename ImageT>
+void spvImageFence(ImageT img) { img.fence(); }
+
+struct B10
+{
+    float v;
+};
+
+struct B11
+{
+    float v;
+};
+
+struct B20
+{
+    float v;
+};
+
+struct B21
+{
+    float v;
+};
+
+struct B30
+{
+    uint i;
+};
+
+struct B31
+{
+    float v;
+};
+
+struct B40
+{
+    float v;
+};
+
+struct B41
+{
+    float v;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+constant float4 _477 = {};
+
+struct spvDescriptorSetBuffer0
+{
+    array<texture2d<float>, 8> t00 [[id(0)]];
+    // Overlapping binding: array<texture2d<uint>, 8> t01 [[id(0)]];
+    // Overlapping binding: array<texture2d<int>, 8> t02 [[id(0)]];
+    // Overlapping binding: array<texture_buffer<uint, access::read_write>, 8> u0 [[id(0)]];
+    // Overlapping binding: array<sampler, 8> s00 [[id(0)]];
+};
+
+struct spvDescriptorSetBuffer1
+{
+    spvDescriptor<device B30 *> b30 [[id(0)]][1] /* unsized array hack */;
+    // Overlapping binding: spvDescriptor<constant B31 *> b31 [[id(0)]][1] /* unsized array hack */;
+    // Overlapping binding: spvDescriptor<texture2d<uint>> t31 [[id(0)]][1] /* unsized array hack */;
+    // Overlapping binding: spvDescriptor<texture2d<int>> t32 [[id(0)]][1] /* unsized array hack */;
+    // Overlapping binding: spvDescriptor<texture_buffer<uint, access::read_write>> u3 [[id(0)]][1] /* unsized array hack */;
+};
+
+struct spvDescriptorSetBuffer2
+{
+    device B20* b20 [[id(0)]][8];
+    // Overlapping binding: constant B21* b21 [[id(0)]][8];
+    // Overlapping binding: array<texture2d<uint>, 8> t21 [[id(0)]];
+    // Overlapping binding: array<texture2d<int>, 8> t22 [[id(0)]];
+    // Overlapping binding: array<texture_buffer<uint, access::read_write>, 8> u2 [[id(0)]];
+};
+
+struct spvDescriptorSetBuffer3
+{
+    device B10* b10 [[id(0)]][8];
+    // Overlapping binding: constant B11* b11 [[id(0)]][8];
+    // Overlapping binding: array<texture_buffer<uint, access::read_write>, 8> u1 [[id(0)]];
+};
+
+struct spvDescriptorSetBuffer4
+{
+    device B40* b40 [[id(0)]];
+    // Overlapping binding: constant B41* b41 [[id(0)]];
+    // Overlapping binding: texture2d<uint> t41 [[id(0)]];
+    // Overlapping binding: texture2d<int> t42 [[id(0)]];
+    // Overlapping binding: texture_buffer<uint, access::read_write> u4 [[id(0)]];
+};
+
+kernel void main0(const device spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], const device spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], constant spvDescriptorSetBuffer2& spvDescriptorSet2 [[buffer(2)]], constant spvDescriptorSetBuffer3& spvDescriptorSet3 [[buffer(3)]], constant spvDescriptorSetBuffer4& spvDescriptorSet4 [[buffer(4)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    spvDescriptorArray<device B30*> b30 {spvDescriptorSet1.b30};
+    spvDescriptorArray<texture2d<uint>> t31 {reinterpret_cast<const device spvDescriptor<texture2d<uint>>*>(&spvDescriptorSet1.b30)};
+    spvDescriptorArray<texture2d<int>> t32 {reinterpret_cast<const device spvDescriptor<texture2d<int>>*>(&spvDescriptorSet1.b30)};
+    spvDescriptorArray<constant B31*> b31 {reinterpret_cast<spvDescriptor<constant B31 *> const device *>(&spvDescriptorSet1.b30)};
+    spvDescriptorArray<texture_buffer<uint, access::read_write>> u3 {reinterpret_cast<const device spvDescriptor<texture_buffer<uint, access::read_write>>*>(&spvDescriptorSet1.b30)};
+
+    const device auto &t01 = reinterpret_cast<const device array<texture2d<uint>, 8> &>(spvDescriptorSet0.t00);
+    const device auto &t02 = reinterpret_cast<const device array<texture2d<int>, 8> &>(spvDescriptorSet0.t00);
+    const device auto &u0 = reinterpret_cast<const device array<texture_buffer<uint, access::read_write>, 8> &>(spvDescriptorSet0.t00);
+    const device auto &s00 = reinterpret_cast<const device array<sampler, 8> &>(spvDescriptorSet0.t00);
+    constant auto &b21 = reinterpret_cast<constant B21* constant (&)[8]>(spvDescriptorSet2.b20);
+    constant auto &t21 = reinterpret_cast<constant array<texture2d<uint>, 8> &>(spvDescriptorSet2.b20);
+    constant auto &t22 = reinterpret_cast<constant array<texture2d<int>, 8> &>(spvDescriptorSet2.b20);
+    constant auto &u2 = reinterpret_cast<constant array<texture_buffer<uint, access::read_write>, 8> &>(spvDescriptorSet2.b20);
+    constant auto &b11 = reinterpret_cast<constant B11* constant (&)[8]>(spvDescriptorSet3.b10);
+    constant auto &u1 = reinterpret_cast<constant array<texture_buffer<uint, access::read_write>, 8> &>(spvDescriptorSet3.b10);
+    constant auto &b41 = *reinterpret_cast<constant B41* constant &>(spvDescriptorSet4.b40);
+    constant auto &t41 = reinterpret_cast<constant texture2d<uint> &>(spvDescriptorSet4.b40);
+    constant auto &t42 = reinterpret_cast<constant texture2d<int> &>(spvDescriptorSet4.b40);
+    constant auto &u4 = reinterpret_cast<constant texture_buffer<uint, access::read_write> &>(spvDescriptorSet4.b40);
+    float4 _292 = spvDescriptorSet0.t00[0].sample(s00[3], float2(0.0), level(0.0));
+    _292.x = as_type<float>(t01[1].read(uint2(int2(0)), 0).x);
+    _292.y = as_type<float>(t02[2].read(uint2(int2(0)), 0).x);
+    spvImageFence(u0[2]);
+    _292.z = as_type<float>(u0[2].read(uint(0)).x);
+    float4 _448;
+    _448.x = spvDescriptorSet3.b10[3]->v;
+    _448.y = b11[4]->v;
+    spvImageFence(u1[2]);
+    _448.z = as_type<float>(u1[2].read(uint(0)).x);
+    float _342 = spvDescriptorSet2.b20[3]->v;
+    spvImageFence(u2[2]);
+    uint _356 = b30[gl_WorkGroupID.x]->i;
+    uint _388 = _356 + 6u;
+    spvImageFence(u3[_388]);
+    float _410 = (*spvDescriptorSet4.b40).v;
+    spvImageFence(u4);
+    u0[0].write(as_type<uint4>(_292), uint(0));
+    u1[0].write(as_type<uint4>(_448), uint(0));
+    u2[0].write(as_type<uint4>(float4(as_type<float>(t21[1].read(uint2(int2(0)), 0).x), as_type<float>(t22[2].read(uint2(int2(0)), 0).x), _342 + as_type<float>(u2[2].read(uint(0)).x), b21[4]->v)), uint(0));
+    u3[0].write(as_type<uint4>(float4(as_type<float>(t31[_356 + 2u].read(uint2(int2(0)), 0).x), as_type<float>(t32[_356 + 3u].read(uint2(int2(0)), 0).x), b31[_356 + 5u]->v, as_type<float>(u3[_388].read(uint(0)).x))), uint(0));
+    u4.write(as_type<uint4>(float4(as_type<float>(t41.read(uint2(int2(0)), 0).x), as_type<float>(t42.read(uint2(int2(0)), 0).x), _410 + b41.v, as_type<float>(u4.read(uint(0)).x))), uint(0));
+}
+

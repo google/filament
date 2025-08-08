@@ -1,0 +1,37 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform sampler Sampler;
+layout(set = 0, binding = 0) uniform texture2D SampledImage;
+layout(set = 0, binding = 0) uniform sampler SPIRV_Cross_DummySampler;
+
+layout(location = 0) out vec4 _entryPointOutput;
+
+vec4 sample_fetch(texture2D tex, ivec3 UV)
+{
+    return texelFetch(sampler2D(tex, SPIRV_Cross_DummySampler), UV.xy, UV.z);
+}
+
+vec4 sample_sampler(texture2D tex, vec2 UV)
+{
+    return texture(sampler2D(tex, Sampler), UV);
+}
+
+vec4 _main(vec4 xIn)
+{
+    ivec3 coord = ivec3(int(xIn.x * 1280.0), int(xIn.y * 720.0), 0);
+    ivec3 param = coord;
+    vec4 value = sample_fetch(SampledImage, param);
+    value += texelFetch(sampler2D(SampledImage, SPIRV_Cross_DummySampler), coord.xy, coord.z);
+    vec2 param_1 = xIn.xy;
+    value += sample_sampler(SampledImage, param_1);
+    value += texture(sampler2D(SampledImage, Sampler), xIn.xy);
+    return value;
+}
+
+void main()
+{
+    vec4 xIn = gl_FragCoord;
+    vec4 param = xIn;
+    _entryPointOutput = _main(param);
+}
+
