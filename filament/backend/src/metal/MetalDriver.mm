@@ -1508,14 +1508,6 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
             << ") is not supported for "
                "readPixels.";
 
-    const bool formatConversionNecessary = srcTexture.pixelFormat != format;
-
-    // TODO: MetalBlitter does not currently support format conversions to integer types.
-    // The format and type must match the source pixel format exactly.
-    FILAMENT_CHECK_PRECONDITION(!formatConversionNecessary || !isMetalFormatInteger(format))
-            << "readPixels does not support integer format conversions from MTLPixelFormat ("
-            << (int)srcTexture.pixelFormat << ") to (" << (int)format << ").";
-
     MTLTextureDescriptor* textureDescriptor =
             [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:format
                                                                width:srcTextureSize.width

@@ -68,9 +68,15 @@ private:
             const BlitArgs& args, uint32_t depthPlane);
 
     struct BlitFunctionKey {
+        enum DataFormat : uint8_t {
+            FLOAT,
+            UINT,
+            INT
+        };
         bool msaaColorSource{};
         bool sources3D{};
-        char padding[2]{};
+        DataFormat inputFormat{};
+        DataFormat outputFormat{};
 
         bool isValid() const noexcept {
             // MSAA 3D textures do not exist.
@@ -79,8 +85,8 @@ private:
         }
 
         bool operator==(const BlitFunctionKey& rhs) const noexcept {
-            return msaaColorSource == rhs.msaaColorSource &&
-                   sources3D == rhs.sources3D;
+            return msaaColorSource == rhs.msaaColorSource && sources3D == rhs.sources3D &&
+                   inputFormat == rhs.inputFormat && outputFormat == rhs.outputFormat;
         }
     };
 

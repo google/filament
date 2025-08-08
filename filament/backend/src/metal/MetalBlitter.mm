@@ -17,6 +17,7 @@
 #include "MetalBlitter.h"
 
 #include "MetalContext.h"
+#include "MetalEnums.h"
 #include "MetalUtils.h"
 
 #include <utils/Logger.h>
@@ -28,6 +29,9 @@ static const char* functionLibrary = R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
 
+#define CAT(a,b) a##b
+#define FORMAT_4(x) CAT(x, 4)
+
 using namespace metal;
 
 struct VertexOut
@@ -37,7 +41,7 @@ struct VertexOut
 
 struct FragmentOut
 {
-    float4 color [[color(0)]];
+    FORMAT_4(OUTPUT_FORMAT) color [[color(0)]];
 };
 
 vertex VertexOut
@@ -66,7 +70,7 @@ blitterFrag(VertexOut in [[stage_in]],
 #elif SOURCES_3D
             texture3d<float, access::sample> sourceColor [[texture(0)]],
 #else
-            texture2d<float, access::sample> sourceColor [[texture(0)]],
+            texture2d<INPUT_FORMAT, access::sample> sourceColor [[texture(0)]],
 #endif  // MSAA_COLOR_SOURCE
 
             constant FragmentArgs* args [[buffer(0)]])
@@ -183,9 +187,20 @@ void MetalBlitter::blitDepthPlane(id<MTLCommandBuffer> cmdBuffer, const BlitArgs
             [cmdBuffer renderCommandEncoderWithDescriptor:descriptor];
     encoder.label = @(label);
 
-    BlitFunctionKey key;
+
+    auto getDataFormat = [](MTLPixelFormat format) {
+        if (isMetalFormatUnsignedInteger(format)) {
+            return BlitFunctionKey::DataFormat::UINT;
+        } else if (isMetalFormatSignedInteger(format)) {
+            return BlitFunctionKey::DataFormat::INT;
+        }
+        return BlitFunctionKey::DataFormat::FLOAT;
+    };
+    BlitFunctionKey key{};
     key.msaaColorSource = args.source.texture.textureType == MTLTextureType2DMultisample;
     key.sources3D       = args.source.texture.textureType == MTLTextureType3D;
+    key.inputFormat     = getDataFormat(args.source.texture.pixelFormat);
+    key.outputFormat    = getDataFormat(args.destination.texture.pixelFormat);
     id<MTLFunction> const fragmentFunction = getBlitFragmentFunction(key);
 
     MetalPipelineState const pipelineState {
@@ -311,6 +326,18 @@ id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) const
     if (key.sources3D) {
         macros[@"SOURCES_3D"] = @"1";
     }
+    auto getDataFormatString = [](BlitFunctionKey::DataFormat f) {
+        switch (f) {
+            case BlitFunctionKey::DataFormat::FLOAT:
+                return @"float";
+            case BlitFunctionKey::DataFormat::UINT:
+                return @"uint";
+            case BlitFunctionKey::DataFormat::INT:
+                return @"int";
+        }
+    };
+    macros[@"INPUT_FORMAT"] = getDataFormatString(key.inputFormat);
+    macros[@"OUTPUT_FORMAT"] = getDataFormatString(key.outputFormat);
     options.preprocessorMacros = macros;
     NSString* const objcSource = [NSString stringWithCString:functionLibrary
                                                     encoding:NSUTF8StringEncoding];
@@ -337,11 +364,17 @@ id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
         return mVertexFunction;
     }
 
+    MTLCompileOptions* const options = [MTLCompileOptions new];
+    NSMutableDictionary* const macros = [NSMutableDictionary dictionary];
+    // these can be anything for the vertex shader
+    macros[@"INPUT_FORMAT"] = @"float";
+    macros[@"OUTPUT_FORMAT"] = @"float";
+    options.preprocessorMacros = macros;
     NSString* const objcSource = [NSString stringWithCString:functionLibrary
                                                     encoding:NSUTF8StringEncoding];
     NSError* error = nil;
     id <MTLLibrary> const library = [mContext.device newLibraryWithSource:objcSource
-                                                                  options:nil
+                                                                  options:options
                                                                     error:&error];
 
     id<MTLFunction> const function = [library newFunctionWithName:@"blitterVertex"];
