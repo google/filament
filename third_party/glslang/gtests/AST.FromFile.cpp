@@ -189,6 +189,7 @@ INSTANTIATE_TEST_SUITE_P(
         "dataOut.frag",
         "dataOutIndirect.frag",
         "deepRvalue.frag",
+        "defaultArgs.comp",
         "depthOut.frag",
         "discard-dce.frag",
         "doWhileLoop.frag",
@@ -225,6 +226,7 @@ INSTANTIATE_TEST_SUITE_P(
         "types.frag",
         "uniformArray.frag",
         "variableArrayIndex.frag",
+        "variadic.comp",
         "varyingArray.frag",
         "varyingArrayIndirect.frag",
         "voidFunction.frag",
@@ -293,6 +295,7 @@ INSTANTIATE_TEST_SUITE_P(
         "textureoffset_sampler2darrayshadow.vert",
         "atomicAdd.comp",
         "GL_ARB_gpu_shader5.u2i.vert",
+        "glsl.arbgpushader5.frag",
         "textureQueryLOD.frag",
         "atomicCounterARBOps.vert",
         "GL_EXT_shader_integer_mix.vert",
@@ -325,6 +328,9 @@ INSTANTIATE_TEST_SUITE_P(
     Glsl, CompileToAstTestNV,
     ::testing::ValuesIn(std::vector<std::string>({
         "nvShaderNoperspectiveInterpolation.frag",
+        "glsl.nvgpushader5.frag",
+        "glsl.nvgpushader5.geom",
+        "glsl.nvgpushader5.vert",
     })),
     FileNameAsCustomTestSuffix
 );

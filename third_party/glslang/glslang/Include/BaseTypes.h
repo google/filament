@@ -50,6 +50,8 @@ enum TBasicType {
     EbtDouble,
     EbtFloat16,
     EbtBFloat16,
+    EbtFloatE5M2,
+    EbtFloatE4M3,
     EbtInt8,
     EbtUint8,
     EbtInt16,
@@ -72,6 +74,7 @@ enum TBasicType {
     EbtTensorLayoutNV,
     EbtTensorViewNV,
     EbtCoopvecNV,
+    EbtTensorARM,
     // SPIR-V type defined by spirv_type
     EbtSpirvType,
 
@@ -344,6 +347,11 @@ enum TBuiltInVariable {
 
     EbvPositionFetch,
 
+    // SPV_QCOM_tile_shading
+    EbvTileOffsetQCOM,
+    EbvTileDimensionQCOM,
+    EbvTileApronSizeQCOM,
+
     EbvLast
 };
 
@@ -604,6 +612,8 @@ __inline bool isTypeFloat(TBasicType type)
     case EbtDouble:
     case EbtFloat16:
     case EbtBFloat16:
+    case EbtFloatE5M2:
+    case EbtFloatE4M3:
         return true;
     default:
         return false;
@@ -615,6 +625,8 @@ __inline uint32_t GetNumBits(TBasicType type)
     switch (type) {
     case EbtInt8:
     case EbtUint8:
+    case EbtFloatE5M2:
+    case EbtFloatE4M3:
         return 8;
     case EbtBFloat16:
     case EbtFloat16:
