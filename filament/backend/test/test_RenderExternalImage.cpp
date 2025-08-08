@@ -40,7 +40,7 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
     return SharedShaders::makeShader(api, cleanup, ShaderRequest{
             .mVertexType = VertexShaderType::Textured,
             .mFragmentType = FragmentShaderType::Textured,
-            .mUniformType = ShaderUniformType::Sampler
+            .mUniformType = ShaderUniformType::Sampler2D
     });
 }
 

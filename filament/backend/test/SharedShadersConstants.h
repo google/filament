@@ -23,7 +23,9 @@ enum class ShaderUniformType : uint8_t {
     None,
     Simple,
     SimpleWithPadding,
-    Sampler,
+    Sampler2D,
+    ISampler2D,
+    USampler2D,
 };
 
 struct SimpleMaterialParams {

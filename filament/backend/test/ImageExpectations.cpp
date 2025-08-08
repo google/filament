@@ -36,14 +36,16 @@
 namespace test {
 
 ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName,
-        uint32_t expectedHash, bool isSrgb, int numAllowedDeviations, int pixelMatchThreshold)
+        uint32_t expectedHash, bool isSrgb, int numAllowedDeviations, int pixelMatchThreshold,
+        std::optional<float> forceAlphaValue)
     : mWidth(width),
       mHeight(height),
       mIsSrgb(isSrgb),
       mExpectedPixelHash(expectedHash),
       mFileName(std::move(fileName)),
       mAllowedPixelDeviations(numAllowedDeviations),
-      mPixelMatchThreshold(pixelMatchThreshold) {}
+      mPixelMatchThreshold(pixelMatchThreshold),
+      mForceAlphaValue(forceAlphaValue) {}
 
 int ScreenshotParams::width() const {
     return mWidth;
@@ -59,6 +61,10 @@ bool ScreenshotParams::isSrgb() const {
 
 uint32_t ScreenshotParams::expectedHash() const {
     return mExpectedPixelHash;
+}
+
+std::optional<float> ScreenshotParams::forceAlphaValue() const {
+    return mForceAlphaValue;
 }
 
 std::filesystem::path ScreenshotParams::actualDirectoryPath() {
@@ -177,9 +183,29 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
     const size_t size = mInternal->params.width() * mInternal->params.height() * 4;
     mInternal->bytes.resize(size);
 
+    using filament::backend::PixelDataFormat;
+    using filament::backend::PixelDataType;
+    constexpr PixelDataFormat readPixelFormat = PixelDataFormat::RGBA;
+    constexpr PixelDataType readPixelType = PixelDataType::UBYTE;
+
     auto cb = [](void* buffer, size_t size, void* user) {
         auto* internal = static_cast<RenderTargetDump::Internal*>(user);
         internal->bytesFilled = true;
+
+        // If requested, we overwrite the alpha value.
+        // If the read pixel format or type changes, this logic must be updated.
+        static_assert(readPixelFormat == PixelDataFormat::RGBA);
+        static_assert(readPixelType == PixelDataType::UBYTE);
+        if (auto alphaValue = internal->params.forceAlphaValue(); alphaValue) {
+            const int pixelCount = internal->params.width() * internal->params.height();
+            const int channels = 4;
+            constexpr int kAlphaChannel = 3;
+            uint8_t* pixelBuffer = static_cast<uint8_t*>(buffer);
+            for (int p = 0; p < pixelCount; p++) {
+                pixelBuffer[p * channels + kAlphaChannel] = *alphaValue * 255.0f;
+            }
+        }
+
 #ifndef FILAMENT_IOS
         image::LinearImage image;
         if (internal->params.isSrgb()) {
@@ -203,9 +229,8 @@ RenderTargetDump::RenderTargetDump(filament::backend::DriverApi& api,
                 filePath);
 #endif
     };
-    filament::backend::PixelBufferDescriptor pb(mInternal->bytes.data(), size,
-            filament::backend::PixelDataFormat::RGBA, filament::backend::PixelDataType::UBYTE, cb,
-            (void*)mInternal.get());
+    filament::backend::PixelBufferDescriptor pb(mInternal->bytes.data(), size, readPixelFormat,
+            readPixelType, cb, (void*) mInternal.get());
     api.readPixels(renderTarget, 0, 0, mInternal->params.width(), mInternal->params.height(),
             std::move(pb));
 }
