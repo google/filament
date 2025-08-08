@@ -404,6 +404,11 @@ MaterialBuilder& MaterialBuilder::groupSize(math::uint3 const groupSize) noexcep
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
+    mUseDefaultDepthVariant = true;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -931,7 +936,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader, needsStandardDepthProgram());
+    container.emplace<bool>(MaterialHasCustomDepthShader,
+            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;

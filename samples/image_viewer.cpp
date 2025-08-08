@@ -245,6 +245,7 @@ static void loadImage(App& app, Engine* engine, const Path& filename) {
             .format(channels == 3 ?
                     Texture::InternalFormat::RGB16F : Texture::InternalFormat::RGBA16F)
             .sampler(Texture::Sampler::SAMPLER_2D)
+            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
             .build(*engine);
 
     Texture::PixelBufferDescriptor::Callback freeCallback = [](void* buf, size_t, void* data) {
