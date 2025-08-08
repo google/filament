@@ -224,6 +224,13 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {
+    for (auto& renderable: g_meshSet->getRenderables()) {
+        auto instance = engine->getRenderableManager().getInstance(renderable);
+        if (instance) {
+            engine->destroy(renderable);
+        }
+    }
+
     for (auto material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
@@ -253,9 +260,9 @@ static void readMaterial(Engine* engine) {
         return;
     }
 
-    std::ifstream in(g_materialPath.c_str(), std::ifstream::in);
+    std::ifstream in(g_materialPath.c_str(), std::ifstream::in | std::ios::binary);
     if (in.is_open()) {
-        g_materialBuffer.reserve(static_cast<unsigned long>(fileSize));
+        g_materialBuffer.resize(static_cast<unsigned long>(fileSize));
         if (in.read(g_materialBuffer.data(), fileSize)) {
             g_material = Material::Builder()
                     .package((void*) g_materialBuffer.data(), (size_t) fileSize)
