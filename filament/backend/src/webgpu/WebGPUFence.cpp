@@ -28,12 +28,11 @@ namespace filament::backend {
 FenceStatus WebGPUFence::getStatus() { return mStatus.load(); }
 
 void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
+    // The lambda function is called when the work is done. It updates the fence status based on the
+    // result of the work.
     queue.OnSubmittedWorkDone(
         wgpu::CallbackMode::AllowSpontaneous,
         [this](const wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
-            // Note: The 'message' parameter is required by the function signature
-            // but can be ignored if not needed.
-
             switch (status) {
                 case wgpu::QueueWorkDoneStatus::Success:
                     mStatus.store(FenceStatus::CONDITION_SATISFIED);

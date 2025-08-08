@@ -28,6 +28,10 @@ namespace filament::backend {
 
 class BufferDescriptor;
 
+/**
+  * A base class for WebGPU buffer objects, providing common functionality for creating and
+  * updating GPU buffers.
+  */
 class WebGPUBufferBase /* intended to be extended */ {
 public:
     /**
@@ -46,7 +50,8 @@ protected:
 
 private:
     const wgpu::Buffer mBuffer;
-    // FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS (e.g. 4) bytes to hold any extra chunk we need.
+    // WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple
+    // of 4. This member is used to pad the data if the source size is not a multiple of 4.
     std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 };
 
