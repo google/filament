@@ -998,6 +998,11 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 }
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
+
+    // always add the CanonicalizeIds Pass
+    optimizer->RegisterPass(CreateCanonicalizeIdsPass());
+
+    // run optimizer
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
@@ -1090,7 +1095,6 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateBlockMergePass());
     RegisterPass(CreateSimplificationPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateCanonicalizeIdsPass());
 }
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& config) {
@@ -1133,7 +1137,6 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
     RegisterPass(CreateRedundancyEliminationPass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreateCFGCleanupPass());
-    RegisterPass(CreateCanonicalizeIdsPass());
 }
 
 } // namespace filamat
