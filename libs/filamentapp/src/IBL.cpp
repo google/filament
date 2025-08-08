@@ -116,6 +116,7 @@ bool IBL::loadFromEquirect(Path const& path) {
             .levels(0xff)
             .format(Texture::InternalFormat::R11F_G11F_B10F)
             .sampler(Texture::Sampler::SAMPLER_2D)
+            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
             .build(mEngine);
 
     equirect->setImage(mEngine, 0, std::move(buffer));
@@ -131,7 +132,7 @@ bool IBL::loadFromEquirect(Path const& path) {
 
     mTexture = specularFilter(mSkyboxTexture);
 
-    mFogTexture = irradianceFilter({ .generateMipmap = false }, mSkyboxTexture);
+    mFogTexture = irradianceFilter({ .generateMipmap = true }, mSkyboxTexture);
     mFogTexture->generateMipmaps(mEngine);
 
     mIndirectLight = IndirectLight::Builder()

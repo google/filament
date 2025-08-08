@@ -237,9 +237,8 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     }
 
 
-    EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(screenWidth(), screenHeight(), "BufferObjectUpdateWithOffset",
-                    2320747245));
+    EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(),
+                                       "BufferObjectUpdateWithOffset", 2320747245));
 
     api.flush();
     api.commit(swapChain);

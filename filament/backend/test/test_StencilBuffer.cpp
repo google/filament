@@ -144,7 +144,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
     RunTest(renderTarget);
 
-    EXPECT_IMAGE(renderTarget, getExpectations(),
+    EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "StencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
@@ -170,7 +170,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
     RunTest(renderTarget);
 
-    EXPECT_IMAGE(renderTarget, getExpectations(),
+    EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "DepthAndStencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
@@ -266,9 +266,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.stopCapture(0);
     api.endFrame(0);
 
-    EXPECT_IMAGE(renderTarget1, getExpectations(),
-            ScreenshotParams(screenWidth(), screenHeight(), "StencilBufferAutoResolve",
-                    3353562179));
+    EXPECT_IMAGE(renderTarget1, ScreenshotParams(screenWidth(), screenHeight(),
+                                        "StencilBufferAutoResolve", 3353562179));
 
     flushAndWait();
     getDriver().purge();
