@@ -86,6 +86,12 @@ void setDefaultTargetFlags(WebGPURenderTarget& defaultRenderTarget,
 
 } // namespace
 
+// The WebGPUDriver is the main entry point for the WebGPU backend. It is responsible for
+// creating and managing all WebGPU resources, and for submitting commands to the GPU.
+// It implements the Driver interface, which is the abstraction layer used by Filament's
+// renderer. The driver uses a handle-based system to manage resources, and it operates
+// asynchronously, with `create...S` methods for synchronous handle allocation and
+// `create...R` methods for resource creation on the backend thread.
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
     constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -165,6 +171,9 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     }
 }
 
+// Submits the currently recorded commands to the GPU queue for execution.
+// This does not wait for the commands to complete. A new command encoder is created
+// to allow for recording subsequent commands.
 void WebGPUDriver::flush(int) {
     if (mCommandEncoder == nullptr) {
         return;
@@ -184,6 +193,8 @@ void WebGPUDriver::flush(int) {
     assert_invariant(mCommandEncoder);
 }
 
+// Submits the currently recorded commands and waits for them to complete on the GPU.
+// This is a synchronous operation and should be used sparingly.
 void WebGPUDriver::finish(int /* dummy */) {
     if (mCommandEncoder == nullptr) {
         return;
@@ -303,6 +314,14 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> descriptorSetHan
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+// Synchronous handle creation methods (S-methods)
+//
+// These methods are called from the frontend thread to allocate a handle for a backend resource.
+// They are lightweight and do not perform any GPU operations. The actual resource creation
+// happens in the corresponding R-method on the backend thread.
+// ------------------------------------------------------------------------------------------------
+
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
     return allocHandle<WebGPUSwapChain>();
 }
@@ -386,6 +405,13 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImage2S() noexcept {
 Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
     return allocHandle<WebGPUTexture>();
 }
+
+// ------------------------------------------------------------------------------------------------
+// Asynchronous resource creation methods (R-methods)
+//
+// These methods are called on the backend thread to create the actual GPU resources
+// associated with a handle that was previously allocated by an S-method.
+// ------------------------------------------------------------------------------------------------
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     mNativeWindow = nativeWindow;
@@ -775,6 +801,10 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vertexBufferHand
     vertexBuffer->getBuffers()[index] = bufferObject->getBuffer();
 }
 
+// Updates a 3D texture region with pixel data from a buffer.
+// This function handles various pixel formats and performs a blit operation if the source
+// format needs to be converted to the destination format. For compressed textures, it ensures
+// that the offsets are aligned to the block dimensions.
 void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t level,
         const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
         const uint32_t width, const uint32_t height, const uint32_t depth,
@@ -1040,6 +1070,10 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
     }
 }
 
+// Begins a render pass. This sets up the render pass descriptor with the appropriate
+// color and depth/stencil attachments, based on whether the target is the default
+// swap chain render target or a custom one. It also handles MSAA by setting up
+// resolve targets if necessary.
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
     if (!mCommandEncoder) {
@@ -1280,6 +1314,11 @@ void WebGPUDriver::stopCapture(int) {
     //todo
 }
 
+// Reads a block of pixels from a render target into a buffer.
+// This function is asynchronous. It copies the pixel data to a staging buffer on the GPU,
+// and then maps the buffer for reading on the CPU. The provided callback is invoked when the
+// data is ready. This function also handles the 256-byte row alignment requirement for
+// buffer-to-texture copies in WebGPU.
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {

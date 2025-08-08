@@ -42,6 +42,9 @@ constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
 
 } // namespace
 
+// The constructor initializes the descriptor set based on a given layout.
+// It pre-allocates space for the bind group entries and sets up a mapping from binding index
+// to the internal entry array index. This prepares the object to be populated with resources.
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
     : mLayout{ layout },
@@ -64,6 +67,10 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
     }
 }
 
+// Adds or updates a resource binding in the descriptor set.
+// This method is called to populate the descriptor set with buffers, textures, and samplers.
+// It is only valid to call this before the descriptor set is locked (i.e., before
+// `lockAndReturn` is called).
 void WebGPUDescriptorSet::addEntry(const unsigned int index, wgpu::BindGroupEntry&& entry) {
     if (mBindGroup) {
         // We will keep getting hits from future updates, but shouldn't do anything
@@ -83,6 +90,10 @@ void WebGPUDescriptorSet::addEntry(const unsigned int index, wgpu::BindGroupEntr
     mEntries[entryIndex] = std::move(entry);
 }
 
+// Finalizes the descriptor set by creating the underlying `wgpu::BindGroup`.
+// Once this method is called, the descriptor set becomes immutable. To save memory, the
+// intermediate data (`mEntries` and `mLayout`) is cleared after the bind group is created.
+// If the bind group has already been created, this method simply returns the existing one.
 wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
     if (mBindGroup) {
         return mBindGroup;
@@ -125,6 +136,7 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
     return mBindGroup;
 }
 
+// The destructor releases the WebGPU handles for the bind group and layout.
 WebGPUDescriptorSet::~WebGPUDescriptorSet() {
     mBindGroup = nullptr;
     mLayout = nullptr;

@@ -206,9 +206,21 @@ constexpr std::string_view FRAGMENT_SHADER_SNIPPET_2D_INPUT_TEMPLATE{ R"(
 
 } // namespace
 
+// The WebGPUBlitter is responsible for copying regions of pixels from one texture to another.
+// It can perform a direct memory copy if the formats are compatible and no scaling or format
+// conversion is needed. Otherwise, it uses a render pass with a custom shader to perform
+// the blit. This allows for scaling, format conversion, and resolving multisampled textures.
+// The blitter caches pipelines, layouts, and shaders to avoid recompilation.
 WebGPUBlitter::WebGPUBlitter(wgpu::Device const& device)
     : mDevice{ device } {}
 
+// Performs a blit operation from a source to a destination texture.
+// This function first checks if a direct texture-to-texture copy can be performed.
+// A direct copy is possible if the source and destination textures have the same sample count,
+// compatible formats, and the copy extents match. If a direct copy is not possible, this
+// function falls back to a render pass-based blit. The render pass uses a shader to read from
+// the source texture and write to the destination texture, allowing for format conversion,
+// scaling, and MSAA resolves.
 void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& commandEncoder,
         BlitArgs const& args) {
     // current assumptions/simplifications made in this implementation:
@@ -516,6 +528,9 @@ void WebGPUBlitter::createSampler(const SamplerMagFilter filter) {
     }
 }
 
+// Caches and returns a render pipeline for a given blit configuration.
+// If a pipeline for the given configuration does not exist, it creates and caches one.
+// The cache key is a hash of the filter type, source dimension, sample count, and formats.
 wgpu::RenderPipeline const& WebGPUBlitter::getOrCreateRenderPipeline(
         const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
         const uint32_t sourceSampleCount, const bool depthSource,
@@ -529,6 +544,9 @@ wgpu::RenderPipeline const& WebGPUBlitter::getOrCreateRenderPipeline(
     return mRenderPipelines[key];
 }
 
+// Creates a render pipeline for a blit operation.
+// The pipeline is configured with the appropriate vertex and fragment shaders,
+// pipeline layout, and render target state based on the blit parameters.
 wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(const SamplerMagFilter filterType,
         const wgpu::TextureViewDimension sourceDimension, const uint32_t sourceSampleCount,
         const bool depthSource, const wgpu::TextureFormat destinationTextureFormat) {
@@ -595,6 +613,8 @@ size_t WebGPUBlitter::hashRenderPipelineKey(const SamplerMagFilter filterType,
     return seed;
 }
 
+// Caches and returns a pipeline layout for a given blit configuration.
+// If a layout for the given configuration does not exist, it creates and caches one.
 wgpu::PipelineLayout const& WebGPUBlitter::getOrCreatePipelineLayout(
         const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
         const bool multisampledSource, const bool depthSource) {
@@ -607,6 +627,8 @@ wgpu::PipelineLayout const& WebGPUBlitter::getOrCreatePipelineLayout(
     return mPipelineLayouts[key];
 }
 
+// Creates a pipeline layout for a blit operation.
+// The layout defines the bind group layouts used by the blit pipeline.
 wgpu::PipelineLayout WebGPUBlitter::createPipelineLayout(const SamplerMagFilter filterType,
         const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
         const bool depthSource) {
@@ -633,6 +655,8 @@ size_t WebGPUBlitter::hashPipelineLayoutKey(const SamplerMagFilter filterType,
     return seed;
 }
 
+// Caches and returns a bind group layout for a given blit configuration.
+// If a layout for the given configuration does not exist, it creates and caches one.
 wgpu::BindGroupLayout const& WebGPUBlitter::getOrCreateTextureBindGroupLayout(
         const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
         const bool multisampledSource, const bool depthSource) {
@@ -645,6 +669,9 @@ wgpu::BindGroupLayout const& WebGPUBlitter::getOrCreateTextureBindGroupLayout(
     return mTextureBindGroupLayouts[key];
 }
 
+// Creates a bind group layout for the blit operation's texture resources.
+// This layout specifies the bindings for the source texture, a uniform buffer with blit parameters,
+// and a sampler.
 wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerMagFilter filterType,
         const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
         const bool depthSource) {
@@ -707,6 +734,8 @@ size_t WebGPUBlitter::hashTextureBindGroupLayoutKey(const SamplerMagFilter filte
     return seed;
 }
 
+// Caches and returns a shader module for a given blit configuration.
+// If a shader module for the given configuration does not exist, it creates and caches one.
 wgpu::ShaderModule const& WebGPUBlitter::getOrCreateShaderModule(
         const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
         const bool depthSource, const bool depthDestination) {
@@ -719,6 +748,9 @@ wgpu::ShaderModule const& WebGPUBlitter::getOrCreateShaderModule(
     return mShaderModules[key];
 }
 
+// Creates a shader module containing the vertex and fragment shaders for the blit operation.
+// The shader source is generated from a template, with placeholders filled in based on the
+// blit configuration (e.g., texture type, sample count).
 wgpu::ShaderModule WebGPUBlitter::createShaderModule(
         const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
         const bool depthSource, const bool depthDestination) {
