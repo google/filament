@@ -17,6 +17,7 @@ import os
 import json
 import glob
 import shutil
+import concurrent.futures
 
 from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
 
@@ -25,62 +26,83 @@ from golden_manager import GoldenManager
 from image_diff import same_image
 from results import RESULT_OK, RESULT_FAILED
 
+def _render_single_model(gltf_viewer, test_json_path, named_output_dir, test_name, backend, model, model_path, opengl_lib):
+  env = None
+  if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
+    env = {
+      'LD_LIBRARY_PATH': opengl_lib,
+      # for macOS
+      'DYLD_LIBRARY_PATH': opengl_lib,
+    }
+
+  out_name = f'{test_name}.{backend}.{model}'
+  test_desc = out_name
+
+  working_dir = f'/tmp/renderdiff/{backend}/{model}'
+  mkdir_p(working_dir)
+
+  important_print(f'Rendering {test_desc}')
+
+  out_code, _ = execute(
+    f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
+    cwd=working_dir,
+    env=env, capture_output=False
+  )
+
+  result = ''
+  if out_code == 0:
+    result = RESULT_OK
+    out_tif_basename = f'{out_name}.tif'
+    out_tif_name = f'{named_output_dir}/{out_tif_basename}'
+    mv_f(f'{working_dir}/{test_name}0.tif', out_tif_name)
+    mv_f(f'{working_dir}/{test_name}0.json', f'{named_output_dir}/{test_name}.json')
+  else:
+    result = RESULT_FAILED
+    important_print(f'{test_desc} rendering failed with error={out_code}')
+
+  return {
+    'name': out_name,
+    'result': result,
+    'result_code': out_code,
+  }
+
 def _render_test_config(gltf_viewer,
-                        test_config,
-                        output_dir,
-                        opengl_lib=None,
-                        vk_icd=None):
+            test_config,
+            output_dir,
+            local_only=False,
+            opengl_lib=None,
+            vk_icd=None):
   assert os.path.isdir(output_dir), f"output directory {output_dir} does not exist"
   assert os.access(gltf_viewer, os.X_OK)
 
   named_output_dir = os.path.join(output_dir, test_config.name)
   mkdir_p(named_output_dir)
 
+  gltf_viewer_abs = os.path.abspath(gltf_viewer)
+
   results = []
-  for test in test_config.tests:
-    test_json_path = f'{named_output_dir}/{test.name}.simplified.json'
+  with concurrent.futures.ThreadPoolExecutor() as executor:
+    futures = []
+    for test in test_config.tests:
+      test_json_path = os.path.abspath(
+          f'{named_output_dir}/{test.name}.simplified.json')
 
-    with open(test_json_path, 'w') as f:
-      f.write(f'[{test.to_filament_format()}]')
+      with open(test_json_path, 'w') as f:
+        f.write(f'[{test.to_filament_format()}]')
 
-    for backend in test_config.backends:
-      env = None
-      if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
-        env = {
-          'LD_LIBRARY_PATH': opengl_lib,
+      for backend in test_config.backends:
+        for model in test.models:
+          model_path = os.path.abspath(test_config.models[model])
+          futures.append(
+            executor.submit(_render_single_model, gltf_viewer_abs,
+                    test_json_path, named_output_dir,
+                    test.name, backend, model, model_path,
+                    opengl_lib))
 
-           # for macOS
-          'DYLD_LIBRARY_PATH': opengl_lib,
-        }
+    for future in concurrent.futures.as_completed(futures):
+      results.append(future.result())
+  print(results)
 
-      for model in test.models:
-        model_path = test_config.models[model]
-        out_name = f'{test.name}.{backend}.{model}'
-        test_desc = out_name
-
-        important_print(f'Rendering {test_desc}')
-
-        out_code, _ = execute(
-          f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
-          env=env, capture_output=False
-        )
-
-        result = ''
-        if out_code == 0:
-          result = RESULT_OK
-          out_tif_basename = f'{out_name}.tif'
-          out_tif_name = f'{named_output_dir}/{out_tif_basename}'
-          mv_f(f'{test.name}0.tif', out_tif_name)
-          mv_f(f'{test.name}0.json', f'{named_output_dir}/{test.name}.json')
-        else:
-          result = RESULT_FAILED
-          important_print(f'{test_desc} rendering failed with error={out_code}')
-
-        results.append({
-          'name': out_name,
-          'result': result,
-          'result_code': out_code,
-        })
   return named_output_dir, results
 
 if __name__ == "__main__":

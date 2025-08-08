@@ -34,7 +34,10 @@ function start_render_() {
             fi
         done
     fi
-    CXX=`which clang++` CC=`which clang` ./build.sh -f -X ${MESA_DIR} -p desktop debug gltf_viewer
+    # -W enables the webgpu build
+    # -f forces regeneration of cmake build files
+    # -X points to the mesa directory, which contains the compiled gl and vk drivers.
+    CXX=`which clang++` CC=`which clang` ./build.sh -W -f -X ${MESA_DIR} -p desktop debug gltf_viewer
 }
 
 function end_render_() {
