@@ -1366,6 +1366,10 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
         srcw = dstw;
         srch = dsth;
     } while ((srcw > 1 || srch > 1) && ++level < t->levels - 1);
+
+    VulkanCommandBuffer* commandBuffer = &mCommands.get();
+    // Here we transition to the whole image to the most likely next layout.
+    t->transitionLayout(commandBuffer, t->getPrimaryViewRange(), t->getDefaultLayout());
 }
 
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
