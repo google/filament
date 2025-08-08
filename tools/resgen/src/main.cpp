@@ -31,6 +31,7 @@
 #include <vector>
 
 #include <string.h>
+#include <zstd.h>
 
 using namespace utils;
 
@@ -43,6 +44,8 @@ struct AppConfig {
     bool generateC = false;
     bool quietMode = false;
     bool embedJson = false;
+    bool compress = false;
+    bool compressPackage = false;
     std::vector<Path> inputPaths;
 };
 
@@ -83,6 +86,10 @@ Options:
        of all resource sizes and names. Useful for size analysis.
     --quiet, -q
         Suppress console output
+    --compress, -z
+        Compress each resource individually with zstd.
+    --compress-package, -Z
+        Compress the entire package with zstd.
 
 Examples:
     RESGEN -cp textures jungle.png beach.png
@@ -144,7 +151,7 @@ static std::string& replaceAll(std::string& context, const std::string& from, co
 
 // Parses command-line arguments using getopt and populates the AppConfig struct.
 static AppConfig handleArguments(int const argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:ktcqj";
+    static constexpr const char* OPTSTR = "hLp:x:ktcqjzZ";
     static const option OPTIONS[] = {
             { "help",         no_argument,       nullptr, 'h' },
             { "license",      no_argument,       nullptr, 'L' },
@@ -155,6 +162,8 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
             { "cfile",        no_argument,       nullptr, 'c' },
             { "quiet",        no_argument,       nullptr, 'q' },
             { "json",         no_argument,       nullptr, 'j' },
+            { "compress",     no_argument,       nullptr, 'z' },
+            { "compress-package", no_argument,   nullptr, 'Z' },
             { nullptr, 0, nullptr, 0 }
     };
 
@@ -189,10 +198,21 @@ static AppConfig handleArguments(int const argc, char* argv[]) {
             case 'j':
                 config.embedJson = true;
                 break;
+            case 'z':
+                config.compress = true;
+                break;
+            case 'Z':
+                config.compressPackage = true;
+                break;
             default:
                 printUsage(argv[0]);
                 std::exit(1);
         }
+    }
+
+    if (config.compress && config.compressPackage) {
+        std::cerr << "Cannot use -z and -Z at the same time." << std::endl;
+        exit(1);
     }
 
     // Treat remaining arguments as input file paths.
@@ -302,10 +322,9 @@ int main(int argc, char* argv[]) {
     replaceAll(asmstr, "{RESOURCES}", packagePrefix);
     replaceAll(asmstr, "{resources}", packageFile);
 
-    // Open all output file streams.
+    // Open file streams.
     auto appleAsmStream = openOutputFile(appleAsmPath);
     auto asmStream = openOutputFile(asmPath);
-    auto binStream = openOutputFile(binPath, std::ios::binary);
 
     // Begin constructing the C header file content.
     std::ostringstream headerStream;
@@ -327,17 +346,18 @@ int main(int argc, char* argv[]) {
                   << "const uint8_t " << packageSymbol << "[] = {\n";
     }
 
+    std::vector<uint8_t> packageData;
+    std::vector<uint8_t> uncompressedPackageData;
+    size_t totalUncompressedSize = 0;
+
     // Process each input file to build the resource collection.
     jsonStream << "{";
     std::size_t offset = 0;
     for (const auto& inPath : inputPaths) {
-        std::vector<std::uint8_t> content;
+        std::vector<std::uint8_t> uncompressedContent;
         if (inPath != g_jsonMagicString) {
-            // For a regular file, read its binary content.
-            content = readFile(inPath);
+            uncompressedContent = readFile(inPath);
         } else {
-            // For the JSON placeholder, finalize and embed the JSON summary blob.
-            // The blob is formatted as: __RESGEN__\0<size>\0{...json...}
             std::string jsonString = jsonStream.str();
             jsonString[jsonString.size() - 1] = '}';
             std::ostringstream jsonBlob;
@@ -346,55 +366,115 @@ int main(int argc, char* argv[]) {
             jsonBlob << jsonString;
             jsonString = jsonBlob.str();
             const auto* jsonPtr = reinterpret_cast<const std::uint8_t*>(jsonString.c_str());
-            content.assign(jsonPtr, jsonPtr + jsonBlob.str().size());
+            uncompressedContent.assign(jsonPtr, jsonPtr + jsonBlob.str().size());
         }
 
-        // Optionally append a null terminator, useful for text resources.
         if (config.appendNull) {
-            content.push_back(0);
+            uncompressedContent.push_back(0);
         }
 
-        // Generate the resource's symbol name from its file name.
+        const size_t uncompressedSize = uncompressedContent.size();
+        totalUncompressedSize += uncompressedSize;
+
+        std::vector<std::uint8_t> finalContent;
+        bool const shouldCompressThisResource = config.compress && inPath != g_jsonMagicString;
+
+        if (shouldCompressThisResource) {
+            size_t const cBuffSize = ZSTD_compressBound(uncompressedSize);
+            finalContent.resize(cBuffSize);
+            size_t const cSize = ZSTD_compress(finalContent.data(), cBuffSize,
+                    uncompressedContent.data(), uncompressedSize, ZSTD_maxCLevel());
+            if (ZSTD_isError(cSize)) {
+                std::cerr << "zstd compression error: " << ZSTD_getErrorName(cSize) << std::endl;
+                exit(1);
+            }
+            finalContent.resize(cSize);
+        } else {
+            finalContent = std::move(uncompressedContent);
+        }
+
         std::string rname = config.keepExtension ? inPath.getName() : inPath.getNameWithoutExtension();
         replaceAll(rname, ".", "_");
         std::transform(rname.begin(), rname.end(), rname.begin(), [](unsigned char c) { return std::toupper(c); });
         const std::string prname = packagePrefix + rname;
 
-        // Write the resource content to the aggregate binary file.
-        binStream.write(reinterpret_cast<const char*>(content.data()), content.size());
-
-        // Generate C preprocessor macros for the resource's offset, size, and data pointer.
-        headerMacros << "#define " << prname << "_OFFSET " << offset << "\n"
-                     << "#define " << prname << "_SIZE " << content.size() << "\n"
-                     << "#define " << prname << "_DATA (" << packageSymbol << " + " << prname << "_OFFSET)\n\n";
-
-        // If enabled, write the content to the C source file.
-        if (config.generateC) {
-            writeXxdEntry(xxdStream, rname, content);
+        if (config.compressPackage) {
+            uncompressedPackageData.insert(uncompressedPackageData.end(), finalContent.begin(), finalContent.end());
+        } else {
+            packageData.insert(packageData.end(), finalContent.begin(), finalContent.end());
         }
 
-        // Add an entry to the JSON summary and update the running offset.
-        jsonStream << "\"" << rname << "\":" << content.size() << ",";
-        offset += content.size();
+        size_t const sizeForHeader = config.compressPackage ? uncompressedSize : finalContent.size();
+
+        headerMacros << "#define " << prname << "_OFFSET " << offset << "\n";
+        if (shouldCompressThisResource) {
+            headerMacros << "#define " << prname << "_UNCOMPRESSED_SIZE " << uncompressedSize << "\n";
+        }
+        headerMacros << "#define " << prname << "_SIZE " << sizeForHeader << "\n";
+        if (!config.compressPackage) {
+            headerMacros << "#define " << prname << "_DATA (" << packageSymbol << " + " << prname << "_OFFSET)\n\n";
+        }
+
+        if (config.generateC) {
+            writeXxdEntry(xxdStream, rname, finalContent);
+        }
+
+        if (inPath != g_jsonMagicString) {
+            jsonStream << "\"" << rname << "\":{\"uncompressedSize\":" << uncompressedSize;
+            if (config.compress) {
+                jsonStream << ",\"compressedSize\":" << finalContent.size();
+            }
+            jsonStream << "},";
+        }
+        offset += sizeForHeader;
     }
 
-    // Finalize the header file content.
+    if (config.compressPackage) {
+        size_t const cBuffSize = ZSTD_compressBound(uncompressedPackageData.size());
+        packageData.resize(cBuffSize);
+        size_t const cSize = ZSTD_compress(packageData.data(), cBuffSize,
+                uncompressedPackageData.data(), uncompressedPackageData.size(), ZSTD_maxCLevel());
+        if (ZSTD_isError(cSize)) {
+            std::cerr << "zstd compression error: " << ZSTD_getErrorName(cSize) << std::endl;
+            exit(1);
+        }
+        packageData.resize(cSize);
+    }
+
+    size_t const totalCompressedSize = packageData.size();
+
+    if (config.compress || config.compressPackage) {
+        headerStream << "    // This package is compressed with zstd.\n";
+        if (config.compress) {
+            headerStream << "    // Each resource is compressed individually.\n"
+                         << "    // The _SIZE macro is the compressed size.\n"
+                         << "    // The _UNCOMPRESSED_SIZE macro is the original size.\n";
+        }
+        if (config.compressPackage) {
+            headerStream << "    // The entire package is compressed as a single blob.\n"
+                         << "    // The _SIZE and _OFFSET macros are for the uncompressed data.\n"
+                         << "    // You must decompress the entire package before using them.\n";
+        }
+        headerStream << "    // Original package size: " << totalUncompressedSize << " bytes.\n"
+                     << "    // Compressed package size: " << totalCompressedSize << " bytes.\n\n";
+    }
+
     headerStream << "}\n\n";
     headerStream << headerMacros.str();
     headerStream << "#endif\n";
 
-    // Write the header and assembly files.
+    auto binStream = openOutputFile(binPath, std::ios::binary);
+    binStream.write(reinterpret_cast<const char*>(packageData.data()), packageData.size());
+
     writeHeaderIfChanged(headerPath, headerStream.str());
     asmStream << asmstr << std::endl;
     appleAsmStream << aasmstr << std::endl;
 
-    // Report generated files to the console unless in quiet mode.
     if (!config.quietMode) {
         std::cout << "Generated files: " << headerPath << " " << asmPath << " " << appleAsmPath << " "
              << binPath;
     }
 
-    // Finalize the C file and report it.
     if (config.generateC) {
         xxdStream << "};\n\n";
         if (!config.quietMode) {

@@ -200,7 +200,7 @@ static void printUsage(char* name) {
             "       Generate irradiance SH for shader code\n\n"
             "\n"
             "Private use only:\n"
-            "   --ibl-dfg=filename.[exr|hdr|psd|png|rgbm|rgb32f|dds|h|hpp|c|cpp|inc|txt]\n"
+            "   --ibl-dfg=filename.[exr|hdr|psd|png|rgbm|rgb32f|dds|h|hpp|c|cpp|inc|txt|bin]\n"
             "       Compute the IBL DFG LUT\n\n"
             "   --ibl-dfg-multiscatter\n"
             "       If --ibl-dfg is set, computes the DFG for multi-scattering GGX\n\n"
@@ -1134,6 +1134,11 @@ void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
     }
 }
 
+static bool isBinaryFile(const utils::Path& filename) {
+    std::string extension(filename.getExtension());
+    return extension == "bin";
+}
+
 static bool isTextFile(const utils::Path& filename) {
     std::string extension(filename.getExtension());
     return extension == "h" || extension == "hpp" ||
@@ -1160,8 +1165,19 @@ void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t size, b
         const bool isInclude = isIncludeFile(filename);
         std::ofstream outputStream(filename, std::ios::trunc);
 
-        outputStream << "// generated with: cmgen --ibl-dfg=" << filename.c_str() << std::endl;
-        outputStream << "// DFG LUT stored as an RG16F texture, in GL order" << std::endl;
+        outputStream << "// generated with: cmgen --size=" << size;
+        if (multiscatter) {
+            outputStream << " --ibl-dfg-multiscatter";
+        }
+        if (g_dfg_cloth) {
+            outputStream << " --ibl-dfg-cloth";
+        }
+        outputStream << " --ibl-dfg=" << filename.getName().c_str() << std::endl;
+        outputStream << "// DFG LUT stored as an RG";
+        if (g_dfg_cloth) {
+            outputStream << 'B';
+        }
+        outputStream << "16F texture, in GL order" << std::endl;
         if (!isInclude) {
             outputStream << "const uint16_t DFG_LUT[] = {";
         }
@@ -1184,6 +1200,23 @@ void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t size, b
         }
 
         outputStream << std::endl;
+        outputStream.flush();
+        outputStream.close();
+    } else if (isBinaryFile(filename)) {
+        std::ofstream outputStream(filename, std::ios::binary | std::ios::trunc);
+        for (size_t y = 0; y < size; y++) {
+            for (size_t x = 0; x < size; x++) {
+                const half3 d = half3(*static_cast<float3*>(image.getPixelRef(x, size - 1 - y)));
+                const uint16_t r = *reinterpret_cast<const uint16_t*>(&d.r);
+                const uint16_t g = *reinterpret_cast<const uint16_t*>(&d.g);
+                const uint16_t b = *reinterpret_cast<const uint16_t*>(&d.b);
+                outputStream.write((char*)&r, 2);
+                outputStream.write((char*)&g, 2);
+                if (g_dfg_cloth) {
+                    outputStream.write((char*)&b, 2);
+                }
+            }
+        }
         outputStream.flush();
         outputStream.close();
     } else {

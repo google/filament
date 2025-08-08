@@ -143,11 +143,13 @@ namespace {
         retUsage |= wgpu::TextureUsage::RenderAttachment;
     }
     if (any(TextureUsage::BLIT_SRC & fUsage)) {
-        retUsage |= wgpu::TextureUsage::RenderAttachment;
+        retUsage |= wgpu::TextureUsage::TextureBinding;
     }
     if (any(TextureUsage::BLIT_DST & fUsage)) {
         retUsage |= wgpu::TextureUsage::RenderAttachment;
-        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
+    if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);
     }
     // WGPU Render attachment covers either color or stencil situation dependant
     // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
