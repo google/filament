@@ -65,12 +65,12 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
         Cleanup cleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         Shader shader = createShader();
-
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // To test large buffers (which exercise a different code path) create an extra large
         // buffer. Only the first 3 vertices will be used.
@@ -155,15 +155,14 @@ TEST_F(BufferUpdatesTest, VertexBufferUpdate) {
 // This test renders two triangles in two separate draw calls. Between the draw calls, a uniform
 // buffer object is partially updated.
 TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "All values including alpha are written as 0, see b/417254943");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
     const TrianglePrimitive triangle(api);
 
     // Create a platform-specific SwapChain and make it current.
+    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
     auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
@@ -179,9 +178,9 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
     shader.bindUniform<SimpleMaterialParams>(api, ubuffer, kBindingConfig);
 
     // Create a render target.
-    auto colorTexture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
-                    screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
+    auto colorTexture = cleanup.add(
+            api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1, screenWidth(),
+                    screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC));
     auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0, screenWidth(),
             screenHeight(), 1, 0, { { colorTexture } }, {}, {}));
 
@@ -234,16 +233,15 @@ TEST_F(BufferUpdatesTest, BufferObjectUpdateWithOffset) {
         api.bindRenderPrimitive(triangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+
+        api.flush();
+        api.commit(swapChain);
     }
 
 
     EXPECT_IMAGE(renderTarget, getExpectations(),
-            ScreenshotParams(screenWidth(), screenHeight(), "BufferObjectUpdateWithOffset",
-                    2320747245));
-
-    api.flush();
-    api.commit(swapChain);
-    api.endFrame(0);
+        ScreenshotParams(screenWidth(), screenHeight(), "BufferObjectUpdateWithOffset",
+                2320747245));
 
     // This ensures all driver commands have finished before exiting the test.
     api.finish();

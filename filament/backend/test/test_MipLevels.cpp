@@ -62,6 +62,10 @@ TEST_F(BackendTest, TextureViewLod) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        // Create a platform-specific SwapChain and make it current.
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        assert_invariant(defaultRenderTarget);
+
         // Create a SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
@@ -152,9 +156,6 @@ TEST_F(BackendTest, TextureViewLod) {
             api.draw2(0, 3, 1);
             api.endRenderPass();
         }
-
-        backend::Handle<HwRenderTarget> defaultRenderTarget =
-                cleanup.add(api.createDefaultRenderTarget(0));
 
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);

@@ -65,6 +65,8 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
         DriverApi& api = getDriverApi();
         Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
@@ -74,8 +76,6 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
                 .fragmentShader = SharedShaders::getFragmentShaderText(FragmentShaderType::White,
                         ShaderUniformType::None),
         });
-
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         TrianglePrimitive triangle(api);
 

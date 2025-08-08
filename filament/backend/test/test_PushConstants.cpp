@@ -118,6 +118,8 @@ TEST_F(BackendTest, PushConstants) {
     // executeCommands().
     {
         // Create a SwapChain and make it current.
+        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
+
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
@@ -126,8 +128,6 @@ TEST_F(BackendTest, PushConstants) {
         Program p =
                 shaderGen.getProgramWithPushConstants(api, { gVertConstants, gFragConstants, {} });
         ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
-
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 
@@ -140,7 +140,6 @@ TEST_F(BackendTest, PushConstants) {
         ps.rasterState.colorWrite = true;
         ps.rasterState.depthWrite = false;
 
-        api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
 
         api.beginRenderPass(renderTarget, params);
@@ -179,12 +178,12 @@ TEST_F(BackendTest, PushConstants) {
 
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",
-                        3575588741));
-
         api.commit(swapChain);
         api.endFrame(0);
+
+        EXPECT_IMAGE(renderTarget, getExpectations(),
+        ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",
+                3575588741));
     }
 
     api.stopCapture(0);
