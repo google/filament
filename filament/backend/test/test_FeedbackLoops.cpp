@@ -247,7 +247,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                EXPECT_IMAGE(renderTargets[0], getExpectations(),
+                EXPECT_IMAGE(renderTargets[0],
                         ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
 
