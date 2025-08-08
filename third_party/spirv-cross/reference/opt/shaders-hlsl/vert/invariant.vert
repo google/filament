@@ -19,7 +19,8 @@ struct SPIRV_Cross_Output
 
 void vert_main()
 {
-    float4 _21 = mad(vInput1, vInput2, vInput0);
+    float4 _20 = vInput1 * vInput2;
+    float4 _21 = vInput0 + _20;
     gl_Position = _21;
     float4 _27 = vInput0 - vInput1;
     float4 _29 = _27 * vInput2;

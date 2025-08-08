@@ -1,0 +1,13 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+layout(local_size_x = 1) in;
+
+layout(set = 0, binding = 0) buffer SSBO
+{
+	vec4 a;
+} ssbos[];
+
+void main()
+{
+	ssbos[gl_WorkGroupID.x].a += 2.0;
+}

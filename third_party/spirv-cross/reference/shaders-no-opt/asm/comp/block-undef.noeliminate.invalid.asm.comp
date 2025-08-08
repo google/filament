@@ -7,6 +7,11 @@ struct FHitGroupRootConstants
     uint UserData;
 };
 
+layout(binding = 20, std430) readonly buffer type_StructuredBuffer_FHitGroupRootConstants
+{
+    FHitGroupRootConstants _RESERVED_IDENTIFIER_FIXUP_m0[];
+} HitGroupData;
+
 void main()
 {
 }

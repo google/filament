@@ -1,0 +1,86 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+#extension GL_EXT_shader_8bit_storage : require
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_EXT_shader_explicit_arithmetic_types_float16)
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#else
+#error No extension available for FP16.
+#endif
+#extension GL_EXT_shader_16bit_storage : require
+#extension GL_EXT_shader_explicit_arithmetic_types_int16 : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_KHR_memory_scope_semantics : require
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA> CoopMatFP8toFP16(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA> _31)
+{
+    uint _39;
+    _39 = 0u;
+    coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA> coop_output;
+    for (;;)
+    {
+        uint _40 = _39 + 1u;
+        coop_output[_39] = int16BitsToFloat16((int16_t(int8_t(_31[_39])) << 7s) & (-16385s));
+        if (_40 < uint(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA>(0).length()))
+        {
+            _39 = _40;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return coop_output * float16_t(256.0);
+}
+
+coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB> CoopMatFP8toFP16_1(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB> _64)
+{
+    uint _72;
+    _72 = 0u;
+    coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB> coop_output;
+    for (;;)
+    {
+        uint _73 = _72 + 1u;
+        coop_output[_72] = int16BitsToFloat16((int16_t(int8_t(_64[_72])) << 7s) & (-16385s));
+        if (_73 < uint(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB>(0).length()))
+        {
+            _72 = _73;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return coop_output * float16_t(256.0);
+}
+
+coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator> CoopMatFP8toFP16_2(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator> _91)
+{
+    uint _99;
+    _99 = 0u;
+    coopmat<float16_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator> coop_output;
+    for (;;)
+    {
+        uint _100 = _99 + 1u;
+        coop_output[_99] = int16BitsToFloat16((int16_t(int8_t(_91[_99])) << 7s) & (-16385s));
+        if (_100 < uint(coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator>(0).length()))
+        {
+            _99 = _100;
+        }
+        else
+        {
+            break;
+        }
+    }
+    return coop_output * float16_t(256.0);
+}
+
+void main()
+{
+    coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA> _58 = coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseA>(uint8_t(gl_WorkGroupID.x));
+    coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB> _85 = coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseB>(uint8_t(gl_WorkGroupID.x));
+    coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator> _112 = coopmat<uint8_t, gl_ScopeSubgroup, 16u, 16u, gl_MatrixUseAccumulator>(uint8_t(gl_WorkGroupID.x));
+}
+

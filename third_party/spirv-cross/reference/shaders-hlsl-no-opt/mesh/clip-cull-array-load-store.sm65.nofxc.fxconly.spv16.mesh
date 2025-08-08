@@ -1,0 +1,43 @@
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+struct gl_MeshPerVertexEXT
+{
+    float4 gl_ClipDistance : SV_ClipDistance;
+};
+
+struct gl_MeshPerPrimitiveEXT
+{
+};
+
+void write_clip_distance(inout float v[4])
+{
+    v[0] += 1.0f;
+    v[1] += 2.0f;
+    v[2] += 3.0f;
+    v[3] += 4.0f;
+}
+
+void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[3])
+{
+    SetMeshOutputCounts(3u, 1u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[1] = 4.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[2] = 4.0f;
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[3] = 4.0f;
+    float _62[4] = { gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance.x, gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance.y, gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance.z, gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance.w };
+    float param[4] = _62;
+    write_clip_distance(param);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance = float4(param[0], param[1], param[2], param[3]);
+}
+
+[outputtopology("triangle")]
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input, out vertices gl_MeshPerVertexEXT gl_MeshVerticesEXT[3])
+{
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    mesh_main(gl_MeshVerticesEXT);
+}

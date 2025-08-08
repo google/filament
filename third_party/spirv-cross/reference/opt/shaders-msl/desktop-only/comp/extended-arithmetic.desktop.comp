@@ -1,7 +1,15 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
+
+template<typename T, typename U, typename V>
+[[clang::optnone]] T spvMulExtended(V l, V r)
+{
+    return T{U(l * r), U(mulhi(l, r))};
+}
 
 struct SSBOUint
 {
@@ -135,44 +143,28 @@ kernel void main0(device SSBOUint& u [[buffer(0)]], device SSBOInt& i [[buffer(1
     _106._m1 = select(uint4(1), uint4(0), u.a4 >= u.b4);
     u.d4 = _106._m1;
     u.c4 = _106._m0;
-    ResType _116;
-    _116._m0 = u.a * u.b;
-    _116._m1 = mulhi(u.a, u.b);
+    ResType _116 = spvMulExtended<ResType, uint>(u.a, u.b);
     u.d = _116._m0;
     u.c = _116._m1;
-    ResType_1 _125;
-    _125._m0 = u.a2 * u.b2;
-    _125._m1 = mulhi(u.a2, u.b2);
+    ResType_1 _125 = spvMulExtended<ResType_1, uint2>(u.a2, u.b2);
     u.d2 = _125._m0;
     u.c2 = _125._m1;
-    ResType_2 _134;
-    _134._m0 = u.a3 * u.b3;
-    _134._m1 = mulhi(u.a3, u.b3);
+    ResType_2 _134 = spvMulExtended<ResType_2, uint3>(u.a3, u.b3);
     u.d3 = _134._m0;
     u.c3 = _134._m1;
-    ResType_3 _143;
-    _143._m0 = u.a4 * u.b4;
-    _143._m1 = mulhi(u.a4, u.b4);
+    ResType_3 _143 = spvMulExtended<ResType_3, uint4>(u.a4, u.b4);
     u.d4 = _143._m0;
     u.c4 = _143._m1;
-    ResType_4 _160;
-    _160._m0 = i.a * i.b;
-    _160._m1 = mulhi(i.a, i.b);
+    ResType_4 _160 = spvMulExtended<ResType_4, int>(i.a, i.b);
     i.d = _160._m0;
     i.c = _160._m1;
-    ResType_5 _171;
-    _171._m0 = i.a2 * i.b2;
-    _171._m1 = mulhi(i.a2, i.b2);
+    ResType_5 _171 = spvMulExtended<ResType_5, int2>(i.a2, i.b2);
     i.d2 = _171._m0;
     i.c2 = _171._m1;
-    ResType_6 _182;
-    _182._m0 = i.a3 * i.b3;
-    _182._m1 = mulhi(i.a3, i.b3);
+    ResType_6 _182 = spvMulExtended<ResType_6, int3>(i.a3, i.b3);
     i.d3 = _182._m0;
     i.c3 = _182._m1;
-    ResType_7 _193;
-    _193._m0 = i.a4 * i.b4;
-    _193._m1 = mulhi(i.a4, i.b4);
+    ResType_7 _193 = spvMulExtended<ResType_7, int4>(i.a4, i.b4);
     i.d4 = _193._m0;
     i.c4 = _193._m1;
 }

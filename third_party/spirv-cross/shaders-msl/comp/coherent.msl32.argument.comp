@@ -1,0 +1,46 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0) coherent buffer SSBO
+{
+	uint v;
+} ssbos[4];
+
+layout(set = 0, binding = 1) writeonly coherent uniform image2D img;
+
+layout(buffer_reference) coherent buffer BDA
+{
+	float v;
+};
+
+layout(push_constant) uniform Registers
+{
+	BDA ssbo;
+};
+
+void foo()
+{
+	ssbos[gl_WorkGroupID.x].v += 2;
+	imageStore(img, ivec2(4, 4), vec4(8.0));
+}
+
+void write_in_func(writeonly coherent image2D img)
+{
+	imageStore(img, ivec2(2, 2), vec4(4.0));
+}
+
+void write_in_func(BDA s) { s.v += 6.0; }
+
+void main()
+{
+	ssbos[gl_WorkGroupID.x].v += 10;
+	foo();
+	imageStore(img, ivec2(1, 1), vec4(1.0));
+	write_in_func(img);
+
+	BDA tmp = ssbo;
+	tmp.v += 4.0;
+	write_in_func(tmp);
+}
+

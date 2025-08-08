@@ -4,7 +4,8 @@ layout(local_size_x = 1) in;
 
 layout(r32ui, binding = 0) uniform highp uimage2D uImage;
 layout(r32i, binding = 1) uniform highp iimage2D iImage;
-layout(binding = 2, std430) buffer SSBO
+layout(r32ui, binding = 2) uniform highp uimage2DArray uImageArray;
+layout(binding = 3, std430) buffer SSBO
 {
     uint u32;
     int i32;
@@ -13,6 +14,7 @@ layout(binding = 2, std430) buffer SSBO
 void main()
 {
     imageAtomicAdd(uImage, ivec2(1, 5), 1u);
+    imageAtomicAdd(uImageArray, ivec3(1, 5, 8), 1u);
 
     // Test that we do not invalidate OpImage variables which are loaded from UniformConstant
     // address space.

@@ -1,0 +1,81 @@
+; SPIR-V
+; Version: 1.6
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 41
+; Schema: 0
+               OpCapability Shader
+               OpCapability ReplicatedCompositesEXT
+               OpExtension "SPV_EXT_replicated_composites"
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %ubo
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource GLSL 450
+               OpSourceExtension "GL_EXT_shader_explicit_arithmetic_types_float16"
+               OpSourceExtension "GL_KHR_memory_scope_semantics"
+               OpName %main "main"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %c "c"
+               OpName %spec_const "spec_const"
+               OpName %array "array"
+               OpName %d "d"
+               OpName %UBO "UBO"
+               OpMemberName %UBO 0 "uniform_float"
+               OpName %ubo "ubo"
+               OpName %e "e"
+               OpName %f "f"
+               OpDecorate %spec_const SpecId 0
+               OpDecorate %UBO Block
+               OpMemberDecorate %UBO 0 Offset 0
+               OpDecorate %ubo Binding 0
+               OpDecorate %ubo DescriptorSet 0
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+      %float = OpTypeFloat 32
+    %v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+    %float_0 = OpConstant %float 0
+         %11 = OpConstantCompositeReplicateEXT %v4float %float_0
+%mat4v4float = OpTypeMatrix %v4float 4
+%_ptr_Function_mat4v4float = OpTypePointer Function %mat4v4float
+    %float_1 = OpConstant %float 1
+         %16 = OpConstantCompositeReplicateEXT %v4float %float_1
+         %17 = OpConstantCompositeReplicateEXT %mat4v4float %16
+ %spec_const = OpSpecConstant %float 0
+         %20 = OpSpecConstantCompositeReplicateEXT %v4float %spec_const
+       %uint = OpTypeInt 32 0
+     %uint_8 = OpConstant %uint 8
+%_arr_float_uint_8 = OpTypeArray %float %uint_8
+%_ptr_Function__arr_float_uint_8 = OpTypePointer Function %_arr_float_uint_8
+         %26 = OpConstantCompositeReplicateEXT %_arr_float_uint_8 %float_1
+        %UBO = OpTypeStruct %float
+%_ptr_Uniform_UBO = OpTypePointer Uniform %UBO
+        %ubo = OpVariable %_ptr_Uniform_UBO Uniform
+        %int = OpTypeInt 32 1
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+          %a = OpVariable %_ptr_Function_v4float Function
+          %b = OpVariable %_ptr_Function_mat4v4float Function
+          %c = OpVariable %_ptr_Function_v4float Function
+      %array = OpVariable %_ptr_Function__arr_float_uint_8 Function
+          %d = OpVariable %_ptr_Function_v4float Function
+          %e = OpVariable %_ptr_Function_mat4v4float Function
+          %f = OpVariable %_ptr_Function__arr_float_uint_8 Function
+               OpStore %a %11
+               OpStore %b %17
+               OpStore %c %20
+               OpStore %array %26
+         %34 = OpAccessChain %_ptr_Uniform_float %ubo %int_0
+         %35 = OpLoad %float %34
+         %36 = OpCompositeConstructReplicateEXT %v4float %35
+               OpStore %d %36
+         %38 = OpLoad %v4float %d
+         %39 = OpCompositeConstructReplicateEXT %mat4v4float %38
+               OpStore %e %39
+         %40 = OpCompositeConstructReplicateEXT %_arr_float_uint_8 %35
+               OpStore %f %40
+               OpReturn
+               OpFunctionEnd

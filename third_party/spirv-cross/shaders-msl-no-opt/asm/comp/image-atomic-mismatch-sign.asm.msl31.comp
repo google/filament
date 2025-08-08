@@ -1,0 +1,71 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 11
+; Bound: 45
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource ESSL 310
+               OpSourceExtension "GL_OES_shader_image_atomic"
+               OpName %main "main"
+               OpName %uImage "uImage"
+               OpName %uImageArray "uImageArray"
+               OpName %iImage "iImage"
+               OpName %iImageArray "iImageArray"
+               OpDecorate %uImage DescriptorSet 0
+               OpDecorate %uImage Binding 0
+               OpDecorate %uImageArray DescriptorSet 0
+               OpDecorate %uImageArray Binding 2
+               OpDecorate %iImage DescriptorSet 0
+               OpDecorate %iImage Binding 1
+               OpDecorate %iImageArray DescriptorSet 0
+               OpDecorate %iImageArray Binding 3
+               OpDecorate %gl_WorkGroupSize BuiltIn WorkgroupSize
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+          %7 = OpTypeImage %uint 2D 0 0 0 2 R32ui
+%_ptr_UniformConstant_7 = OpTypePointer UniformConstant %7
+     %uImage = OpVariable %_ptr_UniformConstant_7 UniformConstant
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+      %int_1 = OpConstant %int 1
+      %int_5 = OpConstant %int 5
+         %14 = OpConstantComposite %v2int %int_1 %int_5
+     %uint_1 = OpConstant %uint 1
+     %uint_0 = OpConstant %uint 0
+%_ptr_Image_uint = OpTypePointer Image %uint
+         %20 = OpTypeImage %uint 2D 0 1 0 2 R32ui
+%_ptr_UniformConstant_20 = OpTypePointer UniformConstant %20
+%uImageArray = OpVariable %_ptr_UniformConstant_20 UniformConstant
+      %v3int = OpTypeVector %int 3
+      %int_4 = OpConstant %int 4
+         %25 = OpConstantComposite %v3int %int_1 %int_5 %int_4
+         %28 = OpTypeImage %int 2D 0 0 0 2 R32i
+%_ptr_UniformConstant_28 = OpTypePointer UniformConstant %28
+     %iImage = OpVariable %_ptr_UniformConstant_28 UniformConstant
+      %int_6 = OpConstant %int 6
+         %32 = OpConstantComposite %v2int %int_1 %int_6
+%_ptr_Image_int = OpTypePointer Image %int
+         %36 = OpTypeImage %int 2D 0 1 0 2 R32i
+%_ptr_UniformConstant_36 = OpTypePointer UniformConstant %36
+%iImageArray = OpVariable %_ptr_UniformConstant_36 UniformConstant
+      %int_9 = OpConstant %int 9
+         %40 = OpConstantComposite %v3int %int_1 %int_6 %int_9
+     %v3uint = OpTypeVector %uint 3
+%gl_WorkGroupSize = OpConstantComposite %v3uint %uint_1 %uint_1 %uint_1
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %18 = OpImageTexelPointer %_ptr_Image_uint %uImage %14 %uint_0
+         %19 = OpAtomicSMin %uint %18 %uint_1 %uint_0 %uint_1
+         %26 = OpImageTexelPointer %_ptr_Image_uint %uImageArray %25 %uint_0
+         %27 = OpAtomicSMax %uint %26 %uint_1 %uint_0 %uint_1
+         %34 = OpImageTexelPointer %_ptr_Image_int %iImage %32 %uint_0
+         %35 = OpAtomicUMin %int %34 %uint_1 %uint_0 %int_1
+         %41 = OpImageTexelPointer %_ptr_Image_int %iImageArray %40 %uint_0
+         %42 = OpAtomicUMax %int %41 %uint_1 %uint_0 %int_1
+               OpReturn
+               OpFunctionEnd

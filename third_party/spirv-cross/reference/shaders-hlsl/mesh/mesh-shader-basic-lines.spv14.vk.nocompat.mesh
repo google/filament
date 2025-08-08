@@ -51,7 +51,7 @@ struct gl_MeshPerPrimitiveEXT
 
 groupshared float shared_float[16];
 
-void main3(inout uint2 gl_PrimitiveLineIndicesEXT[22], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22])
+void main3(inout uint2 gl_PrimitiveLineIndicesEXT[22], out gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22])
 {
     gl_PrimitiveLineIndicesEXT[gl_LocalInvocationIndex] = uint2(0u, 1u) + gl_LocalInvocationIndex.xx;
     gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveID = int(gl_GlobalInvocationID.x);
@@ -61,7 +61,7 @@ void main3(inout uint2 gl_PrimitiveLineIndicesEXT[22], inout gl_MeshPerPrimitive
     gl_MeshPrimitivesEXT[gl_LocalInvocationIndex].gl_PrimitiveShadingRateEXT = int(gl_GlobalInvocationID.x) + 3;
 }
 
-void main2(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
+void main2(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
 {
     SetMeshOutputCounts(24u, 22u);
     gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = float4(float3(gl_GlobalInvocationID), 1.0f);
@@ -81,7 +81,7 @@ void main2(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout gl_MeshPerPri
     }
 }
 
-void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
+void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
 {
     main2(gl_MeshVerticesEXT, gl_MeshPrimitivesEXT, _payload, gl_PrimitiveLineIndicesEXT);
 }

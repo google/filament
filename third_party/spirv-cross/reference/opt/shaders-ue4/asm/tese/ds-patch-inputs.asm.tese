@@ -186,9 +186,9 @@ struct main0_patchIn
     float4 _139 = float4(_119 * 3.0);
     float4 _143 = float4(_120 * 3.0);
     float4 _150 = float4(_121 * 3.0);
-    float4 _164 = fma(((patchIn.in_var_PN_POSITION9 * float4(6.0)) * _136) * _127, _131, fma(_101[2][2] * _139, _136, fma(_101[2][1] * _150, _127, fma(_101[1][2] * _150, _131, fma(_101[1][1] * _143, _136, fma(_101[0][2] * _143, _127, fma(_101[0][1] * _139, _131, fma(_101[2][0] * float4(_121), _136, fma(_101[0][0] * float4(_119), _127, (_101[1][0] * float4(_120)) * _131)))))))));
-    float3 _179 = fma(_93[2].xyz, float3(gl_TessCoord.z), fma(_93[0].xyz, float3(gl_TessCoord.x), _93[1].xyz * float3(gl_TessCoord.y)).xyz);
-    float4 _182 = fma(_94[2], _136, fma(_94[0], _127, _94[1] * _131));
+    float4 _164 = ((((((((((_101[0][0] * float4(_119)) * _127) + ((_101[1][0] * float4(_120)) * _131)) + ((_101[2][0] * float4(_121)) * _136)) + ((_101[0][1] * _139) * _131)) + ((_101[0][2] * _143) * _127)) + ((_101[1][1] * _143) * _136)) + ((_101[1][2] * _150) * _131)) + ((_101[2][1] * _150) * _127)) + ((_101[2][2] * _139) * _136)) + ((((patchIn.in_var_PN_POSITION9 * float4(6.0)) * _136) * _127) * _131);
+    float3 _179 = ((_93[0].xyz * float3(gl_TessCoord.x)) + (_93[1].xyz * float3(gl_TessCoord.y))).xyz + (_93[2].xyz * float3(gl_TessCoord.z));
+    float4 _182 = ((_94[0] * _127) + (_94[1] * _131)) + (_94[2] * _136);
     float4 _189 = ShadowDepthPass.ShadowDepthPass_ProjectionMatrix * float4(_164.x, _164.y, _164.z, _164.w);
     float4 _200;
     if ((ShadowDepthPass.ShadowDepthPass_bClampToNearPlane > 0.0) && (_189.z < 0.0))
@@ -204,7 +204,7 @@ struct main0_patchIn
     }
     float _209 = abs(dot(float3(ShadowDepthPass.ShadowDepthPass_ViewMatrix[0].z, ShadowDepthPass.ShadowDepthPass_ViewMatrix[1].z, ShadowDepthPass.ShadowDepthPass_ViewMatrix[2].z), _182.xyz));
     float4 _234 = _200;
-    _234.z = fma(_200.z, ShadowDepthPass.ShadowDepthPass_ShadowParams.w, fma(ShadowDepthPass.ShadowDepthPass_ShadowParams.y, fast::clamp((abs(_209) > 0.0) ? (sqrt(fast::clamp(fma(-_209, _209, 1.0), 0.0, 1.0)) / _209) : ShadowDepthPass.ShadowDepthPass_ShadowParams.z, 0.0, ShadowDepthPass.ShadowDepthPass_ShadowParams.z), ShadowDepthPass.ShadowDepthPass_ShadowParams.x)) * _200.w;
+    _234.z = ((_200.z * ShadowDepthPass.ShadowDepthPass_ShadowParams.w) + ((ShadowDepthPass.ShadowDepthPass_ShadowParams.y * fast::clamp((abs(_209) > 0.0) ? (sqrt(fast::clamp(1.0 - (_209 * _209), 0.0, 1.0)) / _209) : ShadowDepthPass.ShadowDepthPass_ShadowParams.z, 0.0, ShadowDepthPass.ShadowDepthPass_ShadowParams.z)) + ShadowDepthPass.ShadowDepthPass_ShadowParams.x)) * _200.w;
     out.out_var_TEXCOORD10_centroid = float4(_179.x, _179.y, _179.z, _90.w);
     out.out_var_TEXCOORD11_centroid = _182;
     out.out_var_TEXCOORD6 = 0.0;

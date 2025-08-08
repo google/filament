@@ -3,6 +3,7 @@
 layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
 
 layout(buffer_reference) buffer S;
+
 layout(buffer_reference, buffer_reference_align = 4, std430) buffer S
 {
     vec4 data[];

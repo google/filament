@@ -57,14 +57,14 @@ struct spvBufferDescriptor
 template<typename T>
 struct spvDescriptorArray
 {
-    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)
+    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
     {
     }
     const device T& operator [] (size_t i) const
     {
-        return ptr[i].value;
+        return ptr[i];
     }
-    const device spvDescriptor<T>* ptr;
+    const device T* ptr;
 };
 
 template<typename T>

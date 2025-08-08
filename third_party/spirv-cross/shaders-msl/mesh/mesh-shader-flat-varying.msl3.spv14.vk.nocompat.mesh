@@ -1,0 +1,23 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+#extension GL_EXT_fragment_shading_rate : require
+layout(local_size_x = 2, local_size_y = 3, local_size_z = 4) in;
+layout(triangles, max_vertices = 24, max_primitives = 22) out;
+
+out gl_MeshPerVertexEXT
+{
+  vec4 gl_Position;
+  float gl_ClipDistance[1];
+} gl_MeshVerticesEXT[];
+
+layout(location = 0) out float fOut[];
+layout(location = 1) out flat uint uiOut[];
+
+void main()
+{
+  SetMeshOutputsEXT(24, 22);
+  gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = vec4(gl_GlobalInvocationID, 1.0);
+  gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0;
+  fOut[gl_LocalInvocationIndex] = float(gl_GlobalInvocationID.x);
+  uiOut[gl_LocalInvocationIndex] = gl_GlobalInvocationID.y;
+}

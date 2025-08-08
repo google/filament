@@ -10,6 +10,12 @@
 struct ResType
 {
     f16vec4 _m0;
+    f16vec4 _m1;
+};
+
+struct ResType_1
+{
+    f16vec4 _m0;
     ivec4 _m1;
 };
 
@@ -92,9 +98,10 @@ void test_builtins()
     res = ceil(v4);
     res = fract(v4);
     res = mod(v4, v4);
-    f16vec4 tmp;
-    f16vec4 _231 = modf(v4, tmp);
-    res = _231;
+    ResType _232;
+    _232._m0 = modf(v4, _232._m1);
+    f16vec4 tmp = _232._m1;
+    res = _232._m0;
     res = min(v4, v4);
     res = max(v4, v4);
     res = clamp(v4, v4, v4);
@@ -105,10 +112,10 @@ void test_builtins()
     bvec4 btmp = isnan(v4);
     btmp = isinf(v4);
     res = fma(v4, v4, v4);
-    ResType _275;
-    _275._m0 = frexp(v4, _275._m1);
-    ivec4 itmp = _275._m1;
-    res = _275._m0;
+    ResType_1 _278;
+    _278._m0 = frexp(v4, _278._m1);
+    ivec4 itmp = _278._m1;
+    res = _278._m0;
     res = ldexp(res, itmp);
     uint pack0 = packFloat2x16(v4.xy);
     uint pack1 = packFloat2x16(v4.zw);

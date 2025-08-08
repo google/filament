@@ -5,10 +5,13 @@
 
 using namespace metal;
 
+template <typename ImageT>
+void spvImageFence(ImageT img) { img.fence(); }
+
 static inline __attribute__((always_inline))
 void _main(thread const uint3& id, texture2d<float, access::read_write> TargetTexture)
 {
-    TargetTexture.fence();
+    spvImageFence(TargetTexture);
     float2 loaded = TargetTexture.read(uint2(id.xy)).xy;
     float2 storeTemp = loaded + float2(1.0);
     TargetTexture.write(storeTemp.xyyy, uint2((id.xy + uint2(1u))));

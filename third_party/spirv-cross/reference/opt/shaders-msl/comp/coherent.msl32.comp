@@ -1,0 +1,35 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct BDA;
+
+struct BDA
+{
+    float v;
+};
+
+struct SSBO
+{
+    uint v;
+};
+
+struct Registers
+{
+    coherent device BDA* ssbo;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(64u, 1u, 1u);
+
+kernel void main0(coherent device SSBO& _25 [[buffer(0)]], constant Registers& _69 [[buffer(1)]], texture2d<float, access::write, memory_coherence_device> img [[texture(0)]])
+{
+    _25.v += 10u;
+    _25.v += 2u;
+    img.write(float4(8.0), uint2(int2(4)));
+    img.write(float4(1.0), uint2(int2(1)));
+    img.write(float4(4.0), uint2(int2(2)));
+    _69.ssbo->v += 4.0;
+    _69.ssbo->v += 6.0;
+}
+

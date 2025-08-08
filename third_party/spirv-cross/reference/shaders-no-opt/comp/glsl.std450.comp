@@ -4,6 +4,12 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 struct ResType
 {
     float _m0;
+    float _m1;
+};
+
+struct ResType_1
+{
+    float _m0;
     int _m1;
 };
 
@@ -73,9 +79,10 @@ void main()
     _19.m2 = inverse(_19.m2);
     _19.m3 = inverse(_19.m3);
     _19.m4 = inverse(_19.m4);
-    float tmp;
-    float _287 = modf(_19.f32.x, tmp);
-    _19.res = _287;
+    ResType _288;
+    _288._m0 = modf(_19.f32.x, _288._m1);
+    float tmp = _288._m1;
+    _19.res = _288._m0;
     _19.res = min(_19.f32.x, _19.f32.y);
     _19.ures = min(_19.u32.x, _19.u32.y);
     _19.ires = min(_19.s32.x, _19.s32.y);
@@ -89,10 +96,10 @@ void main()
     _19.res = step(_19.f32.x, _19.f32.y);
     _19.res = smoothstep(_19.f32.x, _19.f32.y, _19.f32.z);
     _19.res = fma(_19.f32.x, _19.f32.y, _19.f32.z);
-    ResType _387;
-    _387._m0 = frexp(_19.f32.x, _387._m1);
-    int itmp = _387._m1;
-    _19.res = _387._m0;
+    ResType_1 _390;
+    _390._m0 = frexp(_19.f32.x, _390._m1);
+    int itmp = _390._m1;
+    _19.res = _390._m0;
     _19.res = ldexp(_19.f32.x, itmp);
     _19.ures = packSnorm4x8(_19.f32);
     _19.ures = packUnorm4x8(_19.f32);
