@@ -75,6 +75,8 @@ public:
 
     virtual std::string toString() const noexcept = 0;
 
+    virtual std::string toPIISafeString() const noexcept = 0;
+
     bool isDebug() const noexcept {
         return mDebug;
     }
