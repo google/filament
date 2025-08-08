@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../src/DirIncluder.h"
+#include "DirIncluder.h"
 
 using namespace utils;
 using namespace filamat;

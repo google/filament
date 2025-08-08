@@ -368,7 +368,7 @@ bool MaterialParser::parseMaterial(const char* buffer, size_t size,
             identifier = lexeme.getStringValue();
             if (mConfigProcessor.find(identifier) == mConfigProcessor.end()) {
                 std::cerr << "Unknown identifier '"
-                          << lexeme.getStringValue()
+                          << identifier
                           << "' at line:" << lexeme.getLine()
                           << " position:" << lexeme.getLinePosition() << std::endl;
                 return false;

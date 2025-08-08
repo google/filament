@@ -18,10 +18,12 @@
 
 #include "TestMaterialParser.h"
 
+#include <filamat/MaterialBuilder.h>
+
 #include <filament-matp/MaterialParser.h>
-#include "../src/JsonishLexer.h"
-#include "../src/JsonishParser.h"
-#include "../src/MaterialLexer.h"
+#include "JsonishLexer.h"
+#include "JsonishParser.h"
+#include "MaterialLexer.h"
 
 class MaterialLexer: public ::testing::Test {
 protected:
