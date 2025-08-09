@@ -130,6 +130,13 @@ void ImageExpectation::compareImage() const {
         LoadedPng loadedImage(mParams.expectedFilePath());
         // Bytewise compare.
         EXPECT_EQ(loadedImage.bytes().size(), mResult.bytes().size());
+        if (loadedImage.bytes().size() != mResult.bytes().size()) {
+            // Something is wrong with the size of the expected result, which usually means the file
+            // is missing. Fail the test and early return so later steps can assume the image is
+            // there.
+            BackendTest::markImageAsFailure(mParams.filePrefix());
+            return;
+        }
         int pixelDeviations = 0;
         for (int i = 0; i < mResult.bytes().size(); ++i) {
             if (std::abs( mResult.bytes()[i] - loadedImage.bytes()[i] ) >
@@ -137,10 +144,10 @@ void ImageExpectation::compareImage() const {
                 pixelDeviations++;
             }
         }
+        EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
         if (pixelDeviations > mParams.allowedPixelDeviations()) {
             BackendTest::markImageAsFailure(mParams.filePrefix());
         }
-        EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
         // TODO: Add better debug output, such as generating a diff image.
 #else
         // For builds that can't load PNGs (currently iOS only) use the expected hash.

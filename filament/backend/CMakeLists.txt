@@ -574,6 +574,7 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
         test/test_CircularBuffer.cpp
         test/test_CommandBufferQueue.cpp
+        test/test_Template.cpp
     )
     set(BACKEND_TEST_LIBS
         absl::str_format
