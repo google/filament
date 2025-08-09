@@ -99,7 +99,7 @@ uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samp
     frontBackHorizon.y = acosFast(frontBackHorizon.y);
 
     // Shift sample from V to normal, clamp in [0..1]
-    frontBackHorizon = clamp((frontBackHorizon + n + HALF_PI) / PI, 0.0, 1.0);
+    frontBackHorizon = clamp(((samplingDirection * -frontBackHorizon) + n + HALF_PI) / PI, 0.0, 1.0);
 
     // Sampling direction inverts min/max angles
     frontBackHorizon = samplingDirection >= 0.0 ? frontBackHorizon.yx : frontBackHorizon.xy;
@@ -133,16 +133,17 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         vec3 direction = vec3(cosPhi, sinPhi, 0.0);
         // Project direction onto the plane orthogonal to viewDir.
         vec3 orthoDirection = normalize(direction - (dot(direction, viewDir)*viewDir));
-        // axis is orthogonal to direction and viewDir (basically the normal of the slice plane)
+        // `axis` is orthogonal to direction and viewDir (basically the normal of the slice plane)
         // Used to define projectedNormal
         vec3 axis = cross(orthoDirection, viewDir);
-        // Project the normal onto the slice plane
+        // `projNormal` is the normal projected onto the slice plane
         vec3 projNormal = normal - axis * dot(normal, axis);
 
         float signNorm = sign(dot(orthoDirection, projNormal));
         float projNormalLength = length(projNormal);
         float cosNorm = saturate(dot(projNormal, viewDir) / projNormalLength);
 
+        // `n` is the signed angle between projNormal and viewDir
         float n = signNorm * acosFast(cosNorm);
 
         float horizonCos0 = -1.0;
