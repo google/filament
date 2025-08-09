@@ -1,32 +1,34 @@
-## Updating
-To update to the spire-cross of a specific chromium commit, do the following.
+To update the version of SPIRV-Cross used in this project, run the `update_spirv-cross.sh` script.
+
+The script is located in `third_party/spirv-cross/tnt`.
+
+From the root of the repository, you can run it like this:
+
+**Usage:**
+```shell
+./third_party/spirv-cross/tnt/update_spirv-cross.sh <version_tag>
 ```
-cd third_party
-curl -L https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross/+archive/b8fcf307.tar.gz > spirv-cross-src.tar.gz
-mkdir spirv-cross-new
-tar -xzf spirv-cross-src.tar.gz -C spirv-cross-new
-rsync -r spirv-cross-new/ spirv-cross/ --delete
-git restore spirv-cross/tnt
-patch -p2 < spirv-cross/tnt/0001-convert-floats-to-their-smallest-string-representati.patch
-patch -p2 < spirv-cross/tnt/0002-localeconv-api-level-check.patch
-rm -rf spirv-cross-new spirv-cross-src.tar.gz
-git add spirv-cross
+or
+```shell
+./third_party/spirv-cross/tnt/update_spirv-cross.sh --sha <commit_sha>
 ```
 
-
-To update to the spirv-cross that's currently on GitHub master, do the following.
-
+For example, to update to a specific release:
+```shell
+./third_party/spirv-cross/tnt/update_spirv-cross.sh 2023-08-23
 ```
-cd third_party
-curl -L https://github.com/KhronosGroup/SPIRV-Cross/archive/main.zip > main.zip
-unzip main.zip
-rsync -r SPIRV-Cross-main/ spirv-cross/ --delete
-git restore spirv-cross/tnt
-patch -p2 < spirv-cross/tnt/0001-convert-floats-to-their-smallest-string-representati.patch
-patch -p2 < spirv-cross/tnt/0002-localeconv-api-level-check.patch
-rm -rf SPIRV-Cross-main main.zip
-git add spirv-cross
+
+To update to a specific commit:
+```shell
+./third_party/spirv-cross/tnt/update_spirv-cross.sh --sha a1b2c3d4
 ```
+
+You can find the latest version number on the SPIRV-Cross releases page:
+[https://github.com/KhronosGroup/SPIRV-Cross/releases](https://github.com/KhronosGroup/SPIRV-Cross/releases)
+
+The script will automatically apply the following patches:
+- `0001-convert-floats-to-their-smallest-string-representati.patch`
+- `0002-localeconv-api-level-check.patch`
 
 Please be sure to test Filament before uploading your CL.
 
