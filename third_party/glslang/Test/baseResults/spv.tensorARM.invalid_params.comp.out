@@ -1,0 +1,11 @@
+spv.tensorARM.invalid_params.comp
+ERROR: 0:12: '' : tensor type is missing type parameters 
+ERROR: 0:16: '' : tensor type is missing type parameters 
+ERROR: 0:20: '' : tensor type requires exactly 1 rank specifier 
+ERROR: 0:21: 'dim' : dimension argument exceeds tensor rank 
+ERROR: 0:29: 'partiallySpecialized' : no matching overloaded function found 
+ERROR: 0:29: 'assign' :  cannot convert from ' const float' to 'layout( column_major std430 offset=0) temp highp uint'
+ERROR: 6 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

@@ -1,0 +1,8 @@
+#version 320 es
+#extension GL_NV_compute_shader_derivatives : require
+
+layout (local_size_x_id = 0, local_size_y_id = 1) in;
+layout(derivative_group_linearNV) in;
+
+void main(){
+}

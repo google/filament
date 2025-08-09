@@ -1,0 +1,87 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+
+void main()
+{
+    coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> f;
+    coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseB> f2;
+    coopmat<float, gl_ScopeSubgroup, 16, 8, gl_MatrixUseA> f3;
+
+    coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> f16;
+
+    coopmat<uint8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> u8;
+    coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> i8;
+    coopmat<int32_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> i32;
+
+    f+1.0;
+    f-1.0;
+    f/1.0;
+    1.0+f;
+    1.0-f;
+    1.0/f;
+    f+=1.0;
+    f-=1.0;
+    f/=1.0;
+
+    f+f16;
+    f-f16;
+    f*f16;
+    f/f16;
+    f+=f16;
+    f-=f16;
+    f*=f16;
+    f/=f16;
+
+    f+f2;
+    f-f2;
+    f*f2;
+    f/f2;
+    f+=f2;
+    f-=f2;
+    f*=f2;
+    f/=f2;
+
+    f+f3;
+    f-f3;
+    f*f3;
+    f/f3;
+    f+=f3;
+    f-=f3;
+    f*=f3;
+    f/=f3;
+
+    u8+i8;
+    u8-i8;
+    u8*i8;
+    u8/i8;
+    u8+=i8;
+    u8-=i8;
+    u8*=i8;
+    u8/=i8;
+
+    u8+uint8_t(1);
+    u8-uint8_t(1);
+    u8/uint8_t(1);
+    u8+=uint8_t(1);
+    u8-=uint8_t(1);
+    u8/=uint8_t(1);
+
+    i8+int8_t(1);
+    i8-int8_t(1);
+    i8/int8_t(1);
+    i8+=int8_t(1);
+    i8-=int8_t(1);
+    i8/=int8_t(1);
+
+    i32+1;
+    i32-1;
+    i32/1;
+    i32+=1;
+    i32-=1;
+    i32/=1;
+}

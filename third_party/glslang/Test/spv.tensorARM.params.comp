@@ -1,0 +1,26 @@
+#version 460 core
+#extension GL_ARM_tensors : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+layout(set = 0, binding = 0) uniform tensorARM<int32_t, 4> tu;
+
+layout(set = 0, binding = 1, std430) buffer buff {
+  uint out_data[];
+};
+
+void unusedTensorParams(tensorARM<int32_t, 4>, readonly tensorARM<int32_t, 4>) {
+  return;
+}
+
+uint tensorParam(tensorARM<int32_t, 4> t) {
+  return tensorSizeARM(t, 0);
+}
+
+uint qualifiedTensorParam(readonly tensorARM<int32_t, 4> t) {
+  return tensorSizeARM(t, 0);
+}
+
+void main() {
+  unusedTensorParams(tu, tu);
+  out_data[0] = tensorParam(tu) + qualifiedTensorParam(tu);
+}

@@ -1,0 +1,60 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_NV_cooperative_vector : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(constant_id = 0) const uint N = 3;
+
+void main()
+{
+    float16_t f1 = float16_t(1.0);
+    float16_t f2 = float16_t(2.0);
+    float16_t f3 = float16_t(3.0);
+
+    coopvecNV<float16_t, N> v  = coopvecNV<float16_t, N>(1.0);
+    coopvecNV<float16_t, N> v2 = coopvecNV<float16_t, N>(f2);
+    coopvecNV<float16_t, N> v3 = coopvecNV<float16_t, N>(1.0, 2.0, 3.0);
+    coopvecNV<float16_t, N> v4 = coopvecNV<float16_t, N>(f1, f2, f3);
+    coopvecNV<float16_t, N> v5 = coopvecNV<float16_t, N>(1.0);
+    coopvecNV<float16_t, N> v6 = coopvecNV<float16_t, N>(1.0, 2.0, 3.0);
+
+    coopvecNV<float, N> v7 = coopvecNV<float, N>(1);
+    v7 *= 2.0;
+
+    coopvecNV<uint32_t, N> v8 = coopvecNV<uint32_t, N>(1);
+    v8 *= 2;
+
+    coopvecNV<uint32_t, N> v9 = v8 * 2;
+    coopvecNV<uint32_t, N> v10 = 2 * v8;
+
+    v8 = v8 & v9;
+    v8 = v8 | v9;
+    v8 = v8 ^ ~v9;
+    v8 = v8 >> v9;
+    v8 = v8 << v9;
+
+    v8 &= v9;
+    v8 |= v9;
+    v8 ^= v9;
+    v8 >>= v9;
+    v8 <<= v9;
+
+    v = coopvecNV<float16_t, N>(v);
+
+    coopvecNV<int32_t, 1> v11;
+    coopvecNV<uint8_t, 1>(v11);
+
+    coopvecNV<int32_t, 4> v12;
+    coopvecNV<uint8_t, 4>(v12);
+
+    coopvecNV<float32_t, 4> v13;
+    coopvecNV<int8_t, 4>(v13);
+}
+
+void foo(coopvecNV<float32_t, 4> v)
+{
+}

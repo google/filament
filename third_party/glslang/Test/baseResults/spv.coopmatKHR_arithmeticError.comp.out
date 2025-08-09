@@ -1,0 +1,64 @@
+spv.coopmatKHR_arithmeticError.comp
+ERROR: 0:21: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' const float' (or there is no acceptable conversion)
+ERROR: 0:22: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' const float' (or there is no acceptable conversion)
+ERROR: 0:23: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' const float' (or there is no acceptable conversion)
+ERROR: 0:24: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' const float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:25: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' const float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:26: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' const float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:27: 'assign' :  cannot convert from ' const float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:28: 'assign' :  cannot convert from ' const float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:29: 'assign' :  cannot convert from ' const float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:31: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float16_t' (or there is no acceptable conversion)
+ERROR: 0:32: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float16_t' (or there is no acceptable conversion)
+ERROR: 0:33: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float16_t' (or there is no acceptable conversion)
+ERROR: 0:34: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 0> float16_t' (or there is no acceptable conversion)
+ERROR: 0:35: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> float16_t' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:36: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> float16_t' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:37: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> float16_t' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:38: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> float16_t' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:40: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 1> float' (or there is no acceptable conversion)
+ERROR: 0:41: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 1> float' (or there is no acceptable conversion)
+ERROR: 0:42: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 1> float' (or there is no acceptable conversion)
+ERROR: 0:43: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 8, 8, 1> float' (or there is no acceptable conversion)
+ERROR: 0:44: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 1> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:45: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 1> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:46: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 1> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:47: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 1> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:49: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 16, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:50: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 16, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:51: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 16, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:52: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> float' and a right operand of type ' temp coopmat<3, 16, 8, 0> float' (or there is no acceptable conversion)
+ERROR: 0:53: 'assign' :  cannot convert from ' temp coopmat<3, 16, 8, 0> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:54: 'assign' :  cannot convert from ' temp coopmat<3, 16, 8, 0> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:55: 'assign' :  cannot convert from ' temp coopmat<3, 16, 8, 0> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:56: 'assign' :  cannot convert from ' temp coopmat<3, 16, 8, 0> float' to ' temp coopmat<3, 8, 8, 0> float'
+ERROR: 0:58: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' temp coopmat<3, 8, 8, 0> int8_t' (or there is no acceptable conversion)
+ERROR: 0:59: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' temp coopmat<3, 8, 8, 0> int8_t' (or there is no acceptable conversion)
+ERROR: 0:60: '*' :  wrong operand types: no operation '*' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' temp coopmat<3, 8, 8, 0> int8_t' (or there is no acceptable conversion)
+ERROR: 0:61: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' temp coopmat<3, 8, 8, 0> int8_t' (or there is no acceptable conversion)
+ERROR: 0:62: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> int8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:63: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> int8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:64: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> int8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:65: 'assign' :  cannot convert from ' temp coopmat<3, 8, 8, 0> int8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:67: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' const uint8_t' (or there is no acceptable conversion)
+ERROR: 0:68: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' const uint8_t' (or there is no acceptable conversion)
+ERROR: 0:69: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> uint8_t' and a right operand of type ' const uint8_t' (or there is no acceptable conversion)
+ERROR: 0:70: 'assign' :  cannot convert from ' const uint8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:71: 'assign' :  cannot convert from ' const uint8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:72: 'assign' :  cannot convert from ' const uint8_t' to ' temp coopmat<3, 8, 8, 0> uint8_t'
+ERROR: 0:74: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int8_t' and a right operand of type ' const int8_t' (or there is no acceptable conversion)
+ERROR: 0:75: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int8_t' and a right operand of type ' const int8_t' (or there is no acceptable conversion)
+ERROR: 0:76: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int8_t' and a right operand of type ' const int8_t' (or there is no acceptable conversion)
+ERROR: 0:77: 'assign' :  cannot convert from ' const int8_t' to ' temp coopmat<3, 8, 8, 0> int8_t'
+ERROR: 0:78: 'assign' :  cannot convert from ' const int8_t' to ' temp coopmat<3, 8, 8, 0> int8_t'
+ERROR: 0:79: 'assign' :  cannot convert from ' const int8_t' to ' temp coopmat<3, 8, 8, 0> int8_t'
+ERROR: 0:81: '+' :  wrong operand types: no operation '+' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int' and a right operand of type ' const int' (or there is no acceptable conversion)
+ERROR: 0:82: '-' :  wrong operand types: no operation '-' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int' and a right operand of type ' const int' (or there is no acceptable conversion)
+ERROR: 0:83: '/' :  wrong operand types: no operation '/' exists that takes a left-hand operand of type ' temp coopmat<3, 8, 8, 0> int' and a right operand of type ' const int' (or there is no acceptable conversion)
+ERROR: 0:84: 'assign' :  cannot convert from ' const int' to ' temp coopmat<3, 8, 8, 0> int'
+ERROR: 0:85: 'assign' :  cannot convert from ' const int' to ' temp coopmat<3, 8, 8, 0> int'
+ERROR: 0:86: 'assign' :  cannot convert from ' const int' to ' temp coopmat<3, 8, 8, 0> int'
+ERROR: 59 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

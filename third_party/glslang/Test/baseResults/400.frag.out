@@ -1,0 +1,779 @@
+400.frag
+ERROR: 0:51: 'textureGatherOffsets(...)' : must be a compile-time constant: offsets argument
+ERROR: 0:55: 'textureGatherOffset(...)' : must be a compile-time constant: component argument
+ERROR: 0:56: 'textureGatherOffset(...)' : must be 0, 1, 2, or 3: component argument
+ERROR: 0:63: 'location qualifier on input' : not supported for this version or the enabled extensions 
+ERROR: 0:71: 'location qualifier on uniform or buffer' : not supported for this version or the enabled extensions 
+ERROR: 0:73: 'gl_Color' : identifiers starting with "gl_" are reserved 
+ERROR: 0:74: 'redeclaration' : cannot change qualification of gl_ClipDistance
+ERROR: 0:76: 'gl_FragCoord' : cannot redeclare after use 
+ERROR: 0:84: 'texel offset' : argument must be compile-time constant 
+ERROR: 0:86: 'texel offset' : value is out of range: [gl_MinProgramTexelOffset, gl_MaxProgramTexelOffset]
+ERROR: 0:86: 'texel offset' : value is out of range: [gl_MinProgramTexelOffset, gl_MaxProgramTexelOffset]
+ERROR: 0:87: 'texel offset' : value is out of range: [gl_MinProgramTexelOffset, gl_MaxProgramTexelOffset]
+ERROR: 0:87: 'texel offset' : value is out of range: [gl_MinProgramTexelOffset, gl_MaxProgramTexelOffset]
+ERROR: 0:90: 'patch' : not supported in this stage: fragment
+ERROR: 0:91: 'patch' : not supported in this stage: fragment
+ERROR: 0:91: 'centroid/sample/patch' : can't use auxiliary qualifier on a fragment output 
+ERROR: 0:106: 'dFdxFine' : required extension not requested: GL_ARB_derivative_control
+ERROR: 0:107: 'dFdyCoarse' : required extension not requested: GL_ARB_derivative_control
+ERROR: 0:108: 'fwidthCoarse' : required extension not requested: GL_ARB_derivative_control
+ERROR: 0:108: 'fwidthFine' : required extension not requested: GL_ARB_derivative_control
+ERROR: 0:137: 'centroid/sample/patch' : can't use auxiliary qualifier on a fragment output 
+ERROR: 0:156: 'interpolateAtCentroid' : no matching overloaded function found 
+ERROR: 0:158: 'interpolateAtCentroid' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:160: 'interpolateAtSample' : no matching overloaded function found 
+ERROR: 0:165: 'interpolateAtOffset' : no matching overloaded function found 
+ERROR: 0:167: 'interpolateAtOffset' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:168: 'interpolateAtOffset' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:169: 'interpolateAtOffset' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:172: 'interpolateAtCentroid' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:173: 'interpolateAtSample' : first argument must be an interpolant, or interpolant-array element 
+ERROR: 0:216: 'textureQueryLod' : no matching overloaded function found 
+ERROR: 0:216: 'assign' :  cannot convert from ' const float' to ' temp 2-component vector of float'
+ERROR: 0:217: 'textureQueryLod' : no matching overloaded function found 
+ERROR: 0:217: 'assign' :  cannot convert from ' const float' to ' temp 2-component vector of float'
+ERROR: 0:230: 'subroutine' : feature not yet implemented 
+ERROR: 0:230: '' : default qualifier requires 'uniform', 'buffer', 'in', 'out' or 'shared' storage qualification 
+ERROR: 0:231: 'subroutine' : feature not yet implemented 
+ERROR: 0:232: 'subroutine' : feature not yet implemented 
+ERROR: 0:234: '' :  syntax error, unexpected PRECISE, expecting IDENTIFIER
+ERROR: 39 compilation errors.  No code generated.
+
+
+Shader version: 400
+Requested GL_ARB_derivative_control
+Requested GL_ARB_separate_shader_objects
+Requested GL_ARB_shader_storage_buffer_object
+gl_FragCoord pixel center is integer
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:18  Function Definition: atomicOpPass( ( global void)
+0:18    Function Parameters: 
+0:20    Sequence
+0:20      Sequence
+0:20        move second child to first child ( temp int)
+0:20          'origi' ( temp int)
+0:20          AtomicAdd ( global int)
+0:20            atomi: direct index for structure (layout( column_major shared) buffer int)
+0:20              'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:20              Constant:
+0:20                0 (const uint)
+0:20            Constant:
+0:20              3 (const int)
+0:21      Sequence
+0:21        move second child to first child ( temp uint)
+0:21          'origu' ( temp uint)
+0:21          AtomicAnd ( global uint)
+0:21            atomu: direct index for structure (layout( column_major shared) buffer uint)
+0:21              'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:21              Constant:
+0:21                1 (const uint)
+0:21            Constant:
+0:21              7 (const uint)
+0:22      move second child to first child ( temp int)
+0:22        'origi' ( temp int)
+0:22        AtomicExchange ( global int)
+0:22          atomi: direct index for structure (layout( column_major shared) buffer int)
+0:22            'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:22            Constant:
+0:22              0 (const uint)
+0:22          Constant:
+0:22            4 (const int)
+0:23      move second child to first child ( temp uint)
+0:23        'origu' ( temp uint)
+0:23        AtomicCompSwap ( global uint)
+0:23          atomu: direct index for structure (layout( column_major shared) buffer uint)
+0:23            'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:23            Constant:
+0:23              1 (const uint)
+0:23          Constant:
+0:23            10 (const uint)
+0:23          Constant:
+0:23            8 (const uint)
+0:43  Function Definition: main( ( global void)
+0:43    Function Parameters: 
+0:?     Sequence
+0:46      move second child to first child ( temp 4-component vector of float)
+0:46        'v' ( temp 4-component vector of float)
+0:46        texture ( global 4-component vector of float)
+0:46          indirect index ( temp sampler2D)
+0:46            'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:46            'i' ( flat in int)
+0:46          'c2D' ( smooth in 2-component vector of float)
+0:47      move second child to first child ( temp float)
+0:47        direct index ( temp float)
+0:47          'outp' ( out 4-component vector of float)
+0:47          Constant:
+0:47            0 (const int)
+0:47        direct index ( smooth temp float ClipDistance)
+0:47          'gl_ClipDistance' ( smooth in 4-element array of float ClipDistance)
+0:47          Constant:
+0:47            1 (const int)
+0:51      Sequence
+0:51        move second child to first child ( temp 4-component vector of uint)
+0:51          'uv4' ( temp 4-component vector of uint)
+0:51          textureGatherOffsets ( global 4-component vector of uint)
+0:51            'samp2dr' ( uniform usampler2DRect)
+0:51            'c2D' ( smooth in 2-component vector of float)
+0:51            'offsets' ( temp 4-element array of 2-component vector of int)
+0:51            Constant:
+0:51              2 (const int)
+0:52      move second child to first child ( temp 4-component vector of uint)
+0:52        'uv4' ( temp 4-component vector of uint)
+0:52        textureGatherOffsets ( global 4-component vector of uint)
+0:52          'samp2dr' ( uniform usampler2DRect)
+0:52          'c2D' ( smooth in 2-component vector of float)
+0:52          Constant:
+0:52            1 (const int)
+0:52            2 (const int)
+0:52            3 (const int)
+0:52            4 (const int)
+0:52            15 (const int)
+0:52            16 (const int)
+0:52            -2 (const int)
+0:52            0 (const int)
+0:52          Constant:
+0:52            2 (const int)
+0:53      Sequence
+0:53        move second child to first child ( temp 4-component vector of float)
+0:53          'v4' ( temp 4-component vector of float)
+0:53          textureGather ( global 4-component vector of float)
+0:53            direct index ( temp sampler2D)
+0:53              'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:53              Constant:
+0:53                0 (const int)
+0:53            'c2D' ( smooth in 2-component vector of float)
+0:54      Sequence
+0:54        move second child to first child ( temp 4-component vector of int)
+0:54          'iv4' ( temp 4-component vector of int)
+0:54          textureGatherOffset ( global 4-component vector of int)
+0:54            'isamp2DA' ( uniform isampler2DArray)
+0:54            Constant:
+0:54              0.100000
+0:54              0.100000
+0:54              0.100000
+0:54            Constant:
+0:54              1 (const int)
+0:54              1 (const int)
+0:54            Constant:
+0:54              3 (const int)
+0:55      move second child to first child ( temp 4-component vector of int)
+0:55        'iv4' ( temp 4-component vector of int)
+0:55        textureGatherOffset ( global 4-component vector of int)
+0:55          'isamp2DA' ( uniform isampler2DArray)
+0:55          Constant:
+0:55            0.100000
+0:55            0.100000
+0:55            0.100000
+0:55          Constant:
+0:55            1 (const int)
+0:55            1 (const int)
+0:55          'i' ( flat in int)
+0:56      move second child to first child ( temp 4-component vector of int)
+0:56        'iv4' ( temp 4-component vector of int)
+0:56        textureGatherOffset ( global 4-component vector of int)
+0:56          'isamp2DA' ( uniform isampler2DArray)
+0:56          Constant:
+0:56            0.100000
+0:56            0.100000
+0:56            0.100000
+0:56          Constant:
+0:56            1 (const int)
+0:56            1 (const int)
+0:56          Constant:
+0:56            4 (const int)
+0:57      move second child to first child ( temp 4-component vector of int)
+0:57        'iv4' ( temp 4-component vector of int)
+0:57        textureGatherOffset ( global 4-component vector of int)
+0:57          'isamp2DA' ( uniform isampler2DArray)
+0:57          Constant:
+0:57            0.100000
+0:57            0.100000
+0:57            0.100000
+0:57          Constant:
+0:57            1 (const int)
+0:57            1 (const int)
+0:57          Constant:
+0:57            3 (const int)
+0:58      move second child to first child ( temp 4-component vector of int)
+0:58        'iv4' ( temp 4-component vector of int)
+0:58        textureGatherOffset ( global 4-component vector of int)
+0:58          'isamp2DA' ( uniform isampler2DArray)
+0:58          Constant:
+0:58            0.100000
+0:58            0.100000
+0:58            0.100000
+0:58          Construct ivec2 ( temp 2-component vector of int)
+0:58            'i' ( flat in int)
+0:60      Sequence
+0:60        move second child to first child ( temp 4-component vector of float)
+0:60          'c' ( temp 4-component vector of float)
+0:60          'gl_FragCoord' ( gl_FragCoord 4-component vector of float FragCoord)
+0:80  Function Definition: foo23( ( global void)
+0:80    Function Parameters: 
+0:?     Sequence
+0:84      textureProjGradOffset ( global float)
+0:84        'u2drs' ( uniform sampler2DRectShadow)
+0:84        'outp' ( out 4-component vector of float)
+0:84        Constant:
+0:84          0.000000
+0:84          0.000000
+0:84        Constant:
+0:84          0.000000
+0:84          0.000000
+0:84        Convert float to int ( temp 2-component vector of int)
+0:84          'c2D' ( smooth in 2-component vector of float)
+0:85      textureProjGradOffset ( global float)
+0:85        'u2drs' ( uniform sampler2DRectShadow)
+0:85        'outp' ( out 4-component vector of float)
+0:85        Constant:
+0:85          0.000000
+0:85          0.000000
+0:85        Constant:
+0:85          0.000000
+0:85          0.000000
+0:85        Constant:
+0:85          3 (const int)
+0:85          4 (const int)
+0:86      textureProjGradOffset ( global float)
+0:86        'u2drs' ( uniform sampler2DRectShadow)
+0:86        'outp' ( out 4-component vector of float)
+0:86        Constant:
+0:86          0.000000
+0:86          0.000000
+0:86        Constant:
+0:86          0.000000
+0:86          0.000000
+0:86        Constant:
+0:86          15 (const int)
+0:86          16 (const int)
+0:87      textureProjGradOffset ( global float)
+0:87        'u2drs' ( uniform sampler2DRectShadow)
+0:87        'outp' ( out 4-component vector of float)
+0:87        Constant:
+0:87          0.000000
+0:87          0.000000
+0:87        Constant:
+0:87          0.000000
+0:87          0.000000
+0:87        Constant:
+0:87          -10 (const int)
+0:87          20 (const int)
+0:93  Function Definition: foo24( ( global void)
+0:93    Function Parameters: 
+0:?     Sequence
+0:96      move second child to first child ( temp 3-component vector of double)
+0:96        'df' ( temp 3-component vector of double)
+0:96        modf ( global 3-component vector of double)
+0:96          Convert float to double ( temp 3-component vector of double)
+0:96            vector swizzle ( temp 3-component vector of float)
+0:96              'outp' ( out 4-component vector of float)
+0:96              Sequence
+0:96                Constant:
+0:96                  0 (const int)
+0:96                Constant:
+0:96                  1 (const int)
+0:96                Constant:
+0:96                  2 (const int)
+0:96          'di' ( temp 3-component vector of double)
+0:104  Function Definition: foodc1( ( global void)
+0:104    Function Parameters: 
+0:106    Sequence
+0:106      Sequence
+0:106        move second child to first child ( temp 2-component vector of float)
+0:106          'v2' ( temp 2-component vector of float)
+0:106          dPdxFine ( global 2-component vector of float)
+0:106            'in2' ( smooth in 2-component vector of float)
+0:107      Sequence
+0:107        move second child to first child ( temp 3-component vector of float)
+0:107          'v3' ( temp 3-component vector of float)
+0:107          dPdyCoarse ( global 3-component vector of float)
+0:107            'in3' ( smooth in 3-component vector of float)
+0:108      Sequence
+0:108        move second child to first child ( temp 4-component vector of float)
+0:108          'v4' ( temp 4-component vector of float)
+0:108          add ( temp 4-component vector of float)
+0:108            fwidthCoarse ( global 4-component vector of float)
+0:108              'in4' ( smooth in 4-component vector of float)
+0:108            fwidthFine ( global 4-component vector of float)
+0:108              'in4' ( smooth in 4-component vector of float)
+0:113  Function Definition: foodc2( ( global void)
+0:113    Function Parameters: 
+0:115    Sequence
+0:115      Sequence
+0:115        move second child to first child ( temp 2-component vector of float)
+0:115          'v2' ( temp 2-component vector of float)
+0:115          dPdxFine ( global 2-component vector of float)
+0:115            'in2' ( smooth in 2-component vector of float)
+0:116      Sequence
+0:116        move second child to first child ( temp 3-component vector of float)
+0:116          'v3' ( temp 3-component vector of float)
+0:116          dPdyCoarse ( global 3-component vector of float)
+0:116            'in3' ( smooth in 3-component vector of float)
+0:117      Sequence
+0:117        move second child to first child ( temp 4-component vector of float)
+0:117          'v4' ( temp 4-component vector of float)
+0:117          add ( temp 4-component vector of float)
+0:117            fwidthCoarse ( global 4-component vector of float)
+0:117              'in4' ( smooth in 4-component vector of float)
+0:117            fwidthFine ( global 4-component vector of float)
+0:117              'in4' ( smooth in 4-component vector of float)
+0:122      move second child to first child ( temp 2-component vector of float)
+0:122        'v2' ( temp 2-component vector of float)
+0:122        frexp ( global 2-component vector of float)
+0:122          'v2' ( temp 2-component vector of float)
+0:122          'i2' ( temp 2-component vector of int)
+0:123      move second child to first child ( temp 3-component vector of float)
+0:123        'v3' ( temp 3-component vector of float)
+0:123        ldexp ( global 3-component vector of float)
+0:123          'v3' ( temp 3-component vector of float)
+0:123          'i3' ( temp 3-component vector of int)
+0:125      move second child to first child ( temp uint)
+0:125        'u1' ( temp uint)
+0:125        PackUnorm4x8 ( global uint)
+0:125          'v4' ( temp 4-component vector of float)
+0:126      move second child to first child ( temp uint)
+0:126        'u1' ( temp uint)
+0:126        PackSnorm4x8 ( global uint)
+0:126          'v4' ( temp 4-component vector of float)
+0:127      move second child to first child ( temp 4-component vector of float)
+0:127        'v4' ( temp 4-component vector of float)
+0:127        UnpackUnorm4x8 ( global 4-component vector of float)
+0:127          'u1' ( temp uint)
+0:128      move second child to first child ( temp 4-component vector of float)
+0:128        'v4' ( temp 4-component vector of float)
+0:128        UnpackSnorm4x8 ( global 4-component vector of float)
+0:128          'u1' ( temp uint)
+0:132      move second child to first child ( temp double)
+0:132        'd' ( temp double)
+0:132        PackDouble2x32 ( global double)
+0:132          'u2' ( temp 2-component vector of uint)
+0:133      move second child to first child ( temp 2-component vector of uint)
+0:133        'u2' ( temp 2-component vector of uint)
+0:133        UnpackDouble2x32 ( global 2-component vector of uint)
+0:133          'd' ( temp double)
+0:150  Function Definition: interp( ( global void)
+0:150    Function Parameters: 
+0:152    Sequence
+0:152      interpolateAtCentroid ( global 2-component vector of float)
+0:152        'colorfc' ( centroid flat in 2-component vector of float)
+0:153      interpolateAtCentroid ( global 4-component vector of float)
+0:153        'colorSampIn' ( smooth sample in 4-component vector of float)
+0:154      interpolateAtCentroid ( global 4-component vector of float)
+0:154        'colorfsi' ( noperspective in 4-component vector of float)
+0:155      interpolateAtCentroid ( global float)
+0:155        'scalarIn' ( smooth in float)
+0:156      Constant:
+0:156        0.000000
+0:157      interpolateAtCentroid ( global 3-component vector of float)
+0:157        direct index ( smooth sample temp 3-component vector of float)
+0:157          'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:157          Constant:
+0:157            2 (const int)
+0:158      interpolateAtCentroid ( global 2-component vector of float)
+0:158        vector swizzle ( temp 2-component vector of float)
+0:158          direct index ( smooth sample temp 3-component vector of float)
+0:158            'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:158            Constant:
+0:158              2 (const int)
+0:158          Sequence
+0:158            Constant:
+0:158              0 (const int)
+0:158            Constant:
+0:158              1 (const int)
+0:160      Constant:
+0:160        0.000000
+0:161      interpolateAtSample ( global 3-component vector of float)
+0:161        indirect index ( smooth sample temp 3-component vector of float)
+0:161          'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:161          'i' ( flat in int)
+0:161        Constant:
+0:161          0 (const int)
+0:162      interpolateAtSample ( global float)
+0:162        x: direct index for structure ( global float)
+0:162          's1' ( smooth in structure{ global float x})
+0:162          Constant:
+0:162            0 (const int)
+0:162        Constant:
+0:162          2 (const int)
+0:163      interpolateAtSample ( global float)
+0:163        'scalarIn' ( smooth in float)
+0:163        Constant:
+0:163          1 (const int)
+0:165      Constant:
+0:165        0.000000
+0:166      interpolateAtOffset ( global 3-component vector of float)
+0:166        direct index ( smooth sample temp 3-component vector of float)
+0:166          'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:166          Constant:
+0:166            2 (const int)
+0:166        Constant:
+0:166          0.200000
+0:166          0.200000
+0:167      interpolateAtOffset ( global 2-component vector of float)
+0:167        vector swizzle ( temp 2-component vector of float)
+0:167          direct index ( smooth sample temp 3-component vector of float)
+0:167            'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:167            Constant:
+0:167              2 (const int)
+0:167          Sequence
+0:167            Constant:
+0:167              0 (const int)
+0:167            Constant:
+0:167              1 (const int)
+0:167        Constant:
+0:167          0.200000
+0:167          0.200000
+0:168      interpolateAtOffset ( global float)
+0:168        add ( temp float)
+0:168          'scalarIn' ( smooth in float)
+0:168          'scalarIn' ( smooth in float)
+0:168        Constant:
+0:168          0.200000
+0:168          0.200000
+0:169      interpolateAtOffset ( global float)
+0:169        x: direct index for structure ( global float)
+0:169          's2' ( sample temp structure{ global float x})
+0:169          Constant:
+0:169            0 (const int)
+0:169        Constant:
+0:169          0.200000
+0:169          0.200000
+0:172      interpolateAtCentroid ( global float)
+0:172        'f' ( temp float)
+0:173      interpolateAtSample ( global 4-component vector of float)
+0:173        'outp' ( out 4-component vector of float)
+0:173        Constant:
+0:173          0 (const int)
+0:194  Function Definition: qlod( ( global void)
+0:194    Function Parameters: 
+0:?     Sequence
+0:201      move second child to first child ( temp 2-component vector of float)
+0:201        'lod' ( temp 2-component vector of float)
+0:201        textureQueryLod ( global 2-component vector of float)
+0:201          'samp1D' ( uniform sampler1D)
+0:201          'pf' ( temp float)
+0:202      move second child to first child ( temp 2-component vector of float)
+0:202        'lod' ( temp 2-component vector of float)
+0:202        textureQueryLod ( global 2-component vector of float)
+0:202          'isamp2D' ( uniform isampler2D)
+0:202          'pf2' ( temp 2-component vector of float)
+0:203      move second child to first child ( temp 2-component vector of float)
+0:203        'lod' ( temp 2-component vector of float)
+0:203        textureQueryLod ( global 2-component vector of float)
+0:203          'usamp3D' ( uniform usampler3D)
+0:203          'pf3' ( temp 3-component vector of float)
+0:204      move second child to first child ( temp 2-component vector of float)
+0:204        'lod' ( temp 2-component vector of float)
+0:204        textureQueryLod ( global 2-component vector of float)
+0:204          'sampCube' ( uniform samplerCube)
+0:204          'pf3' ( temp 3-component vector of float)
+0:205      move second child to first child ( temp 2-component vector of float)
+0:205        'lod' ( temp 2-component vector of float)
+0:205        textureQueryLod ( global 2-component vector of float)
+0:205          'isamp1DA' ( uniform isampler1DArray)
+0:205          'pf' ( temp float)
+0:206      move second child to first child ( temp 2-component vector of float)
+0:206        'lod' ( temp 2-component vector of float)
+0:206        textureQueryLod ( global 2-component vector of float)
+0:206          'usamp2DA' ( uniform usampler2DArray)
+0:206          'pf2' ( temp 2-component vector of float)
+0:207      move second child to first child ( temp 2-component vector of float)
+0:207        'lod' ( temp 2-component vector of float)
+0:207        textureQueryLod ( global 2-component vector of float)
+0:207          'isampCubeA' ( uniform isamplerCubeArray)
+0:207          'pf3' ( temp 3-component vector of float)
+0:209      move second child to first child ( temp 2-component vector of float)
+0:209        'lod' ( temp 2-component vector of float)
+0:209        textureQueryLod ( global 2-component vector of float)
+0:209          'samp1Ds' ( uniform sampler1DShadow)
+0:209          'pf' ( temp float)
+0:210      move second child to first child ( temp 2-component vector of float)
+0:210        'lod' ( temp 2-component vector of float)
+0:210        textureQueryLod ( global 2-component vector of float)
+0:210          'samp2Ds' ( uniform sampler2DShadow)
+0:210          'pf2' ( temp 2-component vector of float)
+0:211      move second child to first child ( temp 2-component vector of float)
+0:211        'lod' ( temp 2-component vector of float)
+0:211        textureQueryLod ( global 2-component vector of float)
+0:211          'sampCubes' ( uniform samplerCubeShadow)
+0:211          'pf3' ( temp 3-component vector of float)
+0:212      move second child to first child ( temp 2-component vector of float)
+0:212        'lod' ( temp 2-component vector of float)
+0:212        textureQueryLod ( global 2-component vector of float)
+0:212          'samp1DAs' ( uniform sampler1DArrayShadow)
+0:212          'pf' ( temp float)
+0:213      move second child to first child ( temp 2-component vector of float)
+0:213        'lod' ( temp 2-component vector of float)
+0:213        textureQueryLod ( global 2-component vector of float)
+0:213          'samp2DAs' ( uniform sampler2DArrayShadow)
+0:213          'pf2' ( temp 2-component vector of float)
+0:214      move second child to first child ( temp 2-component vector of float)
+0:214        'lod' ( temp 2-component vector of float)
+0:214        textureQueryLod ( global 2-component vector of float)
+0:214          'sampCubeAs' ( uniform samplerCubeArrayShadow)
+0:214          'pf3' ( temp 3-component vector of float)
+0:216      'lod' ( temp 2-component vector of float)
+0:217      'lod' ( temp 2-component vector of float)
+0:223  Function Definition: bitwiseConv( ( global void)
+0:223    Function Parameters: 
+0:225    Sequence
+0:225      move second child to first child ( temp uint)
+0:225        'iout' ( out uint)
+0:225        bitwise and ( temp uint)
+0:225          'uu' ( uniform uint)
+0:225          Convert int to uint ( temp uint)
+0:225            'i' ( flat in int)
+0:226      add second child into first child ( temp uint)
+0:226        'iout' ( out uint)
+0:226        exclusive-or ( temp uint)
+0:226          'uu' ( uniform uint)
+0:226          Convert int to uint ( temp uint)
+0:226            'i' ( flat in int)
+0:227      add second child into first child ( temp uint)
+0:227        'iout' ( out uint)
+0:227        inclusive-or ( temp uint)
+0:227          Convert int to uint ( temp uint)
+0:227            'i' ( flat in int)
+0:227          'uu' ( uniform uint)
+0:231  Function Definition: subT1( ( temp float)
+0:231    Function Parameters: 
+0:231    Sequence
+0:231      Branch: Return with expression
+0:231        Constant:
+0:231          1.000000
+0:232  Function Definition: subT2( ( temp float)
+0:232    Function Parameters: 
+0:232    Sequence
+0:232      Branch: Return with expression
+0:232        Constant:
+0:232          1.000000
+0:?   Linker Objects
+0:?     'c2D' ( smooth in 2-component vector of float)
+0:?     'i' ( flat in int)
+0:?     'outp' ( out 4-component vector of float)
+0:?     'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:?     'samp2dr' ( uniform usampler2DRect)
+0:?     'isamp2DA' ( uniform isampler2DArray)
+0:?     'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:?     'ssboStd430Arr' (layout( column_major shared) buffer 2-element array of block{layout( column_major shared) buffer int member01, layout( column_major shared) buffer 2-element array of int memberArr01, layout( column_major shared) buffer unsized 1-element array of int memberUnsizedArr01})
+0:?     'ssboSharedArr' (layout( column_major shared) buffer 2-element array of block{layout( column_major shared) buffer int member02, layout( column_major shared) buffer 2-element array of int memberArr02, layout( column_major shared) buffer unsized 1-element array of int memberUnsizedArr02})
+0:?     'gl_ClipDistance' ( smooth in 4-element array of float ClipDistance)
+0:?     'vl' (layout( location=4) smooth in 4-component vector of float)
+0:?     'vl2' (layout( location=6) smooth in 4-component vector of float)
+0:?     'uv3' (layout( location=3) uniform 3-component vector of float)
+0:?     'gl_Color' (layout( location=5) smooth in 4-component vector of float)
+0:?     'gl_FragCoord' ( gl_FragCoord 4-component vector of float FragCoord)
+0:?     'u2drs' ( uniform sampler2DRectShadow)
+0:?     'patchIn' ( smooth patch in 4-component vector of float)
+0:?     'patchOut' ( patch out 4-component vector of float)
+0:?     'in1' ( smooth in float)
+0:?     'in2' ( smooth in 2-component vector of float)
+0:?     'in3' ( smooth in 3-component vector of float)
+0:?     'in4' ( smooth in 4-component vector of float)
+0:?     'colorSampIn' ( smooth sample in 4-component vector of float)
+0:?     'colorSampleBad' ( sample out 4-component vector of float)
+0:?     'colorfsi' ( noperspective in 4-component vector of float)
+0:?     'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:?     'scalarIn' ( smooth in float)
+0:?     'colorfc' ( centroid flat in 2-component vector of float)
+0:?     's1' ( smooth in structure{ global float x})
+0:?     's2' ( sample temp structure{ global float x})
+0:?     'samp1D' ( uniform sampler1D)
+0:?     'isamp2D' ( uniform isampler2D)
+0:?     'usamp3D' ( uniform usampler3D)
+0:?     'sampCube' ( uniform samplerCube)
+0:?     'isamp1DA' ( uniform isampler1DArray)
+0:?     'usamp2DA' ( uniform usampler2DArray)
+0:?     'isampCubeA' ( uniform isamplerCubeArray)
+0:?     'samp1Ds' ( uniform sampler1DShadow)
+0:?     'samp2Ds' ( uniform sampler2DShadow)
+0:?     'sampCubes' ( uniform samplerCubeShadow)
+0:?     'samp1DAs' ( uniform sampler1DArrayShadow)
+0:?     'samp2DAs' ( uniform sampler2DArrayShadow)
+0:?     'sampCubeAs' ( uniform samplerCubeArrayShadow)
+0:?     'sampBuf' ( uniform samplerBuffer)
+0:?     'sampRect' ( uniform sampler2DRect)
+0:?     'uu' ( uniform uint)
+0:?     'iout' ( out uint)
+
+
+Linked fragment stage:
+
+
+Shader version: 400
+Requested GL_ARB_derivative_control
+Requested GL_ARB_separate_shader_objects
+Requested GL_ARB_shader_storage_buffer_object
+gl_FragCoord pixel center is integer
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:43  Function Definition: main( ( global void)
+0:43    Function Parameters: 
+0:?     Sequence
+0:46      move second child to first child ( temp 4-component vector of float)
+0:46        'v' ( temp 4-component vector of float)
+0:46        texture ( global 4-component vector of float)
+0:46          indirect index ( temp sampler2D)
+0:46            'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:46            'i' ( flat in int)
+0:46          'c2D' ( smooth in 2-component vector of float)
+0:47      move second child to first child ( temp float)
+0:47        direct index ( temp float)
+0:47          'outp' ( out 4-component vector of float)
+0:47          Constant:
+0:47            0 (const int)
+0:47        direct index ( smooth temp float ClipDistance)
+0:47          'gl_ClipDistance' ( smooth in 4-element array of float ClipDistance)
+0:47          Constant:
+0:47            1 (const int)
+0:51      Sequence
+0:51        move second child to first child ( temp 4-component vector of uint)
+0:51          'uv4' ( temp 4-component vector of uint)
+0:51          textureGatherOffsets ( global 4-component vector of uint)
+0:51            'samp2dr' ( uniform usampler2DRect)
+0:51            'c2D' ( smooth in 2-component vector of float)
+0:51            'offsets' ( temp 4-element array of 2-component vector of int)
+0:51            Constant:
+0:51              2 (const int)
+0:52      move second child to first child ( temp 4-component vector of uint)
+0:52        'uv4' ( temp 4-component vector of uint)
+0:52        textureGatherOffsets ( global 4-component vector of uint)
+0:52          'samp2dr' ( uniform usampler2DRect)
+0:52          'c2D' ( smooth in 2-component vector of float)
+0:52          Constant:
+0:52            1 (const int)
+0:52            2 (const int)
+0:52            3 (const int)
+0:52            4 (const int)
+0:52            15 (const int)
+0:52            16 (const int)
+0:52            -2 (const int)
+0:52            0 (const int)
+0:52          Constant:
+0:52            2 (const int)
+0:53      Sequence
+0:53        move second child to first child ( temp 4-component vector of float)
+0:53          'v4' ( temp 4-component vector of float)
+0:53          textureGather ( global 4-component vector of float)
+0:53            direct index ( temp sampler2D)
+0:53              'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:53              Constant:
+0:53                0 (const int)
+0:53            'c2D' ( smooth in 2-component vector of float)
+0:54      Sequence
+0:54        move second child to first child ( temp 4-component vector of int)
+0:54          'iv4' ( temp 4-component vector of int)
+0:54          textureGatherOffset ( global 4-component vector of int)
+0:54            'isamp2DA' ( uniform isampler2DArray)
+0:54            Constant:
+0:54              0.100000
+0:54              0.100000
+0:54              0.100000
+0:54            Constant:
+0:54              1 (const int)
+0:54              1 (const int)
+0:54            Constant:
+0:54              3 (const int)
+0:55      move second child to first child ( temp 4-component vector of int)
+0:55        'iv4' ( temp 4-component vector of int)
+0:55        textureGatherOffset ( global 4-component vector of int)
+0:55          'isamp2DA' ( uniform isampler2DArray)
+0:55          Constant:
+0:55            0.100000
+0:55            0.100000
+0:55            0.100000
+0:55          Constant:
+0:55            1 (const int)
+0:55            1 (const int)
+0:55          'i' ( flat in int)
+0:56      move second child to first child ( temp 4-component vector of int)
+0:56        'iv4' ( temp 4-component vector of int)
+0:56        textureGatherOffset ( global 4-component vector of int)
+0:56          'isamp2DA' ( uniform isampler2DArray)
+0:56          Constant:
+0:56            0.100000
+0:56            0.100000
+0:56            0.100000
+0:56          Constant:
+0:56            1 (const int)
+0:56            1 (const int)
+0:56          Constant:
+0:56            4 (const int)
+0:57      move second child to first child ( temp 4-component vector of int)
+0:57        'iv4' ( temp 4-component vector of int)
+0:57        textureGatherOffset ( global 4-component vector of int)
+0:57          'isamp2DA' ( uniform isampler2DArray)
+0:57          Constant:
+0:57            0.100000
+0:57            0.100000
+0:57            0.100000
+0:57          Constant:
+0:57            1 (const int)
+0:57            1 (const int)
+0:57          Constant:
+0:57            3 (const int)
+0:58      move second child to first child ( temp 4-component vector of int)
+0:58        'iv4' ( temp 4-component vector of int)
+0:58        textureGatherOffset ( global 4-component vector of int)
+0:58          'isamp2DA' ( uniform isampler2DArray)
+0:58          Constant:
+0:58            0.100000
+0:58            0.100000
+0:58            0.100000
+0:58          Construct ivec2 ( temp 2-component vector of int)
+0:58            'i' ( flat in int)
+0:60      Sequence
+0:60        move second child to first child ( temp 4-component vector of float)
+0:60          'c' ( temp 4-component vector of float)
+0:60          'gl_FragCoord' ( gl_FragCoord 4-component vector of float FragCoord)
+0:?   Linker Objects
+0:?     'c2D' ( smooth in 2-component vector of float)
+0:?     'i' ( flat in int)
+0:?     'outp' ( out 4-component vector of float)
+0:?     'arrayedSampler' ( uniform 5-element array of sampler2D)
+0:?     'samp2dr' ( uniform usampler2DRect)
+0:?     'isamp2DA' ( uniform isampler2DArray)
+0:?     'anon@0' (layout( column_major shared) buffer block{layout( column_major shared) buffer int atomi, layout( column_major shared) buffer uint atomu})
+0:?     'ssboStd430Arr' (layout( column_major shared) buffer 2-element array of block{layout( column_major shared) buffer int member01, layout( column_major shared) buffer 2-element array of int memberArr01, layout( column_major shared) buffer unsized 1-element array of int memberUnsizedArr01})
+0:?     'ssboSharedArr' (layout( column_major shared) buffer 2-element array of block{layout( column_major shared) buffer int member02, layout( column_major shared) buffer 2-element array of int memberArr02, layout( column_major shared) buffer unsized 1-element array of int memberUnsizedArr02})
+0:?     'gl_ClipDistance' ( smooth in 4-element array of float ClipDistance)
+0:?     'vl' (layout( location=4) smooth in 4-component vector of float)
+0:?     'vl2' (layout( location=6) smooth in 4-component vector of float)
+0:?     'uv3' (layout( location=3) uniform 3-component vector of float)
+0:?     'gl_Color' (layout( location=5) smooth in 4-component vector of float)
+0:?     'gl_FragCoord' ( gl_FragCoord 4-component vector of float FragCoord)
+0:?     'u2drs' ( uniform sampler2DRectShadow)
+0:?     'patchIn' ( smooth patch in 4-component vector of float)
+0:?     'patchOut' ( patch out 4-component vector of float)
+0:?     'in1' ( smooth in float)
+0:?     'in2' ( smooth in 2-component vector of float)
+0:?     'in3' ( smooth in 3-component vector of float)
+0:?     'in4' ( smooth in 4-component vector of float)
+0:?     'colorSampIn' ( smooth sample in 4-component vector of float)
+0:?     'colorSampleBad' ( sample out 4-component vector of float)
+0:?     'colorfsi' ( noperspective in 4-component vector of float)
+0:?     'sampInArray' ( smooth sample in 4-element array of 3-component vector of float)
+0:?     'scalarIn' ( smooth in float)
+0:?     'colorfc' ( centroid flat in 2-component vector of float)
+0:?     's1' ( smooth in structure{ global float x})
+0:?     's2' ( sample temp structure{ global float x})
+0:?     'samp1D' ( uniform sampler1D)
+0:?     'isamp2D' ( uniform isampler2D)
+0:?     'usamp3D' ( uniform usampler3D)
+0:?     'sampCube' ( uniform samplerCube)
+0:?     'isamp1DA' ( uniform isampler1DArray)
+0:?     'usamp2DA' ( uniform usampler2DArray)
+0:?     'isampCubeA' ( uniform isamplerCubeArray)
+0:?     'samp1Ds' ( uniform sampler1DShadow)
+0:?     'samp2Ds' ( uniform sampler2DShadow)
+0:?     'sampCubes' ( uniform samplerCubeShadow)
+0:?     'samp1DAs' ( uniform sampler1DArrayShadow)
+0:?     'samp2DAs' ( uniform sampler2DArrayShadow)
+0:?     'sampCubeAs' ( uniform samplerCubeArrayShadow)
+0:?     'sampBuf' ( uniform samplerBuffer)
+0:?     'sampRect' ( uniform sampler2DRect)
+0:?     'uu' ( uniform uint)
+0:?     'iout' ( out uint)
+

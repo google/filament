@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 15.4.0 2025-06-26
+* Support GL_NV_gpu_shader5/GL_ARB_gpu_shader5
+* Remove BUILD_SHARED_LIBS option (defer to built-in variable)
+* Remap discard to OpDemoteToHelperInvocation
+* Fix typos and improve readability of help message
+* Support GLSL_QCOM_tile_shading
+* Emit correct capability for linear swept sphere
+* Support GL_EXT_float8_e5m2_e4m3
+* Move E_SPV_ARM_cooperative_matrix_layouts into GLSL.ext.ARM.h
+* Support GL_ARM_tensors
+
 ## 15.3.0 2025-04-24
 * Fix CMake find_package on Windows when building shared libraries
 * Fix crash calling coopMatLoadTensorNV on an array element
