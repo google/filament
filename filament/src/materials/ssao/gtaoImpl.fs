@@ -24,6 +24,7 @@
 #include "../utils/geometry.fs"
 
 #define rsqrt inversesqrt
+#define SECTOR_COUNT 32u
 
 #ifndef COMPUTE_BENT_NORMAL
 #error COMPUTE_BENT_NORMAL must be set
@@ -56,6 +57,54 @@ float spatialDirectionNoise(float2 uv) {
 float spatialOffsetsNoise(float2 uv) {
 	int2 position = int2(uv * materialParams.resolution.xy);
 	return 0.25 * float((position.y - position.x) & 3);
+}
+
+uint bitCount_(uint value) {
+    value = value - ((value >> 1u) & 0x55555555u);
+    value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
+    return ((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u;
+}
+
+// If the new sample value is greater then the current one, update the value with some fallOff.
+// Otherwise, apply thicknessHeuristic.
+float updateHorizon(float sampleHorizonCos, float currentHorizonCos, float fallOff) {
+    return sampleHorizonCos > currentHorizonCos
+        ? mix(sampleHorizonCos, currentHorizonCos, fallOff)
+        : mix(currentHorizonCos, sampleHorizonCos, materialParams.thicknessHeuristic);
+}
+
+uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
+    uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
+    uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
+    if (angleHorizonInt >= SECTOR_COUNT) {
+        return 0xFFFFFFFFu;
+    }
+
+    uint angleHorizonBitfield = (1u << angleHorizonInt) - 1u;
+    uint currentOccludedBitfield = angleHorizonBitfield << startHorizonInt;
+    return globalOccludedBitfield | currentOccludedBitfield;
+}
+
+uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
+    uint globalOccludedBitfield, float n, highp vec3 origin) {
+    vec2 frontBackHorizon;
+    float linearThicknessMultiplier = materialParams.thickness > 0.0 ? saturate(origin.z * materialParams.invFarPlane) * 100.0 : 1.0;
+    vec3 deltaPosBackface = deltaPos - viewDir * materialParams.thickness * linearThicknessMultiplier;
+
+    // Project sample onto the unit circle and compute the angle relative to V
+    frontBackHorizon.x = dot(normalize(deltaPos), viewDir);
+    frontBackHorizon.y = dot(normalize(deltaPosBackface), viewDir);
+
+    frontBackHorizon.x = acosFast(frontBackHorizon.x);
+    frontBackHorizon.y = acosFast(frontBackHorizon.y);
+
+    // Shift sample from V to normal, clamp in [0..1]
+    frontBackHorizon = clamp((frontBackHorizon + n + HALF_PI) / PI, 0.0, 1.0);
+
+    // Sampling direction inverts min/max angles
+    frontBackHorizon = samplingDirection >= 0.0 ? frontBackHorizon.yx : frontBackHorizon.xy;
+
+    return updateSectors(frontBackHorizon.x, frontBackHorizon.y, globalOccludedBitfield);
 }
 
 void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
@@ -98,6 +147,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
+        uint globalOccludedBitfield = 0u;
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
@@ -116,36 +166,50 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             highp vec3 sampleDelta0 = (samplePos0 - origin);
             highp vec3 sampleDelta1 = (samplePos1 - origin);
-            highp vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
-            vec2 invSampleDist = rsqrt(sqSampleDist);
 
-            // Use the view space radius to calculate the fallOff
-            vec2 fallOff = saturate(sqSampleDist.xy * materialParams.invRadiusSquared * 2.0);
+            if (materialConstants_useVisibilityBitmasks) {
+                globalOccludedBitfield = calculateVisibilityMask(sampleDelta0, viewDir, 1.0, globalOccludedBitfield, n, origin);
+                globalOccludedBitfield = calculateVisibilityMask(sampleDelta1, viewDir, -1.0, globalOccludedBitfield, n, origin);
+            }
+            else {
+                highp vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
+                vec2 invSampleDist = rsqrt(sqSampleDist);
 
-            // sample horizon cos
-            float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
-            float shc1 = dot(sampleDelta1, viewDir) * invSampleDist.y;
+                // Use the view space radius to calculate the fallOff
+                vec2 fallOff = saturate(sqSampleDist.xy * materialParams.invRadiusSquared * 2.0);
 
-            // If the new sample value is greater then the current one, update the value with some fallOff.
-            // Otherwise, apply thicknessHeuristic.
-            horizonCos0 = shc0 > horizonCos0 ? mix(shc0, horizonCos0, fallOff.x) : mix(horizonCos0, shc0, materialParams.thicknessHeuristic);
-            horizonCos1 = shc1 > horizonCos1 ? mix(shc1, horizonCos1, fallOff.y) : mix(horizonCos1, shc1, materialParams.thicknessHeuristic);
+                // sample horizon cos
+                float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
+                float shc1 = dot(sampleDelta1, viewDir) * invSampleDist.y;
+
+                horizonCos0 = updateHorizon(shc0, horizonCos0, fallOff.x);
+                horizonCos1 = updateHorizon(shc1, horizonCos1, fallOff.y);
+            }
         }
 
-        float h0 = -acosFast(horizonCos1);
-        float h1 = acosFast(horizonCos0);
-        h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
-        h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
+        if (materialConstants_useVisibilityBitmasks) {
+            visibility += float(bitCount_(globalOccludedBitfield)) / float(SECTOR_COUNT);
+        }
+        else {
+            float h0 = -acosFast(horizonCos1);
+            float h1 = acosFast(horizonCos0);
+            h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
+            h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
 
-#if COMPUTE_BENT_NORMAL
-        float angle = 0.5 * (h0 + h1);
-        bentNormal += viewDir * cos(angle) - orthoDirection * sin(angle);
-#endif
+            #if COMPUTE_BENT_NORMAL
+                    float angle = 0.5 * (h0 + h1);
+                    bentNormal += viewDir * cos(angle) - orthoDirection * sin(angle);
+            #endif
 
-        visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
+            visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
+        }
     }
-
-    obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
+    if (materialConstants_useVisibilityBitmasks) {
+        obscurance = saturate(visibility * materialParams.sliceCount.y);
+    }
+    else{
+        obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
+    }
 
 #if COMPUTE_BENT_NORMAL
     bentNormal = normalize(bentNormal);

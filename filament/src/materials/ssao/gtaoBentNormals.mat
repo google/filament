@@ -23,6 +23,10 @@ material {
         },
         {
             type : float,
+            name : thickness
+        },
+        {
+            type : float,
             name : invFarPlane
         },
         {
@@ -96,6 +100,13 @@ material {
         {
             type : uint,
             name : ssctSampleCount
+        }
+    ],
+    constants : [
+        {
+            type : bool,
+            name : useVisibilityBitmasks,
+            default : false
         }
     ],
     outputs : [
