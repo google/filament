@@ -15,47 +15,67 @@
  */
 
 #include "MaterialTextChunk.h"
+#include "Flattener.h"
+#include "LineDictionary.h"
+#include "ShaderEntry.h"
+
+#include <exception>
+#include <utils/Log.h>
+#include <utils/ostream.h>
+
+#include <cstdint>
+#include <cassert>
+#include <cstddef>
+#include <string_view>
+#include <unordered_map>
+#include <string>
 
 namespace filamat {
 
-void MaterialTextChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) const noexcept {
+void MaterialTextChunk::writeEntryAttributes(size_t const entryIndex, Flattener& f) const noexcept {
     const TextEntry& entry = mEntries[entryIndex];
     f.writeUint8(uint8_t(entry.shaderModel));
     f.writeUint8(entry.variant.key);
     f.writeUint8(uint8_t(entry.stage));
 }
 
-void compressShader(std::string_view src, Flattener &f, const LineDictionary& dictionary) {
+void compressShader(std::string_view const src, Flattener &f, const LineDictionary& dictionary) {
+    if (dictionary.getDictionaryLineCount() > 65536) {
+        slog.e << "Dictionary is too large!" << io::endl;
+        std::terminate();
+    }
+
     f.writeUint32(static_cast<uint32_t>(src.size() + 1));
     f.writeValuePlaceholder();
 
     size_t numLines = 0;
 
     size_t cur = 0;
-
+    size_t const len = src.length();
     const char* s = src.data();
-    while (s[cur] != '\0') {
-        size_t pos = cur;
-        size_t len = 0;
-
-        while (s[cur] != '\n') {
+    while (cur < len) {
+        // Start of the current line
+        size_t const pos = cur;
+        // Find the end of the current line or end of text
+        while (cur < len && s[cur] != '\n') {
             cur++;
-            len++;
+        }
+        // If we found a newline, advance past it for the next iteration, ensuring '\n' is included
+        if (cur < len) {
+            cur++;
+        }
+        std::string_view const newLine{ s + pos, cur - pos };
+
+        auto const indices = dictionary.getIndices(newLine);
+        if (indices.empty()) {
+            slog.e << "Line not found in dictionary!" << io::endl;
+            std::terminate();
         }
 
-        std::string_view newLine(s + pos, len);
-
-        size_t index = dictionary.getIndex(newLine);
-        if (index > UINT16_MAX) {
-            slog.e << "Dictionary returned line index > UINT16_MAX" << io::endl;
-            assert(false);
-            continue;
+        numLines += indices.size();
+        for (auto const index : indices) {
+            f.writeUint16(static_cast<uint16_t>(index));
         }
-
-        f.writeUint16(static_cast<uint16_t>(index));
-        numLines += 1;
-
-        cur++;
     }
     f.writeValue(numLines);
 }
