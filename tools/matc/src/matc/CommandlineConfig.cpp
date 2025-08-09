@@ -30,6 +30,53 @@ using namespace utils;
 
 namespace matc {
 
+static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
+static const struct option OPTIONS[] = {
+        { "help",                    no_argument, nullptr, 'h' },
+        { "license",                 no_argument, nullptr, 'L' },
+        { "output",            required_argument, nullptr, 'o' },
+        { "output-format",     required_argument, nullptr, 'f' },
+        { "debug",                   no_argument, nullptr, 'd' },
+        { "variant-filter",    required_argument, nullptr, 'V' },
+        { "platform",          required_argument, nullptr, 'p' },
+        { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
+        { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
+        { "optimize-size",           no_argument, nullptr, 'S' },
+        { "optimize-none",           no_argument, nullptr, 'g' },
+        { "preprocessor-only",       no_argument, nullptr, 'E' },
+        { "api",               required_argument, nullptr, 'a' },
+        { "feature-level",     required_argument, nullptr, 'l' },
+        { "no-essl1",                no_argument, nullptr, '1' },
+        { "define",            required_argument, nullptr, 'D' },
+        { "template",          required_argument, nullptr, 'T' },
+        { "material-parameter",required_argument, nullptr, 'P' },
+        { "reflect",           required_argument, nullptr, 'r' },
+        { "print",                   no_argument, nullptr, 't' },
+        { "version",                 no_argument, nullptr, 'v' },
+        { "raw",                     no_argument, nullptr, 'w' },
+        { "no-sampler-validation",   no_argument, nullptr, 'F' },
+        { "save-raw-variants",       no_argument, nullptr, 'R' },
+        { nullptr, 0, nullptr, 0 }  // termination of the option list
+};
+
+// A list of options that may contain PII(Personally Identifiable Information) data.
+// We ignore these options when we call the `toPIISafeString` method.
+static const std::string_view PII_OPTIONS[] = {
+    "output",
+};
+
+static bool isPIIOption(const char* longOptionName) {
+    if (!longOptionName) {
+        return false;
+    }
+    for (auto option : PII_OPTIONS) {
+        if (option == longOptionName) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void usage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
@@ -181,35 +228,6 @@ static void parseDefine(std::string defineString, matp::Config::StringReplacemen
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
-    static const struct option OPTIONS[] = {
-            { "help",                    no_argument, nullptr, 'h' },
-            { "license",                 no_argument, nullptr, 'L' },
-            { "output",            required_argument, nullptr, 'o' },
-            { "output-format",     required_argument, nullptr, 'f' },
-            { "debug",                   no_argument, nullptr, 'd' },
-            { "variant-filter",    required_argument, nullptr, 'V' },
-            { "platform",          required_argument, nullptr, 'p' },
-            { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
-            { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
-            { "optimize-size",           no_argument, nullptr, 'S' },
-            { "optimize-none",           no_argument, nullptr, 'g' },
-            { "preprocessor-only",       no_argument, nullptr, 'E' },
-            { "api",               required_argument, nullptr, 'a' },
-            { "feature-level",     required_argument, nullptr, 'l' },
-            { "no-essl1",                no_argument, nullptr, '1' },
-            { "define",            required_argument, nullptr, 'D' },
-            { "template",          required_argument, nullptr, 'T' },
-            { "material-parameter",required_argument, nullptr, 'P' },
-            { "reflect",           required_argument, nullptr, 'r' },
-            { "print",                   no_argument, nullptr, 't' },
-            { "version",                 no_argument, nullptr, 'v' },
-            { "raw",                     no_argument, nullptr, 'w' },
-            { "no-sampler-validation",   no_argument, nullptr, 'F' },
-            { "save-raw-variants",       no_argument, nullptr, 'R' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
-    };
-
     int opt;
     int option_index = 0;
 
@@ -346,6 +364,74 @@ bool CommandlineConfig::parse() {
     }
 
     return true;
+}
+
+// This method concatenates all options and arguments, excluding the executable name, input file
+// name, and any options found in PII_OPTIONS due to potential PII data.
+std::string CommandlineConfig::toPIISafeString() const noexcept {
+    std::string result;
+    optind = 1; // Reset getopt's internal index before parsing
+
+    while (true) {
+        // getopt_long will only set `long_index` if a long option is parsed.
+        int long_index = -1;
+        int opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
+        if (opt == -1) {
+            break; // End of options
+        }
+
+        // Find the matched option.
+        const struct option* matched_option = nullptr;
+        if (long_index != -1) {
+            // A long option was parsed (e.g., --help)
+             matched_option = &OPTIONS[long_index];
+        } else if (opt > 0) {
+            // A short option was parsed (e.g., -h)
+            for (int i = 0; OPTIONS[i].name != nullptr; ++i) {
+                if (OPTIONS[i].val == opt) {
+                    matched_option = &OPTIONS[i];
+                    break;
+                }
+            }
+        }
+
+        if (!matched_option) {
+            std::cerr << "Failed to find the matched option: long_index=" << long_index
+                      << ", opt=" << opt << std::endl;
+            continue;
+        }
+
+        // Skip if it's a PII option.
+        if (isPIIOption(matched_option->name)) {
+            continue;
+        }
+
+        // Reconstruct the option.
+        if (long_index != -1) {
+            result += "--";
+            result += matched_option->name;
+            result += " ";
+        } else if (opt > 0) {
+            result += "-";
+            result += (char)matched_option->val;
+            result += " ";
+        }
+
+        // Add an argument if available.
+        if (optarg && matched_option && matched_option->has_arg != no_argument) {
+            result += optarg;
+            result += " ";
+        }
+    }
+
+    // We're ignoring the last (remaining) argument because it's user input with PII.
+
+    // Trim trailing space
+    if (!result.empty()) {
+        result.pop_back();
+    }
+
+    return result;
 }
 
 } // namespace matc
