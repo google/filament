@@ -993,8 +993,16 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 #endif
                 auto& material = getPostProcessMaterial(materialName);
 
-                FMaterial const * const ma = material.getMaterial(mEngine);
-                FMaterialInstance* const mi = getMaterialInstance(ma);
+                FMaterial* const ma = material.getMaterial(mEngine);
+                bool dirty = false;
+                setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useBitmask, dirty);
+                if (dirty) {
+                   ma->invalidate();
+                   // TODO: call Material::compile(), we can't do that now because it works only
+                   //       with surface materials
+                }
+
+                FMaterialInstance* const mi = getMaterialInstance(mEngine, material);
 
                 // Set AO type specific material parameters
                 switch (aoType) {
@@ -1028,6 +1036,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         mi->setParameter("radius", options.radius);
                         mi->setParameter("intensity", options.intensity);
                         mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
+                        mi->setParameter("thickness", options.gtao.thickness);
 
                         break;
                     }
