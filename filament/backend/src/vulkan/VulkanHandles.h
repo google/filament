@@ -308,6 +308,15 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget();
 
+    VulkanRenderTarget(VulkanRenderTarget&& target) {
+        swap(std::move(target));
+    }
+
+    VulkanRenderTarget& operator=(VulkanRenderTarget&& target) {
+        swap(std::move(target));
+        return *this;
+    }
+
     void transformClientRectToPlatform(VkRect2D* bounds) const;
 
     void transformViewportToPlatform(VkViewport* bounds) const;
@@ -355,6 +364,12 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     void emitBarriersEndRenderPass(VulkanCommandBuffer& commands);
 
 private:
+    void swap(VulkanRenderTarget&& target) {
+        std::swap(mOffscreen, target.mOffscreen);
+        std::swap(mProtected, target.mProtected);
+        std::swap(mInfo, target.mInfo);
+    }
+
     struct Auxiliary {
         static constexpr int8_t UNDEFINED_INDEX = -1;
 
@@ -368,7 +383,7 @@ private:
         int8_t msaaDepthIndex = UNDEFINED_INDEX;
         int8_t msaaIndex = UNDEFINED_INDEX;
     };
-    bool const mOffscreen;
+    bool mOffscreen;
     bool mProtected;
 
     std::unique_ptr<Auxiliary> mInfo;
