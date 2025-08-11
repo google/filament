@@ -256,7 +256,7 @@ template<typename WebGPUPrintable>
         || FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE) \
         || FWGPU_ENABLED(FWGPU_DEBUG_BLIT)         \
         || FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
-[[nodiscard]] std::string webGPUTextureToString(wgpu::Texture const& texture) {
+[[nodiscard]] inline std::string webGPUTextureToString(wgpu::Texture const& texture) {
     if (texture == nullptr) {
         return "nullptr (no wgpu::Texture)";
     }
@@ -411,7 +411,7 @@ template<typename WebGPUPrintable>
     }
 }
 
-[[nodiscard]] std::string filamentTextureUsageFlagsToString(const TextureUsage flags) {
+[[nodiscard]] inline std::string filamentTextureUsageFlagsToString(const TextureUsage flags) {
     if (flags == TextureUsage::NONE) {
         return "NONE";
     }

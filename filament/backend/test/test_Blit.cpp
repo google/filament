@@ -199,7 +199,7 @@ TEST_F(BlitTest, ColorMagnify) {
 
     {
         RenderFrame frame(api);
-        EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+        EXPECT_IMAGE(dstRenderTargets[0],
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
         api.commit(swapChain);
     }
@@ -255,7 +255,7 @@ TEST_F(BlitTest, ColorMinify) {
             { 0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel },
             SamplerMagFilter::LINEAR);
 
-    EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+    EXPECT_IMAGE(dstRenderTargets[0],
             ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
 }
 
@@ -336,7 +336,7 @@ TEST_F(BlitTest, ColorResolve) {
             srcRenderTarget, { 0, 0, kSrcTexWidth, kSrcTexHeight },
             SamplerMagFilter::NEAREST);
 
-    EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+    EXPECT_IMAGE(dstRenderTarget,
             ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687));
 }
 
@@ -403,7 +403,7 @@ TEST_F(BlitTest, Blit2DTextureArray) {
 
     {
         RenderFrame frame(api);
-        EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+        EXPECT_IMAGE(dstRenderTarget,
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "Blit2DTextureArray",
                         0x8de7d55b));
         api.commit(swapChain);
@@ -479,7 +479,7 @@ TEST_F(BlitTest, BlitRegion) {
         RenderFrame frame(api);
         // TODO: for some reason, this test has very, very slight (as in one pixel) differences
         // between OpenGL and Metal. So disable golden checking for now.
-        // EXPECT_IMAGE(dstRenderTarget, expectations, ScreenshotParams(kDstTexWidth,
+        // EXPECT_IMAGE(dstRenderTarget, ScreenshotParams(kDstTexWidth,
         //         kDstTexHeight, "BlitRegion", 0x74fa34ed));
         api.commit(swapChain);
     }
@@ -546,7 +546,7 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
 
     // TODO: for some reason, this test has been disabled. It needs to be tested on all
     // machines.
-    // EXPECT_IMAGE(dstRenderTarget, expectations,
+    // EXPECT_IMAGE(dstRenderTarget,
     //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
 }
 
