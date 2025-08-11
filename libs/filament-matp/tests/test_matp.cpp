@@ -95,6 +95,16 @@ TEST_F(MaterialLexer, MaterialParser) {
     EXPECT_EQ(result, true);
 }
 
+TEST_F(MaterialLexer, NoSpaceBetweenBlockAndIdentifier) {
+    matp::MaterialLexer materialLexer;
+    static std::string source(R"(
+        material {}fragment {}
+    )");
+    materialLexer.lex(source.c_str(), source.size(), 1);
+    auto lexemes = materialLexer.getLexemes();
+    EXPECT_EQ(lexemes.size(), 4);
+}
+
 TEST_F(MaterialLexer, MaterialParserWithToolSection) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
