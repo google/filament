@@ -465,6 +465,9 @@ void FEngine::init() {
         }
         mDefaultMaterial = downcast(defaultMaterialBuilder.build(*this));
     }
+    // We must commit the default material instance here. It may not be used in a scene, but its
+    // descriptor set may still be used for shared variants.
+    mDefaultMaterial->getDefaultInstance()->commit(driverApi);
 
     if (UTILS_UNLIKELY(getSupportedFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1)) {
         mDefaultColorGrading = downcast(ColorGrading::Builder().build(*this));
