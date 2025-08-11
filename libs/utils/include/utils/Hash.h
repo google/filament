@@ -20,11 +20,50 @@
 #include <functional>   // for std::hash
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <stdint.h>
 #include <stddef.h>
 
 namespace utils::hash {
+
+// The standard CRC-32 polynomial (used in Ethernet, ZIP, PNG, etc.)
+static constexpr uint32_t CRC32_POLYNOMIAL = 0xEDB88320;
+
+// Generates the lookup table for the CRC-32 algorithm.
+inline void crc32GenerateTable(std::vector<uint32_t>& table) {
+    if (table.size() != 256) {
+        table.resize(256);
+    }
+
+    for (uint32_t i = 0; i < 256; ++i) {
+        uint32_t crc = i;
+        for (int j = 0; j < 8; ++j) {
+            if (crc & 1) {
+                crc = (crc >> 1) ^ CRC32_POLYNOMIAL;
+            } else {
+                crc = crc >> 1;
+            }
+        }
+        table[i] = crc;
+    }
+}
+
+// Updates the CRC-32 value with a new chunk of data. This function can be called multiple times to
+// process a large buffer in smaller, separate parts.
+//  @param previous_crc The CRC value returned from the previous call to `crc32Update`.
+//  @param data A pointer to the data buffer for this chunk.
+//  @param length The length of the data buffer in bytes.
+//  @return The new CRC value.
+inline uint32_t crc32Update(uint32_t previous_crc, const void* data, size_t length, const std::vector<uint32_t>& table) {
+    uint32_t crc = ~previous_crc;
+    const uint8_t* current = static_cast<const uint8_t*>(data);
+    for (size_t i = 0; i < length; ++i) {
+        // The core CRC-32 calculation step.
+        crc = (crc >> 8) ^ table[(crc ^ current[i]) & 0xFF];
+    }
+    return ~crc;
+}
 
 inline size_t combine(size_t lhs, size_t rhs) noexcept {
     std::pair<size_t, size_t> const p{ lhs, rhs };
