@@ -188,6 +188,28 @@ Material* Material::Builder::build(Engine& engine) const {
         return nullptr;
     }
 
+    // Try checking CRC32 value for the package and skip if it's unavailable.
+    if (downcast(engine).features.material.check_crc32_after_loading) {
+        uint32_t parsedCrc32 = 0;
+        materialParser->getMaterialCrc32(&parsedCrc32);
+
+        constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+        const size_t originalSize = mImpl->mSize - crc32ChunkSize;
+        assert_invariant(mImpl->mSize > crc32ChunkSize);
+
+        std::vector<uint32_t> crc32Table;
+        hash::crc32GenerateTable(crc32Table);
+        uint32_t expectedCrc32 = hash::crc32Update(0, mImpl->mPayload, originalSize, crc32Table);
+        if (parsedCrc32 != expectedCrc32) {
+            CString name;
+            materialParser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' is corrupted: crc32_expected=" << expectedCrc32
+                       << ", crc32_parsed=" << parsedCrc32;
+            return nullptr;
+        }
+    }
+
     uint32_t v = 0;
     materialParser->getShaderModels(&v);
     bitset32 shaderModels;
@@ -223,7 +245,7 @@ Material* Material::Builder::build(Engine& engine) const {
                 materialParser->getName(&name);
                 LOG(WARNING) << "The stereoscopic type in the compiled material '"
                              << name.c_str_safe() << "' is " << (int) materialStereoscopicType
-                             << ", which is not compatiable with the engine's setting "
+                             << ", which is not compatible with the engine's setting "
                              << (int) engineStereoscopicType << ".";
             }
         }

@@ -255,6 +255,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -363,6 +364,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -464,6 +466,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);
@@ -510,6 +513,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 					"-lfilamat",
 					"-force_load ../../../out/ios-debug/filament/lib/arm64/libbackend_test.a",
 				);

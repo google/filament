@@ -62,6 +62,9 @@ public:
         return mStart == (uint8_t*) FAKE_DRY_RUNNER_START_ADDR;
     }
 
+    uint8_t* getStartPtr() {
+        return mStart;
+    }
     size_t getBytesWritten() {
         return mCursor - mStart;
     }
@@ -183,7 +186,7 @@ public:
         return size;
     }
 
-    void writeOffsetplaceholder(size_t index) {
+    void writeOffsetPlaceholder(size_t index) {
         mOffsetPlaceholders.insert(std::pair<size_t, uint8_t*>(index, mCursor));
         if (!isDryRunner()) {
             mCursor[0] = 0x0;
@@ -228,7 +231,7 @@ public:
         mCursor += 4;
     }
 
-    void writePlaceHoldValue(size_t v) {
+    void writeValue(size_t v) {
         assert(!mValuePlaceholders.empty());
 
         if (v > UINT32_MAX) {

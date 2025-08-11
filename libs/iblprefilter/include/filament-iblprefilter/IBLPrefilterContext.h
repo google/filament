@@ -227,7 +227,6 @@ public:
                 filament::Texture* outIrradianceTexture = nullptr);
 
     private:
-        filament::Texture* createIrradianceTexture();
         IBLPrefilterContext& mContext;
         filament::Material* mKernelMaterial = nullptr;
         filament::Texture* mKernelTexture = nullptr;
@@ -325,7 +324,6 @@ public:
         // TODO: add a callback for when the processing is done?
 
     private:
-        filament::Texture* createReflectionsTexture();
         IBLPrefilterContext& mContext;
         filament::Material* mKernelMaterial = nullptr;
         filament::Texture* mKernelTexture = nullptr;
