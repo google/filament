@@ -188,6 +188,10 @@ private:
 
     bool const mIsSRGBSwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+
+    // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
+    // data to process it at call time. So we store it and process it during updateStreams.
+    std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
 };
 
 } // namespace filament::backend
