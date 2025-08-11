@@ -1,0 +1,25 @@
+# .github/actions/fetch-gltf-assets/action.yml
+name: 'Fetch and Cache glTF Assets'
+description: 'Downloads and caches glTF assets by calling the get-gltf-sample-assets.sh script.'
+
+outputs:
+  cache-hit:
+    description: "A boolean value to indicate if the cache was hit. 'true' or 'false'."
+    value: ${{ steps.cache-gltf.outputs.cache-hit }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions  
+    - name: Cache glTF assets
+      id: cache-gltf
+      uses: actions/cache@v4
+      with:
+        path: gltf
+        key: ${{ runner.os }}-gltf-assets-${{ env.GITHUB_GLTF_SAMPLE_ASSETS_COMMIT }}
+    - name: Download assets via script if cache not found
+      if: steps.cache-gltf.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "Cache miss for commit ${{ env.GITHUB_GLTF_SAMPLE_ASSETS_COMMIT }}. Running download script..."
+        bash build/common/get-gltf-sample-assets.sh
