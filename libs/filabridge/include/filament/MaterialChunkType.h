@@ -98,6 +98,8 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     DictionaryText = charTo64bitNum("DIC_TEXT"),
     DictionarySpirv = charTo64bitNum("DIC_SPIR"),
     DictionaryMetalLibrary = charTo64bitNum("DIC_MLIB"),
+
+    MaterialCrc32 = charTo64bitNum("MAT_CRC "),
 };
 
 } // namespace filamat

@@ -57,7 +57,7 @@ void compressShader(std::string_view src, Flattener &f, const LineDictionary& di
 
         cur++;
     }
-    f.writePlaceHoldValue(numLines);
+    f.writeValue(numLines);
 }
 
 void MaterialTextChunk::flatten(Flattener& f) {
@@ -90,7 +90,7 @@ void MaterialTextChunk::flatten(Flattener& f) {
     for (size_t i = 0; i < mEntries.size(); i++) {
         writeEntryAttributes(i, f);
         const ShaderMapping& mapping = mDuplicateMap[i];
-        f.writeOffsetplaceholder(mapping.isDup ? mapping.dupOfIndex : i);
+        f.writeOffsetPlaceholder(mapping.isDup ? mapping.dupOfIndex : i);
     }
 
     // Write all strings

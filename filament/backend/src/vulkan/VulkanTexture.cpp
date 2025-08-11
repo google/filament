@@ -117,12 +117,14 @@ inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         if (any(usage & TextureUsage::SAMPLEABLE)) {
             return VulkanLayout::DEPTH_SAMPLER;
-        } else {
-            return VulkanLayout::DEPTH_ATTACHMENT;
         }
+        return VulkanLayout::DEPTH_ATTACHMENT;
     }
 
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        if (any(usage & TextureUsage::SAMPLEABLE)) {
+            return VulkanLayout::FRAG_READ;
+        }
         return VulkanLayout::COLOR_ATTACHMENT;
     }
     // Finally, the layout for an immutable texture is optimal read-only.
