@@ -207,16 +207,11 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
     VulkanStageImage* stageImage = new VulkanStageImage(
         vkformat, width, height, memory, image, mCurrentFrame);
 
-    // We use VK_IMAGE_LAYOUT_GENERAL here because the spec says:
-    // "Host access to image memory is only well-defined for linear images and for image
-    // subresources of those images which are currently in either the
-    // VK_IMAGE_LAYOUT_PREINITIALIZED or VK_IMAGE_LAYOUT_GENERAL layout. Calling
-    // vkGetImageSubresourceLayout for a linear image returns a subresource layout mapping that is
-    // valid for either of those image layouts."
     fvkutils::transitionLayout(cmdbuffer, {
             .image = stageImage->image(),
             .oldLayout = VulkanLayout::UNDEFINED,
-            .newLayout = VulkanLayout::STAGING, // (= VK_IMAGE_LAYOUT_GENERAL)
+            // TRANSFER_SRC because we're about to blit this to the actual texture.
+            .newLayout = VulkanLayout::TRANSFER_SRC,
             .subresources = { aspectFlags, 0, 1, 0, 1 },
         });
 

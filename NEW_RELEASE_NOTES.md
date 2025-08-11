@@ -13,3 +13,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - engine: Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
   depth-only passes. [**Requires recompiling materials**]
 - material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
+- material: Add CRC32 validation for material packages [⚠️ **New Material Version**]

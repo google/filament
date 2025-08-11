@@ -18,7 +18,6 @@
 #ifndef TNT_MATERIALPARSER_H
 #define TNT_MATERIALPARSER_H
 
-#include <string>
 #include <unordered_map>
 
 #include "Config.h"
@@ -82,12 +81,14 @@ private:
     using MaterialConfigProcessor = bool (MaterialParser::*)
             (const MaterialLexeme&, filamat::MaterialBuilder& builder) const;
     // Map used to store Command pattern function pointers.
-    std::unordered_map<std::string, MaterialConfigProcessor> mConfigProcessor;
+    // Using string_view is generally not recommended in a map, but the string keys are program constants,
+    // which guarantees that the strings will outlive lifetime of the map. See MaterialParser.cpp
+    std::unordered_map<std::string_view, MaterialConfigProcessor> mConfigProcessor;
 
     // The same, but for pure JSON syntax
     using MaterialConfigProcessorJSON = bool (MaterialParser::*)
             (const JsonishValue*, filamat::MaterialBuilder& builder) const;
-    std::unordered_map<std::string, MaterialConfigProcessorJSON> mConfigProcessorJSON;
+    std::unordered_map<std::string_view, MaterialConfigProcessorJSON> mConfigProcessorJSON;
 };
 
 } // namespace matp
