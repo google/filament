@@ -65,4 +65,6 @@ add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} matp gtest)
 
+target_include_directories(${TARGET} PRIVATE ${matp_SOURCE_DIR}/src)
+
 set_target_properties(test_matp PROPERTIES FOLDER Tests)
