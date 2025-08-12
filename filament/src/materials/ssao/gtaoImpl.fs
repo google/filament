@@ -73,6 +73,19 @@ float updateHorizon(float sampleHorizonCos, float currentHorizonCos, float fallO
         : mix(currentHorizonCos, sampleHorizonCos, materialParams.thicknessHeuristic);
 }
 
+float calculateHorizonCos(highp vec3 sampleDelta, highp vec3 viewDir, float horizonCos) {
+    highp float sqSampleDist = dot(sampleDelta, sampleDelta);
+    float invSampleDist = rsqrt(sqSampleDist);
+
+    // Use the view space radius to calculate the fallOff
+    float fallOff = saturate(sqSampleDist * materialParams.invRadiusSquared * 2.0);
+
+    // sample horizon cos
+    float shc = dot(sampleDelta, viewDir) * invSampleDist;
+
+    return updateHorizon(shc, horizonCos, fallOff);
+}
+
 uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
     uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
     uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
@@ -146,9 +159,13 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         // `n` is the signed angle between projNormal and viewDir
         float n = signNorm * acosFast(cosNorm);
 
+        // These are used under non-bitmask mode or bitmask + bentNormal mode
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
+
+        // This is only used in bitmask mode
         uint globalOccludedBitfield = 0u;
+
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
@@ -173,23 +190,16 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
                 globalOccludedBitfield = calculateVisibilityMask(sampleDelta1, viewDir, -1.0, globalOccludedBitfield, n, origin);
             }
             else {
-                highp vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
-                vec2 invSampleDist = rsqrt(sqSampleDist);
-
-                // Use the view space radius to calculate the fallOff
-                vec2 fallOff = saturate(sqSampleDist.xy * materialParams.invRadiusSquared * 2.0);
-
-                // sample horizon cos
-                float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
-                float shc1 = dot(sampleDelta1, viewDir) * invSampleDist.y;
-
-                horizonCos0 = updateHorizon(shc0, horizonCos0, fallOff.x);
-                horizonCos1 = updateHorizon(shc1, horizonCos1, fallOff.y);
+                horizonCos0 = calculateHorizonCos(sampleDelta0, viewDir, horizonCos0);
+                horizonCos1 = calculateHorizonCos(sampleDelta1, viewDir, horizonCos1);
             }
         }
 
         if (materialConstants_useVisibilityBitmasks) {
+            // Calculate the portion of the occluded sector
             visibility += float(bitCount_(globalOccludedBitfield)) / float(SECTOR_COUNT);
+
+            // TODO: Calculate bent normal
         }
         else {
             float h0 = -acosFast(horizonCos1);
