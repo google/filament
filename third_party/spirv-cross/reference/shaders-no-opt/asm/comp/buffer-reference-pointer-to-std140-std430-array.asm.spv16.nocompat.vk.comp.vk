@@ -5,6 +5,7 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(buffer_reference) buffer vec20_stride_8Pointer;
 layout(buffer_reference) buffer vec20_stride_16Pointer;
+
 layout(std430, buffer_reference, buffer_reference_align = 4) buffer vec20_stride_8Pointer
 {
     vec2 value[];

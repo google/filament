@@ -1,0 +1,30 @@
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 0.0f
+#endif
+static const float spec_const = SPIRV_CROSS_CONSTANT_ID_0;
+static const float4 _20 = float4(spec_const);
+static float _42;
+
+static const float _26[8] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+
+cbuffer UBO : register(b0)
+{
+    float ubo_uniform_float : packoffset(c0);
+};
+
+
+void comp_main()
+{
+    float4 a = float4(0.0f);
+    float4x4 b = float4x4(float4(1.0f), float4(1.0f), float4(1.0f), float4(1.0f));
+    float4 c = _20;
+    float4 _36 = float4(ubo_uniform_float);
+    float4 d = _36;
+    float4x4 e = float4x4(_36, _36, _36, _36);
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

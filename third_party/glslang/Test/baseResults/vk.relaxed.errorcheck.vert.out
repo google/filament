@@ -1,0 +1,140 @@
+vk.relaxed.errorcheck.vert
+Shader version: 460
+0:? Sequence
+0:9  Function Definition: foo( ( global highp 4-component vector of float)
+0:9    Function Parameters: 
+0:10    Sequence
+0:10      Branch: Return with expression
+0:10        vector swizzle ( temp highp 4-component vector of float)
+0:10          a: direct index for structure ( uniform highp 2-component vector of float)
+0:10            'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a})
+0:10            Constant:
+0:10              0 (const uint)
+0:10          Sequence
+0:10            Constant:
+0:10              0 (const int)
+0:10            Constant:
+0:10              1 (const int)
+0:10            Constant:
+0:10              0 (const int)
+0:10            Constant:
+0:10              1 (const int)
+0:13  Function Definition: main( ( global void)
+0:13    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp highp 4-component vector of float)
+0:14        'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:14        Function Call: foo( ( global highp 4-component vector of float)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a})
+0:?     'gl_VertexIndex' ( in int VertexIndex)
+0:?     'gl_InstanceIndex' ( in int InstanceIndex)
+
+vk.relaxed.errorcheck.frag
+ERROR: 0:11: 'test' :  Redeclaration: already declared as " uniform highp float"
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 460
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:13  Function Definition: foo( ( global highp 4-component vector of float)
+0:13    Function Parameters: 
+0:14    Sequence
+0:14      Branch: Return with expression
+0:14        add ( temp highp 4-component vector of float)
+0:14          a: direct index for structure ( uniform highp 4-component vector of float)
+0:14            'anon@0' (layout( column_major std140) uniform block{ uniform highp 4-component vector of float a,  uniform highp float test})
+0:14            Constant:
+0:14              0 (const uint)
+0:14          Construct vec4 ( temp highp 4-component vector of float)
+0:14            test: direct index for structure ( uniform highp float)
+0:14              'anon@0' (layout( column_major std140) uniform block{ uniform highp 4-component vector of float a,  uniform highp float test})
+0:14              Constant:
+0:14                1 (const uint)
+0:17  Function Definition: main( ( global void)
+0:17    Function Parameters: 
+0:18    Sequence
+0:18      move second child to first child ( temp highp 4-component vector of float)
+0:18        'o' ( out highp 4-component vector of float)
+0:18        add ( temp highp 4-component vector of float)
+0:18          'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:18          Function Call: foo( ( global highp 4-component vector of float)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:?     'o' ( out highp 4-component vector of float)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform highp 4-component vector of float a,  uniform highp float test})
+
+
+Linked vertex stage:
+
+
+Linked fragment stage:
+
+ERROR: Linking fragment stage: Types must match:
+    a: " uniform highp 2-component vector of float" in stage vertex versus " uniform highp 4-component vector of float" in stage fragment
+
+Shader version: 460
+0:? Sequence
+0:9  Function Definition: foo( ( global highp 4-component vector of float)
+0:9    Function Parameters: 
+0:10    Sequence
+0:10      Branch: Return with expression
+0:10        vector swizzle ( temp highp 4-component vector of float)
+0:10          a: direct index for structure ( uniform highp 2-component vector of float)
+0:10            'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a,  uniform highp float test})
+0:10            Constant:
+0:10              0 (const uint)
+0:10          Sequence
+0:10            Constant:
+0:10              0 (const int)
+0:10            Constant:
+0:10              1 (const int)
+0:10            Constant:
+0:10              0 (const int)
+0:10            Constant:
+0:10              1 (const int)
+0:13  Function Definition: main( ( global void)
+0:13    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp highp 4-component vector of float)
+0:14        'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:14        Function Call: foo( ( global highp 4-component vector of float)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth out highp 4-component vector of float)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a,  uniform highp float test})
+0:?     'gl_VertexIndex' ( in int VertexIndex)
+0:?     'gl_InstanceIndex' ( in int InstanceIndex)
+Shader version: 460
+gl_FragCoord origin is upper left
+ERROR: node is still EOpNull!
+0:13  Function Definition: foo( ( global highp 4-component vector of float)
+0:13    Function Parameters: 
+0:14    Sequence
+0:14      Branch: Return with expression
+0:14        add ( temp highp 4-component vector of float)
+0:14          a: direct index for structure ( uniform highp 4-component vector of float)
+0:14            'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a,  uniform highp float test})
+0:14            Constant:
+0:14              0 (const uint)
+0:14          Construct vec4 ( temp highp 4-component vector of float)
+0:14            test: direct index for structure ( uniform highp float)
+0:14              'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a,  uniform highp float test})
+0:14              Constant:
+0:14                1 (const uint)
+0:17  Function Definition: main( ( global void)
+0:17    Function Parameters: 
+0:18    Sequence
+0:18      move second child to first child ( temp highp 4-component vector of float)
+0:18        'o' ( out highp 4-component vector of float)
+0:18        add ( temp highp 4-component vector of float)
+0:18          'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:18          Function Call: foo( ( global highp 4-component vector of float)
+0:?   Linker Objects
+0:?     'io' (layout( location=0) smooth in highp 4-component vector of float)
+0:?     'o' ( out highp 4-component vector of float)
+0:?     'anon@0' (layout( column_major std140) uniform block{ uniform highp 2-component vector of float a,  uniform highp float test})
+
+Validation failed
+SPIR-V is not generated for failed compile or link
