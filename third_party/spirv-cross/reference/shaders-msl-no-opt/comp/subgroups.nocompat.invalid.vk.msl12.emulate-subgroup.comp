@@ -1,0 +1,30 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float FragColor;
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(device SSBO& _9 [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]], unsupported-built-in-type gl_WorkGroupSize [[unsupported-built-in]])
+{
+    uint gl_NumSubgroups = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
+    uint gl_SubgroupID = gl_LocalInvocationIndex;
+    uint gl_SubgroupSize = 1;
+    uint gl_SubgroupInvocationID = 0;
+    _9.FragColor = float(gl_NumSubgroups);
+    _9.FragColor = float(gl_SubgroupID);
+    _9.FragColor = float(gl_SubgroupSize);
+    _9.FragColor = float(gl_SubgroupInvocationID);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+    threadgroup_barrier(mem_flags::mem_device);
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_texture);
+    bool elected = true;
+}
+

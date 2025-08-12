@@ -14,18 +14,6 @@ struct ResType_1
     ivec2 _m1;
 };
 
-struct ResType_2
-{
-    highp float _m0;
-    highp float _m1;
-};
-
-struct ResType_3
-{
-    highp vec2 _m0;
-    highp vec2 _m1;
-};
-
 layout(location = 0) in float v0;
 layout(location = 1) in vec2 v1;
 layout(location = 0) out float FragColor;
@@ -44,14 +32,12 @@ void main()
     _35._m0 = frexp(v1, _35._m1);
     mediump ivec2 e1 = _35._m1;
     vec2 f1 = _35._m0;
-    ResType_2 _42;
-    _42._m0 = modf(v0, _42._m1);
-    float r0 = _42._m1;
-    float m0 = _42._m0;
-    ResType_3 _49;
-    _49._m0 = modf(v1, _49._m1);
-    vec2 r1 = _49._m1;
-    vec2 m1 = _49._m0;
+    float r0;
+    float _41 = modf(v0, r0);
+    float m0 = _41;
+    vec2 r1;
+    vec2 _45 = modf(v1, r1);
+    vec2 m1 = _45;
     FragColor = ((((f0 + f1.x) + f1.y) + m0) + m1.x) + m1.y;
 }
 

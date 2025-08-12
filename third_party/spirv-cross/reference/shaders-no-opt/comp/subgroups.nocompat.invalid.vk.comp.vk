@@ -3,7 +3,6 @@
 #extension GL_KHR_shader_subgroup_ballot : require
 #extension GL_KHR_shader_subgroup_shuffle : require
 #extension GL_KHR_shader_subgroup_shuffle_relative : require
-#extension GL_KHR_shader_subgroup_rotate : require
 #extension GL_KHR_shader_subgroup_vote : require
 #extension GL_KHR_shader_subgroup_arithmetic : require
 #extension GL_KHR_shader_subgroup_clustered : require
@@ -47,8 +46,6 @@ void main()
     uint shuffled_xor = subgroupShuffleXor(30u, 8u);
     uint shuffled_up = subgroupShuffleUp(20u, 4u);
     uint shuffled_down = subgroupShuffleDown(20u, 4u);
-    uint rotated = subgroupRotate(20u, 4u);
-    uint rotated_clustered = subgroupClusteredRotate(20u, 4u, 8u);
     bool has_all = subgroupAll(true);
     bool has_any = subgroupAny(true);
     bool has_equal = subgroupAllEqual(true);

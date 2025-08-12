@@ -1,17 +1,7 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
-
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
 
 struct Position;
 struct PositionReferences;
@@ -42,11 +32,11 @@ vertex main0_out main0(constant Registers& registers [[buffer(0)]], uint gl_Inst
 {
     main0_out out = {};
     int slice = int(gl_InstanceIndex);
-    device Position* __restrict positions = registers.references->buffers[slice];
+    const device Position* __restrict positions = registers.references->buffers[slice];
     float2 pos = positions->positions[int(gl_VertexIndex)] * 2.5;
-    pos += ((float2(float(spvSMod(slice, 8)), float(slice / 8)) - float2(3.5)) * 3.0);
+    pos += ((float2(float(slice % 8), float(slice / 8)) - float2(3.5)) * 3.0);
     out.gl_Position = registers.view_projection * float4(pos, 0.0, 1.0);
-    int index_x = spvSMod(int(gl_VertexIndex), 16);
+    int index_x = int(gl_VertexIndex) % 16;
     int index_y = int(gl_VertexIndex) / 16;
     float r = 0.5 + (0.300000011920928955078125 * sin(float(index_x)));
     float g = 0.5 + (0.300000011920928955078125 * sin(float(index_y)));

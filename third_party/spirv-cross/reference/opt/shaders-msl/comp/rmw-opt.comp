@@ -1,17 +1,7 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
-
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
 
 struct SSBO
 {
@@ -30,7 +20,7 @@ kernel void main0(device SSBO& _9 [[buffer(0)]])
     _9.a = _9.a >> 3;
     _9.a &= 40;
     _9.a ^= 10;
-    _9.a = spvSMod(_9.a, 40);
+    _9.a %= 40;
     _9.a |= 1;
     _9.a = 0;
 }

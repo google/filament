@@ -13,9 +13,8 @@ layout(binding = 1, std430) writeonly buffer SSBO2
 
 void main()
 {
-    vec4 _29 = _23.in_data[gl_GlobalInvocationID.x];
-    _33.out_data[gl_GlobalInvocationID.x] = mod(_29, _33.out_data[gl_GlobalInvocationID.x]);
-    _33.out_data[gl_GlobalInvocationID.x] = uintBitsToFloat(floatBitsToUint(_29) % floatBitsToUint(_33.out_data[gl_GlobalInvocationID.x]));
-    _33.out_data[gl_GlobalInvocationID.x] = intBitsToFloat(floatBitsToInt(_29) % floatBitsToInt(_33.out_data[gl_GlobalInvocationID.x]));
+    _33.out_data[gl_GlobalInvocationID.x] = mod(_23.in_data[gl_GlobalInvocationID.x], _33.out_data[gl_GlobalInvocationID.x]);
+    _33.out_data[gl_GlobalInvocationID.x] = uintBitsToFloat(floatBitsToUint(_23.in_data[gl_GlobalInvocationID.x]) % floatBitsToUint(_33.out_data[gl_GlobalInvocationID.x]));
+    _33.out_data[gl_GlobalInvocationID.x] = intBitsToFloat(floatBitsToInt(_23.in_data[gl_GlobalInvocationID.x]) % floatBitsToInt(_33.out_data[gl_GlobalInvocationID.x]));
 }
 

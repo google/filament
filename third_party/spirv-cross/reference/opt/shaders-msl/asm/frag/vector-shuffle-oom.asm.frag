@@ -96,11 +96,10 @@ struct main0_out
 fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 [[buffer(1)]], constant _7& _15259 [[buffer(2)]], texture2d<float> _5785 [[texture(0)]], texture2d<float> _3312 [[texture(1)]], texture2d<float> _4862 [[texture(2)]], sampler _5688 [[sampler(0)]], sampler _4646 [[sampler(1)]], sampler _3594 [[sampler(2)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
-    float2 _19927 = gl_FragCoord.xy * _15259._m23.xy;
     float4 _17581 = _22044._m2 * _22044._m0.xyxy;
     float2 _7011 = _17581.xy;
     float2 _21058 = _17581.zw;
-    float2 _13149 = fast::clamp(_19927 + (float2(0.0, -2.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13149 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(0.0, -2.0) * _22044._m0.xy), _7011, _21058);
     float3 _12103 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13149, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17670 = _3312.sample(_4646, _13149, level(0.0));
     float _16938 = _17670.y;
@@ -113,7 +112,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7719 = _12103;
     }
-    float2 _13150 = fast::clamp(_19927 + (float2(-1.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13150 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(-1.0) * _22044._m0.xy), _7011, _21058);
     float3 _12104 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13150, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17671 = _3312.sample(_4646, _13150, level(0.0));
     float _16939 = _17671.y;
@@ -126,7 +125,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7720 = _12104;
     }
-    float2 _13151 = fast::clamp(_19927 + (float2(0.0, -1.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13151 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(0.0, -1.0) * _22044._m0.xy), _7011, _21058);
     float3 _12105 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13151, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17672 = _3312.sample(_4646, _13151, level(0.0));
     float _16940 = _17672.y;
@@ -139,7 +138,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7721 = _12105;
     }
-    float2 _13152 = fast::clamp(_19927 + (float2(1.0, -1.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13152 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(1.0, -1.0) * _22044._m0.xy), _7011, _21058);
     float3 _12106 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13152, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17673 = _3312.sample(_4646, _13152, level(0.0));
     float _16941 = _17673.y;
@@ -152,7 +151,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7722 = _12106;
     }
-    float2 _13153 = fast::clamp(_19927 + (float2(-2.0, 0.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13153 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(-2.0, 0.0) * _22044._m0.xy), _7011, _21058);
     float3 _12107 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13153, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17674 = _3312.sample(_4646, _13153, level(0.0));
     float _16942 = _17674.y;
@@ -165,7 +164,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7723 = _12107;
     }
-    float2 _13154 = fast::clamp(_19927 + (float2(-1.0, 0.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13154 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(-1.0, 0.0) * _22044._m0.xy), _7011, _21058);
     float3 _12108 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13154, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17675 = _3312.sample(_4646, _13154, level(0.0));
     float _16943 = _17675.y;
@@ -178,7 +177,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7724 = _12108;
     }
-    float2 _13155 = fast::clamp(_19927, _7011, _21058);
+    float2 _13155 = fast::clamp(gl_FragCoord.xy * _15259._m23.xy, _7011, _21058);
     float3 _12109 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13155, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17676 = _3312.sample(_4646, _13155, level(0.0));
     float _16944 = _17676.y;
@@ -191,7 +190,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7725 = _12109;
     }
-    float2 _13156 = fast::clamp(_19927 + (float2(1.0, 0.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13156 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(1.0, 0.0) * _22044._m0.xy), _7011, _21058);
     float3 _12110 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13156, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17677 = _3312.sample(_4646, _13156, level(0.0));
     float _16945 = _17677.y;
@@ -204,7 +203,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7726 = _12110;
     }
-    float2 _13157 = fast::clamp(_19927 + (float2(2.0, 0.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13157 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(2.0, 0.0) * _22044._m0.xy), _7011, _21058);
     float3 _12111 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13157, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17678 = _3312.sample(_4646, _13157, level(0.0));
     float _16946 = _17678.y;
@@ -217,7 +216,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7727 = _12111;
     }
-    float2 _13158 = fast::clamp(_19927 + (float2(-1.0, 1.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13158 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(-1.0, 1.0) * _22044._m0.xy), _7011, _21058);
     float3 _12112 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13158, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17679 = _3312.sample(_4646, _13158, level(0.0));
     float _16947 = _17679.y;
@@ -230,7 +229,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7728 = _12112;
     }
-    float2 _13159 = fast::clamp(_19927 + (float2(0.0, 1.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13159 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(0.0, 1.0) * _22044._m0.xy), _7011, _21058);
     float3 _12113 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13159, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17680 = _3312.sample(_4646, _13159, level(0.0));
     float _16948 = _17680.y;
@@ -243,7 +242,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7729 = _12113;
     }
-    float2 _13160 = fast::clamp(_19927 + _22044._m0.xy, _7011, _21058);
+    float2 _13160 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, _22044._m0.xy), _7011, _21058);
     float3 _12114 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13160, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17681 = _3312.sample(_4646, _13160, level(0.0));
     float _16949 = _17681.y;
@@ -256,7 +255,7 @@ fragment main0_out main0(constant _3& _22044 [[buffer(0)]], constant _4& _12348 
     {
         _7730 = _12114;
     }
-    float2 _13161 = fast::clamp(_19927 + (float2(0.0, 2.0) * _22044._m0.xy), _7011, _21058);
+    float2 _13161 = fast::clamp(fma(gl_FragCoord.xy, _15259._m23.xy, float2(0.0, 2.0) * _22044._m0.xy), _7011, _21058);
     float3 _12115 = float3(_12348._m5) * fast::clamp(_5785.sample(_5688, _13161, level(0.0)).w * _22044._m1, 0.0, 1.0);
     float4 _17682 = _3312.sample(_4646, _13161, level(0.0));
     float _16950 = _17682.y;

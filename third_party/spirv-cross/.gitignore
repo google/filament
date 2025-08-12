@@ -26,6 +26,3 @@
 
 !CMakeLists.txt
 !LICENSES/*.txt
-
-# Running tests leaves *.spv files in the root directory.
-*.spv

@@ -12,14 +12,6 @@ inline Tx mod(Tx x, Ty y)
     return x - y * floor(x / y);
 }
 
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
-
 struct SSBO
 {
     float4 in_data[1];
@@ -39,7 +31,7 @@ kernel void main0(const device SSBO& _23 [[buffer(0)]], device SSBO2& _33 [[buff
     _33.out_data[ident] = v;
     uint4 vu = as_type<uint4>(_23.in_data[ident]) % as_type<uint4>(_33.out_data[ident]);
     _33.out_data[ident] = as_type<float4>(vu);
-    int4 vi = spvSMod(as_type<int4>(_23.in_data[ident]), as_type<int4>(_33.out_data[ident]));
+    int4 vi = as_type<int4>(_23.in_data[ident]) % as_type<int4>(_33.out_data[ident]);
     _33.out_data[ident] = as_type<float4>(vi);
 }
 

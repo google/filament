@@ -12,6 +12,18 @@ uint2 spvTexelBufferCoord(uint tc)
     return uint2(tc % 4096, tc / 4096);
 }
 
+template<typename T> struct spvRemoveReference { typedef T type; };
+template<typename T> struct spvRemoveReference<thread T&> { typedef T type; };
+template<typename T> struct spvRemoveReference<thread T&&> { typedef T type; };
+template<typename T> inline constexpr thread T&& spvForward(thread typename spvRemoveReference<T>::type& x)
+{
+    return static_cast<thread T&&>(x);
+}
+template<typename T> inline constexpr thread T&& spvForward(thread typename spvRemoveReference<T>::type&& x)
+{
+    return static_cast<thread T&&>(x);
+}
+
 enum class spvSwizzle : uint
 {
     none = 0,
@@ -60,12 +72,9 @@ inline T spvTextureSwizzle(T x, uint s)
     return spvTextureSwizzle(vec<T, 4>(x, 0, 0, 1), s).x;
 }
 
-template<typename Tex, typename... Tp>
-using spvGatherReturn = decltype(declval<Tex>().gather(declval<sampler>(), declval<Tp>()...));
-
 // Wrapper function that swizzles texture gathers.
-template<typename Tex, typename... Ts>
-inline spvGatherReturn<Tex, Ts...> spvGatherSwizzle(const thread Tex& t, sampler s, uint sw, component c, Ts... params) METAL_CONST_ARG(c)
+template<typename T, template<typename, access = access::sample, typename = void> class Tex, typename... Ts>
+inline vec<T, 4> spvGatherSwizzle(const thread Tex<T>& t, sampler s, uint sw, component c, Ts... params) METAL_CONST_ARG(c)
 {
     if (sw)
     {
@@ -74,29 +83,29 @@ inline spvGatherReturn<Tex, Ts...> spvGatherSwizzle(const thread Tex& t, sampler
             case spvSwizzle::none:
                 break;
             case spvSwizzle::zero:
-                return spvGatherReturn<Tex, Ts...>(0, 0, 0, 0);
+                return vec<T, 4>(0, 0, 0, 0);
             case spvSwizzle::one:
-                return spvGatherReturn<Tex, Ts...>(1, 1, 1, 1);
+                return vec<T, 4>(1, 1, 1, 1);
             case spvSwizzle::red:
-                return t.gather(s, params..., component::x);
+                return t.gather(s, spvForward<Ts>(params)..., component::x);
             case spvSwizzle::green:
-                return t.gather(s, params..., component::y);
+                return t.gather(s, spvForward<Ts>(params)..., component::y);
             case spvSwizzle::blue:
-                return t.gather(s, params..., component::z);
+                return t.gather(s, spvForward<Ts>(params)..., component::z);
             case spvSwizzle::alpha:
-                return t.gather(s, params..., component::w);
+                return t.gather(s, spvForward<Ts>(params)..., component::w);
         }
     }
     switch (c)
     {
         case component::x:
-            return t.gather(s, params..., component::x);
+            return t.gather(s, spvForward<Ts>(params)..., component::x);
         case component::y:
-            return t.gather(s, params..., component::y);
+            return t.gather(s, spvForward<Ts>(params)..., component::y);
         case component::z:
-            return t.gather(s, params..., component::z);
+            return t.gather(s, spvForward<Ts>(params)..., component::z);
         case component::w:
-            return t.gather(s, params..., component::w);
+            return t.gather(s, spvForward<Ts>(params)..., component::w);
     }
 }
 

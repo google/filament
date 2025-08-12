@@ -14,14 +14,14 @@ struct spvDescriptor
 template<typename T>
 struct spvDescriptorArray
 {
-    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(&ptr->value)
+    spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)
     {
     }
     const device T& operator [] (size_t i) const
     {
-        return ptr[i];
+        return ptr[i].value;
     }
-    const device T* ptr;
+    const device spvDescriptor<T>* ptr;
 };
 
 struct SSBO

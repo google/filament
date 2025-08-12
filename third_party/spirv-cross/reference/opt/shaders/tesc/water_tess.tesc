@@ -46,20 +46,20 @@ void main()
     else
     {
         vOutPatchPosBase = vPatchPosBase[0];
-        vec2 _681 = (vPatchPosBase[0] + (vec2(-0.5) * _41.uPatchSize)) * _41.uScale.xy;
-        vec2 _710 = (vPatchPosBase[0] + (vec2(0.5, -0.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _681 = (vec2(-0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
+        vec2 _710 = (vec2(0.5, -0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _729 = clamp(log2((length(_41.uCamPos - vec3(_710.x, 0.0, _710.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x);
-        vec2 _739 = (vPatchPosBase[0] + (vec2(1.5, -0.5) * _41.uPatchSize)) * _41.uScale.xy;
-        vec2 _768 = (vPatchPosBase[0] + (vec2(-0.5, 0.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _739 = (vec2(1.5, -0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
+        vec2 _768 = (vec2(-0.5, 0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _787 = clamp(log2((length(_41.uCamPos - vec3(_768.x, 0.0, _768.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x);
-        vec2 _797 = (vPatchPosBase[0] + (vec2(0.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _797 = (vec2(0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _816 = clamp(log2((length(_41.uCamPos - vec3(_797.x, 0.0, _797.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x);
-        vec2 _826 = (vPatchPosBase[0] + (vec2(1.5, 0.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _826 = (vec2(1.5, 0.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _845 = clamp(log2((length(_41.uCamPos - vec3(_826.x, 0.0, _826.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x);
-        vec2 _855 = (vPatchPosBase[0] + (vec2(-0.5, 1.5) * _41.uPatchSize)) * _41.uScale.xy;
-        vec2 _884 = (vPatchPosBase[0] + (vec2(0.5, 1.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _855 = (vec2(-0.5, 1.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
+        vec2 _884 = (vec2(0.5, 1.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _903 = clamp(log2((length(_41.uCamPos - vec3(_884.x, 0.0, _884.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x);
-        vec2 _913 = (vPatchPosBase[0] + (vec2(1.5) * _41.uPatchSize)) * _41.uScale.xy;
+        vec2 _913 = (vec2(1.5) * _41.uPatchSize + vPatchPosBase[0]) * _41.uScale.xy;
         float _614 = dot(vec4(_787, _816, clamp(log2((length(_41.uCamPos - vec3(_855.x, 0.0, _855.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x), _903), vec4(0.25));
         float _620 = dot(vec4(clamp(log2((length(_41.uCamPos - vec3(_681.x, 0.0, _681.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x), _729, _787, _816), vec4(0.25));
         float _626 = dot(vec4(_729, clamp(log2((length(_41.uCamPos - vec3(_739.x, 0.0, _739.y)) + 9.9999997473787516355514526367188e-05) * _41.uDistanceMod), 0.0, _41.uMaxTessLevel.x), _816, _845), vec4(0.25));

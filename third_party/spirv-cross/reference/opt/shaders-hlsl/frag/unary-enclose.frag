@@ -1,11 +1,9 @@
 static float4 FragColor;
 static float4 vIn;
-static int4 vIn1;
 
 struct SPIRV_Cross_Input
 {
     float4 vIn : TEXCOORD0;
-    nointerpolation int4 vIn1 : TEXCOORD1;
 };
 
 struct SPIRV_Cross_Output
@@ -21,7 +19,6 @@ void frag_main()
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
 {
     vIn = stage_input.vIn;
-    vIn1 = stage_input.vIn1;
     frag_main();
     SPIRV_Cross_Output stage_output;
     stage_output.FragColor = FragColor;

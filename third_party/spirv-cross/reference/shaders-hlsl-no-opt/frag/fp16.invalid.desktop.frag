@@ -1,9 +1,3 @@
-struct ResType
-{
-    min16float4 _m0;
-    min16float4 _m1;
-};
-
 static min16float4 v4;
 static min16float3 v3;
 static min16float v1;
@@ -120,16 +114,15 @@ void test_builtins()
     res = ceil(v4);
     res = frac(v4);
     res = mod(v4, v4);
-    ResType _145;
-    _145._m0 = modf(v4, _145._m1);
-    min16float4 tmp = _145._m1;
-    res = _145._m0;
+    min16float4 tmp;
+    min16float4 _144 = modf(v4, tmp);
+    res = _144;
     res = min(v4, v4);
     res = max(v4, v4);
     res = clamp(v4, v4, v4);
     res = lerp(v4, v4, v4);
-    bool4 _167 = bool4(v4.x < v4.x, v4.y < v4.y, v4.z < v4.z, v4.w < v4.w);
-    res = min16float4(_167.x ? v4.x : v4.x, _167.y ? v4.y : v4.y, _167.z ? v4.z : v4.z, _167.w ? v4.w : v4.w);
+    bool4 _164 = bool4(v4.x < v4.x, v4.y < v4.y, v4.z < v4.z, v4.w < v4.w);
+    res = min16float4(_164.x ? v4.x : v4.x, _164.y ? v4.y : v4.y, _164.z ? v4.z : v4.z, _164.w ? v4.w : v4.w);
     res = step(v4, v4);
     res = smoothstep(v4, v4, v4);
     bool4 btmp = isnan(v4);

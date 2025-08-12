@@ -3,14 +3,9 @@
 
 layout(location = 0) out float FragColor;
 
-void func()
+void main()
 {
 	FragColor = float(gl_HelperInvocation);
 	demote;
 	FragColor = float(gl_HelperInvocation);
-}
-
-void main()
-{
-	func();
 }

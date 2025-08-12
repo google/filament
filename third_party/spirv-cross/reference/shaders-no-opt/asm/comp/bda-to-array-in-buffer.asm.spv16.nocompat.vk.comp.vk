@@ -12,7 +12,6 @@ layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 layout(buffer_reference) buffer uintPointer;
 layout(buffer_reference) buffer uint8_tPointer;
 layout(buffer_reference) buffer uint8_t12_stride_1Pointer;
-
 layout(buffer_reference) buffer uint8_tPointer
 {
     uint8_t value;

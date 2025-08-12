@@ -50,7 +50,7 @@ void main()
     vec2 _396 = _317.yy;
     vec2 _399 = _396 * _137.distribution[_281].yx;
     vec2 _426 = _396 * _137.distribution[_291].yx;
-    vec2 _434 = (_137.distribution[_291] * _391) + vec2(-_426.x, _426.y);
-    _225.heights[_281] = packHalf2x16(((_137.distribution[_281] * _391) + vec2(-_399.x, _399.y)) + vec2(_434.x, -_434.y));
+    vec2 _434 = _137.distribution[_291] * _391 + vec2(-_426.x, _426.y);
+    _225.heights[_281] = packHalf2x16((_137.distribution[_281] * _391 + vec2(-_399.x, _399.y)) + vec2(_434.x, -_434.y));
 }
 

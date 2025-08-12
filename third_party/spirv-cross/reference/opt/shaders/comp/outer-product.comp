@@ -23,17 +23,14 @@ layout(binding = 1, std430) readonly buffer ReadSSBO
 
 void main()
 {
-    vec2 _29 = _26.v2;
-    _21.m22 = outerProduct(_29, _29);
-    vec3 _38 = _26.v3;
-    _21.m23 = outerProduct(_38, _29);
-    vec4 _47 = _26.v4;
-    _21.m24 = outerProduct(_47, _29);
-    _21.m32 = outerProduct(_29, _38);
-    _21.m33 = outerProduct(_38, _38);
-    _21.m34 = outerProduct(_47, _38);
-    _21.m42 = outerProduct(_29, _47);
-    _21.m43 = outerProduct(_38, _47);
-    _21.m44 = outerProduct(_47, _47);
+    _21.m22 = outerProduct(_26.v2, _26.v2);
+    _21.m23 = outerProduct(_26.v3, _26.v2);
+    _21.m24 = outerProduct(_26.v4, _26.v2);
+    _21.m32 = outerProduct(_26.v2, _26.v3);
+    _21.m33 = outerProduct(_26.v3, _26.v3);
+    _21.m34 = outerProduct(_26.v4, _26.v3);
+    _21.m42 = outerProduct(_26.v2, _26.v4);
+    _21.m43 = outerProduct(_26.v3, _26.v4);
+    _21.m44 = outerProduct(_26.v4, _26.v4);
 }
 

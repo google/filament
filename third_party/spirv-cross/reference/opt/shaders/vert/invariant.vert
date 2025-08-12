@@ -9,8 +9,7 @@ layout(location = 0) invariant out vec4 vColor;
 
 void main()
 {
-    vec4 _20 = vInput1 * vInput2;
-    vec4 _21 = vInput0 + _20;
+    vec4 _21 = vInput1 * vInput2 + vInput0;
     gl_Position = _21;
     vec4 _27 = vInput0 - vInput1;
     vec4 _29 = _27 * vInput2;

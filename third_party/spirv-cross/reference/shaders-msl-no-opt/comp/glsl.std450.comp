@@ -192,12 +192,6 @@ struct SSBO
 struct ResType
 {
     float _m0;
-    float _m1;
-};
-
-struct ResType_1
-{
-    float _m0;
     int _m1;
 };
 
@@ -256,10 +250,9 @@ kernel void main0(device SSBO& _19 [[buffer(0)]])
     _19.m2 = spvInverse2x2(_19.m2);
     _19.m3 = spvInverse3x3(_19.m3);
     _19.m4 = spvInverse4x4(_19.m4);
-    ResType _288;
-    _288._m0 = modf(((device float*)&_19.f32)[0u], _288._m1);
-    float tmp = _288._m1;
-    _19.res = _288._m0;
+    float tmp;
+    float _287 = modf(((device float*)&_19.f32)[0u], tmp);
+    _19.res = _287;
     _19.res = fast::min(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
     _19.ures = min(((device uint*)&_19.u32)[0u], ((device uint*)&_19.u32)[1u]);
     _19.ires = min(((device int*)&_19.s32)[0u], ((device int*)&_19.s32)[1u]);
@@ -273,10 +266,10 @@ kernel void main0(device SSBO& _19 [[buffer(0)]])
     _19.res = step(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u]);
     _19.res = smoothstep(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
     _19.res = fma(((device float*)&_19.f32)[0u], ((device float*)&_19.f32)[1u], ((device float*)&_19.f32)[2u]);
-    ResType_1 _390;
-    _390._m0 = frexp(((device float*)&_19.f32)[0u], _390._m1);
-    int itmp = _390._m1;
-    _19.res = _390._m0;
+    ResType _387;
+    _387._m0 = frexp(((device float*)&_19.f32)[0u], _387._m1);
+    int itmp = _387._m1;
+    _19.res = _387._m0;
     _19.res = ldexp(((device float*)&_19.f32)[0u], itmp);
     _19.ures = pack_float_to_snorm4x8(_19.f32);
     _19.ures = pack_float_to_unorm4x8(_19.f32);

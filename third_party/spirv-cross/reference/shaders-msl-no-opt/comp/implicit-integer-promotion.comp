@@ -5,14 +5,6 @@
 
 using namespace metal;
 
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
-
 struct BUF0
 {
     half2 f16s;
@@ -47,7 +39,7 @@ void test_i16(device BUF0& _24)
     _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] - ((device short*)&_24.i16)[1u]));
     _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] * ((device short*)&_24.i16)[1u]));
     _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] / ((device short*)&_24.i16)[1u]));
-    _24.f16 += as_type<half>(spvSMod(((device short*)&_24.i16)[0u], ((device short*)&_24.i16)[1u]));
+    _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] % ((device short*)&_24.i16)[1u]));
     _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] << ((device short*)&_24.i16)[1u]));
     _24.f16 += as_type<half>(short(((device short*)&_24.i16)[0u] >> ((device short*)&_24.i16)[1u]));
     _24.f16 += as_type<half>(short(~((device short*)&_24.i16)[0u]));
@@ -81,7 +73,7 @@ void test_i16s(device BUF0& _24)
     _24.f16s += as_type<half2>(_24.i16s.xy - _24.i16s.zw);
     _24.f16s += as_type<half2>(_24.i16s.xy * _24.i16s.zw);
     _24.f16s += as_type<half2>(_24.i16s.xy / _24.i16s.zw);
-    _24.f16s += as_type<half2>(spvSMod(_24.i16s.xy, _24.i16s.zw));
+    _24.f16s += as_type<half2>(_24.i16s.xy % _24.i16s.zw);
     _24.f16s += as_type<half2>(_24.i16s.xy << _24.i16s.zw);
     _24.f16s += as_type<half2>(_24.i16s.xy >> _24.i16s.zw);
     _24.f16s += as_type<half2>(~_24.i16s.xy);

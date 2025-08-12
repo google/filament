@@ -2,14 +2,13 @@
 #extension GL_EXT_buffer_reference2 : require
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(buffer_reference) buffer FooPointer;
-
 struct Foo
 {
     uint a;
     uint b;
 };
 
+layout(buffer_reference) buffer FooPointer;
 layout(std430, buffer_reference, buffer_reference_align = 8) buffer FooPointer
 {
     Foo value;

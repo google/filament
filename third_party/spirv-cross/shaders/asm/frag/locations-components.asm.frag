@@ -15,7 +15,7 @@
                OpDecorate %8 Location 1
                OpDecorate %16 Location 1
                OpDecorate %16 Component 2
-               OpDecorate %22 Location 3
+               OpDecorate %22 Location 2
                OpDecorate %22 Flat
                OpDecorate %28 Location 2
                OpDecorate %28 Component 1

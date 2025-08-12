@@ -5,6 +5,6 @@ layout(location = 0) rayPayloadInNV float payload;
 
 void main()
 {
-    payload = gl_RayTmaxNV;
+    payload = gl_HitTNV;
 }
 

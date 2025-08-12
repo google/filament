@@ -5,5 +5,5 @@ layout(set = 0, binding = 0) buffer myBlock {
 } myStorage;
 void main() {
     myStorage.a = (myStorage.a + 1) % 256;
-    myStorage.b[gl_LocalInvocationID.x] = myStorage.b[gl_LocalInvocationID.x] + 0.02;
+    myStorage.b[gl_LocalInvocationID.x] = mod((myStorage.b[gl_LocalInvocationID.x] + 0.02), 1.0);
 }

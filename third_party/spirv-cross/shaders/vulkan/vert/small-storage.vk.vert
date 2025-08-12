@@ -5,7 +5,7 @@
 #extension GL_AMD_gpu_shader_int16 : require
 #extension GL_AMD_gpu_shader_half_float : require
 
-layout(location = 0, component = 0) in uint16_t foo;
+layout(location = 0, component = 0) in int16_t foo;
 layout(location = 0, component = 1) in uint16_t bar;
 layout(location = 1) in float16_t baz;
 
