@@ -74,7 +74,7 @@ static void __cpuid(int cpu_info[4], int info_type) {
 // On linux, just use the c-library getauxval call.
 #if defined(ABSL_INTERNAL_USE_LINUX_GETAUXVAL)
 
-extern "C" unsigned long getauxval(unsigned long type);  // NOLINT(runtime/int)
+#include <sys/auxv.h>
 
 static uint32_t GetAuxval(uint32_t hwcap_type) {
   return static_cast<uint32_t>(getauxval(hwcap_type));

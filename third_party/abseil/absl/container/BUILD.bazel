@@ -70,7 +70,9 @@ cc_library(
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:dynamic_annotations",
+        "//absl/base:iterator_traits_internal",
         "//absl/base:throw_delegate",
+        "//absl/hash:weakly_mixed_integer",
         "//absl/memory",
     ],
 )
@@ -85,6 +87,7 @@ cc_test(
         ":test_allocator",
         "//absl/base:config",
         "//absl/base:exception_testing",
+        "//absl/base:iterator_traits_test_helper",
         "//absl/hash:hash_testing",
         "//absl/memory",
         "@googletest//:gtest",
@@ -144,7 +147,9 @@ cc_library(
         ":inlined_vector_internal",
         "//absl/algorithm",
         "//absl/base:core_headers",
+        "//absl/base:iterator_traits_internal",
         "//absl/base:throw_delegate",
+        "//absl/hash:weakly_mixed_integer",
         "//absl/memory",
         "//absl/meta:type_traits",
     ],
@@ -171,6 +176,7 @@ cc_test(
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:exception_testing",
+        "//absl/base:iterator_traits_test_helper",
         "//absl/hash:hash_testing",
         "//absl/log:check",
         "//absl/memory",
@@ -404,6 +410,7 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         "//absl/base:config",
+        "//absl/hash",
         "//absl/memory",
         "//absl/meta:type_traits",
         "//absl/utility",
@@ -488,6 +495,7 @@ cc_library(
         "//absl/base:no_destructor",
         "//absl/memory",
         "//absl/meta:type_traits",
+        "//absl/random",
         "//absl/strings",
     ],
 )
@@ -523,6 +531,7 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":common_policy_traits",
+        ":container_memory",
         "//absl/meta:type_traits",
     ],
 )
@@ -619,6 +628,7 @@ cc_test(
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/profiling:sample_recorder",
+        "//absl/random",
         "//absl/synchronization",
         "//absl/synchronization:thread_pool",
         "//absl/time",
@@ -655,11 +665,13 @@ cc_library(
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
+        ":common_policy_traits",
         ":container_memory",
         ":raw_hash_set",
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:throw_delegate",
+        "//absl/meta:type_traits",
     ],
 )
 
@@ -671,6 +683,53 @@ cc_library(
     deps = [
         "//absl/meta:type_traits",
         "//absl/types:optional",
+    ],
+)
+
+cc_library(
+    name = "hashtable_control_bytes",
+    hdrs = ["internal/hashtable_control_bytes.h"],
+    copts = ABSL_DEFAULT_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        "//absl/base:config",
+        "//absl/base:core_headers",
+        "//absl/base:endian",
+        "//absl/numeric:bits",
+    ],
+)
+
+cc_test(
+    name = "hashtable_control_bytes_test",
+    srcs = ["internal/hashtable_control_bytes_test.cc"],
+    copts = ABSL_TEST_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        ":hashtable_control_bytes",
+        "//absl/base:config",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "raw_hash_set_resize_impl",
+    hdrs = ["internal/raw_hash_set_resize_impl.h"],
+    copts = ABSL_DEFAULT_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = ["//absl/base:config"],
+)
+
+cc_test(
+    name = "raw_hash_set_resize_impl_test",
+    srcs = ["internal/raw_hash_set_resize_impl_test.cc"],
+    copts = ABSL_TEST_COPTS,
+    linkopts = ABSL_DEFAULT_LINKOPTS,
+    deps = [
+        ":raw_hash_set_resize_impl",
+        "//absl/base:config",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -687,15 +746,21 @@ cc_library(
         ":container_memory",
         ":hash_function_defaults",
         ":hash_policy_traits",
+        ":hashtable_control_bytes",
         ":hashtable_debug_hooks",
         ":hashtablez_sampler",
+        ":raw_hash_set_resize_impl",
+        "//absl/base",
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:dynamic_annotations",
         "//absl/base:endian",
+        "//absl/base:iterator_traits_internal",
         "//absl/base:prefetch",
         "//absl/base:raw_logging_internal",
+        "//absl/functional:function_ref",
         "//absl/hash",
+        "//absl/hash:weakly_mixed_integer",
         "//absl/memory",
         "//absl/meta:type_traits",
         "//absl/numeric:bits",
@@ -719,10 +784,12 @@ cc_test(
         ":flat_hash_set",
         ":hash_function_defaults",
         ":hash_policy_testing",
+        ":hashtable_control_bytes",
         ":hashtable_debug",
         ":hashtablez_sampler",
         ":node_hash_set",
         ":raw_hash_set",
+        ":raw_hash_set_resize_impl",
         ":test_allocator",
         ":test_instance_tracker",
         "//absl/base",
@@ -735,6 +802,8 @@ cc_test(
         "//absl/log:check",
         "//absl/memory",
         "//absl/meta:type_traits",
+        "//absl/numeric:int128",
+        "//absl/random",
         "//absl/strings",
         "//absl/types:optional",
         "@googletest//:gtest",
@@ -1008,6 +1077,7 @@ cc_test(
     deps = [
         ":flat_hash_map",
         ":flat_hash_set",
+        ":hashtablez_sampler",
         ":node_hash_map",
         ":node_hash_set",
         "@googletest//:gtest",
@@ -1038,6 +1108,7 @@ cc_library(
         "//absl/base:core_headers",
         "//absl/base:raw_logging_internal",
         "//absl/base:throw_delegate",
+        "//absl/hash:weakly_mixed_integer",
         "//absl/memory",
         "//absl/meta:type_traits",
         "//absl/strings",
@@ -1123,6 +1194,5 @@ cc_binary(
         "//absl/strings:str_format",
         "//absl/time",
         "@google_benchmark//:benchmark_main",
-        "@googletest//:gtest",
     ],
 )
