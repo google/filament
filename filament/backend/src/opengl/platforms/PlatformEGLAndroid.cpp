@@ -289,14 +289,19 @@ bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
 }
 
 OpenGLPlatform::ExternalTexture* PlatformEGLAndroid::createExternalImageTexture() noexcept {
-    ExternalTexture* outTexture = new (std::nothrow) ExternalTexture{};
+    ExternalTextureAndroid* outTexture = new (std::nothrow) ExternalTextureAndroid{};
     glGenTextures(1, &outTexture->id);
     return outTexture;
 }
 
 void PlatformEGLAndroid::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
+    ExternalTextureAndroid* outTexture = static_cast<ExternalTextureAndroid*>(texture);
     glDeleteTextures(1, &texture->id);
-    delete texture;
+
+    if (outTexture->eglImage != EGL_NO_IMAGE) {
+        eglDestroyImageKHR(eglGetCurrentDisplay(), outTexture->eglImage);
+    }
+    delete outTexture;
 }
 
 bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImage,
@@ -356,6 +361,9 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         glBindTexture(GL_TEXTURE_2D, prevTexture);
         return false;
     }
+    ExternalTextureAndroid* outTexture = static_cast<ExternalTextureAndroid*>(texture);
+    outTexture->eglImage = eglImage;
+
     glActiveTexture(prevActiveTexture);
     glBindTexture(GL_TEXTURE_2D, prevTexture);
     return true;
