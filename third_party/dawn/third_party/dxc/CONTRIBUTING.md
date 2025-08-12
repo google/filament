@@ -40,9 +40,31 @@ Before submitting a feature or substantial code contribution please discuss it w
 
 ### Coding guidelines
 
-The coding, style, and general engineering guidelines follow those described in the docs/CodingStandards.rst. For additional guidelines in code specific to HLSL, see the docs/HLSLChanges.rst file.
+The coding, style, and general engineering guidelines follow those described in the [LLVM Coding Standards](docs/CodingStandards.rst). For additional guidelines in code specific to HLSL, see the [HLSL Changes](docs/HLSLChanges.rst) docs.
 
 DXC has adopted a clang-format requirement for all incoming changes to C and C++ files. PRs to DXC should have the *changed code* clang formatted to the LLVM style, and leave the remaining portions of the file unchanged. This can be done using the `git-clang-format` tool or IDE driven workflows. A GitHub action will run on all PRs to validate that the change is properly formatted.
+
+#### Applying LLVM Standards
+
+All new code contributed to DXC should follow the LLVM coding standards.
+
+Note that the LLVM Coding Standards have a golden rule:
+
+> **If you are extending, enhancing, or bug fixing already implemented code, use the style that is already being used so that the source is uniform and easy to follow.**
+
+The golden rule should continue to be applied to places where DXC is self-consistent. A good example is DXC's common use of `PascalCase` instead of `camelCase` for APIs in some parts of the HLSL implementation. In any place where DXC is not self-consistent new code should follow the LLVM Coding Standard.
+
+A good secondary rule to follow is:
+
+> **When in doubt, follow LLVM.**
+
+Adopting LLVM's coding standards provides a consistent set of rules and guidelines to hold all contributions to. This allows patch authors to clearly understand the expectations placed on contributions, and allows reviewers to have a bar to measure contributions against. Aligning with LLVM by default ensures the path of least resistance for everyone.
+
+Since many of the LLVM Coding Standards are not enforced automatically we rely on code reviews to provide feedback and ensure contributions align with the expected coding standards. Since we rely on reviewers for enforcement and humans make mistakes, please keep in mind:
+
+> **Code review is a conversation.**
+
+It is completely reasonable for a patch author to question feedback and provide additional context about why something was done the way it was. Reviewers often see narrow slices in diffs rather than the full context of a file or part of the compiler, so they may not always provide perfect feedback. This is especially true with the application of the "golden rule" since it depends on understanding a wider context.
 
 ### Documenting Pull Requests
 

@@ -125,8 +125,8 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
-TEST_F(IR_BlockDecoratedStructsTest, Scalar_PushConstant) {
-    auto* buffer = b.Var(ty.ptr<push_constant, i32>());
+TEST_F(IR_BlockDecoratedStructsTest, Scalar_Immediate) {
+    auto* buffer = b.Var(ty.ptr<immediate, i32>());
     mod.root_block->Append(buffer);
 
     auto* func = b.Function("foo", ty.i32());
@@ -140,12 +140,12 @@ tint_symbol = struct @align(4), @block {
 }
 
 $B1: {  # root
-  %1:ptr<push_constant, tint_symbol, read> = var undef
+  %1:ptr<immediate, tint_symbol, read> = var undef
 }
 
 %foo = func():i32 {
   $B2: {
-    %3:ptr<push_constant, i32, read> = access %1, 0u
+    %3:ptr<immediate, i32, read> = access %1, 0u
     %4:i32 = load %3
     ret %4
   }
@@ -394,18 +394,18 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
-TEST_F(IR_BlockDecoratedStructsTest, PushConstantAlreadyHasBlockAttribute) {
+TEST_F(IR_BlockDecoratedStructsTest, ImmediateAlreadyHasBlockAttribute) {
     auto* structure = ty.Struct(mod.symbols.New("MyStruct"), {
                                                                  {mod.symbols.New("i"), ty.i32()},
                                                              });
     structure->SetStructFlag(type::kBlock);
 
-    auto* buffer = b.Var(ty.ptr(push_constant, structure));
+    auto* buffer = b.Var(ty.ptr(immediate, structure));
     mod.root_block->Append(buffer);
 
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {
-        auto* val_ptr = b.Access<ptr<push_constant, i32>>(buffer, 0_u);
+        auto* val_ptr = b.Access<ptr<immediate, i32>>(buffer, 0_u);
         b.Return(func, b.Load(val_ptr));
     });
 
@@ -415,12 +415,12 @@ MyStruct = struct @align(4), @block {
 }
 
 $B1: {  # root
-  %1:ptr<push_constant, MyStruct, read> = var undef
+  %1:ptr<immediate, MyStruct, read> = var undef
 }
 
 %foo = func():i32 {
   $B2: {
-    %3:ptr<push_constant, i32, read> = access %1, 0u
+    %3:ptr<immediate, i32, read> = access %1, 0u
     %4:i32 = load %3
     ret %4
   }

@@ -165,7 +165,7 @@ void SystemHandle::Close() {
     // Still invalidate the handle if Close failed.
     // If Close failed, the handle surely was invalid already.
     mHandle = kInvalidHandle;
-    if (DAWN_UNLIKELY(result.IsError())) {
+    if (result.IsError()) [[unlikely]] {
         dawn::ErrorLog() << result.AcquireError()->GetFormattedMessage();
     }
 }

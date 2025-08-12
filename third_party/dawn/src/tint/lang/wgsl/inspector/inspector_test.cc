@@ -25,12 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <algorithm>
+#include <memory>
 #include <unordered_set>
 
 #include "gmock/gmock.h"
 
-#include "src/tint/lang/core/fluent_types.h"
+#include "src/tint/lang/core/fluent_types.h"  // IWYU pragma: export
 #include "src/tint/lang/wgsl/inspector/entry_point.h"
 #include "src/tint/lang/wgsl/inspector/inspector.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
@@ -80,11 +80,9 @@ class InspectorTestWithParam : public TestHelper, public testing::TestWithParam<
 
 using InspectorGetEntryPointTest = InspectorTest;
 using InspectorOverridesTest = InspectorTest;
-using InspectorGetOverrideDefaultValuesTest = InspectorTest;
 using InspectorGetConstantNameToIdMapTest = InspectorTest;
 using InspectorGetResourceBindingsTest = InspectorTest;
 using InspectorGetUsedExtensionNamesTest = InspectorTest;
-using InspectorGetEnableDirectivesTest = InspectorTest;
 using InspectorGetBlendSrcTest = InspectorTest;
 using InspectorSubgroupMatrixTest = InspectorTest;
 using InspectorTextureTest = InspectorTest;
@@ -126,7 +124,6 @@ TEST_F(InspectorGetEntryPointTest, OneEntryPoint) {
 
     ASSERT_EQ(1u, result.size());
     EXPECT_EQ("foo", result[0].name);
-    EXPECT_EQ("foo", result[0].remapped_name);
     EXPECT_EQ(PipelineStage::kFragment, result[0].stage);
 }
 
@@ -142,10 +139,8 @@ TEST_F(InspectorGetEntryPointTest, MultipleEntryPoints) {
 
     ASSERT_EQ(2u, result.size());
     EXPECT_EQ("foo", result[0].name);
-    EXPECT_EQ("foo", result[0].remapped_name);
     EXPECT_EQ(PipelineStage::kFragment, result[0].stage);
     EXPECT_EQ("bar", result[1].name);
-    EXPECT_EQ("bar", result[1].remapped_name);
     EXPECT_EQ(PipelineStage::kCompute, result[1].stage);
 }
 
@@ -165,10 +160,8 @@ fn foo() { func(); }
 
     ASSERT_EQ(2u, result.size());
     EXPECT_EQ("foo", result[0].name);
-    EXPECT_EQ("foo", result[0].remapped_name);
     EXPECT_EQ(PipelineStage::kCompute, result[0].stage);
     EXPECT_EQ("bar", result[1].name);
-    EXPECT_EQ("bar", result[1].remapped_name);
     EXPECT_EQ(PipelineStage::kFragment, result[1].stage);
 }
 
@@ -189,8 +182,8 @@ TEST_F(InspectorGetEntryPointTest, DefaultWorkgroupSize) {
     EXPECT_EQ(1u, workgroup_size->z);
 }
 
-// Test that push_constant_size is zero if there are no push constants.
-TEST_F(InspectorGetEntryPointTest, PushConstantSizeNone) {
+// Test that immediate_data_size is zero if there are no immediate data.
+TEST_F(InspectorGetEntryPointTest, ImmediateDataSizeNone) {
     auto* src = R"(
 @fragment fn foo() {}
 )";
@@ -200,15 +193,15 @@ TEST_F(InspectorGetEntryPointTest, PushConstantSizeNone) {
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
 
     ASSERT_EQ(1u, result.size());
-    EXPECT_EQ(0u, result[0].push_constant_size);
+    EXPECT_EQ(0u, result[0].immediate_data_size);
 }
 
-// Test that push_constant_size is 4 (bytes) if there is a single F32 push constant.
-TEST_F(InspectorGetEntryPointTest, PushConstantSizeOneWord) {
+// Test that immediate_data_size is 4 (bytes) if there is a single F32 immediate data.
+TEST_F(InspectorGetEntryPointTest, ImmediateDataSizeOneWord) {
     auto* src = R"(
-enable chromium_experimental_push_constant;
+enable chromium_experimental_immediate;
 
-var<push_constant> pc: f32;
+var<immediate> pc: f32;
 
 @fragment fn foo() { _ = pc; }
 )";
@@ -218,21 +211,21 @@ var<push_constant> pc: f32;
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
 
     ASSERT_EQ(1u, result.size());
-    EXPECT_EQ(4u, result[0].push_constant_size);
+    EXPECT_EQ(4u, result[0].immediate_data_size);
 }
 
-// Test that push_constant_size is 12 (bytes) if there is a struct containing one
+// Test that immediate_data_size is 12 (bytes) if there is a struct containing one
 // each of i32, f32 and u32.
-TEST_F(InspectorGetEntryPointTest, PushConstantSizeThreeWords) {
+TEST_F(InspectorGetEntryPointTest, ImmediateDataSizeThreeWords) {
     auto* src = R"(
-enable chromium_experimental_push_constant;
+enable chromium_experimental_immediate;
 
 struct S {
   a: i32,
   b: f32,
   c: u32,
 }
-var<push_constant> pc : S;
+var<immediate> pc : S;
 
 @fragment fn foo() { _ = pc; }
 )";
@@ -242,23 +235,23 @@ var<push_constant> pc : S;
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
 
     ASSERT_EQ(1u, result.size());
-    EXPECT_EQ(12u, result[0].push_constant_size);
+    EXPECT_EQ(12u, result[0].immediate_data_size);
 }
 
-// Test that push_constant_size is 4 (bytes) if there are two push constants,
+// Test that immediate_data_size is 4 (bytes) if there are two immediate data,
 // one used by the entry point containing an f32, and one unused by the entry
 // point containing a struct of size 12 bytes.
-TEST_F(InspectorGetEntryPointTest, PushConstantSizeTwoConstants) {
+TEST_F(InspectorGetEntryPointTest, ImmediateDataSizeTwoConstants) {
     auto* src = R"(
-enable chromium_experimental_push_constant;
+enable chromium_experimental_immediate;
 
 struct S {
   a: i32,
   b: f32,
   c: u32,
 }
-var<push_constant> unused : S;
-var<push_constant> pc: f32;
+var<immediate> unused : S;
+var<immediate> pc: f32;
 
 @fragment fn foo() { _ = pc; }
 )";
@@ -269,8 +262,8 @@ var<push_constant> pc: f32;
 
     ASSERT_EQ(1u, result.size());
 
-    // Check that the result only includes the single f32 push constant.
-    EXPECT_EQ(4u, result[0].push_constant_size);
+    // Check that the result only includes the single f32 immediate data.
+    EXPECT_EQ(4u, result[0].immediate_data_size);
 }
 
 TEST_F(InspectorGetEntryPointTest, NonDefaultWorkgroupSize) {
@@ -1139,7 +1132,6 @@ fn ep_func() {}
     ASSERT_EQ(1u, result.size());
     EXPECT_FALSE(result[0].input_sample_mask_used);
     EXPECT_FALSE(result[0].output_sample_mask_used);
-    EXPECT_FALSE(result[0].input_position_used);
     EXPECT_FALSE(result[0].front_facing_used);
     EXPECT_FALSE(result[0].sample_index_used);
     EXPECT_FALSE(result[0].num_workgroups_used);
@@ -1209,35 +1201,6 @@ fn ep_func() -> out_struct {
 
     ASSERT_EQ(1u, result.size());
     EXPECT_TRUE(result[0].output_sample_mask_used);
-}
-
-TEST_F(InspectorGetEntryPointTest, InputPositionSimpleReferenced) {
-    auto* src = R"(
-@fragment
-fn ep_func(@builtin(position) in_var: vec4f) {}
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetEntryPoints();
-
-    ASSERT_EQ(1u, result.size());
-    EXPECT_TRUE(result[0].input_position_used);
-}
-
-TEST_F(InspectorGetEntryPointTest, InputPositionStructReferenced) {
-    auto* src = R"(
-struct in_struct {
-  @builtin(position) inner_position: vec4f,
-}
-@fragment
-fn ep_func(in_var: in_struct) {}
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetEntryPoints();
-
-    ASSERT_EQ(1u, result.size());
-    EXPECT_TRUE(result[0].input_position_used);
 }
 
 TEST_F(InspectorGetEntryPointTest, FrontFacingSimpleReferenced) {
@@ -1664,197 +1627,6 @@ TEST_F(InspectorGetEntryPointTest, HasDepthTextureWithNonComparisonSampler) {
                     .has_depth_texture_with_non_comparison_sampler);
 }
 
-TEST_F(InspectorGetOverrideDefaultValuesTest, Bool) {
-    auto* src = R"(
-const C = true;
-@id(1) override a: bool;
-@id(20) override b: bool = true;
-@id(300) override c = false;
-@id(400) override d = true || false;
-@id(500) override e = C;
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetOverrideDefaultValues();
-    ASSERT_EQ(5u, result.size());
-
-    ASSERT_TRUE(result.find(OverrideId{1}) != result.end());
-    EXPECT_TRUE(result[OverrideId{1}].IsNull());
-
-    ASSERT_TRUE(result.find(OverrideId{20}) != result.end());
-    EXPECT_TRUE(result[OverrideId{20}].IsBool());
-    EXPECT_TRUE(result[OverrideId{20}].AsBool());
-
-    ASSERT_TRUE(result.find(OverrideId{300}) != result.end());
-    EXPECT_TRUE(result[OverrideId{300}].IsBool());
-    EXPECT_FALSE(result[OverrideId{300}].AsBool());
-
-    ASSERT_TRUE(result.find(OverrideId{400}) != result.end());
-    EXPECT_TRUE(result[OverrideId{400}].IsBool());
-    EXPECT_TRUE(result[OverrideId{400}].AsBool());
-
-    ASSERT_TRUE(result.find(OverrideId{500}) != result.end());
-    EXPECT_TRUE(result[OverrideId{500}].IsBool());
-    EXPECT_TRUE(result[OverrideId{500}].AsBool());
-}
-
-TEST_F(InspectorGetOverrideDefaultValuesTest, U32) {
-    auto* src = R"(
-const C = 100u;
-@id(1) override a: u32;
-@id(20) override b: u32 = 42u;
-@id(30) override c: u32 = 42;
-@id(40) override d: u32 = 42 + 10;
-@id(50) override e = 42 + 10u;
-@id(60) override f = C;
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetOverrideDefaultValues();
-    ASSERT_EQ(6u, result.size());
-
-    ASSERT_TRUE(result.find(OverrideId{1}) != result.end());
-    EXPECT_TRUE(result[OverrideId{1}].IsNull());
-
-    ASSERT_TRUE(result.find(OverrideId{20}) != result.end());
-    EXPECT_TRUE(result[OverrideId{20}].IsU32());
-    EXPECT_EQ(42u, result[OverrideId{20}].AsU32());
-
-    ASSERT_TRUE(result.find(OverrideId{30}) != result.end());
-    EXPECT_TRUE(result[OverrideId{30}].IsU32());
-    EXPECT_EQ(42u, result[OverrideId{30}].AsU32());
-
-    ASSERT_TRUE(result.find(OverrideId{40}) != result.end());
-    EXPECT_TRUE(result[OverrideId{40}].IsU32());
-    EXPECT_EQ(52u, result[OverrideId{40}].AsU32());
-
-    ASSERT_TRUE(result.find(OverrideId{50}) != result.end());
-    EXPECT_TRUE(result[OverrideId{50}].IsU32());
-    EXPECT_EQ(52u, result[OverrideId{50}].AsU32());
-
-    ASSERT_TRUE(result.find(OverrideId{60}) != result.end());
-    EXPECT_TRUE(result[OverrideId{60}].IsU32());
-    EXPECT_EQ(100u, result[OverrideId{60}].AsU32());
-}
-
-TEST_F(InspectorGetOverrideDefaultValuesTest, I32) {
-    auto* src = R"(
-const C = 100;
-@id(1) override a: i32;
-@id(20) override b: i32 = -42i;
-@id(300) override c: i32 = 42i;
-@id(400) override d = 42;
-@id(500) override e = 42 + 7;
-@id(6000) override f = C;
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetOverrideDefaultValues();
-    ASSERT_EQ(6u, result.size());
-
-    ASSERT_TRUE(result.find(OverrideId{1}) != result.end());
-    EXPECT_TRUE(result[OverrideId{1}].IsNull());
-
-    ASSERT_TRUE(result.find(OverrideId{20}) != result.end());
-    EXPECT_TRUE(result[OverrideId{20}].IsI32());
-    EXPECT_EQ(-42, result[OverrideId{20}].AsI32());
-
-    ASSERT_TRUE(result.find(OverrideId{300}) != result.end());
-    EXPECT_TRUE(result[OverrideId{300}].IsI32());
-    EXPECT_EQ(42, result[OverrideId{300}].AsI32());
-
-    ASSERT_TRUE(result.find(OverrideId{400}) != result.end());
-    EXPECT_TRUE(result[OverrideId{400}].IsI32());
-    EXPECT_EQ(42, result[OverrideId{400}].AsI32());
-
-    ASSERT_TRUE(result.find(OverrideId{500}) != result.end());
-    EXPECT_TRUE(result[OverrideId{500}].IsI32());
-    EXPECT_EQ(49, result[OverrideId{500}].AsI32());
-
-    ASSERT_TRUE(result.find(OverrideId{6000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{6000}].IsI32());
-    EXPECT_EQ(100, result[OverrideId{6000}].AsI32());
-}
-
-TEST_F(InspectorGetOverrideDefaultValuesTest, F32) {
-    auto* src = R"(
-@id(1) override a: f32;
-@id(20) override b: f32 = 0f;
-@id(300) override c: f32 = -10f;
-@id(4000) override d = 15f;
-@id(5000) override e = 42.0;
-@id(6000) override f: f32 = 15f * 10;
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetOverrideDefaultValues();
-    ASSERT_EQ(6u, result.size());
-
-    ASSERT_TRUE(result.find(OverrideId{1}) != result.end());
-    EXPECT_TRUE(result[OverrideId{1}].IsNull());
-
-    ASSERT_TRUE(result.find(OverrideId{20}) != result.end());
-    EXPECT_TRUE(result[OverrideId{20}].IsFloat());
-    EXPECT_FLOAT_EQ(0.0f, result[OverrideId{20}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{300}) != result.end());
-    EXPECT_TRUE(result[OverrideId{300}].IsFloat());
-    EXPECT_FLOAT_EQ(-10.0f, result[OverrideId{300}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{4000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{4000}].IsFloat());
-    EXPECT_FLOAT_EQ(15.0f, result[OverrideId{4000}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{5000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{5000}].IsFloat());
-    EXPECT_FLOAT_EQ(42.0f, result[OverrideId{5000}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{6000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{6000}].IsFloat());
-    EXPECT_FLOAT_EQ(150.0f, result[OverrideId{6000}].AsFloat());
-}
-
-TEST_F(InspectorGetOverrideDefaultValuesTest, F16) {
-    auto* src = R"(
-enable f16;
-
-@id(1) override a: f16;
-@id(20) override b: f16 = 0h;
-@id(300) override c: f16 = -10h;
-@id(4000) override d = 15h;
-@id(5000) override e = 42.0h;
-@id(6000) override f: f16 = 15h * 10;
-)";
-    Inspector& inspector = Initialize(src);
-
-    auto result = inspector.GetOverrideDefaultValues();
-    ASSERT_EQ(6u, result.size());
-
-    ASSERT_TRUE(result.find(OverrideId{1}) != result.end());
-    EXPECT_TRUE(result[OverrideId{1}].IsNull());
-
-    ASSERT_TRUE(result.find(OverrideId{20}) != result.end());
-    // Default value of f16 override is also stored as float scalar.
-    EXPECT_TRUE(result[OverrideId{20}].IsFloat());
-    EXPECT_FLOAT_EQ(0.0f, result[OverrideId{20}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{300}) != result.end());
-    EXPECT_TRUE(result[OverrideId{300}].IsFloat());
-    EXPECT_FLOAT_EQ(-10.0f, result[OverrideId{300}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{4000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{4000}].IsFloat());
-    EXPECT_FLOAT_EQ(15.0f, result[OverrideId{4000}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{5000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{5000}].IsFloat());
-    EXPECT_FLOAT_EQ(42.0f, result[OverrideId{5000}].AsFloat());
-
-    ASSERT_TRUE(result.find(OverrideId{6000}) != result.end());
-    EXPECT_TRUE(result[OverrideId{6000}].IsFloat());
-    EXPECT_FLOAT_EQ(150.0f, result[OverrideId{6000}].AsFloat());
-}
-
 TEST_F(InspectorGetConstantNameToIdMapTest, WithAndWithoutIds) {
     auto* src = R"(
 @id(1) override v1: f32;
@@ -1942,6 +1714,9 @@ fn depth_ms_func() {
 @group(4) @binding(0) var st_var: texture_storage_2d<r32uint, write>;
 fn st_func() { let dim = textureDimensions(st_var); }
 
+@group(4) @binding(1) var ba_s: binding_array<texture_2d<f32>, 3>;
+fn ba_s_func() { let dim = textureDimensions(ba_s[2]); }
+
 @fragment
 fn ep_func() {
   ub_func();
@@ -1951,49 +1726,65 @@ fn ep_func() {
   cs_func();
   depth_ms_func();
   st_func();
+  ba_s_func();
 }
 )";
     Inspector& inspector = Initialize(src);
 
     auto result = inspector.GetResourceBindings("ep_func");
     ASSERT_FALSE(inspector.has_error()) << inspector.error();
-    ASSERT_EQ(9u, result.size());
+    ASSERT_EQ(10u, result.size());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kUniformBuffer, result[0].resource_type);
     EXPECT_EQ(0u, result[0].bind_group);
     EXPECT_EQ(0u, result[0].binding);
+    EXPECT_FALSE(result[0].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kStorageBuffer, result[1].resource_type);
     EXPECT_EQ(1u, result[1].bind_group);
     EXPECT_EQ(0u, result[1].binding);
+    EXPECT_FALSE(result[1].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyStorageBuffer, result[2].resource_type);
     EXPECT_EQ(1u, result[2].bind_group);
     EXPECT_EQ(1u, result[2].binding);
+    EXPECT_FALSE(result[2].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[3].resource_type);
     EXPECT_EQ(2u, result[3].bind_group);
     EXPECT_EQ(0u, result[3].binding);
+    EXPECT_FALSE(result[3].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kSampler, result[4].resource_type);
     EXPECT_EQ(3u, result[4].bind_group);
     EXPECT_EQ(0u, result[4].binding);
+    EXPECT_FALSE(result[4].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kDepthTexture, result[5].resource_type);
     EXPECT_EQ(3u, result[5].bind_group);
     EXPECT_EQ(1u, result[5].binding);
+    EXPECT_FALSE(result[5].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kComparisonSampler, result[6].resource_type);
     EXPECT_EQ(3u, result[6].bind_group);
     EXPECT_EQ(2u, result[6].binding);
+    EXPECT_FALSE(result[6].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kDepthMultisampledTexture, result[7].resource_type);
     EXPECT_EQ(3u, result[7].bind_group);
     EXPECT_EQ(3u, result[7].binding);
+    EXPECT_FALSE(result[7].array_size.has_value());
 
     EXPECT_EQ(ResourceBinding::ResourceType::kWriteOnlyStorageTexture, result[8].resource_type);
     EXPECT_EQ(4u, result[8].bind_group);
     EXPECT_EQ(0u, result[8].binding);
+    EXPECT_FALSE(result[8].array_size.has_value());
+
+    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[9].resource_type);
+    EXPECT_EQ(4u, result[9].bind_group);
+    EXPECT_EQ(1u, result[9].binding);
+    EXPECT_TRUE(result[9].array_size.has_value());
+    EXPECT_EQ(3u, result[9].array_size.value());
 }
 
 TEST_F(InspectorGetResourceBindingsTest, InputAttachment) {
@@ -2029,6 +1820,41 @@ fn main() {
     EXPECT_EQ(3u, result[1].binding);
     EXPECT_EQ(1u, result[1].input_attachment_index);
     EXPECT_EQ(inspector::ResourceBinding::SampledKind::kSInt, result[1].sampled_kind);
+}
+
+TEST_F(InspectorGetResourceBindingsTest, TexelBuffer) {
+    auto* src = R"(
+
+@group(0) @binding(0) var tb_read: texel_buffer<rgba8uint, read>;
+@group(2) @binding(1) var tb_rw: texel_buffer<r32sint, read_write>;
+
+fn use_tb() {
+  _ = textureDimensions(tb_read);
+  textureStore(tb_rw, 0u, vec4<i32>());
+}
+
+@fragment
+fn main() { use_tb(); }
+)";
+
+    Inspector& inspector = Initialize(src);
+    auto result = inspector.GetResourceBindings("main");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+    ASSERT_EQ(2u, result.size());
+
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadOnlyTexelBuffer, result[0].resource_type);
+    EXPECT_EQ(0u, result[0].bind_group);
+    EXPECT_EQ(0u, result[0].binding);
+    EXPECT_EQ(ResourceBinding::TextureDimension::k1d, result[0].dim);
+    EXPECT_EQ(ResourceBinding::TexelFormat::kRgba8Uint, result[0].image_format);
+    EXPECT_EQ(ResourceBinding::SampledKind::kUInt, result[0].sampled_kind);
+
+    EXPECT_EQ(ResourceBinding::ResourceType::kReadWriteTexelBuffer, result[1].resource_type);
+    EXPECT_EQ(2u, result[1].bind_group);
+    EXPECT_EQ(1u, result[1].binding);
+    EXPECT_EQ(ResourceBinding::TextureDimension::k1d, result[1].dim);
+    EXPECT_EQ(ResourceBinding::TexelFormat::kR32Sint, result[1].image_format);
+    EXPECT_EQ(ResourceBinding::SampledKind::kSInt, result[1].sampled_kind);
 }
 
 TEST_F(InspectorGetResourceBindingsTest, MissingEntryPoint) {
@@ -2919,6 +2745,53 @@ TEST_F(InspectorGetResourceBindingsTest, ExternalTexture) {
     EXPECT_EQ(0u, result[0].binding);
 }
 
+TEST_F(InspectorGetResourceBindingsTest, BindingArray_Simple) {
+    auto* src = R"(
+@group(0) @binding(1) var toto: binding_array<texture_2d<f32>, 5>;
+@fragment fn ep() {
+  _ = textureDimensions(toto[3]);
+}
+)";
+
+    Inspector& inspector = Initialize(src);
+
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+
+    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[0].resource_type);
+    EXPECT_EQ(0u, result[0].bind_group);
+    EXPECT_EQ(1u, result[0].binding);
+    EXPECT_TRUE(result[0].array_size.has_value());
+    EXPECT_EQ(5u, result[0].array_size.value());
+}
+
+TEST_F(InspectorGetResourceBindingsTest, BindingArray_InFunction) {
+    auto* src = R"(
+@group(0) @binding(1) var toto: binding_array<texture_2d<f32>, 5>;
+fn f() {
+  _ = textureDimensions(toto[3]);
+}
+@fragment fn ep() {
+  f();
+}
+)";
+
+    Inspector& inspector = Initialize(src);
+
+    auto result = inspector.GetResourceBindings("ep");
+    ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+    ASSERT_EQ(1u, result.size());
+
+    EXPECT_EQ(ResourceBinding::ResourceType::kSampledTexture, result[0].resource_type);
+    EXPECT_EQ(0u, result[0].bind_group);
+    EXPECT_EQ(1u, result[0].binding);
+    EXPECT_TRUE(result[0].array_size.has_value());
+    EXPECT_EQ(5u, result[0].array_size.value());
+}
+
 class InspectorGetSamplerTextureUsesTest : public TestHelper, public testing::Test {
   public:
     using ResultExpectation = std::initializer_list<SamplerTexturePair>;
@@ -2938,16 +2811,17 @@ class InspectorGetSamplerTextureUsesTest : public TestHelper, public testing::Te
             EXPECT_TRUE(pairSet.insert(pair).second)
                 << "Duplicated SamplerTexturePair found: Sampler: ("
                 << pair.sampler_binding_point.group << ", " << pair.sampler_binding_point.binding
-                << "), " << "Texture: (" << pair.texture_binding_point.group << ", "
+                << "), "
+                << "Texture: (" << pair.texture_binding_point.group << ", "
                 << pair.texture_binding_point.binding << ")";
         }
         // Check that each SamplerTexturePair in the actual is in the set and occurs only once.
         for (const auto& pair : actual) {
             EXPECT_TRUE(pairSet.erase(pair) == 1)
                 << "Unexpected SamplerTexturePair: Sampler: (" << pair.sampler_binding_point.group
-                << ", " << pair.sampler_binding_point.binding << "), " << "Texture: ("
-                << pair.texture_binding_point.group << ", " << pair.texture_binding_point.binding
-                << ")";
+                << ", " << pair.sampler_binding_point.binding << "), "
+                << "Texture: (" << pair.texture_binding_point.group << ", "
+                << pair.texture_binding_point.binding << ")";
         }
     }
 
@@ -3373,6 +3247,102 @@ fn main(@location(0) fragUV: vec2<f32>,
     }
 }
 
+TEST_F(InspectorGetSamplerTextureUsesTest, TextureFromBindingArray) {
+    std::string shader = R"(
+@group(0) @binding(1) var mySampler: sampler;
+@group(0) @binding(2) var myTextures: binding_array<texture_2d<f32>, 3>;
+
+@fragment fn main() {
+  _ = textureSample(myTextures[1], mySampler, vec2(0));
+})";
+
+    ResultExpectation expected = {
+        {/* Sampler */ BindingPoint{0, 1}, /* Texture */ BindingPoint{0, 2}},
+    };
+
+    Inspector& inspector = Initialize(shader);
+
+    {
+        auto result = inspector.GetSamplerTextureUses("main");
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+
+    {
+        auto result = inspector.GetSamplerAndNonSamplerTextureUses("main", non_sampler_placeholder);
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+}
+
+TEST_F(InspectorGetSamplerTextureUsesTest, TextureFromBindingArrayPassedAsParameter) {
+    std::string shader = R"(
+@group(0) @binding(1) var mySampler: sampler;
+@group(0) @binding(2) var myTextures: binding_array<texture_2d<f32>, 3>;
+
+fn f(ts : binding_array<texture_2d<f32>, 3>) {
+  _ = textureSample(ts[1], mySampler, vec2(0));
+}
+@fragment fn main() {
+  f(myTextures);
+})";
+
+    ResultExpectation expected = {
+        {/* Sampler */ BindingPoint{0, 1}, /* Texture */ BindingPoint{0, 2}},
+    };
+
+    Inspector& inspector = Initialize(shader);
+
+    {
+        auto result = inspector.GetSamplerTextureUses("main");
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+
+    {
+        auto result = inspector.GetSamplerAndNonSamplerTextureUses("main", non_sampler_placeholder);
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+}
+
+TEST_F(InspectorGetSamplerTextureUsesTest, TextureParameterFromBindingArray) {
+    std::string shader = R"(
+@group(0) @binding(1) var mySampler: sampler;
+@group(0) @binding(2) var myTextures: binding_array<texture_2d<f32>, 3>;
+
+fn f(t : texture_2d<f32>) {
+  _ = textureSample(t, mySampler, vec2(0));
+}
+@fragment fn main() {
+  f(myTextures[1]);
+})";
+
+    ResultExpectation expected = {
+        {/* Sampler */ BindingPoint{0, 1}, /* Texture */ BindingPoint{0, 2}},
+    };
+
+    Inspector& inspector = Initialize(shader);
+
+    {
+        auto result = inspector.GetSamplerTextureUses("main");
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+
+    {
+        auto result = inspector.GetSamplerAndNonSamplerTextureUses("main", non_sampler_placeholder);
+        ASSERT_FALSE(inspector.has_error()) << inspector.error();
+
+        ValidateEqual(expected, result);
+    }
+}
+
 TEST_F(InspectorGetSamplerTextureUsesTest, NeitherIndirect) {
     std::string shader = R"(
 @group(0) @binding(1) var mySampler: sampler;
@@ -3507,6 +3477,7 @@ TEST_F(InspectorGetSamplerTextureUsesTest, SamplerAndNonSamplerTexture) {
 @group(2) @binding(3) var texture2: texture_storage_2d<r32float, read_write>;
 @group(2) @binding(4) var external0 : texture_external;
 @group(2) @binding(5) var external1 : texture_external;
+@group(2) @binding(6) var texture_array : binding_array<texture_2d<f32>, 5>;
 
 const loadStoreCoords = vec2<u32>(0u, 0u);
 
@@ -3538,6 +3509,10 @@ fn main(@location(0) fragUV: vec2<f32>,
   _ = textureSampleBaseClampToEdge(external0, sampler0, fragUV);
   _ = textureLoad(external1, vec2(0, 0));
 
+  // Usages of binding_array with and without samplers
+  _ = textureSample(texture_array[2], sampler0, fragUV);
+  _ = textureLoad(texture_array[1], vec2(0, 0), 0);
+
   // Another usage with a sampler.
   return textureSample(texture0, sampler1, fragUV) + fragPosition;
 }
@@ -3549,6 +3524,7 @@ fn main(@location(0) fragUV: vec2<f32>,
     constexpr BindingPoint texture_1 = {2, 1};
     constexpr BindingPoint external_0 = {2, 4};
     constexpr BindingPoint external_1 = {2, 5};
+    constexpr BindingPoint texture_array = {2, 6};
     // Storage texture texture2 should not be included in the result.
 
     ResultExpectation expected_sampler_only = {
@@ -3556,6 +3532,7 @@ fn main(@location(0) fragUV: vec2<f32>,
         {/* Sampler */ sampler_0, /* Texture */ texture_0},
         {/* Sampler */ sampler_1, /* Texture */ texture_0},
         {/* Sampler */ sampler_0, /* Texture */ external_0},
+        {/* Sampler */ sampler_0, /* Texture */ texture_array},
     };
     ResultExpectation expected_sampler_and_non_sampler = {
         {/* Sampler */ sampler_0, /* Texture */ texture_1},
@@ -3565,6 +3542,8 @@ fn main(@location(0) fragUV: vec2<f32>,
         {/* Sampler */ sampler_1, /* Texture */ texture_0},
         {/* Sampler */ sampler_0, /* Texture */ external_0},
         {/* Sampler */ non_sampler_placeholder, /* Texture */ external_1},
+        {/* Sampler */ sampler_0, /* Texture */ texture_array},
+        {/* Sampler */ non_sampler_placeholder, /* Texture */ texture_array},
     };
 
     Inspector& inspector = Initialize(shader);
@@ -3641,67 +3620,6 @@ fn main() {
     EXPECT_EQ(result[0], "f16");
 }
 
-// Test calling GetEnableDirectives on a empty shader.
-TEST_F(InspectorGetEnableDirectivesTest, Empty) {
-    std::string shader = "";
-
-    Inspector& inspector = Initialize(shader);
-
-    auto result = inspector.GetEnableDirectives();
-    EXPECT_EQ(result.size(), 0u);
-}
-
-// Test calling GetEnableDirectives on a shader with no extension.
-TEST_F(InspectorGetEnableDirectivesTest, None) {
-    std::string shader = R"(
-@fragment
-fn main() {
-})";
-
-    Inspector& inspector = Initialize(shader);
-
-    auto result = inspector.GetEnableDirectives();
-    EXPECT_EQ(result.size(), 0u);
-}
-
-// Test calling GetEnableDirectives on a shader with valid extension.
-TEST_F(InspectorGetEnableDirectivesTest, Simple) {
-    std::string shader = R"(
-enable f16;
-
-@fragment
-fn main() {
-})";
-
-    Inspector& inspector = Initialize(shader);
-
-    auto result = inspector.GetEnableDirectives();
-    EXPECT_EQ(result.size(), 1u);
-    EXPECT_EQ(result[0].first, "f16");
-    EXPECT_EQ(result[0].second.range, (Source::Range{{2, 8}, {2, 11}}));
-}
-
-// Test calling GetEnableDirectives on a shader with a extension enabled for
-// multiple times.
-TEST_F(InspectorGetEnableDirectivesTest, Duplicated) {
-    std::string shader = R"(
-enable f16;
-
-enable f16;
-@fragment
-fn main() {
-})";
-
-    Inspector& inspector = Initialize(shader);
-
-    auto result = inspector.GetEnableDirectives();
-    EXPECT_EQ(result.size(), 2u);
-    EXPECT_EQ(result[0].first, "f16");
-    EXPECT_EQ(result[0].second.range, (Source::Range{{2, 8}, {2, 11}}));
-    EXPECT_EQ(result[1].first, "f16");
-    EXPECT_EQ(result[1].second.range, (Source::Range{{4, 8}, {4, 11}}));
-}
-
 // Crash was occuring in ::GenerateSamplerTargets, when
 // ::GetSamplerTextureUses was called.
 TEST_F(InspectorRegressionTest, tint967) {
@@ -3730,6 +3648,24 @@ TEST_F(InspectorTextureTest, TextureLevelInEP) {
 @compute @workgroup_size(1)
 fn main() {
   let num = textureNumLevels(myTexture);
+})";
+
+    Inspector& inspector = Initialize(shader);
+    auto info = inspector.GetTextureQueries("main");
+
+    ASSERT_EQ(1u, info.size());
+    EXPECT_EQ(Inspector::TextureQueryType::kTextureNumLevels, info[0].type);
+    EXPECT_EQ(2u, info[0].group);
+    EXPECT_EQ(3u, info[0].binding);
+}
+
+TEST_F(InspectorTextureTest, TextureLevelInBindingArray) {
+    std::string shader = R"(
+@group(2) @binding(3) var myTextures : binding_array<texture_2d<f32>, 4>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let num = textureNumLevels(myTextures[2]);
 })";
 
     Inspector& inspector = Initialize(shader);
@@ -3868,6 +3804,25 @@ fn main() {
     EXPECT_EQ(3u, info[0].binding);
 }
 
+TEST_F(InspectorTextureTest, TextureLoadInBindingArray) {
+    std::string shader = R"(
+@group(2) @binding(3) var textures: binding_array<texture_2d<f32>, 4>;
+
+@compute @workgroup_size(1)
+fn main() {
+  let num1 = textureLoad(textures[1], vec2(0, 0), 0);
+})";
+
+    Inspector& inspector = Initialize(shader);
+    auto info = inspector.GetTextureQueries("main");
+
+    ASSERT_EQ(1u, info.size());
+
+    EXPECT_EQ(Inspector::TextureQueryType::kTextureNumLevels, info[0].type);
+    EXPECT_EQ(2u, info[0].group);
+    EXPECT_EQ(3u, info[0].binding);
+}
+
 TEST_F(InspectorTextureTest, TextureLoadMultisampledInEP) {
     std::string shader = R"(
 @group(2) @binding(3) var tex1: texture_multisampled_2d<f32>;
@@ -3888,12 +3843,14 @@ TEST_F(InspectorTextureTest, TextureLoadMultipleInEP) {
 @group(2) @binding(3) var tex1: texture_2d<f32>;
 @group(1) @binding(4) var tex2: texture_multisampled_2d<f32>;
 @group(0) @binding(1) var tex3: texture_2d<f32>;
+@group(0) @binding(8) var tex4: texture_external;
 
 @compute @workgroup_size(1)
 fn main() {
   let num1 = textureLoad(tex1, vec2(0, 0), 0);
   let num2 = textureLoad(tex2, vec2(0, 0), 0);
   let num3 = textureLoad(tex3, vec2(0, 0), 0);
+  let num4 = textureLoad(tex4, vec2(0, 0));
 })";
 
     Inspector& inspector = Initialize(shader);
@@ -4048,8 +4005,9 @@ TEST_F(InspectorSubgroupMatrixTest, DirectUse) {
     auto* src = R"(
 enable chromium_experimental_subgroup_matrix;
 
-var<private> sm: subgroup_matrix_result<f32, 8, 8>;
-@compute @workgroup_size(1) fn foo() { _ = sm; }
+@compute @workgroup_size(1) fn foo() {
+  _ = subgroup_matrix_result<f32, 8, 8>();
+}
 )";
     Inspector& inspector = Initialize(src);
 
@@ -4064,8 +4022,7 @@ TEST_F(InspectorSubgroupMatrixTest, IndirectUse) {
     auto* src = R"(
 enable chromium_experimental_subgroup_matrix;
 
-var<private> sm: subgroup_matrix_result<f32, 8, 8>;
-fn foo() { _ = sm; }
+fn foo() { _ = subgroup_matrix_result<f32, 8, 8>(); }
 @compute @workgroup_size(1) fn main() { foo(); }
 )";
     Inspector& inspector = Initialize(src);

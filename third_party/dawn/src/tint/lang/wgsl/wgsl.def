@@ -79,20 +79,16 @@ enum extension {
   dual_source_blending
   // WGSL Extension "subgroups"
   subgroups
-  // WGSL Extension "subgroups_f16"
-  subgroups_f16
 
   // A Chromium-specific extension for disabling uniformity analysis.
   chromium_disable_uniformity_analysis
-  // A Chromium-specific extension for push constants
-  chromium_experimental_push_constant
+  // A Chromium-specific extension for immediate data
+  chromium_experimental_immediate
   // A Chromium-specific extension that enables features for graphite
   chromium_internal_graphite
   // A Chromium-specific extension that enables features for input
   // attachments
   chromium_internal_input_attachments
-  // A Chromium-specific extension that relaxes memory layout requirements for uniform storage.
-  chromium_internal_relaxed_uniform_layout
   // A Chromium-specific extension that enables pixel local storage.
   // Cannot be used with chromium_experimental_framebuffer_fetch
   chromium_experimental_pixel_local
@@ -101,6 +97,10 @@ enum extension {
   chromium_experimental_framebuffer_fetch
   // A Chromium-specific extension for subgroup matrix support
   chromium_experimental_subgroup_matrix
+  // A Chromium-specific extension for primitive_id support
+  chromium_experimental_primitive_id
+  // A Chromium-specific extension for barycentric_coord support
+  chromium_experimental_barycentric_coord
 }
 
 // https://gpuweb.github.io/gpuweb/wgsl/#language-extensions-sec
@@ -110,6 +110,10 @@ enum language_feature {
   readonly_and_readwrite_storage_textures
   unrestricted_pointer_parameters
   sized_binding_array
+  texel_buffers
+
+  // Non-standard language features for Chromium developers.
+  chromium_print
 
   // Language features used only for testing whose status will never change.
   chromium_testing_unimplemented
@@ -172,6 +176,7 @@ type texture_storage_2d<F: texel_format, A: access>
 type texture_storage_2d_array<F: texel_format, A: access>
 type texture_storage_3d<F: texel_format, A: access>
 type texture_external
+type texel_buffer<F: texel_format, A: access>
 type input_attachment<T>
 
 @display("__modf_result_{T}")        type __modf_result<T>
@@ -182,6 +187,8 @@ type input_attachment<T>
 type __atomic_compare_exchange_result<T>
 
 type subgroup_matrix<S: subgroup_matrix_kind, T, C: num, R: num>
+
+@display("any concrete constructible type") type __constructible
 
 ////////////////////////////////////////////////////////////////////////////////
 // Type matchers                                                              //
@@ -207,8 +214,10 @@ match fi32_f16: f32 | i32 | f16
 match fi32: f32 | i32
 match f32_f16: f32 | f16
 match iu32: i32 | u32
+match iu32_iu8: i32 | u32 | i8 | u8
+match iu8: i8 | u8
 
-match subgroup_matrix_elements: f32 | f16 | u32 | i32
+match subgroup_matrix_elements: f32 | f16 | u32 | i32 | u8 | i8
 match subgroup_matrix_kind_left : subgroup_matrix_kind.left
 match subgroup_matrix_kind_right : subgroup_matrix_kind.right
 match subgroup_matrix_kind_result : subgroup_matrix_kind.result
@@ -224,25 +233,47 @@ match subgroup_matrix_kind_result : subgroup_matrix_kind.result
 // https://gpuweb.github.io/gpuweb/wgsl/#texel-formats
 match f32_texel_format
   : texel_format.r8unorm
+  | texel_format.r8snorm
+  | texel_format.rg8unorm
+  | texel_format.rg8snorm
   | texel_format.bgra8unorm
   | texel_format.rgba8unorm
   | texel_format.rgba8snorm
+  | texel_format.r16unorm
+  | texel_format.r16snorm
+  | texel_format.rg16unorm
+  | texel_format.rg16snorm
+  | texel_format.rgba16unorm
+  | texel_format.rgba16snorm
+  | texel_format.r16float
+  | texel_format.rg16float
   | texel_format.rgba16float
   | texel_format.r32float
   | texel_format.rg32float
   | texel_format.rgba32float
+  | texel_format.rgb10a2unorm
+  | texel_format.rg11b10ufloat
 match i32_texel_format
-  : texel_format.rgba8sint
+  : texel_format.r8sint
+  | texel_format.rg8sint
+  | texel_format.rgba8sint
+  | texel_format.r16sint
+  | texel_format.rg16sint
   | texel_format.rgba16sint
   | texel_format.r32sint
   | texel_format.rg32sint
   | texel_format.rgba32sint
 match u32_texel_format
-  : texel_format.rgba8uint
+  : texel_format.r8uint
+  | texel_format.rg8uint
+  | texel_format.r16uint
+  | texel_format.rg16uint
+  | texel_format.rgba8uint
   | texel_format.rgba16uint
   | texel_format.r32uint
   | texel_format.rg32uint
   | texel_format.rgba32uint
+  | texel_format.rgb10a2uint
 
 match read: access.read
 match write: access.write
@@ -446,7 +477,8 @@ match workgroup
 @must_use @const fn unpack4xI8(u32) -> vec4<i32>
 @must_use @const fn unpack4xU8(u32) -> vec4<u32>
 @stage("compute") fn workgroupBarrier()
-@must_use @stage("compute") implicit(T) fn workgroupUniformLoad(ptr<workgroup, T, read_write>) -> T
+@must_use @stage("compute") implicit(T: __constructible) fn workgroupUniformLoad(ptr<workgroup, T, read_write>) -> T
+@must_use @stage("compute") implicit(T: iu32) fn workgroupUniformLoad(ptr<workgroup, atomic<T>, read_write>) -> T
 
 @stage("compute") fn textureBarrier()
 @must_use implicit(T: fiu32) fn textureDimensions(texture: texture_1d<T>) -> u32
@@ -475,10 +507,12 @@ match workgroup
 @must_use implicit(F: texel_format, R: read) fn textureDimensions(texture: texture_storage_2d<F, R>) -> vec2<u32>
 @must_use implicit(F: texel_format, R: read) fn textureDimensions(texture: texture_storage_2d_array<F, R>) -> vec2<u32>
 @must_use implicit(F: texel_format, R: read) fn textureDimensions(texture: texture_storage_3d<F, R>) -> vec3<u32>
+@must_use implicit(F: texel_format, R: read) fn textureDimensions(texture: texel_buffer<F, R>) -> u32
 @must_use @stage("fragment", "compute") implicit(F: texel_format, W: writable) fn textureDimensions(texture: texture_storage_1d<F, W>) -> u32
 @must_use @stage("fragment", "compute") implicit(F: texel_format, W: writable) fn textureDimensions(texture: texture_storage_2d<F, W>) -> vec2<u32>
 @must_use @stage("fragment", "compute") implicit(F: texel_format, W: writable) fn textureDimensions(texture: texture_storage_2d_array<F, W>) -> vec2<u32>
 @must_use @stage("fragment", "compute") implicit(F: texel_format, W: writable) fn textureDimensions(texture: texture_storage_3d<F, W>) -> vec3<u32>
+@must_use @stage("fragment", "compute") implicit(F: texel_format, W: writable) fn textureDimensions(texture: texel_buffer<F, W>) -> u32
 @must_use fn textureDimensions(texture: texture_external) -> vec2<u32>
 @must_use implicit(T: fiu32, C: iu32) fn textureGather(@const component: C, texture: texture_2d<T>, sampler: sampler, coords: vec2<f32>) -> vec4<T>
 @must_use implicit(T: fiu32, C: iu32) fn textureGather(@const component: C, texture: texture_2d<T>, sampler: sampler, coords: vec2<f32>, @const offset: vec2<i32>) -> vec4<T>
@@ -559,6 +593,7 @@ match workgroup
 @must_use fn textureSampleGrad(texture: texture_3d<f32>, sampler: sampler, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>, @const offset: vec3<i32>) -> vec4<f32>
 @must_use fn textureSampleGrad(texture: texture_cube<f32>, sampler: sampler, coords: vec3<f32>, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
 @must_use implicit(A: iu32) fn textureSampleGrad(texture: texture_cube_array<f32>, sampler: sampler, coords: vec3<f32>, array_index: A, ddx: vec3<f32>, ddy: vec3<f32>) -> vec4<f32>
+@must_use fn textureSampleLevel(texture: texture_1d<f32>, sampler: sampler, coords: f32, level: f32) -> vec4<f32>
 @must_use fn textureSampleLevel(texture: texture_2d<f32>, sampler: sampler, coords: vec2<f32>, level: f32) -> vec4<f32>
 @must_use fn textureSampleLevel(texture: texture_2d<f32>, sampler: sampler, coords: vec2<f32>, level: f32, @const offset: vec2<i32>) -> vec4<f32>
 @must_use implicit(A: iu32) fn textureSampleLevel(texture: texture_2d_array<f32>, sampler: sampler, coords: vec2<f32>, array_index: A, level: f32) -> vec4<f32>
@@ -579,14 +614,17 @@ match workgroup
 @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, W: writable) fn textureStore(texture: texture_storage_2d<F, W>, coords: vec2<C>, value: vec4<f32>)
 @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, W: writable, A: iu32) fn textureStore(texture: texture_storage_2d_array<F, W>, coords: vec2<C>, array_index: A, value: vec4<f32>)
 @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, W: writable) fn textureStore(texture: texture_storage_3d<F, W>, coords: vec3<C>, value: vec4<f32>)
+@stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, RW: read_write) fn textureStore(texture: texel_buffer<F, RW>, coords: C, value: vec4<f32>)
 @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, W: writable) fn textureStore(texture: texture_storage_1d<F, W>, coords: C, value: vec4<i32>)
 @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, W: writable) fn textureStore(texture: texture_storage_2d<F, W>, coords: vec2<C>, value: vec4<i32>)
 @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, W: writable, A: iu32) fn textureStore(texture: texture_storage_2d_array<F, W>, coords: vec2<C>, array_index: A, value: vec4<i32>)
 @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, W: writable) fn textureStore(texture: texture_storage_3d<F, W>, coords: vec3<C>, value: vec4<i32>)
+@stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, RW: read_write) fn textureStore(texture: texel_buffer<F, RW>, coords: C, value: vec4<i32>)
 @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, W: writable) fn textureStore(texture: texture_storage_1d<F, W>, coords: C, value: vec4<u32>)
 @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, W: writable) fn textureStore(texture: texture_storage_2d<F, W>, coords: vec2<C>, value: vec4<u32>)
 @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, W: writable, A: iu32) fn textureStore(texture: texture_storage_2d_array<F, W>, coords: vec2<C>, array_index: A, value: vec4<u32>)
 @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, W: writable) fn textureStore(texture: texture_storage_3d<F, W>, coords: vec3<C>, value: vec4<u32>)
+@stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, RW: read_write) fn textureStore(texture: texel_buffer<F, RW>, coords: C, value: vec4<u32>)
 @must_use implicit(T: fiu32, C: iu32, L: iu32) fn textureLoad(texture: texture_1d<T>, coords: C, level: L) -> vec4<T>
 @must_use implicit(T: fiu32, C: iu32, L: iu32) fn textureLoad(texture: texture_2d<T>, coords: vec2<C>, level: L) -> vec4<T>
 @must_use implicit(T: fiu32, C: iu32, A: iu32, L: iu32) fn textureLoad(texture: texture_2d_array<T>, coords: vec2<C>, array_index: A, level: L) -> vec4<T>
@@ -608,6 +646,9 @@ match workgroup
 @must_use implicit(C: iu32, F: f32_texel_format, R: read) fn textureLoad(texture: texture_storage_3d<F, R>, coords: vec3<C>) -> vec4<f32>
 @must_use implicit(C: iu32, F: i32_texel_format, R: read) fn textureLoad(texture: texture_storage_3d<F, R>, coords: vec3<C>) -> vec4<i32>
 @must_use implicit(C: iu32, F: u32_texel_format, R: read) fn textureLoad(texture: texture_storage_3d<F, R>, coords: vec3<C>) -> vec4<u32>
+@must_use implicit(C: iu32, F: f32_texel_format, R: read) fn textureLoad(texture: texel_buffer<F, R>, coords: C) -> vec4<f32>
+@must_use implicit(C: iu32, F: i32_texel_format, R: read) fn textureLoad(texture: texel_buffer<F, R>, coords: C) -> vec4<i32>
+@must_use implicit(C: iu32, F: u32_texel_format, R: read) fn textureLoad(texture: texel_buffer<F, R>, coords: C) -> vec4<u32>
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_1d<F, RW>, coords: C) -> vec4<f32>
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_1d<F, RW>, coords: C) -> vec4<i32>
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_1d<F, RW>, coords: C) -> vec4<u32>
@@ -620,6 +661,9 @@ match workgroup
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_3d<F, RW>, coords: vec3<C>) -> vec4<f32>
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_3d<F, RW>, coords: vec3<C>) -> vec4<i32>
 @must_use @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, RW: read_write) fn textureLoad(texture: texture_storage_3d<F, RW>, coords: vec3<C>) -> vec4<u32>
+@must_use @stage("fragment", "compute") implicit(C: iu32, F: f32_texel_format, RW: read_write) fn textureLoad(texture: texel_buffer<F, RW>, coords: C) -> vec4<f32>
+@must_use @stage("fragment", "compute") implicit(C: iu32, F: i32_texel_format, RW: read_write) fn textureLoad(texture: texel_buffer<F, RW>, coords: C) -> vec4<i32>
+@must_use @stage("fragment", "compute") implicit(C: iu32, F: u32_texel_format, RW: read_write) fn textureLoad(texture: texel_buffer<F, RW>, coords: C) -> vec4<u32>
 
 @stage("fragment") implicit(T: fiu32) fn inputAttachmentLoad(input_attachment: input_attachment<T>) -> vec4<T>
 
@@ -682,19 +726,58 @@ match workgroup
 @must_use @stage("fragment", "compute") implicit(T: fiu32_f16) fn quadSwapDiagonal(e: T) -> T
 @must_use @stage("fragment", "compute") implicit(N: num, T: fiu32_f16) fn quadSwapDiagonal(e: vec<N, T>) -> vec<N, T>
 
-@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<S>, readable>, u32, @const bool, u32) -> T
-@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<S, AC>, readable>, u32, @const bool, u32) -> T
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn subgroupMatrixStore(ptr<storage, runtime_array<S>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, u32)
-@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixStore(ptr<workgroup_or_storage, array<S, AC>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, u32)
-@must_use @stage("compute") implicit(T: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: subgroup_matrix_elements>(
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<S>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<S, AC>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<i32>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<storage, runtime_array<u32>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num, AC: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<i32, AC>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@must_use @stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num, AC: num) fn subgroupMatrixLoad<T: subgroup_matrix<K, S, C, R> >(ptr<workgroup_or_storage, array<u32, AC>, readable>, u32, @const bool, @test_value(8) u32) -> T
+@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num) fn subgroupMatrixStore(ptr<storage, runtime_array<S>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, S: fiu32_f16, C: num, R: num, AC: num) fn subgroupMatrixStore(ptr<workgroup_or_storage, array<S, AC>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num) fn subgroupMatrixStore(ptr<storage, runtime_array<i32>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num) fn subgroupMatrixStore(ptr<storage, runtime_array<u32>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, S: i8, C: num, R: num, AC: num) fn subgroupMatrixStore(ptr<workgroup_or_storage, array<i32, AC>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@stage("compute") implicit(K: subgroup_matrix_kind, S: u8, C: num, R: num, AC: num) fn subgroupMatrixStore(ptr<workgroup_or_storage, array<u32, AC>, writable>, u32, subgroup_matrix<K, S, C, R>, @const bool, @test_value(8) u32)
+@must_use @stage("compute") implicit(T: f16, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: f32_f16>(
   subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
   subgroup_matrix<subgroup_matrix_kind_right, T, C, K>)
   -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
-@must_use @stage("compute") implicit(T: subgroup_matrix_elements, TR: subgroup_matrix_elements, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
+@must_use @stage("compute") implicit(T: f32, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: f32>(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: iu8, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: iu32_iu8>(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: iu32, C: num, R: num, K: num) fn subgroupMatrixMultiply<TR: iu32>(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: f16, TR: f32_f16, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
   subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
   subgroup_matrix<subgroup_matrix_kind_right, T, C, K>,
   subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>)
   -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: f32, TR: f32, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>,
+  subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: iu8, TR: iu32_iu8, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>,
+  subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+@must_use @stage("compute") implicit(T: iu32, TR: iu32, C: num, R: num, K: num) fn subgroupMatrixMultiplyAccumulate(
+  subgroup_matrix<subgroup_matrix_kind_left, T, K, R>,
+  subgroup_matrix<subgroup_matrix_kind_right, T, C, K>,
+  subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>)
+  -> subgroup_matrix<subgroup_matrix_kind_result, TR, C, R>
+
+// chromium_experimental_print
+implicit(T: concrete_scalar) fn print(T)
+implicit(N: num, T: concrete_scalar) fn print(vec<N, T>)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Value constructors                                                         //

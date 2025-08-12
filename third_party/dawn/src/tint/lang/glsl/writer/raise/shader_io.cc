@@ -87,6 +87,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                         break;
                     case core::BuiltinValue::kVertexIndex:
                     case core::BuiltinValue::kInstanceIndex:
+                    case core::BuiltinValue::kPrimitiveId:
                     case core::BuiltinValue::kSampleIndex:
                         ptr = ty.ptr(addrspace, ty.i32(), access);
                         break;
@@ -148,6 +149,7 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             switch (builtin.value()) {
                 case core::BuiltinValue::kVertexIndex:
                 case core::BuiltinValue::kInstanceIndex:
+                case core::BuiltinValue::kPrimitiveId:
                 case core::BuiltinValue::kSampleIndex: {
                     // GLSL uses i32 for these, so convert to u32.
                     value = builder.Convert(ty.u32(), value)->Result();
@@ -222,11 +224,11 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             return frag_depth;
         }
 
-        auto* push_constants = config.push_constant_layout.var;
-        auto min_idx = u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->min));
-        auto max_idx = u32(config.push_constant_layout.IndexOf(config.depth_range_offsets->max));
-        auto* min = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, min_idx));
-        auto* max = builder.Load(builder.Access<ptr<push_constant, f32>>(push_constants, max_idx));
+        auto* immediate_data = config.immediate_data_layout.var;
+        auto min_idx = u32(config.immediate_data_layout.IndexOf(config.depth_range_offsets->min));
+        auto max_idx = u32(config.immediate_data_layout.IndexOf(config.depth_range_offsets->max));
+        auto* min = builder.Load(builder.Access<ptr<immediate, f32>>(immediate_data, min_idx));
+        auto* max = builder.Load(builder.Access<ptr<immediate, f32>>(immediate_data, max_idx));
         return builder.Call<f32>(core::BuiltinFn::kClamp, frag_depth, min, max)->Result();
     }
 
@@ -239,7 +241,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
     auto result = ValidateAndDumpIfNeeded(
         ir, "glsl.ShaderIO",
-        core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings});
+        core::ir::Capabilities{core::ir::Capability::kAllowHandleVarsWithoutBindings,
+                               core::ir::Capability::kAllowDuplicateBindings});
     if (result != Success) {
         return result;
     }

@@ -96,7 +96,6 @@ DS_OUTPUT BezierEvalDS( HS_CONSTANT_DATA_OUTPUT input,
 // CHECK-NEXT:                OpDecorate %in_var_TANVCORNER Patch
 // CHECK-NEXT:                OpDecorate %in_var_TANWEIGHTS Patch
 // CHECK-NEXT:                OpDecorate %gl_TessCoord BuiltIn TessCoord
-// CHECK-NEXT:                OpDecorate %gl_TessCoord Patch
 // CHECK-NEXT:                OpDecorate %gl_Position BuiltIn Position
 // CHECK-NEXT:                OpDecorate %in_var_BEZIERPOS Location 0
 // CHECK-NEXT:                OpDecorate %in_var_TANGENT Location 1

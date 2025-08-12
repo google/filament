@@ -69,7 +69,7 @@ struct DebugX11 {
         }
 
         // Make all X11 calls synchronous so that the error handler is called immediately.
-        sDebug->x.xSynchronize(display, true);
+        sDebug->x.xSynchronize(display, 1);
     }
 
     static int HandleError(Display* d, XErrorEvent* e) {

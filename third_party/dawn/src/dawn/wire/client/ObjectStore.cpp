@@ -68,7 +68,7 @@ void ObjectStore::Remove(ObjectBase* obj) {
     // already reused, each handle also has a generation that's increment by one on each reuse.
     // Avoid overflows by only reusing the ID if the increment of the generation won't overflow.
     const ObjectHandle& currentHandle = obj->GetWireHandle();
-    if (DAWN_LIKELY(currentHandle.generation != std::numeric_limits<ObjectGeneration>::max())) {
+    if (currentHandle.generation != std::numeric_limits<ObjectGeneration>::max()) [[likely]] {
         mFreeHandles.push_back({currentHandle.id, currentHandle.generation + 1});
     }
     mObjects[currentHandle.id] = nullptr;

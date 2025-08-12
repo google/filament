@@ -51,7 +51,7 @@ WireResult Server::DoInstanceRequestAdapter(Known<WGPUInstance> instance,
     mProcs.instanceRequestAdapter(
         instance->handle, options,
         {nullptr, WGPUCallbackMode_AllowSpontaneous,
-         ForwardToServer2<&Server::OnRequestAdapterCallback>, userdata.release(), nullptr});
+         ForwardToServer<&Server::OnRequestAdapterCallback>, userdata.release(), nullptr});
     return WireResult::Success;
 }
 
@@ -113,14 +113,6 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
         propertiesChain = &(*propertiesChain)->next;
     }
 
-    // Query AdapterPropertiesSubgroups if the feature is supported.
-    WGPUAdapterPropertiesSubgroups subgroupsProperties = {};
-    subgroupsProperties.chain.sType = WGPUSType_AdapterPropertiesSubgroups;
-    if (mProcs.adapterHasFeature(adapter, WGPUFeatureName_Subgroups)) {
-        *propertiesChain = &subgroupsProperties.chain;
-        propertiesChain = &(*propertiesChain)->next;
-    }
-
     // Query AdapterPropertiesSubgroupMatrixConfigs if the feature is supported.
     FreeMembers<WGPUAdapterPropertiesSubgroupMatrixConfigs> subgroupMatrixConfigs(mProcs);
     // WGPUAdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs{};
@@ -130,21 +122,25 @@ void Server::OnRequestAdapterCallback(RequestAdapterUserdata* data,
         propertiesChain = &(*propertiesChain)->next;
     }
 
+    WGPUDawnAdapterPropertiesPowerPreference powerProperties = {};
+    powerProperties.chain.sType = WGPUSType_DawnAdapterPropertiesPowerPreference;
+    *propertiesChain = &powerProperties.chain;
+    propertiesChain = &(*propertiesChain)->next;
+
     mProcs.adapterGetInfo(adapter, &info);
     cmd.info = &info;
 
     // Query and report the adapter limits, including all known extension limits.
+    // TODO(crbug.com/421950205): Use dawn::utils::ComboLimits here.
     WGPULimits limits = {};
-
-    // Chained DawnExperimentalImmediateDataLimits.
-    WGPUDawnExperimentalImmediateDataLimits experimentalImmediateDataLimits = {};
-    experimentalImmediateDataLimits.chain.sType = WGPUSType_DawnExperimentalImmediateDataLimits;
-    limits.nextInChain = &experimentalImmediateDataLimits.chain;
-
+    // Chained CompatibilityModeLimits.
+    WGPUCompatibilityModeLimits compatLimits = WGPU_COMPATIBILITY_MODE_LIMITS_INIT;
+    compatLimits.chain.sType = WGPUSType_CompatibilityModeLimits;
+    limits.nextInChain = &compatLimits.chain;
     // Chained DawnTexelCopyBufferRowAlignmentLimits.
-    WGPUDawnTexelCopyBufferRowAlignmentLimits texelCopyBufferRowAlignmentLimits = {};
-    texelCopyBufferRowAlignmentLimits.chain.sType = WGPUSType_DawnTexelCopyBufferRowAlignmentLimits;
-    experimentalImmediateDataLimits.chain.next = &texelCopyBufferRowAlignmentLimits.chain;
+    WGPUDawnTexelCopyBufferRowAlignmentLimits texelCopyBufferRowAlignmentLimits =
+        WGPU_DAWN_TEXEL_COPY_BUFFER_ROW_ALIGNMENT_LIMITS_INIT;
+    compatLimits.chain.next = &texelCopyBufferRowAlignmentLimits.chain;
 
     mProcs.adapterGetLimits(adapter, &limits);
     cmd.limits = &limits;

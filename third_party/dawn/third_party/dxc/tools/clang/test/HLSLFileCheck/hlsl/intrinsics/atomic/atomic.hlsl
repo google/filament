@@ -90,49 +90,57 @@ void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 }
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit InterlockedAdd 'void (unsigned long long &, unsigned long long)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit used InterlockedAdd 'void (int &, unsigned int)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit InterlockedAdd 'void (unsigned long long &, unsigned long long, long long &)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'long long &&__restrict'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'long long &&__restrict'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit used InterlockedAdd 'void (int &, unsigned int, int &)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'int &&__restrict'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'int &&__restrict'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit InterlockedCompareStore 'void (unsigned long long &, unsigned long long, unsigned long long)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned long long'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned long long'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit used InterlockedCompareStore 'void (int &, unsigned int, unsigned int)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned int'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned int'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit InterlockedCompareExchange 'void (unsigned long long &, unsigned long long, unsigned long long, long long &)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned long long'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'long long &&__restrict'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'unsigned long long &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned long long'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned long long'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'long long &&__restrict'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit
 
 // AST: FunctionDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} implicit used InterlockedCompareExchange 'void (int &, unsigned int, unsigned int, int &)' extern
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned int'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
-// AST-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'int &&__restrict'
-// AST-NEXT: `-HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} result 'int &'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} compare 'unsigned int'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} value 'unsigned int'
+// AST-NEXT: ParmVarDecl {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} original 'int &&__restrict'
+// AST-NEXT: HLSLIntrinsicAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}} Implicit "op" ""
+// AST-NEXT: HLSLBuiltinCallAttr {{0x[0-9a-fA-F]+}} {{[<>a-z ]+}}> Implicit

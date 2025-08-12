@@ -29,6 +29,7 @@
 #define INCLUDE_DAWN_WIRE_WIRESERVER_H_
 
 #include <memory>
+#include <span>
 
 #include "dawn/wire/Wire.h"
 
@@ -136,14 +137,14 @@ class DAWN_WIRE_EXPORT MemoryTransferService {
                                            size_t deserializeSize,
                                            size_t offset,
                                            size_t size) = 0;
-
-      protected:
-        void* mTargetData = nullptr;
-        size_t mDataLength = 0;
+        std::span<uint8_t> GetTarget() const;
 
       private:
         WriteHandle(const WriteHandle&) = delete;
         WriteHandle& operator=(const WriteHandle&) = delete;
+
+        uint8_t* mTargetData = nullptr;
+        size_t mDataLength = 0;
     };
 
   private:

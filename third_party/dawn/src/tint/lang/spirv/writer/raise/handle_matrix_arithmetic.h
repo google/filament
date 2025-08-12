@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_HANDLE_MATRIX_ARITHMETIC_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_HANDLE_MATRIX_ARITHMETIC_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -36,6 +37,12 @@ class Module;
 }
 
 namespace tint::spirv::writer::raise {
+
+// The capabilities that the transform can support.
+const core::ir::Capabilities kHandleMatrixArithmeticCapabilities{
+    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
+    core::ir::Capability::kAllowNonCoreTypes,
+};
 
 /// HandleMatrixArithmetic is a transform that converts arithmetic instruction that use matrix into
 /// SPIR-V intrinsics or polyfills.

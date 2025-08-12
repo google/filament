@@ -56,9 +56,8 @@ struct BufferSyncInfo {
 struct TextureSyncInfo {
     wgpu::TextureUsage usage = wgpu::TextureUsage::None;
     wgpu::ShaderStage shaderStages = wgpu::ShaderStage::None;
+    bool operator==(const TextureSyncInfo& b) const = default;
 };
-
-bool operator==(const TextureSyncInfo& a, const TextureSyncInfo& b);
 
 // The texture usage inside passes must be tracked per-subresource.
 using TextureSubresourceSyncInfo = SubresourceStorage<TextureSyncInfo>;

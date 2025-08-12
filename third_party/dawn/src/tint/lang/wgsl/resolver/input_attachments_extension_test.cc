@@ -27,7 +27,7 @@
 
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/number.h"
-#include "src/tint/lang/wgsl/extension.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
 #include "src/tint/lang/wgsl/resolver/resolver_helper_test.h"
 

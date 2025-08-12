@@ -97,8 +97,14 @@ TEST_F(WireInjectSurfaceTests, CallAfterReserveInject) {
     ASSERT_TRUE(
         GetWireServer()->InjectSurface(apiSurface, reservation.handle, reservation.instanceHandle));
 
-    surface.Present();
-    EXPECT_CALL(api, SurfacePresent(apiSurface));
+    // The client assumes a reserved surface is unconfigured, so it can't present.
+    EXPECT_EQ(wgpu::Status::Error, surface.Present());
+    FlushClient();
+
+    surface.Configure(&mConfiguration);
+    EXPECT_CALL(api, SurfaceConfigure(apiSurface, _));
+    EXPECT_EQ(wgpu::Status::Success, surface.Present());
+    EXPECT_CALL(api, SurfacePresent(apiSurface)).WillOnce(Return(WGPUStatus_Success));
     FlushClient();
 }
 

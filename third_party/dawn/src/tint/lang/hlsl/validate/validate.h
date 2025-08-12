@@ -29,19 +29,10 @@
 #define SRC_TINT_LANG_HLSL_VALIDATE_VALIDATE_H_
 
 #include <string>
-#include <utility>
-#include <vector>
 
-#include "src/tint/lang/wgsl/ast/pipeline_stage.h"
-
-// Forward declarations
-namespace tint {
-class Program;
-}  // namespace tint
+#include "src/tint/lang/core/ir/function.h"
 
 namespace tint::hlsl::validate {
-
-using EntryPointList = std::vector<std::pair<std::string, ast::PipelineStage>>;
 
 /// Name of the FXC compiler DLL
 static constexpr const char kFxcDLLName[] = "d3dcompiler_47.dll";
@@ -68,13 +59,15 @@ struct Result {
 /// compiles successfully.
 /// @param dxc_path path to DXC
 /// @param source the generated HLSL source
-/// @param entry_points the list of entry points to validate
+/// @param entry_point_name the name of the entry point to validate
+/// @param pipeline_stage the pipeline stage of the entry point to validate
 /// @param require_16bit_types set to `true` to require the support of float16 in DXC
 /// @param hlsl_shader_model the shader model of the HLSL source
 /// @return the result of the compile
 Result ValidateUsingDXC(const std::string& dxc_path,
                         const std::string& source,
-                        const EntryPointList& entry_points,
+                        const std::string& entry_point_name,
+                        core::ir::Function::PipelineStage pipeline_stage,
                         bool require_16bit_types,
                         uint32_t hlsl_shader_model);
 
@@ -83,11 +76,13 @@ Result ValidateUsingDXC(const std::string& dxc_path,
 /// compiles successfully.
 /// @param fxc_path path to the FXC DLL
 /// @param source the generated HLSL source
-/// @param entry_points the list of entry points to validate
+/// @param entry_point_name the name of the entry point to validate
+/// @param pipeline_stage the pipeline stage of the entry point to validate
 /// @return the result of the compile
 Result ValidateUsingFXC(const std::string& fxc_path,
                         const std::string& source,
-                        const EntryPointList& entry_points);
+                        const std::string& entry_point_name,
+                        core::ir::Function::PipelineStage pipeline_stage);
 #endif  // _WIN32
 
 }  // namespace tint::hlsl::validate

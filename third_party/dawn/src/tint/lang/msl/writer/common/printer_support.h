@@ -31,9 +31,7 @@
 #include <cstdint>
 #include <string>
 
-#include "src/tint/lang/core/builtin_value.h"
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/utils/text/string_stream.h"
 

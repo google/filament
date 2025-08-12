@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_BUILTIN_POLYFILL_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_BUILTIN_POLYFILL_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/reflection.h"
 #include "src/tint/utils/result.h"
 
@@ -37,6 +38,9 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
+
+/// The capabilities that the transform can support.
+const Capabilities kBuiltinPolyfillCapabilities{Capability::kAllowDuplicateBindings};
 
 /// Enumerator of polyfill levels.
 enum class BuiltinPolyfillLevel {
@@ -52,6 +56,8 @@ enum class BuiltinPolyfillLevel {
 struct BuiltinPolyfillConfig {
     /// Should `clamp()` be polyfilled for integer values?
     bool clamp_int = false;
+    /// Should `abs()` be polyfilled for signed integer values?
+    bool abs_signed_int = false;
     /// Should `countLeadingZeros()` be polyfilled?
     bool count_leading_zeros = false;
     /// Should `countTrailingZeros()` be polyfilled?
@@ -92,15 +98,20 @@ struct BuiltinPolyfillConfig {
                  clamp_int,
                  count_leading_zeros,
                  count_trailing_zeros,
+                 degrees,
                  extract_bits,
                  first_leading_bit,
                  first_trailing_bit,
+                 fwidth_fine,
                  insert_bits,
+                 radians,
+                 reflect_vec2_f32,
                  saturate,
                  texture_sample_base_clamp_to_edge_2d_f32,
                  dot_4x8_packed,
                  pack_unpack_4x8,
-                 pack_4xu8_clamp);
+                 pack_4xu8_clamp,
+                 pack_unpack_4x8_norm);
 };
 
 /// BuiltinPolyfill is a transform that replaces calls to builtin functions and uses of other core

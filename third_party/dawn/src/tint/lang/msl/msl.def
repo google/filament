@@ -59,25 +59,47 @@ match workgroup_or_storage
 
 match f32_texel_format
   : texel_format.r8unorm
+  | texel_format.r8snorm
+  | texel_format.rg8unorm
+  | texel_format.rg8snorm
   | texel_format.bgra8unorm
   | texel_format.rgba8unorm
   | texel_format.rgba8snorm
+  | texel_format.r16unorm
+  | texel_format.r16snorm
+  | texel_format.rg16unorm
+  | texel_format.rg16snorm
+  | texel_format.rgba16unorm
+  | texel_format.rgba16snorm
+  | texel_format.r16float
+  | texel_format.rg16float
   | texel_format.rgba16float
   | texel_format.r32float
   | texel_format.rg32float
   | texel_format.rgba32float
+  | texel_format.rgb10a2unorm
+  | texel_format.rg11b10ufloat
 match i32_texel_format
-  : texel_format.rgba8sint
+  : texel_format.r8sint
+  | texel_format.rg8sint
+  | texel_format.rgba8sint
+  | texel_format.r16sint
+  | texel_format.rg16sint
   | texel_format.rgba16sint
   | texel_format.r32sint
   | texel_format.rg32sint
   | texel_format.rgba32sint
 match u32_texel_format
-  : texel_format.rgba8uint
+  : texel_format.r8uint
+  | texel_format.rg8uint
+  | texel_format.r16uint
+  | texel_format.rg16uint
+  | texel_format.rgba8uint
   | texel_format.rgba16uint
   | texel_format.r32uint
   | texel_format.rg32uint
   | texel_format.rgba32uint
+  | texel_format.rgb10a2uint
 
 ////////////////////////////////////////////////////////////////////////////////
 // Types                                                                      //
@@ -127,6 +149,8 @@ type level
 
 type __packed_vec3<T>
 
+type string
+
 ////////////////////////////////////////////////////////////////////////////////
 // Type matchers                                                              //
 ////////////////////////////////////////////////////////////////////////////////
@@ -136,6 +160,7 @@ match fiu32: f32 | i32 | u32
 match f32_f16: f32 | f16
 match fiu32_f16: f32 | i32 | u32 | f16
 match iu8: i8 | u8
+match scalar: bool | f16 | f32 | i32 | u32
 
 match subgroup_matrix_kind_left : subgroup_matrix_kind.left
 match subgroup_matrix_kind_right : subgroup_matrix_kind.right
@@ -377,8 +402,15 @@ fn convert(u32) -> u64
   subgroup_matrix<subgroup_matrix_kind_right, S, C, K>,
   subgroup_matrix<subgroup_matrix_kind_result, S, C, R>)
 
-////////////////////////////////////////////////////////////////////////////////
-// Binary Operators                                                           //
-////////////////////////////////////////////////////////////////////////////////
-implicit(T: iu8) op + (T, T) -> T
-implicit(T: iu8) op * (T, T) -> T
+// Compute
+implicit(T: scalar) fn os_log(string, u32, u32, u32, T)
+implicit(N: num, T: scalar) fn os_log(string, u32, u32, u32, vec<N, T>)
+// Fragment
+implicit(T: scalar) fn os_log(string, f32, f32, f32, T)
+implicit(N: num, T: scalar) fn os_log(string, f32, f32, f32, vec<N, T>)
+// Vertex
+implicit(T: scalar) fn os_log(string, u32, u32, T)
+implicit(N: num, T: scalar) fn os_log(string, u32, u32, vec<N, T>)
+
+implicit(T, S: address_space, A: access) fn pointer_offset(ptr<S, T, A>, u32) -> ptr<S, T, A>
+

@@ -47,6 +47,8 @@ libtint_source_set("transform") {
   sources = [
     "add_empty_entry_point.cc",
     "add_empty_entry_point.h",
+    "array_length_from_immediate.cc",
+    "array_length_from_immediate.h",
     "array_length_from_uniform.cc",
     "array_length_from_uniform.h",
     "bgra8unorm_polyfill.cc",
@@ -59,18 +61,25 @@ libtint_source_set("transform") {
     "block_decorated_structs.h",
     "builtin_polyfill.cc",
     "builtin_polyfill.h",
+    "builtin_scalarize.cc",
+    "builtin_scalarize.h",
+    "change_immediate_to_uniform.cc",
+    "change_immediate_to_uniform.h",
     "combine_access_instructions.cc",
     "combine_access_instructions.h",
     "conversion_polyfill.cc",
     "conversion_polyfill.h",
+    "dead_code_elimination.cc",
+    "dead_code_elimination.h",
     "demote_to_helper.cc",
     "demote_to_helper.h",
     "direct_variable_access.cc",
     "direct_variable_access.h",
     "multiplanar_external_texture.cc",
     "multiplanar_external_texture.h",
-    "prepare_push_constants.cc",
-    "prepare_push_constants.h",
+    "multiplanar_options.h",
+    "prepare_immediate_data.cc",
+    "prepare_immediate_data.h",
     "preserve_padding.cc",
     "preserve_padding.h",
     "prevent_infinite_loops.cc",
@@ -85,6 +94,8 @@ libtint_source_set("transform") {
     "robustness.h",
     "shader_io.cc",
     "shader_io.h",
+    "signed_integer_polyfill.cc",
+    "signed_integer_polyfill.h",
     "single_entry_point.cc",
     "single_entry_point.h",
     "std140.cc",
@@ -104,7 +115,6 @@ libtint_source_set("transform") {
     "${dawn_root}/src/utils:utils",
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
-    "${tint_src_dir}/lang/core/common",
     "${tint_src_dir}/lang/core/constant",
     "${tint_src_dir}/lang/core/intrinsic",
     "${tint_src_dir}/lang/core/ir",
@@ -127,25 +137,30 @@ if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
       "add_empty_entry_point_test.cc",
+      "array_length_from_immediate_test.cc",
       "array_length_from_uniform_test.cc",
       "bgra8unorm_polyfill_test.cc",
       "binary_polyfill_test.cc",
       "binding_remapper_test.cc",
       "block_decorated_structs_test.cc",
       "builtin_polyfill_test.cc",
+      "builtin_scalarize_test.cc",
+      "change_immediate_to_uniform_test.cc",
       "combine_access_instructions_test.cc",
       "conversion_polyfill_test.cc",
+      "dead_code_elimination_test.cc",
       "demote_to_helper_test.cc",
       "direct_variable_access_test.cc",
       "helper_test.h",
       "multiplanar_external_texture_test.cc",
-      "prepare_push_constants_test.cc",
+      "prepare_immediate_data_test.cc",
       "preserve_padding_test.cc",
       "prevent_infinite_loops_test.cc",
       "remove_continue_in_switch_test.cc",
       "remove_terminator_args_test.cc",
       "rename_conflicts_test.cc",
       "robustness_test.cc",
+      "signed_integer_polyfill_test.cc",
       "single_entry_point_test.cc",
       "std140_test.cc",
       "substitute_overrides_test.cc",
@@ -159,21 +174,12 @@ if (tint_build_unittests) {
       "${tint_src_dir}:gmock_and_gtest",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
-      "${tint_src_dir}/lang/core/common",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/intrinsic",
       "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/ir/type",
       "${tint_src_dir}/lang/core/type",
-      "${tint_src_dir}/lang/wgsl",
-      "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
-      "${tint_src_dir}/lang/wgsl/program",
-      "${tint_src_dir}/lang/wgsl/sem",
-      "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
-      "${tint_src_dir}/lang/wgsl/writer/raise",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -185,21 +191,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_wgsl_reader) {
-      deps += [
-        "${tint_src_dir}/lang/wgsl/reader",
-        "${tint_src_dir}/lang/wgsl/reader/program_to_ir",
-      ]
-    }
-
-    if (tint_build_wgsl_reader && tint_build_wgsl_writer) {
-      sources += [ "direct_variable_access_wgsl_test.cc" ]
-    }
-
-    if (tint_build_wgsl_writer) {
-      deps += [ "${tint_src_dir}/lang/wgsl/writer" ]
-    }
   }
 }
 
@@ -214,6 +205,7 @@ tint_fuzz_source_set("fuzz") {
     "builtin_polyfill_fuzz.cc",
     "combine_access_instructions_fuzz.cc",
     "conversion_polyfill_fuzz.cc",
+    "dead_code_elimination_fuzz.cc",
     "demote_to_helper_fuzz.cc",
     "direct_variable_access_fuzz.cc",
     "multiplanar_external_texture_fuzz.cc",
@@ -221,6 +213,7 @@ tint_fuzz_source_set("fuzz") {
     "remove_terminator_args_fuzz.cc",
     "rename_conflicts_fuzz.cc",
     "robustness_fuzz.cc",
+    "single_entry_point_fuzz.cc",
     "std140_fuzz.cc",
     "substitute_overrides_fuzz.cc",
     "value_to_let_fuzz.cc",
@@ -232,7 +225,6 @@ tint_fuzz_source_set("fuzz") {
     "${tint_src_dir}/api/common",
     "${tint_src_dir}/cmd/fuzz/ir:fuzz",
     "${tint_src_dir}/lang/core",
-    "${tint_src_dir}/lang/core/common",
     "${tint_src_dir}/lang/core/constant",
     "${tint_src_dir}/lang/core/ir",
     "${tint_src_dir}/lang/core/ir/transform",

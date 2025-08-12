@@ -28,31 +28,39 @@
 #include "src/tint/utils/ice/ice.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "src/tint/utils/ice/debugger.h"
 #include "src/tint/utils/macros/compiler.h"
 
 namespace tint {
-namespace {
 
-InternalCompilerErrorReporter* ice_reporter = nullptr;
-
-}  // namespace
-
-void SetInternalCompilerErrorReporter(InternalCompilerErrorReporter* reporter) {
-    ice_reporter = reporter;
-}
-
-InternalCompilerError::InternalCompilerError(const char* file, size_t line)
-    : file_(file), line_(line) {}
+InternalCompilerError::InternalCompilerError(const char* file,
+                                             size_t line,
+                                             InternalCompilerErrorCallback callback)
+    : file_(file), line_(line), callback_info_(callback) {}
 
 TINT_BEGIN_DISABLE_WARNING(DESTRUCTOR_NEVER_RETURNS);
 InternalCompilerError::~InternalCompilerError() {
-    if (ice_reporter) {
-        ice_reporter(*this);
+    std::ostringstream err;
+    err << Error();
+    err << R"(
+
+********************************************************************
+*  The tint shader compiler has encountered an unexpected error.   *
+*                                                                  *
+*  Please help us fix this issue by submitting a bug report at     *
+*  crbug.com/tint with the source program that triggered the bug.  *
+********************************************************************
+)";
+
+    // When consuming the ICE, log the error message and never return.
+    // Default to stderr unless an ICE callback is provided.
+    if (callback_info_ && callback_info_->callback) {
+        callback_info_->callback(err.str(), callback_info_->userdata);
     } else {
-        std::cerr << Error() << "\n\n";
+        std::cerr << err.str();
     }
 
     debugger::Break();

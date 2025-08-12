@@ -31,7 +31,7 @@ public:
 
   bool visit(SpirvDecoration *decor) override;
   bool visit(SpirvEntryPoint *) override;
-  bool visit(SpirvExecutionMode *) override;
+  bool visit(SpirvExecutionModeBase *execMode) override;
   bool visit(SpirvImageQuery *) override;
   bool visit(SpirvImageOp *) override;
   bool visit(SpirvImageSparseTexelsResident *) override;

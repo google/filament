@@ -62,7 +62,7 @@ size_t Hash(const TypedInteger<Tag, T>& value) {
 // Example usage to compute the hash of a mask and values corresponding to the mask:
 //
 //    size_t hash = Hash(mask):
-//    for (uint32_t i : IterateBitSet(mask)) { HashCombine(&hash, hashables[i]); }
+//    for (uint32_t i : mask) { HashCombine(&hash, hashables[i]); }
 //    return hash;
 template <typename T>
 void HashCombine(size_t* hash, const T& value) {

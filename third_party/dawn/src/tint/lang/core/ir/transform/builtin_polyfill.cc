@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/core/ir/transform/builtin_polyfill.h"
 
+#include "src/tint/lang/core/binary_op.h"
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
@@ -73,6 +74,12 @@ struct State {
                     case core::BuiltinFn::kClamp:
                         if (config.clamp_int &&
                             builtin->Result()->Type()->IsIntegerScalarOrVector()) {
+                            worklist.Push(builtin);
+                        }
+                        break;
+                    case core::BuiltinFn::kAbs:
+                        if (config.abs_signed_int &&
+                            builtin->Result()->Type()->IsSignedIntegerScalarOrVector()) {
                             worklist.Push(builtin);
                         }
                         break;
@@ -193,6 +200,9 @@ struct State {
             switch (builtin->Func()) {
                 case core::BuiltinFn::kClamp:
                     ClampInt(builtin);
+                    break;
+                case core::BuiltinFn::kAbs:
+                    AbsSignedInt(builtin);
                     break;
                 case core::BuiltinFn::kCountLeadingZeros:
                     CountLeadingZeros(builtin);
@@ -397,6 +407,17 @@ struct State {
         b.InsertBefore(call, [&] {
             auto* max = b.Call(type, core::BuiltinFn::kMax, e, low);
             b.CallWithResult(call->DetachResult(), core::BuiltinFn::kMin, max, high);
+        });
+        call->Destroy();
+    }
+
+    /// Polyfill a `abs()` builtin call for signed integers.
+    /// @param call the builtin call instruction
+    void AbsSignedInt(ir::CoreBuiltinCall* call) {
+        auto* type = call->Result()->Type();
+        auto* e = call->Args()[0];
+        b.InsertBefore(call, [&] {
+            b.CallWithResult(call->DetachResult(), core::BuiltinFn::kMax, e, b.Negation(type, e));
         });
         call->Destroy();
     }
@@ -810,6 +831,18 @@ struct State {
                 auto* newbits = call->Args()[1];
                 auto* result_ty = e->Type();
                 auto* uint_ty = ty.MatchWidth(ty.u32(), result_ty);
+                const bool result_is_signed = result_ty->DeepestElement()->Is<type::I32>();
+
+                auto mask_as_result_type = [&](Instruction* mask) {
+                    if (result_is_signed) {
+                        mask = b.Convert<i32>(mask);
+                    }
+                    if (auto* vec = result_ty->As<type::Vector>()) {
+                        mask = b.Construct(vec, mask);
+                    }
+                    return mask;
+                };
+
                 b.InsertBefore(call, [&] {
                     auto* oc = b.Add<u32>(offset, count);
                     auto* t1 = b.ShiftLeft<u32>(1_u, offset);
@@ -825,9 +858,9 @@ struct State {
                     auto* t3 = b.ShiftLeft(result_ty, newbits, b.Construct(uint_ty, offset));
                     auto* s3 = b.Call(result_ty, core::BuiltinFn::kSelect, f3, t3,
                                       b.LessThan<bool>(offset, 32_u));
-                    auto* result_lhs = b.And(result_ty, s3, b.Construct(result_ty, mask));
+                    auto* result_lhs = b.And(result_ty, s3, mask_as_result_type(mask));
                     auto* result_rhs =
-                        b.And(result_ty, e, b.Construct(result_ty, b.Complement<u32>(mask)));
+                        b.And(result_ty, e, mask_as_result_type(b.Complement<u32>(mask)));
                     auto* result = b.Or(result_ty, result_lhs, result_rhs);
                     result->SetResult(call->DetachResult());
                 });
@@ -1145,7 +1178,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BuiltinPolyfill(Module& ir, const BuiltinPolyfillConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.BuiltinPolyfill");
+    auto result = ValidateAndDumpIfNeeded(ir, "core.BuiltinPolyfill", kBuiltinPolyfillCapabilities);
     if (result != Success) {
         return result;
     }

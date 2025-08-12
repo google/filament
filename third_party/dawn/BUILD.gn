@@ -71,10 +71,18 @@ group("tests") {
 }
 
 group("cmds") {
-  deps = [
-    "src/dawn/samples",
-    "src/tint:cmds",
-  ]
+  deps = [ "src/tint:cmds" ]
+  if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
+      (target_cpu == "arm64" && is_win)) {
+    deps += [ "third_party/gn/dxc:dxc" ]
+  }
+}
+
+group("samples") {
+  deps = [ "src/dawn/samples" ]
+  if (dawn_wasm) {
+    deps += [ "src/dawn/samples(//build/toolchain/wasm:wasm)" ]
+  }
   if ((target_cpu == "x64" && (is_win || is_linux || is_mac)) ||
       (target_cpu == "arm64" && is_win)) {
     deps += [ "third_party/gn/dxc:dxc" ]
@@ -91,7 +99,7 @@ group("emdawnwebgpu") {
     "src/emdawnwebgpu:emdawnwebgpu_headers_gen",
     "src/emdawnwebgpu:emdawnwebgpu_js_gen",
   ]
-  if (dawn_emscripten_dir != "") {
+  if (is_wasm) {
     deps += [ "src/emdawnwebgpu:emdawnwebgpu" ]
   }
 }
@@ -105,6 +113,7 @@ group("all") {
     ":emdawnwebgpu",
     ":fuzzers",
     ":libs",
+    ":samples",
     ":tests",
   ]
 }

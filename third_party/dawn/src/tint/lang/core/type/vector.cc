@@ -37,13 +37,24 @@ TINT_INSTANTIATE_TYPEINFO(tint::core::type::Vector);
 
 namespace tint::core::type {
 
+namespace {
+
+core::type::Flags FlagsFrom(const Type* element) {
+    core::type::Flags flags{
+        Flag::kConstructable,
+        Flag::kCreationFixedFootprint,
+        Flag::kFixedFootprint,
+    };
+    if (element->IsHostShareable()) {
+        flags.Add(Flag::kHostShareable);
+    }
+    return flags;
+}
+
+}  // namespace
+
 Vector::Vector(type::Type const* subtype, uint32_t width, bool packed /* = false */)
-    : Base(Hash(tint::TypeCode::Of<Vector>().bits, width, subtype, packed),
-           core::type::Flags{
-               Flag::kConstructable,
-               Flag::kCreationFixedFootprint,
-               Flag::kFixedFootprint,
-           }),
+    : Base(Hash(tint::TypeCode::Of<Vector>().bits, width, subtype, packed), FlagsFrom(subtype)),
       subtype_(subtype),
       width_(width),
       packed_(packed) {

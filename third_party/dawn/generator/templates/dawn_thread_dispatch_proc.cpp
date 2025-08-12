@@ -25,7 +25,7 @@ void {{prefix}}ProcSetPerThreadProcs(const {{Prefix}}ProcTable* procs) {
 }
 
 {% for function in by_category["function"] %}
-    static {{as_cType(function.return_type.name)}} ThreadDispatch{{as_cppType(function.name)}}(
+    static {{as_annotated_cType(function.returns)}} ThreadDispatch{{as_cppType(function.name)}}(
         {%- for arg in function.arguments -%}
             {% if not loop.first %}, {% endif %}{{as_annotated_cType(arg)}}
         {%- endfor -%}
@@ -34,7 +34,7 @@ void {{prefix}}ProcSetPerThreadProcs(const {{Prefix}}ProcTable* procs) {
         if (!proc) {
             proc = defaultProc.{{as_varName(function.name)}};
         }
-        {% if function.return_type.name.canonical_case() != "void" %}return {% endif %}
+        {% if function.returns %}return {% endif %}
         proc(
             {%- for arg in function.arguments -%}
                 {% if not loop.first %}, {% endif %}{{as_varName(arg.name)}}
@@ -43,9 +43,9 @@ void {{prefix}}ProcSetPerThreadProcs(const {{Prefix}}ProcTable* procs) {
     }
 {% endfor %}
 
-{% for type in by_category["object"] %}
-    {% for method in c_methods(type) %}
-        static {{as_cType(method.return_type.name)}} ThreadDispatch{{as_MethodSuffix(type.name, method.name)}}(
+{% for (type, methods) in c_methods_sorted_by_parent %}
+    {% for method in methods %}
+        static {{as_annotated_cType(method.returns)}} ThreadDispatch{{as_MethodSuffix(type.name, method.name)}}(
             {{-as_cType(type.name)}} {{as_varName(type.name)}}
             {%- for arg in method.arguments -%}
                 , {{as_annotated_cType(arg)}}
@@ -55,7 +55,7 @@ void {{prefix}}ProcSetPerThreadProcs(const {{Prefix}}ProcTable* procs) {
             if (!proc) {
                 proc = defaultProc.{{as_varName(type.name, method.name)}};
             }
-            {% if method.return_type.name.canonical_case() != "void" %}return {% endif %}
+            {% if method.returns %}return {% endif %}
             proc({{as_varName(type.name)}}
                 {%- for arg in method.arguments -%}
                     , {{as_varName(arg.name)}}
@@ -70,8 +70,8 @@ extern "C" {
         {% for function in by_category["function"] %}
             ThreadDispatch{{as_cppType(function.name)}},
         {% endfor %}
-        {% for type in by_category["object"] %}
-            {% for method in c_methods(type) %}
+        {% for (type, methods) in c_methods_sorted_by_parent %}
+            {% for method in methods %}
                 ThreadDispatch{{as_MethodSuffix(type.name, method.name)}},
             {% endfor %}
         {% endfor %}

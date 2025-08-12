@@ -41,7 +41,8 @@ TINT_INSTANTIATE_TYPEINFO(tint::msl::type::Bias);
 namespace tint::msl::type {
 
 Bias::Bias()
-    : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Bias>().bits)), core::type::Flags{}) {}
+    : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Bias>().bits)),
+           core::type::Flags{core::type::kConstructable, core::type::kCreationFixedFootprint}) {}
 
 bool Bias::Equals(const UniqueNode& other) const {
     return other.Is<Bias>();

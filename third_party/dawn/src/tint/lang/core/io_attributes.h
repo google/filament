@@ -31,7 +31,8 @@
 #include <cstdint>
 #include <optional>
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/api/common/binding_point.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/interpolation.h"
 
 namespace tint::core {
@@ -39,15 +40,19 @@ namespace tint::core {
 /// Attributes that can be applied to an object that will be used for shader IO.
 struct IOAttributes {
     /// The value of a `@location` attribute.
-    std::optional<uint32_t> location;
+    std::optional<uint32_t> location = std::nullopt;
     /// The value of a `@blend_src` attribute.
-    std::optional<uint32_t> blend_src;
+    std::optional<uint32_t> blend_src = std::nullopt;
     /// The value of a `@color` attribute.
-    std::optional<uint32_t> color;
+    std::optional<uint32_t> color = std::nullopt;
     /// The value of a `@builtin` attribute.
-    std::optional<core::BuiltinValue> builtin;
+    std::optional<core::BuiltinValue> builtin = std::nullopt;
     /// The values of a `@interpolate` attribute.
-    std::optional<core::Interpolation> interpolation;
+    std::optional<core::Interpolation> interpolation = std::nullopt;
+    /// The value of an `@input_attachment_index` attribute
+    std::optional<uint32_t> input_attachment_index = std::nullopt;
+    /// The value of the `@binding` and `@group` attributes
+    std::optional<BindingPoint> binding_point = std::nullopt;
     /// True if the object is annotated with `@invariant`.
     bool invariant = false;
 };

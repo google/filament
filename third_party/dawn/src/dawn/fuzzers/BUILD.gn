@@ -42,7 +42,9 @@ if (dawn_has_fuzzers) {
       "${dawn_root}/src/dawn:proc",
       "${dawn_root}/src/dawn/common",
       "${dawn_root}/src/dawn/native:static",
-      "${dawn_root}/src/dawn/utils",
+      "${dawn_root}/src/dawn/utils:system_utils",
+      "${dawn_root}/src/dawn/utils:test_utils",
+      "${dawn_root}/src/dawn/utils:wgpu_utils",
       "${dawn_root}/src/dawn/wire:static",
     ]
   }

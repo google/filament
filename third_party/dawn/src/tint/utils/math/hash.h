@@ -32,9 +32,12 @@
 
 #include <cstdio>
 #include <functional>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -140,6 +143,20 @@ struct Hasher<std::pair<A, B>> {
     }
 };
 
+/// Hasher specialization for std::optional
+template <typename T>
+struct Hasher<std::optional<T>> {
+    /// @param optional the std::optional to hash
+    /// @returns a hash of the std::optional
+    HashCode operator()(const std::optional<T>& optional) const {
+        auto hash = Hash(optional.has_value());
+        if (optional.has_value()) {
+            hash = HashCombine(hash, optional.value());
+        }
+        return hash;
+    }
+};
+
 /// Hasher specialization for std::variant
 template <typename... TYPES>
 struct Hasher<std::variant<TYPES...>> {
@@ -170,6 +187,38 @@ struct Hasher<std::string> {
     /// @returns a hash of the string
     HashCode operator()(const std::string_view& str) const {
         return static_cast<HashCode>(std::hash<std::string_view>()(str));
+    }
+};
+
+/// Hasher specialization for std::unordered_map
+template <typename K, typename V>
+struct Hasher<std::unordered_map<K, V>> {
+    /// @param map the std::unordered_map to hash
+    /// @returns a hash of the map
+    HashCode operator()(const std::unordered_map<K, V>& map) const {
+        auto hash = Hash(map.size());
+        for (const auto& [key, value] : map) {
+            // Use an XOR to ensure that the non-deterministic ordering of the map still produces
+            // the same hash value for the same entries.
+            hash ^= Hash(key, value);
+        }
+        return hash;
+    }
+};
+
+/// Hasher specialization for std::unordered_set
+template <typename K>
+struct Hasher<std::unordered_set<K>> {
+    /// @param set the std::unordered_set to hash
+    /// @returns a hash of the set
+    HashCode operator()(const std::unordered_set<K>& set) const {
+        auto hash = Hash(set.size());
+        for (const auto& key : set) {
+            // Use an XOR to ensure that the non-deterministic ordering of the map still produces
+            // the same hash value for the same entries.
+            hash ^= Hash(key);
+        }
+        return hash;
     }
 };
 

@@ -2161,7 +2161,8 @@ INSTANTIATE_TEST_SUITE_P(ResolverTest,
 namespace texture_builtin_tests {
 
 enum class Texture { kF32, kI32, kU32 };
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, Texture data) {
     if (data == Texture::kF32) {
         out << "f32";

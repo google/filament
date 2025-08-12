@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_MSL_WRITER_PRINTER_PRINTER_H_
 #define SRC_TINT_LANG_MSL_WRITER_PRINTER_PRINTER_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/msl/writer/common/options.h"
 #include "src/tint/lang/msl/writer/common/output.h"
 #include "src/tint/utils/result.h"
@@ -38,6 +39,18 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::msl::writer {
+
+// The capabilities that might be needed due to raising.
+const core::ir::Capabilities kPrinterCapabilities{
+    core::ir::Capability::kAllow8BitIntegers,
+    core::ir::Capability::kAllow64BitIntegers,
+    core::ir::Capability::kAllowPointersAndHandlesInStructures,
+    core::ir::Capability::kAllowPrivateVarsInFunctions,
+    core::ir::Capability::kAllowAnyLetType,
+    core::ir::Capability::kAllowModuleScopeLets,
+    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
+    core::ir::Capability::kAllowNonCoreTypes,
+};
 
 /// @param module the Tint IR module to generate
 /// @returns the result of printing the MSL shader on success, or failure

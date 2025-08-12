@@ -139,7 +139,7 @@ class Texture final : public TextureBase {
         ExecutionSerial lastDecaySerial;
         bool isValidToDecay;
 
-        bool operator==(const StateAndDecay& other) const;
+        bool operator==(const StateAndDecay& other) const = default;
     };
 
     SubresourceStorage<StateAndDecay> InitialSubresourceStateAndDecay() const;

@@ -67,20 +67,18 @@
 #       Extra flags passed to the plugin. See cc_generator_options.
 #
 #   deps (optional)
-#       DEPRECATED: use proto_deps or link_deps instead (crbug.com/938011).
-#       Additional dependencies.
+#       This is used to specify deps to other proto_library targets containing
+#       imported proto files as sources from proto files in this target.
 #
 #   link_deps (optional)
-#       Additional dependencies linked to library.
+#       Additional deps for the generated C++ library.
+#
+#   link_public_deps (optional)
+#       Additional public_deps for the generated C++ library.
 #
 #   proto_deps (optional)
 #       Additional dependencies required before running protoc.
 #       e.g. proto file generating action.
-#
-#   proto_data_sources (optional)
-#       Additional proto sources that will only be used for references
-#       and will not be compiled.
-#       This should be used in conjunction with import_dirs.
 #
 #   use_protobuf_full (optional)
 #       If adding protobuf library would be required, adds protobuf_full to deps
@@ -92,6 +90,10 @@
 #       needed, typically when proto files cannot cleanly import through
 #       absolute paths, such as for third_party or generated .proto files.
 #       http://crbug.com/691451 tracks fixing this.
+#
+#   generator_visiblility (optional)
+#       This is added to visibility of code generation target so that other
+#       targets can depend on them to have generated codes as their inputs.
 #
 # Parameters for compiling the generated code:
 #
@@ -137,6 +139,9 @@
 #    ]
 #  }
 
+import("//build_overrides/protobuf.gni")
+
+import("//build/config/compiler/compiler.gni")
 import("//build/config/cronet/config.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/kythe.gni")
@@ -145,6 +150,14 @@ declare_args() {
   # Allows subprojects to omit javascript dependencies (e.g.) closure_compiler
   # and google-closure-library.
   enable_js_protobuf = !is_cronet_build
+}
+
+declare_args() {
+  # Allows embedders to provide an alternate path to abseil-cpp. (Used
+  # by Dawn & Skia in stand alone builds)
+  if (!defined(protobuf_abseil_dir)) {
+    protobuf_abseil_dir = "//third_party/abseil-cpp"
+  }
 }
 
 if (enable_js_protobuf) {
@@ -353,9 +366,14 @@ template("proto_library") {
   }
 
   action_name = "${target_name}_gen"
+  input_config_name = "${target_name}_input_config"
   source_set_name = target_name
   javascript_name = "${target_name}_js"
   py_runtime_name = "${target_name}_py_runtime"
+
+  config(input_config_name) {
+    inputs = proto_sources
+  }
 
   # Generate protobuf stubs.
   action(action_name) {
@@ -364,10 +382,14 @@ template("proto_library") {
       ":$py_runtime_name",
       ":$source_set_name",
     ]
+    if (defined(invoker.generator_visibility)) {
+      visibility += invoker.generator_visibility
+    }
     script = "//tools/protoc_wrapper/protoc_wrapper.py"
     args = protos
 
     sources = proto_sources
+
     outputs =
         get_path_info(protogens + protogens_cc + protogens_js + protogens_py,
                       "abspath")
@@ -385,6 +407,11 @@ template("proto_library") {
       "--proto-in-dir",
       rebase_path(proto_in_dir, root_build_dir),
     ]
+
+    # TODO(crbug.com/409484308): Enable in fuzzer builds too.
+    if (treat_warnings_as_errors && !fuzzing_engine_supports_custom_main) {
+      args += [ "--fatal_warnings" ]
+    }
 
     if (generate_cc) {
       args += [
@@ -455,10 +482,6 @@ template("proto_library") {
         rel_depfile,
       ]
     }
-    inputs = []
-    if (defined(invoker.proto_data_sources)) {
-      inputs += invoker.proto_data_sources
-    }
 
     if (defined(invoker.import_dirs)) {
       foreach(path, invoker.import_dirs) {
@@ -466,9 +489,21 @@ template("proto_library") {
       }
     }
 
-    # System protoc is not used so it's necessary to build a chromium one.
-    inputs += [ _protoc_path ]
+    inputs = [
+      # System protoc is not used so it's necessary to build a chromium one.
+      _protoc_path,
+
+      # Add this here as there are some protos which import descriptor.proto
+      # directly or indirectly.
+      "//third_party/protobuf/src/google/protobuf/descriptor.proto",
+    ]
     deps = [ _protoc_label ]
+    if (host_toolchain_is_msan) {
+      configs = [
+        "//third_party/instrumented_libs:msan_runtime_libs($host_toolchain)",
+      ]
+      deps += [ "//third_party/instrumented_libs:ld-linux($host_toolchain)" ]
+    }
 
     if (enable_js_protobuf) {
       inputs += [ _protoc_gen_js_path ]
@@ -487,12 +522,21 @@ template("proto_library") {
       }
     }
 
+    public_configs = [ ":${input_config_name}" ]
+    public_deps = []
+
     # The deps may have steps that have to run before running protoc.
     if (defined(invoker.proto_deps)) {
-      deps += invoker.proto_deps
+      public_deps += invoker.proto_deps
     }
     if (defined(invoker.deps)) {
-      deps += invoker.deps
+      public_deps += invoker.deps
+
+      # This is to propagate input deps for imported proto to ancestor targets.
+      foreach(dep, invoker.deps) {
+        canonicalized_dep = get_label_info(dep, "label_no_toolchain")
+        public_configs += [ "${canonicalized_dep}_input_config" ]
+      }
     }
   }
 
@@ -569,10 +613,7 @@ template("proto_library") {
       configs += [ "//build/config/sanitizers:not_fuzzed" ]
     }
 
-    public_configs = [
-      "$_this_dir:using_proto",
-      "$_this_dir:allow_deprecated_proto_fields",
-    ]
+    public_configs = [ "$_this_dir:using_proto" ]
     public_deps = []
 
     if (generate_cc || generate_with_plugin) {
@@ -627,6 +668,9 @@ template("proto_library") {
     if (defined(invoker.link_deps)) {
       deps += invoker.link_deps
     }
+    if (defined(invoker.link_public_deps)) {
+      public_deps += invoker.link_public_deps
+    }
   }
 
   if (generate_py_runtime) {
@@ -676,7 +720,7 @@ template("proto_library") {
 #     args = [
 #       "--encode=foo.FooMessage",
 #       "-I",
-#       rebase_path("//"),
+#       rebase_path("//", root_build_dir),
 #       "component/core/foo.proto",
 #     ]
 #   }
@@ -700,12 +744,18 @@ template("protoc_convert") {
     outputs = [ invoker.output_pattern ]
 
     args = [
-             "--protoc",
-             "./" + rebase_path(_protoc_path, root_build_dir),
-             "--infile",
-             "{{source}}",
-             "--outfile",
-             rebase_path(invoker.output_pattern),
-           ] + invoker.args
+      "--protoc",
+      "./" + rebase_path(_protoc_path, root_build_dir),
+      "--infile",
+      "{{source}}",
+      "--outfile",
+      rebase_path(invoker.output_pattern, root_build_dir),
+    ]
+
+    if (treat_warnings_as_errors) {
+      args += [ "--fatal_warnings" ]
+    }
+
+    args += invoker.args
   }
 }

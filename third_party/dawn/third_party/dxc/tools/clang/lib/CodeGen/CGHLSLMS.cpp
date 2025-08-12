@@ -288,6 +288,9 @@ public:
                                            llvm::Value *DestPtr,
                                            clang::QualType DestTy) override;
   void AddHLSLFunctionInfo(llvm::Function *, const FunctionDecl *FD) override;
+  bool FindDispatchGridSemantic(const CXXRecordDecl *RD,
+                                hlsl::SVDispatchGrid &SDGRec,
+                                CharUnits Offset = CharUnits());
   void AddHLSLNodeRecordTypeInfo(const clang::ParmVarDecl *parmDecl,
                                  hlsl::NodeIOProperties &node);
   void EmitHLSLFunctionProlog(llvm::Function *,
@@ -300,7 +303,7 @@ public:
                                  clang::QualType QaulTy) override;
   void FinishAutoVar(CodeGenFunction &CGF, const VarDecl &D,
                      llvm::Value *V) override;
-  const clang::Expr *CheckReturnStmtGLCMismatch(
+  const clang::Expr *CheckReturnStmtCoherenceMismatch(
       CodeGenFunction &CGF, const Expr *RV, const clang::ReturnStmt &S,
       clang::QualType FnRetTy,
       const std::function<void(const VarDecl *, llvm::Value *)> &TmpArgMap)
@@ -2560,6 +2563,66 @@ void CGMSHLSLRuntime::AddHLSLFunctionInfo(Function *F, const FunctionDecl *FD) {
   m_ScopeMap[F] = ScopeInfo(F, FD->getLocation());
 }
 
+// Find the input node record field with the SV_DispatchGrid semantic.
+// We have already diagnosed any error conditions in Sema, so we
+// expect valid size and types, and use the first occurance found.
+// We return true if we have populated the SV_DispatchGrid values.
+bool CGMSHLSLRuntime::FindDispatchGridSemantic(const CXXRecordDecl *RD,
+                                               hlsl::SVDispatchGrid &SDGRec,
+                                               CharUnits Offset) {
+  const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
+
+  // Check (non-virtual) bases
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    DXASSERT(!Base.getType()->isDependentType(),
+             "Node Record with dependent base class not caught by Sema");
+    if (Base.getType()->isDependentType())
+      continue;
+    CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    CharUnits BaseOffset = Offset + Layout.getBaseClassOffset(BaseDecl);
+    if (FindDispatchGridSemantic(BaseDecl, SDGRec, BaseOffset))
+      return true;
+  }
+
+  // Check each field in this record.
+  for (FieldDecl *Field : RD->fields()) {
+    uint64_t FieldNo = Field->getFieldIndex();
+    CharUnits FieldOffset = Offset + CGM.getContext().toCharUnitsFromBits(
+                                         Layout.getFieldOffset(FieldNo));
+
+    // If this field is a record check its fields
+    if (const CXXRecordDecl *D = Field->getType()->getAsCXXRecordDecl()) {
+      if (FindDispatchGridSemantic(D, SDGRec, FieldOffset))
+        return true;
+    }
+    // Otherwise check this field for the SV_DispatchGrid semantic annotation
+    for (const hlsl::UnusualAnnotation *UA : Field->getUnusualAnnotations()) {
+      if (UA->getKind() == hlsl::UnusualAnnotation::UA_SemanticDecl) {
+        const hlsl::SemanticDecl *SD = cast<hlsl::SemanticDecl>(UA);
+        if (SD->SemanticName.equals("SV_DispatchGrid")) {
+          const llvm::Type *FTy = CGM.getTypes().ConvertType(Field->getType());
+          const llvm::Type *ElTy = FTy;
+          SDGRec.NumComponents = 1;
+          SDGRec.ByteOffset = (unsigned)FieldOffset.getQuantity();
+          if (const llvm::VectorType *VT = dyn_cast<llvm::VectorType>(FTy)) {
+            SDGRec.NumComponents = VT->getNumElements();
+            ElTy = VT->getElementType();
+          } else if (const llvm::ArrayType *AT =
+                         dyn_cast<llvm::ArrayType>(FTy)) {
+            SDGRec.NumComponents = AT->getNumElements();
+            ElTy = AT->getElementType();
+          }
+          SDGRec.ComponentType = (ElTy->getIntegerBitWidth() == 16)
+                                     ? DXIL::ComponentType::U16
+                                     : DXIL::ComponentType::U32;
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 void CGMSHLSLRuntime::AddHLSLNodeRecordTypeInfo(
     const clang::ParmVarDecl *parmDecl, hlsl::NodeIOProperties &node) {
   clang::QualType paramTy = parmDecl->getType().getCanonicalType();
@@ -2577,7 +2640,6 @@ void CGMSHLSLRuntime::AddHLSLNodeRecordTypeInfo(
         DiagnosticsEngine &Diags = CGM.getDiags();
         auto &Rec = TemplateArgs.get(0);
         clang::QualType RecType = Rec.getAsType();
-        llvm::Type *Type = CGM.getTypes().ConvertType(RecType);
         CXXRecordDecl *RD = RecType->getAsCXXRecordDecl();
 
         // Get the TrackRWInputSharing flag from the record attribute
@@ -2597,63 +2659,12 @@ void CGMSHLSLRuntime::AddHLSLNodeRecordTypeInfo(
 
         // Ex: For DispatchNodeInputRecord<MY_RECORD>, set size =
         // size(MY_RECORD), alignment = alignof(MY_RECORD)
+        llvm::Type *Type = CGM.getTypes().ConvertType(RecType);
         node.RecordType.size = CGM.getDataLayout().getTypeAllocSize(Type);
         node.RecordType.alignment =
             CGM.getDataLayout().getABITypeAlignment(Type);
-        // Iterate over fields of the MY_RECORD(example) struct
-        for (auto fieldDecl : RD->fields()) {
-          // Check if any of the fields have a semantic annotation =
-          // SV_DispatchGrid
-          for (const hlsl::UnusualAnnotation *it :
-               fieldDecl->getUnusualAnnotations()) {
-            if (it->getKind() == hlsl::UnusualAnnotation::UA_SemanticDecl) {
-              const hlsl::SemanticDecl *sd = cast<hlsl::SemanticDecl>(it);
-              // if we find a field with SV_DispatchGrid, fill out the
-              // SV_DispatchGrid member with byteoffset of the field,
-              // NumComponents (3 for uint3 etc) and U32 vs U16 types, which are
-              // the only types allowed
-              if (sd->SemanticName.equals("SV_DispatchGrid")) {
-                clang::QualType FT = fieldDecl->getType();
-                auto &DL = CGM.getDataLayout();
-                auto &SDGRec = node.RecordType.SV_DispatchGrid;
 
-                DXASSERT_NOMSG(SDGRec.NumComponents == 0);
-
-                unsigned fieldIdx = fieldDecl->getFieldIndex();
-                if (StructType *ST = dyn_cast<StructType>(Type)) {
-                  SDGRec.ByteOffset =
-                      DL.getStructLayout(ST)->getElementOffset(fieldIdx);
-                }
-                const llvm::Type *lTy = CGM.getTypes().ConvertType(FT);
-                if (const llvm::VectorType *VT =
-                        dyn_cast<llvm::VectorType>(lTy)) {
-                  DXASSERT(VT->getElementType()->isIntegerTy(), "invalid type");
-                  SDGRec.NumComponents = VT->getNumElements();
-                  SDGRec.ComponentType =
-                      (VT->getElementType()->getIntegerBitWidth() == 16)
-                          ? DXIL::ComponentType::U16
-                          : DXIL::ComponentType::U32;
-                } else if (const llvm::ArrayType *AT =
-                               dyn_cast<llvm::ArrayType>(lTy)) {
-                  DXASSERT(AT->getElementType()->isIntegerTy(), "invalid type");
-                  DXASSERT_NOMSG(AT->getNumElements() <= 3);
-                  SDGRec.NumComponents = AT->getNumElements();
-                  SDGRec.ComponentType =
-                      (AT->getElementType()->getIntegerBitWidth() == 16)
-                          ? DXIL::ComponentType::U16
-                          : DXIL::ComponentType::U32;
-                } else {
-                  // Scalar U16 or U32
-                  DXASSERT(lTy->isIntegerTy(), "invalid type");
-                  SDGRec.NumComponents = 1;
-                  SDGRec.ComponentType = (lTy->getIntegerBitWidth() == 16)
-                                             ? DXIL::ComponentType::U16
-                                             : DXIL::ComponentType::U32;
-                }
-              }
-            }
-          }
-        }
+        FindDispatchGridSemantic(RD, node.RecordType.SV_DispatchGrid);
       }
     }
   }
@@ -2803,16 +2814,20 @@ void CGMSHLSLRuntime::MarkPotentialResourceTemp(CodeGenFunction &CGF,
   AddValToPropertyMap(V, QualTy);
 }
 
-static bool isGLCMismatch(QualType Ty0, QualType Ty1, const Expr *SrcExp,
-                          clang::SourceLocation Loc, DiagnosticsEngine &Diags) {
-  if (HasHLSLGloballyCoherent(Ty0) == HasHLSLGloballyCoherent(Ty1))
-    return false;
+static std::pair<bool, bool> getCoherenceMismatch(QualType Ty0, QualType Ty1,
+                                                  const Expr *SrcExp) {
+  std::pair Mismatch{
+      HasHLSLGloballyCoherent(Ty0) != HasHLSLGloballyCoherent(Ty1),
+      HasHLSLReorderCoherent(Ty0) != HasHLSLReorderCoherent(Ty1)};
+  if (!Mismatch.first && !Mismatch.second)
+    return {false, false};
+
   if (const CastExpr *Cast = dyn_cast<CastExpr>(SrcExp)) {
     // Skip flat conversion which is for createHandleFromHeap.
     if (Cast->getCastKind() == CastKind::CK_FlatConversion)
-      return false;
+      return {false, false};
   }
-  return true;
+  return Mismatch;
 }
 
 void CGMSHLSLRuntime::FinishAutoVar(CodeGenFunction &CGF, const VarDecl &D,
@@ -2829,19 +2844,23 @@ void CGMSHLSLRuntime::FinishAutoVar(CodeGenFunction &CGF, const VarDecl &D,
   AddValToPropertyMap(V, D.getType());
 
   if (D.hasInit()) {
-    if (isGLCMismatch(D.getType(), D.getInit()->getType(), D.getInit(),
-                      D.getLocation(), CGM.getDiags())) {
-      objectProperties.updateGLC(V);
+    auto [glcMismatch, rdcMismatch] =
+        getCoherenceMismatch(D.getType(), D.getInit()->getType(), D.getInit());
+
+    if (glcMismatch || rdcMismatch) {
+      objectProperties.updateCoherence(V, glcMismatch, rdcMismatch);
     }
   }
 }
 
-const clang::Expr *CGMSHLSLRuntime::CheckReturnStmtGLCMismatch(
+const clang::Expr *CGMSHLSLRuntime::CheckReturnStmtCoherenceMismatch(
     CodeGenFunction &CGF, const Expr *RV, const clang::ReturnStmt &S,
     clang::QualType FnRetTy,
     const std::function<void(const VarDecl *, llvm::Value *)> &TmpArgMap) {
-  if (!isGLCMismatch(RV->getType(), FnRetTy, RV, S.getReturnLoc(),
-                     CGM.getDiags())) {
+  auto [glcMismatch, rdcMismatch] =
+      getCoherenceMismatch(RV->getType(), FnRetTy, RV);
+
+  if (!glcMismatch && !rdcMismatch) {
     return RV;
   }
   const FunctionDecl *FD = cast<FunctionDecl>(CGF.CurFuncDecl);
@@ -2913,10 +2932,11 @@ void CGMSHLSLRuntime::addResource(Decl *D) {
     if (VD->hasInit() && resClass != DXIL::ResourceClass::Invalid) {
 
       if (resClass == DXIL::ResourceClass::UAV) {
-        if (isGLCMismatch(VD->getType(), VD->getInit()->getType(),
-                          VD->getInit(), D->getLocation(), CGM.getDiags())) {
+        auto [glcMismatch, rdcMismatch] = getCoherenceMismatch(
+            VD->getType(), VD->getInit()->getType(), VD->getInit());
+        if (glcMismatch || rdcMismatch) {
           GlobalVariable *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(VD));
-          objectProperties.updateGLC(GV);
+          objectProperties.updateCoherence(GV, glcMismatch, rdcMismatch);
         }
       }
       return;
@@ -3463,8 +3483,11 @@ bool CGMSHLSLRuntime::SetUAVSRV(SourceLocation loc,
       }
     }
   }
+  // 'globallycoherent' implies 'reordercoherent'
   if (HasHLSLGloballyCoherent(QualTy)) {
     hlslRes->SetGloballyCoherent(true);
+  } else if (HasHLSLReorderCoherent(QualTy)) {
+    hlslRes->SetReorderCoherent(true);
   }
   if (resClass == hlsl::DxilResourceBase::Class::SRV) {
     hlslRes->SetRW(false);
@@ -3497,6 +3520,8 @@ uint32_t CGMSHLSLRuntime::AddUAVSRV(VarDecl *decl,
   if (decl->hasAttr<HLSLGloballyCoherentAttr>()) {
     hlslRes->SetGloballyCoherent(true);
   }
+  if (decl->hasAttr<HLSLReorderCoherentAttr>())
+    hlslRes->SetReorderCoherent(true);
 
   if (!SetUAVSRV(decl->getLocation(), resClass, hlslRes.get(), VarTy))
     return 0;
@@ -6140,8 +6165,9 @@ void CGMSHLSLRuntime::EmitHLSLOutParamConversionInit(
     bool isObject = dxilutil::IsHLSLObjectType(CGF.ConvertTypeForMem(ParamTy));
     bool bAnnotResource = false;
     if (isObject) {
-      if (isGLCMismatch(Param->getType(), Arg->getType(), Arg,
-                        Arg->getExprLoc(), CGM.getDiags())) {
+      auto [glcMismatch, rdcMismatch] =
+          getCoherenceMismatch(Param->getType(), Arg->getType(), Arg);
+      if (glcMismatch || rdcMismatch) {
         // NOTE: if function is noinline, resource parameter is not allowed.
         // Here assume function will be always inlined.
         // This can only take care resource as parameter. When parameter is

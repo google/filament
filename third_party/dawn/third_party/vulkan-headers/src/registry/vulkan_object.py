@@ -27,16 +27,20 @@ class Extension:
     deprecatedBy: (str | None)
     obsoletedBy: (str | None)
     specialUse: list[str]
+    ratified: bool
 
     # These are here to allow for easy reverse lookups
+    # To prevent infinite recursion, other classes reference a string back to the Extension class
     # Quotes allow us to forward declare the dataclass
+    handles: list['Handle'] = field(default_factory=list, init=False)
     commands: list['Command'] = field(default_factory=list, init=False)
     enums:    list['Enum']    = field(default_factory=list, init=False)
     bitmasks: list['Bitmask'] = field(default_factory=list, init=False)
+    flags: dict[str, list['Flags']] = field(default_factory=dict, init=False)
     # Use the Enum name to see what fields are extended
     enumFields: dict[str, list['EnumField']] = field(default_factory=dict, init=False)
-    # Use the Bitmaks name to see what flags are extended
-    flags: dict[str, list['Flag']] = field(default_factory=dict, init=False)
+    # Use the Bitmask name to see what flag bits are added to it
+    flagBits: dict[str, list['Flag']] = field(default_factory=dict, init=False)
 
 @dataclass
 class Version:
@@ -47,6 +51,13 @@ class Version:
     name: str       # ex) VK_VERSION_1_1
     nameString: str # ex) "VK_VERSION_1_1" (no marco, so has quotes)
     nameApi: str    # ex) VK_API_VERSION_1_1
+
+@dataclass
+class Deprecate:
+    """<deprecate>"""
+    link: (str | None) # Spec URL Anchor - ex) deprecation-dynamicrendering
+    version: (Version | None)
+    extensions: list[str]
 
 @dataclass
 class Handle:
@@ -65,8 +76,17 @@ class Handle:
 
     dispatchable: bool
 
+    extensions: list[str] # All extensions that enable the handle
+
     def __lt__(self, other):
         return self.name < other.name
+
+class ExternSync(Enum):
+    NONE          = auto() # no externsync attribute
+    ALWAYS        = auto() # externsync="true"
+    MAYBE         = auto() # externsync="maybe"
+    SUBTYPE       = auto() # externsync="param->member"
+    SUBTYPE_MAYBE = auto() # externsync="maybe:param->member"
 
 @dataclass
 class Param:
@@ -97,8 +117,9 @@ class Param:
     optional: bool
     optionalPointer: bool # if type contains a pointer, is the pointer value optional
 
-    externSync: bool
-    externSyncPointer: list[str] # if type contains a pointer, might only specific members modified
+    externSync: ExternSync
+    externSyncPointer: (str | None)  # if type contains a pointer (externSync is SUBTYPE*),
+                                     # only a specific member is externally synchronized.
 
     # C string of member, example:
     #   - const void* pNext
@@ -118,7 +139,7 @@ class Queues(IntFlag):
     OPTICAL_FLOW   = auto() # VK_QUEUE_OPTICAL_FLOW_BIT_NV
     DECODE         = auto() # VK_QUEUE_VIDEO_DECODE_BIT_KHR
     ENCODE         = auto() # VK_QUEUE_VIDEO_ENCODE_BIT_KHR
-    ALL = TRANSFER | GRAPHICS | COMPUTE | PROTECTED | SPARSE_BINDING | OPTICAL_FLOW | DECODE | ENCODE
+    DATA_GRAPH     = auto() # VK_QUEUE_DATA_GRAPH_BIT_ARM
 
 class CommandScope(Enum):
     NONE    = auto()
@@ -133,7 +154,7 @@ class Command:
     alias: (str | None) # Because commands are interfaces into layers/drivers, we need all command alias
     protect: (str | None) # ex) 'VK_ENABLE_BETA_EXTENSIONS'
 
-    extensions: list[Extension] # All extensions that enable the struct
+    extensions: list[str] # All extensions that enable the struct
     version: (Version | None) # None if Version 1.0
 
     returnType: str # ex) void, VkResult, etc
@@ -145,7 +166,8 @@ class Command:
     device: bool
 
     tasks: list[str]        # ex) [ action, state, synchronization ]
-    queues: Queues          # zero == No Queues found
+    queues: Queues          # zero == No Queues found (represents restriction which queue type can be used)
+    allowNoQueues: bool     # VK_KHR_maintenance9 allows some calls to be done with zero queues
     successCodes: list[str] # ex) [ VK_SUCCESS, VK_INCOMPLETE ]
     errorCodes: list[str]   # ex) [ VK_ERROR_OUT_OF_HOST_MEMORY ]
 
@@ -157,6 +179,8 @@ class Command:
     videoCoding: CommandScope
 
     implicitExternSyncParams: list[str]
+
+    deprecate: (Deprecate | None)
 
     # C prototype string - ex:
     # VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
@@ -202,13 +226,15 @@ class Member:
     optional: bool
     optionalPointer: bool # if type contains a pointer, is the pointer value optional
 
-    externSync: bool
+    externSync: ExternSync
 
     # C string of member, example:
     #   - const void* pNext
     #   - VkFormat format
     #   - VkStructureType sType
     cDeclaration: str
+
+    bitFieldWidth: (int | None) # bit width (only for bit field struct members)
 
     def __lt__(self, other):
         return self.name < other.name
@@ -219,7 +245,7 @@ class Struct:
     name: str # ex) VkImageSubresource2
     aliases: list[str] # ex) ['VkImageSubresource2KHR', 'VkImageSubresource2EXT']
 
-    extensions: list[Extension] # All extensions that enable the struct
+    extensions: list[str] # All extensions that enable the struct
     version: (Version | None) # None if Version 1.0
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
 
@@ -236,13 +262,18 @@ class Struct:
     extends: list[str] # Struct names that this struct extends
     extendedBy: list[str] # Struct names that can be extended by this struct
 
+    # This field is only set for enum definitions coming from Video Std headers
+    videoStdHeader: (str | None) = None
+
     def __lt__(self, other):
         return self.name < other.name
 
 @dataclass
 class EnumField:
     """<enum> of type enum"""
-    name: str # ex) VK_DYNAMIC_STATE_SCISSOR
+    name: str # ex) VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT
+    aliases: list[str] # ex) ['VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT_EXT']
+
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
 
     negative: bool # True if negative values are allowed (ex. VkResult)
@@ -250,7 +281,7 @@ class EnumField:
     valueStr: str # value as shown in spec (ex. "0", "2", "1000267000", "0x00000004")
 
     # some fields are enabled from 2 extensions (ex) VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR)
-    extensions: list[Extension] # None if part of 1.0 core
+    extensions: list[str] # None if part of 1.0 core
 
     def __lt__(self, other):
         return self.name < other.name
@@ -268,9 +299,12 @@ class Enum:
 
     fields: list[EnumField]
 
-    extensions: list[Extension] # None if part of 1.0 core
+    extensions: list[str] # None if part of 1.0 core
     # Unique list of all extension that are involved in 'fields' (superset of 'extensions')
-    fieldExtensions: list[Extension]
+    fieldExtensions: list[str]
+
+    # This field is only set for enum definitions coming from Video Std headers
+    videoStdHeader: (str | None) = None
 
     def __lt__(self, other):
         return self.name < other.name
@@ -279,6 +313,8 @@ class Enum:
 class Flag:
     """<enum> of type bitmask"""
     name: str # ex) VK_ACCESS_2_SHADER_READ_BIT
+    aliases: str # ex) ['VK_ACCESS_2_SHADER_READ_BIT_KHR']
+
     protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
 
     value: int
@@ -287,7 +323,7 @@ class Flag:
     zero: bool     # if true, the value is zero (ex) VK_PIPELINE_STAGE_NONE)
 
     # some fields are enabled from 2 extensions (ex) VK_TOOL_PURPOSE_DEBUG_REPORTING_BIT_EXT)
-    extensions: list[Extension] # None if part of 1.0 core
+    extensions: list[str] # None if part of 1.0 core
 
     def __lt__(self, other):
         return self.name < other.name
@@ -306,12 +342,40 @@ class Bitmask:
 
     flags: list[Flag]
 
-    extensions: list[Extension] # None if part of 1.0 core
+    extensions: list[str] # None if part of 1.0 core
     # Unique list of all extension that are involved in 'flag' (superset of 'extensions')
-    flagExtensions: list[Extension]
+    flagExtensions: list[str]
 
     def __lt__(self, other):
         return self.name < other.name
+
+@dataclass
+class Flags:
+    """<type> defining flags types"""
+    name: str # ex) VkAccessFlags2
+    aliases: list[str] # ex) [`VkAccessFlags2KHR`]
+
+    bitmaskName: (str | None) # ex) VkAccessFlagBits2
+    protect: (str | None) # ex) VK_ENABLE_BETA_EXTENSIONS
+
+    baseFlagsType: str # ex) VkFlags
+    bitWidth: int # 32 or 64
+    returnedOnly: bool
+
+    extensions: list[str] # None if part of 1.0 core
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+@dataclass
+class Constant:
+    name: str # ex) VK_UUID_SIZE
+    type: str # ex) uint32_t, float
+    value: (int | float)
+    valueStr: str # value as shown in spec (ex. "(~0U)", "256U", etc)
+
+    # This field is only set for enum definitions coming from Video Std headers
+    videoStdHeader: (str | None) = None
 
 @dataclass
 class FormatComponent:
@@ -408,21 +472,93 @@ class Spirv:
     capability: bool
     enable: list[SpirvEnables]
 
+@dataclass
+class VideoRequiredCapabilities:
+    """<videorequirecapabilities>"""
+    struct: str     # ex) VkVideoEncodeCapabilitiesKHR
+    member: str     # ex) flags
+    value: str      # ex) VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR
+                    # may contain XML boolean expressions ("+" means AND, "," means OR)
+
+@dataclass
+class VideoFormat:
+    """<videoformat>"""
+    name: str       # ex) Decode Output
+    usage: str      # ex) VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR
+                    # may contain XML boolean expressions ("+" means AND, "," means OR)
+
+    requiredCaps: list[VideoRequiredCapabilities]
+    properties: dict[str, str]
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+@dataclass
+class VideoProfileMember:
+    """<videoprofilemember> and <videoprofile>"""
+    name: str
+    # Video profile struct member (value attribute of <videoprofile>) value as key,
+    # profile name substring (name attribute of <videoprofile>) as value
+    values: dict[str, str]
+
+@dataclass
+class VideoProfiles:
+    """<videoprofiles>"""
+    name: str
+    members: dict[str, VideoProfileMember]
+
+@dataclass
+class VideoCodec:
+    """<videocodec>"""
+    name: str   # ex) H.264 Decode
+    value: (str | None) # If no video codec operation flag bit is associated with the codec
+                        # then it is a codec category (e.g. decode, encode), not a specific codec
+
+    profiles: dict[str, VideoProfiles]
+    capabilities: dict[str, str]
+    formats: dict[str, VideoFormat]
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+@dataclass
+class VideoStdHeader:
+    """<extension> in video.xml"""
+    name: str # ex) vulkan_video_codec_h264std_decode
+    version: (str | None)   # ex) VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_API_VERSION_1_0_0
+                            # None if it is a shared common Video Std header
+
+    headerFile: str # ex) vk_video/vulkan_video_codec_h264std_decode.h
+
+    # Other Video Std headers that this one depends on
+    depends: list[str]
+
+@dataclass
+class VideoStd:
+    headers: dict[str, VideoStdHeader] = field(default_factory=dict, init=False)
+
+    enums: dict[str, Enum]           = field(default_factory=dict, init=False)
+    structs: dict[str, Struct]       = field(default_factory=dict, init=False)
+    constants: dict[str, Constant]   = field(default_factory=dict, init=False)
+
 # This is the global Vulkan Object that holds all the information from parsing the XML
 # This class is designed so all generator scripts can use this to obtain data
 @dataclass
 class VulkanObject():
-    headerVersion: int = 0 # value of VK_HEADER_VERSION
+    headerVersion:         int = 0  # value of VK_HEADER_VERSION (ex. 345)
+    headerVersionComplete: str = '' # value of VK_HEADER_VERSION_COMPLETE (ex. '1.2.345' )
 
     extensions: dict[str, Extension] = field(default_factory=dict, init=False)
     versions:   dict[str, Version]   = field(default_factory=dict, init=False)
 
-    handles:  dict[str, Handle]      = field(default_factory=dict, init=False)
-    commands: dict[str, Command]     = field(default_factory=dict, init=False)
-    structs:  dict[str, Struct]      = field(default_factory=dict, init=False)
-    enums:    dict[str, Enum]        = field(default_factory=dict, init=False)
-    bitmasks: dict[str, Bitmask]     = field(default_factory=dict, init=False)
-    formats:  dict[str, Format]      = field(default_factory=dict, init=False)
+    handles:   dict[str, Handle]     = field(default_factory=dict, init=False)
+    commands:  dict[str, Command]    = field(default_factory=dict, init=False)
+    structs:   dict[str, Struct]     = field(default_factory=dict, init=False)
+    enums:     dict[str, Enum]       = field(default_factory=dict, init=False)
+    bitmasks:  dict[str, Bitmask]    = field(default_factory=dict, init=False)
+    flags:     dict[str, Flags]      = field(default_factory=dict, init=False)
+    constants: dict[str, Constant]   = field(default_factory=dict, init=False)
+    formats:   dict[str, Format]     = field(default_factory=dict, init=False)
 
     syncStage:    list[SyncStage]    = field(default_factory=list, init=False)
     syncAccess:   list[SyncAccess]   = field(default_factory=list, init=False)
@@ -436,3 +572,9 @@ class VulkanObject():
     vendorTags: list[str]            = field(default_factory=list, init=False)
     # ex) [ Queues.COMPUTE : VK_QUEUE_COMPUTE_BIT ]
     queueBits: dict[IntFlag, str]    = field(default_factory=dict, init=False)
+
+    # Video codec information from the vk.xml
+    videoCodecs: dict[str, VideoCodec] = field(default_factory=dict, init=False)
+
+    # Video Std header information from the video.xml
+    videoStd: (VideoStd | None) = None

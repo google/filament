@@ -58,7 +58,8 @@ enum TestElementType {
     kF32,
     kF16,
 };
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, TestElementType type) {
     switch (type) {
         case kBool:

@@ -44,6 +44,12 @@
 #include "src/tint/utils/memory/aligned_storage.h"
 #include "src/tint/utils/memory/bitcast.h"
 
+// This file implements a custom STL style container & iterator in a performant manner, using
+// C-style data access. It is not unexpected that -Wunsafe-buffer-usage triggers in this code, since
+// the type of dynamic access being used cannot be guaranteed to be safe via static analysis.
+// Attempting to change this code in simple ways to quiet these errors either a) negatively affects
+// the performance by introducing unneeded copes, or b) uses typing shenanigans to work around the
+// warning that other linters/analyses are unhappy with.
 TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 #ifndef TINT_VECTOR_MUTATION_CHECKS_ENABLED
@@ -285,7 +291,8 @@ class VectorIterator {
 /// @param out the stream to write to
 /// @param it the VectorIterator
 /// @returns @p out so calls can be chained
-template <typename STREAM, typename T, bool FORWARD, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename T, bool FORWARD>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const VectorIterator<T, FORWARD>& it) {
     return out << *it;
 }
@@ -1239,7 +1246,8 @@ Vector<T, N> ToVector(const std::vector<T>& vector) {
 /// @param o the stream to write to
 /// @param vec the vector
 /// @return the stream so calls can be chained
-template <typename STREAM, typename T, size_t N, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename T, size_t N>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, const Vector<T, N>& vec) {
     o << "[";
     bool first = true;
@@ -1258,7 +1266,8 @@ auto& operator<<(STREAM& o, const Vector<T, N>& vec) {
 /// @param o the stream to write to
 /// @param vec the vector reference
 /// @return the stream so calls can be chained
-template <typename STREAM, typename T, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename T>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, VectorRef<T> vec) {
     o << "[";
     bool first = true;

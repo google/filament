@@ -33,7 +33,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/io_attributes.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 

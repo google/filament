@@ -12,54 +12,10 @@
 /build
 /buildtools
 /testing
-/third_party/abseil-cpp/
-/third_party/angle
-/third_party/binutils
-/third_party/catapult
-/third_party/clang-format
-/third_party/cpplint
-/third_party/depot_tools
-/third_party/dxc
-/third_party/dxheaders
-/third_party/glfw
-/third_party/glslang/src/
-/third_party/google_benchmark/src
-/third_party/googletest
-/third_party/gpuweb
-/third_party/jinja2
-/third_party/jsoncpp
-/third_party/khronos/EGL-Registry
-/third_party/khronos/OpenGL-Registry
-/third_party/libc++/src
-/third_party/libc++abi/src
-/third_party/libprotobuf-mutator/src
-/third_party/llvm-build
-/third_party/markupsafe
-/third_party/ninja
-/third_party/node
-/third_party/node-addon-api
-/third_party/node-api-headers
-/third_party/partition_alloc
-/third_party/protobuf
-/third_party/siso/cipd/
-/third_party/spirv-cross/src/
-/third_party/spirv-headers/src/
-/third_party/spirv-tools/src/
-/third_party/swiftshader
-/third_party/vulkan-deps
-/third_party/vulkan-headers/src/
-/third_party/vulkan-loader/src/
-/third_party/vulkan-tools/src/
-/third_party/vulkan-utility-libraries/src/
-/third_party/vulkan-validation-layers/src/
-/third_party/vulkan_memory_allocator
-/third_party/webgpu-cts
-/third_party/zlib
 /tools/bin
 /tools/clang
 /tools/cmake*
 /tools/golang
-/tools/memory
 /out
 
 # Tint test validation cache file
@@ -161,3 +117,6 @@ tint.dot
 
 ### The 'compile_commands' file can be generated at root
 compile_commands.json
+
+### Root user file for gemini cli
+GEMINI.md

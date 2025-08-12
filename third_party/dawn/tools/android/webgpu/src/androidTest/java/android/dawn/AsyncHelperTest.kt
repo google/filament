@@ -1,5 +1,7 @@
 package android.dawn
+import android.dawn.helper.createWebGpu
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -8,7 +10,9 @@ import org.junit.runner.RunWith
 class AsyncHelperTest {
     @Test
     fun asyncMethodTest() {
-        dawnTestLauncher() { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             /* Set up a shader module to support the async call. */
             val shaderModule = device.createShaderModule(
                 ShaderModuleDescriptor(shaderSourceWGSL = ShaderSourceWGSL(""))
@@ -28,7 +32,9 @@ class AsyncHelperTest {
 
     @Test
     fun asyncMethodTestValidationPasses() {
-        dawnTestLauncher() { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             /* Set up a shader module to support the async call. */
             val shaderModule = device.createShaderModule(
                 ShaderModuleDescriptor(

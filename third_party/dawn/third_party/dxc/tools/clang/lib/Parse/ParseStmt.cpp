@@ -179,6 +179,7 @@ Retry:
   case tok::kw_precise:
   case tok::kw_sample:
   case tok::kw_globallycoherent:
+  case tok::kw_reordercoherent:
   case tok::kw_center:
   case tok::kw_indices:
   case tok::kw_vertices:

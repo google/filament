@@ -1,8 +1,6 @@
 ; RUN: %dxopt %s -hlsl-passes-resume -dxilgen -S | FileCheck %s
 ; REQUIRES: dxil-1-9
 
-; CHECK-NOT:  @dx.op.hitObject_
-; CHECK-NOT:  @dx.op.maybeReorderThread
 
 ;
 ; Buffer Definitions:
@@ -36,6 +34,7 @@ entry:
   %hit = alloca %dx.types.HitObject, align 4
   %0 = bitcast %dx.types.HitObject* %hit to i8*, !dbg !19 ; line:9 col:3
   call void @llvm.lifetime.start(i64 4, i8* %0) #0, !dbg !19 ; line:9 col:3
+; CHECK: %{{[^ ]+}} = call %dx.types.HitObject @dx.op.hitObject_MakeNop(i32 266)
   %1 = call %dx.types.HitObject* @"dx.hl.op..%dx.types.HitObject* (i32, %dx.types.HitObject*)"(i32 358, %dx.types.HitObject* %hit), !dbg !23 ; line:9 col:17
   call void @"dx.hl.op..void (i32, %dx.types.HitObject*)"(i32 359, %dx.types.HitObject* %hit), !dbg !24 ; line:10 col:3
   call void @"dx.hl.op..void (i32, %dx.types.HitObject*, i32, i32)"(i32 359, %dx.types.HitObject* %hit, i32 241, i32 3), !dbg !25 ; line:11 col:3

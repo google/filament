@@ -28,10 +28,9 @@
 #include "src/tint/utils/text/unicode.h"
 
 #include <algorithm>
+#include <array>
 
 #include "src/tint/utils/macros/compiler.h"
-
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint {
 namespace {
@@ -217,9 +216,6 @@ constexpr CodePointRange kXIDStartRanges[] = {
     {0x2ceb0, 0x2ebe0}, {0x2f800, 0x2fa1d}, {0x30000, 0x3134a},
 };
 
-// Number of ranges in kXIDStartRanges
-constexpr size_t kNumXIDStartRanges = sizeof(kXIDStartRanges) / sizeof(kXIDStartRanges[0]);
-
 // The additional code point interval ranges for the Unicode 14 XID_Continue
 // set. This extends the values in kXIDStartRanges.
 // This array needs to be in ascending order.
@@ -317,9 +313,6 @@ constexpr CodePointRange kXIDContinueRanges[] = {
     {0x1e950, 0x1e959}, {0x1fbf0, 0x1fbf9}, {0xe0100, 0xe01ef},
 };
 
-// Number of ranges in kXIDContinueRanges
-constexpr size_t kNumXIDContinueRanges = sizeof(kXIDContinueRanges) / sizeof(kXIDContinueRanges[0]);
-
 }  // namespace
 
 bool CodePoint::IsXIDStart() const {
@@ -334,7 +327,7 @@ bool CodePoint::IsXIDStart() const {
     if (value < 0x000aa) {
         return false;
     }
-    return std::binary_search(kXIDStartRanges, kXIDStartRanges + kNumXIDStartRanges, *this);
+    return std::binary_search(std::begin(kXIDStartRanges), std::end(kXIDStartRanges), *this);
 }
 
 bool CodePoint::IsXIDContinue() const {
@@ -343,12 +336,14 @@ bool CodePoint::IsXIDContinue() const {
     if ((value >= '0' && value <= '9') || value == '_') {
         return true;
     }
-    return IsXIDStart() || std::binary_search(kXIDContinueRanges,
-                                              kXIDContinueRanges + kNumXIDContinueRanges, *this);
+    return IsXIDStart() ||
+           std::binary_search(std::begin(kXIDContinueRanges), std::end(kXIDContinueRanges), *this);
 }
 
 namespace utf8 {
 
+// This is a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 std::pair<CodePoint, size_t> Decode(const uint8_t* ptr, size_t len) {
     if (len < 1) {
         return {};
@@ -365,7 +360,7 @@ std::pair<CodePoint, size_t> Decode(const uint8_t* ptr, size_t len) {
     // 0x10FFFF are also invalid (0xf5+).
     // See: https://en.wikipedia.org/wiki/UTF-8#Encoding and
     //      https://datatracker.ietf.org/doc/html/rfc3629#section-3
-    static constexpr uint8_t kSequenceLength[256] = {
+    static constexpr std::array<uint8_t, 256> kSequenceLength = {
         //         0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
         /* 0x00 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
         /* 0x10 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -436,11 +431,14 @@ std::pair<CodePoint, size_t> Decode(const uint8_t* ptr, size_t len) {
 
     return {c, n};
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 std::pair<CodePoint, size_t> Decode(std::string_view utf8_string) {
     return Decode(reinterpret_cast<const uint8_t*>(utf8_string.data()), utf8_string.size());
 }
 
+// This is a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 size_t Encode(CodePoint code_point, uint8_t* ptr) {
     if (code_point <= 0x7f) {
         if (ptr) {
@@ -474,6 +472,7 @@ size_t Encode(CodePoint code_point, uint8_t* ptr) {
     }
     return 0;  // invalid code point
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 bool IsASCII(std::string_view str) {
     for (auto c : str) {
@@ -488,6 +487,8 @@ bool IsASCII(std::string_view str) {
 
 namespace utf16 {
 
+// This is a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 std::pair<CodePoint, size_t> Decode(const uint16_t* ptr, size_t len) {
     if (len < 1) {
         return {};
@@ -507,11 +508,14 @@ std::pair<CodePoint, size_t> Decode(const uint16_t* ptr, size_t len) {
     uint32_t low = b - 0xdc00;
     return {CodePoint{0x10000 + ((high << 10) | low)}, 2};
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 std::pair<CodePoint, size_t> Decode(std::string_view utf16_string) {
     return Decode(reinterpret_cast<const uint16_t*>(utf16_string.data()), utf16_string.size() / 2);
 }
 
+// This is a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 size_t Encode(CodePoint code_point, uint16_t* ptr) {
     if (code_point <= 0xd7ff || (code_point >= 0xe000 && code_point <= 0xffff)) {
         if (ptr) {
@@ -529,8 +533,7 @@ size_t Encode(CodePoint code_point, uint16_t* ptr) {
     }
     return 0;  // invalid code point
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 }  // namespace utf16
 }  // namespace tint
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

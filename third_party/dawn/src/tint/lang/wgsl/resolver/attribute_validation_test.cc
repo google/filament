@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/disable_validation_attribute.h"
 #include "src/tint/lang/wgsl/resolver/resolver.h"
@@ -1284,36 +1284,6 @@ INSTANTIATE_TEST_SUITE_P(
 1:2 note: first attribute declared here)",
         }));
 
-using EntryPointParameterAttributeTest = TestWithParams;
-TEST_F(EntryPointParameterAttributeTest, DuplicateInternalAttribute) {
-    auto* s = Param("s", ty.sampler(core::type::SamplerKind::kSampler),
-                    Vector{
-                        Binding(0_a),
-                        Group(0_a),
-                        Disable(ast::DisabledValidation::kBindingPointCollision),
-                        Disable(ast::DisabledValidation::kEntryPointParameter),
-                    });
-    Func("f", Vector{s}, ty.void_(), tint::Empty,
-         Vector{
-             Stage(ast::PipelineStage::kFragment),
-         });
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
-
-using EntryPointReturnTypeAttributeTest = ResolverTest;
-TEST_F(EntryPointReturnTypeAttributeTest, DuplicateInternalAttribute) {
-    Func("f", tint::Empty, ty.i32(), Vector{Return(1_i)},
-         Vector{
-             Stage(ast::PipelineStage::kFragment),
-         },
-         Vector{
-             Disable(ast::DisabledValidation::kBindingPointCollision),
-             Disable(ast::DisabledValidation::kEntryPointParameter),
-         });
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
 }  // namespace EntryPointInputAndOutputTests
 
 namespace StructAndStructMemberTests {

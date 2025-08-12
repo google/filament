@@ -1,0 +1,15 @@
+               OpCapability Kernel
+               OpCapability Addresses
+               OpCapability Linkage
+               OpMemoryModel Logical OpenCL
+               OpName %structptr "structptr"
+               OpName %structptr2 "structptr2"
+               OpTypeForwardPointer %structptr UniformConstant
+               OpTypeForwardPointer %structptr2 Function
+       %uint = OpTypeInt 32 0
+   %structt1 = OpTypeStruct %structptr %uint
+   %structt2 = OpTypeStruct %uint %structptr
+   %structt3 = OpTypeStruct %uint %uint %structptr
+   %structt4 = OpTypeStruct %uint %uint %uint %structptr
+  %structptr = OpTypePointer UniformConstant %structt1
+  %structptr2 = OpTypePointer Function %structt1

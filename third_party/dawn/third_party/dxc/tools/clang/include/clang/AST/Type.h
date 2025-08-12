@@ -3652,7 +3652,8 @@ public:
     attr_hlsl_row_major,
     attr_hlsl_column_major,
     attr_hlsl_globallycoherent,
-    // HLSL Change Ends    
+    attr_hlsl_reordercoherent,
+    // HLSL Change Ends
   };
 
 private:

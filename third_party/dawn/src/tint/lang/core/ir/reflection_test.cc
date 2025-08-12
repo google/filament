@@ -30,7 +30,6 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/utils/result.h"
 
@@ -40,11 +39,7 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class IR_ReflectionTest : public IRTestHelper {
-  protected:
-    /// @returns the module as a disassembled string
-    std::string Disassemble() const { return "\n" + ir::Disassembler(mod).Plain(); }
-};
+using IR_ReflectionTest = IRTestHelper;
 
 TEST_F(IR_ReflectionTest, GetWorkgroupInfoBasic) {
     auto* var_a = mod.root_block->Append(b.Var<workgroup, u32>("a"));
@@ -66,7 +61,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     auto res = GetWorkgroupInfo(mod);
     EXPECT_TRUE(res == tint::Success);
@@ -108,7 +103,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     auto res = GetWorkgroupInfo(mod);
     EXPECT_TRUE(res == tint::Success);
@@ -131,7 +126,7 @@ TEST_F(IR_ReflectionTest, GetWorkgroupInfoNoVar) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     auto res = GetWorkgroupInfo(mod);
     EXPECT_TRUE(res == tint::Success);
@@ -162,7 +157,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     auto res = GetWorkgroupInfo(mod);
     EXPECT_FALSE(res == tint::Success);

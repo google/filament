@@ -30,7 +30,6 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/common/Range.h"
 #include "dawn/common/ityp_vector.h"
@@ -140,18 +139,22 @@ MaybeError BindGroupLayout::Initialize() {
     }
 
     for (const auto& [_, bindingIndex] : GetBindingMap()) {
+        // This texture will be bound into the VkDescriptorSet at the index for the sampler itself.
         if (mTextureToStaticSamplerIndices.contains(bindingIndex)) {
-            // This texture will be bound into the VkDescriptorSet at the index
-            // for the sampler itself.
             continue;
         }
 
+        // Vulkan descriptor set layouts have one entry for binding_array. Only handle their first
+        // element as subsequent one will be part of the already added VkDescriptorSetLayoutBinding.
         const BindingInfo& bindingInfo = GetBindingInfo(bindingIndex);
+        if (bindingInfo.indexInArray != BindingIndex(0)) {
+            continue;
+        }
 
         VkDescriptorSetLayoutBinding vkBinding;
-        vkBinding.binding = static_cast<uint32_t>(bindingIndex);
+        vkBinding.binding = uint32_t(bindingIndex);
         vkBinding.descriptorType = VulkanDescriptorType(bindingInfo);
-        vkBinding.descriptorCount = 1;
+        vkBinding.descriptorCount = uint32_t(bindingInfo.arraySize);
         vkBinding.stageFlags = VulkanShaderStageFlags(bindingInfo.visibility);
 
         if (std::holds_alternative<StaticSamplerBindingInfo>(bindingInfo.bindingLayout)) {
@@ -190,11 +193,17 @@ MaybeError BindGroupLayout::Initialize() {
             continue;
         }
 
-        VkDescriptorType vulkanType = VulkanDescriptorType(GetBindingInfo(bindingIndex));
+        // Vulkan descriptor set layouts have one entry for binding_array. Only handle their first
+        // element as subsequent one will be part of the already counted descriptors.
+        const BindingInfo& bindingInfo = GetBindingInfo(bindingIndex);
+        if (bindingInfo.indexInArray != BindingIndex(0)) {
+            continue;
+        }
 
-        size_t numVkDescriptors = 1;
+        VkDescriptorType vulkanType = VulkanDescriptorType(bindingInfo);
+
+        size_t numVkDescriptors = uint32_t(bindingInfo.arraySize);
         if (vulkanType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-            const BindingInfo& bindingInfo = GetBindingInfo(bindingIndex);
             auto samplerLayout = std::get<StaticSamplerBindingInfo>(bindingInfo.bindingLayout);
             auto sampler = ToBackend(samplerLayout.sampler);
             if (sampler->IsYCbCr()) {
@@ -210,6 +219,7 @@ MaybeError BindGroupLayout::Initialize() {
                 // the maximum number of planes that an external format can have here. The number
                 // of overall YCbCr descriptors will be relatively small and these pools are not an
                 // overall bottleneck on memory usage.
+                DAWN_ASSERT(bindingInfo.arraySize == BindingIndex(1));
                 numVkDescriptors = 3;
             }
         }

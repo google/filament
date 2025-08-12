@@ -136,5 +136,25 @@ TEST_F(IR_SwitchTest, CloneWithResults) {
     EXPECT_EQ(new_r1->Type(), ty.f32());
 }
 
+TEST_F(IR_SwitchTest, Default_NoDefault) {
+    auto* switch_ = b.Switch(1_i);
+    b.Case(switch_, {b.Constant(3_i)});
+    EXPECT_EQ(nullptr, switch_->DefaultBlock());
+}
+
+TEST_F(IR_SwitchTest, Default_DefaultStandalone) {
+    auto* switch_ = b.Switch(1_i);
+    b.Case(switch_, {nullptr});
+    b.Case(switch_, {b.Constant(3_i)});
+    EXPECT_EQ(switch_->Cases()[0].block, switch_->DefaultBlock());
+}
+
+TEST_F(IR_SwitchTest, Default_DefaultMixedSelector) {
+    auto* switch_ = b.Switch(1_i);
+    b.Case(switch_, {b.Constant(3_i)});
+    b.Case(switch_, {nullptr, b.Constant(2_i)});
+    EXPECT_EQ(switch_->Cases()[1].block, switch_->DefaultBlock());
+}
+
 }  // namespace
 }  // namespace tint::core::ir

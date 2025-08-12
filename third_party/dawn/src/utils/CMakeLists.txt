@@ -36,6 +36,8 @@ set(sources
 
 set(conditional_private_depends)
 
+add_subdirectory(chromium_test_compat)
+
 dawn_add_library(
     dawn_shared_utils
     ENABLE_EMSCRIPTEN

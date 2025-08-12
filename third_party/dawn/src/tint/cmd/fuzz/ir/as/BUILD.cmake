@@ -34,11 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
-if(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER AND TINT_BUILD_IR_FUZZER)
+if(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER)
 ################################################################################
 # Target:    tint_cmd_fuzz_ir_as_cmd
 # Kind:      cmd
-# Condition: TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER AND TINT_BUILD_IR_FUZZER
+# Condition: TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER
 ################################################################################
 tint_add_target(tint_cmd_fuzz_ir_as_cmd cmd
   cmd/fuzz/ir/as/main.cc
@@ -48,6 +48,7 @@ tint_target_add_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
   tint_api
   tint_api_common
   tint_cmd_common
+  tint_cmd_fuzz_ir_helpers
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_ir
@@ -55,12 +56,10 @@ tint_target_add_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
-  tint_lang_wgsl_helpers
   tint_lang_wgsl_inspector
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
+  tint_lang_wgsl_writer_ir_to_program
   tint_utils
   tint_utils_command
   tint_utils_containers
@@ -82,14 +81,9 @@ tint_target_add_external_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
 if(TINT_BUILD_IR_BINARY)
   tint_target_add_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
     tint_lang_core_ir_binary
-  )
-endif(TINT_BUILD_IR_BINARY)
-
-if(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
-  tint_target_add_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
     tint_utils_protos_ir_fuzz_proto
   )
-endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
+endif(TINT_BUILD_IR_BINARY)
 
 if(TINT_BUILD_SPV_READER)
   tint_target_add_dependencies(tint_cmd_fuzz_ir_as_cmd cmd
@@ -105,4 +99,4 @@ endif(TINT_BUILD_WGSL_READER)
 
 tint_target_set_output_name(tint_cmd_fuzz_ir_as_cmd cmd "ir_fuzz_as")
 
-endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER AND TINT_BUILD_IR_FUZZER)
+endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER)

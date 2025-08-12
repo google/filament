@@ -85,7 +85,7 @@ const char* EGLErrorAsString(EGLint error) {
 }
 
 MaybeError CheckEGL(const EGLFunctions& egl, EGLBoolean result, const char* context) {
-    if (DAWN_LIKELY(result != EGL_FALSE)) {
+    if (result != EGL_FALSE) [[likely]] {
         return {};
     }
     EGLint error = egl.GetError();

@@ -40,7 +40,7 @@ namespace tint::msl::writer {
 /// Generate the resource bindings
 /// @param module the module to generate from
 /// @returns the bindings
-Bindings GenerateBindings(const core::ir::Module& module);
+Bindings GenerateBindings(const core::ir::Module& module, bool use_argument_buffers);
 
 }  // namespace tint::msl::writer
 

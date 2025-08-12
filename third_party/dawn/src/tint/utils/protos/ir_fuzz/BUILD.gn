@@ -38,7 +38,7 @@ import("../../../../../scripts/dawn_overrides_with_defaults.gni")
 import("../../../../../scripts/tint_overrides_with_defaults.gni")
 
 import("${tint_src_dir}/tint.gni")
-if (tint_build_ir_binary && tint_build_ir_fuzzer) {
+if (tint_build_ir_binary) {
   tint_proto_library("proto") {
     sources = [ "ir_fuzz.proto" ]
     deps = []

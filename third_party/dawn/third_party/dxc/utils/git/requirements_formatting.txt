@@ -18,7 +18,7 @@ charset-normalizer==3.2.0
     # via requests
 click==8.1.7
     # via black
-cryptography==43.0.1
+cryptography==44.0.1
     # via pyjwt
 darker==1.7.2
     # via -r llvm/utils/git/requirements_formatting.txt.in
@@ -42,11 +42,11 @@ pyjwt[crypto]==2.8.0
     # via pygithub
 pynacl==1.5.0
     # via pygithub
-requests==2.32.0
+requests==2.32.4
     # via pygithub
 toml==0.10.2
     # via darker
-urllib3==2.2.2
+urllib3==2.5.0
     # via requests
 wrapt==1.15.0
     # via deprecated

@@ -68,6 +68,8 @@ class DAWN_WIRE_EXPORT CommandHandler {
 struct Handle {
     uint32_t id = 0;
     uint32_t generation = 0;
+
+    bool operator==(const Handle& other) const = default;
 };
 
 }  // namespace dawn::wire

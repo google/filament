@@ -25,8 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/u32.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -34,20 +36,23 @@ namespace {
 using U32Test = TestHelper;
 
 TEST_F(U32Test, Creation) {
-    auto* a = create<U32>();
-    auto* b = create<U32>();
+    Manager ty;
+    auto* a = ty.u32();
+    auto* b = ty.u32();
     EXPECT_EQ(a, b);
 }
 
 TEST_F(U32Test, Hash) {
-    auto* a = create<U32>();
-    auto* b = create<U32>();
+    Manager ty;
+    auto* a = ty.u32();
+    auto* b = ty.u32();
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(U32Test, Equals) {
-    auto* a = create<U32>();
-    auto* b = create<U32>();
+    Manager ty;
+    auto* a = ty.u32();
+    auto* b = ty.u32();
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(Void{}));
 }
@@ -58,7 +63,8 @@ TEST_F(U32Test, FriendlyName) {
 }
 
 TEST_F(U32Test, Clone) {
-    auto* a = create<U32>();
+    Manager ty;
+    auto* a = ty.u32();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

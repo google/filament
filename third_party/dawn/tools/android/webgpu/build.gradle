@@ -102,6 +102,13 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit-ktx:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4'
+
+    androidTestUtil 'androidx.test:orchestrator:1.5.1'
+}
+
+tasks.register('sourcesJar', Jar) {
+    archiveClassifier.set('sources')
+    from android.sourceSets.main.java.srcDirs
 }
 
 project.afterEvaluate {
@@ -112,6 +119,7 @@ project.afterEvaluate {
                 setArtifactId 'webgpu'
                 version '1.1.34'
                 artifact bundleReleaseAar
+                artifact sourcesJar
             }
         }
     }

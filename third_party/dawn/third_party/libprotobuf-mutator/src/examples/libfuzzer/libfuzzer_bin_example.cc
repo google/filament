@@ -19,8 +19,6 @@
 #include "port/protobuf.h"
 #include "src/libfuzzer/libfuzzer_macro.h"
 
-protobuf_mutator::protobuf::LogSilencer log_silincer;
-
 template <class Proto>
 using PostProcessor =
     protobuf_mutator::libfuzzer::PostProcessorRegistration<Proto>;
@@ -57,7 +55,7 @@ DEFINE_BINARY_PROTO_FUZZER(const libfuzzer_example::Msg& message) {
       !std::isnan(message.optional_float()) &&
       std::fabs(message.optional_float()) > 1000 &&
       message.any().UnpackTo(&file) && !file.name().empty()) {
-    std::cerr << message.DebugString() << "\n";
+    std::cerr << absl::StrCat(message) << "\n";
     abort();
   }
 }

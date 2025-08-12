@@ -67,8 +67,8 @@ TEST_P(AllocatorMemoryInstrumentationTest, GetAllocatorMemoryInfoVulkan) {
     device.GetQueue().Submit(0, nullptr);
     // Use Futures WaitAny to wait for the queue to update serial.
     wgpu::FutureWaitInfo waitInfo{};
-    waitInfo.future = device.GetQueue().OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
-                                                            [](wgpu::QueueWorkDoneStatus) {});
+    waitInfo.future = device.GetQueue().OnSubmittedWorkDone(
+        wgpu::CallbackMode::WaitAnyOnly, [](wgpu::QueueWorkDoneStatus, wgpu::StringView) {});
     const auto& instance = device.GetAdapter().GetInstance();
     auto status =
         instance.WaitAny(1, &waitInfo, /*timeoutNS=*/std::numeric_limits<uint64_t>::max());

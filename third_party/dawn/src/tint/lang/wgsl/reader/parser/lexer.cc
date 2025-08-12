@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/wgsl/reader/parser/lexer.h"
 
+#include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <cmath>
@@ -45,8 +46,6 @@
 #include "src/tint/utils/text/unicode.h"
 
 using namespace tint::core::fluent_types;  // NOLINT
-
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint::wgsl::reader {
 namespace {
@@ -154,8 +153,8 @@ uint32_t Lexer::length() const {
 }
 
 const char& Lexer::at(uint32_t pos) const {
-    auto l = line();
-    // Unlike for std::string, if pos == l.size(), indexing `l[pos]` is UB for
+    const auto& l = line();
+    // Unlike for std::string, if pos == line().size(), indexing `l[pos]` is UB for
     // std::string_view.
     if (pos >= l.size()) {
         static const char zero = 0;
@@ -163,6 +162,14 @@ const char& Lexer::at(uint32_t pos) const {
     }
     return l[pos];
 }
+
+// This pointer is passed into std::from_chars which requires a pointer beyond the end of contiguous
+// range, not an end iterator, so will always hit this warning.
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
+const char* Lexer::line_end() const {
+    return &(line()[length() - 1]) + 1;
+}
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 std::string_view Lexer::substr(uint32_t offset, uint32_t count) {
     return line().substr(offset, count);
@@ -253,10 +260,10 @@ bool Lexer::is_bom() const {
 }
 
 bool Lexer::is_digit(char ch) const {
-    return std::isdigit(static_cast<unsigned char>(ch));
+    return std::isdigit(static_cast<unsigned char>(ch)) != 0;
 }
 bool Lexer::is_hex(char ch) const {
-    return std::isxdigit(static_cast<unsigned char>(ch));
+    return std::isxdigit(static_cast<unsigned char>(ch)) != 0;
 }
 
 bool Lexer::matches(uint32_t pos, std::string_view sub_string) {
@@ -440,14 +447,6 @@ std::optional<Token> Lexer::try_float() {
         return {};
     }
 
-    // Note, the `at` method will return a static `0` if the provided position is >= length. We
-    // actually need the end pointer to point to the correct memory location to use `from_chars`.
-    // So, handle the case where we point past the length specially.
-    auto* end_ptr = &at(end);
-    if (end >= length()) {
-        end_ptr = &at(length() - 1) + 1;
-    }
-
     auto ret = tint::strconv::ParseDouble(std::string_view(&at(start), end - start));
     double value = ret == Success ? ret.Get() : 0.0;
     bool overflow =
@@ -466,7 +465,15 @@ std::optional<Token> Lexer::try_float() {
             size_t exp_value = 0;
             bool exp_conversion_succeeded = true;
             if (exponent_value_position.has_value()) {
-                auto exp_end_ptr = end_ptr - (has_f_suffix || has_h_suffix ? 1 : 0);
+                // Note, the `at` method will return a static `0` if the provided position is >=
+                // length. The end pointer need to point to the correct memory location in the
+                // current line to use `from_chars`.
+                // So, handle the case where end points past the length specially.
+                auto exp_end = std::min(end, length()) - (has_f_suffix || has_h_suffix ? 1 : 0);
+                auto* exp_end_ptr = &at(exp_end);
+                if (exp_end >= length()) {
+                    exp_end_ptr = line_end();
+                }
                 auto exp_ret = std::from_chars(&at(exponent_value_position.value()), exp_end_ptr,
                                                exp_value, 10);
 
@@ -921,7 +928,7 @@ Token Lexer::build_token_from_int_if_possible(Source source,
     // characters to find the last possible and using that, we just provide the end of the string.
     // We then calculate the count based off the provided end pointer and the start pointer. The
     // extra `prefix_count` is to handle a `0x` which is not included in the `start` value.
-    const char* end_ptr = &at(length() - 1) + 1;
+    const char* end_ptr = line_end();
 
     int64_t value = 0;
     auto res = std::from_chars(start_ptr, end_ptr, value, base);
@@ -1315,5 +1322,3 @@ std::optional<Token::Type> Lexer::parse_keyword(std::string_view str) {
 }
 
 }  // namespace tint::wgsl::reader
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

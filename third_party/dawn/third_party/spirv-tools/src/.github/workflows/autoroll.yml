@@ -1,0 +1,56 @@
+name: Update dependencies
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    permissions:
+      contents: write
+      pull-requests: write
+    name: Update dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Checkout the depot tools they are needed by roll_deps.sh
+      - name: Checkout depot tools
+        run: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+
+      - name: Update PATH
+        run: echo "$(pwd)/depot_tools" >> $GITHUB_PATH
+
+      - name: Download dependencies
+        run: python3 utils/git-sync-deps
+
+      - name: Setup git user information
+        run: |
+          git config user.name "GitHub Actions[bot]"
+          git config user.email "<>"
+          git checkout -b roll_deps
+
+      - name: Update dependencies
+        run: |
+          utils/roll_deps.sh
+          if [[ `git diff HEAD..origin/main --name-only | wc -l` == 0 ]]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+        id: update_dependencies
+      - name: Push changes and create PR
+        if: steps.update_dependencies.outputs.changed == 'true'
+        run: |
+          git push --force --set-upstream origin roll_deps
+          # Create a PR. If it aready exists, the command fails, so ignore the return code.
+          gh pr create --base main -f || true 
+          # Add the 'kokoro:run' label so that the kokoro tests will be run.
+          gh pr edit --add-label 'kokoro:run'
+          gh pr merge --auto --squash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

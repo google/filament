@@ -32,7 +32,7 @@ namespace dawn::wire::server {
     {% for command in cmd_records["command"] %}
         {% set method = command.derived_method %}
         {% set is_method = method != None %}
-        {% set returns = is_method and method.return_type.name.canonical_case() != "void" %}
+        {% set returns = is_method and method.returns %}
 
         {% set Suffix = command.name.CamelCase() %}
         //* The generic command handlers

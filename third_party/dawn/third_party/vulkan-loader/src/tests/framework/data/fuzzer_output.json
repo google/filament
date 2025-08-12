@@ -6,7 +6,7 @@
                 "/out/settings_fuzzer",
                 "/work/settings_fuzzer"
             ],
-            "stderr_log": [
+            "stderr_logg": [
                 "all",
                 "info",
                 "warn",
@@ -15,7 +15,8 @@
                 "debug",
                 "layer",
                 "driver",
-                "validation"
+                "validation",
+                "not_real"
             ],
             "log_locations": [
                 {

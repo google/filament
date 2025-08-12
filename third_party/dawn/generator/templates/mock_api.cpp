@@ -34,7 +34,7 @@ using namespace testing;
 namespace {
     {% for type in by_category["object"] %}
         {% for method in c_methods(type) %}
-            {{as_cType(method.return_type.name)}} Forward{{as_MethodSuffix(type.name, method.name)}}(
+            {{as_annotated_cType(method.returns)}} Forward{{as_MethodSuffix(type.name, method.name)}}(
                 {{-as_cType(type.name)}} self
                 {%- for arg in method.arguments -%}
                     , {{as_annotated_cType(arg)}}
@@ -78,7 +78,7 @@ void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
     {% for method in type.methods %}
         {% set Suffix = as_CppMethodSuffix(type.name, method.name) %}
         {% if has_callbackInfoStruct(method) %}
-            {{as_cType(method.return_type.name)}} ProcTableAsClass::{{Suffix}}(
+            {{as_annotated_cType(method.returns)}} ProcTableAsClass::{{Suffix}}(
                 {{-as_cType(type.name)}} {{as_varName(type.name)}}
                 {%- for arg in method.arguments -%}
                     , {{as_annotated_cType(arg)}}
@@ -95,7 +95,7 @@ void ProcTableAsClass::GetProcTable({{Prefix}}ProcTable* table) {
                         , {{as_varName(arg.name)}}
                     {%- endfor -%}
                 );
-                {% if method.return_type.name.get() == "future" %}
+                {% if method.returns and method.returns.type.name.get() == "future" %}
                     return {mNextFutureID++};
                 {% endif %}
             }

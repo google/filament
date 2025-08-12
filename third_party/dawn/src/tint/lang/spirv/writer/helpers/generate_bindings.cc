@@ -72,28 +72,27 @@ Bindings GenerateBindings(const core::ir::Module& module) {
                 continue;
             }
 
-            binding::BindingInfo info{bp->group, bp->binding};
             switch (ptr->AddressSpace()) {
                 case core::AddressSpace::kHandle:
                     Switch(
                         ptr->UnwrapPtr(),  //
-                        [&](const core::type::Sampler*) { bindings.sampler.emplace(*bp, info); },
+                        [&](const core::type::Sampler*) { bindings.sampler.emplace(*bp, *bp); },
                         [&](const core::type::StorageTexture*) {
-                            bindings.storage_texture.emplace(*bp, info);
+                            bindings.storage_texture.emplace(*bp, *bp);
                         },
-                        [&](const core::type::Texture*) { bindings.texture.emplace(*bp, info); });
+                        [&](const core::type::Texture*) { bindings.texture.emplace(*bp, *bp); });
                     break;
                 case core::AddressSpace::kStorage:
-                    bindings.storage.emplace(*bp, info);
+                    bindings.storage.emplace(*bp, *bp);
                     break;
                 case core::AddressSpace::kUniform:
-                    bindings.uniform.emplace(*bp, info);
+                    bindings.uniform.emplace(*bp, *bp);
                     break;
 
                 case core::AddressSpace::kUndefined:
                 case core::AddressSpace::kPixelLocal:
                 case core::AddressSpace::kPrivate:
-                case core::AddressSpace::kPushConstant:
+                case core::AddressSpace::kImmediate:
                 case core::AddressSpace::kIn:
                 case core::AddressSpace::kOut:
                 case core::AddressSpace::kFunction:
@@ -107,11 +106,11 @@ Bindings GenerateBindings(const core::ir::Module& module) {
         uint32_t g = bp.group;
         uint32_t& next_num = group_to_next_binding_number.GetOrAddZero(g);
 
-        binding::BindingInfo plane0{bp.group, bp.binding};
-        binding::BindingInfo plane1{g, next_num++};
-        binding::BindingInfo metadata{g, next_num++};
+        tint::BindingPoint plane0{bp.group, bp.binding};
+        tint::BindingPoint plane1{g, next_num++};
+        tint::BindingPoint metadata{g, next_num++};
 
-        bindings.external_texture.emplace(bp, binding::ExternalTexture{metadata, plane0, plane1});
+        bindings.external_texture.emplace(bp, ExternalTexture{metadata, plane0, plane1});
     }
 
     return bindings;

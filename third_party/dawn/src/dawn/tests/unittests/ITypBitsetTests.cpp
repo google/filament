@@ -31,6 +31,7 @@
 
 #include "dawn/common/TypedInteger.h"
 #include "dawn/common/ityp_bitset.h"
+#include "dawn/native/Features_autogen.h"
 
 namespace dawn {
 namespace {
@@ -222,6 +223,200 @@ TEST_F(ITypBitsetTest, GetHighestBitIndexPlusOne) {
     EXPECT_EQ(36u, static_cast<size_t>(GetHighestBitIndexPlusOne(Bitset40(0xFFFFFFFFF))));
     EXPECT_EQ(40u, static_cast<size_t>(GetHighestBitIndexPlusOne(Bitset40(0xF000000000))));
     EXPECT_EQ(40u, static_cast<size_t>(GetHighestBitIndexPlusOne(Bitset40(0xFFFFFFFFFF))));
+}
+
+class ITypBitsetIteratorTest : public testing::Test {
+  protected:
+    using IntegerT = TypedInteger<struct Foo, uint32_t>;
+    ityp::bitset<IntegerT, 40> mStateBits;
+
+    // For testing large bitsets (over 64 elements)
+    ityp::bitset<native::Feature, native::EnumCount<native::Feature>::value> mLargeStateBits;
+};
+
+// Simple iterator test.
+TEST_F(ITypBitsetIteratorTest, Iterator) {
+    std::set<IntegerT> originalValues;
+    originalValues.insert(IntegerT(2));
+    originalValues.insert(IntegerT(6));
+    originalValues.insert(IntegerT(8));
+    originalValues.insert(IntegerT(35));
+
+    for (IntegerT value : originalValues) {
+        mStateBits.set(value);
+    }
+
+    std::set<IntegerT> readValues;
+    for (IntegerT bit : mStateBits) {
+        EXPECT_EQ(1u, originalValues.count(bit));
+        EXPECT_EQ(0u, readValues.count(bit));
+        readValues.insert(bit);
+    }
+
+    EXPECT_EQ(originalValues.size(), readValues.size());
+}
+
+// Test an empty iterator.
+TEST_F(ITypBitsetIteratorTest, EmptySet) {
+    // We don't use the FAIL gtest macro here since it returns immediately,
+    // causing an unreachable code warning in MSVC
+    bool sawBit = false;
+    for ([[maybe_unused]] IntegerT bit : mStateBits) {
+        sawBit = true;
+    }
+    EXPECT_FALSE(sawBit);
+}
+
+// Test iterating a result of combining two bitsets.
+TEST_F(ITypBitsetIteratorTest, NonLValueBitset) {
+    ityp::bitset<IntegerT, 40> otherBits;
+
+    mStateBits.set(IntegerT(1));
+    mStateBits.set(IntegerT(2));
+    mStateBits.set(IntegerT(3));
+    mStateBits.set(IntegerT(4));
+
+    otherBits.set(IntegerT(0));
+    otherBits.set(IntegerT(1));
+    otherBits.set(IntegerT(3));
+    otherBits.set(IntegerT(5));
+
+    std::set<IntegerT> seenBits;
+
+    for (IntegerT bit : mStateBits& otherBits) {
+        EXPECT_EQ(0u, seenBits.count(bit));
+        seenBits.insert(bit);
+        EXPECT_TRUE(mStateBits[bit]);
+        EXPECT_TRUE(otherBits[bit]);
+    }
+
+    EXPECT_EQ((mStateBits & otherBits).count(), seenBits.size());
+}
+
+// Simple iterator test with a large bitset.
+TEST_F(ITypBitsetIteratorTest, Iterator_Large) {
+    std::set<native::Feature> originalValues;
+    originalValues.insert(native::Feature::Depth32FloatStencil8);
+    originalValues.insert(native::Feature::Subgroups);
+    originalValues.insert(native::Feature::R8UnormStorage);
+    originalValues.insert(native::Feature::MultiDrawIndirect);
+
+    for (native::Feature value : originalValues) {
+        mLargeStateBits.set(value);
+    }
+
+    std::set<native::Feature> readValues;
+    for (native::Feature bit : mLargeStateBits) {
+        EXPECT_EQ(1u, originalValues.count(bit));
+        EXPECT_EQ(0u, readValues.count(bit));
+        readValues.insert(bit);
+    }
+
+    EXPECT_EQ(originalValues.size(), readValues.size());
+}
+
+// Test an empty iterator with a large bitset.
+TEST_F(ITypBitsetIteratorTest, EmptySet_Large) {
+    // We don't use the FAIL gtest macro here since it returns immediately,
+    // causing an unreachable code warning in MSVC
+    bool sawBit = false;
+    for ([[maybe_unused]] native::Feature bit : mLargeStateBits) {
+        sawBit = true;
+    }
+    EXPECT_FALSE(sawBit);
+}
+
+// Test iterating a result of combining two large bitsets.
+TEST_F(ITypBitsetIteratorTest, NonLValueBitset_Large) {
+    ityp::bitset<native::Feature, native::EnumCount<native::Feature>::value> otherBits;
+
+    mLargeStateBits.set(native::Feature::Depth32FloatStencil8);
+    mLargeStateBits.set(native::Feature::Subgroups);
+    mLargeStateBits.set(native::Feature::R8UnormStorage);
+    mLargeStateBits.set(native::Feature::MultiDrawIndirect);
+
+    otherBits.set(native::Feature::ShaderF16);
+    otherBits.set(native::Feature::FramebufferFetch);
+    otherBits.set(native::Feature::StaticSamplers);
+    otherBits.set(native::Feature::SharedFenceEGLSync);
+
+    std::set<native::Feature> seenBits;
+
+    for (native::Feature bit : mLargeStateBits& otherBits) {
+        EXPECT_EQ(0u, seenBits.count(bit));
+        seenBits.insert(bit);
+        EXPECT_TRUE(mLargeStateBits[bit]);
+        EXPECT_TRUE(otherBits[bit]);
+    }
+
+    EXPECT_EQ((mLargeStateBits & otherBits).count(), seenBits.size());
+}
+
+class EnumBitSetIteratorTest : public testing::Test {
+  protected:
+    enum class TestEnum { A, B, C, D, E, F, G, H, I, J, EnumCount };
+
+    static constexpr size_t kEnumCount = static_cast<size_t>(TestEnum::EnumCount);
+    ityp::bitset<TestEnum, kEnumCount> mStateBits;
+};
+
+// Simple iterator test.
+TEST_F(EnumBitSetIteratorTest, Iterator) {
+    std::set<TestEnum> originalValues;
+    originalValues.insert(TestEnum::B);
+    originalValues.insert(TestEnum::F);
+    originalValues.insert(TestEnum::C);
+    originalValues.insert(TestEnum::I);
+
+    for (TestEnum value : originalValues) {
+        mStateBits.set(value);
+    }
+
+    std::set<TestEnum> readValues;
+    for (TestEnum bit : mStateBits) {
+        EXPECT_EQ(1u, originalValues.count(bit));
+        EXPECT_EQ(0u, readValues.count(bit));
+        readValues.insert(bit);
+    }
+
+    EXPECT_EQ(originalValues.size(), readValues.size());
+}
+
+// Test an empty iterator.
+TEST_F(EnumBitSetIteratorTest, EmptySet) {
+    // We don't use the FAIL gtest macro here since it returns immediately,
+    // causing an unreachable code warning in MSVC
+    bool sawBit = false;
+    for ([[maybe_unused]] TestEnum bit : mStateBits) {
+        sawBit = true;
+    }
+    EXPECT_FALSE(sawBit);
+}
+
+// Test iterating a result of combining two bitsets.
+TEST_F(EnumBitSetIteratorTest, NonLValueBitset) {
+    ityp::bitset<TestEnum, kEnumCount> otherBits;
+
+    mStateBits.set(TestEnum::B);
+    mStateBits.set(TestEnum::C);
+    mStateBits.set(TestEnum::D);
+    mStateBits.set(TestEnum::E);
+
+    otherBits.set(TestEnum::A);
+    otherBits.set(TestEnum::B);
+    otherBits.set(TestEnum::D);
+    otherBits.set(TestEnum::F);
+
+    std::set<TestEnum> seenBits;
+
+    for (TestEnum bit : mStateBits& otherBits) {
+        EXPECT_EQ(0u, seenBits.count(bit));
+        seenBits.insert(bit);
+        EXPECT_TRUE(mStateBits[bit]);
+        EXPECT_TRUE(otherBits[bit]);
+    }
+
+    EXPECT_EQ((mStateBits & otherBits).count(), seenBits.size());
 }
 
 }  // anonymous namespace

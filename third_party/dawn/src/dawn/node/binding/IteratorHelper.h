@@ -58,7 +58,7 @@ Napi::Object CreateIterator(const Napi::CallbackInfo& info, const T& collection)
     Napi::Env env = info.Env();
     Napi::Object iterObj = Napi::Object::New(env);
 
-    auto* helper = new IteratorHelper{collection, info.This().As<Napi::Object>()};
+    auto* helper = new IteratorHelper<T>{collection, info.This().As<Napi::Object>()};
     iterObj.AddFinalizer(std::remove_reference_t<decltype(*helper)>::Cleanup, helper);
 
     iterObj.Set("next", Napi::Function::New(

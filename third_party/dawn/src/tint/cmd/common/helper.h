@@ -56,9 +56,6 @@ struct ProgramInfo {
     std::unique_ptr<tint::Source::File> source_file;
 };
 
-/// Reporter callback for internal tint errors
-void TintInternalCompilerErrorReporter(const InternalCompilerError& err);
-
 /// PrintWGSL writes the WGSL of the program to the provided ostream, if the
 /// WGSL writer is enabled, otherwise it does nothing.
 /// @param out the output stream to write the WGSL to
@@ -79,7 +76,7 @@ struct LoadProgramOptions {
     std::string filename;
 #if TINT_BUILD_SPV_READER
     /// Spirv-reader options
-    bool use_ir = false;
+    bool use_ir_reader = false;
     tint::spirv::reader::Options spirv_reader_options;
 #endif
     /// The text printer to use for output

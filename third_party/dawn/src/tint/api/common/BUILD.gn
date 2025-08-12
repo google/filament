@@ -46,7 +46,6 @@ if (tint_build_unittests || tint_build_benchmarks) {
 libtint_source_set("common") {
   sources = [
     "binding_point.h",
-    "common.cc",
     "override_id.h",
     "vertex_pulling_config.cc",
     "vertex_pulling_config.h",

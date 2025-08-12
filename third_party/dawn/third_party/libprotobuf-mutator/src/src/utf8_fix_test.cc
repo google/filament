@@ -19,8 +19,6 @@
 
 namespace protobuf_mutator {
 
-protobuf::LogSilencer log_silincer;
-
 class FixUtf8StringTest : public ::testing::TestWithParam<int> {
  public:
   bool IsStructurallyValid(const std::string& s) {

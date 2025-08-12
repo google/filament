@@ -209,11 +209,11 @@ char* CommandAllocator::AllocateInNewBlock(uint32_t commandId,
     size_t requestedBlockSize = commandSize + kWorstCaseAdditionalSize;
 
     // The computation of the request could overflow.
-    if (DAWN_UNLIKELY(requestedBlockSize <= commandSize)) {
+    if (requestedBlockSize <= commandSize) [[unlikely]] {
         return nullptr;
     }
 
-    if (DAWN_UNLIKELY(!GetNewBlock(requestedBlockSize))) {
+    if (!GetNewBlock(requestedBlockSize)) [[unlikely]] {
         return nullptr;
     }
     return Allocate(commandId, commandSize, commandAlignment);
@@ -224,7 +224,7 @@ bool CommandAllocator::GetNewBlock(size_t minimumSize) {
     mLastAllocationSize = std::max(minimumSize, std::min(mLastAllocationSize * 2, size_t(16384)));
 
     auto block = std::unique_ptr<char[]>(new (std::nothrow) char[mLastAllocationSize]);
-    if (DAWN_UNLIKELY(block == nullptr)) {
+    if (block == nullptr) [[unlikely]] {
         return false;
     }
 
