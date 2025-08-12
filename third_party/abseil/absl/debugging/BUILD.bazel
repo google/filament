@@ -66,7 +66,9 @@ cc_test(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":stacktrace",
+        "//absl/base:config",
         "//absl/base:core_headers",
+        "//absl/types:span",
         "@googletest//:gtest",
         "@googletest//:gtest_main",
     ],
@@ -202,6 +204,7 @@ cc_library(
     ],
     hdrs = [
         "internal/address_is_readable.h",
+        "internal/addresses.h",
         "internal/elf_mem_image.h",
         "internal/vdso_support.h",
     ],

@@ -14,11 +14,11 @@ git add abseil
 This folder was last updated as follows to match the Dawn dependency:
 
     cd third_party
-    curl -L -O https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp/+archive/f81f6c011baf9b0132a5594c034fe0060820711d.tar.gz
+    curl -L -O https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp/+archive/cae4b6a3990e1431caa09c7b2ed1c76d0dfeab17.tar.gz
     mkdir abseil_new 
-    tar -xzf f81f6c011baf9b0132a5594c034fe0060820711d.tar.gz -C abseil_new
+    tar -xzf cae4b6a3990e1431caa09c7b2ed1c76d0dfeab17.tar.gz -C abseil_new
     rsync -r abseil_new/ abseil/ --delete --exclude tnt
-    rm -rf abseil_new/ f81f6c011baf9b0132a5594c034fe0060820711d.tar.gz
+    rm -rf abseil_new/ cae4b6a3990e1431caa09c7b2ed1c76d0dfeab17.tar.gz
     git add abseil ; git status
 
 

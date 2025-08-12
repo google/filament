@@ -57,7 +57,7 @@ template <typename T>
 using Flag = flags_internal::Flag<T>;
 
 template <typename T>
-ABSL_MUST_USE_RESULT T GetFlag(const absl::Flag<T>& flag);
+[[nodiscard]] T GetFlag(const absl::Flag<T>& flag);
 
 template <typename T>
 void SetFlag(absl::Flag<T>* flag, const T& v);
@@ -783,7 +783,7 @@ class FlagImpl final : public CommandLineFlag {
   // heap allocation during initialization, which is both slows program startup
   // and can fail. Using reserved space + placement new allows us to avoid both
   // problems.
-  alignas(absl::Mutex) mutable char data_guard_[sizeof(absl::Mutex)];
+  alignas(absl::Mutex) mutable unsigned char data_guard_[sizeof(absl::Mutex)];
 };
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
@@ -828,7 +828,7 @@ class Flag {
     U u;
 
 #if !defined(NDEBUG)
-    impl_.AssertValidType(base_internal::FastTypeId<T>(), &GenRuntimeTypeId<T>);
+    impl_.AssertValidType(absl::FastTypeId<T>(), &GenRuntimeTypeId<T>);
 #endif
 
     if (ABSL_PREDICT_FALSE(!value_.Get(impl_.seq_lock_, u.value))) {
@@ -837,7 +837,7 @@ class Flag {
     return std::move(u.value);
   }
   void Set(const T& v) {
-    impl_.AssertValidType(base_internal::FastTypeId<T>(), &GenRuntimeTypeId<T>);
+    impl_.AssertValidType(absl::FastTypeId<T>(), &GenRuntimeTypeId<T>);
     impl_.Write(&v);
   }
 
@@ -876,7 +876,8 @@ class FlagImplPeer {
 template <typename T>
 void* FlagOps(FlagOp op, const void* v1, void* v2, void* v3) {
   struct AlignedSpace {
-    alignas(MaskedPointer::RequiredAlignment()) alignas(T) char buf[sizeof(T)];
+    alignas(MaskedPointer::RequiredAlignment()) alignas(
+        T) unsigned char buf[sizeof(T)];
   };
   using Allocator = std::allocator<AlignedSpace>;
   switch (op) {
@@ -901,7 +902,7 @@ void* FlagOps(FlagOp op, const void* v1, void* v2, void* v3) {
     case FlagOp::kSizeof:
       return reinterpret_cast<void*>(static_cast<uintptr_t>(sizeof(T)));
     case FlagOp::kFastTypeId:
-      return const_cast<void*>(base_internal::FastTypeId<T>());
+      return const_cast<void*>(absl::FastTypeId<T>());
     case FlagOp::kRuntimeTypeId:
       return const_cast<std::type_info*>(GenRuntimeTypeId<T>());
     case FlagOp::kParse: {

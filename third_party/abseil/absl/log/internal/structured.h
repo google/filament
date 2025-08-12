@@ -34,7 +34,7 @@ namespace absl {
 ABSL_NAMESPACE_BEGIN
 namespace log_internal {
 
-class ABSL_MUST_USE_RESULT AsLiteralImpl final {
+class [[nodiscard]] AsLiteralImpl final {
  public:
   explicit AsLiteralImpl(absl::string_view str ABSL_ATTRIBUTE_LIFETIME_BOUND)
       : str_(str) {}
@@ -66,7 +66,7 @@ enum class StructuredStringType {
 // Structured log data for a string and associated structured proto field,
 // both of which must outlive this object.
 template <StructuredStringType str_type>
-class ABSL_MUST_USE_RESULT AsStructuredStringTypeImpl final {
+class [[nodiscard]] AsStructuredStringTypeImpl final {
  public:
   constexpr AsStructuredStringTypeImpl(
       absl::string_view str ABSL_ATTRIBUTE_LIFETIME_BOUND,
@@ -105,7 +105,7 @@ using AsStructuredNotLiteralImpl =
 // Structured log data for a stringifyable type T and associated structured
 // proto field, both of which must outlive this object.
 template <typename T>
-class ABSL_MUST_USE_RESULT AsStructuredValueImpl final {
+class [[nodiscard]] AsStructuredValueImpl final {
  public:
   using ValueFormatter = absl::AnyInvocable<std::string(T) const>;
 
@@ -139,8 +139,6 @@ class ABSL_MUST_USE_RESULT AsStructuredValueImpl final {
   }
 };
 
-#ifdef ABSL_HAVE_CLASS_TEMPLATE_ARGUMENT_DEDUCTION
-
 // Template deduction guide so `AsStructuredValueImpl(42, data)` works
 // without specifying the template type.
 template <typename T>
@@ -154,8 +152,6 @@ AsStructuredValueImpl(
     T value, StructuredProtoField field,
     typename AsStructuredValueImpl<T>::ValueFormatter value_formatter)
     -> AsStructuredValueImpl<T>;
-
-#endif  // ABSL_HAVE_CLASS_TEMPLATE_ARGUMENT_DEDUCTION
 
 }  // namespace log_internal
 ABSL_NAMESPACE_END
