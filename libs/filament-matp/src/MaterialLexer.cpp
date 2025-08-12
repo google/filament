@@ -85,8 +85,8 @@ bool MaterialLexer::readLexeme() noexcept {
         case MaterialType::BLOCK:
             if (!readBlock()) {
                 nextMaterialType = MaterialType::UNKNOWN;
-                break;
             }
+            break;
         case MaterialType::IDENTIFIER: readIdentifier(); break;
         case MaterialType::UNKNOWN:    readUnknown();    break;
         default:

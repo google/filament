@@ -382,9 +382,22 @@ void SpirvStream::disassembleInstruction(Id resultId, Id /*typeId*/, Op opCode, 
                 break;
             case Op::OpTypeFloat:
                 switch (stream[word]) {
+                case 8:
                 case 16:
-                    if (numOperands > 1 && stream[word+1] == spv::FPEncoding::BFloat16KHR) {
-                        idDescriptor[resultId] = "bfloat16_t";
+                    if (numOperands > 1) {
+                        switch (stream[word+1]) {
+                        default:
+                            assert(0); [[fallthrough]];
+                        case (int)spv::FPEncoding::BFloat16KHR:
+                            idDescriptor[resultId] = "bfloat16_t";
+                            break;
+                        case (int)spv::FPEncoding::Float8E4M3EXT:
+                            idDescriptor[resultId] = "floate4m3_t";
+                            break;
+                        case (int)spv::FPEncoding::Float8E5M2EXT:
+                            idDescriptor[resultId] = "floate5m2_t";
+                            break;
+                        }
                     } else {
                         idDescriptor[resultId] = "float16_t";
                     }
