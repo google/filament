@@ -58,6 +58,8 @@ class MetalDriver final : public DriverBase {
 public:
     static Driver* create(PlatformMetal* platform, const Platform::DriverConfig& driverConfig);
 
+    MetalContext* getContext() { return mContext; }
+
 private:
 
     friend class MetalSwapChain;

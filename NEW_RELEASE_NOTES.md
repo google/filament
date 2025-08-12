@@ -14,4 +14,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   depth-only passes. [**Requires recompiling materials**]
 - material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
 - material: Add CRC32 validation for material packages [⚠️ **New Material Version**]
+- material: Improve LineDictionary compression [⚠️ **New Material Version**]
 - Filament is now targeting c++20 (was previously c++17)
