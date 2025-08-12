@@ -5,11 +5,12 @@
 
 using namespace metal;
 
-// Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
+// Implementation of signed integer mod accurate to SPIR-V specification
 template<typename Tx, typename Ty>
-inline Tx mod(Tx x, Ty y)
+inline Tx spvSMod(Tx x, Ty y)
 {
-    return x - y * floor(x / y);
+    Tx remainder = x - y * (x / y);
+    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
 }
 
 struct myBlock
@@ -20,7 +21,7 @@ struct myBlock
 
 kernel void main0(device myBlock& myStorage [[buffer(0)]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
 {
-    myStorage.a = (myStorage.a + 1) % 256;
-    myStorage.b[gl_LocalInvocationIndex] = mod(myStorage.b[gl_LocalInvocationIndex] + 0.0199999995529651641845703125, 1.0);
+    myStorage.a = spvSMod(myStorage.a + 1, 256);
+    myStorage.b[gl_LocalInvocationIndex] += 0.0199999995529651641845703125;
 }
 

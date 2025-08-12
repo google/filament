@@ -12,5 +12,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]
 - engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
 - opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
-- Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
+- engine: Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
   depth-only passes. [**Requires recompiling materials**]
+- material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
+- material: Add CRC32 validation for material packages [⚠️ **New Material Version**]
+- Filament is now targeting c++20 (was previously c++17)

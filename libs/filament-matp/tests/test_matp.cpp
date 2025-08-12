@@ -18,10 +18,12 @@
 
 #include "TestMaterialParser.h"
 
+#include <filamat/MaterialBuilder.h>
+
 #include <filament-matp/MaterialParser.h>
-#include "../src/JsonishLexer.h"
-#include "../src/JsonishParser.h"
-#include "../src/MaterialLexer.h"
+#include "JsonishLexer.h"
+#include "JsonishParser.h"
+#include "MaterialLexer.h"
 
 class MaterialLexer: public ::testing::Test {
 protected:
@@ -93,6 +95,16 @@ TEST_F(MaterialLexer, MaterialParser) {
     filamat::MaterialBuilder unused;
     bool result = testParser.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
     EXPECT_EQ(result, true);
+}
+
+TEST_F(MaterialLexer, NoSpaceBetweenBlockAndIdentifier) {
+    matp::MaterialLexer materialLexer;
+    static std::string source(R"(
+        material {}fragment {}
+    )");
+    materialLexer.lex(source.c_str(), source.size(), 1);
+    auto lexemes = materialLexer.getLexemes();
+    EXPECT_EQ(lexemes.size(), 4);
 }
 
 TEST_F(MaterialLexer, MaterialParserWithToolSection) {

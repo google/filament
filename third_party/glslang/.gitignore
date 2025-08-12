@@ -4,6 +4,7 @@
 *.exe
 .cache/
 .vscode/
+.vs/
 tags
 TAGS
 bazel-*

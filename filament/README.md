@@ -99,7 +99,7 @@ main: main.o
 	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -lpthread -lc++ -ldl -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++17 -pthread -c main.cpp
+	$(CC) -Iinclude/ -std=c++20 -pthread -c main.cpp
 
 clean:
 	rm -f main main.o
@@ -119,7 +119,7 @@ main: main.o
 	$(CC) -Llib/$(ARCH)/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++17 -c main.cpp
+	$(CC) -Iinclude/ -std=c++20 -c main.cpp
 
 clean:
 	rm -f main main.o
@@ -148,7 +148,7 @@ main.exe: main.obj
 	gdi32.lib user32.lib opengl32.lib
 
 main.obj: main.cpp
-	$(CC) /MT /Iinclude\\ /std:c++17 /c main.cpp
+	$(CC) /MT /Iinclude\\ /std:c++20 /c main.cpp
 
 clean:
 	del main.exe main.obj

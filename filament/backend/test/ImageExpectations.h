@@ -27,9 +27,9 @@
 
 // Arguments are (RenderTargetHandle renderTarget, ImageExpectations& expectations,
 // ScreenshotParams screenshotParams)
-#define EXPECT_IMAGE(renderTarget, expectations, screenshotParams)  \
+#define EXPECT_IMAGE(renderTarget, screenshotParams)  \
 do {                                                                \
-    expectations.addExpectation(                                    \
+    getExpectations().addExpectation(                               \
         __FILE__,                                                   \
         __LINE__,                                                   \
         renderTarget,                                               \

@@ -1,0 +1,45 @@
+iomap.mismatchedBufferTypes.vert
+Shader version: 460
+0:? Sequence
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:?   Linker Objects
+0:?     'blockname' (layout( column_major std140) uniform block{layout( column_major std140) uniform float a, layout( column_major std140) uniform float b})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+
+iomap.mismatchedBufferTypes.frag
+Shader version: 460
+0:? Sequence
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:?   Linker Objects
+0:?     'blockname' (layout( column_major std140) uniform block{layout( column_major std140) uniform float a})
+
+
+Linked vertex stage:
+
+
+Linked fragment stage:
+
+ERROR: Linking fragment stage: vertex block member has no corresponding member in fragment block:
+    vertex stage: Block: crossStageBlock, Member: b
+    fragment stage: Block: crossStageBlock, Member: n/a 
+
+Shader version: 460
+0:? Sequence
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:?   Linker Objects
+0:?     'blockname' (layout( column_major std140) uniform block{layout( column_major std140) uniform float a, layout( column_major std140) uniform float b})
+0:?     'gl_VertexID' ( gl_VertexId int VertexId)
+0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
+Shader version: 460
+0:? Sequence
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:?   Linker Objects
+0:?     'blockname' (layout( column_major std140) uniform block{layout( column_major std140) uniform float a})
+
+Validation failed
+SPIR-V is not generated for failed compile or link
