@@ -206,6 +206,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
     : mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
+      // Note that we always create the default rendertarget before createDefaultRenderTarget(). We
+      // swap the content later when createDefaultRenderTarget() is called.  This frees
+      // createDefaultRenderTarget() from being ordered with makeCurrent().
+      mDefaultRenderTarget(
+              fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
@@ -698,8 +703,11 @@ void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
-    assert_invariant(!mDefaultRenderTarget);
-    auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth);
+    assert_invariant(mDefaultRenderTarget); // Default render target should already exist.
+
+    auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth,
+            std::move(std::move(*mDefaultRenderTarget.get())));
+
     mDefaultRenderTarget = renderTarget;
 }
 
@@ -775,6 +783,7 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
     if (UTILS_UNLIKELY(rt == mDefaultRenderTarget)) {
+        // Note that this should only happen on driver shutdown.
         mDefaultRenderTarget = {};
     } else {
         rt.dec();
