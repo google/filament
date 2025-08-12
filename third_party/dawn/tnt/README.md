@@ -17,6 +17,7 @@ cp -r ../dawn/tnt .
 cd ..
 rm -rf dawn
 mv dawn_copy dawn
+patch -p2 < dawn/tnt/dawn-generator-CMakeList.patch
 # remove redundant 3rd party dependencies with Filament itself
 rm -rf \
     dawn/third_party/abseil-cpp \
