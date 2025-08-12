@@ -194,7 +194,8 @@ void WebGPUDriver::finish(int /* dummy */) {
     std::condition_variable syncCondition;
     bool done = false;
     mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
-            [&syncPoint, &syncCondition, &done](wgpu::QueueWorkDoneStatus status) {
+            [&syncPoint, &syncCondition, &done](wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
+                // The 'message' parameter is required by the API but can be ignored.
                 assert_invariant(status == wgpu::QueueWorkDoneStatus::Success);
                 std::unique_lock<std::mutex> lock(syncPoint);
                 done = true;
@@ -1239,7 +1240,9 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
     // get a purple flash
     if (firstRender) {
         auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
-                [=](wgpu::QueueWorkDoneStatus) {});
+                [](wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
+                    // This lambda does nothing, but the signature must match.
+                });
         const wgpu::Instance instance = mAdapter.GetInstance();
         auto wStatus = instance.WaitAny(f,
                 std::chrono::duration_cast<std::chrono::nanoseconds>(1s).count());

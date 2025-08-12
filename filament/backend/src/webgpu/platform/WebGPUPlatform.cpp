@@ -266,12 +266,14 @@ void printInstanceDetails(wgpu::Instance const& instance) {
     dawnTogglesDescriptor.enabledToggleCount = 1;
     dawnTogglesDescriptor.enabledToggles = &toggleName;
 #endif
+    const wgpu::InstanceFeatureName features[] = {wgpu::InstanceFeatureName::TimedWaitAny};
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
-        .capabilities = {
-            .timedWaitAnyEnable = true// TODO consider using pure async instead
-        }
+        .requiredFeatures = features,
+//        .requiredFeatureCount = std::size(features),
     };
+//    instanceDescriptor.requiredFeatures = features;
+    instanceDescriptor.requiredFeatureCount = 1;
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create WebGPU instance.";
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
