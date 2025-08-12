@@ -404,6 +404,11 @@ MaterialBuilder& MaterialBuilder::groupSize(math::uint3 const groupSize) noexcep
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
+    mUseDefaultDepthVariant = true;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -931,7 +936,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader, needsStandardDepthProgram());
+    container.emplace<bool>(MaterialHasCustomDepthShader,
+            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -1380,10 +1386,25 @@ error:
         goto error;
     }
 
-    // Flatten all chunks in the container into a Package.
-    Package package(container.getSize());
+    // Flatten all container chunks into a single package and compute its CRC32 value, storing it as
+    // a separate chunk.
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    const size_t originalContainerSize = container.getSize();
+    const size_t signedContainerSize = originalContainerSize + crc32ChunkSize;
+
+    Package package(signedContainerSize);
     Flattener f{ package.getData() };
-    container.flatten(f);
+    size_t flattenSize = container.flatten(f);
+
+    std::vector<uint32_t> crc32Table;
+    hash::crc32GenerateTable(crc32Table);
+    uint32_t crc = hash::crc32Update(0, f.getStartPtr(), flattenSize, crc32Table);
+    f.writeUint64(static_cast<uint64_t>(MaterialCrc32));
+    f.writeUint32(static_cast<uint32_t>(sizeof(crc)));
+    f.writeUint32(static_cast<uint32_t>(crc));
+
+    assert_invariant(flattenSize == originalContainerSize);
+    assert_invariant(signedContainerSize == f.getBytesWritten());
 
     return package;
 }

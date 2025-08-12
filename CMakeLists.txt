@@ -331,9 +331,9 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CXX_STANDARD "-std=c++17")
+set(CXX_STANDARD "-std=c++20")
 if (WIN32)
-    set(CXX_STANDARD "/std:c++17")
+    set(CXX_STANDARD "/std:c++20")
 endif()
 
 if (MSVC)
@@ -818,6 +818,7 @@ add_subdirectory(${EXTERNAL}/jsmn/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
+add_subdirectory(${EXTERNAL}/zstd/tnt)
 
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)

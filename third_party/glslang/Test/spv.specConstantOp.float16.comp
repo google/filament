@@ -1,0 +1,18 @@
+#version 450
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// Produce an OpSpecConstantOp with 8 bit integer type
+
+layout(constant_id = 0) const float c = 8;
+
+layout(binding=0) writeonly restrict buffer S {
+    float16_t p_out[];
+};
+
+void main()
+{
+    p_out[0] = float16_t(c);
+}
+
+
+

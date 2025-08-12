@@ -1,0 +1,25 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO;
+
+struct SSBO
+{
+    float data[1];
+};
+
+struct UBO
+{
+    ulong2 ptrs[2];
+};
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(256u, 1u, 1u);
+
+kernel void main0(constant UBO& _17 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    device SSBO* s0 = ((device SSBO*)_17.ptrs[0].x);
+    s0->data[gl_GlobalInvocationID.x] += 1.0;
+}
+
