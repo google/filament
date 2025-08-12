@@ -132,7 +132,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(fullRenderTarget, getExpectations(),
+        EXPECT_IMAGE(fullRenderTarget,
                 ScreenshotParams(kSrcTexWidth >> 1, kSrcTexHeight >> 1, "scissor", 15842520));
 
         api.commit(swapChain);
@@ -224,7 +224,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
+        EXPECT_IMAGE(renderTarget,
                 ScreenshotParams(512, 512, "ScissorViewportEdgeCases", 2199186852));
 
         api.commit(swapChain);

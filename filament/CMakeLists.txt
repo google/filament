@@ -152,6 +152,7 @@ set(SRCS
         src/fg/PassNode.cpp
         src/fg/ResourceNode.cpp
         src/fsr.cpp
+        src/ZstdHelper.cpp
 )
 
 set(PRIVATE_HDRS
@@ -235,6 +236,7 @@ set(PRIVATE_HDRS
         src/materials/fsr/ffx_a.h
         src/materials/fsr/ffx_fsr1.h
         src/materials/fsr/ffx_fsr1_mobile.fs
+        src/ZstdHelper.h
 )
 
 set(MATERIAL_SRCS
@@ -605,6 +607,28 @@ add_custom_command(
         APPEND
 )
 
+file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
+
+set(output_path_dfg_bin "${GENERATION_ROOT}/generated/data/dfg.bin")
+add_custom_command(
+        OUTPUT ${output_path_dfg_bin}
+        COMMAND cmgen --quiet --size=${DFG_LUT_SIZE} --ibl-dfg-multiscatter --ibl-dfg-cloth --ibl-dfg=${output_path_dfg_bin}
+        DEPENDS cmgen
+        COMMENT "Generating DFG LUT to ${output_path_dfg_bin}"
+)
+
+set(dfg_package_name "dfg")
+get_resgen_vars(${RESOURCE_DIR} ${dfg_package_name})
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} -Z ${output_path_dfg_bin}
+        DEPENDS resgen
+        DEPENDS ${output_path_dfg_bin}
+        COMMENT "Generating DFG resource package for ${dfg_package_name}"
+)
+list(APPEND GENERATED_RESOURCE_HDRS ${RESGEN_HEADER})
+list(APPEND GENERATED_RESOURCE_SRCS ${RESGEN_SOURCE})
+
 # Add the generated resource files to the source and header lists.
 list(APPEND PRIVATE_HDRS ${GENERATED_RESOURCE_HDRS})
 list(APPEND SRCS ${GENERATED_RESOURCE_SRCS})
@@ -613,16 +637,6 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${GENERATED_RESOURCE_SRCS} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
-
-set(output_path "${GENERATION_ROOT}/generated/data/dfg.inc")
-add_custom_command(
-        OUTPUT ${output_path}
-        COMMAND cmgen --quiet --size=${DFG_LUT_SIZE} --ibl-dfg-multiscatter --ibl-dfg-cloth --ibl-dfg=${output_path}
-        DEPENDS cmgen
-        COMMENT "Generating DFG LUT ${output_path}"
-)
-list(APPEND DATA_BINS ${output_path})
 
 # ==================================================================================================
 # Includes & target definition
@@ -633,7 +647,7 @@ include_directories(${GENERATION_ROOT})
 include_directories(src)
 
 # we're building a library
-add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS} ${DATA_BINS})
+add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
@@ -650,6 +664,7 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
+target_link_libraries(${TARGET} PRIVATE zstd)
 
 if (FILAMENT_USE_ABSEIL_LOGGING)
     target_link_libraries(${TARGET} PUBLIC absl::log)
@@ -713,13 +728,6 @@ else()
             -Wover-aligned
             -Werror
     )
-    if (CMAKE_CXX_STANDARD EQUAL 20)
-        # The lambdas for passes in PostProcessManager.cpp capture this
-        # implicitly in a way that's deprecated in c++20, but can't easily be
-        # fixed in a way that's backwards compatible with c++17:
-        # https://www.nextptr.com/tutorial/ta1430524603/capture-this-in-lambda-expression-timeline-of-change
-        list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
-    endif()
 endif()
 
 target_compile_options(${TARGET} PRIVATE

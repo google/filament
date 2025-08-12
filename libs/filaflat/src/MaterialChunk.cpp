@@ -54,6 +54,10 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
     }
 
     auto [start, end] = mContainer.getChunkRange(materialTag);
+    if (start == end) {
+        return false;
+    }
+
     Unflattener unflattener(start, end);
 
     mUnflattener = unflattener;

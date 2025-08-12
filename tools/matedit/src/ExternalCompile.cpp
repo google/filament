@@ -34,6 +34,8 @@
 #include <matdbg/ShaderExtractor.h>
 #include <matdbg/ShaderInfo.h>
 
+#include <utils/Hash.h>
+
 #include <filamat/Package.h>
 
 #include <sys/wait.h>
@@ -422,12 +424,25 @@ int externalCompile(utils::Path input, utils::Path output, bool preserveTextShad
     outputChunks.push<filamat::MaterialBinaryChunk>(
             std::move(metalBinaryEntries), filamat::ChunkType::MaterialMetalLibrary);
 
-    // Flatten into a Package and write to disk.
-    Package package(outputChunks.getSize());
-    Flattener f { package.getData() };
-    outputChunks.flatten(f);
+    // Flatten all container chunks into a package and write to disk. Compute its CRC32 value,
+    // storing it as a separate chunk.
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    const size_t originalContainerSize = outputChunks.getSize();
+    const size_t signedContainerSize = originalContainerSize + crc32ChunkSize;
 
-    assert_invariant(package.isValid());
+    Package package(signedContainerSize);
+    Flattener f{ package.getData() };
+    size_t flattenSize = outputChunks.flatten(f);
+
+    std::vector<uint32_t> crc32Table;
+    hash::crc32GenerateTable(crc32Table);
+    uint32_t crc = hash::crc32Update(0, f.getStartPtr(), flattenSize, crc32Table);
+    f.writeUint64(static_cast<uint64_t>(filamat::MaterialCrc32));
+    f.writeUint32(static_cast<uint32_t>(sizeof(crc)));
+    f.writeUint32(static_cast<uint32_t>(crc));
+
+    assert_invariant(flattenSize == originalContainerSize);
+    assert_invariant(signedContainerSize == f.getBytesWritten());
 
     dumpBinary(package.getData(), package.getSize(), output);
 

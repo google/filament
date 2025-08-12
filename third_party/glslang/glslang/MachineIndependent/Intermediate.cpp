@@ -400,6 +400,8 @@ TIntermTyped* TIntermediate::addUnaryMath(TOperator op, TIntermTyped* child,
     case EOpConstructDouble: newType = EbtDouble; break;
     case EOpConstructFloat16: newType = EbtFloat16; break;
     case EOpConstructBFloat16: newType = EbtBFloat16; break;
+    case EOpConstructFloatE4M3: newType = EbtFloatE4M3; break;
+    case EOpConstructFloatE5M2: newType = EbtFloatE5M2; break;
     default: break; // some compilers want this
     }
 
@@ -430,7 +432,9 @@ TIntermTyped* TIntermediate::addUnaryMath(TOperator op, TIntermTyped* child,
         case EOpConstructFloat:
         case EOpConstructDouble:
         case EOpConstructFloat16:
-        case EOpConstructBFloat16: {
+        case EOpConstructBFloat16:
+        case EOpConstructFloatE5M2:
+        case EOpConstructFloatE4M3: {
             TIntermUnary* unary_node = child->getAsUnaryNode();
             if (unary_node != nullptr)
                 unary_node->updatePrecision();
@@ -571,9 +575,9 @@ bool TIntermediate::isConversionAllowed(TOperator op, TIntermTyped* node) const
 
 bool TIntermediate::buildConvertOp(TBasicType dst, TBasicType src, TOperator& newOp) const
 {
-    // bfloat16_t <-> bool not supported
-    if ((src == EbtBFloat16 && dst == EbtBool) ||
-        (dst == EbtBFloat16 && src == EbtBool)) {
+    // (bfloat16_t,fp8) <-> bool not supported
+    if (((src == EbtBFloat16 || src == EbtFloatE5M2 || src == EbtFloatE4M3) && dst == EbtBool) ||
+        ((dst == EbtBFloat16 || dst == EbtFloatE5M2 || dst == EbtFloatE4M3) && src == EbtBool)) {
         return false;
     }
 
@@ -604,12 +608,15 @@ TIntermTyped* TIntermediate::createConversion(TBasicType convertTo, TIntermTyped
                                 node->getBasicType() == EbtInt   || node->getBasicType() == EbtUint   ||
                                 node->getBasicType() == EbtInt64 || node->getBasicType() == EbtUint64);
 
-    bool convertToFloatTypes = (convertTo == EbtFloat16 || convertTo == EbtBFloat16 || convertTo == EbtFloat || convertTo == EbtDouble);
+    bool convertToFloatTypes = (convertTo == EbtFloat16 || convertTo == EbtBFloat16 || convertTo == EbtFloat || convertTo == EbtDouble ||
+                                convertTo == EbtFloatE5M2 || convertTo == EbtFloatE4M3);
 
     bool convertFromFloatTypes = (node->getBasicType() == EbtFloat16 ||
                                   node->getBasicType() == EbtBFloat16 ||
                                   node->getBasicType() == EbtFloat ||
-                                  node->getBasicType() == EbtDouble);
+                                  node->getBasicType() == EbtDouble ||
+                                  node->getBasicType() == EbtFloatE5M2 ||
+                                  node->getBasicType() == EbtFloatE4M3);
 
     if (((convertTo == EbtInt8 || convertTo == EbtUint8) && ! convertFromIntTypes) ||
         ((node->getBasicType() == EbtInt8 || node->getBasicType() == EbtUint8) && ! convertToIntTypes)) {
@@ -858,12 +865,15 @@ TIntermTyped* TIntermediate::addConversion(TOperator op, const TType& type, TInt
     case EOpConstructDouble:
     case EOpConstructFloat16:
     case EOpConstructBFloat16:
+    case EOpConstructFloatE5M2:
+    case EOpConstructFloatE4M3:
     case EOpConstructInt8:
     case EOpConstructUint8:
     case EOpConstructInt16:
     case EOpConstructUint16:
     case EOpConstructInt64:
     case EOpConstructUint64:
+    case EOpConstructSaturated:
         break;
 
     //
@@ -965,6 +975,8 @@ TIntermTyped* TIntermediate::addConversion(TOperator op, const TType& type, TInt
     //  - at the time of this writing (14-Aug-2020), no test results are changed by this.
     switch (op) {
     case EOpConstructBFloat16:
+    case EOpConstructFloatE5M2:
+    case EOpConstructFloatE4M3:
         canPromoteConstant = true;
         break;
     case EOpConstructFloat16:
@@ -1270,6 +1282,8 @@ bool TIntermediate::isFPPromotion(TBasicType from, TBasicType to) const
     if (to == EbtDouble) {
         switch(from) {
         case EbtBFloat16:
+        case EbtFloatE5M2:
+        case EbtFloatE4M3:
         case EbtFloat16:
         case EbtFloat:
             return true;
@@ -1362,7 +1376,7 @@ bool TIntermediate::isIntegralConversion(TBasicType from, TBasicType to) const
 
 bool TIntermediate::isFPConversion(TBasicType from, TBasicType to) const
 {
-    if (to == EbtFloat && (from == EbtFloat16 || from == EbtBFloat16)) {
+    if (to == EbtFloat && (from == EbtFloat16 || from == EbtBFloat16 || from == EbtFloatE5M2 || from == EbtFloatE4M3)) {
         return true;
     } else {
         return false;
@@ -1510,12 +1524,19 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             case EbtInt16:
             case EbtUint16:
                 return (version >= 400 || numericFeatures.contains(TNumericFeatures::gpu_shader_fp64)) &&
-                                          numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                                         (numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) || 
+                                          numericFeatures.contains(TNumericFeatures::gpu_shader_int16));
             case EbtFloat16:
                 return (version >= 400 || numericFeatures.contains(TNumericFeatures::gpu_shader_fp64)) &&
-                                          numericFeatures.contains(TNumericFeatures::gpu_shader_half_float);
+                                        (numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) || 
+                                        numericFeatures.contains(TNumericFeatures::gpu_shader_half_float));
             case EbtBFloat16:
+            case EbtFloatE5M2:
+            case EbtFloatE4M3:
                 return true;
+            case EbtInt8:
+            case EbtUint8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                 return false;
            }
@@ -1528,24 +1549,37 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
                  return getSource() == EShSourceHlsl;
             case EbtInt16:
             case EbtUint16:
-                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+                       numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             case EbtFloat16:
                 return numericFeatures.contains(TNumericFeatures::gpu_shader_half_float) ||
+                    numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) ||
                     getSource() == EShSourceHlsl;
             case EbtBFloat16:
+            case EbtFloatE5M2:
+            case EbtFloatE4M3:
                 return true;
+            case EbtInt8:
+            case EbtUint8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                  return false;
             }
         case EbtUint:
             switch (from) {
             case EbtInt:
-                return version >= 400 || getSource() == EShSourceHlsl || IsRequestedExtension(E_GL_ARB_gpu_shader5);
+                return version >= 400 || getSource() == EShSourceHlsl || 
+						IsRequestedExtension(E_GL_ARB_gpu_shader5) ||
+						numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             case EbtBool:
                 return getSource() == EShSourceHlsl;
             case EbtInt16:
             case EbtUint16:
-                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+                       numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
+            case EbtInt8:
+            case EbtUint8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                 return false;
             }
@@ -1554,7 +1588,10 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             case EbtBool:
                 return getSource() == EShSourceHlsl;
             case EbtInt16:
-                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+                       numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
+            case EbtInt8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                 return false;
             }
@@ -1566,7 +1603,11 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
                 return true;
             case EbtInt16:
             case EbtUint16:
-                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+                	numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
+            case EbtInt8:
+            case EbtUint8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                 return false;
             }
@@ -1574,8 +1615,11 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             switch (from) {
             case EbtInt:
                 return true;
+            case EbtInt8:
+                return numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             case EbtInt16:
-                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+                return numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+				       numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types);
             default:
                 return false;
             }
@@ -1584,6 +1628,18 @@ bool TIntermediate::canImplicitlyPromote(TBasicType from, TBasicType to, TOperat
             case EbtInt16:
             case EbtUint16:
                 return numericFeatures.contains(TNumericFeatures::gpu_shader_int16);
+            case EbtFloatE5M2:
+            case EbtFloatE4M3:
+                return true;
+            default:
+                break;
+            }
+            return false;
+        case EbtBFloat16:
+            switch (from) {
+            case EbtFloatE5M2:
+            case EbtFloatE4M3:
+                return true;
             default:
                 break;
             }
@@ -2051,6 +2107,24 @@ TOperator TIntermediate::mapTypeToConstructorOp(const TType& type) const
         default: break; // some compilers want this
         }
         break;
+    case EbtFloatE5M2:
+        switch (type.getVectorSize()) {
+        case 1: op = EOpConstructFloatE5M2;  break;
+        case 2: op = EOpConstructFloatE5M2Vec2;  break;
+        case 3: op = EOpConstructFloatE5M2Vec3;  break;
+        case 4: op = EOpConstructFloatE5M2Vec4;  break;
+        default: break; // some compilers want this
+        }
+        break;
+    case EbtFloatE4M3:
+        switch (type.getVectorSize()) {
+        case 1: op = EOpConstructFloatE4M3;  break;
+        case 2: op = EOpConstructFloatE4M3Vec2;  break;
+        case 3: op = EOpConstructFloatE4M3Vec3;  break;
+        case 4: op = EOpConstructFloatE4M3Vec4;  break;
+        default: break; // some compilers want this
+        }
+        break;
     case EbtInt8:
         switch(type.getVectorSize()) {
         case 1: op = EOpConstructInt8;   break;
@@ -2460,7 +2534,7 @@ TIntermConstantUnion* TIntermediate::addConstantUnion(bool b, const TSourceLoc& 
 
 TIntermConstantUnion* TIntermediate::addConstantUnion(double d, TBasicType baseType, const TSourceLoc& loc, bool literal) const
 {
-    assert(baseType == EbtFloat || baseType == EbtDouble || baseType == EbtFloat16 || baseType == EbtBFloat16);
+    assert(baseType == EbtFloat || baseType == EbtDouble || baseType == EbtFloat16 || baseType == EbtBFloat16 || baseType == EbtFloatE5M2 || baseType == EbtFloatE4M3);
 
     if (isEsProfile() && (baseType == EbtFloat || baseType == EbtFloat16)) {
         int exponent = 0;
@@ -3715,6 +3789,8 @@ TIntermTyped* TIntermediate::promoteConstantUnion(TBasicType promoteTo, TIntermC
 #define TO_ALL(Get)   \
         switch (promoteTo) { \
         case EbtBFloat16: PROMOTE(setDConst, double, Get); break; \
+        case EbtFloatE5M2: PROMOTE(setDConst, double, Get); break; \
+        case EbtFloatE4M3: PROMOTE(setDConst, double, Get); break; \
         case EbtFloat16: PROMOTE(setDConst, double, Get); break; \
         case EbtFloat: PROMOTE(setDConst, double, Get); break; \
         case EbtDouble: PROMOTE(setDConst, double, Get); break; \
@@ -3737,6 +3813,8 @@ TIntermTyped* TIntermediate::promoteConstantUnion(TBasicType promoteTo, TIntermC
         case EbtBool: TO_ALL(getBConst); break;
         case EbtFloat16: TO_ALL(getDConst); break;
         case EbtBFloat16: TO_ALL(getDConst); break;
+        case EbtFloatE5M2: TO_ALL(getDConst); break;
+        case EbtFloatE4M3: TO_ALL(getDConst); break;
         case EbtDouble: TO_ALL(getDConst); break;
         case EbtInt8: TO_ALL(getI8Const); break;
         case EbtInt16: TO_ALL(getI16Const); break;

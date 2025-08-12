@@ -232,6 +232,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -338,6 +339,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -382,6 +384,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
@@ -536,6 +539,7 @@
 					"-lgeometry",
 					"-libl",
 					"-labseil",
+					"-lzstd",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "${SAMPLE_CODE_DISAMBIGUATOR}.google.filament.hello-triangle";
 				SAMPLE_CODE_DISAMBIGUATOR = "${DEVELOPMENT_TEAM}";
