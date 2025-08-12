@@ -1,0 +1,15 @@
+name: 'Get Mesa'
+description: 'Caches and installs Mesa'
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Cache Mesa and deps
+      uses: actions/cache@v4
+      with:
+        path: mesa
+        key: ${{ runner.os }}-mesa-deps-${{ env.GITHUB_MESA_VERSION }}
+    - name: Get Mesa
+      run: |
+        bash build/common/get-mesa.sh
+      shell: bash

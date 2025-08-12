@@ -121,15 +121,11 @@ jobs:
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - uses: ./.github/actions/mac-prereq
-      - name: Cache Mesa and deps
-        uses: actions/cache@v4
-        with:
-          path: mesa
-          key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
+      - uses: ./.github/actions/get-mesa
       - name: Prerequisites
         run: |
-          bash build/common/get-mesa.sh
           pip install tifffile numpy
+        shell: bash
       - name: Render and compare
         id: render_compare
         run: |
