@@ -1067,48 +1067,56 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 scheduleRelease(stream->takePrevious());
             }
 
-            // If this is a new frame for the stream
-            auto externalImage =
-                    mPlatform->createExternalImageFromRaw(stream->getAcquired().image, false);
-            auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
-            auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+            auto texture = stream->getTexture(stream->getAcquired().image);
+            if (!texture) {
+                auto externalImage =
+                        mPlatform->createExternalImageFromRaw(stream->getAcquired().image, false);
+                auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
+                auto imgData = mPlatform->createVkImageFromExternal(externalImage);
 
-            assert_invariant(imgData.internal.valid() || imgData.external.valid());
+                assert_invariant(imgData.internal.valid() || imgData.external.valid());
 
-            VkFormat vkformat = metadata.format;
-            VkImage vkimage = VK_NULL_HANDLE;
-            VkDeviceMemory memory = VK_NULL_HANDLE;
-            if (imgData.internal.valid()) {
-                metadata.externalFormat = 0;
-                vkimage = imgData.internal.image;
-                memory = imgData.internal.memory;
-            } else {
-                vkformat = VK_FORMAT_UNDEFINED;
-                vkimage = imgData.external.image;
-                memory = imgData.external.memory;
+                VkFormat vkformat = metadata.format;
+                VkImage vkimage = VK_NULL_HANDLE;
+                VkDeviceMemory memory = VK_NULL_HANDLE;
+                if (imgData.internal.valid()) {
+                    metadata.externalFormat = 0;
+                    vkimage = imgData.internal.image;
+                    memory = imgData.internal.memory;
+                } else {
+                    vkformat = VK_FORMAT_UNDEFINED;
+                    vkimage = imgData.external.image;
+                    memory = imgData.external.memory;
+                }
+
+                VkSamplerYcbcrConversion const conversion =
+                        mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
+
+                auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager, mContext,
+                        mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage,
+                        memory, vkformat, conversion, metadata.samples, metadata.width,
+                        metadata.height, metadata.layers, metadata.filamentUsage, mStagePool);
+
+                // We shouldn't need to do this when we allocate the texture
+                if (true) {
+                    auto& commands = mCommands.get();
+                    // Unlike uploaded textures or swapchains, we need to explicit transition this
+                    // texture into the read layout.
+                    newTexture->transitionLayout(&commands, newTexture->getPrimaryViewRange(),
+                            VulkanLayout::FRAG_READ);
+                }
+
+                if (imgData.external.valid()) {
+                    mExternalImageManager.addExternallySampledTexture(newTexture, externalImage);
+                    // Cache the AHB backed image.
+                    stream->pushImage(stream->getAcquired().image, newTexture);
+                }
+
+                newTexture.inc();
+                texture = newTexture;
             }
 
-            VkSamplerYcbcrConversion const conversion =
-                    mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
-
-            auto texture = resource_ptr<VulkanTexture>::construct(&mResourceManager, mContext,
-                    mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage,
-                    memory, vkformat, conversion, metadata.samples, metadata.width, metadata.height,
-                    metadata.layers, metadata.filamentUsage, mStagePool);
-            auto& commands = mCommands.get();
-            // Unlike uploaded textures or swapchains, we need to explicit transition this
-            // texture into the read layout.
-            texture->transitionLayout(&commands, texture->getPrimaryViewRange(),
-                    VulkanLayout::FRAG_READ);
-
-            if (imgData.external.valid()) {
-                // These two now go hand in hand, all new stream images are unique VulkanTextures
-                // and all require a specific binding to the descriptor set.
-                mExternalImageManager.addExternallySampledTexture(texture, externalImage);
-                mExternalImageManager.bindStreamFrame(stream, texture);
-            }
-
-            texture.inc();
+            mExternalImageManager.bindStreamFrame(stream, texture);
         }
         mStreamsWithPendingAcquiredImage.clear();
     }

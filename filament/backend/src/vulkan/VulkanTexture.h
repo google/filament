@@ -37,36 +37,31 @@ namespace filament::backend {
 struct VulkanTexture;
 
 struct VulkanStream : public HwStream, fvkmemory::ThreadSafeResource {
-//    fvkmemory::resource_ptr<VulkanTexture> getFrame(void* ahb) {
-//        fvkmemory::resource_ptr<VulkanTexture> frame;
-//        const auto& it = mFrames.find(ahb);
-//        if (it != mFrames.end()) frame = it->second;
-//        return frame;
-//    }
-//    void pushFrame(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mFrames[ahb] = tex; }
-//
-//private:
-//    std::map<void*, fvkmemory::resource_ptr<VulkanTexture>> mFrames;
-public:
+    fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
+        fvkmemory::resource_ptr<VulkanTexture> frame;
+        const auto& it = mTextures.find(ahb);
+        if (it != mTextures.end()) frame = it->second;
+        return frame;
+    }
+    void pushImage(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mTextures[ahb] = tex; }
     void acquire(const AcquiredImage& image) {
         mPrevious = mAcquired;
         mAcquired = image;
     }
-    bool previousNeedsRelease() const {
-        return (mPrevious.image != nullptr);
-    }
-    // this function will null the previouce once the caller takes it.
+    bool previousNeedsRelease() const { return (mPrevious.image != nullptr); }
+    // this function will null the previous once the caller takes it.
     // It ensures we don't schedule for release twice.
     AcquiredImage takePrevious() {
         AcquiredImage previous = mPrevious;
         mPrevious = { nullptr, nullptr, nullptr, nullptr };
         return previous;
     }
-    const AcquiredImage& getAcquired()const { return mAcquired; }
+    const AcquiredImage& getAcquired() const { return mAcquired; }
 
 private:
     AcquiredImage mAcquired;
     AcquiredImage mPrevious;
+    std::map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
 };
 
 struct VulkanTextureState : public fvkmemory::Resource {
