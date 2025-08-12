@@ -231,20 +231,16 @@ void assertLimitsAreExpressedInRequirementsStruct() {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
-    if (!instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures)) {
-        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features";
-    } else {
-        FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
-                   << supportedWGSLLanguageFeatures.featureCount << "):";
-        if (supportedWGSLLanguageFeatures.featureCount > 0 &&
-                supportedWGSLLanguageFeatures.features != nullptr) {
-            std::for_each(supportedWGSLLanguageFeatures.features,
-                    supportedWGSLLanguageFeatures.features +
-                            supportedWGSLLanguageFeatures.featureCount,
-                    [](wgpu::WGSLLanguageFeatureName const featureName) {
-                        FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
-                    });
-        }
+    instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures);
+    FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
+               << supportedWGSLLanguageFeatures.featureCount << "):";
+    if (supportedWGSLLanguageFeatures.featureCount > 0 &&
+            supportedWGSLLanguageFeatures.features != nullptr) {
+        std::for_each(supportedWGSLLanguageFeatures.features,
+                supportedWGSLLanguageFeatures.features + supportedWGSLLanguageFeatures.featureCount,
+                [](wgpu::WGSLLanguageFeatureName const featureName) {
+                    FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
+                });
     }
 }
 #endif
@@ -336,10 +332,6 @@ void printLimits(wgpu::Limits const& limits) {
     printLimit("maxComputeWorkgroupSizeY", limits.maxComputeWorkgroupSizeY);
     printLimit("maxComputeWorkgroupSizeZ", limits.maxComputeWorkgroupSizeZ);
     printLimit("maxComputeWorkgroupsPerDimension", limits.maxComputeWorkgroupsPerDimension);
-    printLimit("maxStorageBuffersInVertexStage", limits.maxStorageBuffersInVertexStage);
-    printLimit("maxStorageTexturesInVertexStage", limits.maxStorageTexturesInVertexStage);
-    printLimit("maxStorageBuffersInFragmentStage", limits.maxStorageBuffersInFragmentStage);
-    printLimit("maxStorageTexturesInFragmentStage", limits.maxStorageTexturesInFragmentStage);
 }
 #endif
 

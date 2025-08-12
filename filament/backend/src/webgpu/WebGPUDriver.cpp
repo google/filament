@@ -195,7 +195,10 @@ void WebGPUDriver::finish(int /* dummy */) {
     bool done = false;
     mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
             [&syncPoint, &syncCondition, &done](wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
-                // The 'message' parameter is required by the API but can be ignored.
+                if (status != wgpu::QueueWorkDoneStatus::Success)
+                {
+                    FWGPU_LOGW << "WebGPUDriver::finish: QueueWorkDoneStatus was not successful. " << message;
+                }
                 assert_invariant(status == wgpu::QueueWorkDoneStatus::Success);
                 std::unique_lock<std::mutex> lock(syncPoint);
                 done = true;
