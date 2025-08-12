@@ -92,7 +92,7 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& ubo [[buffer(0)]]
     inViewMat[3] = in.inViewMat_3;
     float4 _64 = float4(in.inPos, 1.0);
     out.gl_Position = (ubo.projection * ubo.model) * _64;
-    out.outPos = (ubo.model * _64).xyz;
+    out.outPos = float3((ubo.model * _64).xyz);
     out.outNormal = float3x3(float3(ubo.model[0].x, ubo.model[0].y, ubo.model[0].z), float3(ubo.model[1].x, ubo.model[1].y, ubo.model[1].z), float3(ubo.model[2].x, ubo.model[2].y, ubo.model[2].z)) * in.inNormal;
     out.outLodBias = ubo.lodBias;
     outTransModel = transpose(ubo.model) * inViewMat;

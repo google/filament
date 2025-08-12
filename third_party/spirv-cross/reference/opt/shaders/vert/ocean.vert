@@ -103,15 +103,17 @@ void main()
         _474 = 0u;
     }
     vec4 _416 = vec4((_360.xyxy + uvec4(_467, _470, _472, _474)) & (~_367).xxyy);
-    vec2 _197 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _180.InvOceanSize_PatchScale.zw) + mix(_416.xy, _416.zw, vec2(_351 - _353))) * _180.InvOceanSize_PatchScale.xy;
+    vec2 _197 = (_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _180.InvOceanSize_PatchScale.zw + mix(_416.xy, _416.zw, vec2(_351 - _353))) * _180.InvOceanSize_PatchScale.xy;
     vec2 _204 = _197 * _180.NormalTexCoordScale.zw;
-    mediump float _433 = textureLod(TexLOD, _197, 0.0).x * 7.96875;
+    mediump vec4 _431 = textureLod(TexLOD, _197, 0.0);
+    mediump float _432 = _431.x;
+    mediump float _433 = _432 * 7.96875;
     float hp_copy_433 = _433;
     float _435 = floor(hp_copy_433);
     vec2 _220 = (_180.InvOceanSize_PatchScale.xy * exp2(_435)) * _180.NormalTexCoordScale.zw;
-    vec3 _267 = ((vec3(_197.x, 0.0, _197.y) + mix(textureLod(TexDisplacement, _204 + (_220 * 0.5), _435).yxz, textureLod(TexDisplacement, _204 + (_220 * 1.0), _435 + 1.0).yxz, vec3(_433 - _435))) * _180.OceanScale.xyz) + _180.OceanPosition.xyz;
+    vec3 _267 = (vec3(_197.x, 0.0, _197.y) + mix(textureLod(TexDisplacement, _197 * _180.NormalTexCoordScale.zw + (_220 * 0.5), _435).yxz, textureLod(TexDisplacement, _197 * _180.NormalTexCoordScale.zw + (_220 * 1.0), _435 + 1.0).yxz, vec3(_432 * 7.96875 + (-_435)))) * _180.OceanScale.xyz + _180.OceanPosition.xyz;
     EyeVec = _267 - _273.g_CamPos.xyz;
-    TexCoord = vec4(_204, _204 * _180.NormalTexCoordScale.xy) + ((_180.InvOceanSize_PatchScale.xyxy * 0.5) * _180.NormalTexCoordScale.zwzw);
+    TexCoord = (_180.InvOceanSize_PatchScale.xyxy * 0.5) * _180.NormalTexCoordScale.zwzw + vec4(_204, _204 * _180.NormalTexCoordScale.xy);
     gl_Position = (((_273.g_ViewProj_Row0 * _267.x) + (_273.g_ViewProj_Row1 * _267.y)) + (_273.g_ViewProj_Row2 * _267.z)) + _273.g_ViewProj_Row3;
 }
 

@@ -1,12 +1,6 @@
 static const float _17[5] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f };
 
 static float4 FragColor;
-static float4 v0;
-
-struct SPIRV_Cross_Input
-{
-    float4 v0 : TEXCOORD0;
-};
 
 struct SPIRV_Cross_Output
 {
@@ -24,9 +18,8 @@ void frag_main()
     }
 }
 
-SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)
+SPIRV_Cross_Output main()
 {
-    v0 = stage_input.v0;
     frag_main();
     SPIRV_Cross_Output stage_output;
     stage_output.FragColor = FragColor;

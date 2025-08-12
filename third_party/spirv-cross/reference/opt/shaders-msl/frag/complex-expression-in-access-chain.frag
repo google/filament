@@ -1,17 +1,7 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
-
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
 
 struct UBO
 {
@@ -32,7 +22,7 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], device UBO& _34 [[buffer(0)]], texture2d<int> Buf [[texture(0)]], sampler BufSmplr [[sampler(0)]], float4 gl_FragCoord [[position]])
 {
     main0_out out = {};
-    int _40 = spvSMod(Buf.read(uint2(int2(gl_FragCoord.xy)), 0).x, 16);
+    int _40 = Buf.read(uint2(int2(gl_FragCoord.xy)), 0).x % 16;
     out.FragColor = (_34.results[_40] + _34.results[_40]) + _34.results[(in.vIn * in.vIn) + (in.vIn2 * in.vIn2)];
     return out;
 }

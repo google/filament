@@ -452,10 +452,6 @@ void ParsedIR::set_decoration(ID id, Decoration decoration, uint32_t argument)
 		dec.fp_rounding_mode = static_cast<FPRoundingMode>(argument);
 		break;
 
-	case DecorationFPFastMathMode:
-		dec.fp_fast_math_mode = static_cast<FPFastMathModeMask>(argument);
-		break;
-
 	default:
 		break;
 	}
@@ -568,8 +564,7 @@ Bitset ParsedIR::get_buffer_block_type_flags(const SPIRType &type) const
 Bitset ParsedIR::get_buffer_block_flags(const SPIRVariable &var) const
 {
 	auto &type = get<SPIRType>(var.basetype);
-	if (type.basetype != SPIRType::Struct)
-		SPIRV_CROSS_THROW("Cannot get buffer block flags for non-buffer variable.");
+	assert(type.basetype == SPIRType::Struct);
 
 	// Some flags like non-writable, non-readable are actually found
 	// as member decorations. If all members have a decoration set, propagate
@@ -647,8 +642,6 @@ uint32_t ParsedIR::get_decoration(ID id, Decoration decoration) const
 		return dec.index;
 	case DecorationFPRoundingMode:
 		return dec.fp_rounding_mode;
-	case DecorationFPFastMathMode:
-		return dec.fp_fast_math_mode;
 	default:
 		return 1;
 	}
@@ -736,10 +729,6 @@ void ParsedIR::unset_decoration(ID id, Decoration decoration)
 		dec.fp_rounding_mode = FPRoundingModeMax;
 		break;
 
-	case DecorationFPFastMathMode:
-		dec.fp_fast_math_mode = FPFastMathModeMaskNone;
-		break;
-
 	case DecorationHlslCounterBufferGOOGLE:
 	{
 		auto &counter = meta[id].hlsl_magic_counter_buffer;
@@ -794,8 +783,6 @@ uint32_t ParsedIR::get_member_decoration(TypeID id, uint32_t index, Decoration d
 		return dec.stream;
 	case DecorationSpecId:
 		return dec.spec_id;
-	case DecorationMatrixStride:
-		return dec.matrix_stride;
 	case DecorationIndex:
 		return dec.index;
 	default:
@@ -938,8 +925,6 @@ void ParsedIR::reset_all_of_type(Types type)
 
 void ParsedIR::add_typed_id(Types type, ID id)
 {
-	assert(id < ids.size());
-
 	if (loop_iteration_depth_hard != 0)
 		SPIRV_CROSS_THROW("Cannot add typed ID while looping over it.");
 
@@ -1042,8 +1027,6 @@ ParsedIR::LoopLock &ParsedIR::LoopLock::operator=(LoopLock &&other) SPIRV_CROSS_
 
 void ParsedIR::make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_id_set)
 {
-	assert(id < ids.size());
-
 	auto &constant_type = get<SPIRType>(type);
 
 	if (constant_type.pointer)
@@ -1060,21 +1043,16 @@ void ParsedIR::make_constant_null(uint32_t id, uint32_t type, bool add_to_typed_
 		uint32_t parent_id = increase_bound_by(1);
 		make_constant_null(parent_id, constant_type.parent_type, add_to_typed_id_set);
 
-		// The array size of OpConstantNull can be either literal or specialization constant.
-		// In the latter case, we cannot take the value as-is, as it can be changed to anything.
-		// Rather, we assume it to be *one* for the sake of initializer.
-		bool is_literal_array_size = constant_type.array_size_literal.back();
-		uint32_t count = is_literal_array_size ? constant_type.array.back() : 1;
+		if (!constant_type.array_size_literal.back())
+			SPIRV_CROSS_THROW("Array size of OpConstantNull must be a literal.");
 
-		SmallVector<uint32_t> elements(count);
-		for (uint32_t i = 0; i < count; i++)
+		SmallVector<uint32_t> elements(constant_type.array.back());
+		for (uint32_t i = 0; i < constant_type.array.back(); i++)
 			elements[i] = parent_id;
 
 		if (add_to_typed_id_set)
 			add_typed_id(TypeConstant, id);
-		auto& constant = variant_set<SPIRConstant>(ids[id], type, elements.data(), uint32_t(elements.size()), false);
-		constant.self = id;
-		constant.is_null_array_specialized_length = !is_literal_array_size;
+		variant_set<SPIRConstant>(ids[id], type, elements.data(), uint32_t(elements.size()), false).self = id;
 	}
 	else if (!constant_type.member_types.empty())
 	{

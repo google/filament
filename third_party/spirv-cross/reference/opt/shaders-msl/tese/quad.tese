@@ -67,7 +67,7 @@ struct main0_patchIn
     gl_TessLevelOuter[2] = patchIn.gl_TessLevelOuter[2];
     gl_TessLevelOuter[3] = patchIn.gl_TessLevelOuter[3];
     float3 gl_TessCoord = float3(gl_TessCoordIn.x, gl_TessCoordIn.y, 0.0);
-    out.gl_Position = float4(((gl_TessCoord.x * gl_TessLevelInner[0]) * gl_TessLevelOuter[0]) + (((1.0 - gl_TessCoord.x) * gl_TessLevelInner[0]) * gl_TessLevelOuter[2]), ((gl_TessCoord.y * gl_TessLevelInner[1]) * gl_TessLevelOuter[1]) + (((1.0 - gl_TessCoord.y) * gl_TessLevelInner[1]) * gl_TessLevelOuter[3]), 0.0, 1.0);
+    out.gl_Position = float4(fma(gl_TessCoord.x * gl_TessLevelInner[0], gl_TessLevelOuter[0], ((1.0 - gl_TessCoord.x) * gl_TessLevelInner[0]) * gl_TessLevelOuter[2]), fma(gl_TessCoord.y * gl_TessLevelInner[1], gl_TessLevelOuter[1], ((1.0 - gl_TessCoord.y) * gl_TessLevelInner[1]) * gl_TessLevelOuter[3]), 0.0, 1.0);
     return out;
 }
 

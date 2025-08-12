@@ -1,17 +1,7 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
-
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
 
 struct main0_out
 {
@@ -38,7 +28,7 @@ kernel void main0(uint3 gl_GlobalInvocationID [[thread_position_in_grid]], devic
     float3 _20 = float3(0.0, 0.0, _15);
     gl_out[gl_InvocationID].in_te_data0 = float4x3(_18, _19, _20, float3(0.0));
     threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup);
-    int _42 = spvSMod(gl_InvocationID + 1, 3);
+    int _42 = (gl_InvocationID + 1) % 3;
     gl_out[gl_InvocationID].in_te_data1 = float4x3(_18 + gl_out[_42].in_te_data0[0], _19 + gl_out[_42].in_te_data0[1], _20 + gl_out[_42].in_te_data0[2], gl_out[_42].in_te_data0[3]);
     gl_out[gl_InvocationID].in_te_attr = gl_in[gl_InvocationID].in_tc_attr.x;
     spvTessLevel[gl_PrimitiveID].insideTessellationFactor[0] = half(1.0);

@@ -5,6 +5,18 @@
 
 using namespace metal;
 
+template<typename T> struct spvRemoveReference { typedef T type; };
+template<typename T> struct spvRemoveReference<thread T&> { typedef T type; };
+template<typename T> struct spvRemoveReference<thread T&&> { typedef T type; };
+template<typename T> inline constexpr thread T&& spvForward(thread typename spvRemoveReference<T>::type& x)
+{
+    return static_cast<thread T&&>(x);
+}
+template<typename T> inline constexpr thread T&& spvForward(thread typename spvRemoveReference<T>::type&& x)
+{
+    return static_cast<thread T&&>(x);
+}
+
 enum class spvSwizzle : uint
 {
     none = 0,
@@ -76,9 +88,10 @@ fragment main0_out main0(main0_in in [[stage_in]], constant spvDescriptorSetBuff
     constant uint* spvDescriptorSet0_uSampler0Swzl = &spvDescriptorSet0.spvSwizzleConstants[0];
     constant uint& uSampler1Swzl = spvSwizzleConstants[0];
     out.FragColor = spvTextureSwizzle(spvDescriptorSet0.uSampler0[2].sample(spvDescriptorSet0.uSampler0Smplr[2], in.vUV), spvDescriptorSet0_uSampler0Swzl[2]);
-    out.FragColor += spvTextureSwizzle(uSampler1.sample(uSampler1Smplr, in.vUV), uSampler1Swzl);
+    float4 _73 = spvTextureSwizzle(uSampler1.sample(uSampler1Smplr, in.vUV), uSampler1Swzl);
+    out.FragColor += _73;
     out.FragColor += spvTextureSwizzle(spvDescriptorSet0.uSampler0[1].sample(spvDescriptorSet0.uSampler0Smplr[1], in.vUV), spvDescriptorSet0_uSampler0Swzl[1]);
-    out.FragColor += spvTextureSwizzle(uSampler1.sample(uSampler1Smplr, in.vUV), uSampler1Swzl);
+    out.FragColor += _73;
     return out;
 }
 

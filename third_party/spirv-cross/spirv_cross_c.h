@@ -40,7 +40,7 @@ extern "C" {
 /* Bumped if ABI or API breaks backwards compatibility. */
 #define SPVC_C_API_VERSION_MAJOR 0
 /* Bumped if APIs or enumerations are added in a backwards compatible way. */
-#define SPVC_C_API_VERSION_MINOR 67
+#define SPVC_C_API_VERSION_MINOR 59
 /* Bumped if internal implementation details change. */
 #define SPVC_C_API_VERSION_PATCH 0
 
@@ -226,8 +226,6 @@ typedef enum spvc_resource_type
 	SPVC_RESOURCE_TYPE_ACCELERATION_STRUCTURE = 12,
 	SPVC_RESOURCE_TYPE_RAY_QUERY = 13,
 	SPVC_RESOURCE_TYPE_SHADER_RECORD_BUFFER = 14,
-	SPVC_RESOURCE_TYPE_GL_PLAIN_UNIFORM = 15,
-	SPVC_RESOURCE_TYPE_TENSOR = 16,
 	SPVC_RESOURCE_TYPE_INT_MAX = 0x7fffffff
 } spvc_resource_type;
 
@@ -382,8 +380,7 @@ typedef struct spvc_msl_shader_interface_var_2
  */
 SPVC_PUBLIC_API void spvc_msl_shader_interface_var_init_2(spvc_msl_shader_interface_var_2 *var);
 
-/* Maps to C++ API.
- * Deprecated. Use spvc_msl_resource_binding_2. */
+/* Maps to C++ API. */
 typedef struct spvc_msl_resource_binding
 {
 	SpvExecutionModel stage;
@@ -394,24 +391,11 @@ typedef struct spvc_msl_resource_binding
 	unsigned msl_sampler;
 } spvc_msl_resource_binding;
 
-typedef struct spvc_msl_resource_binding_2
-{
-	SpvExecutionModel stage;
-	unsigned desc_set;
-	unsigned binding;
-	unsigned count;
-	unsigned msl_buffer;
-	unsigned msl_texture;
-	unsigned msl_sampler;
-} spvc_msl_resource_binding_2;
-
 /*
  * Initializes the resource binding struct.
  * The defaults are non-zero.
- * Deprecated: Use spvc_msl_resource_binding_init_2.
  */
 SPVC_PUBLIC_API void spvc_msl_resource_binding_init(spvc_msl_resource_binding *binding);
-SPVC_PUBLIC_API void spvc_msl_resource_binding_init_2(spvc_msl_resource_binding_2 *binding);
 
 #define SPVC_MSL_PUSH_CONSTANT_DESC_SET (~(0u))
 #define SPVC_MSL_PUSH_CONSTANT_BINDING (0)
@@ -744,14 +728,6 @@ typedef enum spvc_compiler_option
 	SPVC_COMPILER_OPTION_MSL_READWRITE_TEXTURE_FENCES = 86 | SPVC_COMPILER_OPTION_MSL_BIT,
 	SPVC_COMPILER_OPTION_MSL_REPLACE_RECURSIVE_INPUTS = 87 | SPVC_COMPILER_OPTION_MSL_BIT,
 	SPVC_COMPILER_OPTION_MSL_AGX_MANUAL_CUBE_GRAD_FIXUP = 88 | SPVC_COMPILER_OPTION_MSL_BIT,
-	SPVC_COMPILER_OPTION_MSL_FORCE_FRAGMENT_WITH_SIDE_EFFECTS_EXECUTION = 89 | SPVC_COMPILER_OPTION_MSL_BIT,
-
-	SPVC_COMPILER_OPTION_HLSL_USE_ENTRY_POINT_NAME = 90 | SPVC_COMPILER_OPTION_HLSL_BIT,
-	SPVC_COMPILER_OPTION_HLSL_PRESERVE_STRUCTURED_BUFFERS = 91 | SPVC_COMPILER_OPTION_HLSL_BIT,
-
-	SPVC_COMPILER_OPTION_MSL_AUTO_DISABLE_RASTERIZATION = 92 | SPVC_COMPILER_OPTION_MSL_BIT,
-
-	SPVC_COMPILER_OPTION_MSL_ENABLE_POINT_SIZE_DEFAULT = 93 | SPVC_COMPILER_OPTION_MSL_BIT,
 
 	SPVC_COMPILER_OPTION_INT_MAX = 0x7fffffff
 } spvc_compiler_option;
@@ -859,11 +835,8 @@ SPVC_PUBLIC_API spvc_bool spvc_compiler_msl_needs_patch_output_buffer(spvc_compi
 SPVC_PUBLIC_API spvc_bool spvc_compiler_msl_needs_input_threadgroup_mem(spvc_compiler compiler);
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_add_vertex_attribute(spvc_compiler compiler,
                                                                    const spvc_msl_vertex_attribute *attrs);
-/* Deprecated; use spvc_compiler_msl_add_resource_binding_2(). */
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_add_resource_binding(spvc_compiler compiler,
                                                                    const spvc_msl_resource_binding *binding);
-SPVC_PUBLIC_API spvc_result spvc_compiler_msl_add_resource_binding_2(spvc_compiler compiler,
-                                                                     const spvc_msl_resource_binding_2 *binding);
 /* Deprecated; use spvc_compiler_msl_add_shader_input_2(). */
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_add_shader_input(spvc_compiler compiler,
                                                                const spvc_msl_shader_interface_var *input);

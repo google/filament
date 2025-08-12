@@ -18,8 +18,7 @@ struct main0_in
 vertex main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    float4 _20 = in.vInput1 * in.vInput2;
-    float4 _21 = in.vInput0 + _20;
+    float4 _21 = fma(in.vInput1, in.vInput2, in.vInput0);
     out.gl_Position = _21;
     return out;
 }

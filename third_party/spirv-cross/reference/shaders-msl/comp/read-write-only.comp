@@ -23,7 +23,7 @@ struct SSBO1
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(device SSBO2& __restrict _10 [[buffer(0)]], const device SSBO0& _15 [[buffer(1)]], device SSBO1& __restrict _21 [[buffer(2)]])
+kernel void main0(device SSBO2& _10 [[buffer(0)]], const device SSBO0& _15 [[buffer(1)]], device SSBO1& _21 [[buffer(2)]])
 {
     _10.data4 = _15.data0 + _21.data2;
     _10.data5 = _15.data1 + _21.data3;

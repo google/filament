@@ -1,17 +1,7 @@
-#pragma clang diagnostic ignored "-Wmissing-prototypes"
-
 #include <metal_stdlib>
 #include <simd/simd.h>
 
 using namespace metal;
-
-// Implementation of signed integer mod accurate to SPIR-V specification
-template<typename Tx, typename Ty>
-inline Tx spvSMod(Tx x, Ty y)
-{
-    Tx remainder = x - y * (x / y);
-    return select(Tx(remainder + y), remainder, remainder == 0 || (x >= 0) == (y >= 0));
-}
 
 constant float a_tmp [[function_constant(1)]];
 constant float a = is_function_constant_defined(a_tmp) ? a_tmp : 1.0;
@@ -33,7 +23,7 @@ constant uint e = is_function_constant_defined(e_tmp) ? e_tmp : 5u;
 constant uint f_tmp [[function_constant(6)]];
 constant uint f = is_function_constant_defined(f_tmp) ? f_tmp : 6u;
 constant uint _36 = (e / f);
-constant int _38 = spvSMod(c, d);
+constant int _38 = (c % d);
 constant uint _40 = (e % f);
 constant int _42 = (c >> d);
 constant uint _44 = (e >> f);

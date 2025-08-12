@@ -41,6 +41,6 @@ void main()
 {
     FragColor = (((spvWorkaroundRowMajor(_17.rm2).rm.B * spvWorkaroundRowMajor(_35.rm.B)) * spvWorkaroundRowMajor(_42.A)) * spvWorkaroundRowMajor(_42.C)) * Clip;
     FragColor += (_56.D * Clip);
-    FragColor += (_42.A[1] * Clip);
+    FragColor = fma(_42.A[1], Clip, FragColor);
 }
 

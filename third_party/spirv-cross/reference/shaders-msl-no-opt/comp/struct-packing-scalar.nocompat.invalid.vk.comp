@@ -3,9 +3,9 @@
 
 using namespace metal;
 
+typedef packed_float2 packed_float2x2[2];
 typedef packed_float3 packed_float2x3[2];
 typedef packed_float3 packed_rm_float3x2[2];
-typedef packed_float2 packed_float2x2[2];
 
 struct S0
 {
@@ -124,7 +124,7 @@ struct SSBO2
 
 constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
 
-kernel void main0(device SSBO1& __restrict ssbo_scalar [[buffer(0)]], device SSBO0& __restrict ssbo_140 [[buffer(1)]], device SSBO2& __restrict ssbo_scalar2 [[buffer(2)]])
+kernel void main0(device SSBO1& ssbo_scalar [[buffer(0)]], device SSBO0& ssbo_140 [[buffer(1)]], device SSBO2& ssbo_scalar2 [[buffer(2)]])
 {
     ssbo_scalar.content.m0s[0].a[0] = ssbo_140.content.m0s[0].a[0];
     ssbo_scalar.content.m0s[0].b = ssbo_140.content.m0s[0].b;

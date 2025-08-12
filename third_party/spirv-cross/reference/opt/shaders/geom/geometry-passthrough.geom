@@ -2,11 +2,6 @@
 #extension GL_NV_geometry_shader_passthrough : require
 layout(triangles) in;
 
-layout(passthrough) in gl_PerVertex
-{
-    vec4 gl_Position;
-} gl_in[];
-
 layout(passthrough, location = 0) in VertexBlock
 {
     int a;

@@ -22,7 +22,7 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    out.FragColor = float4(in.v0.x + in.v1.y, in.v2.xy, ((in.v3.w * in.v4) + in.v5) - in.v6);
+    out.FragColor = float4(in.v0.x + in.v1.y, in.v2.xy, fma(in.v3.w, in.v4, in.v5) - in.v6);
     return out;
 }
 

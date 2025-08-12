@@ -2,7 +2,7 @@
 
 layout(location = 1) in vec2 _8;
 layout(location = 1, component = 2) in float _16;
-layout(location = 3) flat in float _22;
+layout(location = 2) flat in float _22;
 layout(location = 2, component = 1) flat in uint _28;
 layout(location = 2, component = 2) flat in uint _33;
 layout(location = 0) out vec4 o0;

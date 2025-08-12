@@ -35,7 +35,11 @@
                OpDecorate %16 Binding 0
                OpDecorate %30 BuiltIn TessLevelOuter
                OpDecorate %30 Patch
+               OpDecorate %30 Patch
+               OpDecorate %30 Patch
+               OpDecorate %30 Patch
                OpDecorate %80 BuiltIn TessLevelInner
+               OpDecorate %80 Patch
                OpDecorate %80 Patch
                OpDecorate %101 Location 0
                OpDecorate %103 Location 1

@@ -52,7 +52,7 @@ float spvFlipVertY(float v)
     return -v;
 }
 
-void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout uint3 gl_PrimitiveTriangleIndicesEXT[22])
+void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout uint3 gl_PrimitiveTriangleIndicesEXT[22])
 {
     SetMeshOutputCounts(24u, 22u);
     gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = spvFlipVertY(float4(float3(gl_GlobalInvocationID), 1.0f));

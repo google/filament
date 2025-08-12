@@ -5,7 +5,6 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 layout(buffer_reference) buffer Alias;
 layout(buffer_reference) buffer _8;
 layout(buffer_reference) buffer _9;
-
 layout(buffer_reference, buffer_reference_align = 16, std430) readonly buffer Alias
 {
     vec4 v[];

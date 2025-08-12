@@ -66,7 +66,7 @@ function(bundle_libraries output_target)
     endif()
   endforeach()
 
-  add_library(${output_target} STATIC ${all_objects})
+  add_library(${output_target} SHARED ${all_objects})
 
   add_dependencies(${output_target} ${ARGN})
 
