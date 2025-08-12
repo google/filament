@@ -54,9 +54,7 @@ struct AssembleInputs {
                  hlsl::AbstractMemoryStream *pReflectionOut = nullptr,
                  hlsl::AbstractMemoryStream *pRootSigOut = nullptr,
                  CComPtr<IDxcBlob> pRootSigBlob = nullptr,
-                 CComPtr<IDxcBlob> pPrivateBlob = nullptr,
-                 hlsl::options::ValidatorSelection SelectValidator =
-                     hlsl::options::ValidatorSelection::Auto);
+                 CComPtr<IDxcBlob> pPrivateBlob = nullptr);
   std::unique_ptr<llvm::Module> pM;
   CComPtr<IDxcBlob> &pOutputContainerBlob;
   IDxcVersionInfo *pVersionInfo = nullptr;
@@ -71,18 +69,13 @@ struct AssembleInputs {
   hlsl::AbstractMemoryStream *pRootSigOut = nullptr;
   CComPtr<IDxcBlob> pRootSigBlob = nullptr;
   CComPtr<IDxcBlob> pPrivateBlob = nullptr;
-  hlsl::options::ValidatorSelection SelectValidator =
-      hlsl::options::ValidatorSelection::Auto;
 };
 HRESULT ValidateAndAssembleToContainer(AssembleInputs &inputs);
-HRESULT ValidateRootSignatureInContainer(
-    IDxcBlob *pRootSigContainer, clang::DiagnosticsEngine *pDiag = nullptr,
-    hlsl::options::ValidatorSelection SelectValidator =
-        hlsl::options::ValidatorSelection::Auto);
+HRESULT
+ValidateRootSignatureInContainer(IDxcBlob *pRootSigContainer,
+                                 clang::DiagnosticsEngine *pDiag = nullptr);
 HRESULT SetRootSignature(hlsl::DxilModule *pModule, CComPtr<IDxcBlob> pSource);
-void GetValidatorVersion(unsigned *pMajor, unsigned *pMinor,
-                         hlsl::options::ValidatorSelection SelectValidator =
-                             hlsl::options::ValidatorSelection::Auto);
+void GetValidatorVersion(unsigned *pMajor, unsigned *pMinor);
 void AssembleToContainer(AssembleInputs &inputs);
 HRESULT Disassemble(IDxcBlob *pProgram, llvm::raw_string_ostream &Stream);
 void ReadOptsAndValidate(hlsl::options::MainArgs &mainArgs,

@@ -69,15 +69,17 @@ func (cmd) Desc() string {
 }
 
 func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, error) {
-	slowExpectations := common.DefaultSlowExpectationsPath()
+	slowExpectations := common.DefaultSlowExpectationsPath(cfg.OsWrapper)
 	flag.Var(&c.flags.expectations, "expectations", "path to CTS expectations file(s) to validate")
 	flag.StringVar(&c.flags.slow, "slow", slowExpectations, "path to CTS slow expectations file to validate")
 	return nil, nil
 }
 
+// TODO(crbug.com/344014313): Add unittests once expectations.Load() uses
+// dependency injection.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	if len(c.flags.expectations) == 0 {
-		c.flags.expectations = common.DefaultExpectationsPaths()
+		c.flags.expectations = common.DefaultExpectationsPaths(cfg.OsWrapper)
 	}
 
 	for _, expectationFilename := range c.flags.expectations {

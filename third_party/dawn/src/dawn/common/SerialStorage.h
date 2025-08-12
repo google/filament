@@ -54,8 +54,7 @@ class SerialStorage {
         explicit Iterator(StorageIterator start);
         Iterator& operator++();
 
-        bool operator==(const Iterator& other) const;
-        bool operator!=(const Iterator& other) const;
+        bool operator==(const Iterator& other) const = default;
         Value& operator*() const;
 
       private:
@@ -71,8 +70,7 @@ class SerialStorage {
         explicit ConstIterator(ConstStorageIterator start);
         ConstIterator& operator++();
 
-        bool operator==(const ConstIterator& other) const;
-        bool operator!=(const ConstIterator& other) const;
+        bool operator==(const ConstIterator& other) const = default;
         const Value& operator*() const;
 
       private:
@@ -246,18 +244,6 @@ typename SerialStorage<Derived>::Iterator& SerialStorage<Derived>::Iterator::ope
 }
 
 template <typename Derived>
-bool SerialStorage<Derived>::Iterator::operator==(
-    const typename SerialStorage<Derived>::Iterator& other) const {
-    return other.mStorageIterator == mStorageIterator && other.mSerialIterator == mSerialIterator;
-}
-
-template <typename Derived>
-bool SerialStorage<Derived>::Iterator::operator!=(
-    const typename SerialStorage<Derived>::Iterator& other) const {
-    return !(*this == other);
-}
-
-template <typename Derived>
 typename SerialStorage<Derived>::Value& SerialStorage<Derived>::Iterator::operator*() const {
     if (mSerialIterator == nullptr) {
         return *mStorageIterator->second.begin();
@@ -308,18 +294,6 @@ SerialStorage<Derived>::ConstIterator::operator++() {
     }
 
     return *this;
-}
-
-template <typename Derived>
-bool SerialStorage<Derived>::ConstIterator::operator==(
-    const typename SerialStorage<Derived>::ConstIterator& other) const {
-    return other.mStorageIterator == mStorageIterator && other.mSerialIterator == mSerialIterator;
-}
-
-template <typename Derived>
-bool SerialStorage<Derived>::ConstIterator::operator!=(
-    const typename SerialStorage<Derived>::ConstIterator& other) const {
-    return !(*this == other);
 }
 
 template <typename Derived>

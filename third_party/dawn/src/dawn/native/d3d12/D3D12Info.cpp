@@ -127,6 +127,12 @@ ResultOrError<D3D12DeviceInfo> GatherDeviceInfo(const PhysicalDevice& physicalDe
             featureDataRootSignature.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1;
     }
 
+    D3D12_FEATURE_DATA_EXISTING_HEAPS existingHeapInfo = {};
+    if (SUCCEEDED(physicalDevice.GetDevice()->CheckFeatureSupport(
+            D3D12_FEATURE_EXISTING_HEAPS, &existingHeapInfo, sizeof(existingHeapInfo)))) {
+        info.supportsExistingHeap = existingHeapInfo.Supported;
+    }
+
     D3D12_FEATURE_DATA_SHADER_MODEL knownShaderModels[] = {
         {D3D_SHADER_MODEL_6_6}, {D3D_SHADER_MODEL_6_5}, {D3D_SHADER_MODEL_6_4},
         {D3D_SHADER_MODEL_6_3}, {D3D_SHADER_MODEL_6_2}, {D3D_SHADER_MODEL_6_1},

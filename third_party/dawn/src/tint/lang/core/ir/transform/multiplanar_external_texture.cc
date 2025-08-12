@@ -609,7 +609,8 @@ struct State {
 Result<SuccessType> MultiplanarExternalTexture(
     Module& ir,
     const tint::transform::multiplanar::BindingsMap& multiplanar_map) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.MultiplanarExternalTexture");
+    auto result = ValidateAndDumpIfNeeded(ir, "core.MultiplanarExternalTexture",
+                                          kMultiplanarExternalTextureCapabilities);
     if (result != Success) {
         return result;
     }

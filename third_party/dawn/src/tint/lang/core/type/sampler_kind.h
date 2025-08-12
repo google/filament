@@ -48,7 +48,8 @@ std::string_view ToString(enum SamplerKind kind);
 /// @param out the stream to write to
 /// @param kind the SamplerKind
 /// @return the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, SamplerKind kind) {
     return out << ToString(kind);
 }

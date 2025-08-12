@@ -812,6 +812,9 @@ ResultOrError<Ref<SharedTextureMemory>> SharedTextureMemory::Create(
         (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
         properties.usage |= wgpu::TextureUsage::RenderAttachment;
     }
+    if (createInfo->usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) {
+        properties.usage |= wgpu::TextureUsage::TransientAttachment;
+    }
 
     const Format* internalFormat;
     DAWN_TRY_ASSIGN(internalFormat, device->GetInternalFormat(properties.format));

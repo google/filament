@@ -66,7 +66,7 @@ func NewProject(root string, cfg *common.Config) *Project {
 		Directories:       container.NewMap[string, *Directory](),
 		Targets:           container.NewMap[TargetName, *Target](),
 		externals:         container.NewMap[ExternalDependencyName, ExternalDependency](),
-		externalsJsonPath: filepath.Join(fileutils.DawnRoot(), "src", "tint", "externals.json"),
+		externalsJsonPath: filepath.Join(fileutils.DawnRoot(cfg.OsWrapper), "src", "tint", "externals.json"),
 	}
 }
 

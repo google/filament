@@ -26,6 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <array>
+#include <cstdio>
 #include <thread>
 
 #include "dawn/utils/PlatformDebugLogger.h"

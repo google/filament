@@ -118,7 +118,7 @@ ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* devi
         absl::string_view key = {constants[i].key};
         double value = constants[i].value;
 
-        DAWN_INVALID_IF(metadata.overrides.count(key) == 0,
+        DAWN_INVALID_IF(!metadata.overrides.contains(key),
                         "Pipeline overridable constant \"%s\" not found in %s.", constants[i].key,
                         module);
         DAWN_INVALID_IF(!std::isfinite(value),
@@ -174,7 +174,7 @@ ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* devi
     }
 
     // Validate if any overridable constant is left uninitialized
-    if (DAWN_UNLIKELY(numUninitializedConstants > 0)) {
+    if (numUninitializedConstants > 0) [[unlikely]] {
         std::string uninitializedConstantsArray;
         bool isFirst = true;
         for (std::string identifier : metadata.uninitializedOverrides) {

@@ -28,8 +28,6 @@
 #ifndef SRC_DAWN_COMMON_ITYP_SPAN_H_
 #define SRC_DAWN_COMMON_ITYP_SPAN_H_
 
-#include <type_traits>
-
 #include "dawn/common/TypedInteger.h"
 #include "dawn/common/UnderlyingType.h"
 

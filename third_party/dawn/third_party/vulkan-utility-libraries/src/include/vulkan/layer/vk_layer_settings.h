@@ -70,8 +70,9 @@ const VkLayerSettingsCreateInfoEXT *vkuFindLayerSettingsCreateInfo(const VkInsta
 const VkLayerSettingsCreateInfoEXT *vkuNextLayerSettingsCreateInfo(const VkLayerSettingsCreateInfoEXT *pCreateInfo);
 
 // Return the list of Unknown setting in VkLayerSettingsCreateInfoEXT
-VkResult vkuGetUnknownSettings(const VkLayerSettingsCreateInfoEXT *pFirstCreateInfo, uint32_t settingsCount, const char **pSettings,
-                               uint32_t *pUnknownSettingCount, const char **pUnknownSettings);
+VkResult vkuGetUnknownSettings(VkuLayerSettingSet layerSettingSet, uint32_t layerSettingsCount, const char **pLayerSettings,
+                               const VkLayerSettingsCreateInfoEXT *pFirstCreateInfo, uint32_t *pUnknownSettingCount,
+                               const char **pUnknownSettings);
 
 #ifdef __cplusplus
 }

@@ -893,7 +893,7 @@ class CopyTextureForBrowser_ColorSpace
                                                          dstTextureAlphaMode);
         }
 
-        return GetExpectedDataForSeperateSource(srcColorSpace, dstColorSpace);
+        return GetExpectedDataForSeparateSource(srcColorSpace, dstColorSpace);
     }
 
     std::vector<float> GeneratePremultipliedResult(std::vector<float> result) {
@@ -968,7 +968,7 @@ class CopyTextureForBrowser_ColorSpace
         DAWN_UNREACHABLE();
     }
 
-    std::vector<float> GetExpectedDataForSeperateSource(ColorSpace srcColorSpace,
+    std::vector<float> GetExpectedDataForSeparateSource(ColorSpace srcColorSpace,
                                                         ColorSpace dstColorSpace) {
         if (srcColorSpace == dstColorSpace) {
             return std::vector<float>{
@@ -1142,8 +1142,8 @@ DAWN_INSTANTIATE_TEST(CopyTextureForBrowser_Basic,
 // the source texture is RGBA8Unorm format.
 TEST_P(CopyTextureForBrowser_Formats, ColorConversion) {
     // BGRA8UnormSrgb is unsupported in Compatibility mode.
-    DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode() &&
-                          GetParam().mDstFormat == wgpu::TextureFormat::BGRA8UnormSrgb);
+    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode() &&
+                             GetParam().mDstFormat == wgpu::TextureFormat::BGRA8UnormSrgb);
 
     DAWN_SUPPRESS_TEST_IF(IsOpenGL() && IsLinux());
 

@@ -9,7 +9,7 @@
 // CHECK:               [[x:%[0-9]+]] = OpString "x"
 // CHECK:     [[srcMainName:%[0-9]+]] = OpString "main"
 // CHECK:           [[color:%[0-9]+]] = OpString "color"
-// CHECK:        [[mainName:%[0-9]+]] = OpString "wrapper"
+// CHECK:        [[mainName:%[0-9]+]] = OpString "__dxc_setup"
 
 // CHECK: [[int:%[0-9]+]] = OpExtInst %void [[set]] DebugTypeBasic {{%[0-9]+}} %uint_32 Signed
 // CHECK: [[float:%[0-9]+]] = OpExtInst %void [[set]] DebugTypeBasic {{%[0-9]+}} %uint_32 Float

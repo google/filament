@@ -59,6 +59,10 @@ declare_args() {
   # See crbug.com/tint/1753.
   dawn_use_built_dxc = is_win && target_cpu != "x86"
 
+  # Force Dawn to load components like d3dcompiler_47.dll and vulkan-1.dll from
+  # system directories instead of local directories.
+  dawn_force_system_component_load = false
+
   # Whether to build Dawn's NodeJS bindings
   dawn_build_node_bindings = false
 }
@@ -84,6 +88,10 @@ declare_args() {
   # Enables the compilation of Dawn's Null backend
   # (required for unittests, obviously non-conformant)
   dawn_enable_null = true
+
+  # Enables the compilation of Dawn's WebGPU backend
+  # (used for debugging purpose, capture and replay)
+  dawn_enable_webgpu_on_webgpu = dawn_standalone
 
   # Enables the compilation of Dawn's OpenGL backend
   # (best effort, non-conformant)

@@ -1,0 +1,38 @@
+.clang_complete
+.ycm_extra_conf.py*
+*.pyc
+compile_commands.json
+/build*/
+/buildtools/
+/external/abseil_cpp/
+/external/googletest
+/external/SPIRV-Headers
+/external/spirv-headers
+/external/effcee
+/external/re2
+/external/protobuf
+/external/mimalloc
+/out
+/TAGS
+/third_party/llvm-build/
+/testing
+/tools/clang/
+/utils/clang-format-diff.py
+bazel-bin
+bazel-genfiles
+bazel-out
+bazel-spirv-tools
+bazel-SPIRV-Tools
+bazel-testlogs
+MODULE.bazel.lock
+
+# Vim
+[._]*.s[a-w][a-z]
+*~
+
+# C-Lion
+/.idea/
+/cmake-build-*/
+
+# VSCode
+/.vscode/*

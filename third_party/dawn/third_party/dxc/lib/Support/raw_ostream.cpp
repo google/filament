@@ -134,13 +134,18 @@ raw_ostream &raw_ostream::operator<<(unsigned long N) {
 }
 
 raw_ostream &raw_ostream::operator<<(long N) {
+  // A positive signed long has the same value when casted to its unsigned
+  // counterpart. If its negative, then we'll handle it in the below if block.
+  unsigned long UN = static_cast<unsigned long>(N);
+
   if (N < 0 && writeBase == 10) {
     *this << '-';
-    // Avoid undefined behavior on LONG_MIN with a cast.
-    N = -(unsigned long)N;
+    // Since N is negative and we're storing the result in an unsigned Long,
+    // we can use the equivalence of -N == ~N + 1 to get the positive value.
+    UN = ~N + 1UL;
   }
 
-  return this->operator<<(static_cast<unsigned long>(N));
+  return this->operator<<(UN);
 }
 
 raw_ostream &raw_ostream::operator<<(unsigned long long N) {
@@ -169,13 +174,18 @@ raw_ostream &raw_ostream::operator<<(unsigned long long N) {
 }
 
 raw_ostream &raw_ostream::operator<<(long long N) {
+  // A positive signed long has the same value when casted to its unsigned
+  // counterpart. If its negative, then we'll handle it in the below if block.
+  unsigned long long UN = static_cast<unsigned long long>(N);
+
   if (N < 0 && writeBase == 10) {
     *this << '-';
-    // Avoid undefined behavior on INT64_MIN with a cast.
-    N = -(unsigned long long)N;
+    // Since N is negative and we're storing the result in an unsigned Long,
+    // we can use the equivalence of -N == ~N + 1 to get the positive value.
+    UN = ~N + 1ULL;
   }
 
-  return this->operator<<(static_cast<unsigned long long>(N));
+  return this->operator<<(UN);
 }
 
 // HLSL Change Starts - Generalize non-base10 printing.
@@ -470,7 +480,10 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
     char *EndPtr = NumberBuffer+sizeof(NumberBuffer);
     char *CurPtr = EndPtr;
     bool Neg = (FN.DecValue < 0);
-    uint64_t N = Neg ? -static_cast<uint64_t>(FN.DecValue) : FN.DecValue;
+    // If the value is negative, and because we are storing the result of the ~
+    // operation in an unsigned value, we can use the equivalence of
+    // -N == ~N + 1 to get the positive value of the negative number
+    uint64_t N = Neg ? (~FN.DecValue + 1UL) : FN.DecValue;
     while (N) {
       *--CurPtr = '0' + char(N % 10);
       N /= 10;

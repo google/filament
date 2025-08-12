@@ -211,10 +211,9 @@ public:
   // add call candidates to the given expression. It returns 'true'
   // if standard overload search should be suppressed; false otherwise.
   virtual bool AddOverloadedCallCandidates(UnresolvedLookupExpr *ULE,
-    ArrayRef<Expr *> Args,
-    OverloadCandidateSet &CandidateSet,
-    bool PartialOverloading)
-  {
+                                           ArrayRef<Expr *> Args,
+                                           OverloadCandidateSet &CandidateSet,
+                                           Scope *S, bool PartialOverloading) {
     return false;
   }
 

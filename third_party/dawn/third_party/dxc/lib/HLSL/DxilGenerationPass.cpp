@@ -88,6 +88,7 @@ void InitResource(const DxilResource *pSource, DxilResource *pDest) {
   pDest->SetSampleCount(pSource->GetSampleCount());
   pDest->SetElementStride(pSource->GetElementStride());
   pDest->SetGloballyCoherent(pSource->IsGloballyCoherent());
+  pDest->SetReorderCoherent(pSource->IsReorderCoherent());
   pDest->SetHasCounter(pSource->HasCounter());
   pDest->SetRW(pSource->IsRW());
   pDest->SetROV(pSource->IsROV());

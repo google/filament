@@ -27,8 +27,24 @@
 
 #include "src/tint/lang/spirv/writer/common/function.h"
 
-namespace tint::spirv::writer {
+#include <unordered_map>
+#include <unordered_set>
 
+#include "src/tint/utils/ice/ice.h"
+
+namespace tint::spirv::writer {
+namespace {
+
+bool IsFunctionTerminator(spv::Op op) {
+    return op == spv::Op::OpReturn || op == spv::Op::OpReturnValue || op == spv::Op::OpKill ||
+           op == spv::Op::OpUnreachable || op == spv::Op::OpTerminateInvocation;
+}
+
+bool IsBranchTerminator(spv::Op op) {
+    return op == spv::Op::OpBranch || op == spv::Op::OpBranchConditional || op == spv::Op::OpSwitch;
+}
+
+}  // namespace
 Function::Function() : declaration_(Instruction{spv::Op::OpNop, {}}), label_op_(Operand(0u)) {}
 
 Function::Function(const Instruction& declaration,
@@ -54,8 +70,102 @@ void Function::Iterate(std::function<void(const Instruction&)> cb) const {
     for (const auto& var : vars_) {
         cb(var);
     }
-    for (const auto& inst : instructions_) {
-        cb(inst);
+
+    std::vector<uint32_t> block_order;
+    block_order.reserve(blocks_.size());
+
+    std::unordered_set<uint32_t> seen_blocks;
+
+    std::vector<uint32_t> block_idx_stack;
+    block_idx_stack.push_back(0);
+    seen_blocks.insert(0);
+
+    auto idx_for_id = [&](uint32_t id) -> uint32_t {
+        auto iter = block_id_to_block_.find(id);
+        TINT_ASSERT(iter != block_id_to_block_.end());
+        return iter->second;
+    };
+
+    auto push_id = [&](const Instruction& inst, size_t idx) {
+        auto id = idx_for_id(std::get<uint32_t>(inst.Operands()[idx]));
+
+        if (seen_blocks.find(id) != seen_blocks.end()) {
+            return;
+        }
+        seen_blocks.insert(id);
+
+        block_idx_stack.push_back(id);
+    };
+
+    while (!block_idx_stack.empty()) {
+        auto idx = block_idx_stack.back();
+        block_idx_stack.pop_back();
+
+        block_order.push_back(idx);
+
+        auto& blk = blocks_[idx];
+        auto& term = blk.back();
+        if (IsFunctionTerminator(term.Opcode())) {
+            continue;
+        }
+
+        TINT_ASSERT(IsBranchTerminator(term.Opcode()));
+
+        // The initial block doesn't have a label, so can end up with 1
+        // instruction.
+        if (blk.size() >= 2) {
+            auto& pre_term = blk[blk.size() - 2];
+
+            // Push the merges first so the emit after the branch conditional.
+            switch (pre_term.Opcode()) {
+                case spv::Op::OpSelectionMerge: {
+                    push_id(pre_term, 0);
+                    break;
+                }
+                case spv::Op::OpLoopMerge: {
+                    // Push merge first, then continuing
+                    push_id(pre_term, 0);
+                    push_id(pre_term, 1);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        switch (term.Opcode()) {
+            case spv::Op::OpBranch: {
+                push_id(term, 0);
+                break;
+            }
+            case spv::Op::OpBranchConditional: {
+                // Push false then true as we'll emit in reversed order
+                push_id(term, 2);
+                push_id(term, 1);
+
+                break;
+            }
+            case spv::Op::OpSwitch: {
+                auto& ops = term.Operands();
+                for (size_t k = ops.size() - 1; k > 2; k -= 2) {
+                    push_id(term, k);
+                }
+                push_id(term, 1);
+                break;
+            }
+            default:
+                TINT_UNREACHABLE();
+        }
+    }
+
+    TINT_ASSERT(seen_blocks.size() == blocks_.size());
+
+    // Emit the blocks in block order
+    for (const auto& idx : block_order) {
+        auto& blk = blocks_[idx];
+        for (const auto& inst : blk) {
+            cb(inst);
+        }
     }
 
     cb(Instruction{spv::Op::OpFunctionEnd, {}});

@@ -1178,8 +1178,8 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
       auto MapTemp = [&](const VarDecl *LocalVD, llvm::Value *TmpArg) {
         OutParamScope.addTemp(LocalVD, TmpArg);
       };
-      RV = CGM.getHLSLRuntime().CheckReturnStmtGLCMismatch(*this, RV, S,
-                                                           FnRetTy, MapTemp);
+      RV = CGM.getHLSLRuntime().CheckReturnStmtCoherenceMismatch(
+          *this, RV, S, FnRetTy, MapTemp);
       // HLSL Change Ends.
       CharUnits Alignment = getContext().getTypeAlignInChars(RV->getType());
       EmitAggExpr(RV, AggValueSlot::forAddr(ReturnValue, Alignment,

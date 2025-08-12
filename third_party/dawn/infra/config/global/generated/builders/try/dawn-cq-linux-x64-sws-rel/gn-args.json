@@ -1,0 +1,20 @@
+{
+  "gn_args": {
+    "dawn_enable_d3d12": false,
+    "dawn_use_swiftshader": true,
+    "is_clang": true,
+    "is_component_build": true,
+    "is_debug": false,
+    "target_cpu": "x64",
+    "target_os": "linux",
+    "tint_build_hlsl_writer": true,
+    "tint_build_msl_writer": true,
+    "tint_build_spv_reader": true,
+    "tint_build_spv_writer": true,
+    "tint_build_wgsl_reader": true,
+    "tint_build_wgsl_writer": true,
+    "use_reclient": false,
+    "use_remoteexec": true,
+    "use_siso": true
+  }
+}

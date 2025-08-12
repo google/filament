@@ -30,44 +30,6 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 {% from 'art/api_kotlin_types.kt' import kotlin_declaration, kotlin_definition with context %}
 
-//* Legacy callback pattern: we make a return class for every function pointer so that usage of
-//* callback-using methods can be replaced with suspend (async) function that returns the same data.
-{% for function_pointer
-        in by_category['function pointer'] if len(function_pointer.name.chunks) > 1 %}
-    //* Function pointers generally end in Callback which we replace with Return.
-    {% set return_name = function_pointer.name.chunks[:-1] | map('title') | join + 'Return' %}
-    public data class {{ return_name }}(
-        {% for arg in kotlin_record_members(function_pointer.arguments) %}
-            val {{ as_varName(arg.name) }}: {{ kotlin_declaration(arg) }},
-        {% endfor %})
-{% endfor %}
-
-//* Legacy callback pattern: every method that is identified as using callbacks is given a helper
-//* method that wraps the call with a suspend function.
-{% for obj in by_category['object'] %}
-    {% for method in obj.methods if is_async_method(method) %}
-        {% set function_pointer = method.arguments[-2].type %}
-        {% set return_name = function_pointer.name.chunks[:-1] | map('title') | join + 'Return' %}
-        public suspend fun {{ obj.name.CamelCase() }}.{{ method.name.camelCase() }}(
-            {%- for arg in method.arguments[:-2] %}
-                {{- as_varName(arg.name) }}: {{ kotlin_definition(arg) }},
-            {%- endfor %}): {{ return_name }} = suspendCoroutine {
-                {{ method.name.camelCase() }}(
-                    {%- for arg in method.arguments[:-2] %}
-                        {{- as_varName(arg.name) }},
-                    {% endfor %}) {
-                    {%- for arg in kotlin_record_members(function_pointer.arguments) %}
-                        {{- as_varName(arg.name) }},
-                    {%- endfor %} -> it.resume({{ return_name }}(
-                        {%- for arg in kotlin_record_members(function_pointer.arguments) %}
-                            {{- as_varName(arg.name) }},
-                        {%- endfor %})
-                    )
-                }
-            }
-    {% endfor %}
-{% endfor %}
-
 //* Provide an async wrapper for the 'callback info' type of async methods.
 {% for obj in by_category['object'] %}
     {% for method in obj.methods if has_callbackInfoStruct(method) %}

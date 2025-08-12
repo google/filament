@@ -34,6 +34,7 @@
 
 struct loader_instance;
 struct loader_layer_list;
+struct loader_string_list;
 struct loader_pointer_layer_list;
 struct loader_envvar_all_filters;
 typedef struct log_configuration log_configuration;
@@ -61,6 +62,15 @@ typedef struct loader_settings_layer_configuration {
 
 } loader_settings_layer_configuration;
 
+typedef struct loader_settings_driver_configuration {
+    char* path;
+} loader_settings_driver_configuration;
+
+typedef struct loader_settings_device_configuration {
+    char deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    uint8_t deviceUUID[VK_UUID_SIZE];
+} loader_settings_device_configuration;
+
 typedef struct loader_settings {
     bool settings_active;
     bool has_unordered_layer_location;
@@ -68,6 +78,13 @@ typedef struct loader_settings {
 
     uint32_t layer_configuration_count;
     loader_settings_layer_configuration* layer_configurations;
+
+    bool additional_drivers_use_exclusively;
+    uint32_t additional_driver_count;
+    loader_settings_driver_configuration* additional_drivers;
+
+    uint32_t device_configuration_count;
+    loader_settings_device_configuration* device_configurations;
 
     char* settings_file_path;
 } loader_settings;
@@ -112,3 +129,11 @@ VkResult enable_correct_layers_from_settings(const struct loader_instance* inst,
                                              const struct loader_layer_list* instance_layers,
                                              struct loader_pointer_layer_list* target_layer_list,
                                              struct loader_pointer_layer_list* activated_layer_list);
+
+// Add any drivers that the loader settings file contains to the out_files list. If the additional_drivers_use_exclusively field is
+// true, clear the out_files list before adding any additional drivers
+VkResult loader_settings_get_additional_driver_files(const struct loader_instance* inst, struct loader_string_list* out_files);
+
+// Check if there are any device_configurations. If so, we don't want to allow environment variables from selecting or ignoring
+// drivers. This is because the VkPhysicalDevices corresponding to a driver_configurations might not be present otherwise.
+bool loader_settings_should_use_driver_environment_variables(const struct loader_instance* inst);

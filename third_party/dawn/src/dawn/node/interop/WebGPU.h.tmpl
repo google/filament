@@ -47,9 +47,19 @@ See:
 #define DAWN_NODE_GEN_INTEROP_WEBGPU_H_
 
 #include "src/dawn/node/interop/Core.h"
+#include "src/dawn/node/ManualConstructors.h"
 
 namespace wgpu {
 namespace interop {
+
+struct Constructors : public ManualConstructors {
+  Constructors(Napi::Env env) : ManualConstructors(env) {}
+{{   range $ := .Declarations}}
+{{-     if and (IsInterfaceOrNamespace $) (not (HasAnnotation $ "ManualImplementation"))}}
+  Napi::FunctionReference {{$.Name}}_ctor;
+{{-     end}}
+{{-  end}}
+};
 
 // Initialize() registers the WebGPU types with the Napi environment
 // and returns an object containing their JavaScript interfaces.
@@ -61,8 +71,11 @@ Napi::Object Initialize(Napi::Env env);
 {{-   else if IsInterface  $}}{{template "Interface" $}}
 {{-   else if IsEnum       $}}{{template "Enum" $}}
 {{-   else if IsTypedef    $}}{{template "Typedef" $}}
+{{-   else if IsCallback   $}}{{template "Callback" $}}
 {{-   end}}
 {{- end}}
+
+const Constructors* ConstructorsFor(Napi::Env env);
 
 }  // namespace interop
 }  // namespace wgpu
@@ -125,8 +138,9 @@ public:
 */ -}}
 {{- define "Interface"}}
 // interface {{$.Name}}
-class {{$.Name}} {{- if $.Inherits }} : public {{$.Inherits}}{{end}} {
+class {{$.Name}} {{- if $.Inherits }} : public virtual {{$.Inherits}}{{end}} {
 public:
+{{-  if not (HasAnnotation $ "ManualImplementation")}}
   static Interface<{{$.Name}}> Bind(Napi::Env, std::unique_ptr<{{$.Name}}>&&);
   static {{$.Name}}* Unwrap(Napi::Object);
 
@@ -134,8 +148,8 @@ public:
   static inline Interface<{{$.Name}}> Create(Napi::Env env, ARGS&& ... args) {
     return Bind(env, std::make_unique<T>(std::forward<ARGS>(args)...));
   }
-
-  virtual ~{{$.Name}}();
+{{-  end}}
+  virtual ~{{$.Name}}() {{- if $.Inherits }} override{{end}};
   {{$.Name}}();
 {{-  if $s := SetlikeOf $}}
 {{-    template "InterfaceSetlike" $s}}
@@ -191,6 +205,17 @@ public:
 };
 
 std::ostream& operator<<(std::ostream& o, {{$.Name}});
+{{end}}
+
+
+{{- /*
+--------------------------------------------------------------------------------
+-- Callback emits the C++ header declaration that defines the interop type for
+-- the given ast.Callback
+--------------------------------------------------------------------------------
+*/ -}}
+{{- define "Callback"}}
+using {{$.Name}} = Napi::Function;
 {{end}}
 
 

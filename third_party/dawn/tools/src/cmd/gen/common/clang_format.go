@@ -35,15 +35,18 @@ import (
 	"strings"
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
 var clangFormatPath string
 
+// TODO(crbug.com/416755658): Add unittest coverage when exec calls are handled
+// via dependency injection.
 // ClangFormat invokes clang-format to format the file content 'src'.
 // Returns the formatted file.
-func ClangFormat(src string) (string, error) {
+func ClangFormat(src string, fsReader oswrapper.FilesystemReader) (string, error) {
 	if clangFormatPath == "" {
-		path, err := findClangFormat()
+		path, err := findClangFormat(fsReader)
 		if err != nil {
 			return "", err
 		}
@@ -58,9 +61,11 @@ func ClangFormat(src string) (string, error) {
 	return string(out), nil
 }
 
+// TODO(crbug.com/344014313): Add unittest coverage when fileutils is converted
+// to use dependency injection.
 // Looks for clang-format in the 'buildtools' directory, falling back to PATH
-func findClangFormat() (string, error) {
-	dawnRoot := fileutils.DawnRoot()
+func findClangFormat(fsReader oswrapper.FilesystemReader) (string, error) {
+	dawnRoot := fileutils.DawnRoot(fsReader)
 	var path string
 	switch runtime.GOOS {
 	case "linux":
@@ -70,7 +75,7 @@ func findClangFormat() (string, error) {
 	case "windows":
 		path = filepath.Join(dawnRoot, "buildtools/win/clang-format.exe")
 	}
-	if fileutils.IsExe(path) {
+	if fileutils.IsExe(path, fsReader) {
 		return path, nil
 	}
 	var err error

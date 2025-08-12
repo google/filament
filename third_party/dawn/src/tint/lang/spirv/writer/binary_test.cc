@@ -110,14 +110,9 @@ TEST_P(Arithmetic_Bitwise, Vector) {
 INSTANTIATE_TEST_SUITE_P(
     SpirvWriterTest_Binary_I32,
     Arithmetic_Bitwise,
-    testing::Values(BinaryTestCase{kI32, core::BinaryOp::kAdd, "OpIAdd", "int"},
-                    BinaryTestCase{kI32, core::BinaryOp::kSubtract, "OpISub", "int"},
-                    BinaryTestCase{kI32, core::BinaryOp::kMultiply, "OpIMul", "int"},
-                    BinaryTestCase{kI32, core::BinaryOp::kAnd, "OpBitwiseAnd", "int"},
+    testing::Values(BinaryTestCase{kI32, core::BinaryOp::kAnd, "OpBitwiseAnd", "int"},
                     BinaryTestCase{kI32, core::BinaryOp::kOr, "OpBitwiseOr", "int"},
                     BinaryTestCase{kI32, core::BinaryOp::kXor, "OpBitwiseXor", "int"},
-                    BinaryTestCase{kI32, kI32, kU32, core::BinaryOp::kShiftLeft,
-                                   "OpShiftLeftLogical", "int"},
                     BinaryTestCase{kI32, kI32, kU32, core::BinaryOp::kShiftRight,
                                    "OpShiftRightArithmetic", "int"}));
 INSTANTIATE_TEST_SUITE_P(
@@ -349,8 +344,10 @@ TEST_F(SpirvWriterTest, Binary_Chain) {
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("%sub = OpISub %int %int_1 %int_2");
-    EXPECT_INST("%add = OpIAdd %int %sub %sub");
+    EXPECT_INST("OpBitcast %uint %int_1");
+    EXPECT_INST("OpBitcast %uint %int_2");
+    EXPECT_INST("OpISub %uint %6 %9");
+    EXPECT_INST("OpIAdd %uint %13 %14");
 }
 
 TEST_F(SpirvWriterTest, Divide_u32_u32) {
@@ -550,7 +547,6 @@ TEST_F(SpirvWriterTest, Modulo_u32_u32) {
                OpFunctionEnd
 )");
 }
-
 TEST_F(SpirvWriterTest, Modulo_i32_i32) {
     Vector<core::ir::FunctionParam*, 4> args;
     args.Push(b.FunctionParam("lhs", ty.i32()));
@@ -586,10 +582,219 @@ TEST_F(SpirvWriterTest, Modulo_i32_i32) {
          %20 = OpLogicalOr %bool %12 %19
          %21 = OpSelect %int %20 %int_1 %rhs_0
          %23 = OpSDiv %int %lhs_0 %21
-         %24 = OpIMul %int %23 %21
-         %25 = OpISub %int %lhs_0 %24
-               OpReturnValue %25
+         %25 = OpBitcast %uint %23
+         %26 = OpBitcast %uint %21
+         %27 = OpIMul %uint %25 %26
+         %28 = OpBitcast %int %27
+         %29 = OpBitcast %uint %lhs_0
+         %30 = OpBitcast %uint %28
+         %31 = OpISub %uint %29 %30
+         %32 = OpBitcast %int %31
+               OpReturnValue %32
                OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %35
+         %36 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)");
+}
+
+TEST_F(SpirvWriterTest, Add_i32_i32) {
+    Vector<core::ir::FunctionParam*, 4> args;
+    args.Push(b.FunctionParam("lhs", ty.i32()));
+    args.Push(b.FunctionParam("rhs", ty.i32()));
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams(args);
+    b.Append(func->Block(), [&] {
+        auto* result = b.Binary(core::BinaryOp::kAdd, ty.i32(), args[0], args[1]);
+        b.Return(func, result);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %lhs "lhs"                    ; id %3
+               OpName %rhs "rhs"                    ; id %4
+               OpName %unused_entry_point "unused_entry_point"  ; id %12
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+          %5 = OpTypeFunction %int %int %int
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+
+               ; Function foo
+        %foo = OpFunction %int None %5
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %int
+          %6 = OpLabel
+          %8 = OpBitcast %uint %lhs
+          %9 = OpBitcast %uint %rhs
+         %10 = OpIAdd %uint %8 %9
+         %11 = OpBitcast %int %10
+               OpReturnValue %11
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %14
+         %15 = OpLabel
+)");
+}
+
+TEST_F(SpirvWriterTest, Sub_i32_i32) {
+    Vector<core::ir::FunctionParam*, 4> args;
+    args.Push(b.FunctionParam("lhs", ty.i32()));
+    args.Push(b.FunctionParam("rhs", ty.i32()));
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams(args);
+    b.Append(func->Block(), [&] {
+        auto* result = b.Binary(core::BinaryOp::kSubtract, ty.i32(), args[0], args[1]);
+        b.Return(func, result);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %lhs "lhs"                    ; id %3
+               OpName %rhs "rhs"                    ; id %4
+               OpName %unused_entry_point "unused_entry_point"  ; id %12
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+          %5 = OpTypeFunction %int %int %int
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+
+               ; Function foo
+        %foo = OpFunction %int None %5
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %int
+          %6 = OpLabel
+          %8 = OpBitcast %uint %lhs
+          %9 = OpBitcast %uint %rhs
+         %10 = OpISub %uint %8 %9
+         %11 = OpBitcast %int %10
+               OpReturnValue %11
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %14
+         %15 = OpLabel
+)");
+}
+
+TEST_F(SpirvWriterTest, Mul_i32_i32) {
+    Vector<core::ir::FunctionParam*, 4> args;
+    args.Push(b.FunctionParam("lhs", ty.i32()));
+    args.Push(b.FunctionParam("rhs", ty.i32()));
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams(args);
+    b.Append(func->Block(), [&] {
+        auto* result = b.Binary(core::BinaryOp::kMultiply, ty.i32(), args[0], args[1]);
+        b.Return(func, result);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %lhs "lhs"                    ; id %3
+               OpName %rhs "rhs"                    ; id %4
+               OpName %unused_entry_point "unused_entry_point"  ; id %12
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+          %5 = OpTypeFunction %int %int %int
+       %uint = OpTypeInt 32 0
+       %void = OpTypeVoid
+         %14 = OpTypeFunction %void
+
+               ; Function foo
+        %foo = OpFunction %int None %5
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %int
+          %6 = OpLabel
+          %8 = OpBitcast %uint %lhs
+          %9 = OpBitcast %uint %rhs
+         %10 = OpIMul %uint %8 %9
+         %11 = OpBitcast %int %10
+               OpReturnValue %11
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %14
+         %15 = OpLabel
+)");
+}
+
+TEST_F(SpirvWriterTest, ShiftLeft_i32_u32) {
+    Vector<core::ir::FunctionParam*, 4> args;
+    args.Push(b.FunctionParam("lhs", ty.i32()));
+    args.Push(b.FunctionParam("rhs", ty.u32()));
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams(args);
+    b.Append(func->Block(), [&] {
+        auto* result = b.Binary(core::BinaryOp::kShiftLeft, ty.i32(), args[0], args[1]);
+        b.Return(func, result);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %lhs "lhs"                    ; id %3
+               OpName %rhs "rhs"                    ; id %5
+               OpName %unused_entry_point "unused_entry_point"  ; id %13
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+          %6 = OpTypeFunction %int %int %uint
+    %uint_31 = OpConstant %uint 31
+       %void = OpTypeVoid
+         %15 = OpTypeFunction %void
+
+               ; Function foo
+        %foo = OpFunction %int None %6
+        %lhs = OpFunctionParameter %int
+        %rhs = OpFunctionParameter %uint
+          %7 = OpLabel
+          %8 = OpBitwiseAnd %uint %rhs %uint_31
+         %10 = OpBitcast %uint %lhs
+         %11 = OpShiftLeftLogical %uint %10 %8
+         %12 = OpBitcast %int %11
+               OpReturnValue %12
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %15
+         %16 = OpLabel
 )");
 }
 
@@ -630,9 +835,21 @@ TEST_F(SpirvWriterTest, Modulo_i32_vec4i) {
          %26 = OpLogicalOr %v4bool %15 %25
          %27 = OpSelect %v4int %26 %28 %rhs_0
          %30 = OpSDiv %v4int %lhs_0 %27
-         %31 = OpIMul %v4int %30 %27
-         %32 = OpISub %v4int %lhs_0 %31
-               OpReturnValue %32
+         %33 = OpBitcast %v4uint %30
+         %34 = OpBitcast %v4uint %27
+         %35 = OpIMul %v4uint %33 %34
+         %36 = OpBitcast %v4int %35
+         %37 = OpBitcast %v4uint %lhs_0
+         %38 = OpBitcast %v4uint %36
+         %39 = OpISub %v4uint %37 %38
+         %40 = OpBitcast %v4int %39
+               OpReturnValue %40
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %43
+         %44 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -674,9 +891,21 @@ TEST_F(SpirvWriterTest, Modulo_vec4i_i32) {
          %26 = OpLogicalOr %v4bool %15 %25
          %27 = OpSelect %v4int %26 %28 %rhs_0
          %30 = OpSDiv %v4int %lhs_0 %27
-         %31 = OpIMul %v4int %30 %27
-         %32 = OpISub %v4int %lhs_0 %31
-               OpReturnValue %32
+         %33 = OpBitcast %v4uint %30
+         %34 = OpBitcast %v4uint %27
+         %35 = OpIMul %v4uint %33 %34
+         %36 = OpBitcast %v4int %35
+         %37 = OpBitcast %v4uint %lhs_0
+         %38 = OpBitcast %v4uint %36
+         %39 = OpISub %v4uint %37 %38
+         %40 = OpBitcast %v4int %39
+               OpReturnValue %40
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %43
+         %44 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }

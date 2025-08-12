@@ -118,7 +118,8 @@ void Run(Module& ir) {
 }  // namespace
 
 Result<SuccessType> BlockDecoratedStructs(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.BlockDecoratedStructs");
+    auto result = ValidateAndDumpIfNeeded(ir, "core.BlockDecoratedStructs",
+                                          kBlockDecoratedStructsCapabilities);
     if (result != Success) {
         return result;
     }

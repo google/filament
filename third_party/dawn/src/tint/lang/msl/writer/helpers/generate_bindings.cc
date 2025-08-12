@@ -44,7 +44,7 @@
 
 namespace tint::msl::writer {
 
-Bindings GenerateBindings(const core::ir::Module& module) {
+Bindings GenerateBindings(const core::ir::Module& module, bool use_argument_buffers) {
     Bindings bindings{};
 
     std::unordered_set<tint::BindingPoint> seen_binding_points;
@@ -73,7 +73,10 @@ Bindings GenerateBindings(const core::ir::Module& module) {
                 continue;
             }
 
-            binding::BindingInfo info{bp->binding};
+            tint::BindingPoint info{
+                .group = use_argument_buffers ? bp->group : 0,
+                .binding = bp->binding,
+            };
             switch (ptr->AddressSpace()) {
                 case core::AddressSpace::kHandle:
                     Switch(
@@ -94,7 +97,7 @@ Bindings GenerateBindings(const core::ir::Module& module) {
                 case core::AddressSpace::kUndefined:
                 case core::AddressSpace::kPixelLocal:
                 case core::AddressSpace::kPrivate:
-                case core::AddressSpace::kPushConstant:
+                case core::AddressSpace::kImmediate:
                 case core::AddressSpace::kIn:
                 case core::AddressSpace::kOut:
                 case core::AddressSpace::kFunction:
@@ -105,14 +108,24 @@ Bindings GenerateBindings(const core::ir::Module& module) {
     }
 
     for (auto bp : ext_tex_bps) {
-        uint32_t g = bp.group;
-        uint32_t& next_num = group_to_next_binding_number.GetOrAddZero(g);
+        uint32_t& next_num = group_to_next_binding_number.GetOrAddZero(bp.group);
 
-        binding::BindingInfo plane0{bp.binding};
-        binding::BindingInfo plane1{next_num++};
-        binding::BindingInfo metadata{next_num++};
+        uint32_t g = use_argument_buffers ? bp.group : 0;
 
-        bindings.external_texture.emplace(bp, binding::ExternalTexture{metadata, plane0, plane1});
+        tint::BindingPoint plane0{
+            .group = g,
+            .binding = bp.binding,
+        };
+        tint::BindingPoint plane1{
+            .group = g,
+            .binding = next_num++,
+        };
+        tint::BindingPoint metadata{
+            .group = g,
+            .binding = next_num++,
+        };
+
+        bindings.external_texture.emplace(bp, ExternalTexture{metadata, plane0, plane1});
     }
 
     return bindings;

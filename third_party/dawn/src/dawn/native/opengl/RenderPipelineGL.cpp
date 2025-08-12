@@ -27,7 +27,6 @@
 
 #include "dawn/native/opengl/RenderPipelineGL.h"
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/native/opengl/DeviceGL.h"
 #include "dawn/native/opengl/Forward.h"
 #include "dawn/native/opengl/PersistentPipelineStateGL.h"
@@ -224,7 +223,7 @@ RenderPipeline::RenderPipeline(Device* device,
 
 MaybeError RenderPipeline::InitializeImpl() {
     VertexAttributeMask bgraSwizzleAttributes = {};
-    for (VertexAttributeLocation i : IterateBitSet(GetAttributeLocationsUsed())) {
+    for (VertexAttributeLocation i : GetAttributeLocationsUsed()) {
         bgraSwizzleAttributes.set(i, GetAttribute(i).format == wgpu::VertexFormat::Unorm8x4BGRA);
     }
 
@@ -260,7 +259,7 @@ MaybeError RenderPipeline::CreateVAOForVertexState() {
     DAWN_GL_TRY(gl, GenVertexArrays(1, &mVertexArrayObject));
     DAWN_GL_TRY(gl, BindVertexArray(mVertexArrayObject));
 
-    for (VertexAttributeLocation location : IterateBitSet(GetAttributeLocationsUsed())) {
+    for (VertexAttributeLocation location : GetAttributeLocationsUsed()) {
         const auto& attribute = GetAttribute(location);
         GLuint glAttrib = static_cast<GLuint>(static_cast<uint8_t>(location));
         DAWN_GL_TRY(gl, EnableVertexAttribArray(glAttrib));
@@ -290,7 +289,7 @@ MaybeError RenderPipeline::CreateVAOForVertexState() {
 
 MaybeError RenderPipeline::ApplyNow(PersistentPipelineState& persistentPipelineState) {
     const OpenGLFunctions& gl = ToBackend(GetDevice())->GetGL();
-    DAWN_TRY(PipelineGL::ApplyNow(gl));
+    DAWN_TRY(PipelineGL::ApplyNow(gl, ToBackend(GetLayout())));
 
     DAWN_ASSERT(mVertexArrayObject);
     DAWN_GL_TRY(gl, BindVertexArray(mVertexArrayObject));
@@ -330,12 +329,12 @@ MaybeError RenderPipeline::ApplyNow(PersistentPipelineState& persistentPipelineS
     }
 
     if (!GetDevice()->IsToggleEnabled(Toggle::DisableIndexedDrawBuffers)) {
-        for (auto attachmentSlot : IterateBitSet(GetColorAttachmentsMask())) {
+        for (auto attachmentSlot : GetColorAttachmentsMask()) {
             DAWN_TRY(ApplyColorState(gl, attachmentSlot, GetColorTargetState(attachmentSlot)));
         }
     } else {
         const ColorTargetState* prevDescriptor = nullptr;
-        for (auto attachmentSlot : IterateBitSet(GetColorAttachmentsMask())) {
+        for (auto attachmentSlot : GetColorAttachmentsMask()) {
             const ColorTargetState* descriptor = GetColorTargetState(attachmentSlot);
             if (!prevDescriptor) {
                 DAWN_TRY(ApplyColorState(gl, descriptor));

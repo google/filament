@@ -28,7 +28,7 @@
 //*
 {% include 'BSD_LICENSE' %}
 
-{% if 'dawn' in enabled_tags %}
+{%- if 'dawn' in enabled_tags %}
     #ifdef __EMSCRIPTEN__
     #error "Do not include this header. Emscripten already provides headers needed for {{metadata.api}}."
     #endif
@@ -37,128 +37,9 @@
 #ifndef {{metadata.api.upper()}}_H_
 #define {{metadata.api.upper()}}_H_
 
-#define WGPU_BREAKING_CHANGE_STRING_VIEW_LABELS
-#define WGPU_BREAKING_CHANGE_STRING_VIEW_OUTPUT_STRUCTS
-#define WGPU_BREAKING_CHANGE_STRING_VIEW_CALLBACKS
-#define WGPU_BREAKING_CHANGE_INSTANCE_DROPPED_RENAME
-
-{% set API = metadata.c_prefix %}
-{% set api = API.lower() %}
-#if defined({{API}}_SHARED_LIBRARY)
-#    if defined(_WIN32)
-#        if defined({{API}}_IMPLEMENTATION)
-#            define {{API}}_EXPORT __declspec(dllexport)
-#        else
-#            define {{API}}_EXPORT __declspec(dllimport)
-#        endif
-#    else  // defined(_WIN32)
-#        if defined({{API}}_IMPLEMENTATION)
-#            define {{API}}_EXPORT __attribute__((visibility("default")))
-#        else
-#            define {{API}}_EXPORT
-#        endif
-#    endif  // defined(_WIN32)
-#else       // defined({{API}}_SHARED_LIBRARY)
-#    define {{API}}_EXPORT
-#endif  // defined({{API}}_SHARED_LIBRARY)
-
-#if !defined({{API}}_OBJECT_ATTRIBUTE)
-#define {{API}}_OBJECT_ATTRIBUTE
-#endif
-#if !defined({{API}}_ENUM_ATTRIBUTE)
-#define {{API}}_ENUM_ATTRIBUTE
-#endif
-#if !defined({{API}}_STRUCTURE_ATTRIBUTE)
-#define {{API}}_STRUCTURE_ATTRIBUTE
-#endif
-#if !defined({{API}}_FUNCTION_ATTRIBUTE)
-#define {{API}}_FUNCTION_ATTRIBUTE
-#endif
-#if !defined({{API}}_NULLABLE)
-#define {{API}}_NULLABLE
-#endif
-
-#include <stdint.h>
-#include <stddef.h>
-#include <math.h>
-
-#if defined(__cplusplus)
-#  define _{{api}}_ENUM_ZERO_INIT(type) type(0)
-#  define _{{api}}_STRUCT_ZERO_INIT {}
-#  if __cplusplus >= 201103L
-#    define _{{api}}_MAKE_INIT_STRUCT(type, value) (type value)
-#  else
-#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
-#  endif
-#else
-#  define _{{api}}_ENUM_ZERO_INIT(type) (type)0
-#  define _{{api}}_STRUCT_ZERO_INIT {0}
-#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#    define _{{api}}_MAKE_INIT_STRUCT(type, value) ((type) value)
-#  else
-#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
-#  endif
-#endif
-
-{% for constant in by_category["constant"] %}
-    #define {{API}}_{{constant.name.SNAKE_CASE()}} {{constant.value}}
-{% endfor %}
-
-typedef uint64_t {{API}}Flags;
-typedef uint32_t {{API}}Bool;
-
-{% for type in by_category["object"] %}
-    typedef struct {{as_cType(type.name)}}Impl* {{as_cType(type.name)}} {{API}}_OBJECT_ATTRIBUTE;
-{% endfor %}
-
-// Structure forward declarations
-{% for type in by_category["structure"] %}
-    struct {{as_cType(type.name)}};
-{% endfor %}
-
-{% for type in by_category["enum"] %}
-    typedef enum {{as_cType(type.name)}} {
-        {% for value in type.values %}
-            {{as_cEnum(type.name, value.name)}} = 0x{{format(value.value, "08X")}},
-        {% endfor %}
-        {{as_cEnum(type.name, Name("force32"))}} = 0x7FFFFFFF
-    } {{as_cType(type.name)}} {{API}}_ENUM_ATTRIBUTE;
-{% endfor %}
-
-{% for type in by_category["bitmask"] %}
-    typedef {{API}}Flags {{as_cType(type.name)}};
-    {% for value in type.values %}
-        static const {{as_cType(type.name)}} {{as_cEnum(type.name, value.name)}} = 0x{{format(value.value, "016X")}};
-    {% endfor %}
-{% endfor -%}
-
-{% for type in by_category["function pointer"] %}
-    typedef {{as_cType(type.return_type.name)}} (*{{as_cType(type.name)}})(
-        {%- if type.arguments == [] -%}
-            void
-        {%- else -%}
-            {%- for arg in type.arguments -%}
-                {% if not loop.first %}, {% endif %}
-                {% if arg.type.category == "structure" %}struct {% endif %}{{as_annotated_cType(arg)}}
-            {%- endfor -%}
-        {%- endif -%}
-    ) {{API}}_FUNCTION_ATTRIBUTE;
-{% endfor %}
-
-// Callback function pointers
-{% for type in by_category["callback function"] %}
-    typedef {{as_cType(type.return_type.name)}} (*{{as_cType(type.name)}})(
-        {%- for arg in type.arguments -%}
-        {% if arg.type.category == "structure" %}struct {% endif %}{{as_annotated_cType(arg)}}{{", "}}
-        {%- endfor -%}
-    {{API}}_NULLABLE void* userdata1, {{API}}_NULLABLE void* userdata2) {{API}}_FUNCTION_ATTRIBUTE;
-{% endfor %}
-
-typedef struct {{API}}ChainedStruct {
-    struct {{API}}ChainedStruct * next;
-    {{API}}SType sType;
-} {{API}}ChainedStruct {{API}}_STRUCTURE_ATTRIBUTE;
-
+//* -------------------------------------------------------------------------------------
+//* The follow block defines Dawn generator specific macros
+//* -------------------------------------------------------------------------------------
 {% macro render_c_default_value(member) -%}
     {%- if member.annotation in ["*", "const*", "const*const*"] -%}
         //* Pointer types should always default to NULL.
@@ -201,8 +82,7 @@ typedef struct {{API}}ChainedStruct {
         {%- endif -%}
     {%- elif member.type.category == "native" -%}
         //* Defaults in native types are either directly specified, or
-        //* explicitly defined per type, except for booleans, which we need to
-        //* convert into literals.
+        //* explicitly defined per type.
         {%- if member.default_value != None and member.type.name.get() != "bool" -%}
             //* Check to see if the default value is a known constant.
             {%- set constant = find_by_name(by_category["constant"], member.default_value) -%}
@@ -219,11 +99,10 @@ typedef struct {{API}}ChainedStruct {
             {%- elif member.type.name.get() == "double" -%}
                 0.
             {%- elif member.type.name.get() == "bool" -%}
-                //* Explicitly use literals 0 and 1 for booleans.
                 {%- if member.default_value == "true" -%}
-                    1
+                    {{API}}_TRUE
                 {%- else -%}
-                    0
+                    {{API}}_FALSE
                 {%- endif -%}
             {%- elif "void" in member.type.name.get() -%}
                 //* For members, void types are always pointers. We should
@@ -237,37 +116,10 @@ typedef struct {{API}}ChainedStruct {
     {%- else -%}
         {{- assert(false, 'Unknown type "' + member.type.name.get() + '" with annotations "' + member.annotation + '" when trying to render default value.') -}}
     {%- endif -%}
-{% endmacro %}
-{% macro nullable_annotation(record) -%}
-    {% if record.optional and (record.type.category == "object" or record.annotation != "value") -%}
-        {{API}}_NULLABLE{{" "}}
-    {%- endif %}
-{%- endmacro %}
+{%- endmacro -%}
 
-#define _{{api}}_COMMA ,
-
-{% for type in by_category["callback info"] %}
-    typedef struct {{as_cType(type.name)}} {
-        {{API}}ChainedStruct * nextInChain;
-        {% for member in type.members %}
-            {{as_annotated_cType(member)}};
-        {% endfor %}
-        {{API}}_NULLABLE void* userdata1;
-        {{API}}_NULLABLE void* userdata2;
-    } {{as_cType(type.name)}} {{API}}_STRUCTURE_ATTRIBUTE;
-
-    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT _{{api}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
-        /*.nextInChain=*/NULL _{{api}}_COMMA \
-        {% for member in type.members %}
-            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} _{{api}}_COMMA \
-        {% endfor %}
-        /*.userdata1=*/NULL _{{api}}_COMMA \
-        /*.userdata2=*/NULL _{{api}}_COMMA \
-    })
-
-{% endfor %}
-
-{% for type in by_category["structure"] %}
+//* The |render_c_struct_definition| macro renders both the struct definition and the init macros for a given struct.
+{%- macro render_c_struct_definition(type) -%}
     {% for root in type.chain_roots %}
         // Can be chained in {{as_cType(root.name)}}
     {% endfor %}
@@ -279,7 +131,7 @@ typedef struct {{API}}ChainedStruct {
             {{API}}ChainedStruct chain;
         {% endif %}
         {% for member in type.members %}
-            {{nullable_annotation(member)}}{{as_annotated_cType(member)}};
+            {{as_nullability_annotated_cType(member)}};
         {% endfor %}
     } {{as_cType(type.name)}} {{API}}_STRUCTURE_ATTRIBUTE;
 
@@ -297,8 +149,181 @@ typedef struct {{API}}ChainedStruct {
             /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} _{{api}}_COMMA \
         {% endfor %}
     })
+{%- endmacro %}
 
+{%- macro render_c_function_args(args) %}
+    {% for arg in args -%}
+        {% if not loop.first %}, {% endif -%}
+        {{as_nullability_annotated_cType(arg)}}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro render_c_method_args(this, args) %}
+    {{as_cType(this.name)}} {{as_varName(this.name)}}
+    {%- if args -%}
+        , {{ render_c_function_args(args) }}
+    {%- endif %}
+{%- endmacro %}
+
+//* Special structures that require some custom code generation.
+{%- set SpecialStructures = ["string view"] %}
+//* -------------------------------------------------------------------------------------
+//* End of Dawn generator specific macros
+//* -------------------------------------------------------------------------------------
+
+{%- set API = metadata.c_prefix %}
+{% set api = API.lower() %}
+#if defined({{API}}_SHARED_LIBRARY)
+#    if defined(_WIN32)
+#        if defined({{API}}_IMPLEMENTATION)
+#            define {{API}}_EXPORT __declspec(dllexport)
+#        else
+#            define {{API}}_EXPORT __declspec(dllimport)
+#        endif
+#    else  // defined(_WIN32)
+#        if defined({{API}}_IMPLEMENTATION)
+#            define {{API}}_EXPORT __attribute__((visibility("default")))
+#        else
+#            define {{API}}_EXPORT
+#        endif
+#    endif  // defined(_WIN32)
+#else       // defined({{API}}_SHARED_LIBRARY)
+#    define {{API}}_EXPORT
+#endif  // defined({{API}}_SHARED_LIBRARY)
+
+#if !defined({{API}}_OBJECT_ATTRIBUTE)
+#define {{API}}_OBJECT_ATTRIBUTE
+#endif
+#if !defined({{API}}_ENUM_ATTRIBUTE)
+#define {{API}}_ENUM_ATTRIBUTE
+#endif
+#if !defined({{API}}_STRUCTURE_ATTRIBUTE)
+#define {{API}}_STRUCTURE_ATTRIBUTE
+#endif
+#if !defined({{API}}_FUNCTION_ATTRIBUTE)
+#define {{API}}_FUNCTION_ATTRIBUTE
+#endif
+#if !defined({{API}}_NULLABLE)
+#define {{API}}_NULLABLE
+#endif
+
+#include <stdint.h>
+#include <stddef.h>
+#include <math.h>
+
+#define _{{api}}_COMMA ,
+#if defined(__cplusplus)
+#  define _{{api}}_ENUM_ZERO_INIT(type) type(0)
+#  define _{{api}}_STRUCT_ZERO_INIT {}
+#  if __cplusplus >= 201103L
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) (type value)
+#  else
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
+#  endif
+#else
+#  define _{{api}}_ENUM_ZERO_INIT(type) (type)0
+#  define _{{api}}_STRUCT_ZERO_INIT {0}
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) ((type) value)
+#  else
+#    define _{{api}}_MAKE_INIT_STRUCT(type, value) value
+#  endif
+#endif
+
+#define WGPU_TRUE (UINT32_C(1))
+#define WGPU_FALSE (UINT32_C(0))
+{% for constant in by_category["constant"] %}
+    #define {{API}}_{{constant.name.SNAKE_CASE()}} ({{constant.value}})
 {% endfor %}
+
+//* The upstream header fully declares WGPUStringView up front so do the same here.
+{{render_c_struct_definition(types["string view"])}}
+
+typedef uint64_t {{API}}Flags;
+typedef uint32_t {{API}}Bool;
+
+{% for type in by_category["object"] %}
+    typedef struct {{as_cType(type.name)}}Impl* {{as_cType(type.name)}} {{API}}_OBJECT_ATTRIBUTE;
+{% endfor %}
+
+// Structure forward declarations
+{% for type in by_category["structure"] if type.name.get() not in SpecialStructures %}
+    struct {{as_cType(type.name)}};
+{% endfor %}
+
+// Callback info structure forward declarations.
+{% for type in by_category["callback info"] %}
+    struct {{as_cType(type.name)}};
+{% endfor %}
+
+{% for type in by_category["enum"] %}
+    typedef enum {{as_cType(type.name)}} {
+        {% for value in type.values %}
+            {{as_cEnum(type.name, value.name)}} = 0x{{format(value.value, "08X")}},
+        {% endfor %}
+        {{as_cEnum(type.name, Name("force32"))}} = 0x7FFFFFFF
+    } {{as_cType(type.name)}} {{API}}_ENUM_ATTRIBUTE;
+
+{% endfor -%}
+
+{% for type in by_category["bitmask"] %}
+    typedef {{API}}Flags {{as_cType(type.name)}};
+    {% for value in type.values %}
+        static const {{as_cType(type.name)}} {{as_cEnum(type.name, value.name)}} = 0x{{format(value.value, "016X")}};
+    {% endfor %}
+
+{% endfor -%}
+
+{% for type in by_category["function pointer"] %}
+    typedef {{as_nullability_annotated_cType(type.returns)}} (*{{as_cType(type.name)}})(
+        {%- if type.arguments == [] -%}
+            void
+        {%- else -%}
+            {{- render_c_function_args(type.arguments) -}}
+        {%- endif -%}
+    ) {{API}}_FUNCTION_ATTRIBUTE;
+{% endfor %}
+
+// Callback function pointers
+{% for type in by_category["callback function"] %}
+    typedef {{as_annotated_cType(type.returns)}} (*{{as_cType(type.name)}})(
+        {%- for arg in type.arguments -%}
+            {% if arg.type.category == "structure" and arg.type.name.get() != "string view" %}struct {% endif %}{{as_annotated_cType(arg)}}{{", "}}
+        {%- endfor -%}
+    {{API}}_NULLABLE void* userdata1, {{API}}_NULLABLE void* userdata2) {{API}}_FUNCTION_ATTRIBUTE;
+
+{% endfor -%}
+
+typedef struct {{API}}ChainedStruct {
+    struct {{API}}ChainedStruct * next;
+    {{API}}SType sType;
+} {{API}}ChainedStruct {{API}}_STRUCTURE_ATTRIBUTE;
+
+{% for type in by_category["callback info"] %}
+    typedef struct {{as_cType(type.name)}} {
+        {{API}}ChainedStruct * nextInChain;
+        {% for member in type.members %}
+            {{as_nullability_annotated_cType(member)}};
+        {% endfor %}
+        {{API}}_NULLABLE void* userdata1;
+        {{API}}_NULLABLE void* userdata2;
+    } {{as_cType(type.name)}} {{API}}_STRUCTURE_ATTRIBUTE;
+
+    #define {{API}}_{{type.name.SNAKE_CASE()}}_INIT _{{api}}_MAKE_INIT_STRUCT({{as_cType(type.name)}}, { \
+        /*.nextInChain=*/NULL _{{api}}_COMMA \
+        {% for member in type.members %}
+            /*.{{as_varName(member.name)}}=*/{{render_c_default_value(member)}} _{{api}}_COMMA \
+        {% endfor %}
+        /*.userdata1=*/NULL _{{api}}_COMMA \
+        /*.userdata2=*/NULL _{{api}}_COMMA \
+    })
+
+{% endfor -%}
+
+{% for type in by_category["structure"] if type.name.get() not in SpecialStructures %}
+    {{render_c_struct_definition(type)}}
+
+{% endfor -%}
 {% for typeDef in by_category["typedef"] %}
     // {{as_cType(typeDef.name)}} is deprecated.
     // Use {{as_cType(typeDef.type.name)}} instead.
@@ -310,61 +335,46 @@ extern "C" {
 #endif
 
 #if !defined({{API}}_SKIP_PROCS)
-
-// TODO(374150686): Remove these Emscripten specific declarations from the
-// header once they are fully deprecated.
-#ifdef __EMSCRIPTEN__
-{{API}}_EXPORT WGPUDevice emscripten_webgpu_get_device(void);
-#endif
-
+{% if 'emscripten' in enabled_tags %}
+    // TODO(374150686): Remove these Emscripten specific declarations from the
+    // header once they are fully deprecated.
+    {{API}}_EXPORT WGPUDevice emscripten_webgpu_get_device(void);
+{% endif %}
+// Global procs
 {% for function in by_category["function"] %}
-    typedef {{as_cType(function.return_type.name)}} (*{{as_cProc(None, function.name)}})(
-            {%- for arg in function.arguments -%}
-                {% if not loop.first %}, {% endif %}
-                {{nullable_annotation(arg)}}{{as_annotated_cType(arg)}}
-            {%- endfor -%}
-        ) {{API}}_FUNCTION_ATTRIBUTE;
+    typedef {{as_nullability_annotated_cType(function.returns)}} (*{{as_cProc(None, function.name)}})(
+    {{- render_c_function_args(function.arguments) -}}
+    ) {{API}}_FUNCTION_ATTRIBUTE;
 {% endfor %}
 
-{% for type in by_category["object"] if len(c_methods(type)) > 0 %}
+
+{% for (type, methods) in c_methods_sorted_by_parent %}
     // Procs of {{type.name.CamelCase()}}
-    {% for method in c_methods(type) %}
-        typedef {{as_cType(method.return_type.name)}} (*{{as_cProc(type.name, method.name)}})(
-            {{-as_cType(type.name)}} {{as_varName(type.name)}}
-            {%- for arg in method.arguments -%}
-                , {{nullable_annotation(arg)}}{{as_annotated_cType(arg)}}
-            {%- endfor -%}
+    {% for method in methods %}
+        typedef {{as_nullability_annotated_cType(method.returns)}} (*{{as_cProc(type.name, method.name)}})(
+        {{- render_c_method_args(type, method.arguments) -}}
         ) {{API}}_FUNCTION_ATTRIBUTE;
     {% endfor %}
 
 {% endfor %}
-
 #endif  // !defined({{API}}_SKIP_PROCS)
 
 #if !defined({{API}}_SKIP_DECLARATIONS)
-
 {% for function in by_category["function"] %}
-    {{API}}_EXPORT {{as_cType(function.return_type.name)}} {{as_cMethod(None, function.name)}}(
-            {%- for arg in function.arguments -%}
-                {% if not loop.first %}, {% endif -%}
-                {{nullable_annotation(arg)}}{{as_annotated_cType(arg)}}
-            {%- endfor -%}
-        ) {{API}}_FUNCTION_ATTRIBUTE;
+    {{API}}_EXPORT {{as_nullability_annotated_cType(function.returns)}} {{as_cMethod(None, function.name)}}(
+    {{- render_c_function_args(function.arguments) -}}
+    ) {{API}}_FUNCTION_ATTRIBUTE;
 {% endfor %}
 
-{% for type in by_category["object"] if len(c_methods(type)) > 0 %}
+{% for (type, methods) in c_methods_sorted_by_parent %}
     // Methods of {{type.name.CamelCase()}}
-    {% for method in c_methods(type) %}
-        {{API}}_EXPORT {{as_cType(method.return_type.name)}} {{as_cMethod(type.name, method.name)}}(
-            {{-as_cType(type.name)}} {{as_varName(type.name)}}
-            {%- for arg in method.arguments -%}
-                , {{nullable_annotation(arg)}}{{as_annotated_cType(arg)}}
-            {%- endfor -%}
+    {% for method in methods %}
+        {{API}}_EXPORT {{as_nullability_annotated_cType(method.returns)}} {{as_cMethod(type.name, method.name)}}(
+        {{- render_c_method_args(type, method.arguments) -}}
         ) {{API}}_FUNCTION_ATTRIBUTE;
     {% endfor %}
 
 {% endfor %}
-
 #endif  // !defined({{API}}_SKIP_DECLARATIONS)
 
 #ifdef __cplusplus

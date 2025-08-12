@@ -128,7 +128,7 @@ dawn_add_library(
     absl::flat_hash_set
     dawn::dawn_common
     dawn::partition_alloc
-    tint_lang_wgsl_features
+    tint_lang_wgsl
 )
 target_compile_definitions(dawn_wire PRIVATE "DAWN_WIRE_IMPLEMENTATION")
 if(BUILD_SHARED_LIBS)

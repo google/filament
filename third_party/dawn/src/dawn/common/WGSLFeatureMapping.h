@@ -35,6 +35,8 @@
     X(kReadonlyAndReadwriteStorageTextures, ReadonlyAndReadwriteStorageTextures)   \
     X(kUnrestrictedPointerParameters, UnrestrictedPointerParameters)               \
     X(kSizedBindingArray, SizedBindingArray)                                       \
+    X(kTexelBuffers, TexelBuffers)                                                 \
+    X(kChromiumPrint, ChromiumPrint)                                               \
     /* ----------------- entries below are only for testing  ------------------ */ \
     X(kChromiumTestingUnimplemented, ChromiumTestingUnimplemented)                 \
     X(kChromiumTestingUnsafeExperimental, ChromiumTestingUnsafeExperimental)       \

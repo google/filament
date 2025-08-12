@@ -1,0 +1,35 @@
+glsl.-P.frag
+Shader version: 450
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:19    Sequence
+0:19      move second child to first child ( temp 4-component vector of float)
+0:19        'color' (layout( location=0) out 4-component vector of float)
+0:19        Constant:
+0:19          1.000000
+0:19          1.000000
+0:19          1.000000
+0:19          1.000000
+0:?   Linker Objects
+0:?     'color' (layout( location=0) out 4-component vector of float)
+
+
+Linked fragment stage:
+
+
+Shader version: 450
+0:? Sequence
+0:5  Function Definition: main( ( global void)
+0:5    Function Parameters: 
+0:19    Sequence
+0:19      move second child to first child ( temp 4-component vector of float)
+0:19        'color' (layout( location=0) out 4-component vector of float)
+0:19        Constant:
+0:19          1.000000
+0:19          1.000000
+0:19          1.000000
+0:19          1.000000
+0:?   Linker Objects
+0:?     'color' (layout( location=0) out 4-component vector of float)
+

@@ -93,7 +93,7 @@ class FunctionTraverser {
 
   private:
     void Visit(const spvtools::opt::Function& f) {
-        if (visited_.count(&f)) {
+        if (visited_.count(&f) != 0u) {
             return;
         }
         visited_.insert(&f);

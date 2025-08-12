@@ -84,7 +84,8 @@ std::string_view ToString({{$name}} value);
 /// @param out the stream to write to
 /// @param value the {{$name}}
 /// @returns @p out so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, {{$name}} value) {
     return out << ToString(value);
 }
@@ -154,22 +155,22 @@ std::string_view ToString({{$enum}} value) {
 {{- $enum := Eval "EnumName" $ -}}
 namespace parse_print_tests {
 
-struct Case {
+struct {{$enum}}Case {
     const char* string;
     {{$enum}} value;
 };
 
-inline std::ostream& operator<<(std::ostream& out, Case c) {
+inline std::ostream& operator<<(std::ostream& out, {{$enum}}Case c) {
     return out << "'" << std::string(c.string) << "'";
 }
 
-static constexpr Case kValidCases[] = {
+static constexpr {{$enum}}Case kValid{{$enum}}Cases[] = {
 {{-   range $entry := $.PublicEntries }}
     {"{{$entry.Name}}", {{template "EnumCase" $entry}}},
 {{-   end }}
 };
 
-static constexpr Case kInvalidCases[] = {
+static constexpr {{$enum}}Case kInvalid{{$enum}}Cases[] = {
 {{-   $exclude := $.NameSet -}}
 {{-   range $entry := $.PublicEntries }}
     {"{{Scramble $entry.Name $exclude}}", {{$enum}}::kUndefined},
@@ -178,7 +179,7 @@ static constexpr Case kInvalidCases[] = {
 {{-   end }}
 };
 
-using {{$enum}}ParseTest = testing::TestWithParam<Case>;
+using {{$enum}}ParseTest = testing::TestWithParam<{{$enum}}Case>;
 
 TEST_P({{$enum}}ParseTest, Parse) {
     const char* string = GetParam().string;
@@ -186,10 +187,10 @@ TEST_P({{$enum}}ParseTest, Parse) {
     EXPECT_EQ(expect, Parse{{$enum}}(string));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidCases, {{$enum}}ParseTest, testing::ValuesIn(kValidCases));
-INSTANTIATE_TEST_SUITE_P(InvalidCases, {{$enum}}ParseTest, testing::ValuesIn(kInvalidCases));
+INSTANTIATE_TEST_SUITE_P(Valid{{$enum}}Cases, {{$enum}}ParseTest, testing::ValuesIn(kValid{{$enum}}Cases));
+INSTANTIATE_TEST_SUITE_P(Invalid{{$enum}}Cases, {{$enum}}ParseTest, testing::ValuesIn(kInvalid{{$enum}}Cases));
 
-using {{$enum}}PrintTest = testing::TestWithParam<Case>;
+using {{$enum}}PrintTest = testing::TestWithParam<{{$enum}}Case>;
 
 TEST_P({{$enum}}PrintTest, Print) {
     {{$enum}} value = GetParam().value;
@@ -197,7 +198,7 @@ TEST_P({{$enum}}PrintTest, Print) {
     EXPECT_EQ(expect, ToString(value));
 }
 
-INSTANTIATE_TEST_SUITE_P(ValidCases, {{$enum}}PrintTest, testing::ValuesIn(kValidCases));
+INSTANTIATE_TEST_SUITE_P(Valid{{$enum}}Cases, {{$enum}}PrintTest, testing::ValuesIn(kValid{{$enum}}Cases));
 
 }  // namespace parse_print_tests
 

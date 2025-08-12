@@ -129,7 +129,8 @@ ResultOrError<SurfaceTexture> SwapChainBase::GetCurrentTexture() {
     DAWN_ASSERT(mCurrentTextureInfo.texture->GetViewFormats() == ComputeViewFormatSet());
 
     // Calling GetCurrentTexture always returns a new reference.
-    surfaceTexture.texture = Ref<TextureBase>(mCurrentTextureInfo.texture).Detach();
+    auto texture = mCurrentTextureInfo.texture;
+    surfaceTexture.texture = ReturnToAPI(std::move(texture));
     return surfaceTexture;
 }
 

@@ -62,7 +62,7 @@ TEST_F(GlslWriterTest, BuiltinGeneric) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   int x = 1;
-  int w = abs(x);
+  int w = max(x, int((~(uint(x)) + 1u)));
 }
 )");
 }
@@ -325,7 +325,7 @@ void foo_inner(uint tint_local_index) {
     atomicExchange(v.b, 0u);
   }
   barrier();
-  int x = atomicAdd(v.a, -(123));
+  int x = atomicAdd(v.a, int((~(uint(123)) + 1u)));
   uint y = atomicAdd(v.b, -(123u));
 }
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
@@ -817,7 +817,7 @@ void main() {
 
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_1d) {
     auto* type = ty.sampled_texture(core::type::TextureDimension::k1d, ty.f32());
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -843,7 +843,7 @@ void main() {
 
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_2d_WithoutLod) {
     auto* type = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -866,7 +866,7 @@ void main() {
 
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_2d_WithU32Lod) {
     auto* type = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -877,30 +877,28 @@ TEST_F(GlslWriterTest, BuiltinTextureDimensions_2d_WithU32Lod) {
     });
 
     Options opts{};
-    opts.bindings.texture_builtins_from_uniform.ubo_bindingpoint_ordering = {{0, 0}};
+    opts.bindings.texture[{0, 0}] = {0};
+    opts.bindings.texture_builtins_from_uniform.ubo_binding = {0};
+    opts.bindings.texture_builtins_from_uniform.ubo_contents = {
+        {.offset = 0, .count = 1, .binding = {0}}};
     ASSERT_TRUE(Generate(opts)) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
 
-
-struct TintTextureUniformData {
-  uint tint_builtin_value_0;
-};
-
 layout(binding = 0, std140)
-uniform f_tint_symbol_ubo {
-  TintTextureUniformData inner;
+uniform f_TintTextureUniformData_ubo {
+  uvec4 metadata[1];
 } v_1;
 uniform highp sampler2D f_v;
 void main() {
-  uvec2 x = uvec2(textureSize(f_v, int(min(3u, (v_1.inner.tint_builtin_value_0 - 1u)))));
+  uvec2 x = uvec2(textureSize(f_v, int(min(3u, (v_1.metadata[(0u / 4u)][(0u % 4u)] - 1u)))));
 }
 )");
 }
 
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_2dArray) {
     auto* type = ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32());
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -924,7 +922,7 @@ void main() {
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_Storage1D) {
     auto* type = ty.storage_texture(core::type::TextureDimension::k2d, core::TexelFormat::kR32Float,
                                     core::Access::kRead);
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -947,7 +945,7 @@ void main() {
 
 TEST_F(GlslWriterTest, BuiltinTextureDimensions_DepthMultisampled) {
     auto* type = ty.Get<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d);
-    auto* var = b.Var("v", handle, type, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, type, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1024,7 +1022,7 @@ void main() {
 TEST_F(GlslWriterTest, TextureNumLayers_2DArray) {
     auto* var =
         b.Var("v", handle, ty.sampled_texture(core::type::TextureDimension::k2dArray, ty.f32()),
-              core::Access::kReadWrite);
+              core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1048,7 +1046,7 @@ void main() {
 TEST_F(GlslWriterTest, TextureNumLayers_Depth2DArray) {
     auto* var =
         b.Var("v", handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray),
-              core::Access::kReadWrite);
+              core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1072,7 +1070,7 @@ void main() {
 TEST_F(GlslWriterTest, TextureNumLayers_CubeArray) {
     auto* var =
         b.Var("v", handle, ty.sampled_texture(core::type::TextureDimension::kCubeArray, ty.f32()),
-              core::Access::kReadWrite);
+              core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1099,7 +1097,7 @@ void main() {
 TEST_F(GlslWriterTest, TextureNumLayers_DepthCubeArray) {
     auto* var = b.Var("v", handle,
                       ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray),
-                      core::Access::kReadWrite);
+                      core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1127,7 +1125,7 @@ TEST_F(GlslWriterTest, TextureNumLayers_Storage2DArray) {
     auto* storage_ty = ty.storage_texture(core::type::TextureDimension::k2dArray,
                                           core::TexelFormat::kRg32Float, core::Access::kRead);
 
-    auto* var = b.Var("v", handle, storage_ty, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, storage_ty, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -1494,7 +1492,20 @@ TEST_F(GlslWriterTest, DotI32) {
 precision highp int;
 
 int tint_int_dot(ivec4 x, ivec4 y) {
-  return ((((x.x * y.x) + (x.y * y.y)) + (x.z * y.z)) + (x.w * y.w));
+  uint v = uint(x.x);
+  int v_1 = int((v * uint(y.x)));
+  uint v_2 = uint(x.y);
+  int v_3 = int((v_2 * uint(y.y)));
+  uint v_4 = uint(v_1);
+  int v_5 = int((v_4 + uint(v_3)));
+  uint v_6 = uint(x.z);
+  int v_7 = int((v_6 * uint(y.z)));
+  uint v_8 = uint(v_5);
+  int v_9 = int((v_8 + uint(v_7)));
+  uint v_10 = uint(x.w);
+  int v_11 = int((v_10 * uint(y.w)));
+  uint v_12 = uint(v_9);
+  return int((v_12 + uint(v_11)));
 }
 void main() {
   ivec4 x = ivec4(2);
@@ -2598,7 +2609,7 @@ TEST_F(GlslWriterTest, BuiltinTextureSample_Depth2d_Array_Offset) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate({}, tint::ast::PipelineStage::kFragment)) << err_ << output_.glsl;
+    ASSERT_TRUE(Generate({}, core::ir::Function::PipelineStage::kFragment)) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
 
@@ -3841,7 +3852,7 @@ TEST_F(GlslWriterTest, BuiltinTextureSampleCompare_2d_Array_Offset) {
         b.Return(func);
     });
 
-    ASSERT_TRUE(Generate({}, ast::PipelineStage::kFragment)) << err_ << output_.glsl;
+    ASSERT_TRUE(Generate({}, core::ir::Function::PipelineStage::kFragment)) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;
 

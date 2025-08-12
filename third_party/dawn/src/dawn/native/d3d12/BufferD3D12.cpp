@@ -244,12 +244,12 @@ MaybeError Buffer::Initialize(bool mappedAtCreation) {
 
     // Initialize the padding bytes to zero.
     if (GetDevice()->IsToggleEnabled(Toggle::LazyClearResourceOnFirstUse) && !mappedAtCreation) {
-        uint32_t paddingBytes = GetAllocatedSize() - GetSize();
+        uint64_t paddingBytes = GetAllocatedSize() - GetSize();
         if (paddingBytes > 0) {
             CommandRecordingContext* commandRecordingContext =
                 ToBackend(GetDevice()->GetQueue())->GetPendingCommandContext();
 
-            uint32_t clearSize = paddingBytes;
+            uint64_t clearSize = paddingBytes;
             uint64_t clearOffset = GetSize();
             DAWN_TRY(ClearBuffer(commandRecordingContext, 0, clearOffset, clearSize));
         }
@@ -453,6 +453,8 @@ bool Buffer::IsCPUWritableAtCreation() const {
 }
 
 MaybeError Buffer::MapInternal(bool isWrite, size_t offset, size_t size, const char* contextInfo) {
+    DAWN_TRY(SynchronizeBufferBeforeMapping());
+
     // The mapped buffer can be accessed at any time, so it must be locked to ensure it is never
     // evicted. This buffer should already have been made resident when it was created.
     TRACE_EVENT0(GetDevice()->GetPlatform(), General, "BufferD3D12::MapInternal");
@@ -493,9 +495,6 @@ MaybeError Buffer::MapAtCreationImpl() {
 }
 
 MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) {
-    // Externally allocated buffers must be synchronized before any usage.
-    DAWN_TRY(SynchronizeBufferBeforeUse());
-
     // GetPendingCommandContext() call might create a new commandList. Dawn will handle
     // it in Tick() by execute the commandList and signal a fence for it even it is empty.
     // Skip the unnecessary GetPendingCommandContext() call saves an extra fence.
@@ -521,7 +520,7 @@ void Buffer::UnmapImpl() {
     }
 }
 
-void* Buffer::GetMappedPointer() {
+void* Buffer::GetMappedPointerImpl() {
     // The frontend asks that the pointer returned is from the start of the resource
     // irrespective of the offset passed in MapAsyncImpl, which is what mMappedData is.
     return mMappedData;
@@ -630,21 +629,38 @@ MaybeError Buffer::EnsureDataInitializedAsDestination(CommandRecordingContext* c
     return {};
 }
 
-MaybeError Buffer::SynchronizeBufferBeforeUse() {
+MaybeError Buffer::SynchronizeBufferBeforeMapping() {
     // Buffers imported with the SharedBufferMemory feature can include fences that must finish
-    // before Dawn can use the buffer. We acquire and wait for them here.
+    // before Dawn can use the buffer for mapping operations on the CPU timeline. We acquire and
+    // wait for them here.
+    if (SharedResourceMemoryContents* contents = GetSharedResourceMemoryContents()) {
+        SharedBufferMemoryBase::PendingFenceList fences;
+        contents->AcquirePendingFences(&fences);
+        for (const auto& fence : fences) {
+            HANDLE fenceEvent = 0;
+            ComPtr<ID3D12Fence> d3dFence = ToBackend(fence.object)->GetD3DFence();
+            if (d3dFence->GetCompletedValue() < fence.signaledValue) {
+                d3dFence->SetEventOnCompletion(fence.signaledValue, fenceEvent);
+                WaitForSingleObject(fenceEvent, INFINITE);
+            }
+        }
+    }
+
+    return {};
+}
+
+MaybeError Buffer::SynchronizeBufferBeforeUseOnGPU() {
+    // Buffers imported with the SharedBufferMemory feature can include fences that must finish
+    // before Dawn can use the buffer on the GPU timeline. We acquire and wait for them here.
     if (SharedResourceMemoryContents* contents = GetSharedResourceMemoryContents()) {
         Device* device = ToBackend(GetDevice());
         Queue* queue = ToBackend(device->GetQueue());
 
-        std::vector<FenceAndSignalValue> waitFences;
         SharedBufferMemoryBase::PendingFenceList fences;
         contents->AcquirePendingFences(&fences);
-        waitFences.insert(waitFences.end(), std::make_move_iterator(fences.begin()),
-                          std::make_move_iterator(fences.end()));
 
         ID3D12CommandQueue* commandQueue = queue->GetCommandQueue();
-        for (const auto& fence : waitFences) {
+        for (const auto& fence : fences) {
             DAWN_TRY(CheckHRESULT(commandQueue->Wait(ToBackend(fence.object)->GetD3DFence(),
                                                      fence.signaledValue),
                                   "D3D12 fence wait"););

@@ -1,0 +1,29 @@
+boolinput.error.frag
+ERROR: 0:3: 'in' : cannot be bool 
+ERROR: 0:9: 'in' : cannot contain bool 
+ERROR: 0:11: 'in' : cannot contain bool 
+ERROR: 3 compilation errors.  No code generated.
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:15  Function Definition: main( ( global void)
+0:15    Function Parameters: 
+0:?   Linker Objects
+0:?     'a' ( smooth in bool)
+0:?     's' ( smooth in structure{ global bool b})
+0:?     'anon@0' ( in block{ in bool c})
+
+
+Linked fragment stage:
+
+
+Shader version: 460
+ERROR: node is still EOpNull!
+0:15  Function Definition: main( ( global void)
+0:15    Function Parameters: 
+0:?   Linker Objects
+0:?     'a' ( smooth in bool)
+0:?     's' ( smooth in structure{ global bool b})
+0:?     'anon@0' ( in block{ in bool c})
+

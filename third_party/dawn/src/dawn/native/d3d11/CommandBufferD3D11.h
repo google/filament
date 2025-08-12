@@ -57,15 +57,6 @@ class CommandBuffer final : public CommandBufferBase {
     void HandleDebugCommands(const ScopedSwapStateCommandRecordingContext* commandContext,
                              CommandIterator* iter,
                              Command command);
-
-    MaybeError RecordFirstIndexOffset(RenderPipeline* renderPipeline,
-                                      const ScopedSwapStateCommandRecordingContext* commandContext,
-                                      uint32_t firstVertex,
-                                      uint32_t firstInstance);
-    MaybeError RecordNumWorkgroupsForDispatch(
-        ComputePipeline* computePipeline,
-        const ScopedSwapStateCommandRecordingContext* commandContext,
-        DispatchCmd* dispatchCmd);
 };
 
 }  // namespace dawn::native::d3d11

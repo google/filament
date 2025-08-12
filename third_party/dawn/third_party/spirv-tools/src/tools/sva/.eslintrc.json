@@ -1,0 +1,25 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true,
+        "node": true,
+        "mocha": true
+    },
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 2018,
+        "sourceType": "module"
+    },
+    "rules": {
+        "block-scoped-var": "error",
+        "consistent-return": "error",
+        "eqeqeq": ["error", "always"],
+        "indent": [ "error", 2 ],
+        "linebreak-style": [ "error", "unix" ],
+        "no-eval": "error",
+        "no-shadow": "error",
+        "no-shadow-restricted-names": "error",
+        "quotes": [ "error", "double" ],
+        "semi": [ "error", "always" ]
+    }
+}

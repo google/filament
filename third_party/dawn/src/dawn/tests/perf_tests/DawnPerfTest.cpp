@@ -266,7 +266,9 @@ void DawnPerfTestBase::DoRunLoop(double maxRunTime) {
         submittedIterations++;
         mTest->queue.OnSubmittedWorkDone(
             wgpu::CallbackMode::AllowProcessEvents,
-            [&finishedIterations](wgpu::QueueWorkDoneStatus) { finishedIterations++; });
+            [&finishedIterations](wgpu::QueueWorkDoneStatus, wgpu::StringView) {
+                finishedIterations++;
+            });
 
         if (mRunning) {
             ++mNumStepsPerformed;

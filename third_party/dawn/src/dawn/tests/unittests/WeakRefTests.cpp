@@ -28,6 +28,7 @@
 #include <functional>
 #include <thread>
 
+#include "absl/container/flat_hash_map.h"
 #include "dawn/common/WeakRef.h"
 #include "dawn/common/WeakRefSupport.h"
 #include "dawn/utils/BinarySemaphore.h"
@@ -109,6 +110,46 @@ TEST(WeakRefTests, DeletingAndPromoting) {
     semA.Acquire();
     base = nullptr;
     t.join();
+}
+
+// Try using WeakRef as keys in a hash map.
+TEST(WeakRefTests, WeakRefHashmapKey) {
+    Ref<WeakRefBaseA> base1 = AcquireRef(new WeakRefBaseA());
+    WeakRef<WeakRefBaseA> weak1 = GetWeakRef(base1);
+    Ref<WeakRefBaseA> base2 = AcquireRef(new WeakRefBaseA());
+    WeakRef<WeakRefBaseA> weak2 = GetWeakRef(base2);
+
+    absl::flat_hash_map<WeakRef<WeakRefBaseA>, int> m;
+    m.insert({weak1, 1});
+    m.insert({weak2, 2});
+
+    // Getting the values should match w.r.t the map.
+    EXPECT_EQ(m[weak1], 1);
+    EXPECT_EQ(m[weak2], 2);
+
+    // Getting the values with copies of the keys should work.
+    auto copy1 = weak1;
+    auto copy2 = weak2;
+    EXPECT_EQ(m[copy1], 1);
+    EXPECT_EQ(m[copy2], 2);
+
+    // Getting the values with a new weak ref should work.
+    EXPECT_EQ(m[GetWeakRef(base1)], 1);
+    EXPECT_EQ(m[GetWeakRef(base2)], 2);
+
+    // Getting values should still work after the actual reference is gone.
+    base1 = nullptr;
+    base2 = nullptr;
+    EXPECT_EQ(m[weak1], 1);
+    EXPECT_EQ(m[weak2], 2);
+    EXPECT_EQ(m[copy1], 1);
+    EXPECT_EQ(m[copy2], 2);
+
+    // Finding from the map should be valid, but promotion should fail.
+    auto it = m.find(weak1);
+    ASSERT_TRUE(it != m.end());
+    EXPECT_EQ(it->second, 1);
+    EXPECT_EQ(it->first.Promote(), nullptr);
 }
 
 }  // anonymous namespace

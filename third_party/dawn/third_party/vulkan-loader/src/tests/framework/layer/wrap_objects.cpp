@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "vulkan/vk_layer.h"
-#include "vk_dispatch_table_helper.h"
+#include "generated/vk_dispatch_table_helper.h"
 #include "loader/vk_loader_layer.h"
 
 // Export full support of instance extension VK_EXT_direct_mode_display extension

@@ -4020,7 +4020,7 @@ void Sema::CodeCompleteCall(Scope *S, Expr *Fn, ArrayRef<Expr *> Args) {
 
   Expr *NakedFn = Fn->IgnoreParenCasts();
   if (auto ULE = dyn_cast<UnresolvedLookupExpr>(NakedFn))
-    AddOverloadedCallCandidates(ULE, Args, CandidateSet,
+    AddOverloadedCallCandidates(ULE, Args, CandidateSet, S, // HLSL Change
                                 /*PartialOverloading=*/true);
   else if (auto UME = dyn_cast<UnresolvedMemberExpr>(NakedFn)) {
     TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;

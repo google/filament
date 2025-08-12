@@ -675,6 +675,232 @@ TEST_P(TextureShaderBuiltinTests, OneShaderModuleMultipleEntryPoints) {
     EXPECT_BUFFER_U32_RANGE_EQ(expected_2, buffer_2, 0, sizeof(expected_2) / sizeof(uint32_t));
 }
 
+// Test when the pipeline changed but the bind group is unchanged, the texture builtins uniforms are
+// updated correctly.
+TEST_P(TextureShaderBuiltinTests, MultiplePipelinesOneBindGroup) {
+    const char* shader_1 = R"(
+@group(1) @binding(0) var<storage, read_write> dstBuf : array<u32>;
+// Use sparse binding to test impact of binding remapping
+@group(0) @binding(1) var tex1 : texture_2d<f32>;
+@group(0) @binding(4) var tex2 : texture_2d<f32>;
+
+@compute @workgroup_size(1, 1, 1) fn main() {
+    dstBuf[0] = textureNumLevels(tex1);
+}
+    )";
+
+    const char* shader_2 = R"(
+@group(1) @binding(0) var<storage, read_write> dstBuf : array<u32>;
+// Use sparse binding to test impact of binding remapping
+@group(0) @binding(1) var tex1 : texture_2d<f32>;
+@group(0) @binding(4) var tex2 : texture_2d<f32>;
+
+@compute @workgroup_size(1, 1, 1) fn main() {
+    dstBuf[0] = textureNumLevels(tex2);
+}
+    )";
+
+    // Explicitly create bind group layout, shared by 2 different pipelines.
+    wgpu::BindGroupLayout bindGroupLayoutShared = utils::MakeBindGroupLayout(
+        device, {
+                    {1, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::UnfilterableFloat,
+                     wgpu::TextureViewDimension::e2D},
+                    {4, wgpu::ShaderStage::Compute, wgpu::TextureSampleType::UnfilterableFloat,
+                     wgpu::TextureViewDimension::e2D},
+                });
+
+    wgpu::BindGroupLayout bindGroupLayoutBuffer = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Compute, wgpu::BufferBindingType::Storage},
+                });
+
+    constexpr uint32_t kMipLevels_1 = 2;
+    constexpr uint32_t kMipLevels_2 = 3;
+
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.size.width = 4;
+    textureDesc.size.height = 4;
+    textureDesc.format = kDefaultFormat;
+    textureDesc.mipLevelCount = kMipLevels_1;
+    textureDesc.usage = wgpu::TextureUsage::TextureBinding;
+    wgpu::TextureView texView_1 = device.CreateTexture(&textureDesc).CreateView();
+
+    textureDesc.mipLevelCount = kMipLevels_2;
+    wgpu::TextureView texView_2 = device.CreateTexture(&textureDesc).CreateView();
+
+    constexpr uint32_t expected_1[] = {
+        // Output from first dispatch
+        kMipLevels_1,
+    };
+    constexpr uint32_t expected_2[] = {
+        // Output from second dispatch with different pipeline
+        kMipLevels_2,
+    };
+    DAWN_ASSERT(sizeof(expected_1) == sizeof(expected_2));
+
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(expected_1);
+    bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer buffer_1 = device.CreateBuffer(&bufferDesc);
+    wgpu::Buffer buffer_2 = device.CreateBuffer(&bufferDesc);
+
+    wgpu::PipelineLayout pipelineLayout =
+        utils::MakePipelineLayout(device, {bindGroupLayoutShared, bindGroupLayoutBuffer});
+
+    wgpu::ComputePipelineDescriptor pipelineDesc;
+    pipelineDesc.layout = pipelineLayout;
+    pipelineDesc.compute.module = utils::CreateShaderModule(device, shader_1);
+    wgpu::ComputePipeline pipeline_1 = device.CreateComputePipeline(&pipelineDesc);
+
+    pipelineDesc.compute.module = utils::CreateShaderModule(device, shader_2);
+    wgpu::ComputePipeline pipeline_2 = device.CreateComputePipeline(&pipelineDesc);
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    {
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetPipeline(pipeline_1);
+
+        pass.SetBindGroup(0, utils::MakeBindGroup(device, bindGroupLayoutShared,
+                                                  {
+                                                      {1, texView_1},
+                                                      {4, texView_2},
+                                                  }));
+        pass.SetBindGroup(1, utils::MakeBindGroup(device, bindGroupLayoutBuffer,
+                                                  {
+                                                      {0, buffer_1},
+                                                  }));
+        pass.DispatchWorkgroups(1);
+
+        // Note: Change the pipeline, but don't change the shared bind group
+        pass.SetPipeline(pipeline_2);
+        pass.SetBindGroup(1, utils::MakeBindGroup(device, bindGroupLayoutBuffer,
+                                                  {
+                                                      {0, buffer_2},
+                                                  }));
+        pass.DispatchWorkgroups(1);
+
+        pass.End();
+    }
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_RANGE_EQ(expected_1, buffer_1, 0, sizeof(expected_1) / sizeof(uint32_t));
+    EXPECT_BUFFER_U32_RANGE_EQ(expected_2, buffer_2, 0, sizeof(expected_2) / sizeof(uint32_t));
+}
+
+// Regression Test for crbug.com/427409135, Test builtins are handled correctly for render pipeline,
+// when multiple entries in the same bind group from the vertex and fragment stage is not pushing to
+// the same offset in the uniform.
+TEST_P(TextureShaderBuiltinTests, RenderPipelineAvoidSameOffset) {
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+
+    // One texture builtin in the vertex shader
+    const char* vertexShader = R"(
+// Use sparse binding to test impact of binding remapping
+@group(0) @binding(1) var tex1 : texture_2d<f32>;
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) @interpolate(flat, either) value: u32,
+};
+
+@vertex fn main() -> VertexOutput {
+    var out : VertexOutput;
+    out.value = textureNumLevels(tex1);
+    // Make sure this position is not culled.
+    out.position = vec4f(0.5, 0.5, 0.5, 1.0);
+    return out;
+}
+    )";
+
+    // One texture builtin in the fragment shader, in the same bind group
+    const char* fragmentShader = R"(
+@group(1) @binding(0) var<storage, read_write> dstBuf : array<u32>;
+// Use sparse binding to test impact of binding remapping
+@group(0) @binding(3) var tex2 : texture_2d<f32>;
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) @interpolate(flat, either) value: u32,
+};
+
+@fragment fn main(in: VertexOutput) -> @location(0) vec4f{
+    dstBuf[0] = in.value;
+    dstBuf[1] = textureNumLevels(tex2);
+    return vec4f(1.0, 1.0, 1.0, 1.0);
+}
+    )";
+
+    constexpr uint32_t kMipLevels_1 = 2;
+    constexpr uint32_t kMipLevels_2 = 3;
+
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.size.width = 4;
+    textureDesc.size.height = 4;
+    textureDesc.format = kDefaultFormat;
+    textureDesc.mipLevelCount = kMipLevels_1;
+    textureDesc.usage = wgpu::TextureUsage::TextureBinding;
+    wgpu::TextureView texView_1 = device.CreateTexture(&textureDesc).CreateView();
+
+    textureDesc.mipLevelCount = kMipLevels_2;
+    wgpu::TextureView texView_2 = device.CreateTexture(&textureDesc).CreateView();
+
+    constexpr uint32_t expected[] = {
+        kMipLevels_1,
+        kMipLevels_2,
+    };
+
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = sizeof(expected);
+    bufferDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopySrc;
+    wgpu::Buffer buffer = device.CreateBuffer(&bufferDesc);
+
+    wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
+        device, {
+                    {1, wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment,
+                     wgpu::TextureSampleType::Float, wgpu::TextureViewDimension::e2D},
+                    {3, wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment,
+                     wgpu::TextureSampleType::Float, wgpu::TextureViewDimension::e2D},
+                });
+    wgpu::BindGroupLayout bglBuffer = utils::MakeBindGroupLayout(
+        device, {
+                    {0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Storage},
+                });
+
+    wgpu::PipelineLayout pipelineLayout = utils::MakePipelineLayout(device, {bgl, bglBuffer});
+
+    utils::ComboRenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.layout = pipelineLayout;
+    pipelineDesc.vertex.module = utils::CreateShaderModule(device, vertexShader);
+    pipelineDesc.cFragment.module = utils::CreateShaderModule(device, fragmentShader);
+    pipelineDesc.cTargets[0].format = wgpu::TextureFormat::RGBA8Unorm;
+    pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::PointList;
+    wgpu::RenderPipeline renderPipeline = device.CreateRenderPipeline(&pipelineDesc);
+
+    wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+    utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 1, 1);
+    wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
+
+    pass.SetPipeline(renderPipeline);
+    pass.SetBindGroup(0, utils::MakeBindGroup(device, bgl,
+                                              {
+                                                  {1, texView_1},
+                                                  {3, texView_2},
+                                              }));
+    pass.SetBindGroup(1, utils::MakeBindGroup(device, bglBuffer,
+                                              {
+                                                  {0, buffer},
+                                              }));
+    pass.Draw(1);
+    pass.End();
+
+    wgpu::CommandBuffer commands = encoder.Finish();
+    queue.Submit(1, &commands);
+
+    EXPECT_BUFFER_U32_RANGE_EQ(expected, buffer, 0, sizeof(expected) / sizeof(uint32_t));
+}
+
 DAWN_INSTANTIATE_TEST(TextureShaderBuiltinTests,
                       D3D11Backend(),
                       D3D12Backend(),

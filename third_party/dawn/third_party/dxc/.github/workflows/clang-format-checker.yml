@@ -12,7 +12,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - name: Fetch LLVM sources
+      - name: Fetch DirectXShaderCompiler sources
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -31,6 +31,20 @@ jobs:
           separator: ","
           skip_initial_fetch: true
 
+      # We need to pull the script from the main branch, so that we ensure
+      # we get the latest version of this script.
+      - name: Fetch code formatting utils
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: microsoft/DirectXShaderCompiler
+          ref: ${{ github.base_ref }}
+          sparse-checkout: |
+            utils/git/requirements_formatting.txt
+            utils/git/code-format-helper.py
+            utils/git/code-format-save-diff.py
+          sparse-checkout-cone-mode: false
+          path: code-format-tools
+
       - name: "Listed files"
         env:
           LISTED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
@@ -48,10 +62,10 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: 'utils/git/requirements_formatting.txt'
+          cache-dependency-path: 'code-format-tools/utils/git/requirements_formatting.txt'
 
       - name: Install python dependencies
-        run: pip install -r utils/git/requirements_formatting.txt
+        run: pip install -r code-format-tools/utils/git/requirements_formatting.txt
 
       - name: Run code formatter
         id: formatter
@@ -61,7 +75,7 @@ jobs:
           END_REV: ${{ github.event.pull_request.head.sha }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-           python utils/git/code-format-helper.py \
+           python code-format-tools/utils/git/code-format-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --start-rev $START_REV \
@@ -92,28 +106,37 @@ jobs:
             } catch (err) {
               core.setFailed(`Request failed with error ${err}`)
             } 
-      - name: Fetch LLVM sources
-        uses: actions/checkout@v4
+      
+      # We need to pull the script from the main branch, so that we ensure
+      # we get the latest version of this script.
+      - name: Fetch code formatting utils
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 2
-          path: build/main_src
+          repository: microsoft/DirectXShaderCompiler
+          ref: ${{ github.base_ref }}
+          sparse-checkout: |
+            utils/git/requirements_formatting.txt
+            utils/git/code-format-helper.py
+            utils/git/code-format-save-diff.py
+          sparse-checkout-cone-mode: false
+          path: code-format-tools
 
       - name: Setup Python env
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: 'build/main_src/utils/git/requirements_formatting.txt'
+          cache-dependency-path: 'code-format-tools/utils/git/requirements_formatting.txt'
 
       - name: Install python dependencies
-        run: pip install -r build/main_src/utils/git/requirements_formatting.txt
+        run: pip install -r code-format-tools/utils/git/requirements_formatting.txt
 
       - name: Apply code diff
         env:
           GITHUB_PR_NUMBER: ${{ github.event.issue.number }}
           COMMENT_ID: ${{ github.event.comment.id }}
         run: |
-          python build/main_src/utils/git/code-format-save-diff.py \
+          python code-format-tools/utils/git/code-format-save-diff.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --tmp-diff-file $TMP_DIFF_FILE \

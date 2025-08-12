@@ -473,8 +473,8 @@ using GlslWriterDepthTextureESTest = GlslWriterTestWithParam<GlslDepthTextureDat
 TEST_P(GlslWriterDepthTextureESTest, Emit) {
     auto params = GetParam();
 
-    auto* t = ty.Get<core::type::DepthTexture>(params.dim);
-    auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
+    auto* t = ty.depth_texture(params.dim);
+    auto* var = b.Var("v", handle, t, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -499,8 +499,8 @@ using GlslWriterDepthTextureNonESTest = GlslWriterTestWithParam<GlslDepthTexture
 TEST_P(GlslWriterDepthTextureNonESTest, Emit) {
     auto params = GetParam();
 
-    auto* t = ty.Get<core::type::DepthTexture>(params.dim);
-    auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
+    auto* t = ty.depth_texture(params.dim);
+    auto* var = b.Var("v", handle, t, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -526,8 +526,8 @@ INSTANTIATE_TEST_SUITE_P(
         GlslDepthTextureData{core::type::TextureDimension::kCubeArray, "samplerCubeArrayShadow"}));
 
 TEST_F(GlslWriterTest, EmitType_DepthMultisampledTexture) {
-    auto* t = ty.Get<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d);
-    auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
+    auto* t = ty.depth_multisampled_texture(core::type::TextureDimension::k2d);
+    auto* var = b.Var("v", handle, t, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -575,7 +575,7 @@ TEST_P(GlslWriterSampledTextureESTest, Emit) {
     }
 
     auto* t = ty.sampled_texture(params.dim, subtype);
-    auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, t, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -629,7 +629,7 @@ TEST_P(GlslWriterSampledTextureNonESTest, Emit) {
     }
 
     auto* t = ty.sampled_texture(params.dim, subtype);
-    auto* var = b.Var("v", handle, t, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, t, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -690,8 +690,8 @@ TEST_P(GlslWriterMultisampledTextureESTest, Emit) {
             break;
     }
 
-    auto* ms = ty.Get<core::type::MultisampledTexture>(params.dim, subtype);
-    auto* var = b.Var("v", handle, ms, core::Access::kReadWrite);
+    auto* ms = ty.multisampled_texture(params.dim, subtype);
+    auto* var = b.Var("v", handle, ms, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -729,8 +729,8 @@ TEST_P(GlslWriterMultisampledTextureNonESTest, Emit) {
             subtype = ty.u32();
             break;
     }
-    auto* ms = ty.Get<core::type::MultisampledTexture>(params.dim, subtype);
-    auto* var = b.Var("v", handle, ms, core::Access::kReadWrite);
+    auto* ms = ty.multisampled_texture(params.dim, subtype);
+    auto* var = b.Var("v", handle, ms, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -789,7 +789,7 @@ TEST_P(GlslWriterStorageTextureESTest, Emit) {
             break;
     }
     auto s = ty.storage_texture(params.dim, texel_fmt, params.access);
-    auto* var = b.Var("v", handle, s, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, s, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 
@@ -890,7 +890,7 @@ TEST_P(GlslWriterStorageTextureNonESTest, Emit) {
             break;
     }
     auto s = ty.storage_texture(params.dim, texel_fmt, params.access);
-    auto* var = b.Var("v", handle, s, core::Access::kReadWrite);
+    auto* var = b.Var("v", handle, s, core::Access::kRead);
     var->SetBindingPoint(0, 0);
     b.ir.root_block->Append(var);
 

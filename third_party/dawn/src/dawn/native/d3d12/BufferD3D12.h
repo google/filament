@@ -71,7 +71,8 @@ class Buffer final : public BufferBase {
     MaybeError EnsureDataInitializedAsDestination(CommandRecordingContext* commandContext,
                                                   const CopyTextureToBufferCmd* copy);
 
-    MaybeError SynchronizeBufferBeforeUse();
+    MaybeError SynchronizeBufferBeforeMapping();
+    MaybeError SynchronizeBufferBeforeUseOnGPU();
 
     // Dawn API
     void SetLabelImpl() override;
@@ -89,7 +90,7 @@ class Buffer final : public BufferBase {
     void DestroyImpl() override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointer() override;
+    void* GetMappedPointerImpl() override;
 
     MaybeError MapInternal(bool isWrite, size_t start, size_t end, const char* contextInfo);
 

@@ -27,8 +27,10 @@
 
 #include "dawn/native/BlitColorToColorWithDraw.h"
 
+#include <limits>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/Assert.h"
@@ -48,37 +50,70 @@ namespace dawn::native {
 
 namespace {
 
-constexpr char kBlitToColorVS[] = R"(
+constexpr std::string_view kVertexOutputsStruct = R"(
+struct VertexOutputs {
+  @builtin(position) position : vec4<f32>,
+  @location(0) @interpolate(flat, either) offsets : vec2i,
+};
+)";
+
+std::string GenerateBlitToColorVS() {
+    constexpr std::string_view kBlitToColorVS = R"(
+// Unpack a u32 into two i32 values, each was originally two 16-bit signed
+// integer.
+fn unpack_offsets(offsets : u32) -> vec2<i32> {
+  // First extract the high and low 16-bit values, then convert to u32 for
+  // zero-extension.
+  var offsets_bits = vec2u(offsets & 0xFFFFu, (offsets >> 16) & 0xFFFFu);
+  // For each 16-bit value, if the sign bit is set (0x8000), perform sign
+  // extension by setting the upper 16 bits to 1s (0xFFFF0000).
+  offsets_bits = select(
+      offsets_bits,
+      offsets_bits | vec2u(0xFFFF0000u),
+      // Check if negative.
+      (offsets_bits & vec2u(0x8000u)) != vec2u(0u),
+  );
+  // Reinterpret the final 32-bit values as signed integers.
+  return bitcast<vec2i>(offsets_bits);
+}
 
 @vertex fn vert_fullscreen_quad(
   @builtin(vertex_index) vertex_index : u32,
-) -> @builtin(position) vec4f {
+  @builtin(instance_index) instance_index : u32
+) -> VertexOutputs {
+  var output : VertexOutputs;
   const pos = array(
       vec2f(-1.0, -1.0),
-      vec2f( 3.0, -1.0),
-      vec2f(-1.0,  3.0));
-  return vec4f(pos[vertex_index], 0.0, 1.0);
+      vec2f(3.0, -1.0),
+      vec2f(-1.0, 3.0));
+  output.position = vec4f(pos[vertex_index], 0.0, 1.0);
+  output.offsets = unpack_offsets(instance_index);
+  return output;
 }
 )";
+    return std::string(kVertexOutputsStruct) + "\n" + std::string(kBlitToColorVS);
+}
 
 std::string GenerateExpandFS(const BlitColorToColorWithDrawPipelineKey& pipelineKey) {
     std::ostringstream outputStructStream;
     std::ostringstream assignOutputsStream;
     std::ostringstream finalStream;
-
-    for (auto i : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+    for (auto i : pipelineKey.attachmentsToExpandResolve) {
         finalStream << absl::StrFormat("@group(0) @binding(%u) var srcTex%u : texture_2d<f32>;\n",
                                        i, i);
 
         outputStructStream << absl::StrFormat("@location(%u) output%u : vec4f,\n", i, i);
 
         assignOutputsStream << absl::StrFormat(
-            "\toutputColor.output%u = textureLoad(srcTex%u, vec2u(position.xy), 0);\n", i, i);
+            "\toutputColor.output%u = textureLoad(srcTex%u, vec2i(input.position.xy) + "
+            "input.offsets, 0);\n",
+            i, i);
     }
 
+    finalStream << kVertexOutputsStruct << "\n";
     finalStream << "struct OutputColor {\n" << outputStructStream.str() << "}\n\n";
     finalStream << R"(
-@fragment fn expand_multisample(@builtin(position) position : vec4f) -> OutputColor {
+@fragment fn expand_multisample(input: VertexOutputs) -> OutputColor {
     var outputColor : OutputColor;
 )" << assignOutputsStream.str()
                 << R"(
@@ -91,16 +126,17 @@ std::string GenerateExpandFS(const BlitColorToColorWithDrawPipelineKey& pipeline
 // Generate the fragment shader to average multiple samples into one.
 std::string GenerateResolveFS(uint32_t sampleCount) {
     std::ostringstream ss;
-
+    ss << kVertexOutputsStruct << "\n";
     ss << R"(
 @group(0) @binding(0) var srcTex : texture_multisampled_2d<f32>;
 
 @fragment
-fn resolve_multisample(@builtin(position) position : vec4f) -> @location(0) vec4f {
-    var sum = vec4f(0.0, 0.0, 0.0, 0.0);)";
+fn resolve_multisample(input: VertexOutputs) -> @location(0) vec4f {
+    var sum = vec4f(0.0, 0.0, 0.0, 0.0);
+    var offsetPos = vec2i(input.position.xy) - input.offsets;)";
     ss << "\n";
     for (uint32_t sample = 0; sample < sampleCount; ++sample) {
-        ss << absl::StrFormat("    sum += textureLoad(srcTex, vec2u(position.xy), %u);\n", sample);
+        ss << absl::StrFormat("    sum += textureLoad(srcTex, offsetPos, %u);\n", sample);
     }
     ss << absl::StrFormat("    return sum / %u;\n", sampleCount) << "}\n";
 
@@ -123,7 +159,8 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreateExpandMultisamplePipeline(
     ShaderSourceWGSL wgslDesc = {};
     ShaderModuleDescriptor shaderModuleDesc = {};
     shaderModuleDesc.nextInChain = &wgslDesc;
-    wgslDesc.code = kBlitToColorVS;
+    const std::string vsCode = GenerateBlitToColorVS();
+    wgslDesc.code = vsCode.c_str();
 
     Ref<ShaderModuleBase> vshaderModule;
     DAWN_TRY_ASSIGN(vshaderModule, device->CreateShaderModule(&shaderModuleDesc));
@@ -183,7 +220,7 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreateExpandMultisamplePipeline(
 
     // Bind group layout.
     absl::InlinedVector<BindGroupLayoutEntry, kMaxColorAttachments> bglEntries;
-    for (auto colorIdx : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+    for (auto colorIdx : pipelineKey.attachmentsToExpandResolve) {
         bglEntries.push_back({});
         auto& bglEntry = bglEntries.back();
         bglEntry.binding = static_cast<uint8_t>(colorIdx);
@@ -201,6 +238,7 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreateExpandMultisamplePipeline(
 
     Ref<PipelineLayoutBase> pipelineLayout;
     DAWN_TRY_ASSIGN(pipelineLayout, utils::MakeBasicPipelineLayout(device, bindGroupLayout));
+
     renderPipelineDesc.layout = pipelineLayout.Get();
 
     Ref<RenderPipelineBase> pipeline;
@@ -226,7 +264,8 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreateResolveMultisamplePipeline(
     ShaderSourceWGSL wgslDesc = {};
     ShaderModuleDescriptor shaderModuleDesc = {};
     shaderModuleDesc.nextInChain = &wgslDesc;
-    wgslDesc.code = kBlitToColorVS;
+    const std::string vsCode = GenerateBlitToColorVS();
+    wgslDesc.code = vsCode.c_str();
 
     Ref<ShaderModuleBase> vshaderModule;
     DAWN_TRY_ASSIGN(vshaderModule, device->CreateShaderModule(&shaderModuleDesc));
@@ -263,6 +302,19 @@ ResultOrError<Ref<RenderPipelineBase>> GetOrCreateResolveMultisamplePipeline(
 
 }  // namespace
 
+// Since texture dimensions never exceed 16 bits, we can safely store offsets in 16 bits. This
+// allows packing two signed 16-bit offsets (each within −32,768 ~ +32,767) into a single 32-bit
+// unsigned integer for efficient storage and retrieval.
+uint32_t PackOffsets(const RenderPassDescriptorResolveRect& expandResolveRect) {
+    const auto offsetX = static_cast<int32_t>(expandResolveRect.resolveOffsetX) -
+                         static_cast<int32_t>(expandResolveRect.colorOffsetX);
+    const auto offsetY = static_cast<int32_t>(expandResolveRect.resolveOffsetY) -
+                         static_cast<int32_t>(expandResolveRect.colorOffsetY);
+    DAWN_ASSERT(std::abs(offsetX) < std::numeric_limits<int16_t>::max());
+    DAWN_ASSERT(std::abs(offsetY) < std::numeric_limits<int16_t>::max());
+    return static_cast<uint32_t>(offsetX & 0xffff) | static_cast<uint32_t>(offsetY << 16);
+}
+
 MaybeError ExpandResolveTextureWithDraw(
     DeviceBase* device,
     RenderPassEncoder* renderEncoder,
@@ -271,12 +323,19 @@ MaybeError ExpandResolveTextureWithDraw(
     DAWN_ASSERT(device->CanTextureLoadResolveTargetInTheSameRenderpass());
 
     BlitColorToColorWithDrawPipelineKey pipelineKey;
+    uint32_t colorAttachmentWidth = 0;
+    uint32_t colorAttachmentHeight = 0;
     for (uint8_t i = 0; i < renderPassDescriptor->colorAttachmentCount; ++i) {
         ColorAttachmentIndex colorIdx(i);
         const auto& colorAttachment = renderPassDescriptor->colorAttachments[i];
         TextureViewBase* view = colorAttachment.view;
         if (!view) {
             continue;
+        }
+        if (colorAttachmentWidth == 0) {
+            Extent3D renderSize = view->GetSingleSubresourceVirtualSize();
+            colorAttachmentWidth = renderSize.width;
+            colorAttachmentHeight = renderSize.height;
         }
         const Format& format = view->GetFormat();
         TextureComponentType baseType = format.GetAspectInfo(Aspect::Color).baseType;
@@ -289,7 +348,7 @@ MaybeError ExpandResolveTextureWithDraw(
                         wgpu::TextureViewDimension::e2D);
             pipelineKey.attachmentsToExpandResolve.set(colorIdx);
         }
-        pipelineKey.resolveTargetsMask.set(colorIdx, colorAttachment.resolveTarget);
+        pipelineKey.resolveTargetsMask.set(colorIdx, colorAttachment.resolveTarget != nullptr);
 
         pipelineKey.colorTargetFormats[colorIdx] = format.format;
         pipelineKey.sampleCount = view->GetTexture()->GetSampleCount();
@@ -316,7 +375,7 @@ MaybeError ExpandResolveTextureWithDraw(
     {
         absl::InlinedVector<BindGroupEntry, kMaxColorAttachments> bgEntries = {};
 
-        for (auto colorIdx : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+        for (auto colorIdx : pipelineKey.attachmentsToExpandResolve) {
             uint8_t i = static_cast<uint8_t>(colorIdx);
             const auto& colorAttachment = renderPassDescriptor->colorAttachments[i];
             bgEntries.push_back({});
@@ -331,18 +390,32 @@ MaybeError ExpandResolveTextureWithDraw(
         bgDesc.entries = bgEntries.data();
         DAWN_TRY_ASSIGN(bindGroup, device->CreateBindGroup(&bgDesc, UsageValidationMode::Internal));
     }
-
-    // Draw to perform the blit.
     renderEncoder->APISetBindGroup(0, bindGroup.Get());
+
     renderEncoder->APISetPipeline(pipeline.Get());
 
-    if (const auto* rect = renderPassDescriptor.Get<RenderPassDescriptorExpandResolveRect>()) {
+    const auto* expandResolveRect = renderPassDescriptor.Get<RenderPassDescriptorResolveRect>();
+    if (expandResolveRect) {
         // TODO(chromium:344814092): Prevent the scissor to be reset to outside of this region by
         // passing the scissor bound to the render pass creation.
-        renderEncoder->APISetScissorRect(rect->x, rect->y, rect->width, rect->height);
+        renderEncoder->APISetScissorRect(expandResolveRect->colorOffsetX,
+                                         expandResolveRect->colorOffsetY, expandResolveRect->width,
+                                         expandResolveRect->height);
     }
+    // The texture size never exceeds 16 bits. We pack two values {offsetX, offsetY} into a 32-bit
+    // firstInstance value, which avoids creating a uniform buffer.
+    const auto offsets = expandResolveRect ? PackOffsets(*expandResolveRect) : 0;
+    // Draw to perform the blit.
+    renderEncoder->APIDraw(/*vertexCount=*/3,
+                           /*instanceCount=*/1,
+                           /*firstVertex=*/0,
+                           /*firstInstance=*/offsets);
 
-    renderEncoder->APIDraw(3);
+    // After expanding the resolve texture, we reset the scissor rect to the full size of the color
+    // attachment to prevent the previous scissor rect from affecting all subsequent user draws.
+    if (expandResolveRect) {
+        renderEncoder->APISetScissorRect(0, 0, colorAttachmentWidth, colorAttachmentHeight);
+    }
 
     return {};
 }
@@ -385,7 +458,7 @@ bool BlitColorToColorWithDrawPipelineKey::EqualityFunc::operator()(
 
 MaybeError ResolveMultisampleWithDraw(DeviceBase* device,
                                       CommandEncoder* encoder,
-                                      Rect2D rect,
+                                      const RenderPassDescriptorResolveRect& rect,
                                       TextureViewBase* src,
                                       TextureViewBase* dst) {
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
@@ -401,7 +474,6 @@ MaybeError ResolveMultisampleWithDraw(DeviceBase* device,
     Ref<BindGroupBase> bindGroup;
     DAWN_TRY_ASSIGN(bindGroup, utils::MakeBindGroup(device, bindGroupLayout, {{0, src}},
                                                     UsageValidationMode::Internal));
-
     // Color attachment descriptor.
     RenderPassColorAttachment colorAttachmentDesc;
     colorAttachmentDesc.view = dst;
@@ -417,8 +489,15 @@ MaybeError ResolveMultisampleWithDraw(DeviceBase* device,
     // Draw to perform the resolve.
     renderEncoder->APISetBindGroup(0, bindGroup.Get(), 0, nullptr);
     renderEncoder->APISetPipeline(pipeline.Get());
-    renderEncoder->APISetScissorRect(rect.x, rect.y, rect.width, rect.height);
-    renderEncoder->APIDraw(3);
+    renderEncoder->APISetScissorRect(rect.resolveOffsetX, rect.resolveOffsetY, rect.width,
+                                     rect.height);
+    // The texture size never exceeds 16 bits. We pack two values {offsetX, offsetY} into a 32-bit
+    // firstInstance value, which avoids creating a uniform buffer.
+    const auto offsets = PackOffsets(rect);
+    renderEncoder->APIDraw(/*vertexCount=*/3,
+                           /*instanceCount=*/1,
+                           /*firstVertex=*/0,
+                           /*firstInstance=*/offsets);
     renderEncoder->End();
 
     return {};

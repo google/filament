@@ -40,7 +40,7 @@ public suspend fun Texture.createBitmap(device: Device): Bitmap {
             size = size.toLong(),
             usage = BufferUsage.CopyDst or BufferUsage.MapRead
         )
-    )
+    )!!
     device.queue.submit(arrayOf(device.createCommandEncoder().let {
         it.copyTextureToBuffer(
             source = TexelCopyTextureInfo(texture = this),

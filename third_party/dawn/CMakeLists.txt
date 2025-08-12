@@ -26,13 +26,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # As per https://github.com/google/oss-policies-info/blob/main/foundational-cxx-support-matrix.md
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 # - Since we are past CMake 3.12 we can add CONFIGURE_DEPENDS to DawnGenerator to rerun CMake
 #   in case any of the generator files changes. We should also remove the CACHE "" FORCE stuff to
 #   override options in third_party dependencies.
-# - When upgrading to CMake 3.20 we can take advantage of the GENERATED property being global in
-#   DawnGenerator. We should also use the path utilities in dawn_install_target.
 
 project(
     Dawn
@@ -51,6 +49,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_DEBUG_POSTFIX "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(IS_DEBUG_BUILD 0)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" build_type)
+if ((NOT ${build_type} STREQUAL "RELEASE") AND (NOT ${build_type} STREQUAL "RELWITHDEBINFO"))
+  set(IS_DEBUG_BUILD 1)
+endif()
 
 include(DawnSetIfNotDefined)
 
@@ -71,6 +75,7 @@ set(ENABLE_D3D11 OFF)
 set(ENABLE_D3D12 OFF)
 set(ENABLE_METAL OFF)
 set(ENABLE_NULL ON)
+set(ENABLE_WEBGPU_ON_WEBGPU OFF)
 set(ENABLE_OPENGLES OFF)
 set(ENABLE_DESKTOP_GL OFF)
 set(ENABLE_VULKAN OFF)
@@ -81,12 +86,14 @@ set(USE_WINDOWS_UI OFF)
 set(BUILD_SAMPLES OFF)
 set(BUILD_TESTS OFF)
 set(TARGET_MACOS OFF)
+set(FORCE_SYSTEM_COMPONENT_LOAD OFF)
 if (EMSCRIPTEN)
   # Only the samples are supported for Emscripten at the moment.
   # TODO(crbug.com/42240181): Make dawn_end2end_tests work too.
   set(BUILD_SAMPLES ON)
   set(BUILD_TESTS ON)
   set(ENABLE_NULL OFF)
+  set(ENABLE_WEBGPU_ON_WEBGPU OFF)
 elseif (WIN32)
   set(ENABLE_D3D11 ON)
   set(USE_WINDOWS_UI ON)
@@ -118,7 +125,7 @@ endif()
 
 # GLFW is not supported in UWP
 set(DAWN_SUPPORTS_GLFW_FOR_WINDOWING OFF)
-if (NOT EMSCRIPTEN AND ((WIN32 AND NOT WINDOWS_STORE) OR (UNIX AND NOT ANDROID)))
+if (EMSCRIPTEN OR (WIN32 AND NOT WINDOWS_STORE) OR (UNIX AND NOT ANDROID))
     set(DAWN_SUPPORTS_GLFW_FOR_WINDOWING ON)
 endif()
 
@@ -137,10 +144,12 @@ option(DAWN_ENABLE_D3D11 "Enable compilation of the D3D11 backend" ${ENABLE_D3D1
 option(DAWN_ENABLE_D3D12 "Enable compilation of the D3D12 backend" ${ENABLE_D3D12})
 option(DAWN_ENABLE_METAL "Enable compilation of the Metal backend" ${ENABLE_METAL})
 option(DAWN_ENABLE_NULL "Enable compilation of the Null backend" ${ENABLE_NULL})
+option(DAWN_ENABLE_WEBGPU_ON_WEBGPU "Enable compilation of the WebGPU backend" ${ENABLE_WEBGPU_ON_WEBGPU})
 option(DAWN_ENABLE_DESKTOP_GL "Enable compilation of the OpenGL backend" ${ENABLE_DESKTOP_GL})
 option(DAWN_ENABLE_OPENGLES "Enable compilation of the OpenGL ES backend" ${ENABLE_OPENGLES})
 option(DAWN_ENABLE_VULKAN "Enable compilation of the Vulkan backend" ${ENABLE_VULKAN})
 option(DAWN_ENABLE_SPIRV_VALIDATION "Enable validation of SPIR-V" ${ENABLE_SPIRV_VALIDATION})
+option(DAWN_FORCE_SYSTEM_COMPONENT_LOAD "Allow system component fallback" ${FORCE_SYSTEM_COMPONENT_LOAD})
 
 message(STATUS "Dawn building using Emscripten toolchain: ${EMSCRIPTEN}")
 message(STATUS "Dawn build D3D11 backend: ${DAWN_ENABLE_D3D11}")
@@ -158,6 +167,7 @@ message(STATUS "Dawn build with TSAN: ${DAWN_ENABLE_TSAN}")
 message(STATUS "Dawn build with MSAN: ${DAWN_ENABLE_MSAN}")
 message(STATUS "Dawn build with UBSAN: ${DAWN_ENABLE_UBSAN}")
 message(STATUS "Dawn enable install: ${DAWN_ENABLE_INSTALL}")
+message(STATUS "Dawn allow system component fallback: ${DAWN_FORCE_SYSTEM_COMPONENT_LOAD}")
 message(STATUS "")
 
 option(DAWN_ALWAYS_ASSERT "Enable assertions on all build types" OFF)
@@ -174,9 +184,10 @@ option(DAWN_BUILD_TESTS "Enables building Dawn's tests" ${BUILD_TESTS})
 option(DAWN_BUILD_NODE_BINDINGS "Enables building Dawn's NodeJS bindings" OFF)
 option(DAWN_ENABLE_SWIFTSHADER "Enables building Swiftshader as part of the build and Vulkan adapter discovery" OFF)
 option(DAWN_BUILD_BENCHMARKS "Build Dawn benchmarks" OFF)
-option(DAWN_BUILD_PROTOBUF "Build the protobuf dependencies" OFF)
+option(DAWN_BUILD_PROTOBUF "Build the protobuf dependencies" ON)
 
 option(DAWN_WERROR "Build with -Werror (or equivalent)" OFF)
+option(DAWN_WEVERYTHING "Build with -Weverything if using Clang" OFF)
 option(DAWN_ENABLE_PIC "Build with Position-Independent-Code enabled" OFF)
 
 option(DAWN_EMIT_COVERAGE "Emit code coverage information" OFF)
@@ -229,15 +240,8 @@ option(TINT_BUILD_SPV_WRITER "Build the SPIR-V output writer" ${DAWN_ENABLE_VULK
 option(TINT_BUILD_WGSL_WRITER "Build the WGSL output writer" ON)
 option(TINT_BUILD_SYNTAX_TREE_WRITER "Build the syntax tree writer" OFF)
 
-if (DAWN_BUILD_PROTOBUF AND TARGET libprotobuf)
-  set(TINT_DEFAULT_BUILD_IR_BINARY ON)
-else()
-  set(TINT_DEFAULT_BUILD_IR_BINARY OFF)
-endif()
-
-option(TINT_BUILD_IR_BINARY "Build IR binary format support" ${TINT_DEFAULT_BUILD_IR_BINARY})
+option(TINT_BUILD_IR_BINARY "Build IR binary format support" ${DAWN_BUILD_PROTOBUF})
 option(TINT_BUILD_FUZZERS "Build fuzzers" OFF)
-option(TINT_BUILD_IR_FUZZER "Build IR fuzzer" OFF)
 option(TINT_BUILD_BENCHMARKS "Build Tint benchmarks" OFF)
 option(TINT_BUILD_TESTS "Build tests" ON)
 option(TINT_BUILD_AS_OTHER_OS "Override OS detection to force building of *_other.cc files" OFF)
@@ -251,6 +255,7 @@ endif()
 
 option(TINT_BUILD_TINTD "Build the WGSL language server" OFF)
 
+option(TINT_ENABLE_IR_VALIDATION "Enable IR validation for backend codegen" ${IS_DEBUG_BUILD})
 option(TINT_ENABLE_BREAK_IN_DEBUGGER "Enable tint::debugger::Break()" OFF)
 option(TINT_CHECK_CHROMIUM_STYLE "Check for [chromium-style] issues during build" OFF)
 option(TINT_RANDOMIZE_HASHES "Randomize the hash seed value to detect non-deterministic output" OFF)
@@ -269,11 +274,11 @@ message(STATUS "Tint build command line executable tools: ${TINT_BUILD_CMD_TOOLS
 message(STATUS "Tint install: ${TINT_ENABLE_INSTALL}")
 message(STATUS "Tint build fuzzers: ${TINT_BUILD_FUZZERS}")
 message(STATUS "Tint build IR binary: ${TINT_BUILD_IR_BINARY}")
-message(STATUS "Tint build IR fuzzer: ${TINT_BUILD_IR_FUZZER}")
 message(STATUS "Tint build benchmarks: ${TINT_BUILD_BENCHMARKS}")
 message(STATUS "Tint build tests: ${TINT_BUILD_TESTS}")
 message(STATUS "Tint build tintd: ${TINT_BUILD_TINTD}")
 message(STATUS "")
+message(STATUS "Tint enable IR validation: ${TINT_ENABLE_IR_VALIDATION}")
 message(STATUS "Tint enable break in debugger: ${TINT_ENABLE_BREAK_IN_DEBUGGER}")
 message(STATUS "Tint build checking [chromium-style]: ${TINT_CHECK_CHROMIUM_STYLE}")
 message(STATUS "Tint randomize hashes: ${TINT_RANDOMIZE_HASHES}")
@@ -326,11 +331,23 @@ message(STATUS "Webgpu IDL path: ${WEBGPU_IDL_PATH}")
 message(STATUS "Go exe: ${GO_EXECUTABLE}")
 message(STATUS "")
 
-option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" OFF)
-option(DAWN_BUILD_MONOLITHIC_LIBRARY "Bundle all dawn components into a single shared library." ON)
+# Handling of the type of monolithic library to build, if any.
+set(DAWN_BUILD_MONOLITHIC_LIBRARY "OFF" CACHE STRING "Build monolithic library: SHARED, STATIC, or OFF.")
+set_property(CACHE DAWN_BUILD_MONOLITHIC_LIBRARY PROPERTY STRINGS SHARED SHARED STATIC)
 
-message(STATUS "Dawn fetch dependencies: ${DAWN_FETCH_DEPENDENCIES}")
+string(TOUPPER "${DAWN_BUILD_MONOLITHIC_LIBRARY}" _option_upper)
+if(NOT _option_upper STREQUAL "OFF" AND
+   NOT _option_upper STREQUAL "SHARED" AND
+   NOT _option_upper STREQUAL "STATIC")
+    message(FATAL_ERROR "DAWN_BUILD_MONOLITHIC_LIBRARY must be SHARED, STATIC, or OFF, but was \"${DAWN_BUILD_MONOLITHIC_LIBRARY}\".")
+endif()
+if (DAWN_BUILD_MONOLITHIC_LIBRARY AND BUILD_SHARED_LIBS)
+    message(FATAL_ERROR "DAWN_BUILD_MONOLITHIC_LIBRARY SHARED/STATIC requires BUILD_SHARED_LIBS=OFF. Otherwise the bundled library will depend on other shared libraries which defeats the purpose.")
+endif()
 message(STATUS "Dawn build monolithic library: ${DAWN_BUILD_MONOLITHIC_LIBRARY}")
+
+option(DAWN_FETCH_DEPENDENCIES "Use fetch_dawn_dependencies.py as an alternative to using depot_tools" OFF)
+message(STATUS "Dawn fetch dependencies: ${DAWN_FETCH_DEPENDENCIES}")
 message(STATUS "")
 
 # Much of the backend code is shared among desktop OpenGL and OpenGL ES
@@ -378,13 +395,8 @@ endif()
 find_package(Python3 REQUIRED)
 message(STATUS "Dawn: using python at ${Python3_EXECUTABLE}")
 
-set(IS_DEBUG_BUILD 0)
-string(TOUPPER "${CMAKE_BUILD_TYPE}" build_type)
-if ((NOT ${build_type} STREQUAL "RELEASE") AND (NOT ${build_type} STREQUAL "RELWITHDEBINFO"))
-  set(IS_DEBUG_BUILD 1)
-endif()
-
-# Compile definitions for the internal config
+# Options and compile definitions for the internal config
+add_dependencies(dawn_internal_config dawn_warnings_config)
 if (DAWN_ALWAYS_ASSERT OR IS_DEBUG_BUILD)
     target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_ASSERTS")
 endif()
@@ -399,6 +411,9 @@ if (DAWN_ENABLE_METAL)
 endif()
 if (DAWN_ENABLE_NULL)
     target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_NULL")
+endif()
+if (DAWN_ENABLE_WEBGPU_ON_WEBGPU)
+    target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_WEBGPU")
 endif()
 if (DAWN_ENABLE_DESKTOP_GL)
     target_compile_definitions(dawn_internal_config INTERFACE "DAWN_ENABLE_BACKEND_DESKTOP_GL")
@@ -424,6 +439,9 @@ endif()
 if (WIN32)
     target_compile_definitions(dawn_internal_config INTERFACE "NOMINMAX" "WIN32_LEAN_AND_MEAN")
 endif()
+if (DAWN_FORCE_SYSTEM_COMPONENT_LOAD)
+    target_compile_definitions(dawn_internal_config INTERFACE "DAWN_FORCE_SYSTEM_COMPONENT_LOAD")
+endif()
 
 ################################################################################
 # Tint
@@ -439,15 +457,6 @@ set(TINT_SPIRV_TOOLS_DIR   ${DAWN_SPIRV_TOOLS_DIR})
 ################################################################################
 # Run on all subdirectories
 ################################################################################
-if (DAWN_BUILD_PROTOBUF AND EXISTS "${DAWN_PROTOBUF_DIR}/cmake")
-  if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND WIN32)
-    set(protobuf_HAVE_BUILTIN_ATOMICS 1)
-  endif()
-
-  # Needs to come before SPIR-V Tools
-  include("third_party/protobuf.cmake")
-endif()
-
 add_subdirectory(third_party)
 
 # TODO(crbug.com/tint/455): Tint does not currently build with CMake when

@@ -545,6 +545,7 @@ config("common_config") {
       "-fcxx-exceptions",  # DXC uses exceptions
       "-fms-extensions",
       "-frtti",  # DXC uses RTTI
+      "-fno-sized-deallocation",  # Disable sized allocation
     ]
   }
 
@@ -1451,6 +1452,7 @@ dxcompiler_sourceset("lib_dxilpixpasses") {
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilDbgValueToDbgDeclare.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilDebugInstrumentation.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilForceEarlyZ.cpp",
+    "$dawn_dxc_dir/lib/DxilPIXPasses/DxilNonUniformResourceIndexInstrumentation.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilOutputColorBecomesConstant.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilPIXAddTidToAmplificationShaderPayload.cpp",
     "$dawn_dxc_dir/lib/DxilPIXPasses/DxilPIXDXRInvocationsLog.cpp",
@@ -1517,6 +1519,7 @@ dxcompiler_sourceset("lib_hlsl") {
     "$dawn_dxc_dir/lib/HLSL/DxilPreserveAllOutputs.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilPromoteResourcePasses.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilRenameResourcesPass.cpp",
+    "$dawn_dxc_dir/lib/HLSL/DxilScalarizeVectorLoadStores.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilSignatureValidation.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilSimpleGVNHoist.cpp",
     "$dawn_dxc_dir/lib/HLSL/DxilTargetLowering.cpp",
@@ -2300,7 +2303,6 @@ dxcompiler_sourceset("dxcompiler_sources") {
     "$dawn_dxc_dir/tools/clang/tools/dxcompiler/dxcshadersourceinfo.cpp",
     "$dawn_dxc_dir/tools/clang/tools/dxcompiler/dxcutil.cpp",
     "$dawn_dxc_dir/tools/clang/tools/dxcompiler/dxcvalidator.cpp",
-    "$dawn_dxc_dir/tools/clang/tools/dxcompiler/dxillib.cpp",
   ]
   deps = [ ":DxcDisassembler-inc" ]
 }

@@ -104,7 +104,7 @@ void OpenGLFunctionsBase::InitializeSupportedGLExtensions() {
 
 bool OpenGLFunctionsBase::IsGLExtensionSupported(const char* extension) const {
     DAWN_ASSERT(extension != nullptr);
-    return mSupportedGLExtensionsSet.count(extension) != 0;
+    return mSupportedGLExtensionsSet.contains(extension);
 }
 
 }  // namespace dawn::native::opengl

@@ -138,10 +138,9 @@ type Type struct {
 
 // TypeMatcher declares a type matcher
 type TypeMatcher struct {
-	TemplateParams []TemplateParam
-	Decl           ast.MatcherDecl
-	Name           string
-	Types          []*Type
+	Decl  ast.MatcherDecl
+	Name  string
+	Types []*Type
 }
 
 func (t TypeMatcher) PrecedenceSortedTypes() []*Type {

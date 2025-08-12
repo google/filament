@@ -25,8 +25,12 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/matrix.h"
+#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -34,13 +38,14 @@ namespace {
 using MatrixTest = TestHelper;
 
 TEST_F(MatrixTest, Creation) {
-    auto* a = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
-    auto* b = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
-    auto* c = create<Matrix>(create<Vector>(create<F32>(), 3u), 4u);
-    auto* d = create<Matrix>(create<Vector>(create<I32>(), 2u), 4u);
-    auto* e = create<Matrix>(create<Vector>(create<I32>(), 3u), 2u);
+    Manager ty;
+    auto* a = ty.mat4x3(ty.i32());
+    auto* b = ty.mat4x3(ty.i32());
+    auto* c = ty.mat4x3(ty.f32());
+    auto* d = ty.mat4x2(ty.i32());
+    auto* e = ty.mat2x3(ty.i32());
 
-    EXPECT_EQ(a->Type(), create<I32>());
+    EXPECT_EQ(a->Type(), ty.i32());
     EXPECT_EQ(a->Rows(), 3u);
     EXPECT_EQ(a->Columns(), 4u);
 
@@ -51,18 +56,20 @@ TEST_F(MatrixTest, Creation) {
 }
 
 TEST_F(MatrixTest, Hash) {
-    auto* a = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
-    auto* b = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
+    Manager ty;
+    auto* a = ty.mat4x3(ty.i32());
+    auto* b = ty.mat4x3(ty.i32());
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(MatrixTest, Equals) {
-    auto* a = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
-    auto* b = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
-    auto* c = create<Matrix>(create<Vector>(create<F32>(), 3u), 4u);
-    auto* d = create<Matrix>(create<Vector>(create<I32>(), 2u), 4u);
-    auto* e = create<Matrix>(create<Vector>(create<I32>(), 3u), 2u);
+    Manager ty;
+    auto* a = ty.mat4x3(ty.i32());
+    auto* b = ty.mat4x3(ty.i32());
+    auto* c = ty.mat4x3(ty.f32());
+    auto* d = ty.mat4x2(ty.i32());
+    auto* e = ty.mat2x3(ty.i32());
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -79,7 +86,8 @@ TEST_F(MatrixTest, FriendlyName) {
 }
 
 TEST_F(MatrixTest, Clone) {
-    auto* a = create<Matrix>(create<Vector>(create<I32>(), 3u), 4u);
+    Manager ty;
+    auto* a = ty.mat4x3(ty.i32());
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

@@ -25,7 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/wgsl/reader/program_to_ir/ir_program_test.h"
 
 namespace tint::wgsl::reader {
@@ -45,7 +44,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Bitcast) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%my_func = func():f32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%my_func = func():f32 {
   $B1: {
     ret 0.0f
   }
@@ -71,7 +70,7 @@ TEST_F(ProgramToIRCallTest, EmitStatement_Discard) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%test_function = @fragment func():void {
+    EXPECT_EQ(Dis(m.Get()), R"(%test_function = @fragment func():void {
   $B1: {
     discard
     ret
@@ -88,7 +87,7 @@ TEST_F(ProgramToIRCallTest, EmitStatement_UserFunction) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%my_func = func(%p:f32):void {
+    EXPECT_EQ(Dis(m.Get()), R"(%my_func = func(%p:f32):void {
   $B1: {
     ret
   }
@@ -110,7 +109,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Convert) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
+    EXPECT_EQ(Dis(m.Get()), R"($B1: {  # root
   %i:ptr<private, i32, read_write> = var 1i
 }
 
@@ -132,7 +131,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_ConstructEmpty) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
+    EXPECT_EQ(Dis(m.Get()), R"($B1: {  # root
   %i:ptr<private, vec3<f32>, read_write> = var vec3<f32>(0.0f)
 }
 
@@ -147,7 +146,7 @@ TEST_F(ProgramToIRCallTest, EmitExpression_Construct) {
     auto m = Build();
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
+    EXPECT_EQ(Dis(m.Get()), R"($B1: {  # root
   %i:ptr<private, f32, read_write> = var 1.0f
 }
 

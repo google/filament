@@ -31,7 +31,6 @@
 #include <utility>
 
 #include "dawn/common/Assert.h"
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/ityp_array.h"
 
 namespace dawn::native {
@@ -53,6 +52,10 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Support Block Compressed (BC) texture formats",
       "https://gpuweb.github.io/gpuweb/#texture-compression-bc",
       FeatureInfo::FeatureState::Stable}},
+    {Feature::TextureCompressionBCSliced3D,
+     {"Allows Block Compressed (BC) texture formats to be used with 3D dimensions",
+      "https://gpuweb.github.io/gpuweb/#texture-compression-bc-sliced-3d",
+      FeatureInfo::FeatureState::Stable}},
     {Feature::TextureCompressionETC2,
      {"Support Ericsson Texture Compressed (ETC2/EAC) texture formats",
       "https://gpuweb.github.io/gpuweb/#texture-compression-etc2",
@@ -61,6 +64,11 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Support Adaptable Scalable Texture Compressed (ASTC) "
       "texture formats",
       "https://gpuweb.github.io/gpuweb/#texture-compression-astc",
+      FeatureInfo::FeatureState::Stable}},
+    {Feature::TextureCompressionASTCSliced3D,
+     {"Allows Adaptable Scalable Texture Compressed (ASTC) texture formats to be used with 3D "
+      "dimensions",
+      "https://gpuweb.github.io/gpuweb/#texture-compression-astc-sliced-3d",
       FeatureInfo::FeatureState::Stable}},
     {Feature::TimestampQuery,
      {"Support Timestamp Query", "https://gpuweb.github.io/gpuweb/#timestamp-query",
@@ -363,7 +371,7 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "dawn_load_resolve_texture.md",
       FeatureInfo::FeatureState::Stable}},
     {Feature::DawnPartialLoadResolveTexture,
-     {"Support RenderPassDescriptorExpandResolveRect as chained struct into RenderPassDescriptor "
+     {"Support RenderPassDescriptorResolveRect as chained struct into RenderPassDescriptor "
       "for a render pass. This will expand and resolve the texels within the rect of texture.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "dawn_partial_load_resolve_texture.md",
@@ -372,10 +380,21 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Supports the \"enable subgroups;\" directive in WGSL.",
       "https://github.com/gpuweb/gpuweb/blob/main/proposals/subgroups.md",
       FeatureInfo::FeatureState::Stable}},
-    {Feature::SubgroupsF16,
-     {"Supports the \"enable subgroups_f16;\" directive in WGSL (deprecated).",
-      "https://github.com/gpuweb/gpuweb/blob/main/proposals/subgroups.md",
-      FeatureInfo::FeatureState::Stable}},
+    {Feature::TextureFormatsTier1,
+     {"Supports some new GPUTextureFormats with the RENDER_ATTACHMENT, blendable, multisampling "
+      "capabilities and the STORAGE_BINDING capability with the 'read-only' and 'write-only'"
+      "GPUStorageTextureAccesses.",
+      "https://gpuweb.github.io/gpuweb/#texture-formats-tier1",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::TextureFormatsTier2,
+     {"Supports StorageTextureAccess 'read-write' on several additional formats.",
+      "https://gpuweb.github.io/gpuweb/#texture-formats-tier2",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::TextureComponentSwizzle,
+     {"Texture component swizzle lets you to specify how the channels of a texture (red, green, "
+      "blue, and alpha) are mapped to the color components when accessed by a shader.",
+      "https://github.com/gpuweb/gpuweb/blob/main/proposals/texture-component-swizzle.md",
+      FeatureInfo::FeatureState::Experimental}},
     {Feature::CoreFeaturesAndLimits,
      {"Lifts all compatibility mode restrictions (features and limits) to core when enabled on a "
       "device.",
@@ -392,10 +411,6 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
      {"Support the \"enable clip_distances;\" directive in WGSL.",
       "https://gpuweb.github.io/gpuweb/#dom-gpufeaturename-clip-distances",
       FeatureInfo::FeatureState::Stable}},
-    {Feature::ChromiumExperimentalImmediateData,
-     {"Support the \"enable chromium_experimental_immediate_data;\" directive in WGSL.",
-      "https://github.com/gpuweb/gpuweb/blob/main/proposals/push-constants.md",
-      FeatureInfo::FeatureState::Experimental}},
     {Feature::DawnTexelCopyBufferRowAlignment,
      {"Expose the min row alignment in buffer for texel copy operations.",
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
@@ -408,7 +423,18 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       FeatureInfo::FeatureState::Stable}},
     {Feature::ChromiumExperimentalSubgroupMatrix,
      {"Support the \"enable chromium_experimental_subgroup_matrix;\" directive in WGSL.",
-      "https://github.com/gpuweb/gpuweb/issues/4195", FeatureInfo::FeatureState::Experimental}}};
+      "https://github.com/gpuweb/gpuweb/issues/4195", FeatureInfo::FeatureState::Experimental}},
+    {Feature::DawnDeviceAllocatorControl,
+     {"Supports configuring device allocator via DawnDeviceAllocatorControl",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "dawn_device_allocator_control.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::ChromiumExperimentalPrimitiveId,
+     {"Supports the \"enable chromium_experimental_primitive_id;\" directive in WGSL",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/tint/extensions/"
+      "chromium_experimental_primitive_id.md",
+      FeatureInfo::FeatureState::Experimental}}};
+
 }  // anonymous namespace
 
 void FeaturesSet::EnableFeature(Feature feature) {
@@ -446,7 +472,7 @@ void FeaturesSet::ToSupportedFeatures(SupportedFeatures* supportedFeatures) cons
     // This will be freed by wgpuSupportedFeaturesFreeMembers.
     wgpu::FeatureName* features = new wgpu::FeatureName[count];
     uint32_t index = 0;
-    for (Feature f : IterateBitSet(featuresBitSet)) {
+    for (Feature f : featuresBitSet) {
         features[index++] = ToAPI(f);
     }
     DAWN_ASSERT(index == count);

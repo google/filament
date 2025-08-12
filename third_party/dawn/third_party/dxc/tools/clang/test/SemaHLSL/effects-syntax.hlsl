@@ -108,12 +108,10 @@ static const PixelShader ps1 { state=foo; };                /* expected-warning 
 /*verify-ast
   No matching AST found for line!
 */
-// expected-note@? {{'PixelShader' declared here}}
 PixelShadeR ps < int foo=1;>  = ps1;   // Case insensitive! /* expected-error {{unknown type name 'PixelShadeR'; did you mean 'PixelShader'?}} expected-warning {{effect object ignored - effect syntax is deprecated}} expected-warning {{possible effect annotation ignored - effect syntax is deprecated}} fxc-pass {{}} */
 /*verify-ast
   No matching AST found for line!
 */
-// expected-note@? {{'VertexShader' declared here}}
 VertexShadeR vs;        // Case insensitive!                /* expected-error {{unknown type name 'VertexShadeR'; did you mean 'VertexShader'?}} expected-warning {{effect object ignored - effect syntax is deprecated}} fxc-pass {{}} */
 
 // Case sensitive

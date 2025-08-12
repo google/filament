@@ -57,7 +57,6 @@ set(SOURCES
   DXCompiler.rc
   DXCompiler.def
   dxcfilesystem.cpp
-  dxillib.cpp
   dxcutil.cpp
   dxcdisassembler.cpp
   dxcpdbutils.cpp
@@ -75,7 +74,6 @@ set(SOURCES
   dxcutil.cpp
   dxcdisassembler.cpp
   dxcpdbutils.cpp
-  dxillib.cpp
   dxcvalidator.cpp
   dxclinker.cpp
   dxcshadersourceinfo.cpp

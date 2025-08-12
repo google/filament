@@ -36,9 +36,12 @@ namespace dawn {
 // refcount for calls to APIAddRef/APIRelease (refs added/removed by the application).
 // The external refcount starts at 0, and the total refcount starts at 1 - i.e. the first
 // ref isn't an external ref.
-// When the external refcount drops to zero, WillDropLastExternalRef is called. and it can be called
+// When the external refcount is incremented from 0 to 1, WillAddFirstExternalRef is called, and it
+// can be called more than once.
+// When the external refcount drops to zero, WillDropLastExternalRef is called, and it can be called
 // more than once.
-// The derived class must override the behavior of WillDropLastExternalRef.
+// The derived class must override the behavior of WillDropLastExternalRef, overriding
+// WillAddFirstExternalRef is optional.
 template <typename T>
 class RefCountedWithExternalCount : public T {
   public:
@@ -58,13 +61,18 @@ class RefCountedWithExternalCount : public T {
         T::APIRelease();
     }
 
-    void IncrementExternalRefCount() { mExternalRefCount.Increment(); }
+    void IncrementExternalRefCount() {
+        if (mExternalRefCount.Increment()) {
+            WillAddFirstExternalRef();
+        }
+    }
 
     uint64_t GetExternalRefCountForTesting() const {
         return mExternalRefCount.GetValueForTesting();
     }
 
   private:
+    virtual void WillAddFirstExternalRef() {}
     virtual void WillDropLastExternalRef() = 0;
 
     RefCount mExternalRefCount{/*initCount=*/0, /*payload=*/0};

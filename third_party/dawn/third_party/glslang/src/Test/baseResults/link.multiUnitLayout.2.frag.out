@@ -1,0 +1,67 @@
+link.multiUnitLayout.2.frag
+Shader version: 450
+using depth_less
+0:? Sequence
+0:8  Function Definition: outputColor(vf4; ( global void)
+0:8    Function Parameters: 
+0:8      'color' ( in 4-component vector of float)
+0:10    Sequence
+0:10      move second child to first child ( temp 4-component vector of float)
+0:10        'FragColor' (layout( location=0) out 4-component vector of float)
+0:10        'color' ( in 4-component vector of float)
+0:?   Linker Objects
+0:?     'gl_FragDepth' ( gl_FragDepth float FragDepth)
+0:?     'FragColor' (layout( location=0) out 4-component vector of float)
+
+link.multiUnitLayout.0.frag
+Shader version: 450
+using depth_greater
+0:? Sequence
+0:7  Function Definition: main( ( global void)
+0:7    Function Parameters: 
+0:9    Sequence
+0:9      Function Call: outputColor(vf4; ( global void)
+0:9        Constant:
+0:9          1.000000
+0:9          0.000000
+0:9          0.000000
+0:9          1.000000
+0:10      move second child to first child ( temp float)
+0:10        'gl_FragDepth' ( gl_FragDepth float FragDepth)
+0:10        Constant:
+0:10          0.500000
+0:?   Linker Objects
+0:?     'gl_FragDepth' ( gl_FragDepth float FragDepth)
+
+
+Linked fragment stage:
+
+ERROR: Linking fragment stage: Contradictory depth layouts
+
+Shader version: 450
+using depth_less
+0:? Sequence
+0:8  Function Definition: outputColor(vf4; ( global void)
+0:8    Function Parameters: 
+0:8      'color' ( in 4-component vector of float)
+0:10    Sequence
+0:10      move second child to first child ( temp 4-component vector of float)
+0:10        'FragColor' (layout( location=0) out 4-component vector of float)
+0:10        'color' ( in 4-component vector of float)
+0:7  Function Definition: main( ( global void)
+0:7    Function Parameters: 
+0:9    Sequence
+0:9      Function Call: outputColor(vf4; ( global void)
+0:9        Constant:
+0:9          1.000000
+0:9          0.000000
+0:9          0.000000
+0:9          1.000000
+0:10      move second child to first child ( temp float)
+0:10        'gl_FragDepth' ( gl_FragDepth float FragDepth)
+0:10        Constant:
+0:10          0.500000
+0:?   Linker Objects
+0:?     'gl_FragDepth' ( gl_FragDepth float FragDepth)
+0:?     'FragColor' (layout( location=0) out 4-component vector of float)
+

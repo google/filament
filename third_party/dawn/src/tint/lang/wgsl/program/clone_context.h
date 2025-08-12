@@ -79,7 +79,8 @@ class CloneContext {
     }
 
     /// @copydoc ast::CloneContext::Replace
-    template <typename WHAT, typename WITH, typename = traits::EnableIfIsType<WITH, ast::Node>>
+    template <typename WHAT, typename WITH>
+        requires(traits::IsTypeOrDerived<WITH, ast::Node>)
     CloneContext& Replace(const WHAT* what, const WITH* with) {
         ctx_.Replace<WHAT, WITH>(what, with);
         return *this;

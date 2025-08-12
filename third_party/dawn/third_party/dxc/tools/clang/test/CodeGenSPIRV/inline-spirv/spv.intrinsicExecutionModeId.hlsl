@@ -2,11 +2,11 @@
 
 // CHECK: OpCapability ShaderClockKHR
 // CHECK: OpExtension "SPV_KHR_shader_clock"
-// CHECK: OpExecutionModeId {{%[a-zA-Z0-9_]+}} LocalSizeId %uint_8 %uint_8 %uint_8
-// CHECK: OpExecutionModeId {{%[a-zA-Z0-9_]+}} LocalSizeHintId %uint_4 %uint_4 %uint_4
+// CHECK: OpExecutionModeId {{%[a-zA-Z0-9_]+}} LocalSizeId %uint_8 %uint_6 %uint_8
+// CHECK: OpExecutionModeId {{%[a-zA-Z0-9_]+}} LocalSizeHintId %int_4 %int_4 %int_4
 
 int main() : SV_Target0 {
-  vk::ext_execution_mode_id(/*LocalSizeId*/38, 8, 8, 8);
+  vk::ext_execution_mode_id(/*LocalSizeId*/38, 8u, 6u, 8u);
 
   [[vk::ext_capability(5055)]]
   [[vk::ext_extension("SPV_KHR_shader_clock")]]

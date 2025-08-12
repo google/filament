@@ -122,7 +122,6 @@ libtint_source_set("sem") {
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/lang/wgsl",
     "${tint_src_dir}/lang/wgsl/ast",
-    "${tint_src_dir}/lang/wgsl/features",
     "${tint_src_dir}/utils",
     "${tint_src_dir}/utils/containers",
     "${tint_src_dir}/utils/diagnostic",
@@ -138,6 +137,7 @@ libtint_source_set("sem") {
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
+      "array_test.cc",
       "builtin_fn_test.cc",
       "diagnostic_severity_test.cc",
       "helper_test.h",
@@ -152,10 +152,9 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/lang/core/type:unittests",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/resolver",
       "${tint_src_dir}/lang/wgsl/sem",

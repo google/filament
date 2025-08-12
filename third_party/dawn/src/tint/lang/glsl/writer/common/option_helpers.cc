@@ -30,81 +30,134 @@
 #include <utility>
 
 #include "src/tint/utils/containers/hashmap.h"
+#include "src/tint/utils/diagnostic/diagnostic.h"
 
 namespace tint::glsl::writer {
 
-diag::Result<SuccessType> ValidateBindingOptions(const Options& options) {
+namespace {
+
+enum class BindingType : uint8_t {
+    kUniform,
+    kStorage,
+    kSampler,
+    kTexture,
+    kStorageTexture,
+    kExternalTexture
+};
+
+std::string_view ToString(BindingType value) {
+    switch (value) {
+        case BindingType::kUniform:
+            return "uniform";
+        case BindingType::kStorage:
+            return "storage";
+        case BindingType::kSampler:
+            return "sampler";
+        case BindingType::kTexture:
+            return "texture";
+        case BindingType::kStorageTexture:
+            return "storage_texture";
+        case BindingType::kExternalTexture:
+            return "external_texture";
+    }
+    TINT_ICE() << "Unknown enum passed to ToString(::BindingType)";
+}
+
+}  // namespace
+
+Result<SuccessType> ValidateBindingOptions(const Options& options) {
     diag::List diagnostics;
 
-    tint::Hashmap<tint::BindingPoint, binding::BindingInfo, 8> seen_wgsl_bindings{};
-    tint::Hashmap<binding::BindingInfo, tint::BindingPoint, 8> seen_glsl_bindings{};
-
+    tint::Hashmap<tint::BindingPoint, BindingInfo, 8> seen_wgsl_bindings{};
+    tint::Hashmap<BindingInfo, tint::BindingPoint, 8> seen_glsl_texture_bindings{};
+    tint::Hashmap<BindingInfo, tint::BindingPoint, 8> seen_glsl_sampler_bindings{};
+    tint::Hashmap<BindingInfo, tint::BindingPoint, 8> seen_glsl_other_bindings{};
     // Both wgsl_seen and glsl_seen check to see if the pair of [src, dst] are unique. If
     // we have multiple entries that map the same [src, dst] pair, that's fine. We treat it as valid
     // as it's possible for multiple entry points to use the remapper at the same time. If the pair
     // doesn't match, then we report an error about a duplicate binding point.
+    // For glsl_seen it is also valid for a texture and a sampler have the same GLSL side binding
+    // point.
     auto wgsl_seen = [&diagnostics, &seen_wgsl_bindings](const tint::BindingPoint& src,
-                                                         const binding::BindingInfo& dst) -> bool {
-        if (auto binding = seen_wgsl_bindings.Get(src)) {
-            if (*binding != dst) {
-                diagnostics.AddError(Source{}) << "found duplicate WGSL binding point: " << src;
-                return true;
-            }
+                                                         const BindingInfo& dst) -> bool {
+        if (auto binding = seen_wgsl_bindings.Add(src, dst); binding.value != dst) {
+            diagnostics.AddError(Source{}) << "found duplicate WGSL binding point: " << src;
+            return true;
         }
-        seen_wgsl_bindings.Add(src, dst);
         return false;
     };
 
-    auto glsl_seen = [&diagnostics, &seen_glsl_bindings](const binding::BindingInfo& src,
-                                                         const tint::BindingPoint& dst) -> bool {
-        if (auto binding = seen_glsl_bindings.Get(src)) {
-            if (*binding != dst) {
-                diagnostics.AddError(Source{})
-                    << "found duplicate GLSL binding point: [binding: " << src.binding << "]";
-                return true;
+    auto glsl_seen = [&diagnostics, &seen_glsl_texture_bindings, &seen_glsl_sampler_bindings,
+                      &seen_glsl_other_bindings](const BindingInfo& src,
+                                                 const tint::BindingPoint& dst,
+                                                 BindingType type) -> bool {
+        auto disallowed_duplicate =
+            [&diagnostics, &src,
+             &dst](const tint::Hashmap<BindingInfo, tint::BindingPoint, 8>& seen_bindings) -> bool {
+            if (auto binding = seen_bindings.Get(src)) {
+                if (*binding != dst) {
+                    diagnostics.AddError(Source{})
+                        << "found duplicate GLSL binding point: [binding: " << src.binding << "]";
+                    return true;
+                }
             }
+            return false;
+        };
+
+        switch (type) {
+            case BindingType::kTexture:
+                if (disallowed_duplicate(seen_glsl_texture_bindings) ||
+                    disallowed_duplicate(seen_glsl_other_bindings)) {
+                    return true;
+                }
+                seen_glsl_texture_bindings.Add(src, dst);
+                break;
+            case BindingType::kSampler:
+                if (disallowed_duplicate(seen_glsl_sampler_bindings) ||
+                    disallowed_duplicate(seen_glsl_other_bindings)) {
+                    return true;
+                }
+                seen_glsl_sampler_bindings.Add(src, dst);
+                break;
+            default:
+                if (disallowed_duplicate(seen_glsl_sampler_bindings) ||
+                    disallowed_duplicate(seen_glsl_texture_bindings) ||
+                    disallowed_duplicate(seen_glsl_other_bindings)) {
+                    return true;
+                }
+                seen_glsl_other_bindings.Add(src, dst);
+                break;
         }
-        seen_glsl_bindings.Add(src, dst);
         return false;
     };
 
-    auto valid = [&wgsl_seen, &glsl_seen](const auto& hsh) -> bool {
+    auto valid = [&wgsl_seen, &glsl_seen, &diagnostics](const auto& hsh, BindingType type) -> bool {
         for (const auto& it : hsh) {
             const auto& src_binding = it.first;
             const auto& dst_binding = it.second;
 
-            if (wgsl_seen(src_binding, dst_binding)) {
-                return false;
-            }
-
-            if (glsl_seen(dst_binding, src_binding)) {
+            if (wgsl_seen(src_binding, dst_binding) || glsl_seen(dst_binding, src_binding, type)) {
+                diagnostics.AddNote(Source{}) << "when processing " << ToString(type);
                 return false;
             }
         }
         return true;
     };
 
-    if (!valid(options.bindings.uniform)) {
-        diagnostics.AddNote(Source{}) << "when processing uniform";
-        return diag::Failure{std::move(diagnostics)};
+    if (!valid(options.bindings.uniform, BindingType::kUniform)) {
+        return Failure{diagnostics.Str()};
     }
-    if (!valid(options.bindings.storage)) {
-        diagnostics.AddNote(Source{}) << "when processing storage";
-        return diag::Failure{std::move(diagnostics)};
+    if (!valid(options.bindings.storage, BindingType::kStorage)) {
+        return Failure{diagnostics.Str()};
     }
-
-    if (!valid(options.bindings.sampler)) {
-        diagnostics.AddNote(Source{}) << "when processing sampler";
-        return diag::Failure{std::move(diagnostics)};
+    if (!valid(options.bindings.sampler, BindingType::kSampler)) {
+        return Failure{diagnostics.Str()};
     }
-
-    if (!valid(options.bindings.texture)) {
-        diagnostics.AddNote(Source{}) << "when processing texture";
-        return diag::Failure{std::move(diagnostics)};
+    if (!valid(options.bindings.texture, BindingType::kTexture)) {
+        return Failure{diagnostics.Str()};
     }
-    if (!valid(options.bindings.storage_texture)) {
-        diagnostics.AddNote(Source{}) << "when processing storage_texture";
-        return diag::Failure{std::move(diagnostics)};
+    if (!valid(options.bindings.storage_texture, BindingType::kStorageTexture)) {
+        return Failure{diagnostics.Str()};
     }
 
     for (const auto& it : options.bindings.external_texture) {
@@ -116,20 +169,17 @@ diag::Result<SuccessType> ValidateBindingOptions(const Options& options) {
         // Validate with the actual source regardless of what the remapper will do
         if (wgsl_seen(src_binding, plane0)) {
             diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return diag::Failure{std::move(diagnostics)};
+            return Failure{diagnostics.Str()};
         }
 
-        if (glsl_seen(plane0, src_binding)) {
-            diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return diag::Failure{std::move(diagnostics)};
+        if (glsl_seen(plane0, src_binding, BindingType::kExternalTexture)) {
+            return Failure{diagnostics.Str()};
         }
-        if (glsl_seen(plane1, src_binding)) {
-            diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return diag::Failure{std::move(diagnostics)};
+        if (glsl_seen(plane1, src_binding, BindingType::kExternalTexture)) {
+            return Failure{diagnostics.Str()};
         }
-        if (glsl_seen(metadata, src_binding)) {
-            diagnostics.AddNote(Source{}) << "when processing external_texture";
-            return diag::Failure{std::move(diagnostics)};
+        if (glsl_seen(metadata, src_binding, BindingType::kExternalTexture)) {
+            return Failure{diagnostics.Str()};
         }
     }
 
@@ -146,7 +196,7 @@ void PopulateBindingInfo(const Options& options,
     auto create_remappings = [&remapper_data](const auto& hsh) {
         for (const auto& it : hsh) {
             const BindingPoint& src_binding_point = it.first;
-            const binding::Uniform& dst_binding_point = it.second;
+            const BindingInfo& dst_binding_point = it.second;
 
             // Bindings which go to the same slot in GLSL do not need to be re-bound.
             if (src_binding_point.group == 0 &&
@@ -168,9 +218,9 @@ void PopulateBindingInfo(const Options& options,
     for (const auto& it : options.bindings.external_texture) {
         const BindingPoint& src_binding_point = it.first;
 
-        const binding::BindingInfo& plane0 = it.second.plane0;
-        const binding::BindingInfo& plane1 = it.second.plane1;
-        const binding::BindingInfo& metadata = it.second.metadata;
+        const BindingInfo& plane0 = it.second.plane0;
+        const BindingInfo& plane1 = it.second.plane1;
+        const BindingInfo& metadata = it.second.metadata;
 
         const BindingPoint plane0_binding_point{0, plane0.binding};
         const BindingPoint plane1_binding_point{0, plane1.binding};

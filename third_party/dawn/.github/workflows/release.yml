@@ -1,0 +1,36 @@
+name: release
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '50 5 * * *'  # 05:50 UTC (21:50 PST, 22:50 PDT)
+
+# Permission needed to upload a release
+permissions:
+  contents: write
+
+jobs:
+  release-emdawnwebgpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        id: build
+        run: |
+          GITHUB_REPOSITORY="${{ github.repository }}" GITHUB_REF_NAME="${{ github.ref_name }}" .github/workflows/package-emdawnwebgpu.sh
+
+      - name: Upload release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          # Create a Git tag with this name
+          tag_name: ${{ steps.build.outputs.PKG_VERSION }}
+          # User-facing release info
+          name: ${{ steps.build.outputs.PKG_VERSION }}
+          body_path: RELEASE_INFO.md
+          # Files to release (one per line)
+          files: |
+            ${{ steps.build.outputs.REMOTE_PORT_FILE }}
+            ${{ steps.build.outputs.PKG_FILE }}

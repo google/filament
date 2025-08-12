@@ -1174,6 +1174,9 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
     case AttributedType::attr_hlsl_globallycoherent:
       OS << "globallycoherent ";
       break;
+    case AttributedType::attr_hlsl_reordercoherent:
+      OS << "reordercoherent ";
+      break;
     default:
       // Only HLSL attribute types are covered.
       break;

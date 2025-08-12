@@ -35,7 +35,7 @@ import (
 var commands []Command
 
 // Command is the type of a single cts command
-type Command = subcmd.Command[any]
+type Command = subcmd.Command[*Config]
 
 // Register registers the command for use by the 'cts' tool
 func Register(c Command) { commands = append(commands, c) }

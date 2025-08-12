@@ -1,0 +1,94 @@
+link.multiUnitLayout.2.mesh
+ERROR: 0:2: 'GL_EXT_mesh_shader' : not supported for current targeted SPIR-V version 
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 460
+Requested GL_EXT_mesh_shader
+max_vertices = -1
+max_primitives = 34
+output primitive = none
+local_size = (1, 1, 1)
+ERROR: node is still EOpNull!
+0:12  Function Definition: do_process( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp uint)
+0:14        indirect index (layout( column_major std430 offset=0) temp uint)
+0:14          data: direct index for structure (layout( column_major std430 offset=0) buffer runtime-sized array of uint)
+0:14            'dataBuffer' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer runtime-sized array of uint data})
+0:14            Constant:
+0:14              0 (const int)
+0:14          direct index ( temp uint)
+0:14            'gl_LocalInvocationID' ( in 3-component vector of uint LocalInvocationID)
+0:14            Constant:
+0:14              0 (const int)
+0:14        direct index ( temp uint)
+0:14          'gl_WorkGroupID' ( in 3-component vector of uint WorkGroupID)
+0:14          Constant:
+0:14            0 (const int)
+0:?   Linker Objects
+0:?     'dataBuffer' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer runtime-sized array of uint data})
+
+link.multiUnitLayout.0.mesh
+ERROR: 0:2: 'GL_EXT_mesh_shader' : not supported for current targeted SPIR-V version 
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 460
+Requested GL_EXT_mesh_shader
+max_vertices = 81
+max_primitives = 32
+output primitive = triangles
+local_size = (1, 1, 1)
+ERROR: node is still EOpNull!
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:13    Sequence
+0:13      Function Call: do_process( ( global void)
+0:?   Linker Objects
+0:?     'gl_WorkGroupSize' ( const 3-component vector of uint WorkGroupSize)
+0:?       1 (const uint)
+0:?       1 (const uint)
+0:?       1 (const uint)
+
+
+Linked mesh stage:
+
+ERROR: Linking mesh stage: Contradictory layout max_primitives values
+
+Shader version: 460
+Requested GL_EXT_mesh_shader
+max_vertices = 81
+max_primitives = 34
+output primitive = triangles
+local_size = (1, 1, 1)
+ERROR: node is still EOpNull!
+0:12  Function Definition: do_process( ( global void)
+0:12    Function Parameters: 
+0:14    Sequence
+0:14      move second child to first child ( temp uint)
+0:14        indirect index (layout( column_major std430 offset=0) temp uint)
+0:14          data: direct index for structure (layout( column_major std430 offset=0) buffer runtime-sized array of uint)
+0:14            'dataBuffer' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer runtime-sized array of uint data})
+0:14            Constant:
+0:14              0 (const int)
+0:14          direct index ( temp uint)
+0:14            'gl_LocalInvocationID' ( in 3-component vector of uint LocalInvocationID)
+0:14            Constant:
+0:14              0 (const int)
+0:14        direct index ( temp uint)
+0:14          'gl_WorkGroupID' ( in 3-component vector of uint WorkGroupID)
+0:14          Constant:
+0:14            0 (const int)
+0:11  Function Definition: main( ( global void)
+0:11    Function Parameters: 
+0:13    Sequence
+0:13      Function Call: do_process( ( global void)
+0:?   Linker Objects
+0:?     'dataBuffer' (layout( column_major std430) buffer block{layout( column_major std430 offset=0) buffer runtime-sized array of uint data})
+0:?     'gl_WorkGroupSize' ( const 3-component vector of uint WorkGroupSize)
+0:?       1 (const uint)
+0:?       1 (const uint)
+0:?       1 (const uint)
+

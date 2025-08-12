@@ -25,7 +25,6 @@
 #include "dxcetw.h"
 #endif
 #include "dxc/DxilContainer/DxcContainerBuilder.h"
-#include "dxillib.h"
 #include <memory>
 
 HRESULT CreateDxcCompiler(REFIID riid, _Out_ LPVOID *ppv);
@@ -59,20 +58,11 @@ HRESULT CreateDxcContainerReflection(REFIID riid, _Out_ LPVOID *ppv) {
 HRESULT CreateDxcContainerBuilder(REFIID riid, _Out_ LPVOID *ppv) {
   // Call dxil.dll's containerbuilder
   *ppv = nullptr;
-  const char *warning;
-  HRESULT hr = DxilLibCreateInstance(CLSID_DxcContainerBuilder,
-                                     (IDxcContainerBuilder **)ppv);
-  if (FAILED(hr)) {
-    warning = "Unable to create container builder from dxil.dll. Resulting "
-              "container will not be signed.\n";
-  } else {
-    return hr;
-  }
 
   CComPtr<DxcContainerBuilder> Result =
       DxcContainerBuilder::Alloc(DxcGetThreadMallocNoRef());
   IFROOM(Result.p);
-  Result->Init(warning);
+  Result->Init();
   return Result->QueryInterface(riid, ppv);
 }
 
@@ -87,11 +77,7 @@ static HRESULT ThreadMallocDxcCreateInstance(REFCLSID rclsid, REFIID riid,
   } else if (IsEqualCLSID(rclsid, CLSID_DxcUtils)) {
     hr = CreateDxcUtils(riid, ppv);
   } else if (IsEqualCLSID(rclsid, CLSID_DxcValidator)) {
-    if (DxilLibIsEnabled()) {
-      hr = DxilLibCreateInstance(rclsid, riid, (IUnknown **)ppv);
-    } else {
-      hr = CreateDxcValidator(riid, ppv);
-    }
+    hr = CreateDxcValidator(riid, ppv);
   } else if (IsEqualCLSID(rclsid, CLSID_DxcAssembler)) {
     hr = CreateDxcAssembler(riid, ppv);
   } else if (IsEqualCLSID(rclsid, CLSID_DxcOptimizer)) {
