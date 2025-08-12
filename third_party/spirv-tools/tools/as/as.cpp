@@ -28,8 +28,10 @@ static const std::string kHelpText =
 
 Usage: %s [options] [<filename>]
 
-The SPIR-V assembly text is read from <filename>.  If no file is specified,
-or if the filename is "-", then the assembly text is read from standard input.
+The SPIR-V assembly text is read from <filename>.
+Use "-" as the filename to read from standard input.
+Use "./-" to read from the file named "-".
+
 The SPIR-V binary module is written to file "out.spv", unless the -o option
 is used.
 

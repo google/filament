@@ -71,11 +71,14 @@ std::string GenerateModule(const std::string& body) {
        %uint_var_1 = OpVariable %uint_ptr_Private Private %uint_1
 %var_uint_arr4_1_1_1_1 = OpVariable %uint_arr4_ptr_Private Private %uint_arr4_1_1_1_1
     %tensor_uint_4 = OpTypeTensorARM %uint %uint_4
+ %tensor_uint_spec = OpTypeTensorARM %uint %uint_0_spec
      %tensor_float = OpTypeTensorARM %float
 %tensor_uint_4_ptr_UniformConstant = OpTypePointer UniformConstant %tensor_uint_4
 %tensor_var = OpVariable %tensor_uint_4_ptr_UniformConstant UniformConstant
 %tensor_float_ptr_UniformConstant = OpTypePointer UniformConstant %tensor_float
 %tensor_var_float_unranked = OpVariable %tensor_float_ptr_UniformConstant UniformConstant
+%tensor_uint_spec_ptr_UniformConstant = OpTypePointer UniformConstant %tensor_uint_spec
+%tensor_var_spec_rank = OpVariable %tensor_uint_spec_ptr_UniformConstant UniformConstant
 )";
   const std::string footer = R"(
              %fnep = OpFunction %void None %fnty
@@ -135,7 +138,8 @@ TEST_F(ValidateTensor, ValidTypeElementTypeAndRank) {
 
 TEST_F(ValidateTensor, ValidTypeElementTypeAndRankUsingSpecConstant) {
   const std::string src = R"(
-    %test_type = OpTypeTensorARM %uint %uint_0_spec
+    %rank_spec = OpSpecConstant %uint  0
+    %test_type = OpTypeTensorARM %uint %rank_spec
 )";
   std::string spvasm = GenerateModule(src);
   CompileSuccessfully(spvasm, SPVENV);
@@ -563,6 +567,20 @@ TEST_F(ValidateTensor, ValidTensorReadArray) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPVENV));
 }
 
+TEST_F(ValidateTensor, ValidTensorReadSpecConstantRank) {
+  const std::string src = R"(
+             %fn = OpFunction %void None %fnty
+         %label1 = OpLabel
+         %tensor = OpLoad %tensor_uint_spec %tensor_var_spec_rank
+            %val = OpTensorReadARM %uint %tensor %uint_arr4_1_1_1_1
+                   OpReturn
+                   OpFunctionEnd
+)";
+  std::string spvasm = GenerateModule(src);
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPVENV));
+}
+
 TEST_F(ValidateTensor, InvalidTensorReadResultTypeVoid) {
   const std::string src = R"(
              %fn = OpFunction %void None %fnty
@@ -840,6 +858,20 @@ TEST_F(ValidateTensor, ValidTensorWriteArray) {
   EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPVENV));
 }
 
+TEST_F(ValidateTensor, ValidTensorWriteSpecConstantRank) {
+  const std::string src = R"(
+             %fn = OpFunction %void None %fnty
+         %label1 = OpLabel
+         %tensor = OpLoad %tensor_uint_spec %tensor_var_spec_rank
+                   OpTensorWriteARM %tensor %uint_arr4_1_1_1_1 %uint_1
+                   OpReturn
+                   OpFunctionEnd
+)";
+  std::string spvasm = GenerateModule(src);
+  CompileSuccessfully(spvasm, SPVENV);
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(SPVENV));
+}
+
 TEST_F(ValidateTensor, InvalidTensorWriteObjectNotScalarOrArrayOfScalar) {
   const std::string src = R"(
              %fn = OpFunction %void None %fnty
@@ -1069,12 +1101,9 @@ TEST_F(ValidateTensor, ValidTensorQuerySize) {
 
 TEST_F(ValidateTensor, ValidTensorQuerySizeSpecConstant) {
   const std::string src = R"(
-%tensor_uint_4_spec = OpTypeTensorARM %uint %uint_0_spec
-%tensor_uint_4_spec_ptr_UniformConstant = OpTypePointer UniformConstant %tensor_uint_4_spec
-%tensor_var_spec = OpVariable %tensor_uint_4_spec_ptr_UniformConstant UniformConstant
              %fn = OpFunction %void None %fnty
          %label1 = OpLabel
-         %tensor = OpLoad %tensor_uint_4_spec %tensor_var_spec
+         %tensor = OpLoad %tensor_uint_spec %tensor_var_spec_rank
            %size = OpTensorQuerySizeARM %uint %tensor %uint_0_spec
                    OpReturn
                    OpFunctionEnd
