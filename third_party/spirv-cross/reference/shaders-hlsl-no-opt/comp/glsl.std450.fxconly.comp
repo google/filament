@@ -1,6 +1,12 @@
 struct ResType
 {
     float _m0;
+    float _m1;
+};
+
+struct ResType_1
+{
+    float _m0;
     int _m1;
 };
 
@@ -253,9 +259,10 @@ void comp_main()
     _19.Store4(144, asuint(_265[1]));
     _19.Store4(160, asuint(_265[2]));
     _19.Store4(176, asuint(_265[3]));
-    float tmp;
-    float _271 = modf(asfloat(_19.Load(16)), tmp);
-    _19.Store(0, asuint(_271));
+    ResType _272;
+    _272._m0 = modf(asfloat(_19.Load(16)), _272._m1);
+    float tmp = _272._m1;
+    _19.Store(0, asuint(_272._m0));
     _19.Store(0, asuint(min(asfloat(_19.Load(16)), asfloat(_19.Load(20)))));
     _19.Store(8, min(_19.Load(48), _19.Load(52)));
     _19.Store(4, uint(min(int(_19.Load(32)), int(_19.Load(36)))));
@@ -269,10 +276,10 @@ void comp_main()
     _19.Store(0, asuint(step(asfloat(_19.Load(16)), asfloat(_19.Load(20)))));
     _19.Store(0, asuint(smoothstep(asfloat(_19.Load(16)), asfloat(_19.Load(20)), asfloat(_19.Load(24)))));
     _19.Store(0, asuint(mad(asfloat(_19.Load(16)), asfloat(_19.Load(20)), asfloat(_19.Load(24)))));
-    ResType _371;
-    _371._m0 = frexp(asfloat(_19.Load(16)), _371._m1);
-    int itmp = _371._m1;
-    _19.Store(0, asuint(_371._m0));
+    ResType_1 _374;
+    _374._m0 = frexp(asfloat(_19.Load(16)), _374._m1);
+    int itmp = _374._m1;
+    _19.Store(0, asuint(_374._m0));
     _19.Store(0, asuint(ldexp(asfloat(_19.Load(16)), itmp)));
     _19.Store(8, spvPackSnorm4x8(asfloat(_19.Load4(16))));
     _19.Store(8, spvPackUnorm4x8(asfloat(_19.Load4(16))));

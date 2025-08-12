@@ -1,0 +1,89 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform samplerShadow s00[8];
+layout(set = 0, binding = 0) uniform texture2D t00[8];
+layout(set = 0, binding = 0) uniform utexture2D t01[8];
+layout(set = 0, binding = 0) uniform itexture2D t02[8];
+layout(set = 0, binding = 0, r32ui) uniform uimageBuffer u0[8];
+
+layout(set = 3, binding = 0) buffer B10 { float v; } b10[8];
+layout(set = 3, binding = 0) uniform B11 { float v; } b11[8];
+layout(set = 3, binding = 0, r32ui) uniform uimageBuffer u1[8];
+
+layout(set = 2, binding = 0) uniform samplerShadow s20[8];
+layout(set = 2, binding = 0) uniform texture2D t20[8];
+layout(set = 2, binding = 0) uniform utexture2D t21[8];
+layout(set = 2, binding = 0) uniform itexture2D t22[8];
+layout(set = 2, binding = 0) buffer B20 { float v; } b20[8];
+layout(set = 2, binding = 0) uniform B21 { float v; } b21[8];
+layout(set = 2, binding = 0, r32ui) uniform uimageBuffer u2[8];
+
+layout(set = 1, binding = 0) uniform samplerShadow s30[];
+layout(set = 1, binding = 0) uniform texture2D t30[];
+layout(set = 1, binding = 0) uniform utexture2D t31[];
+layout(set = 1, binding = 0) uniform itexture2D t32[];
+layout(set = 1, binding = 0) buffer B30 { uint i; } b30[];
+layout(set = 1, binding = 0) uniform B31 { float v; } b31[];
+layout(set = 1, binding = 0, r32ui) uniform uimageBuffer u3[];
+
+layout(set = 4, binding = 0) uniform samplerShadow s40;
+layout(set = 4, binding = 0) uniform texture2D t40;
+layout(set = 4, binding = 0) uniform utexture2D t41;
+layout(set = 4, binding = 0) uniform itexture2D t42;
+layout(set = 4, binding = 0, r32ui) uniform uimageBuffer u4;
+layout(set = 4, binding = 0) buffer B40 { float v; } b40;
+layout(set = 4, binding = 0) uniform B41 { float v; } b41;
+
+vec4 r0;
+vec4 r1;
+vec4 r2;
+vec4 r3;
+vec4 r4;
+
+void in_function()
+{
+    r0 = textureLod(sampler2D(t00[0u], s00[3u]), vec4(0.0).xy, 0.0);
+    r0.x = uintBitsToFloat(texelFetch(t01[1u], ivec2(0), 0).x);
+    r0.y =  intBitsToFloat(texelFetch(t02[2u], ivec2(0), 0).x);
+    r0.z = uintBitsToFloat(imageLoad(u0[2u], 0).x);
+
+    r1.x = b10[3u].v;
+    r1.y = b11[4u].v;
+    r1.z = uintBitsToFloat(imageLoad(u1[2u], 0).x);
+
+    r2 = textureLod(sampler2D(t20[0u], s20[3u]), vec4(0.0).xy, 0.0);
+    r2.x = uintBitsToFloat(texelFetch(t21[1u], ivec2(0), 0).x);
+    r2.y =  intBitsToFloat(texelFetch(t22[2u], ivec2(0), 0).x);
+    r2.z = b20[3u].v + uintBitsToFloat(imageLoad(u2[2u], 0).x);
+    r2.w = b21[4u].v;
+
+    uint i = b30[gl_WorkGroupID.x].i;
+
+    r3 = textureLod(sampler2D(t30[i], s30[i+1u]), vec4(0.0).xy, 0.0);
+    r3.x = uintBitsToFloat(texelFetch(t31[i+2u], ivec2(0), 0).x);
+    r3.y =  intBitsToFloat(texelFetch(t32[i+3u], ivec2(0), 0).x);
+    r3.z = b31[i+5u].v;
+    r3.w = uintBitsToFloat(imageLoad(u3[i+6u], 0).x); // TODO: Calls fence() on const device&, which is not supported.
+
+    r4 = textureLod(sampler2D(t40, s40), vec4(0.0).xy, 0.0);
+    r4.x = uintBitsToFloat(texelFetch(t41, ivec2(0), 0).x);
+    r4.y =  intBitsToFloat(texelFetch(t42, ivec2(0), 0).x);
+    r4.z = b40.v + b41.v;
+    r4.w = uintBitsToFloat(imageLoad(u4, 0).x); // TODO: Calls fence() on const device&, which is not supported.
+
+    imageStore(u0[0u], 0, floatBitsToUint(r0));
+    imageStore(u1[0u], 0, floatBitsToUint(r1));
+    imageStore(u2[0u], 0, floatBitsToUint(r2));
+    imageStore(u3[0u], 0, floatBitsToUint(r3));
+    imageStore(u4, 0, floatBitsToUint(r4));
+}
+
+void main()
+{
+    in_function();
+}
+
