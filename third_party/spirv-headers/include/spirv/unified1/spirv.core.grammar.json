@@ -5269,6 +5269,18 @@
       "version" : "None"
     },
     {
+      "opname" : "OpBitCastArrayQCOM",
+      "class"  : "Conversion",
+      "opcode" : 4497,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "Source Array" }
+      ],
+      "capabilities" : [ "CooperativeMatrixConversionQCOM" ],
+      "version" : "None"
+    },
+    {
       "opname" : "OpImageBlockMatchWindowSSDQCOM",
       "class"  : "Image",
       "opcode" : 4500,
@@ -5330,6 +5342,43 @@
         { "kind" : "IdRef", "name" : "Block Size" }
       ],
       "capabilities" : [ "TextureBlockMatch2QCOM" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpCompositeConstructCoopMatQCOM",
+      "class"  : "Composite",
+      "opcode" : 4540,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "Source Array" }
+      ],
+      "capabilities" : [ "CooperativeMatrixConversionQCOM" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpCompositeExtractCoopMatQCOM",
+      "class"  : "Composite",
+      "opcode" : 4541,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "Source Cooperative Matrix" }
+      ],
+      "capabilities" : [ "CooperativeMatrixConversionQCOM" ],
+      "version" : "None"
+    },
+    {
+      "opname" : "OpExtractSubArrayQCOM",
+      "class"  : "Composite",
+      "opcode" : 4542,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "name" : "Source Array" },
+        { "kind" : "IdRef", "name" : "index" }
+      ],
+      "capabilities" : [ "CooperativeMatrixConversionQCOM" ],
       "version" : "None"
     },
     {
@@ -10778,6 +10827,101 @@
       "version" : "None"
     },
     {
+      "opname" : "OpConditionalExtensionINTEL",
+      "class"  : "Extension",
+      "opcode" : 6248,
+      "operands" : [
+        { "kind" : "IdRef",         "name" : "Condition" },
+        { "kind" : "LiteralString", "name" : "Name" }
+      ],
+      "capabilities" : [ "SpecConditionalINTEL" ],
+      "provisional" : true,
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConditionalEntryPointINTEL",
+      "class"  : "Mode-Setting",
+      "opcode" : 6249,
+      "operands" : [
+        { "kind" : "IdRef",                              "name" : "Condition" },
+        { "kind" : "ExecutionModel" },
+        { "kind" : "IdRef",                              "name" : "Entry Point" },
+        { "kind" : "LiteralString",                      "name" : "Name" },
+        { "kind" : "IdRef",          "quantifier" : "*", "name" : "Interface" }
+      ],
+      "capabilities" : [ "SpecConditionalINTEL" ],
+      "provisional" : true,
+      "version" : "None"
+    },
+    {
+      "opname" : "OpConditionalCapabilityINTEL",
+      "class"  : "Mode-Setting",
+      "opcode" : 6250,
+      "operands" : [
+        { "kind" : "IdRef",      "name" : "Condition" },
+        { "kind" : "Capability", "name" : "Capability" }
+      ],
+      "capabilities" : [ "SpecConditionalINTEL" ],
+      "provisional" : true,
+      "version" : "None"
+    },
+    {
+      "opname" : "OpSpecConstantTargetINTEL",
+      "class"  : "Constant-Creation",
+      "opcode" : 6251,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "LiteralInteger",                     "name" : "Target" },
+        { "kind" : "LiteralInteger", "quantifier" : "*", "name" : "Features" }
+      ],
+      "capabilities" : [ "FunctionVariantsINTEL" ],
+      "provisional" : true,
+      "version": "None"
+    },
+    {
+      "opname" : "OpSpecConstantArchitectureINTEL",
+      "class"  : "Constant-Creation",
+      "opcode" : 6252,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "LiteralInteger", "name" : "Category" },
+        { "kind" : "LiteralInteger", "name" : "Family" },
+        { "kind" : "LiteralInteger", "name" : "Opcode" },
+        { "kind" : "LiteralInteger", "name" : "Architecture" }
+      ],
+      "capabilities" : [ "FunctionVariantsINTEL" ],
+      "provisional" : true,
+      "version": "None"
+    },
+    {
+      "opname" : "OpSpecConstantCapabilitiesINTEL",
+      "class"  : "Constant-Creation",
+      "opcode" : 6253,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "Capability", "quantifier" : "*", "name" : "Capabilities" }
+      ],
+      "capabilities" : [ "FunctionVariantsINTEL" ],
+      "provisional" : true,
+      "version": "None"
+    },
+    {
+      "opname" : "OpConditionalCopyObjectINTEL",
+      "class"  : "Composite",
+      "opcode" : 6254,
+      "operands" : [
+        { "kind" : "IdResultType" },
+        { "kind" : "IdResult" },
+        { "kind" : "IdRef", "quantifier" : "*", "name" : "Condition 0, Operand 0, +\nCondition 1, Operand 1, +\n..." }
+      ],
+      "capabilities" : [ "SpecConditionalINTEL" ],
+      "provisional" : true,
+      "version" : "None"
+    },
+    {
       "opname" : "OpGroupIMulKHR",
       "class"  : "Group",
       "opcode" : 6401,
@@ -14901,6 +15045,16 @@
           "version" : "None"
         },
         {
+          "enumerant" : "ConditionalINTEL",
+          "value" : 6247,
+          "parameters": [
+            { "kind" : "IdRef", "name" : "Condition" }
+          ],
+          "capabilities" : [ "SpecConditionalINTEL" ],
+          "provisional" : true,
+          "version" : "None"
+        },
+        {
           "enumerant" : "CacheControlLoadINTEL",
           "value" : 6442,
           "capabilities" : [ "CacheControlsINTEL" ],
@@ -16584,6 +16738,13 @@
           "version" : "None"
         },
         {
+          "enumerant" : "CooperativeMatrixConversionQCOM",
+          "value" : 4496,
+          "capabilities" : [ "CooperativeMatrixKHR" ],
+          "extensions" : [ "SPV_QCOM_cooperative_matrix_conversion" ],
+          "version" : "None"
+        },
+        {
           "enumerant" : "TextureBlockMatch2QCOM",
           "value" : 4498,
           "extensions" : [ "SPV_QCOM_image_processing2" ],
@@ -17562,6 +17723,21 @@
           "value" : 6241,
           "extensions" : [ "SPV_INTEL_ternary_bitwise_function"],
           "version" : "None"
+        },
+        {
+          "enumerant" : "SpecConditionalINTEL",
+          "value" : 6245,
+          "extensions" : [ "SPV_INTEL_function_variants" ],
+          "provisional" : true,
+          "version": "None"
+        },
+        {
+          "enumerant" : "FunctionVariantsINTEL",
+          "value" : 6246,
+          "capabilities" : [ "SpecConditionalINTEL" ],
+          "extensions" : [ "SPV_INTEL_function_variants" ],
+          "provisional" : true,
+          "version": "None"
         },
         {
           "enumerant" : "GroupUniformArithmeticKHR",
