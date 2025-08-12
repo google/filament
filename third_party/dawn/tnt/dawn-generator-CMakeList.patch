@@ -1,0 +1,31 @@
+diff --git a/third_party/dawn/generator/CMakeLists.txt b/third_party/dawn/generator/CMakeLists.txt
+index 765b3e2bc..e6d8257f5 100644
+--- a/third_party/dawn/generator/CMakeLists.txt
++++ b/third_party/dawn/generator/CMakeLists.txt
+@@ -156,6 +156,26 @@ function(DawnGenerator)
+     set(${arg_OUTPUT_HEADERS} ${headers} PARENT_SCOPE)
+     set(${arg_OUTPUT_JSONS} ${jsons} PARENT_SCOPE)
+     set(${arg_OUTPUT_JS} ${js} PARENT_SCOPE)
++
++    # Prior to CMake 3.20 the GENERATED property is local to a directory which means that putting
++    # generated headers in INTERFACE properties causes dependent targets to complain that they
++    # cannot find the file. (because they don't see it as generated and want to check is is
++    # actually on the filesystem).
++    # Work around this by generating the files once if they aren't present at configuration time.
++    set(needToGenerate OFF)
++    foreach(path ${OUTPUTS})
++        if (NOT EXISTS ${path})
++            set(needToGenerate ON)
++        endif()
++    endforeach()
++
++    if (${needToGenerate})
++        message(STATUS "Dawn: Generating initial versions of files for ${arg_PRINT_NAME}.")
++        execute_process(COMMAND ${BASE_ARGS} RESULT_VARIABLE RET)
++        if (NOT RET EQUAL 0)
++            message(FATAL_ERROR "Dawn: Failed to generate the initial version of files for ${arg_PRINT_NAME}. Base args are '${BASE_ARGS}'.")
++        endif()
++    endif()
+ endfunction()
+ 
+ # Helper function to call dawn_generator.py:

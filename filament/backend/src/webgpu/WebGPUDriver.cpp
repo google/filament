@@ -1242,6 +1242,9 @@ void WebGPUDriver::commit(Handle<HwSwapChain> sch) {
         auto f = mQueue.OnSubmittedWorkDone(wgpu::CallbackMode::WaitAnyOnly,
                 [](wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
                     // This lambda does nothing, but the signature must match.
+                    if (status != wgpu::QueueWorkDoneStatus::Success){
+                        FWGPU_LOGE << "Waiting for first frame work to finish resulted in an error";
+                    }
                 });
         const wgpu::Instance instance = mAdapter.GetInstance();
         auto wStatus = instance.WaitAny(f,

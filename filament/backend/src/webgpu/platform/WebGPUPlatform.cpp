@@ -270,9 +270,7 @@ void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
         .requiredFeatures = features,
-//        .requiredFeatureCount = std::size(features),
     };
-//    instanceDescriptor.requiredFeatures = features;
     instanceDescriptor.requiredFeatureCount = 1;
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create WebGPU instance.";

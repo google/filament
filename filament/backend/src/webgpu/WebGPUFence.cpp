@@ -15,6 +15,7 @@
  */
 
 #include "WebGPUFence.h"
+#include "WebGPUConstants.h"
 
 #include <backend/DriverEnums.h>
 
@@ -40,6 +41,7 @@ void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
                 case wgpu::QueueWorkDoneStatus::CallbackCancelled:
                 case wgpu::QueueWorkDoneStatus::Error:
                     mStatus.store(FenceStatus::ERROR);
+                    FWGPU_LOGW << "WebGPUFence: wgpu::QueueWorkDoneStatus::Error. " << message;
                     break;
             }
         });
