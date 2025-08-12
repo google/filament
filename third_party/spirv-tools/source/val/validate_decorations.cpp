@@ -1767,14 +1767,19 @@ spv_result_t CheckFPRoundingModeForShaders(ValidationState_t& vstate,
   return SPV_SUCCESS;
 }
 
-// Returns SPV_SUCCESS if validation rules are satisfied for the NonWritable
+// Returns SPV_SUCCESS if validation rules are satisfied for the NonReadable or
+// NonWritable
 // decoration.  Otherwise emits a diagnostic and returns something other than
 // SPV_SUCCESS.  The |inst| parameter is the object being decorated.  This must
 // be called after TypePass and AnnotateCheckDecorationsOfBuffers are called.
-spv_result_t CheckNonWritableDecoration(ValidationState_t& vstate,
-                                        const Instruction& inst,
-                                        const Decoration& decoration) {
+spv_result_t CheckNonReadableWritableDecorations(ValidationState_t& vstate,
+                                                 const Instruction& inst,
+                                                 const Decoration& decoration) {
   assert(inst.id() && "Parser ensures the target of the decoration has an ID");
+  const bool is_non_writable =
+      decoration.dec_type() == spv::Decoration::NonWritable;
+  assert(is_non_writable ||
+         decoration.dec_type() == spv::Decoration::NonReadable);
 
   if (decoration.struct_member_index() == Decoration::kInvalidMember) {
     // The target must be a memory object declaration.
@@ -1786,7 +1791,10 @@ spv_result_t CheckNonWritableDecoration(ValidationState_t& vstate,
         opcode != spv::Op::OpFunctionParameter &&
         opcode != spv::Op::OpRawAccessChainNV) {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
-             << "Target of NonWritable decoration must be a memory object "
+             << "Target of "
+             << (is_non_writable ? "NonWritable" : "NonReadable")
+             << " decoration must be a "
+                "memory object "
                 "declaration (a variable or a function parameter)";
     }
     const auto var_storage_class =
@@ -1797,7 +1805,8 @@ spv_result_t CheckNonWritableDecoration(ValidationState_t& vstate,
                   : spv::StorageClass::Max;
     if ((var_storage_class == spv::StorageClass::Function ||
          var_storage_class == spv::StorageClass::Private) &&
-        vstate.features().nonwritable_var_in_function_or_private) {
+        vstate.features().nonwritable_var_in_function_or_private &&
+        is_non_writable) {
       // New permitted feature in SPIR-V 1.4.
     } else if (var_storage_class == spv::StorageClass::TileAttachmentQCOM) {
     } else if (
@@ -1805,12 +1814,18 @@ spv_result_t CheckNonWritableDecoration(ValidationState_t& vstate,
         vstate.IsPointerToUniformBlock(type_id) ||
         vstate.IsPointerToStorageBuffer(type_id) ||
         vstate.IsPointerToStorageImage(type_id) ||
+        vstate.IsPointerToTensor(type_id) ||
         opcode == spv::Op::OpRawAccessChainNV) {
     } else {
       return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
-             << "Target of NonWritable decoration is invalid: must point to a "
-                "storage image, uniform block, "
-             << (vstate.features().nonwritable_var_in_function_or_private
+             << "Target of "
+             << (is_non_writable ? "NonWritable" : "NonReadable")
+             << " decoration is invalid: "
+                "must point to a "
+                "storage image, tensor variable in UniformConstant storage "
+                "class, uniform block, "
+             << (vstate.features().nonwritable_var_in_function_or_private &&
+                         is_non_writable
                      ? "storage buffer, or variable in Private or Function "
                        "storage class"
                      : "or storage buffer");
@@ -2098,8 +2113,10 @@ spv_result_t CheckDecorationsFromDecoration(ValidationState_t& vstate) {
             PASS_OR_BAIL(
                 CheckFPRoundingModeForShaders(vstate, *inst, decoration));
           break;
+        case spv::Decoration::NonReadable:
         case spv::Decoration::NonWritable:
-          PASS_OR_BAIL(CheckNonWritableDecoration(vstate, *inst, decoration));
+          PASS_OR_BAIL(
+              CheckNonReadableWritableDecorations(vstate, *inst, decoration));
           break;
         case spv::Decoration::Uniform:
         case spv::Decoration::UniformId:

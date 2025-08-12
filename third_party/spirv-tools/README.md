@@ -146,6 +146,7 @@ As of this writing, there are 67 transforms including examples such as:
     decorations.
 * Normalization
   * Compact IDs
+  * Canonicalize IDs
   * CFG cleanup
   * Flatten decorations
   * Merge returns
