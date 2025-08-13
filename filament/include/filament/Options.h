@@ -439,7 +439,7 @@ struct AmbientOcclusionOptions {
         uint8_t sampleStepsPerSlice = 3;  //!< # of steps the radius is divided into for integration. Higher value makes less bias.
         float thicknessHeuristic = 0.004f; //!< thickness heuristic, should be closed to 0
         bool useBitmask = false;
-        float thickness = .5f;
+        float thickness = 0.5f;
     };
     Gtao gtao;                           // %codegen_skip_javascript% %codegen_java_flatten%
 };
