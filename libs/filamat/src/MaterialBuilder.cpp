@@ -549,6 +549,11 @@ MaterialBuilder& MaterialBuilder::linearFog(bool const enabled) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::shadowFarAttenuation(bool const enabled) noexcept {
+    mShadowFarAttenuation = enabled;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::customSurfaceShading(bool const customSurfaceShading) noexcept {
     mCustomSurfaceShading = customSurfaceShading;
     return *this;
@@ -719,6 +724,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
     info.linearFog = mLinearFog;
+    info.shadowFarAttenuation = mShadowFarAttenuation;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.postLightingBlendingMode = mPostLightingBlendingMode;
