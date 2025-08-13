@@ -50,12 +50,14 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #if defined(MATERIAL_HAS_SHADOW_STRENGTH)
         applyShadowStrength(visibility, material.shadowStrength);
 #endif
+#if defined (FILAMENT_SHADOW_FAR_ATTENUATION)
         // shadow far attenuation
         highp vec3 v = getWorldPosition() - getWorldCameraPosition();
         // (viewFromWorld * v).z == dot(transpose(viewFromWorld), v)
         highp float z = dot(transpose(getViewFromWorldMatrix())[2].xyz, v);
         highp vec2 p = frameUniforms.shadowFarAttenuationParams;
         visibility = 1.0 - ((1.0 - visibility) * saturate(p.x - z * z * p.y));
+#endif
     }
     if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
         if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {

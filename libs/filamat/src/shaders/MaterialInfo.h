@@ -45,6 +45,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool clearCoatIorChange;
     bool flipUV;
     bool linearFog;
+    bool shadowFarAttenuation;
     bool multiBounceAO;
     bool multiBounceAOSet;
     bool specularAOSet;
