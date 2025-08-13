@@ -1,7 +1,0 @@
-spv.tensorARM.invalid_size.comp
-ERROR: 0:10: 'dim' : dimension argument exceeds tensor rank 
-ERROR: 0:11: 'dim' : dimension argument must be constant 
-ERROR: 2 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

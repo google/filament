@@ -1,8 +1,0 @@
-#version 460 core
-
-#extension GL_ARM_tensors : enable
-#extension GL_EXT_shader_explicit_arithmetic_types : enable
-
-tensorARM<1, float64_t> t;
-
-void main() {}

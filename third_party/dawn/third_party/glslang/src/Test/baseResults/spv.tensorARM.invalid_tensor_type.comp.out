@@ -1,8 +1,0 @@
-spv.tensorARM.invalid_tensor_type.comp
-ERROR: 0:6: '' :  syntax error, unexpected RIGHT_ANGLE, expecting LEFT_PAREN
-ERROR: 1 compilation errors.  No code generated.
-
-
-ERROR: Linking compute stage: Missing entry point: Each stage requires one entry point
-
-SPIR-V is not generated for failed compile or link
