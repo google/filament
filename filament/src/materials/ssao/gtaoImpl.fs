@@ -159,7 +159,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         // `n` is the signed angle between projNormal and viewDir
         float n = signNorm * acosFast(cosNorm);
 
-        // These are used under non-bitmask mode or bitmask + bentNormal mode
+        // These are only used in non-bitmask mode
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
 
@@ -216,12 +216,7 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         }
     }
 
-    if (materialConstants_useVisibilityBitmasks) {
-        obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
-    }
-    else{
-        obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
-    }
+    obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
 
 #if COMPUTE_BENT_NORMAL
     bentNormal = normalize(bentNormal);
