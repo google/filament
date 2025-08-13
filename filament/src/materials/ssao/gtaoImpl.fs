@@ -81,6 +81,7 @@ float calculateHorizonCos(highp vec3 sampleDelta, highp vec3 viewDir, float hori
 }
 
 // https://cdrinmatane.github.io/posts/ssaovb-code/
+// https://github.com/cdrinmatane/SSRT3/blob/main/HDRP/Shaders/Resources/SSRTCS.compute
 uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
     uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
     uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
@@ -90,6 +91,7 @@ uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfie
 }
 
 // https://cdrinmatane.github.io/posts/ssaovb-code/
+// https://github.com/cdrinmatane/SSRT3/blob/main/HDRP/Shaders/Resources/SSRTCS.compute
 // The visibility bitmask method replaces the traditional two horizon angles with a bitmask
 // for each slice. This bitmask flags whether each sector is occluded or not,
 // which enables surfaces to be modeled with constant thickness, overcoming the limitation
@@ -97,8 +99,10 @@ uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfie
 uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
     uint globalOccludedBitfield, float n, highp vec3 origin) {
     vec2 frontBackHorizon;
-    float linearThicknessMultiplier = materialParams.thickness > 0.0 ? saturate(origin.z * materialParams.invFarPlane) * 100.0 : 1.0;
-    vec3 deltaPosBackface = deltaPos - viewDir * materialParams.thickness * linearThicknessMultiplier;
+    float linearThicknessMultiplier = materialConstants_linearThickness
+        ? saturate(origin.z * materialParams.invFarPlane) * 100.0
+        : 1.0;
+    vec3 deltaPosBackface = deltaPos - viewDir * materialParams.constThickness * linearThicknessMultiplier;
 
     // Project sample onto the unit circle and compute the angle relative to V
     frontBackHorizon.x = dot(normalize(deltaPos), viewDir);

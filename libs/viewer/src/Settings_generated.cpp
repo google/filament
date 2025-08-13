@@ -587,9 +587,9 @@ int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, AmbientOcclusio
         } else if (compare(tok, jsonChunk, "thicknessHeuristic") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->thicknessHeuristic);
         } else if (compare(tok, jsonChunk, "useBitmask") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->useBitmask);
+            i = parse(tokens, i + 1, jsonChunk, &out->useVisibilityBitmasks);
         } else if (compare(tok, jsonChunk, "thickness") == 0) {
-            i = parse(tokens, i + 1, jsonChunk, &out->thickness);
+            i = parse(tokens, i + 1, jsonChunk, &out->constThickness);
         } else {
             slog.w << "Invalid Gtao key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
@@ -607,8 +607,8 @@ std::ostream& operator<<(std::ostream& out, const AmbientOcclusionOptions::Gtao&
         << "\"sampleSliceCount\": " << int(in.sampleSliceCount) << ",\n"
         << "\"sampleStepsPerSlice\": " << int(in.sampleStepsPerSlice) << ",\n"
         << "\"thicknessHeuristic\": " << (in.thicknessHeuristic) << ",\n"
-        << "\"useBitmask\": " << to_string(in.useBitmask) << ",\n"
-        << "\"thickness\": " << (in.thickness) << "\n"
+        << "\"useBitmask\": " << to_string(in.useVisibilityBitmasks) << ",\n"
+        << "\"thickness\": " << (in.constThickness) << "\n"
         << "}";
 }
 

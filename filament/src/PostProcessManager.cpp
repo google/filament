@@ -995,7 +995,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 
                 FMaterial* ma = material.getMaterial(mEngine);
                 bool dirty = false;
-                setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useBitmask, dirty);
+                setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks, dirty);
+                setConstantParameter(ma, "linearThickness", options.gtao.linearThickness, dirty);
                 if (dirty) {
                    ma->invalidate();
                    // TODO: call Material::compile(), we can't do that now because it works only
@@ -1037,7 +1038,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         mi->setParameter("radius", options.radius);
                         mi->setParameter("intensity", options.intensity);
                         mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
-                        mi->setParameter("thickness", options.gtao.thickness);
+                        mi->setParameter("constThickness", options.gtao.constThickness);
 
                         break;
                     }
