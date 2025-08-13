@@ -7,6 +7,17 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.64.0
+
+- engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
+- opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
+- engine: Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
+  depth-only passes. [**Requires recompiling materials**]
+- material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
+- material: Add CRC32 validation for material packages [⚠️ **New Material Version**]
+- material: Improve LineDictionary compression [⚠️ **New Material Version**]
+- Filament is now targeting c++20 (was previously c++17)
+
 ## v1.63.1
 
 
