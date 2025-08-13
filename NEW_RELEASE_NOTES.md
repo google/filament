@@ -7,11 +7,3 @@ We are chaning the way Vulkan buffers are handled. We need to switch over to a m
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
-- opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
-- engine: Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
-  depth-only passes. [**Requires recompiling materials**]
-- material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
-- material: Add CRC32 validation for material packages [⚠️ **New Material Version**]
-- Filament is now targeting c++20 (was previously c++17)

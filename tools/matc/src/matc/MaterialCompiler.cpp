@@ -70,6 +70,12 @@ bool MaterialCompiler::run(const matp::Config& config) {
         return false;
     }
 
+    // If we're reflecting parameters, the MaterialParser will have handled it inside of parse().
+    // We should return here to avoid actually building a material.
+    if (config.getReflectionTarget() != matp::Config::Metadata::NONE) {
+        return true;
+    }
+
     JobSystem js;
     js.adopt();
 
