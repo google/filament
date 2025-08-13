@@ -1,6 +1,0 @@
-spv.ext.ShaderTileImage.typemismatch.frag
-ERROR: 0:7: 'location' : the aliases sharing the location 0 must be the same basic type and interpolation qualification
-ERROR: 1 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

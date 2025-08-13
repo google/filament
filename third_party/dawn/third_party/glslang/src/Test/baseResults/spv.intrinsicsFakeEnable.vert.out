@@ -1,6 +1,0 @@
-spv.intrinsicsFakeEnable.vert
-ERROR: 0:7: 'location' : overlapping use of location 0
-ERROR: 1 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link

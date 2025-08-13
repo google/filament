@@ -1,5 +1,0 @@
-build
-out
-.DS_Store
-bazel-*
-MODULE.bazel.lock

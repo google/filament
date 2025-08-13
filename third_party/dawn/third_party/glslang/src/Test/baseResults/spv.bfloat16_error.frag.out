@@ -1,7 +1,0 @@
-spv.bfloat16_error.frag
-ERROR: 0:9: 'bfloat16 types not allowed as input/output' : qualifier 
-ERROR: 0:10: 'bfloat16 types not allowed as input/output' : qualifier 
-ERROR: 2 compilation errors.  No code generated.
-
-
-SPIR-V is not generated for failed compile or link
