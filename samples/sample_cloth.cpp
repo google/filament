@@ -21,8 +21,6 @@
 #include <map>
 #include <vector>
 
-#include <getopt/getopt.h>
-
 #include <utils/Path.h>
 
 #include <filament/Engine.h>
@@ -41,6 +39,7 @@
 
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
+#include <getopt/getopt.h>
 
 #include <stb_image.h>
 
