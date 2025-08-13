@@ -33,6 +33,12 @@
 
 namespace filamat {
 
+namespace {
+    bool isWordChar(char const c) {
+        return std::isalnum(c) || c == '_';
+    }
+} // anonymous namespace
+
 LineDictionary::LineDictionary() = default;
 
 LineDictionary::~LineDictionary() noexcept {
@@ -43,9 +49,6 @@ std::string const& LineDictionary::getString(index_t const index) const noexcept
     return *mStrings[index];
 }
 
-size_t LineDictionary::getDictionaryLineCount() const {
-    return mStrings.size();
-}
 std::vector<LineDictionary::index_t> LineDictionary::getIndices(
         std::string_view const& line) const noexcept {
     std::vector<index_t> result;
@@ -53,6 +56,8 @@ std::vector<LineDictionary::index_t> LineDictionary::getIndices(
     for (std::string_view const& subline : sublines) {
         if (auto iter = mLineIndices.find(subline); iter != mLineIndices.end()) {
             result.push_back(iter->second.index);
+        } else {
+            return {};
         }
     }
     return result;
@@ -108,7 +113,7 @@ std::pair<size_t, size_t> LineDictionary::findPattern(
     const size_t line_len = line.length();
     for (size_t i = offset; i < line_len; ++i) {
         // A pattern must be a whole word (or at the start of the string).
-        if (i > 0 && std::isalnum(line[i - 1])) {
+        if (i > 0 && isWordChar(line[i - 1])) {
             continue;
         }
 
@@ -120,6 +125,12 @@ std::pair<size_t, size_t> LineDictionary::findPattern(
                     size_t j = startOfDigits;
                     while (j < line_len && (j < startOfDigits + 6) && std::isdigit(line[j])) {
                         j++;
+                    }
+                    // We have a potential match (prefix + digits).
+                    // Check if the character after the match is also a word character.
+                    if (j < line_len && isWordChar(line[j])) {
+                        // It is, so this is not a valid boundary. Continue searching.
+                        break; // breaks from the inner loop (kPatterns)
                     }
                     // We have a full pattern match (prefix + digits).
                     return { i, j - i };
