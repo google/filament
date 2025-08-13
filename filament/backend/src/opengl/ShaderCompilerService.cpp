@@ -524,9 +524,9 @@ void ShaderCompilerService::ensureTokenIsReady(program_token_t const& token) {
             // just log warnings here instead of repeatedly checking compile status. If this turns
             // out to be a real issue later, we would need to consider doing the canonical way.
             if (!isCompileCompleted(token)) {
-                LOG(WARNING)
+                LOG(INFO)
                         << "Shader compilation for OpenGL program " << token->name.c_str_safe()
-                        << " is not completed yet. The following program link may not succeed.";
+                        << " is not completed yet. The following program link may be slow.";
             }
 
             linkProgram(mDriver.getContext(), token);

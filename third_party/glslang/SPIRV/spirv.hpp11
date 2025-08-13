@@ -172,6 +172,8 @@ enum class ExecutionMode : unsigned {
     SignedZeroInfNanPreserve = 4461,
     RoundingModeRTE = 4462,
     RoundingModeRTZ = 4463,
+    NonCoherentTileAttachmentReadQCOM = 4489,
+    TileShadingRateQCOM = 4490,
     EarlyAndLateFragmentTestsAMD = 5017,
     StencilRefReplacingEXT = 5027,
     CoalescingAMDX = 5069,
@@ -241,6 +243,7 @@ enum class StorageClass : unsigned {
     Image = 11,
     StorageBuffer = 12,
     TileImageEXT = 4172,
+    TileAttachmentQCOM = 4491,
     NodePayloadAMDX = 5068,
     CallableDataKHR = 5328,
     CallableDataNV = 5328,
@@ -544,6 +547,7 @@ enum class Decoration : unsigned {
     MaxByteOffset = 45,
     AlignmentId = 46,
     MaxByteOffsetId = 47,
+    SaturatedToLargestFloat8NormalConversionEXT = 4216,
     NoSignedWrap = 4469,
     NoUnsignedWrap = 4470,
     WeightTextureQCOM = 4487,
@@ -713,6 +717,9 @@ enum class BuiltIn : unsigned {
     DeviceIndex = 4438,
     ViewIndex = 4440,
     ShadingRateKHR = 4444,
+    TileOffsetQCOM = 4492,
+    TileDimensionQCOM = 4493,
+    TileApronSizeQCOM = 4494,
     BaryCoordNoPerspAMD = 4992,
     BaryCoordNoPerspCentroidAMD = 4993,
     BaryCoordNoPerspSampleAMD = 4994,
@@ -1063,7 +1070,10 @@ enum class Capability : unsigned {
     TileImageColorReadAccessEXT = 4166,
     TileImageDepthReadAccessEXT = 4167,
     TileImageStencilReadAccessEXT = 4168,
+    TensorsARM = 4174,
     CooperativeMatrixLayoutsARM = 4201,
+    Float8EXT = 4212,
+    Float8CooperativeMatrixEXT = 4213,
     FragmentShadingRateKHR = 4422,
     SubgroupBallotKHR = 4423,
     DrawParameters = 4427,
@@ -1099,6 +1109,7 @@ enum class Capability : unsigned {
     TextureSampleWeightedQCOM = 4484,
     TextureBoxFilterQCOM = 4485,
     TextureBlockMatchQCOM = 4486,
+    TileShadingQCOM = 4495,
     TextureBlockMatch2QCOM = 4498,
     Float16ImageAMD = 5008,
     ImageGatherBiasLodAMD = 5009,
@@ -1450,6 +1461,18 @@ enum class TensorAddressingOperandsMask : unsigned {
     DecodeFunc = 0x00000002,
 };
 
+enum class TensorOperandsShift : unsigned {
+    NontemporalARM = 0,
+    OutOfBoundsValueARM = 1,
+    Max = 0x7fffffff,
+};
+
+enum class TensorOperandsMask : unsigned {
+    MaskNone = 0,
+    NontemporalARM = 0x00000001,
+    OutOfBoundsValueARM = 0x00000002,
+};
+
 enum class InitializationModeQualifier : unsigned {
     InitOnDeviceReprogramINTEL = 0,
     InitOnDeviceResetINTEL = 1,
@@ -1536,6 +1559,8 @@ enum class RawAccessChainOperandsMask : unsigned {
 
 enum class FPEncoding : unsigned {
     BFloat16KHR = 0,
+    Float8E4M3EXT = 4214,
+    Float8E5M2EXT = 4215,
     Max = 0x7fffffff,
 };
 
@@ -1914,6 +1939,10 @@ enum class Op : unsigned {
     OpColorAttachmentReadEXT = 4160,
     OpDepthAttachmentReadEXT = 4161,
     OpStencilAttachmentReadEXT = 4162,
+    OpTypeTensorARM = 4163,
+    OpTensorReadARM = 4164,
+    OpTensorWriteARM = 4165,
+    OpTensorQuerySizeARM = 4166,
     OpTerminateInvocation = 4416,
     OpTypeUntypedPointerKHR = 4417,
     OpUntypedVariableKHR = 4418,
@@ -2723,6 +2752,10 @@ inline void HasResultAndType(Op opcode, bool *hasResult, bool *hasResultType) {
     case Op::OpColorAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
     case Op::OpDepthAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
     case Op::OpStencilAttachmentReadEXT: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTypeTensorARM: *hasResult = true; *hasResultType = false; break;
+    case Op::OpTensorReadARM: *hasResult = true; *hasResultType = true; break;
+    case Op::OpTensorWriteARM: *hasResult = false; *hasResultType = false; break;
+    case Op::OpTensorQuerySizeARM: *hasResult = true; *hasResultType = true; break;
     case Op::OpTerminateInvocation: *hasResult = false; *hasResultType = false; break;
     case Op::OpTypeUntypedPointerKHR: *hasResult = true; *hasResultType = false; break;
     case Op::OpUntypedVariableKHR: *hasResult = true; *hasResultType = true; break;
@@ -3278,6 +3311,8 @@ inline const char* ExecutionModeToString(ExecutionMode value) {
     case ExecutionMode::SignedZeroInfNanPreserve: return "SignedZeroInfNanPreserve";
     case ExecutionMode::RoundingModeRTE: return "RoundingModeRTE";
     case ExecutionMode::RoundingModeRTZ: return "RoundingModeRTZ";
+    case ExecutionMode::NonCoherentTileAttachmentReadQCOM: return "NonCoherentTileAttachmentReadQCOM";
+    case ExecutionMode::TileShadingRateQCOM: return "TileShadingRateQCOM";
     case ExecutionMode::EarlyAndLateFragmentTestsAMD: return "EarlyAndLateFragmentTestsAMD";
     case ExecutionMode::StencilRefReplacingEXT: return "StencilRefReplacingEXT";
     case ExecutionMode::CoalescingAMDX: return "CoalescingAMDX";
@@ -3344,6 +3379,7 @@ inline const char* StorageClassToString(StorageClass value) {
     case StorageClass::Image: return "Image";
     case StorageClass::StorageBuffer: return "StorageBuffer";
     case StorageClass::TileImageEXT: return "TileImageEXT";
+    case StorageClass::TileAttachmentQCOM: return "TileAttachmentQCOM";
     case StorageClass::NodePayloadAMDX: return "NodePayloadAMDX";
     case StorageClass::CallableDataKHR: return "CallableDataKHR";
     case StorageClass::IncomingCallableDataKHR: return "IncomingCallableDataKHR";
@@ -3586,6 +3622,7 @@ inline const char* DecorationToString(Decoration value) {
     case Decoration::MaxByteOffset: return "MaxByteOffset";
     case Decoration::AlignmentId: return "AlignmentId";
     case Decoration::MaxByteOffsetId: return "MaxByteOffsetId";
+    case Decoration::SaturatedToLargestFloat8NormalConversionEXT: return "SaturatedToLargestFloat8NormalConversionEXT";
     case Decoration::NoSignedWrap: return "NoSignedWrap";
     case Decoration::NoUnsignedWrap: return "NoUnsignedWrap";
     case Decoration::WeightTextureQCOM: return "WeightTextureQCOM";
@@ -3745,6 +3782,9 @@ inline const char* BuiltInToString(BuiltIn value) {
     case BuiltIn::DeviceIndex: return "DeviceIndex";
     case BuiltIn::ViewIndex: return "ViewIndex";
     case BuiltIn::ShadingRateKHR: return "ShadingRateKHR";
+    case BuiltIn::TileOffsetQCOM: return "TileOffsetQCOM";
+    case BuiltIn::TileDimensionQCOM: return "TileDimensionQCOM";
+    case BuiltIn::TileApronSizeQCOM: return "TileApronSizeQCOM";
     case BuiltIn::BaryCoordNoPerspAMD: return "BaryCoordNoPerspAMD";
     case BuiltIn::BaryCoordNoPerspCentroidAMD: return "BaryCoordNoPerspCentroidAMD";
     case BuiltIn::BaryCoordNoPerspSampleAMD: return "BaryCoordNoPerspSampleAMD";
@@ -3925,7 +3965,10 @@ inline const char* CapabilityToString(Capability value) {
     case Capability::TileImageColorReadAccessEXT: return "TileImageColorReadAccessEXT";
     case Capability::TileImageDepthReadAccessEXT: return "TileImageDepthReadAccessEXT";
     case Capability::TileImageStencilReadAccessEXT: return "TileImageStencilReadAccessEXT";
+    case Capability::TensorsARM: return "TensorsARM";
     case Capability::CooperativeMatrixLayoutsARM: return "CooperativeMatrixLayoutsARM";
+    case Capability::Float8EXT: return "Float8EXT";
+    case Capability::Float8CooperativeMatrixEXT: return "Float8CooperativeMatrixEXT";
     case Capability::FragmentShadingRateKHR: return "FragmentShadingRateKHR";
     case Capability::SubgroupBallotKHR: return "SubgroupBallotKHR";
     case Capability::DrawParameters: return "DrawParameters";
@@ -3959,6 +4002,7 @@ inline const char* CapabilityToString(Capability value) {
     case Capability::TextureSampleWeightedQCOM: return "TextureSampleWeightedQCOM";
     case Capability::TextureBoxFilterQCOM: return "TextureBoxFilterQCOM";
     case Capability::TextureBlockMatchQCOM: return "TextureBlockMatchQCOM";
+    case Capability::TileShadingQCOM: return "TileShadingQCOM";
     case Capability::TextureBlockMatch2QCOM: return "TextureBlockMatch2QCOM";
     case Capability::Float16ImageAMD: return "Float16ImageAMD";
     case Capability::ImageGatherBiasLodAMD: return "ImageGatherBiasLodAMD";
@@ -4263,6 +4307,8 @@ inline const char* NamedMaximumNumberOfRegistersToString(NamedMaximumNumberOfReg
 inline const char* FPEncodingToString(FPEncoding value) {
     switch (value) {
     case FPEncoding::BFloat16KHR: return "BFloat16KHR";
+    case FPEncoding::Float8E4M3EXT: return "Float8E4M3EXT";
+    case FPEncoding::Float8E5M2EXT: return "Float8E5M2EXT";
     default: return "Unknown";
     }
 }
@@ -4647,6 +4693,10 @@ inline const char* OpToString(Op value) {
     case Op::OpColorAttachmentReadEXT: return "OpColorAttachmentReadEXT";
     case Op::OpDepthAttachmentReadEXT: return "OpDepthAttachmentReadEXT";
     case Op::OpStencilAttachmentReadEXT: return "OpStencilAttachmentReadEXT";
+    case Op::OpTypeTensorARM: return "OpTypeTensorARM";
+    case Op::OpTensorReadARM: return "OpTensorReadARM";
+    case Op::OpTensorWriteARM: return "OpTensorWriteARM";
+    case Op::OpTensorQuerySizeARM: return "OpTensorQuerySizeARM";
     case Op::OpTerminateInvocation: return "OpTerminateInvocation";
     case Op::OpTypeUntypedPointerKHR: return "OpTypeUntypedPointerKHR";
     case Op::OpUntypedVariableKHR: return "OpUntypedVariableKHR";
@@ -5147,6 +5197,10 @@ constexpr TensorAddressingOperandsMask operator|(TensorAddressingOperandsMask a,
 constexpr TensorAddressingOperandsMask operator&(TensorAddressingOperandsMask a, TensorAddressingOperandsMask b) { return TensorAddressingOperandsMask(unsigned(a) & unsigned(b)); }
 constexpr TensorAddressingOperandsMask operator^(TensorAddressingOperandsMask a, TensorAddressingOperandsMask b) { return TensorAddressingOperandsMask(unsigned(a) ^ unsigned(b)); }
 constexpr TensorAddressingOperandsMask operator~(TensorAddressingOperandsMask a) { return TensorAddressingOperandsMask(~unsigned(a)); }
+constexpr TensorOperandsMask operator|(TensorOperandsMask a, TensorOperandsMask b) { return TensorOperandsMask(unsigned(a) | unsigned(b)); }
+constexpr TensorOperandsMask operator&(TensorOperandsMask a, TensorOperandsMask b) { return TensorOperandsMask(unsigned(a) & unsigned(b)); }
+constexpr TensorOperandsMask operator^(TensorOperandsMask a, TensorOperandsMask b) { return TensorOperandsMask(unsigned(a) ^ unsigned(b)); }
+constexpr TensorOperandsMask operator~(TensorOperandsMask a) { return TensorOperandsMask(~unsigned(a)); }
 constexpr MatrixMultiplyAccumulateOperandsMask operator|(MatrixMultiplyAccumulateOperandsMask a, MatrixMultiplyAccumulateOperandsMask b) { return MatrixMultiplyAccumulateOperandsMask(unsigned(a) | unsigned(b)); }
 constexpr MatrixMultiplyAccumulateOperandsMask operator&(MatrixMultiplyAccumulateOperandsMask a, MatrixMultiplyAccumulateOperandsMask b) { return MatrixMultiplyAccumulateOperandsMask(unsigned(a) & unsigned(b)); }
 constexpr MatrixMultiplyAccumulateOperandsMask operator^(MatrixMultiplyAccumulateOperandsMask a, MatrixMultiplyAccumulateOperandsMask b) { return MatrixMultiplyAccumulateOperandsMask(unsigned(a) ^ unsigned(b)); }

@@ -479,6 +479,10 @@ enum TOperator {
     EOpCooperativeVectorOuterProductAccumulateNV,
     EOpCooperativeVectorReduceSumAccumulateNV,
 
+    EOpTensorReadARM,
+    EOpTensorWriteARM,
+    EOpTensorSizeARM,
+
     EOpBeginInvocationInterlock, // Fragment only
     EOpEndInvocationInterlock, // Fragment only
 
@@ -615,6 +619,14 @@ enum TOperator {
     EOpConstructBF16Vec2,
     EOpConstructBF16Vec3,
     EOpConstructBF16Vec4,
+    EOpConstructFloatE5M2,
+    EOpConstructFloatE5M2Vec2,
+    EOpConstructFloatE5M2Vec3,
+    EOpConstructFloatE5M2Vec4,
+    EOpConstructFloatE4M3,
+    EOpConstructFloatE4M3Vec2,
+    EOpConstructFloatE4M3Vec3,
+    EOpConstructFloatE4M3Vec4,
     EOpConstructStruct,
     EOpConstructTextureSampler,
     EOpConstructNonuniform,     // expected to be transformed away, not present in final AST
@@ -623,6 +635,7 @@ enum TOperator {
     EOpConstructCooperativeMatrixKHR,
     EOpConstructCooperativeVectorNV,
     EOpConstructAccStruct,
+    EOpConstructSaturated,
     EOpConstructGuardEnd,
 
     //
@@ -1095,6 +1108,7 @@ public:
     virtual int getVectorSize() const { return type.getVectorSize(); }
     virtual int getMatrixCols() const { return type.getMatrixCols(); }
     virtual int getMatrixRows() const { return type.getMatrixRows(); }
+    virtual int getTensorRankARM() const { return type.getTensorRankARM(); }
     virtual bool isMatrix() const { return type.isMatrix(); }
     virtual bool isArray()  const { return type.isArray(); }
     virtual bool isVector() const { return type.isVector(); }

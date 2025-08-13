@@ -40,7 +40,7 @@ std::string fragmentTexturedLod (R"(#version 450 core
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
 
-layout(location = 0, set = 0) uniform sampler2D backend_test_sib_tex;
+layout(binding = 0, set = 0) uniform sampler2D backend_test_sib_tex;
 
 void main() {
     fragColor = textureLod(backend_test_sib_tex, uv, 1);

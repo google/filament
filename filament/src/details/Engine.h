@@ -752,6 +752,9 @@ public:
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
+        struct {
+            bool check_crc32_after_loading = false;
+        } material;
     } features;
 
     std::array<FeatureFlag, sizeof(features)> const mFeatures{{
@@ -800,6 +803,9 @@ public:
             { "engine.debug.assert_texture_can_generate_mipmap",
               "Assert if a texture has the correct usage set for generating mipmaps.",
               &features.engine.debug.assert_texture_can_generate_mipmap, false },
+            { "material.check_crc32_after_loading",
+              "Verify the checksum of package data when a material is loaded.",
+              &features.material.check_crc32_after_loading, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

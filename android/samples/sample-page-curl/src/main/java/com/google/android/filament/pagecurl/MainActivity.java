@@ -276,6 +276,7 @@ public class MainActivity extends Activity
                 .width(bitmap.getWidth())
                 .height(bitmap.getHeight())
                 .sampler(Texture.Sampler.SAMPLER_2D)
+                .usage(Texture.Usage.DEFAULT | Texture.Usage.GEN_MIPMAPPABLE)
                 .format(Texture.InternalFormat.SRGB8_A8) // It is crucial to use an SRGB format.
                 .levels(0xff) // tells Filament to figure out the number of mip levels
                 .build(engine);

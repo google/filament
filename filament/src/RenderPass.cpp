@@ -1067,7 +1067,8 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     // Each material has a per-material descriptor-set layout which encodes the
                     // material's parameters (ubo and samplers)
                     pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_MATERIAL] =
-                            ma->getDescriptorSetLayout().getHandle();
+                            ma->getDescriptorSetLayout(info.materialVariant).getHandle();
+
 
                     if (UTILS_UNLIKELY(ma->getMaterialDomain() == MaterialDomain::POST_PROCESS)) {
                         // It is possible to get a post-process material here (even though it's

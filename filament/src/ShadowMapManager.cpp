@@ -337,7 +337,8 @@ FrameGraphId<FrameGraphTexture> ShadowMapManager::render(FEngine& engine, FrameG
                 // "read" from one of its resource (only writes), so the FrameGraph culls it.
                 builder.sideEffect();
             },
-            [=, passBuilder = passBuilder,
+            [=, this,
+                    passBuilder = passBuilder,
                     &engine = const_cast<FEngine /*const*/ &>(engine), // FIXME: we want this const
                     &view = const_cast<FView const&>(view)]
                     (FrameGraphResources const&, auto const& data, DriverApi& driver) mutable {

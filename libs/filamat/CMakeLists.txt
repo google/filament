@@ -162,6 +162,7 @@ if (IS_HOST_PLATFORM)
             tests/test_filamat.cpp
             tests/test_argBufferFixup.cpp
             tests/test_clipDistanceFixup.cpp
+            tests/test_line_dictionary.cpp
             tests/test_includes.cpp)
 
     add_executable(${TARGET} ${SRCS})
