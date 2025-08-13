@@ -1595,11 +1595,21 @@ export interface View$AmbientOcclusionOptions$Gtao {
      */
     sampleStepsPerSlice?: number;
     /**
-     * thickness heuristic, should be closed to 0
+     * thickness heuristic, should be closed to 0. No effect when useBitmask sets to true.
      */
     thicknessHeuristic?: number;
-    useBitmask?: boolean;
-    thickness?: number;
+    /**
+     * enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+     */
+    useVisibilityBitmasks?: boolean;
+    /**
+     * constant thickness value of objects on the screen in world space. Only take effect when useBitmask is set to true.
+     */
+    constThickness?: number;
+    /**
+     * increase thickness with distance to maintain detail on distant surfaces.
+     */
+    linearThickness?: boolean;
 }
 
 /**

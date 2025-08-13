@@ -1952,11 +1952,15 @@ public class View {
         /**
          * Ground Truth-base Ambient Occlusion (GTAO) options
          */
-        public boolean gtaoUseBitmask = false;
+        public boolean gtaoUseVisibilityBitmasks = false;
         /**
          * Ground Truth-base Ambient Occlusion (GTAO) options
          */
-        public float gtaoThickness = 0.5f;
+        public float gtaoConstThickness = 0.5f;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public boolean gtaoLinearThickness = false;
 
     }
 
