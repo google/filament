@@ -41,7 +41,7 @@ fragment main0_out main0(main0_in in [[stage_in]])
     inp.v4 = in.inp_v4;
     inp.v5 = in.inp_v5;
     inp.v6 = in.inp_v6;
-    out.FragColor = float4(inp.v0.x + inp.v1.y, inp.v2.xy, fma(inp.v3.w, inp.v4, inp.v5) - inp.v6);
+    out.FragColor = float4(inp.v0.x + inp.v1.y, inp.v2.xy, ((inp.v3.w * inp.v4) + inp.v5) - inp.v6);
     return out;
 }
 
