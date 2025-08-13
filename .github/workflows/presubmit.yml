@@ -118,10 +118,11 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/get-gltf-assets
+      - uses: ./.github/actions/get-mesa
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - uses: ./.github/actions/mac-prereq
-      - uses: ./.github/actions/get-mesa
       - name: Prerequisites
         run: |
           pip install tifffile numpy
