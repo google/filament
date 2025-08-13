@@ -362,6 +362,12 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         return false;
     }
     ExternalTextureAndroid* outTexture = static_cast<ExternalTextureAndroid*>(texture);
+
+    // Make sure to destroy the previous binded image, to avoid leaking memory
+    if (outTexture->eglImage != EGL_NO_IMAGE) {
+        eglDestroyImageKHR(eglGetCurrentDisplay(), outTexture->eglImage);
+    }
+
     outTexture->eglImage = eglImage;
 
     glActiveTexture(prevActiveTexture);
