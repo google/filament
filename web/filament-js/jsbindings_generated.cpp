@@ -99,6 +99,8 @@ value_object<View::AmbientOcclusionOptions::Gtao>("View$AmbientOcclusionOptions$
     .field("sampleSliceCount", &View::AmbientOcclusionOptions::Gtao::sampleSliceCount)
     .field("sampleStepsPerSlice", &View::AmbientOcclusionOptions::Gtao::sampleStepsPerSlice)
     .field("thicknessHeuristic", &View::AmbientOcclusionOptions::Gtao::thicknessHeuristic)
+    .field("useBitmask", &View::AmbientOcclusionOptions::Gtao::useBitmask)
+    .field("thickness", &View::AmbientOcclusionOptions::Gtao::thickness)
     ;
 
 value_object<View::AmbientOcclusionOptions>("View$AmbientOcclusionOptions")

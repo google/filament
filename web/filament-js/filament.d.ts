@@ -1598,6 +1598,8 @@ export interface View$AmbientOcclusionOptions$Gtao {
      * thickness heuristic, should be closed to 0
      */
     thicknessHeuristic?: number;
+    useBitmask?: boolean;
+    thickness?: number;
 }
 
 /**
