@@ -19,6 +19,8 @@
 
 #include "WebGPUDescriptorSetLayout.h"
 
+#include "WebGPUConstants.h"
+
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
@@ -48,6 +50,10 @@ public:
 
     // May be nullptr. Use lockAndReturn to create the bind group when appropriate
     [[nodiscard]] wgpu::BindGroup const& getBindGroup() const { return mBindGroup; }
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
+    [[nodiscard]] wgpu::BindGroupLayout const& getLayout() const { return mLayout; }
+#endif
 
 private:
     wgpu::BindGroupLayout mLayout = nullptr;

@@ -16,7 +16,7 @@
 
 #include "MaterialLexer.h"
 
-namespace matc {
+namespace matp {
 
 bool MaterialLexer::readBlock() noexcept {
     size_t braceCount = 0;
@@ -85,8 +85,8 @@ bool MaterialLexer::readLexeme() noexcept {
         case MaterialType::BLOCK:
             if (!readBlock()) {
                 nextMaterialType = MaterialType::UNKNOWN;
-                break;
             }
+            break;
         case MaterialType::IDENTIFIER: readIdentifier(); break;
         case MaterialType::UNKNOWN:    readUnknown();    break;
         default:
@@ -97,4 +97,4 @@ bool MaterialLexer::readLexeme() noexcept {
     return nextMaterialType != UNKNOWN;
 }
 
-} // namespace matc
+} // namespace matp

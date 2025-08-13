@@ -20,7 +20,7 @@
 
 #include <fstream>
 
-namespace matc {
+namespace matp {
 
 bool DirIncluder::operator()(const utils::CString& includedBy, filamat::IncludeResult& result) {
     auto getHeaderPath = [&result, &includedBy, this]() {
@@ -66,5 +66,5 @@ bool DirIncluder::operator()(const utils::CString& includedBy, filamat::IncludeR
     return true;
 }
 
-} // namespace matc
+} // namespace matp
 

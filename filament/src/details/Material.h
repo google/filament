@@ -96,8 +96,18 @@ public:
     DescriptorSetLayout const& getPerViewDescriptorSetLayout(
             Variant const variant, bool const useVsmDescriptorSetLayout) const noexcept;
 
-    DescriptorSetLayout const& getDescriptorSetLayout() const noexcept {
-        return mDescriptorSetLayout;
+    // Returns the layout that should be used when this material is bound to the pipeline for the
+    // given variant. Shared variants use the Engine's default material's variants, so we should
+    // also use the default material's layout.
+    DescriptorSetLayout const& getDescriptorSetLayout(Variant variant = {}) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return mDescriptorSetLayout;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return mDescriptorSetLayout;
+        }
+        return pDefaultMaterial->getDescriptorSetLayout();
     }
 
     void compile(CompilerPriorityQueue priority,
@@ -148,6 +158,23 @@ public:
 #endif
         assert_invariant(mCachedPrograms[variant.key]);
         return mCachedPrograms[variant.key];
+    }
+
+    // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
+    // however, the material instance will call useShared() to bind the default material's sets
+    // instead.
+    // Returns true if this is a shared variant.
+    bool useShared(backend::DriverApi& driver, Variant variant) const noexcept {
+        if (!isSharedVariant(variant)) {
+            return false;
+        }
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (UTILS_UNLIKELY(!pDefaultMaterial)) {
+            return false;
+        }
+        FMaterialInstance const* const pDefaultInstance = pDefaultMaterial->getDefaultInstance();
+        pDefaultInstance->use(driver, variant);
+        return true;
     }
 
     [[nodiscard]]

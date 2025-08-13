@@ -19,7 +19,7 @@
 
 #include "Lexeme.h"
 
-namespace matc {
+namespace matp {
 
 enum JsonType {
     BOOLEAN,
@@ -68,6 +68,6 @@ public:
 
 };
 
-} // namespace matc
+} // namespace matp
 
 #endif //TNT_JSONLEXEME_H

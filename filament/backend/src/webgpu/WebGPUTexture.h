@@ -26,20 +26,6 @@
 
 namespace filament::backend {
 
-[[nodiscard]] constexpr bool hasStencil(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
-           textureFormat == wgpu::TextureFormat::Stencil8;
-}
-
-[[nodiscard]] constexpr bool hasDepth(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth16Unorm ||
-           textureFormat == wgpu::TextureFormat::Depth32Float ||
-           textureFormat == wgpu::TextureFormat::Depth24Plus ||
-           textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8;
-}
-
 class WebGPUTexture : public HwTexture {
 public:
     enum class MipmapGenerationStrategy : uint8_t {
@@ -104,10 +90,8 @@ public:
     /**
      * @return nullptr if a MSAA sidecar texture is not appliable, otherwise a view to one
      */
-    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&, uint8_t mipLevel, uint32_t arrayLayer) const;
-
-    [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
-            filament::backend::TextureFormat const& fFormat);
+    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&,
+            uint8_t mipLevel, uint32_t arrayLayer) const;
 
     /**
      * @param format a required texture format (can be a view to a different underlying texture
@@ -117,8 +101,6 @@ public:
      */
     [[nodiscard]] static bool supportsMultipleMipLevelsViaStorageBinding(
             wgpu::TextureFormat format);
-
-    [[nodiscard]] static size_t getWGPUTextureFormatPixelSize(const wgpu::TextureFormat format);
 
 private:
     // the texture view's format, which may differ from the underlying texture's format itself,

@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.63.0'
+    implementation 'com.google.android.filament:filament-android:1.63.1'
 }
 ```
 
@@ -51,7 +51,7 @@ Here are all the libraries available in the group `com.google.android.filament`:
 iOS projects can use CocoaPods to install the latest release:
 
 ```shell
-pod 'Filament', '~> 1.63.0'
+pod 'Filament', '~> 1.63.1'
 ```
 
 ## Documentation
@@ -331,6 +331,7 @@ and tools.
   - `filamesh`:               Mesh converter
   - `glslminifier`:           Minifies GLSL source code
   - `matc`:                   Material compiler
+  - `filament-matp`:          Material parser
   - `matinfo`                 Displays information about materials compiled with `matc`
   - `mipgen`                  Generates a series of miplevels from a source image
   - `normal-blending`:        Tool to blend normal maps
