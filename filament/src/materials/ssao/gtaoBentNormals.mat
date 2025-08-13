@@ -23,10 +23,6 @@ material {
         },
         {
             type : float,
-            name : thickness
-        },
-        {
-            type : float,
             name : invFarPlane
         },
         {
@@ -68,6 +64,10 @@ material {
         {
             type : float,
             name : thicknessHeuristic
+        },
+        {
+            type : float,
+            name : thickness
         },
         {
             type : float,

@@ -59,12 +59,6 @@ float spatialOffsetsNoise(float2 uv) {
 	return 0.25 * float((position.y - position.x) & 3);
 }
 
-uint bitCount_(uint value) {
-    value = value - ((value >> 1u) & 0x55555555u);
-    value = (value & 0x33333333u) + ((value >> 2u) & 0x33333333u);
-    return ((value + (value >> 4u) & 0xF0F0F0Fu) * 0x1010101u) >> 24u;
-}
-
 // If the new sample value is greater then the current one, update the value with some fallOff.
 // Otherwise, apply thicknessHeuristic.
 float updateHorizon(float sampleHorizonCos, float currentHorizonCos, float fallOff) {
@@ -86,18 +80,20 @@ float calculateHorizonCos(highp vec3 sampleDelta, highp vec3 viewDir, float hori
     return updateHorizon(shc, horizonCos, fallOff);
 }
 
+// https://cdrinmatane.github.io/posts/ssaovb-code/
 uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
     uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
     uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
-    if (angleHorizonInt >= SECTOR_COUNT) {
-        return 0xFFFFFFFFu;
-    }
-
-    uint angleHorizonBitfield = (1u << angleHorizonInt) - 1u;
+    uint angleHorizonBitfield = angleHorizonInt > 0u ? (0xFFFFFFFFu >> (SECTOR_COUNT-angleHorizonInt)) : 0u;
     uint currentOccludedBitfield = angleHorizonBitfield << startHorizonInt;
     return globalOccludedBitfield | currentOccludedBitfield;
 }
 
+// https://cdrinmatane.github.io/posts/ssaovb-code/
+// The visibility bitmask method replaces the traditional two horizon angles with a bitmask
+// for each slice. This bitmask flags whether each sector is occluded or not,
+// which enables surfaces to be modeled with constant thickness, overcoming the limitation
+// of treating them as a simple height field.
 uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
     uint globalOccludedBitfield, float n, highp vec3 origin) {
     vec2 frontBackHorizon;
@@ -197,9 +193,9 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
         if (materialConstants_useVisibilityBitmasks) {
             // Calculate the portion of the occluded sector
-            visibility += float(bitCount_(globalOccludedBitfield)) / float(SECTOR_COUNT);
+            visibility += 1.0 - float(bitCount(globalOccludedBitfield)) / float(SECTOR_COUNT);
 
-            // TODO: Calculate bent normal
+            // Note: bent normal calculation is not supported in visibility bitmasks mode
         }
         else {
             float h0 = -acosFast(horizonCos1);
@@ -215,8 +211,9 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
             visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
         }
     }
+
     if (materialConstants_useVisibilityBitmasks) {
-        obscurance = saturate(visibility * materialParams.sliceCount.y);
+        obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
     }
     else{
         obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);
