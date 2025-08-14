@@ -137,9 +137,6 @@ if  [[ "$OS_NAME" == "Darwin" ]]; then
 
     # This is necessary to be able to build vk (lavapipe) on macOS.  Doesn't seem like a real dependency.
     sed -I '' "s/error('Vulkan drivers require dri3 for X11 support')//g" meson.build
-    # This is to properly link lib-xcb-present on the mac build (though we won't be drawing to any
-    # real hardware surface).
-    sed -I '' "s/dep_xcb_present = null_dep/dep_xcb_present = dependency('xcb-present')/g" meson.build
 fi
 
 # -Dosmesa=true    => builds OSMesa, which is an offscreen GL context

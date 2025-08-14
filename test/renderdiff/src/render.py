@@ -26,19 +26,13 @@ from golden_manager import GoldenManager
 from image_diff import same_image
 from results import RESULT_OK, RESULT_FAILED
 
-def _render_single_model(gltf_viewer, test_json_path, named_output_dir,
-                         test_name, backend, model, model_path, opengl_lib, vk_icd):
-  env = {}
+def _render_single_model(gltf_viewer, test_json_path, named_output_dir, test_name, backend, model, model_path, opengl_lib):
+  env = None
   if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
-    env |= {
+    env = {
       'LD_LIBRARY_PATH': opengl_lib,
       # for macOS
       'DYLD_LIBRARY_PATH': opengl_lib,
-    }
-
-  if backend == 'vulkan' and os.path.exists(vk_icd):
-    env |= {
-      'VK_ICD_FILENAMES': vk_icd,
     }
 
   out_name = f'{test_name}.{backend}.{model}'
@@ -97,15 +91,13 @@ def _render_test_config(gltf_viewer,
         f.write(f'[{test.to_filament_format()}]')
 
       for backend in test_config.backends:
-        if backend == 'vulkan':
-          assert vk_icd, "VK ICD must be specified when testing vulkan backend"
         for model in test.models:
           model_path = os.path.abspath(test_config.models[model])
           futures.append(
             executor.submit(_render_single_model, gltf_viewer_abs,
                     test_json_path, named_output_dir,
                     test.name, backend, model, model_path,
-                    opengl_lib, vk_icd))
+                    opengl_lib))
 
     for future in concurrent.futures.as_completed(futures):
       results.append(future.result())
