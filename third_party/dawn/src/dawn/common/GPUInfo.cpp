@@ -42,16 +42,6 @@ namespace {
 // gen9
 const std::array<PCIDeviceID, 2> IrisPlus655 = {{0x3EA5, 0x3EA8}};
 
-// According to Intel graphics driver version schema, build number is generated from the
-// last two fields.
-// See https://www.intel.com/content/www/us/en/support/articles/000005654/graphics.html for
-// more details.
-uint32_t GetIntelWindowsDriverBuildNumber(const DriverVersion& driverVersion) {
-    size_t size = driverVersion.size();
-    DAWN_ASSERT(size >= 2);
-    return driverVersion[size - 2] * 10000 + driverVersion[size - 1];
-}
-
 }  // anonymous namespace
 
 DriverVersion::DriverVersion() = default;
@@ -86,19 +76,18 @@ std::string DriverVersion::ToString() const {
     return oss.str();
 }
 
-int CompareWindowsDriverVersion(PCIVendorID vendorId,
-                                const DriverVersion& version1,
-                                const DriverVersion& version2) {
-    if (IsIntel(vendorId)) {
-        uint32_t buildNumber1 = GetIntelWindowsDriverBuildNumber(version1);
-        uint32_t buildNumber2 = GetIntelWindowsDriverBuildNumber(version2);
-        return buildNumber1 < buildNumber2 ? -1 : (buildNumber1 == buildNumber2 ? 0 : 1);
-    }
-
-    // TODO(crbug.com/dawn/823): support other GPU vendors
-    DAWN_UNREACHABLE();
-    return 0;
+// According to Intel graphics driver version schema, build number is generated from the
+// last two fields.
+// See https://www.intel.com/content/www/us/en/support/articles/000005654/graphics.html for
+// more details.
+IntelWindowsDriverVersion::IntelWindowsDriverVersion(const DriverVersion& driverVersion) {
+    size_t size = driverVersion.size();
+    DAWN_ASSERT(size >= 2);
+    mBuildNumber = driverVersion[size - 2] * 10000 + driverVersion[size - 1];
 }
+
+IntelWindowsDriverVersion::IntelWindowsDriverVersion(const std::initializer_list<uint16_t>& version)
+    : IntelWindowsDriverVersion(DriverVersion(version)) {}
 
 int CompareIntelMesaDriverVersion(const DriverVersion& version1, const DriverVersion& version2) {
     for (uint32_t i = 0; i < 3; ++i) {

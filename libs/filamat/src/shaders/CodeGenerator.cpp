@@ -252,6 +252,8 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     if (stage == ShaderStage::FRAGMENT) {
         CodeGenerator::generateDefine(out, "FILAMENT_LINEAR_FOG",
                 material.linearFog);
+        CodeGenerator:generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION",
+                material.shadowFarAttenuation);
         CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
                 material.userMaterialHasCustomDepth);
     }

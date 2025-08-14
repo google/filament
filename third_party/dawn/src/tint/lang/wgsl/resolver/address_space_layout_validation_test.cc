@@ -555,179 +555,46 @@ TEST_F(ResolverAddressSpaceLayoutValidationTest, UniformBuffer_InvalidArrayStrid
     ASSERT_TRUE(r()->Resolve()) << r()->error();
 }
 
-// Detect unaligned member for push constants buffers
-TEST_F(ResolverAddressSpaceLayoutValidationTest, PushConstant_UnalignedMember) {
-    // enable chromium_experimental_push_constant;
+// Detect unaligned member for immediate data buffers
+TEST_F(ResolverAddressSpaceLayoutValidationTest, Immediate_UnalignedMember) {
+    // enable chromium_experimental_immediate;
     // struct S {
     //     @size(5) a : f32;
     //     @align(1) b : f32;
     // };
-    // var<push_constant> a : S;
-    Enable(wgsl::Extension::kChromiumExperimentalPushConstant);
+    // var<immediate> a : S;
+    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
     Structure(Ident(Source{{12, 34}}, "S"),
               Vector{Member("a", ty.f32(), Vector{MemberSize(5_a)}),
                      Member(Source{{34, 56}}, "b", ty.f32(), Vector{MemberAlign(1_i)})});
-    GlobalVar(Source{{78, 90}}, "a", ty("S"), core::AddressSpace::kPushConstant);
+    GlobalVar(Source{{78, 90}}, "a", ty("S"), core::AddressSpace::kImmediate);
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(34:56 error: the offset of a struct member of type 'f32' in address space 'push_constant' must be a multiple of 4 bytes, but 'b' is currently at offset 5. Consider setting '@align(4)' on this member
+        R"(34:56 error: the offset of a struct member of type 'f32' in address space 'immediate' must be a multiple of 4 bytes, but 'b' is currently at offset 5. Consider setting '@align(4)' on this member
 12:34 note: see layout of struct:
 /*           align(4) size(12) */ struct S {
 /* offset(0) align(4) size( 5) */   a : f32,
 /* offset(5) align(1) size( 4) */   b : f32,
 /* offset(9) align(1) size( 3) */   // -- implicit struct size padding --
 /*                             */ };
-78:90 note: 'S' used in address space 'push_constant' here)");
+78:90 note: 'S' used in address space 'immediate' here)");
 }
 
-TEST_F(ResolverAddressSpaceLayoutValidationTest, PushConstant_Aligned) {
-    // enable chromium_experimental_push_constant;
+TEST_F(ResolverAddressSpaceLayoutValidationTest, Immediate_Aligned) {
+    // enable chromium_experimental_immediate;
     // struct S {
     //     @size(5) a : f32;
     //     @align(4) b : f32;
     // };
-    // var<push_constant> a : S;
-    Enable(wgsl::Extension::kChromiumExperimentalPushConstant);
+    // var<immediate> a : S;
+    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
     Structure("S", Vector{Member("a", ty.f32(), Vector{MemberSize(5_a)}),
                           Member("b", ty.f32(), Vector{MemberAlign(4_i)})});
-    GlobalVar("a", ty("S"), core::AddressSpace::kPushConstant);
+    GlobalVar("a", ty("S"), core::AddressSpace::kImmediate);
 
     ASSERT_TRUE(r()->Resolve()) << r()->error();
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_StructMemberOffset_Struct) {
-    // enable chromium_internal_relaxed_uniform_layout;
-    //
-    // struct Inner {
-    //   scalar : i32;
-    // };
-    //
-    // struct Outer {
-    //   scalar : f32;
-    //   inner : Inner;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Enable(wgsl::Extension::kChromiumInternalRelaxedUniformLayout);
-
-    Structure("Inner", Vector{
-                           Member("scalar", ty.i32()),
-                       });
-
-    Structure("Outer", Vector{
-                           Member("scalar", ty.f32()),
-                           Member("inner", ty("Inner")),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_StructMemberOffset_Array) {
-    // enable chromium_internal_relaxed_uniform_layout;
-    //
-    // type Inner = @stride(16) array<f32, 10u>;
-    //
-    // struct Outer {
-    //   scalar : f32;
-    //   inner : Inner;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Enable(wgsl::Extension::kChromiumInternalRelaxedUniformLayout);
-
-    Alias("Inner", ty.array<f32, 10>(Vector{Stride(16)}));
-
-    Structure("Outer", Vector{
-                           Member("scalar", ty.f32()),
-                           Member("inner", ty("Inner")),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_MemberOffsetNotMutipleOf16) {
-    // enable chromium_internal_relaxed_uniform_layout;
-    //
-    // struct Inner {
-    //   @align(4) @size(5) scalar : i32;
-    // };
-    //
-    // struct Outer {
-    //   inner : Inner;
-    //   scalar : i32;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Enable(wgsl::Extension::kChromiumInternalRelaxedUniformLayout);
-
-    Structure("Inner", Vector{
-                           Member("scalar", ty.i32(), Vector{MemberAlign(4_i), MemberSize(5_a)}),
-                       });
-
-    Structure("Outer", Vector{
-                           Member("inner", ty("Inner")),
-                           Member("scalar", ty.i32()),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_ArrayStride_Scalar) {
-    // enable chromium_internal_relaxed_uniform_layout;
-    //
-    // struct Outer {
-    //   arr : array<f32, 10u>;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Enable(wgsl::Extension::kChromiumInternalRelaxedUniformLayout);
-
-    Structure("Outer", Vector{
-                           Member("arr", ty.array<f32, 10>()),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
-}
-
-TEST_F(ResolverAddressSpaceLayoutValidationTest, RelaxedUniformLayout_ArrayStride_Vech) {
-    // enable f16;
-    // enable chromium_internal_relaxed_uniform_layout;
-    //
-    // struct Outer {
-    //   arr : array<vec3<f16>, 10u>;
-    // };
-    //
-    // @group(0) @binding(0)
-    // var<uniform> a : Outer;
-
-    Enable(wgsl::Extension::kF16);
-    Enable(wgsl::Extension::kChromiumInternalRelaxedUniformLayout);
-
-    Structure("Outer", Vector{
-                           Member("arr", ty.array<vec3<f16>, 10>()),
-                       });
-
-    GlobalVar("a", ty("Outer"), core::AddressSpace::kUniform, Group(0_a), Binding(0_a));
-
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
 TEST_F(ResolverAddressSpaceLayoutValidationTest, AlignAttributeTooSmall_Storage) {

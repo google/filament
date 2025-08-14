@@ -114,9 +114,6 @@ func (f *Flags) SetOptions(opts Options) error {
 	if opts.UseFXC {
 		f.Set("disable-dawn-features=use_dxc")
 	}
-	if opts.UseIR {
-		f.Set("enable-dawn-features=use_tint_ir")
-	}
 	f.GlobListFlags("enable-dawn-features=", ",")
 
 	return nil

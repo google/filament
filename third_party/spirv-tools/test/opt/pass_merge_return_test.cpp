@@ -2598,6 +2598,70 @@ TEST_F(MergeReturnPassTest, OverflowTest1) {
   EXPECT_EQ(Pass::Status::Failure, std::get<1>(result));
 }
 
+TEST_F(MergeReturnPassTest, DebugFunctionDefinitionStillInEntryBlock) {
+  // Make sure that the DebugFunctionDefinition instruction is still in the
+  // entry block
+  const std::string text =
+      R"(
+; CHECK: OpFunction
+; CHECK: OpLabel
+; CHECK: DebugFunctionDefinition
+; CHECK: OpSelectionMerge
+; CHECK: OpCompositeExtract
+; CHECK: OpUGreaterThan
+        OpCapability Shader
+        OpExtension "SPV_KHR_non_semantic_info"
+        %2 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+        OpMemoryModel Logical GLSL450
+        OpEntryPoint GLCompute %main "main" %entryPointParam_main %gl_GlobalInvocationID
+        %1 = OpString "test"
+        OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+        OpDecorate %entryPointParam_main Location 0
+        %void = OpTypeVoid
+        %4 = OpExtInst %void %2 DebugSource %1
+        %uint = OpTypeInt 32 0
+        %uint_100 = OpConstant %uint 100
+        %uint_5 = OpConstant %uint 5
+        %uint_11 = OpConstant %uint 11
+        %10 = OpExtInst %void %2 DebugCompilationUnit %uint_100 %uint_5 %4 %uint_11
+        %12 = OpTypeFunction %void
+        %uint_0 = OpConstant %uint 0
+        %14 = OpExtInst %void %2 DebugTypeFunction %uint_0 %void
+        %uint_2 = OpConstant %uint 2
+        %16 = OpExtInst %void %2 DebugFunction %1 %14 %4 %uint_2 %uint_5 %10 %1 %uint_0 %uint_2
+        %v3uint = OpTypeVector %uint 3
+        %_ptr_Input_v3uint = OpTypePointer Input %v3uint
+        %bool = OpTypeBool
+        %uint_3 = OpConstant %uint 3
+        %int = OpTypeInt 32 1
+        %_ptr_Output_int = OpTypePointer Output %int
+        %int_1 = OpConstant %int 1
+        %int_0 = OpConstant %int 0
+        %gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input    ; BuiltIn GlobalInvocationId
+        %entryPointParam_main = OpVariable %_ptr_Output_int Output      ; Location 0
+
+        ; Function main
+        %main = OpFunction %void None %12
+        %13 = OpLabel
+        %20 = OpExtInst %void %2 DebugScope %16
+        %29 = OpLoad %v3uint %gl_GlobalInvocationID
+        %37 = OpCompositeExtract %uint %29 0
+        %39 = OpUGreaterThan %bool %37 %uint_3
+        %19 = OpExtInst %void %2 DebugFunctionDefinition %16 %main
+        OpSelectionMerge %21 None
+        OpBranchConditional %39 %23 %21
+        %21 = OpLabel
+        OpStore %entryPointParam_main %int_1
+        OpReturn
+        %23 = OpLabel
+        OpStore %entryPointParam_main %int_0
+        OpReturn
+        OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<MergeReturnPass>(text, true);
+}
+
 }  // namespace
 }  // namespace opt
 }  // namespace spvtools

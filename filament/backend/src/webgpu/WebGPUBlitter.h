@@ -45,6 +45,13 @@ public:
 
     explicit WebGPUBlitter(wgpu::Device const& device);
 
+    /**
+     * IMPORTANT NOTE: when reusing a command encoder and/or textures make sure to flush/submit
+     * pending commands (draws, etc.) to the GPU prior to calling this blit, because texture updates
+     * may otherwise (unintentionally) happen after draw commands encoded in the encoder.
+     * Submitting any commands up to this point ensures the calls happen in the expected
+     * sequence.
+     */
     void blit(wgpu::Queue const&, wgpu::CommandEncoder const&, BlitArgs const&);
 
 private:

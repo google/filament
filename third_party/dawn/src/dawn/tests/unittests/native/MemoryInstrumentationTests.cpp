@@ -277,8 +277,8 @@ TEST_F(MemoryInstrumentationTest, ComputeEstimatedMemoryUsageInDetails) {
     constexpr uint64_t kMipmappedTextureSize =
         (((30 * 20) + (15 * 10) + (7 * 5) + (3 * 2) + (1 * 1)) * 2) * 10;  // 15840
 
-    // Create a multi-sampled texture.
-    const wgpu::TextureDescriptor kMultisampleTextureDesc = {
+    // Create multi-sampled textures.
+    const wgpu::TextureDescriptor kMultisampleTextureDesc1 = {
         .usage = wgpu::TextureUsage::RenderAttachment,
         .size = {.width = 30, .height = 20},
         .format = kRG8UnormTextureFormat,
@@ -286,9 +286,15 @@ TEST_F(MemoryInstrumentationTest, ComputeEstimatedMemoryUsageInDetails) {
         .viewFormatCount = 1,
         .viewFormats = &kRG8UnormTextureFormat,
     };
-    wgpu::Texture multisampleTexture = device.CreateTexture(&kMultisampleTextureDesc);
+    wgpu::Texture multisampleTexture1 = device.CreateTexture(&kMultisampleTextureDesc1);
     // Expected size = width(30) * height(20) * bytes per pixel(2) * sample count(4).
-    constexpr uint64_t kMultisampleTextureSize = 30 * 20 * 2 * 4;
+    constexpr uint64_t kMultisampleTextureSize1 = 30 * 20 * 2 * 4;
+
+    wgpu::TextureDescriptor kMultisampleTextureDesc2 = kMultisampleTextureDesc1;
+    kMultisampleTextureDesc2.size = {.width = 60, .height = 40};
+    wgpu::Texture multisampleTexture2 = device.CreateTexture(&kMultisampleTextureDesc2);
+    // Expected size = width(60) * height(40) * bytes per pixel(2) * sample count(4).
+    constexpr uint64_t kMultisampleTextureSize2 = 60 * 40 * 2 * 4;
 
     // Create a depth texture.
     const wgpu::TextureDescriptor kDepthTextureDesc = {
@@ -314,13 +320,17 @@ TEST_F(MemoryInstrumentationTest, ComputeEstimatedMemoryUsageInDetails) {
 
     MemoryUsageInfo memInfo = ComputeEstimatedMemoryUsageInfo(device.Get());
 
-    EXPECT_EQ(memInfo.totalUsage, kBufferSize + kMipmappedTextureSize + kMultisampleTextureSize +
-                                      kDepthTextureSize + kStencilTextureSize);
+    EXPECT_EQ(memInfo.totalUsage, kBufferSize + kMipmappedTextureSize + kMultisampleTextureSize1 +
+                                      kMultisampleTextureSize2 + kDepthTextureSize +
+                                      kStencilTextureSize);
     EXPECT_EQ(memInfo.buffersUsage, kBufferSize);
-    EXPECT_EQ(memInfo.texturesUsage, kMipmappedTextureSize + kMultisampleTextureSize +
-                                         kDepthTextureSize + kStencilTextureSize);
+    EXPECT_EQ(memInfo.texturesUsage, kMipmappedTextureSize + kMultisampleTextureSize1 +
+                                         kMultisampleTextureSize2 + kDepthTextureSize +
+                                         kStencilTextureSize);
     EXPECT_EQ(memInfo.depthStencilTexturesUsage, kDepthTextureSize + kStencilTextureSize);
-    EXPECT_EQ(memInfo.msaaTexturesUsage, kMultisampleTextureSize);
+    EXPECT_EQ(memInfo.msaaTexturesUsage, kMultisampleTextureSize1 + kMultisampleTextureSize2);
+    EXPECT_EQ(memInfo.msaaTexturesCount, 2u);
+    EXPECT_EQ(memInfo.largestMsaaTextureUsage, kMultisampleTextureSize2);
 }
 
 }  // namespace

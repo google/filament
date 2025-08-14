@@ -64,7 +64,9 @@ INSTANTIATE_TEST_SUITE_P(
         MslBuiltinData{core::BuiltinValue::kNumWorkgroups, "threadgroups_per_grid"},
         MslBuiltinData{core::BuiltinValue::kSampleIndex, "sample_id"},
         MslBuiltinData{core::BuiltinValue::kSampleMask, "sample_mask"},
-        MslBuiltinData{core::BuiltinValue::kPointSize, "point_size"}));
+        MslBuiltinData{core::BuiltinValue::kPointSize, "point_size"},
+        MslBuiltinData{core::BuiltinValue::kPrimitiveId, "primitive_id"},
+        MslBuiltinData{core::BuiltinValue::kBarycentricCoord, "barycentric_coord"}));
 
 }  // namespace
 }  // namespace tint::msl::writer

@@ -41,7 +41,8 @@ TINT_INSTANTIATE_TYPEINFO(tint::msl::type::Level);
 namespace tint::msl::type {
 
 Level::Level()
-    : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Level>().bits)), core::type::Flags{}) {}
+    : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Level>().bits)),
+           core::type::Flags{core::type::kConstructable, core::type::kCreationFixedFootprint}) {}
 
 bool Level::Equals(const UniqueNode& other) const {
     return other.Is<Level>();

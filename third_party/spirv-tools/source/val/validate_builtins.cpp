@@ -2383,6 +2383,19 @@ spv_result_t BuiltInsValidator::ValidatePrimitiveIdAtReference(
           referenced_from_inst, std::placeholders::_1));
     }
 
+    if (!_.HasCapability(spv::Capability::MeshShadingEXT) &&
+        !_.HasCapability(spv::Capability::MeshShadingNV) &&
+        !_.HasCapability(spv::Capability::Geometry) &&
+        !_.HasCapability(spv::Capability::Tessellation)) {
+      id_to_at_reference_checks_[referenced_from_inst.id()].push_back(std::bind(
+          &BuiltInsValidator::ValidateNotCalledWithExecutionModel, this, 4333,
+          "Vulkan spec doesn't allow BuiltIn PrimitiveId to be used for "
+          "variables in the Fragment execution model unless it declares "
+          "Geometry, Tessellation, or MeshShader capabilities.",
+          spv::ExecutionModel::Fragment, decoration, built_in_inst,
+          referenced_from_inst, std::placeholders::_1));
+    }
+
     for (const spv::ExecutionModel execution_model : execution_models_) {
       switch (execution_model) {
         case spv::ExecutionModel::Fragment:

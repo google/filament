@@ -218,6 +218,36 @@ struct State {
                 case spirv::BuiltinFn::kOuterProduct:
                     OuterProduct(builtin);
                     break;
+                case spirv::BuiltinFn::kGroupNonUniformBroadcast:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kSubgroupBroadcast);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformShuffle:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kSubgroupShuffle);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformShuffleXor:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kSubgroupShuffleXor);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformShuffleDown:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kSubgroupShuffleDown);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformShuffleUp:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kSubgroupShuffleUp);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformBroadcastFirst:
+                    GroupNonUniformBroadcastFirst(builtin);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformQuadBroadcast:
+                    GroupNonUniformBuiltin(builtin, core::BuiltinFn::kQuadBroadcast);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformQuadSwap:
+                    GroupNonUniformQuadSwap(builtin);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformSMin:
+                    GroupNonUniformMinMax(builtin, core::BuiltinFn::kSubgroupMin);
+                    break;
+                case spirv::BuiltinFn::kGroupNonUniformSMax:
+                    GroupNonUniformMinMax(builtin, core::BuiltinFn::kSubgroupMax);
+                    break;
                 case spirv::BuiltinFn::kAtomicLoad:
                 case spirv::BuiltinFn::kAtomicStore:
                 case spirv::BuiltinFn::kAtomicExchange:
@@ -235,11 +265,141 @@ struct State {
                 case spirv::BuiltinFn::kAtomicIDecrement:
                     // Ignore Atomics, they'll be handled by the `Atomics` transform.
                     break;
+                case spirv::BuiltinFn::kImage:
+                case spirv::BuiltinFn::kSampledImage:
+                case spirv::BuiltinFn::kImageRead:
+                case spirv::BuiltinFn::kImageFetch:
+                case spirv::BuiltinFn::kImageGather:
+                case spirv::BuiltinFn::kImageDrefGather:
+                case spirv::BuiltinFn::kImageQueryLevels:
+                case spirv::BuiltinFn::kImageQuerySamples:
+                case spirv::BuiltinFn::kImageQuerySize:
+                case spirv::BuiltinFn::kImageQuerySizeLod:
+                case spirv::BuiltinFn::kImageSampleExplicitLod:
+                case spirv::BuiltinFn::kImageSampleImplicitLod:
+                case spirv::BuiltinFn::kImageSampleProjImplicitLod:
+                case spirv::BuiltinFn::kImageSampleProjExplicitLod:
+                case spirv::BuiltinFn::kImageSampleDrefImplicitLod:
+                case spirv::BuiltinFn::kImageSampleDrefExplicitLod:
+                case spirv::BuiltinFn::kImageSampleProjDrefImplicitLod:
+                case spirv::BuiltinFn::kImageSampleProjDrefExplicitLod:
+                case spirv::BuiltinFn::kImageWrite:
+                    // Ignore image methods, they'll be handled by the `Texture` transform.
+                    break;
                 default:
                     TINT_UNREACHABLE() << "unknown spirv builtin: " << builtin->Func();
             }
         }
     }
+
+    void GroupNonUniformMinMax(spirv::ir::BuiltinCall* call, core::BuiltinFn fn) {
+        auto* value = call->Args()[2];
+
+        auto* orig_type = call->Result()->Type();
+        b.InsertBefore(call, [&] {
+            auto* type = orig_type;
+            if (orig_type->IsUnsignedIntegerScalarOrVector()) {
+                type = ty.MatchWidth(ty.i32(), type);
+                value = b.Convert(type, value)->Result();
+            }
+
+            value = b.Call(type, fn, Vector{value})->Result();
+
+            if (type != orig_type) {
+                value = b.Convert(call->Result()->Type(), value)->Result();
+            }
+
+            call->Result()->ReplaceAllUsesWith(value);
+        });
+        call->Destroy();
+    }
+
+    void GroupNonUniformQuadSwap(spirv::ir::BuiltinCall* call) {
+        auto* value = call->Args()[1];
+        auto* dir_val = call->Args()[2];
+
+        TINT_ASSERT(dir_val->Is<core::ir::Constant>());
+        auto* cnst = dir_val->As<core::ir::Constant>();
+        TINT_ASSERT(cnst);
+
+        uint32_t dir = cnst->Value()->ValueAs<uint32_t>();
+        core::BuiltinFn fn = core::BuiltinFn::kNone;
+        switch (dir) {
+            case 0:
+                fn = core::BuiltinFn::kQuadSwapX;
+                break;
+            case 1:
+                fn = core::BuiltinFn::kQuadSwapY;
+                break;
+            case 2:
+                fn = core::BuiltinFn::kQuadSwapDiagonal;
+                break;
+            default:
+                TINT_UNREACHABLE();
+        }
+
+        auto* type = call->Result()->Type();
+        b.InsertBefore(call, [&] {
+            if (type->DeepestElement()->Is<core::type::Bool>()) {
+                type = ty.MatchWidth(ty.u32(), type);
+                value = b.Convert(type, value)->Result();
+            }
+
+            core::ir::Value* c = b.Call(type, fn, Vector{value})->Result();
+
+            if (type != call->Result()->Type()) {
+                c = b.Convert(call->Result()->Type(), c)->Result();
+            }
+
+            call->Result()->ReplaceAllUsesWith(c);
+        });
+        call->Destroy();
+    }
+
+    void GroupNonUniformBuiltin(spirv::ir::BuiltinCall* call, core::BuiltinFn fn) {
+        auto* value = call->Args()[1];
+        auto* id = call->Args()[2];
+
+        auto* type = call->Result()->Type();
+        b.InsertBefore(call, [&] {
+            if (type->DeepestElement()->Is<core::type::Bool>()) {
+                type = ty.MatchWidth(ty.u32(), type);
+                value = b.Convert(type, value)->Result();
+            }
+
+            core::ir::Value* c = b.Call(type, fn, Vector{value, id})->Result();
+
+            if (type != call->Result()->Type()) {
+                c = b.Convert(call->Result()->Type(), c)->Result();
+            }
+
+            call->Result()->ReplaceAllUsesWith(c);
+        });
+        call->Destroy();
+    }
+
+    void GroupNonUniformBroadcastFirst(spirv::ir::BuiltinCall* call) {
+        auto* value = call->Args()[1];
+
+        auto* type = call->Result()->Type();
+        b.InsertBefore(call, [&] {
+            if (type->DeepestElement()->Is<core::type::Bool>()) {
+                type = ty.MatchWidth(ty.u32(), type);
+                value = b.Convert(type, value)->Result();
+            }
+
+            core::ir::Value* c =
+                b.Call(type, core::BuiltinFn::kSubgroupBroadcastFirst, Vector{value})->Result();
+
+            if (type != call->Result()->Type()) {
+                c = b.Convert(call->Result()->Type(), c)->Result();
+            }
+
+            call->Result()->ReplaceAllUsesWith(c);
+        });
+        call->Destroy();
+    }
+
     void OuterProduct(spirv::ir::BuiltinCall* call) {
         auto* vector1 = call->Args()[0];
         auto* vector2 = call->Args()[1];
@@ -1127,10 +1287,10 @@ struct State {
                     // a * fkgj - b * ekgi + c * ejfi
                     auto* r_33 = sub_add_mul3(ma, fkgj, mb, ekgi, mc, ejfi);
 
-                    auto* r1 = b.Construct(ty.vec3(elem_ty), r_00, r_01, r_02, r_03);
-                    auto* r2 = b.Construct(ty.vec3(elem_ty), r_10, r_11, r_12, r_13);
-                    auto* r3 = b.Construct(ty.vec3(elem_ty), r_20, r_21, r_22, r_23);
-                    auto* r4 = b.Construct(ty.vec3(elem_ty), r_30, r_31, r_32, r_33);
+                    auto* r1 = b.Construct(ty.vec4(elem_ty), r_00, r_01, r_02, r_03);
+                    auto* r2 = b.Construct(ty.vec4(elem_ty), r_10, r_11, r_12, r_13);
+                    auto* r3 = b.Construct(ty.vec4(elem_ty), r_20, r_21, r_22, r_23);
+                    auto* r4 = b.Construct(ty.vec4(elem_ty), r_30, r_31, r_32, r_33);
 
                     auto* m = b.Construct(mat_ty, r1, r2, r3, r4);
                     auto* inv = b.Multiply(mat_ty, inv_det, m);
@@ -1151,7 +1311,10 @@ struct State {
 Result<SuccessType> Builtins(core::ir::Module& ir) {
     auto result = ValidateAndDumpIfNeeded(ir, "spirv.Builtins",
                                           core::ir::Capabilities{
+                                              core::ir::Capability::kAllowMultipleEntryPoints,
                                               core::ir::Capability::kAllowOverrides,
+                                              core::ir::Capability::kAllowNonCoreTypes,
+                                              core::ir::Capability::kAllowStructMatrixDecorations,
                                           });
     if (result != Success) {
         return result.Failure();

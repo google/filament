@@ -169,20 +169,23 @@ void Queue::OnGLUsed() {
     mHasPendingCommands = true;
 }
 
-ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) {
+ResultOrError<ExecutionSerial> Queue::WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                             Nanoseconds timeout) {
     // Search for the first fence >= serial.
-    return mFencesInFlight.Use([&](auto fencesInFlight) -> ResultOrError<bool> {
+    return mFencesInFlight.Use([&](auto fencesInFlight) -> ResultOrError<ExecutionSerial> {
         Ref<WrappedEGLSync> sync;
+        ExecutionSerial completedSerial = kWaitSerialTimeout;
         for (auto it = fencesInFlight->begin(); it != fencesInFlight->end(); ++it) {
-            if (it->second >= serial) {
+            if (it->second >= waitSerial) {
                 sync = it->first;
+                completedSerial = it->second;
                 break;
             }
         }
         if (sync == nullptr) {
             // Fence sync not found. This serial must have already completed.
             // Return a success status.
-            return true;
+            return waitSerial;
         }
 
         // Wait for the fence sync.
@@ -191,9 +194,9 @@ ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanosecond
 
         switch (result) {
             case EGL_TIMEOUT_EXPIRED:
-                return false;
+                return kWaitSerialTimeout;
             case EGL_CONDITION_SATISFIED:
-                return true;
+                return completedSerial;
             default:
                 DAWN_UNREACHABLE();
         }
@@ -275,12 +278,15 @@ bool Queue::HasPendingCommands() const {
     return mHasPendingCommands;
 }
 
-MaybeError Queue::SubmitPendingCommands() {
+MaybeError Queue::SubmitPendingCommandsImpl() {
     DAWN_TRY(SubmitFenceSync());
     return {};
 }
 
 ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
+    // TODO(crbug.com/40643114): Revisit whether this lock is needed for this backend.
+    auto deviceGuard = GetDevice()->GetGuard();
+
     return mFencesInFlight.Use([&](auto fencesInFlight) -> ResultOrError<ExecutionSerial> {
         ExecutionSerial fenceSerial{0};
         while (!fencesInFlight->empty()) {
@@ -297,8 +303,6 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
             fenceSerial = tentativeSerial;
 
             fencesInFlight->pop_front();
-
-            DAWN_ASSERT(fenceSerial > GetCompletedCommandSerial());
         }
         return fenceSerial;
     });

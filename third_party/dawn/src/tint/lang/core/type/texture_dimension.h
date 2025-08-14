@@ -58,7 +58,8 @@ std::string_view ToString(enum type::TextureDimension dim);
 /// @param out the stream to write to
 /// @param dim the type::TextureDimension
 /// @return the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, core::type::TextureDimension dim) {
     return out << ToString(dim);
 }

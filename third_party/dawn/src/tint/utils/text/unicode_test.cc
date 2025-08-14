@@ -36,8 +36,6 @@
 #include "gmock/gmock.h"
 #include "src/tint/utils/text/string.h"
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 /// Helper for constructing a CodePoint
 #define C(x) CodePoint(x)
 
@@ -273,6 +271,8 @@ static std::ostream& operator<<(std::ostream& out, UTF8Case c) {
 
 class UTF8Test : public testing::TestWithParam<UTF8Case> {};
 
+// This is testing a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 TEST_P(UTF8Test, Decode) {
     auto param = GetParam();
 
@@ -292,6 +292,7 @@ TEST_P(UTF8Test, Decode) {
 
     EXPECT_THAT(got, ::testing::ElementsAreArray(param.code_points));
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 TEST_P(UTF8Test, Encode) {
     auto param = GetParam();
@@ -588,6 +589,8 @@ static std::ostream& operator<<(std::ostream& out, UTF16Case c) {
 
 class UTF16Test : public testing::TestWithParam<UTF16Case> {};
 
+// This is testing a C-style API that will always trigger -Wunsafe-buffer-usage
+TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 TEST_P(UTF16Test, Decode) {
     auto param = GetParam();
 
@@ -607,6 +610,7 @@ TEST_P(UTF16Test, Decode) {
 
     EXPECT_THAT(got, ::testing::ElementsAreArray(param.code_points));
 }
+TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 TEST_P(UTF16Test, Encode) {
     auto param = GetParam();
@@ -850,5 +854,3 @@ INSTANTIATE_TEST_SUITE_P(Invalid,
 
 }  // namespace utf16_tests
 }  // namespace tint
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

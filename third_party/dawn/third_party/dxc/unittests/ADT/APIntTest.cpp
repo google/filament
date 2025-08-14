@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 #include <array>
+#include <limits>
 #include <ostream>
 
 using namespace llvm;
@@ -753,7 +754,7 @@ TEST(APIntTest, StringDeath) {
 #endif
 
 TEST(APIntTest, mul_clear) {
-  APInt ValA(65, -1ULL);
+  APInt ValA(65, std::numeric_limits<uint64_t>::max());
   APInt ValB(65, 4);
   APInt ValC(65, 0);
   ValC = ValA * ValB;

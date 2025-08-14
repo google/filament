@@ -1,0 +1,215 @@
+{{- /*
+--------------------------------------------------------------------------------
+Template file for use with tools/src/cmd/gen to generate access.cc
+
+To update the generated file, run:
+    ./tools/run gen
+
+See:
+* tools/src/cmd/gen for structures used by this template
+* https://golang.org/pkg/text/template/ for documentation on the template syntax
+--------------------------------------------------------------------------------
+*/ -}}
+
+{{- $I := LoadIntrinsics "src/tint/lang/core/core.def" -}}
+{{- Import "src/tint/utils/templates/enums.tmpl.inc" -}}
+{{- $access_enum := ($I.Sem.Enum "access") -}}
+{{- $addr_space_enum := ($I.Sem.Enum "address_space") -}}
+{{- $interpolation_sampling_enum := ($I.Sem.Enum "interpolation_sampling") -}}
+{{- $interpolation_type_enum := ($I.Sem.Enum "interpolation_type") -}}
+{{- $subgroup_matrix_kind_enum := ($I.Sem.Enum "subgroup_matrix_kind") -}}
+{{- $texel_format_enum := ($I.Sem.Enum "texel_format") -}}
+{{- $builtin_type_enum := ($I.Sem.Enum "builtin_type") -}}
+{{- $builtin_value_enum := ($I.Sem.Enum "builtin_value") -}}
+{{- $attribute_enum := ($I.Sem.Enum "attribute") -}}
+
+{{- Eval "OverrideEnumName" "Enum" $builtin_type_enum "Name" "BuiltinType" -}}
+
+#include "src/tint/lang/core/enums.h"
+
+namespace tint::core {
+
+{{ Eval "ParseEnum" $access_enum}}
+{{ Eval "EnumOStream" $access_enum}}
+
+{{ Eval "ParseEnum" $addr_space_enum}}
+{{ Eval "EnumOStream" $addr_space_enum}}
+
+{{ Eval "ParseEnum" $interpolation_sampling_enum}}
+{{ Eval "EnumOStream" $interpolation_sampling_enum}}
+
+{{ Eval "ParseEnum" $interpolation_type_enum}}
+{{ Eval "EnumOStream" $interpolation_type_enum}}
+
+{{ Eval "ParseEnum" $subgroup_matrix_kind_enum}}
+{{ Eval "EnumOStream" $subgroup_matrix_kind_enum}}
+
+{{ Eval "ParseEnum" $texel_format_enum}}
+{{ Eval "EnumOStream" $texel_format_enum}}
+
+{{ Eval "ParseEnum" $builtin_type_enum}}
+{{ Eval "EnumOStream" $builtin_type_enum}}
+
+{{ Eval "ParseEnum" $builtin_value_enum}}
+{{ Eval "EnumOStream" $builtin_value_enum}}
+
+{{ Eval "ParseEnum" $attribute_enum}}
+{{ Eval "EnumOStream" $attribute_enum}}
+
+std::string_view ToString(ParameterUsage usage) {
+    switch (usage) {
+        case ParameterUsage::kNone:
+            return "none";
+{{- range $I.Sem.UniqueParameterNames  }}
+        case ParameterUsage::k{{PascalCase .}}:
+            return "{{.}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+BuiltinFn ParseBuiltinFn(std::string_view name) {
+{{- range $I.Sem.Builtins  }}
+    if (name == "{{.Name}}") {
+        return BuiltinFn::k{{PascalCase .Name}};
+    }
+{{- end  }}
+    return BuiltinFn::kNone;
+}
+
+const char* str(BuiltinFn i) {
+    switch (i) {
+        case BuiltinFn::kNone:
+            return "<none>";
+{{- range $I.Sem.Builtins  }}
+        case BuiltinFn::k{{PascalCase .Name}}:
+            return "{{.Name}}";
+{{- end  }}
+    }
+    return "<unknown>";
+}
+
+bool IsCoarseDerivative(BuiltinFn f) {
+    return f == BuiltinFn::kDpdxCoarse || f == BuiltinFn::kDpdyCoarse ||
+           f == BuiltinFn::kFwidthCoarse;
+}
+
+bool IsFineDerivative(BuiltinFn f) {
+    return f == BuiltinFn::kDpdxFine || f == BuiltinFn::kDpdyFine ||
+           f == BuiltinFn::kFwidthFine;
+}
+
+bool IsDerivative(BuiltinFn f) {
+    return f == BuiltinFn::kDpdx || f == BuiltinFn::kDpdy ||
+           f == BuiltinFn::kFwidth || IsCoarseDerivative(f) ||
+           IsFineDerivative(f);
+}
+
+bool IsTexture(BuiltinFn f) {
+    return IsImageQuery(f) ||                                //
+           f == BuiltinFn::kTextureGather ||                 //
+           f == BuiltinFn::kTextureGatherCompare ||          //
+           f == BuiltinFn::kTextureLoad ||                   //
+           f == BuiltinFn::kTextureSample ||                 //
+           f == BuiltinFn::kTextureSampleBaseClampToEdge ||  //
+           f == BuiltinFn::kTextureSampleBias ||             //
+           f == BuiltinFn::kTextureSampleCompare ||          //
+           f == BuiltinFn::kTextureSampleCompareLevel ||     //
+           f == BuiltinFn::kTextureSampleGrad ||             //
+           f == BuiltinFn::kTextureSampleLevel ||            //
+           f == BuiltinFn::kTextureStore || f == BuiltinFn::kInputAttachmentLoad;
+}
+
+bool IsImageQuery(BuiltinFn f) {
+    return f == BuiltinFn::kTextureDimensions ||
+           f == BuiltinFn::kTextureNumLayers || f == BuiltinFn::kTextureNumLevels ||
+           f == BuiltinFn::kTextureNumSamples;
+}
+
+bool IsDataPacking(BuiltinFn f) {
+    return f == BuiltinFn::kPack4X8Snorm || f == BuiltinFn::kPack4X8Unorm ||
+           f == BuiltinFn::kPack2X16Snorm || f == BuiltinFn::kPack2X16Unorm ||
+           f == BuiltinFn::kPack2X16Float;
+}
+
+bool IsDataUnpacking(BuiltinFn f) {
+    return f == BuiltinFn::kUnpack4X8Snorm || f == BuiltinFn::kUnpack4X8Unorm ||
+           f == BuiltinFn::kUnpack2X16Snorm || f == BuiltinFn::kUnpack2X16Unorm ||
+           f == BuiltinFn::kUnpack2X16Float;
+}
+
+bool IsBarrier(BuiltinFn f) {
+    return f == BuiltinFn::kWorkgroupBarrier || f == BuiltinFn::kStorageBarrier ||
+           f == BuiltinFn::kTextureBarrier;
+}
+
+bool IsAtomic(BuiltinFn f) {
+    return f == BuiltinFn::kAtomicLoad || f == BuiltinFn::kAtomicStore ||
+           f == BuiltinFn::kAtomicAdd || f == BuiltinFn::kAtomicSub ||
+           f == BuiltinFn::kAtomicMax || f == BuiltinFn::kAtomicMin ||
+           f == BuiltinFn::kAtomicAnd || f == BuiltinFn::kAtomicOr ||
+           f == BuiltinFn::kAtomicXor || f == BuiltinFn::kAtomicExchange ||
+           f == BuiltinFn::kAtomicCompareExchangeWeak;
+}
+
+bool IsPacked4x8IntegerDotProductBuiltin(BuiltinFn f) {
+    return f == BuiltinFn::kDot4I8Packed || f == BuiltinFn::kDot4U8Packed ||
+           f == BuiltinFn::kPack4XI8 || f == BuiltinFn::kPack4XU8 ||
+           f == BuiltinFn::kPack4XI8Clamp || f == BuiltinFn::kPack4XU8Clamp ||
+           f == BuiltinFn::kUnpack4XI8 || f == BuiltinFn::kUnpack4XU8;
+}
+
+bool IsSubgroup(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kSubgroupBallot:
+        case BuiltinFn::kSubgroupElect:
+        case BuiltinFn::kSubgroupBroadcast:
+        case BuiltinFn::kSubgroupBroadcastFirst:
+        case BuiltinFn::kSubgroupShuffle:
+        case BuiltinFn::kSubgroupShuffleXor:
+        case BuiltinFn::kSubgroupShuffleUp:
+        case BuiltinFn::kSubgroupShuffleDown:
+        case BuiltinFn::kSubgroupAdd:
+        case BuiltinFn::kSubgroupInclusiveAdd:
+        case BuiltinFn::kSubgroupExclusiveAdd:
+        case BuiltinFn::kSubgroupMul:
+        case BuiltinFn::kSubgroupInclusiveMul:
+        case BuiltinFn::kSubgroupExclusiveMul:
+        case BuiltinFn::kSubgroupAnd:
+        case BuiltinFn::kSubgroupOr:
+        case BuiltinFn::kSubgroupXor:
+        case BuiltinFn::kSubgroupMin:
+        case BuiltinFn::kSubgroupMax:
+        case BuiltinFn::kSubgroupAll:
+        case BuiltinFn::kSubgroupAny:
+        case BuiltinFn::kQuadBroadcast:
+        case BuiltinFn::kQuadSwapX:
+        case BuiltinFn::kQuadSwapY:
+        case BuiltinFn::kQuadSwapDiagonal:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool HasSideEffects(BuiltinFn f) {
+    switch (f) {
+        case BuiltinFn::kAtomicAdd:
+        case BuiltinFn::kAtomicAnd:
+        case BuiltinFn::kAtomicCompareExchangeWeak:
+        case BuiltinFn::kAtomicExchange:
+        case BuiltinFn::kAtomicMax:
+        case BuiltinFn::kAtomicMin:
+        case BuiltinFn::kAtomicOr:
+        case BuiltinFn::kAtomicStore:
+        case BuiltinFn::kAtomicSub:
+        case BuiltinFn::kAtomicXor:
+        case BuiltinFn::kTextureStore:
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
+}  // namespace tint::core

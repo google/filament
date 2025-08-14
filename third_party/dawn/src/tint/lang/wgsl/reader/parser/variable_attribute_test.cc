@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/ast/helper_test.h"
 #include "src/tint/lang/wgsl/reader/parser/helper_test.h"
 
@@ -307,7 +307,7 @@ TEST_F(WGSLParserTest, Attribute_Builtin_MissingValue) {
     EXPECT_EQ(attr.value, nullptr);
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:9: expected builtin value name
-Possible values: 'clip_distances', 'frag_depth', 'front_facing', 'global_invocation_id', 'instance_index', 'local_invocation_id', 'local_invocation_index', 'num_workgroups', 'position', 'sample_index', 'sample_mask', 'subgroup_invocation_id', 'subgroup_size', 'vertex_index', 'workgroup_id')");
+Possible values: 'barycentric_coord', 'clip_distances', 'frag_depth', 'front_facing', 'global_invocation_id', 'instance_index', 'local_invocation_id', 'local_invocation_index', 'num_workgroups', 'position', 'primitive_id', 'sample_index', 'sample_mask', 'subgroup_id', 'subgroup_invocation_id', 'subgroup_size', 'vertex_index', 'workgroup_id')");
 }
 
 TEST_F(WGSLParserTest, Attribute_Builtin_MisspelledValue) {
@@ -319,7 +319,7 @@ TEST_F(WGSLParserTest, Attribute_Builtin_MisspelledValue) {
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:9: expected builtin value name
 Did you mean 'position'?
-Possible values: 'clip_distances', 'frag_depth', 'front_facing', 'global_invocation_id', 'instance_index', 'local_invocation_id', 'local_invocation_index', 'num_workgroups', 'position', 'sample_index', 'sample_mask', 'subgroup_invocation_id', 'subgroup_size', 'vertex_index', 'workgroup_id')");
+Possible values: 'barycentric_coord', 'clip_distances', 'frag_depth', 'front_facing', 'global_invocation_id', 'instance_index', 'local_invocation_id', 'local_invocation_index', 'num_workgroups', 'position', 'primitive_id', 'sample_index', 'sample_mask', 'subgroup_id', 'subgroup_invocation_id', 'subgroup_size', 'vertex_index', 'workgroup_id')");
 }
 
 TEST_F(WGSLParserTest, Attribute_Interpolate_Flat) {

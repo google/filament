@@ -33,5 +33,14 @@ updating. That script will compare all the records to the entries in `gpu_info.j
 categorized followed by a list of all the uncategorized device IDs and descriptions sorted by vendor. You'll have to
 manually look at the device descriptions and research their architectural design in order to categorize them.
 
+Figuring out the architecture for a given device can be tricky. Sometimes your best bet is to search "{device name} GPU architecture", but Wikipedia is often one of the better resources. For example:
+
+ - AMD: https://en.wikipedia.org/wiki/List_of_AMD_graphics_processing_units
+ - ARM: https://en.wikipedia.org/wiki/Mali_(processor)
+ - Intel: https://en.wikipedia.org/wiki/Intel_Graphics_Technology
+ - Imagination: https://en.wikipedia.org/wiki/PowerVR
+ - Nvidia: https://en.wikipedia.org/wiki/Category:Nvidia_microarchitectures
+ - Qualcomm: https://en.wikipedia.org/wiki/Adreno
+
 Good luck!
 

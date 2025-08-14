@@ -86,11 +86,11 @@ namespace format {
   TYPE(UnaryOperator) \
   TYPE(Unknown)
 
-enum TokenType {
+enum TokenType : unsigned int {
 #define TYPE(X) TT_##X,
-LIST_TOKEN_TYPES
+  LIST_TOKEN_TYPES
 #undef TYPE
-  NUM_TOKEN_TYPES
+      NUM_TOKEN_TYPES
 };
 
 /// \brief Determines the name of a token type.

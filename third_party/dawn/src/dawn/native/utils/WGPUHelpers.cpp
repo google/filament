@@ -30,6 +30,7 @@
 #include <cstring>
 #include <iomanip>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <sstream>
 

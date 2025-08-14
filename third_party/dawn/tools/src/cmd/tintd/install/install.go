@@ -31,10 +31,10 @@ package install
 import (
 	"bytes"
 	"context"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -62,8 +62,8 @@ func (Cmd) Desc() string {
 	return `install installs the tintd vscode extension for local development`
 }
 
-func (c *Cmd) RegisterFlags(ctx context.Context, _ any) ([]string, error) {
-	dawnRoot := fileutils.DawnRoot()
+func (c *Cmd) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, error) {
+	dawnRoot := fileutils.DawnRoot(cfg.OsWrapper)
 	npmPath, _ := exec.LookPath("npm")
 	flag.BoolVar(&c.flags.symlink, "symlink", false, "create a symlink from the vscode extension directory to the build directory")
 	flag.StringVar(&c.flags.buildDir, "build", filepath.Join(dawnRoot, "out", "active"), "the output build directory")
@@ -72,13 +72,15 @@ func (c *Cmd) RegisterFlags(ctx context.Context, _ any) ([]string, error) {
 	return nil, nil
 }
 
-func (c Cmd) Run(ctx context.Context, _ any) error {
-	pkgDir := c.findPackage()
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
+func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
+	pkgDir := c.findPackage(cfg.OsWrapper)
 	if pkgDir == "" {
 		return fmt.Errorf("could not find extension package directory at '%v'", c.flags.buildDir)
 	}
 
-	if !fileutils.IsExe(c.flags.npmPath) {
+	if !fileutils.IsExe(c.flags.npmPath, cfg.OsWrapper) {
 		return fmt.Errorf("could not find npm")
 	}
 
@@ -95,7 +97,7 @@ func (c Cmd) Run(ctx context.Context, _ any) error {
 		Version string
 	}{}
 	packageJSONPath := filepath.Join(pkgDir, "package.json")
-	packageJSON, err := os.ReadFile(packageJSONPath)
+	packageJSON, err := cfg.OsWrapper.ReadFile(packageJSONPath)
 	if err != nil {
 		return fmt.Errorf("could not open '%v'", packageJSONPath)
 	}
@@ -103,26 +105,26 @@ func (c Cmd) Run(ctx context.Context, _ any) error {
 		return fmt.Errorf("could not parse '%v': %v", packageJSONPath, err)
 	}
 
-	home, err := os.UserHomeDir()
+	home, err := cfg.OsWrapper.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to obtain home directory: %w", err)
 	}
 	vscodeBaseExtsDir := filepath.Join(home, ".vscode", "extensions")
-	if !fileutils.IsDir(vscodeBaseExtsDir) {
+	if !fileutils.IsDir(vscodeBaseExtsDir, cfg.OsWrapper) {
 		return fmt.Errorf("vscode extensions directory not found at '%v'", vscodeBaseExtsDir)
 	}
 
 	vscodeTintdDir := filepath.Join(vscodeBaseExtsDir, fmt.Sprintf("google.%v-%v", pkg.Name, pkg.Version))
-	os.RemoveAll(vscodeTintdDir)
+	cfg.OsWrapper.RemoveAll(vscodeTintdDir)
 
 	if c.flags.symlink {
 		// Symlink the vscode extensions directory to the build directory
-		if err := os.Symlink(pkgDir, vscodeTintdDir); err != nil {
+		if err := cfg.OsWrapper.Symlink(pkgDir, vscodeTintdDir); err != nil {
 			return fmt.Errorf("failed to create symlink '%v' <- '%v': %w", pkgDir, vscodeTintdDir, err)
 		}
 	} else {
 		// Copy the build directory to vscode extensions directory
-		if err := fileutils.CopyDir(vscodeTintdDir, pkgDir); err != nil {
+		if err := fileutils.CopyDir(vscodeTintdDir, pkgDir, cfg.OsWrapper); err != nil {
 			return fmt.Errorf("failed to copy '%v' to '%v': %w", pkgDir, vscodeTintdDir, err)
 		}
 	}
@@ -130,8 +132,9 @@ func (c Cmd) Run(ctx context.Context, _ any) error {
 	return nil
 }
 
+// TODO(crbug.com/344014313): Add unittest coverage.
 // findPackage looks for and returns the tintd package directory. Returns an empty string if not found.
-func (c Cmd) findPackage() string {
+func (c Cmd) findPackage(fsReader oswrapper.FilesystemReader) string {
 	searchPaths := []string{
 		filepath.Join(c.flags.buildDir, "gen/vscode"),
 		c.flags.buildDir,
@@ -141,7 +144,7 @@ func (c Cmd) findPackage() string {
 nextDir:
 	for _, dir := range searchPaths {
 		for _, file := range files {
-			if !fileutils.IsFile(filepath.Join(dir, file)) {
+			if !fileutils.IsFile(filepath.Join(dir, file), fsReader) {
 				continue nextDir
 			}
 		}

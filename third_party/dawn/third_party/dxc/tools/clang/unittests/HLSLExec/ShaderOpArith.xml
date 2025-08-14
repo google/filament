@@ -1976,7 +1976,7 @@
         RWStructuredBuffer<uint64_t> g_shareXchg64Buf : register(u5);
 
         groupshared uint64_t g_uint64Share[6];
-        groupshared int64_t g_sint64Share[3];
+        groupshared int64_t g_sint64Share[4];
         groupshared uint64_t g_xchg64Share[64];
 
         #define VEC_CALL(op, uav, ix, val) op(uav[ix*stride], val);
@@ -2046,7 +2046,7 @@
           // Zero-init shared memory, with special cases
           if (ix < 6)
             g_uint64Share[ix] = ix == 1 ? 99999999ULL | (99999999ULL << 32) : ix == 3 ? ~0ULL : 0;
-          if (ix < 3)
+          if (ix < 4)
             g_sint64Share[ix] = ix == 1 ? 99999999ULL | (99999999ULL << 32) : 0;
           if (ix < 64)
             g_xchg64Share[ix] = 0;
@@ -2552,11 +2552,11 @@
 
         void InitSharedMem(uint ix) {
           // Zero-init shared memory, with special cases
-          if (ix < 6)
+          if (ix < 7)
             g_uintShare[ix] = ix == 1 ? 99999999 : ix == 3 ? -1 : 0;
-          if (ix < 3)
+          if (ix < 4)
             g_sintShare[ix] = ix == 1 ? 99999999 : 0;
-          if (ix < 64)
+          if (ix < 65)
             g_xchgShare[ix] = 0;
 
           GroupMemoryBarrierWithGroupSync();
@@ -3750,4 +3750,102 @@ void MSMain(uint GID : SV_GroupIndex,
     </Shader>
   </ShaderOp>
 
+  <ShaderOp Name="LongVectorOp" CS="CS">
+    <RootSignature>RootFlags(0), UAV(u0), UAV(u1), UAV(u2),
+    UAV(u3)</RootSignature>
+    <!-- Width="16" BYTES to account for two largest scalar types (64 bits)-->
+    <Resource Name="InputFuncArgs" Dimension="BUFFER" Width="16"
+    Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST"
+    TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <!-- Width="8192" BYTES to account for largest type (64 bits) and vector
+    size of 1024 elements (the max long vector size)-->
+    <Resource Name="InputVector1" Dimension="BUFFER" Width="8192" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="InputVector2" Dimension="BUFFER" Width="8192" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <Resource Name="OutputVector" Dimension="BUFFER" Width="8192" Flags="ALLOW_UNORDERED_ACCESS" InitialResourceState="COPY_DEST" TransitionTo="UNORDERED_ACCESS" Init="ByName" ReadBack="true" />
+    <RootValues>
+      <RootValue Index="0" ResName="InputFuncArgs" />
+      <RootValue Index="1" ResName="InputVector1" />
+      <RootValue Index="2" ResName="InputVector2" />
+      <RootValue Index="3" ResName="OutputVector" />
+    </RootValues>
+    <!-- This shader has the following defines to be passed in as arguments:
+     TYPE : The type of the input vector, e.g. float, double, int, uint.
+     OUT_TYPE : The type of the output vector, e.g. float, double, int, uint.
+                In most cases OUT_TYPE == TYPE.
+     
+     NUM : The number of elements in the vector, e.g. 2, 3, 4, 8, 16, 32,
+     
+     FUNC : Used to expand to the HLSL intrinsic being tested. e.g cos, cosh,
+            abs, etc.
+            OR In some cases FUNC is expanded to a function call to handle
+            special logic, e.g. asuint_splitdouble.
+            OR it is intentionally left empty when testing operators like
+            '+', '-', '*', '/', etc.
+     
+     OPERATOR : The operator being tested, e.g. '+', '-', '*', '/', etc.
+                OR for binary operations for an intrinsic it is expanded 
+                ','/
+                OR for unary intrinsics it is expanded to ' ' (empty).
+
+     // For binary operations only. Unary operations leave these empty.
+     IS_SCALAR_OP : If defined, the second operand is loaded as a scalar.
+     IS_BINARY_VECTOR_OP : If defined, the second operand is loaded as a vector.
+     OPERAND2 : The second operand to the operation, e.g. InputVector2 or
+     InputScalar. Used in conjuction with one of the above.
+     -->
+    <Shader Name="CS" Target="cs_6_9" EntryPoint="main">
+      <![CDATA[
+        RWByteAddressBuffer g_InputFuncArgs : register(u0);
+        RWByteAddressBuffer g_InputVector1 : register(u1);
+        RWByteAddressBuffer g_InputVector2 : register(u2);
+        RWByteAddressBuffer g_OutputVector : register(u3);
+
+        #ifdef FUNC_INITIALIZE
+        vector<TYPE, NUM> TestInitialize(vector<TYPE, NUM> Vector)
+        {
+          vector<TYPE, NUM> VectorCopy = Vector;
+          return VectorCopy;
+        }
+        #endif
+
+        #ifdef FUNC_ASUINT_SPLITDOUBLE
+        vector<OUT_TYPE, NUM> TestAsUintSplitDouble(vector<TYPE, NUM> Vector)
+        {
+          vector<OUT_TYPE, NUM> LowBits;
+          vector<OUT_TYPE, NUM> HighBits;
+          asuint(Vector, LowBits, HighBits);
+
+          // Store the high bits in the second half of the output vector.
+          // Because we know the outputs of asuint are always 32 bits, we can
+          // use 4 bytes per element for our offset.
+          g_OutputVector.Store< vector<OUT_TYPE, NUM> >(4 * NUM, HighBits);
+
+          // Generic store logic in main handles storing LowBits in
+          // g_OutputVector.
+          return LowBits;
+        }
+        #endif
+
+        [numthreads(1,1,1)]
+        void main(uint GI : SV_GroupIndex) {
+
+          vector<TYPE, NUM> InputVector1 = g_InputVector1.Load< vector<TYPE,
+          NUM> >(0);
+
+          #ifdef IS_BINARY_VECTOR_OP
+          vector<TYPE, NUM> InputVector2 = g_InputVector2.Load< vector<TYPE,
+          NUM> >(0);
+          #endif
+
+          #ifdef IS_SCALAR_OP
+          TYPE InputScalar = g_InputFuncArgs.Load<TYPE>(0);
+          #endif
+
+          vector<OUT_TYPE, NUM> OutputVector = FUNC(InputVector1 OPERATOR
+          OPERAND2);
+          g_OutputVector.Store< vector<OUT_TYPE, NUM> >(0, OutputVector);
+        };
+      ]]>
+    </Shader>
+  </ShaderOp>
 </ShaderOpSet>

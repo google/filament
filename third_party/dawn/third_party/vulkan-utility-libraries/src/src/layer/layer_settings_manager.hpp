@@ -1,6 +1,6 @@
-// Copyright 2023 The Khronos Group Inc.
-// Copyright 2023 Valve Corporation
-// Copyright 2023 LunarG, Inc.
+// Copyright 2023-2025 The Khronos Group Inc.
+// Copyright 2023-2025 Valve Corporation
+// Copyright 2023-2025 LunarG, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -41,6 +41,8 @@ class LayerSettings {
     void Log(const char *pSettingName, const char *pMessage);
 
     std::vector<std::string> &GetSettingCache(const std::string &pSettingName);
+
+    const std::string &GetLayerName() const;
 
   private:
     const VkLayerSettingEXT *FindLayerSettingValue(const char *pSettingName);

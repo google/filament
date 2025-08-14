@@ -48,6 +48,7 @@ class CommandRecordingContext {
     void Open(ComPtr<ID3D12GraphicsCommandList> commandList);
 
     ID3D12GraphicsCommandList* GetCommandList() const;
+    ID3D12GraphicsCommandList1* GetCommandList1() const;
     ID3D12GraphicsCommandList4* GetCommandList4() const;
     void Release();
     bool NeedsSubmit() const;
@@ -65,6 +66,7 @@ class CommandRecordingContext {
     void ReleaseKeyedMutexes();
 
     ComPtr<ID3D12GraphicsCommandList> mD3d12CommandList;
+    ComPtr<ID3D12GraphicsCommandList1> mD3d12CommandList1;
     ComPtr<ID3D12GraphicsCommandList4> mD3d12CommandList4;
     bool mNeedsSubmit = false;
     absl::flat_hash_set<Buffer*> mSharedBuffers;

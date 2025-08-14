@@ -110,8 +110,7 @@ TEST_F(GlslWriterTest, StripAllNames_CombinedTextureSamplerName) {
     Options options;
     options.strip_all_names = true;
     options.bindings.sampler_texture_to_name.insert(
-        {binding::CombinedTextureSamplerPair{texture_bp, sampler_bp},
-         "tint_combined_texture_sampler"});
+        {CombinedTextureSamplerPair{texture_bp, sampler_bp}, "tint_combined_texture_sampler"});
     ASSERT_TRUE(Generate(options)) << err_ << output_.glsl;
     EXPECT_EQ(output_.glsl, GlslHeader() + R"(precision highp float;
 precision highp int;

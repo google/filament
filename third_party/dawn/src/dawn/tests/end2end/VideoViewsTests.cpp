@@ -58,12 +58,6 @@ void VideoViewsTestsBase::SetUp() {
     DAWN_TEST_UNSUPPORTED_IF(!IsMultiPlanarFormatsSupported());
     // TODO(crbug.com/342213634): Crashes on ChromeOS volteer devices.
     DAWN_SUPPRESS_TEST_IF(IsChromeOS() && IsVulkan() && IsIntel() && IsBackendValidationEnabled());
-
-    // compat mode doesn't allow different texture views to be used in a draw call unless
-    // FlexibleTextureViews feature is enabled. The tests need texture views to sample and render to
-    // separate planes of a multiplanar texture.
-    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode() &&
-                             !SupportsFeatures({wgpu::FeatureName::FlexibleTextureViews}));
 }
 
 std::vector<wgpu::FeatureName> VideoViewsTestsBase::GetRequiredFeatures() {
@@ -2124,6 +2118,9 @@ TEST_P(VideoViewsRenderTargetTests, RenderAttachmentSizeValidation) {
 
 // Tests for rendering to a multiplanar video texture through its views.
 TEST_P(VideoViewsRenderTargetTests, RenderToMultiplanarVideoTexture) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 8) {
         RenderToMultiplanarVideoTextures<uint8_t>(/*numOfTextures=*/1, /*hasDepth=*/false);
     } else if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 16) {
@@ -2134,6 +2131,9 @@ TEST_P(VideoViewsRenderTargetTests, RenderToMultiplanarVideoTexture) {
 }
 
 TEST_P(VideoViewsRenderTargetTests, RenderToMultiplanarVideoTextureWithDepth) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 8) {
         RenderToMultiplanarVideoTextures<uint8_t>(/*numOfTextures=*/1, /*hasDepth=*/true);
     } else if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 16) {
@@ -2144,6 +2144,9 @@ TEST_P(VideoViewsRenderTargetTests, RenderToMultiplanarVideoTextureWithDepth) {
 }
 
 TEST_P(VideoViewsRenderTargetTests, RenderToThreeMultiplanarVideoTexture) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 8) {
         RenderToMultiplanarVideoTextures<uint8_t>(/*numOfTextures=*/3, /*hasDepth=*/false);
     } else if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 16) {
@@ -2154,6 +2157,9 @@ TEST_P(VideoViewsRenderTargetTests, RenderToThreeMultiplanarVideoTexture) {
 }
 
 TEST_P(VideoViewsRenderTargetTests, RenderToThreeMultiplanarVideoTextureWithDepth) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 8) {
         RenderToMultiplanarVideoTextures<uint8_t>(/*numOfTextures=*/3, /*hasDepth=*/true);
     } else if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 16) {
@@ -2165,6 +2171,9 @@ TEST_P(VideoViewsRenderTargetTests, RenderToThreeMultiplanarVideoTextureWithDept
 
 // Tests for rendering to one plane while reading from another plane.
 TEST_P(VideoViewsRenderTargetTests, RenderFromLumaToChromaPlane) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 8) {
         RenderFromLumaToChromaPlane<uint8_t>();
     } else if (utils::GetMultiPlaneTextureBitDepth(GetFormat()) == 16) {

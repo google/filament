@@ -39,14 +39,12 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "ir",
   srcs = [
-    "binary.cc",
     "builtin_call.cc",
     "component.cc",
     "member_builtin_call.cc",
     "memory_order.cc",
   ],
   hdrs = [
-    "binary.h",
     "builtin_call.h",
     "component.h",
     "member_builtin_call.h",
@@ -80,7 +78,6 @@ cc_library(
   name = "test",
   alwayslink = True,
   srcs = [
-    "binary_test.cc",
     "builtin_call_test.cc",
     "member_builtin_call_test.cc",
   ],

@@ -28,6 +28,9 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_PLATFORMFUNCTIONSD3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_PLATFORMFUNCTIONSD3D11_H_
 
+#include <span>
+#include <string>
+
 #include "dawn/native/d3d/PlatformFunctions.h"
 #include "dawn/native/d3d/d3d_platform.h"
 
@@ -38,7 +41,7 @@ class PlatformFunctions final : public d3d::PlatformFunctions {
     PlatformFunctions();
     ~PlatformFunctions() override;
 
-    MaybeError LoadFunctions();
+    MaybeError Initialize(std::span<const std::string> searchPaths);
 
     // Functions from D3D11.dll
     PFN_D3D11_CREATE_DEVICE d3d11CreateDevice = nullptr;

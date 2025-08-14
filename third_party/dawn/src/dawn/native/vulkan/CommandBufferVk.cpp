@@ -45,6 +45,7 @@
 #include "dawn/native/vulkan/ComputePipelineVk.h"
 #include "dawn/native/vulkan/DeviceVk.h"
 #include "dawn/native/vulkan/FencedDeleter.h"
+#include "dawn/native/vulkan/FramebufferCache.h"
 #include "dawn/native/vulkan/PhysicalDeviceVk.h"
 #include "dawn/native/vulkan/PipelineLayoutVk.h"
 #include "dawn/native/vulkan/QuerySetVk.h"
@@ -173,11 +174,11 @@ class DescriptorSetTracker : public BindGroupTrackerBase<true, uint32_t> {
                CommandRecordingContext* recordingContext,
                VkPipelineBindPoint bindPoint) {
         BeforeApply();
-        for (BindGroupIndex dirtyIndex : IterateBitSet(mDirtyBindGroupsObjectChangedOrIsDynamic)) {
+        for (BindGroupIndex dirtyIndex : mDirtyBindGroupsObjectChangedOrIsDynamic) {
             VkDescriptorSet set = ToBackend(mBindGroups[dirtyIndex])->GetHandle();
-            uint32_t count = static_cast<uint32_t>(mDynamicOffsets[dirtyIndex].size());
-            const uint32_t* dynamicOffset =
-                count > 0 ? mDynamicOffsets[dirtyIndex].data() : nullptr;
+            const auto dynamicOffsetSpan = GetDynamicOffsets(dirtyIndex);
+            uint32_t count = static_cast<uint32_t>(dynamicOffsetSpan.size());
+            const uint32_t* dynamicOffset = count > 0 ? dynamicOffsetSpan.data() : nullptr;
             device->fn.CmdBindDescriptorSets(recordingContext->commandBuffer, bindPoint, mVkLayout,
                                              static_cast<uint32_t>(dirtyIndex), 1, &*set, count,
                                              dynamicOffset);
@@ -205,52 +206,19 @@ class ImmediateConstantTracker : public T {
             return;
         }
 
-        const ImmediateConstantMask& pipelineImmediateMask = lastPipeline->GetImmediateMask();
-        const size_t maxImmediateConstantSize =
-            pipelineImmediateMask.count() * kImmediateConstantElementByteSize;
-
-        uint32_t pushConstantRangeStartOffset = 0;
-        uint32_t immediateContentStartOffset = 0;
-        uint32_t immediateDataCount = 0;
-
+        const ImmediateConstantMask& pipelineMask = lastPipeline->GetImmediateMask();
         ImmediateConstantMask uploadBits = this->mDirty & lastPipeline->GetImmediateMask();
-        ImmediateConstantMask prefixBits = ImmediateConstantMask(0u);
-
-        // TODO(crbug.com/366291600): Add IterateBitRanges helper function to achieve iteration on
-        // ranges.
-        for (ImmediateConstantIndex i : IterateBitSet(lastPipeline->GetImmediateMask())) {
-            if (uploadBits.test(i)) {
-                uint32_t index = static_cast<uint32_t>(i);
-                if (immediateDataCount == 0) {
-                    prefixBits = (1u << index) - 1u;
-                    pushConstantRangeStartOffset = (prefixBits & pipelineImmediateMask).count() *
-                                                   kImmediateConstantElementByteSize;
-                    immediateContentStartOffset = index * kImmediateConstantElementByteSize;
-                }
-                ++immediateDataCount;
-            } else {
-                if (immediateDataCount > 0) {
-                    device->fn.CmdPushConstants(
-                        commandBuffer, ToBackend(lastPipeline)->GetVkLayout(),
-                        ToBackend(lastPipeline->GetLayout())->GetImmediateDataRangeStage(),
-                        pushConstantRangeStartOffset,
-                        immediateDataCount * kImmediateConstantElementByteSize,
-                        this->mContent.template Get<uint32_t>(immediateContentStartOffset));
-                    immediateDataCount = 0;
-                }
-            }
-        }
-
-        // Final Uploading
-        if (immediateDataCount > 0) {
-            DAWN_ASSERT(pushConstantRangeStartOffset < maxImmediateConstantSize);
+        for (auto&& [offset, size] : IterateRanges(uploadBits)) {
+            uint32_t immediateContentStartOffset =
+                static_cast<uint32_t>(offset) * kImmediateConstantElementByteSize;
+            uint32_t pushConstantRangeStartOffset =
+                GetImmediateIndexInPipeline(static_cast<uint32_t>(offset), pipelineMask) *
+                kImmediateConstantElementByteSize;
             device->fn.CmdPushConstants(
                 commandBuffer, ToBackend(lastPipeline)->GetVkLayout(),
                 ToBackend(lastPipeline->GetLayout())->GetImmediateDataRangeStage(),
-                pushConstantRangeStartOffset,
-                immediateDataCount * kImmediateConstantElementByteSize,
+                pushConstantRangeStartOffset, size * kImmediateConstantElementByteSize,
                 this->mContent.template Get<uint32_t>(immediateContentStartOffset));
-            immediateDataCount = 0;
         }
 
         // Reset all dirty bits after uploading.
@@ -450,10 +418,11 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
 
     // Query a VkRenderPass from the cache
     VkRenderPass renderPassVK = VK_NULL_HANDLE;
+    uint32_t renderPassId = 0;
     {
         RenderPassCacheQuery query;
 
-        for (auto i : IterateBitSet(renderPass->attachmentState->GetColorAttachmentsMask())) {
+        for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
             const auto& attachmentInfo = renderPass->colorAttachments[i];
             bool hasResolveTarget = attachmentInfo.resolveTarget != nullptr;
 
@@ -475,39 +444,31 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
         RenderPassCache::RenderPassInfo renderPassInfo;
         DAWN_TRY_ASSIGN(renderPassInfo, device->GetRenderPassCache()->GetRenderPass(query));
         renderPassVK = renderPassInfo.renderPass;
+        renderPassId = renderPassInfo.uniqueId;
     }
 
-    // Create a framebuffer that will be used once for the render pass and gather the clear
-    // values for the attachments at the same time.
-    std::array<VkClearValue, kMaxColorAttachments + 1> clearValues;
+    // Query a framebuffer from the cache and gather the clear values for the attachments at the
+    // same time.
+    FramebufferCacheQuery framebufferQuery;
     VkFramebuffer framebuffer = VK_NULL_HANDLE;
-    uint32_t attachmentCount = 0;
     {
-        // Fill in the attachment info that will be chained in the framebuffer create info.
-        std::array<VkImageView, kMaxColorAttachments * 2 + 1> attachments;
+        framebufferQuery.SetRenderPass(renderPassId, renderPass->width, renderPass->height);
 
-        for (auto i : IterateBitSet(renderPass->attachmentState->GetColorAttachmentsMask())) {
+        // Fill in the attachment info that will be chained in the framebuffer create info.
+        for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
             auto& attachmentInfo = renderPass->colorAttachments[i];
             TextureView* view = ToBackend(attachmentInfo.view.Get());
             if (view == nullptr) {
                 continue;
             }
 
-            if (view->GetDimension() == wgpu::TextureViewDimension::e3D) {
-                VkImageView handleFor2DViewOn3D;
-                DAWN_TRY_ASSIGN(handleFor2DViewOn3D,
-                                view->GetOrCreate2DViewOn3D(attachmentInfo.depthSlice));
-                attachments[attachmentCount] = handleFor2DViewOn3D;
-            } else {
-                attachments[attachmentCount] = view->GetHandle();
-            }
-
+            VkClearValue clearValue;
             switch (view->GetFormat().GetAspectInfo(Aspect::Color).baseType) {
                 case TextureComponentType::Float: {
                     const std::array<float, 4> appliedClearColor =
                         ConvertToFloatColor(attachmentInfo.clearColor);
                     for (uint32_t j = 0; j < 4; ++j) {
-                        clearValues[attachmentCount].color.float32[j] = appliedClearColor[j];
+                        clearValue.color.float32[j] = appliedClearColor[j];
                     }
                     break;
                 }
@@ -515,7 +476,7 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
                     const std::array<uint32_t, 4> appliedClearColor =
                         ConvertToUnsignedIntegerColor(attachmentInfo.clearColor);
                     for (uint32_t j = 0; j < 4; ++j) {
-                        clearValues[attachmentCount].color.uint32[j] = appliedClearColor[j];
+                        clearValue.color.uint32[j] = appliedClearColor[j];
                     }
                     break;
                 }
@@ -523,55 +484,59 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
                     const std::array<int32_t, 4> appliedClearColor =
                         ConvertToSignedIntegerColor(attachmentInfo.clearColor);
                     for (uint32_t j = 0; j < 4; ++j) {
-                        clearValues[attachmentCount].color.int32[j] = appliedClearColor[j];
+                        clearValue.color.int32[j] = appliedClearColor[j];
                     }
                     break;
                 }
             }
-            attachmentCount++;
+
+            uint32_t depthSlice = view->GetDimension() == wgpu::TextureViewDimension::e3D
+                                      ? attachmentInfo.depthSlice
+                                      : 0;
+            DAWN_TRY(framebufferQuery.AddAttachment(view, clearValue, depthSlice));
         }
 
         if (renderPass->attachmentState->HasDepthStencilAttachment()) {
             auto& attachmentInfo = renderPass->depthStencilAttachment;
             TextureView* view = ToBackend(attachmentInfo.view.Get());
 
-            attachments[attachmentCount] = view->GetHandle();
+            VkClearValue clearValue;
+            clearValue.depthStencil.depth = attachmentInfo.clearDepth;
+            clearValue.depthStencil.stencil = attachmentInfo.clearStencil;
 
-            clearValues[attachmentCount].depthStencil.depth = attachmentInfo.clearDepth;
-            clearValues[attachmentCount].depthStencil.stencil = attachmentInfo.clearStencil;
-
-            attachmentCount++;
+            DAWN_TRY(framebufferQuery.AddAttachment(view, clearValue));
         }
 
-        for (auto i : IterateBitSet(renderPass->attachmentState->GetColorAttachmentsMask())) {
+        for (auto i : renderPass->attachmentState->GetColorAttachmentsMask()) {
             if (renderPass->colorAttachments[i].resolveTarget != nullptr) {
                 TextureView* view = ToBackend(renderPass->colorAttachments[i].resolveTarget.Get());
-
-                attachments[attachmentCount] = view->GetHandle();
-
-                attachmentCount++;
+                DAWN_TRY(framebufferQuery.AddAttachment(view));
             }
         }
 
-        // Chain attachments and create the framebuffer
-        VkFramebufferCreateInfo createInfo;
-        createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        createInfo.pNext = nullptr;
-        createInfo.flags = 0;
-        createInfo.renderPass = renderPassVK;
-        createInfo.attachmentCount = attachmentCount;
-        createInfo.pAttachments = AsVkArray(attachments.data());
-        createInfo.width = renderPass->width;
-        createInfo.height = renderPass->height;
-        createInfo.layers = 1;
+        DAWN_TRY_ASSIGN(framebuffer,
+                        device->GetFramebufferCache()->GetOrCreate(
+                            framebufferQuery,
+                            [&](const FramebufferCacheQuery& query)
+                                -> ResultOrError<VkFramebuffer> {
+                                VkFramebufferCreateInfo createInfo;
+                                createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                                createInfo.pNext = nullptr;
+                                createInfo.flags = 0;
+                                createInfo.renderPass = renderPassVK;
+                                createInfo.attachmentCount = query.attachmentCount;
+                                createInfo.pAttachments = AsVkArray(query.attachments.data());
+                                createInfo.width = query.width;
+                                createInfo.height = query.height;
+                                createInfo.layers = 1;
 
-        DAWN_TRY(CheckVkSuccess(device->fn.CreateFramebuffer(device->GetVkDevice(), &createInfo,
-                                                             nullptr, &*framebuffer),
-                                "CreateFramebuffer"));
-
-        // We don't reuse VkFramebuffers so mark the framebuffer for deletion as soon as the
-        // commands currently being recorded are finished.
-        device->GetFencedDeleter()->DeleteWhenUnused(framebuffer);
+                                VkFramebuffer framebuffer;
+                                DAWN_TRY(CheckVkSuccess(
+                                    device->fn.CreateFramebuffer(device->GetVkDevice(), &createInfo,
+                                                                 nullptr, &*framebuffer),
+                                    "CreateFramebuffer"));
+                                return framebuffer;
+                            }));
     }
 
     VkRenderPassBeginInfo beginInfo;
@@ -583,8 +548,8 @@ MaybeError RecordBeginRenderPass(CommandRecordingContext* recordingContext,
     beginInfo.renderArea.offset.y = 0;
     beginInfo.renderArea.extent.width = renderPass->width;
     beginInfo.renderArea.extent.height = renderPass->height;
-    beginInfo.clearValueCount = attachmentCount;
-    beginInfo.pClearValues = clearValues.data();
+    beginInfo.clearValueCount = framebufferQuery.attachmentCount;
+    beginInfo.pClearValues = framebufferQuery.clearValues.data();
 
     if (renderPass->attachmentState->GetExpandResolveInfo().attachmentsToExpandResolve.any()) {
         DAWN_TRY(BeginRenderPassAndExpandResolveTextureWithDraw(device, recordingContext,
@@ -1286,9 +1251,13 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
     DescriptorSetTracker descriptorSets = {};
     RenderPipeline* lastPipeline = nullptr;
 
+    // Tracks the number of commands that do significant GPU work (a draw or query write) this pass.
+    uint32_t workCommandCount = 0;
+
     auto EncodeRenderBundleCommand = [&](CommandIterator* iter, Command type) {
         switch (type) {
             case Command::Draw: {
+                workCommandCount++;
                 DrawCmd* draw = iter->NextCommand<DrawCmd>();
 
                 descriptorSets.Apply(device, recordingContext, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -1299,6 +1268,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::DrawIndexed: {
+                workCommandCount++;
                 DrawIndexedCmd* draw = iter->NextCommand<DrawIndexedCmd>();
 
                 descriptorSets.Apply(device, recordingContext, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -1309,6 +1279,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::DrawIndirect: {
+                workCommandCount++;
                 DrawIndirectCmd* draw = iter->NextCommand<DrawIndirectCmd>();
                 Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
 
@@ -1320,6 +1291,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::DrawIndexedIndirect: {
+                workCommandCount++;
                 DrawIndexedIndirectCmd* draw = iter->NextCommand<DrawIndexedIndirectCmd>();
                 Buffer* buffer = ToBackend(draw->indirectBuffer.Get());
                 DAWN_ASSERT(buffer != nullptr);
@@ -1333,6 +1305,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::MultiDrawIndirect: {
+                workCommandCount++;
                 MultiDrawIndirectCmd* cmd = iter->NextCommand<MultiDrawIndirectCmd>();
 
                 Buffer* indirectBuffer = ToBackend(cmd->indirectBuffer.Get());
@@ -1358,6 +1331,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
                 break;
             }
             case Command::MultiDrawIndexedIndirect: {
+                workCommandCount++;
                 MultiDrawIndexedIndirectCmd* cmd = iter->NextCommand<MultiDrawIndexedIndirectCmd>();
 
                 Buffer* indirectBuffer = ToBackend(cmd->indirectBuffer.Get());
@@ -1501,6 +1475,17 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             case Command::EndRenderPass: {
                 mCommands.NextCommand<EndRenderPassCmd>();
 
+                // If no work-producing commands were executed during the render pass and the
+                // VulkanAddWorkToEmptyResolvePass toggle is enabled, add a small amount of work
+                // in the form of performing an occlusion query before ending the pass. This avoids
+                // a driver bug that fails to resolve render targets in empty passes.
+                if (workCommandCount == 0 &&
+                    device->IsToggleEnabled(Toggle::VulkanAddWorkToEmptyResolvePass)) {
+                    QuerySetBase* querySet = device->GetEmptyPassQuerySet();
+                    device->fn.CmdBeginQuery(commands, ToBackend(querySet)->GetHandle(), 0, 0);
+                    device->fn.CmdEndQuery(commands, ToBackend(querySet)->GetHandle(), 0);
+                }
+
                 device->fn.CmdEndRenderPass(commands);
 
                 // Write timestamp at the end of render pass if it's set.
@@ -1553,7 +1538,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
 
                 device->fn.CmdSetViewport(commands, 0, 1, &viewport);
 
-                // Try applying the push constants that contain min/maxDepth immediately. This can
+                // Try applying the immediate data that contain min/maxDepth immediately. This can
                 // be deferred if no pipeline is currently bound.
                 immediates.SetClampFragDepth(viewport.minDepth, viewport.maxDepth);
                 break;
@@ -1586,6 +1571,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::BeginOcclusionQuery: {
+                workCommandCount++;
                 BeginOcclusionQueryCmd* cmd = mCommands.NextCommand<BeginOcclusionQueryCmd>();
 
                 device->fn.CmdBeginQuery(commands, ToBackend(cmd->querySet.Get())->GetHandle(),
@@ -1594,6 +1580,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::EndOcclusionQuery: {
+                workCommandCount++;
                 EndOcclusionQueryCmd* cmd = mCommands.NextCommand<EndOcclusionQueryCmd>();
 
                 device->fn.CmdEndQuery(commands, ToBackend(cmd->querySet.Get())->GetHandle(),
@@ -1602,6 +1589,7 @@ MaybeError CommandBuffer::RecordRenderPass(CommandRecordingContext* recordingCon
             }
 
             case Command::WriteTimestamp: {
+                workCommandCount++;
                 WriteTimestampCmd* cmd = mCommands.NextCommand<WriteTimestampCmd>();
 
                 RecordWriteTimestampCmd(recordingContext, device, cmd->querySet.Get(),

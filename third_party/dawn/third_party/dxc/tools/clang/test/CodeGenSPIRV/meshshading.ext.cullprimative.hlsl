@@ -1,6 +1,4 @@
 // RUN: %dxc -T ms_6_6 -fspv-target-env=vulkan1.1spirv1.4 -E main %s -spirv | FileCheck %s
-// XFAIL: *
-// FIXME(7160): test disabled until the spirv-val fix is merged.
 
 struct MeshletPrimitiveOut
 {

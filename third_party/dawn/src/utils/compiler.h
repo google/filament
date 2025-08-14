@@ -107,7 +107,11 @@
 #if DAWN_COMPILER_IS(CLANG)
 #define DAWN_ASAN_ENABLED() __has_feature(address_sanitizer)
 #elif DAWN_COMPILER_IS(GCC) || DAWN_COMPILER_IS(MSVC)
-#define DAWN_ASAN_ENABLED() defined(__SANITIZE_ADDRESS__)
+#if defined(__SANITIZE_ADDRESS__)
+#define DAWN_ASAN_ENABLED() 1
+#else
+#define DAWN_ASAN_ENABLED() 0
+#endif
 #endif
 
 // DAWN_NO_SANITIZE(instrumentation)

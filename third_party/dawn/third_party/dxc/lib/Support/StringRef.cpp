@@ -12,6 +12,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/edit_distance.h"
 #include <bitset>
+#include <limits>
 
 using namespace llvm;
 
@@ -393,13 +394,16 @@ bool llvm::getAsSignedInteger(StringRef Str, unsigned Radix,
 
   // Get the positive part of the value.
   if (getAsUnsignedInteger(Str.substr(1), Radix, ULLVal) ||
-      // Reject values so large they'd overflow as negative signed, but allow
-      // "-0".  This negates the unsigned so that the negative isn't undefined
-      // on signed overflow.
-      (long long)-ULLVal > 0)
+      // Reject values larger than what can be represented as negative signed.
+      // The most negative long long is LLONG_MIN, which has magnitude
+      // (LLONG_MAX + 1). Values larger than this magnitude cannot be negated
+      // without overflow.
+      ULLVal > static_cast<unsigned long long>(
+                   std::numeric_limits<long long>::max()) +
+                   1)
     return true;
 
-  Result = -ULLVal;
+  Result = (~ULLVal + 1);
   return false;
 }
 

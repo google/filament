@@ -1,6 +1,6 @@
 # libprotobuf-mutator
 
-[![TravisCI Build Status](https://travis-ci.org/google/libprotobuf-mutator.svg?branch=master)](https://travis-ci.org/google/libprotobuf-mutator)
+[![Build Status](https://github.com/google/libprotobuf-mutator/actions/workflows/cmake-multi-platform.yml/badge.svg?event=push)](https://github.com/google/libprotobuf-mutator/actions/workflows/cmake-multi-platform.yml?query=event%3Apush)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/libprotobuf-mutator.svg)](https://oss-fuzz-build-logs.storage.googleapis.com/index.html#libprotobuf-mutator)
 
 ## Overview
@@ -12,7 +12,7 @@ It could be used together with guided fuzzing engines, such as [libFuzzer](http:
 
 Install prerequisites:
 
-```
+```sh
 sudo apt-get update
 sudo apt-get install protobuf-compiler libprotobuf-dev binutils cmake \
   ninja-build liblzma-dev libz-dev pkg-config autoconf libtool
@@ -20,7 +20,7 @@ sudo apt-get install protobuf-compiler libprotobuf-dev binutils cmake \
 
 Compile and test everything:
 
-```
+```sh
 mkdir build
 cd build
 cmake .. -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug
@@ -36,7 +36,7 @@ build a working version of protobuf.
 
 Installation:
 
-```
+```sh
 ninja
 sudo ninja install
 ```
@@ -59,7 +59,7 @@ using [libFuzzer](http://libfuzzer.info)'s mutators.
 
 To apply one mutation to a protobuf object do the following:
 
-```
+```c++
 class MyProtobufMutator : public protobuf_mutator::Mutator {
  public:
   // Optionally redefine the Mutate* methods to perform more sophisticated mutations.
@@ -77,7 +77,7 @@ See also the `ProtobufMutatorMessagesTest.UsageExample` test from
 ## Integrating with libFuzzer
 LibFuzzerProtobufMutator can help to integrate with libFuzzer. For example 
 
-```
+```c++
 #include "src/libfuzzer/libfuzzer_macro.h"
 
 DEFINE_PROTO_FUZZER(const MyMessageType& input) {
@@ -97,7 +97,7 @@ for fuzzer even if it's capable of inserting acceptable values with time.
 PostProcessorRegistration can be used to avoid such issue and guide your fuzzer towards interesting
 code. It registers callback which will be called for each message of particular type after each mutation.
 
-```
+```c++
 static protobuf_mutator::libfuzzer::PostProcessorRegistration<MyMessageType> reg = {
     [](MyMessageType* message, unsigned int seed) {
       TweakMyMessage(message, seed);
@@ -117,7 +117,7 @@ may corrupt the reproducer so it stops triggering the bug.
 
 Note: You can add callback for any nested message and you can add multiple callbacks for
 the same message type.
-```
+```c++
 static PostProcessorRegistration<MyMessageType> reg1 = {
     [](MyMessageType* message, unsigned int seed) {
       TweakMyMessage(message, seed);
@@ -142,10 +142,36 @@ string should be UTF-8, however only "proto3" enforces that. So if fuzzer is
 applied to "proto2" type libprotobuf-mutator will generate any strings including
 invalid UTF-8. If it's a "proto3" message type, only valid UTF-8 will be used.
 
+## Extensions
+Currently the library does not mutate
+[extensions](https://developers.google.com/protocol-buffers/docs/proto#extensions).
+This can be a problem if extension contains required fields so the library will not
+be able to change the message into valid initialized state.
+You can use [post processing hooks](#mutation-post-processing-experimental) to
+cleanup/initialize the message as workaround.
+
 ## Users of the library
 * [Chromium](https://cs.chromium.org/search/?q=DEFINE_.*._PROTO_FUZZER%5C\()
 * [Envoy](https://github.com/envoyproxy/envoy/search?q=DEFINE_TEXT_PROTO_FUZZER+OR+DEFINE_PROTO_FUZZER+OR+DEFINE_BINARY_PROTO_FUZZER&unscoped_q=DEFINE_TEXT_PROTO_FUZZER+OR+DEFINE_PROTO_FUZZER+OR+DEFINE_BINARY_PROTO_FUZZER&type=Code)
 * [LLVM](https://github.com/llvm-mirror/clang/search?q=DEFINE_TEXT_PROTO_FUZZER+OR+DEFINE_PROTO_FUZZER+OR+DEFINE_BINARY_PROTO_FUZZER&unscoped_q=DEFINE_TEXT_PROTO_FUZZER+OR+DEFINE_PROTO_FUZZER+OR+DEFINE_BINARY_PROTO_FUZZER&type=Code)
+
+## Grammars
+* GIF, https://github.com/google/oss-fuzz/tree/master/projects/giflib
+* JSON
+  * https://github.com/google/oss-fuzz/tree/master/projects/jsoncpp
+  * https://github.com/officialcjunior/fuzzrtos/tree/c72e6670e566672ccf8023265cbfad616e75790d/protobufv2
+* Lua 5.1 Language,
+  * https://github.com/ligurio/lua-c-api-tests/tree/master/tests/luaL_loadbuffer_proto
+  * https://github.com/Spoookyyy/luaj/tree/main/fuzz
+* PNG, https://github.com/google/oss-fuzz/tree/master/projects/libpng-proto
+* SQL
+  * https://github.com/tarantool/tarantool/tree/master/test/fuzz/sql_fuzzer
+  * https://chromium.googlesource.com/chromium/src/third_party/+/refs/heads/main/sqlite/fuzz
+* Solidity Language, https://github.com/ethereum/solidity/tree/develop/test/tools/ossfuzz
+* XML
+  * https://github.com/google/oss-fuzz/tree/master/projects/xerces-c
+  * https://github.com/google/libprotobuf-mutator/tree/master/examples/xml
+* JPEG, https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/vaapi/fuzzers/jpeg_decoder/
 
 ## Bugs found with help of the library
 

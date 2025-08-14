@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 
-#include "src/tint/lang/core/builtin_type.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
 #include "src/tint/lang/core/type/bool.h"

@@ -47,12 +47,14 @@ TEST_P(QueueTests, GetQueueSameObject) {
 
 DAWN_INSTANTIATE_TEST(QueueTests,
                       D3D11Backend(),
+                      D3D11Backend({"d3d11_delay_flush_to_gpu"}),
                       D3D12Backend(),
                       MetalBackend(),
                       NullBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class QueueWriteBufferTests : public DawnTest {};
 
@@ -203,6 +205,9 @@ TEST_P(QueueWriteBufferTests, MaxBufferSizeWriteBuffer) {
 // Test a special code path: writing when dynamic uploader already contatins some unaligned
 // data, it might be necessary to use a ring buffer with properly aligned offset.
 TEST_P(QueueWriteBufferTests, UnalignedDynamicUploader) {
+    // TODO(crbug.com/413053623): implement webgpu::Texture
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     utils::UnalignDynamicUploader(device);
 
     wgpu::BufferDescriptor descriptor;
@@ -266,11 +271,13 @@ TEST_P(QueueWriteBufferTests, WriteUniformBufferWithVariousOffsetAndSizeAlignmen
 
 DAWN_INSTANTIATE_TEST(QueueWriteBufferTests,
                       D3D11Backend(),
+                      D3D11Backend({"d3d11_delay_flush_to_gpu"}),
                       D3D12Backend(),
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 // For MinimumDataSpec bytesPerRow and rowsPerImage, compute a default from the copy extent.
 constexpr uint32_t kStrideComputeDefault = 0xFFFF'FFFEul;
@@ -786,7 +793,7 @@ TEST_P(QueueWriteTextureTests, UnalignedDynamicUploader) {
 }
 
 DAWN_INSTANTIATE_TEST_P(QueueWriteTextureTests,
-                        {D3D11Backend(), D3D12Backend(),
+                        {D3D11Backend(), D3D11Backend({"d3d11_delay_flush_to_gpu"}), D3D12Backend(),
                          D3D12Backend({"d3d12_use_temp_buffer_in_depth_stencil_texture_and_buffer_"
                                        "copy_with_non_zero_buffer_offset"}),
                          MetalBackend(),
@@ -986,6 +993,7 @@ DAWN_INSTANTIATE_TEST(QueueWriteTextureSimpleTests,
                       D3D11Backend(),
                       D3D11Backend({"d3d11_use_unmonitored_fence"}),
                       D3D11Backend({"d3d11_disable_fence"}),
+                      D3D11Backend({"d3d11_delay_flush_to_gpu"}),
                       D3D12Backend(),
                       MetalBackend(),
                       OpenGLBackend(),

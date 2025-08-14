@@ -45,8 +45,10 @@ cc_library(
   hdrs = [
     "ctor_conv.h",
     "dialect.h",
+    "type_matchers.h",
   ],
   deps = [
+    "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/intrinsic",
@@ -82,8 +84,6 @@ cc_library(
     "//src/tint/lang/core/type:test",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
-    "//src/tint/lang/wgsl/common",
-    "//src/tint/lang/wgsl/features",
     "//src/tint/lang/wgsl/intrinsic",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/resolver",

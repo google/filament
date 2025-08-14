@@ -301,7 +301,6 @@ if( MSVC )
 
   set(msvc_warning_flags
     # Disabled warnings.
-    -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
     -wd4180 # Suppress 'qualifier applied to function type has no meaning; ignored'
     -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
     -wd4258 # Suppress ''var' : definition from the for loop is ignored; the definition from the enclosing scope is used'

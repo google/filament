@@ -19,7 +19,6 @@
 #include "dxc/Support/WinIncludes.h"
 #include "dxc/Support/dxcapi.impl.h"
 #include "dxc/dxcapi.h"
-#include "dxillib.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -49,23 +48,9 @@ HRESULT RunInternalValidator(IDxcValidator *pValidator,
 namespace {
 // AssembleToContainer helper functions.
 
-bool CreateValidator(CComPtr<IDxcValidator> &pValidator,
-                     hlsl::options::ValidatorSelection SelectValidator =
-                         hlsl::options::ValidatorSelection::Auto) {
-  bool bInternal =
-      SelectValidator == hlsl::options::ValidatorSelection::Internal;
-  bool bExternal =
-      SelectValidator == hlsl::options::ValidatorSelection::External;
-  if (!bInternal && DxilLibIsEnabled())
-    DxilLibCreateInstance(CLSID_DxcValidator, &pValidator);
-
-  bool bInternalValidator = false;
-  if (pValidator == nullptr) {
-    IFTBOOL(!bExternal, DXC_E_VALIDATOR_MISSING);
-    IFT(CreateDxcValidator(IID_PPV_ARGS(&pValidator)));
-    bInternalValidator = true;
-  }
-  return bInternalValidator;
+// return true if the internal validator was used, false otherwise
+void CreateValidator(CComPtr<IDxcValidator> &pValidator) {
+  IFT(CreateDxcValidator(IID_PPV_ARGS(&pValidator)));
 }
 
 } // namespace
@@ -79,23 +64,20 @@ AssembleInputs::AssembleInputs(
     uint32_t ValidationFlags, llvm::StringRef DebugName,
     clang::DiagnosticsEngine *pDiag, hlsl::DxilShaderHash *pShaderHashOut,
     AbstractMemoryStream *pReflectionOut, AbstractMemoryStream *pRootSigOut,
-    CComPtr<IDxcBlob> pRootSigBlob, CComPtr<IDxcBlob> pPrivateBlob,
-    hlsl::options::ValidatorSelection SelectValidator)
+    CComPtr<IDxcBlob> pRootSigBlob, CComPtr<IDxcBlob> pPrivateBlob)
     : pM(std::move(pM)), pOutputContainerBlob(pOutputContainerBlob),
       pMalloc(pMalloc), SerializeFlags(SerializeFlags),
       ValidationFlags(ValidationFlags), pModuleBitcode(pModuleBitcode),
       DebugName(DebugName), pDiag(pDiag), pShaderHashOut(pShaderHashOut),
       pReflectionOut(pReflectionOut), pRootSigOut(pRootSigOut),
-      pRootSigBlob(pRootSigBlob), pPrivateBlob(pPrivateBlob),
-      SelectValidator(SelectValidator) {}
+      pRootSigBlob(pRootSigBlob), pPrivateBlob(pPrivateBlob) {}
 
-void GetValidatorVersion(unsigned *pMajor, unsigned *pMinor,
-                         hlsl::options::ValidatorSelection SelectValidator) {
+void GetValidatorVersion(unsigned *pMajor, unsigned *pMinor) {
   if (pMajor == nullptr || pMinor == nullptr)
     return;
 
   CComPtr<IDxcValidator> pValidator;
-  CreateValidator(pValidator, SelectValidator);
+  CreateValidator(pValidator);
 
   CComPtr<IDxcVersionInfo> pVersionInfo;
   if (SUCCEEDED(pValidator.QueryInterface(&pVersionInfo))) {
@@ -167,76 +149,19 @@ HRESULT ValidateAndAssembleToContainer(AssembleInputs &inputs) {
   std::unique_ptr<llvm::Module> llvmModuleWithDebugInfo;
 
   CComPtr<IDxcValidator> pValidator;
-  bool bInternalValidator = CreateValidator(pValidator, inputs.SelectValidator);
-  // Warning on internal Validator
+  CreateValidator(pValidator);
 
-  CComPtr<IDxcValidator2> pValidator2;
-  if (!bInternalValidator) {
-    pValidator.QueryInterface(&pValidator2);
-  }
-
-  if (bInternalValidator || pValidator2) {
-    // If using the internal validator or external validator supports
-    // IDxcValidator2, we'll use the modules directly. In this case, we'll want
-    // to make a clone to avoid SerializeDxilContainerForModule stripping all
-    // the debug info. The debug info will be stripped from the orginal module,
-    // but preserved in the cloned module.
-    if (llvm::getDebugMetadataVersionFromModule(*inputs.pM) != 0) {
-      llvmModuleWithDebugInfo.reset(llvm::CloneModule(inputs.pM.get()));
-    }
-  }
-
-  // Verify validator version can validate this module
-  CComPtr<IDxcVersionInfo> pValidatorVersion;
-  IFT(pValidator->QueryInterface(&pValidatorVersion));
-  UINT32 ValMajor, ValMinor;
-  IFT(pValidatorVersion->GetVersion(&ValMajor, &ValMinor));
-  DxilModule &DM = inputs.pM.get()->GetOrCreateDxilModule();
-  unsigned ReqValMajor, ReqValMinor;
-  DM.GetValidatorVersion(ReqValMajor, ReqValMinor);
-  if (DXIL::CompareVersions(ValMajor, ValMinor, ReqValMajor, ReqValMinor) < 0) {
-    // Module is expecting to be validated by a newer validator.
-    if (inputs.pDiag) {
-      unsigned diagID = inputs.pDiag->getCustomDiagID(
-          clang::DiagnosticsEngine::Level::Error,
-          "The module cannot be validated by the version of the validator "
-          "currently attached.");
-      inputs.pDiag->Report(diagID);
-    }
-    return E_FAIL;
-  }
+  if (llvm::getDebugMetadataVersionFromModule(*inputs.pM) != 0)
+    llvmModuleWithDebugInfo.reset(llvm::CloneModule(inputs.pM.get()));
 
   AssembleToContainer(inputs);
 
   CComPtr<IDxcOperationResult> pValResult;
-  // Important: in-place edit is required so the blob is reused and thus
-  // dxil.dll can be released.
+  // In-place edit to avoid an extra copy
   inputs.ValidationFlags |= DxcValidatorFlags_InPlaceEdit;
-  if (bInternalValidator) {
-    IFT(RunInternalValidator(pValidator, llvmModuleWithDebugInfo.get(),
-                             inputs.pOutputContainerBlob,
-                             inputs.ValidationFlags, &pValResult));
-  } else {
-    if (pValidator2 && llvmModuleWithDebugInfo) {
-      // If metadata was stripped, re-serialize the input module.
-      CComPtr<AbstractMemoryStream> pDebugModuleStream;
-      IFT(CreateMemoryStream(DxcGetThreadMallocNoRef(), &pDebugModuleStream));
-      raw_stream_ostream outStream(pDebugModuleStream.p);
-      WriteBitcodeToFile(llvmModuleWithDebugInfo.get(), outStream, true);
-      outStream.flush();
-
-      DxcBuffer debugModule = {};
-      debugModule.Ptr = pDebugModuleStream->GetPtr();
-      debugModule.Size = pDebugModuleStream->GetPtrSize();
-
-      IFT(pValidator2->ValidateWithDebug(inputs.pOutputContainerBlob,
-                                         inputs.ValidationFlags, &debugModule,
-                                         &pValResult));
-    } else {
-      IFT(pValidator->Validate(inputs.pOutputContainerBlob,
-                               inputs.ValidationFlags, &pValResult));
-    }
-  }
+  IFT(RunInternalValidator(pValidator, llvmModuleWithDebugInfo.get(),
+                           inputs.pOutputContainerBlob, inputs.ValidationFlags,
+                           &pValResult));
   IFT(pValResult->GetStatus(&valHR));
   if (inputs.pDiag) {
     if (FAILED(valHR)) {
@@ -261,9 +186,8 @@ HRESULT ValidateAndAssembleToContainer(AssembleInputs &inputs) {
   return valHR;
 }
 
-HRESULT ValidateRootSignatureInContainer(
-    IDxcBlob *pRootSigContainer, clang::DiagnosticsEngine *pDiag,
-    hlsl::options::ValidatorSelection SelectValidator) {
+HRESULT ValidateRootSignatureInContainer(IDxcBlob *pRootSigContainer,
+                                         clang::DiagnosticsEngine *pDiag) {
   HRESULT valHR = S_OK;
   CComPtr<IDxcValidator> pValidator;
   CComPtr<IDxcOperationResult> pValResult;

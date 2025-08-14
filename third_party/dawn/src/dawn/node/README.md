@@ -2,6 +2,13 @@
 
 Note: This code is currently WIP. There are a number of [known issues](#known-issues).
 
+## npm package
+
+There is an npm package named `webgpu` which has dawn.node prebuilt and ready to use.
+See the [npm webgpu](https://www.npmjs.com/package/webgpu). It's build from the
+repo at: https://github.com/dawn-gpu/node-webgpu. See that repo for publishing/updating
+details.
+
 ## Building
 
 ### System requirements
@@ -272,7 +279,7 @@ launch.json. For example:
 loop:nested_loops:preventValueOptimizations=false'
 <SNIP>
 Running:
-  Cmd: /home/user/src/dawn/third_party/node/node-linux-x64/bin/node -e "require('./out-node/common/runtime/cmdline.js');" -- placeholder-arg --gpu-provider /home/user/src/dawn/build-clang/cts.js --verbose --quiet --gpu-provider-flag verbose=1 --colors --unroll-const-eval-loops --gpu-provider-flag enable-dawn-features=allow_unsafe_apis "webgpu:shader,execution,flow_control,loop:nested_loops:preventValueOptimizations=false"
+  Cmd: /home/user/src/dawn/third_party/node/node-linux-x64/bin/node -e "require('./out-node/common/runtime/cmdline.js');" -- placeholder-arg --gpu-provider /home/user/src/dawn/build-clang/cts.js --verbose --quiet --gpu-provider-flag verbose=1 --colors --gpu-provider-flag enable-dawn-features=allow_unsafe_apis "webgpu:shader,execution,flow_control,loop:nested_loops:preventValueOptimizations=false"
   Dir: /home/user/src/dawn/third_party/webgpu-cts
 
   For VS Code launch.json:
@@ -289,7 +296,6 @@ Running:
         "--gpu-provider-flag",
         "verbose=1",
         "--colors",
-        "--unroll-const-eval-loops",
         "--gpu-provider-flag",
         "enable-dawn-features=allow_unsafe_apis",
         "webgpu:shader,execution,flow_control,loop:nested_loops:preventValueOptimizations=false"

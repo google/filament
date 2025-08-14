@@ -126,11 +126,13 @@ func run() error {
 		"EnumEntryName":              enumEntryName,
 		"Eval":                       g.eval,
 		"HasAnnotation":              hasAnnotation,
+		"HasConstructor":             hasConstructor,
 		"FlattenedAttributesOf":      g.flattenedAttributesOf,
 		"FlattenedConstantsOf":       g.flattenedConstantsOf,
 		"FlattenedMethodsOf":         g.flattenedMethodsOf,
 		"Include":                    g.include,
 		"IsBasicLiteral":             is(ast.BasicLiteral{}),
+		"IsCallback":                 is(ast.Callback{}),
 		"IsInitializer":              isInitializer,
 		"IsDefaultDictionaryLiteral": is(ast.DefaultDictionaryLiteral{}),
 		"IsDictionary":               is(ast.Dictionary{}),
@@ -194,8 +196,11 @@ func nameOf(n ast.Node) string {
 		return n.Name
 	case *ast.Mixin:
 		return n.Name
+	case *ast.Callback:
+		return n.Name
 	case *ast.Includes:
 		return ""
+
 	default:
 		panic(fmt.Errorf("unhandled AST declaration %T", n))
 	}
@@ -380,6 +385,10 @@ func (s *simplifier) visit(d ast.Decl) {
 	case *ast.Includes:
 		if register(d.Name) {
 			return
+		}
+	case *ast.Callback:
+		for _, p := range d.Parameters {
+			s.visitType(p.Type)
 		}
 	default:
 		panic(fmt.Errorf("unhandled AST declaration %T", d))
@@ -577,6 +586,17 @@ func hasAnnotation(obj interface{}, name string) bool {
 		return findAnnotation(obj.Annotations, name) != nil || findAnnotation(obj.TypeAnnotations, name) != nil
 	}
 	panic("Unhandled AST node type in hasAnnotation")
+}
+
+func hasConstructor(obj interface{}) bool {
+	iface := obj.(*ast.Interface)
+	for _, member := range iface.Members {
+		member := member.(*ast.Member)
+		if isInitializer(member) {
+			return true
+		}
+	}
+	return false
 }
 
 // Method describes a WebIDL interface method

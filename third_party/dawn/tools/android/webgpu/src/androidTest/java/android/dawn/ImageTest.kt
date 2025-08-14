@@ -2,10 +2,14 @@ package android.dawn
 
 import android.dawn.helper.asString
 import android.dawn.helper.createBitmap
+import android.dawn.helper.createWebGpu
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.services.storage.TestStorage
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -22,7 +26,9 @@ class ImageTest {
     }
 
     private fun triangleTest(color: Color, imageName: String) {
-        dawnTestLauncher { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             val appContext = InstrumentationRegistry.getInstrumentation().targetContext
 
             val shaderModule = device.createShaderModule(
@@ -85,11 +91,13 @@ class ImageTest {
 
             val bitmap = testTexture.createBitmap(device)
 
-            if (false) {
-                writeReferenceImage(bitmap)
+            // Write the generated bitmap to test storage for inspection in the event of test
+            // failures.
+            TestStorage(appContext.contentResolver).openOutputFile("generated_image.png").use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
 
-            val testAssets = InstrumentationRegistry.getInstrumentation().context.assets
+            val testAssets = appContext.assets
             val matched = testAssets.list("compare")!!.filter {
                 imageSimilarity(
                     bitmap,

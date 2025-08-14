@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "src/tint/lang/core/ir/transform/helper_test.h"
+#include "src/tint/lang/core/type/sampled_texture.h"
 
 namespace tint::wgsl::writer::raise {
 namespace {
@@ -2680,6 +2681,72 @@ TEST_F(WgslWriter_ValueToLetTest, LoadVarInLoopBody_ThenReadAndWriteToVarInLoopC
       }
     }
     ret 3i
+  }
+}
+)";
+
+    Run(ValueToLet);
+
+    EXPECT_EQ(expect, str());
+}
+
+/////////////////////////
+// Load handle
+/////////////////////////
+TEST_F(WgslWriter_ValueToLetTest, Load_Handle) {
+    core::ir::Var* tex = nullptr;
+    core::ir::Var* sampler = nullptr;
+    b.Append(b.ir.root_block, [&] {
+        tex = b.Var("tex",
+                    ty.ptr(handle, ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
+                           core::Access::kRead));
+        tex->SetBindingPoint(0, 0);
+
+        sampler = b.Var(ty.ptr(handle, ty.sampler()));
+        sampler->SetBindingPoint(0, 1);
+    });
+
+    auto* fn = b.Function("f", ty.void_());
+    b.Append(fn->Block(), [&] {
+        auto* ls = b.Load(sampler);
+        auto* lt = b.Load(tex);
+        auto* r = b.Call(ty.vec4<f32>(), core::BuiltinFn::kTextureSample, lt, ls,
+                         b.Splat<vec2<f32>>(0_f));
+        b.ir.SetName(r, "r");
+        b.Return(fn);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %tex:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
+  %2:ptr<handle, sampler, read> = var undef @binding_point(0, 1)
+}
+
+%f = func():void {
+  $B2: {
+    %4:sampler = load %2
+    %5:texture_2d<f32> = load %tex
+    %r:vec4<f32> = textureSample %5, %4, vec2<f32>(0.0f)
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %tex:ptr<handle, texture_2d<f32>, read> = var undef @binding_point(0, 0)
+  %2:ptr<handle, sampler, read> = var undef @binding_point(0, 1)
+}
+
+%f = func():void {
+  $B2: {
+    %4:sampler = load %2
+    %5:texture_2d<f32> = load %tex
+    %6:vec4<f32> = textureSample %5, %4, vec2<f32>(0.0f)
+    %r:vec4<f32> = let %6
+    ret
   }
 }
 )";

@@ -191,12 +191,12 @@ public:
 template<> struct DenseMapInfo<SDValue> {
   static inline SDValue getEmptyKey() {
     SDValue V;
-    V.ResNo = -1U;
+    V.ResNo = ~0U;
     return V;
   }
   static inline SDValue getTombstoneKey() {
     SDValue V;
-    V.ResNo = -2U;
+    V.ResNo = ~1U;
     return V;
   }
   static unsigned getHashValue(const SDValue &Val) {
@@ -879,7 +879,7 @@ inline SDValue::SDValue(SDNode *node, unsigned resno)
     : Node(node), ResNo(resno) {
   assert((!Node || ResNo < Node->getNumValues()) &&
          "Invalid result number for the given node!");
-  assert(ResNo < -2U && "Cannot use result numbers reserved for DenseMaps.");
+  assert(ResNo < ~1U && "Cannot use result numbers reserved for DenseMaps.");
 }
 
 inline unsigned SDValue::getOpcode() const {

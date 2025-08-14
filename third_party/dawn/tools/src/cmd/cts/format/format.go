@@ -56,13 +56,15 @@ func (cmd) Desc() string {
 
 func (c *cmd) RegisterFlags(ctx context.Context, cfg common.Config) ([]string, error) {
 	defaultExpectations := []string{
-		common.DefaultExpectationsPath(),
-		common.DefaultCompatExpectationsPath(),
+		common.DefaultExpectationsPath(cfg.OsWrapper),
+		common.DefaultCompatExpectationsPath(cfg.OsWrapper),
 	}
 	flag.StringVar(&c.flags.expectations, "expectations", strings.Join(defaultExpectations, ","), "comma separated path to CTS expectation files to update")
 	return nil, nil
 }
 
+// TODO(crbug.com/344014313): Add unittest coverage once expectations.Load() and
+// expectations.Save() use dependency injection.
 func (c *cmd) Run(ctx context.Context, cfg common.Config) error {
 	for _, path := range strings.Split(c.flags.expectations, ",") {
 		path := strings.TrimSpace(path)

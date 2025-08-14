@@ -655,7 +655,7 @@ class ResourceUseErrors {
 public:
   ResourceUseErrors() : m_bErrorsReported(false) {}
 
-  enum ErrorCode {
+  enum ErrorCode : unsigned int {
     // Collision between use of one resource GV and another.
     // All uses must be guaranteed to resolve to only one GV.
     // Additionally, when writing resource to alloca, all uses
@@ -2061,7 +2061,8 @@ void DxilLowerCreateHandleForLib::ReplaceResourceUserWithHandle(
     };
 
     // Search all users for update counter
-    bool updateAnnotateHandle = res.IsGloballyCoherent();
+    bool updateAnnotateHandle =
+        res.IsGloballyCoherent() || res.IsReorderCoherent();
     if (!res.HasCounter()) {
       for (User *U : handle->users()) {
         if (IsDxilOp(U, hlsl::OP::OpCode::BufferUpdateCounter)) {
@@ -2321,6 +2322,7 @@ void InitTBuffer(const DxilCBuffer *pSource, DxilResource *pDest) {
   pDest->SetSampleCount(0);
   pDest->SetElementStride(0);
   pDest->SetGloballyCoherent(false);
+  pDest->SetReorderCoherent(false);
   pDest->SetHasCounter(false);
   pDest->SetRW(false);
   pDest->SetROV(false);

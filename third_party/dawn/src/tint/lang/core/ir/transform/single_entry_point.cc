@@ -38,7 +38,7 @@ namespace tint::core::ir::transform {
 
 namespace {
 
-void Run(ir::Module& ir, std::string_view entry_point_name) {
+Result<SuccessType> Run(ir::Module& ir, std::string_view entry_point_name) {
     // Find the entry point.
     ir::Function* entry_point = nullptr;
     for (auto& func : ir.functions) {
@@ -53,7 +53,9 @@ void Run(ir::Module& ir, std::string_view entry_point_name) {
         }
     }
     if (!entry_point) {
-        TINT_ICE() << "entry point '" << entry_point_name << "' not found";
+        StringStream err;
+        err << "entry point '" << entry_point_name << "' not found";
+        return Failure{err.str()};
     }
 
     // Remove unused functions.
@@ -90,20 +92,20 @@ void Run(ir::Module& ir, std::string_view entry_point_name) {
         }
         inst = prev;
     }
+
+    return Success;
 }
 
 }  // namespace
 
 Result<SuccessType> SingleEntryPoint(Module& ir, std::string_view entry_point_name) {
-    auto result = ValidateAndDumpIfNeeded(
-        ir, "core.SingleEntryPoint", core::ir::Capabilities{core::ir::Capability::kAllowOverrides});
+    auto result =
+        ValidateAndDumpIfNeeded(ir, "core.SingleEntryPoint", kSingleEntryPointCapabilities);
     if (result != Success) {
         return result.Failure();
     }
 
-    Run(ir, entry_point_name);
-
-    return Success;
+    return Run(ir, entry_point_name);
 }
 
 }  // namespace tint::core::ir::transform

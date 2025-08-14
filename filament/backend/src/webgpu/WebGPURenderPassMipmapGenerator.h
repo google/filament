@@ -39,6 +39,13 @@ public:
 
     explicit WebGPURenderPassMipmapGenerator(wgpu::Device const&);
 
+    /**
+     * IMPORTANT NOTE: when reusing a command encoder and/or textures make sure to flush/submit
+     * pending commands (draws, etc.) to the GPU prior to calling this call, because texture updates
+     * may otherwise (unintentionally) happen after draw commands encoded in the encoder.
+     * Submitting any commands up to this point ensures the calls happen in the expected
+     * sequence.
+     */
     void generateMipmaps(wgpu::Queue const&, wgpu::Texture const&);
 
 private:

@@ -12,7 +12,16 @@ struct BufferData {
   float3 v;
 };
 
+using MyInt = vk::SpirvType<
+    /*spv::OpTypeInt*/21,
+    1,1, // size and alignment
+    vk::Literal<vk::integral_constant<uint,16> >, // bits
+    vk::Literal<vk::integral_constant<uint,1> > // signed
+>;
+
 uint64_t Address;
+
+[[vk::ext_capability(/* Int16 */ 22)]]
 float4 main() : SV_Target0 {
   // CHECK:      [[addr:%[0-9]+]] = OpLoad %ulong
   // CHECK-NEXT: [[buf:%[0-9]+]] = OpBitcast %_ptr_PhysicalStorageBuffer_float [[addr]]
@@ -49,6 +58,11 @@ float4 main() : SV_Target0 {
   // CHECK: [[buf:%[0-9]+]] = OpBitcast %_ptr_PhysicalStorageBuffer_BufferData_0 %ulong_0
   // CHECK-NEXT: [[load:%[0-9]+]] = OpLoad %BufferData_0 [[buf]] Aligned 4
   d = vk::RawBufferLoad<BufferData>(0);
+
+  // CHECK: [[buf:%[0-9]+]] = OpBitcast %_ptr_PhysicalStorageBuffer_spirvIntrinsicType %ulong_0
+  // CHECK-NEXT: [[load:%[0-9]+]] = OpLoad %spirvIntrinsicType [[buf]] Aligned 4
+  // CHECK-NEXT: OpStore %mi [[load]]
+  MyInt mi = vk::RawBufferLoad<MyInt>(0);
 
   return float4(w.x, x, y, z);
 }

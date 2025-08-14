@@ -43,7 +43,7 @@ StagingDescriptorAllocator::StagingDescriptorAllocator(Device* device,
     : mDevice(device),
       mSizeIncrement(device->GetD3D12Device()->GetDescriptorHandleIncrementSize(heapType)),
       mBlockSize(descriptorCount * mSizeIncrement),
-      mHeapSize(RoundUp(heapSize, descriptorCount)),
+      mHeapSize(static_cast<uint32_t>(RoundUp(heapSize, descriptorCount))),
       mHeapType(heapType) {
     DAWN_ASSERT(descriptorCount <= heapSize);
 }
@@ -104,7 +104,7 @@ MaybeError StagingDescriptorAllocator::AllocateCPUHeap() {
         newBuffer.freeBlockIndices.push_back(blockIndex);
     }
 
-    mAvailableHeaps.push_back(mPool.size());
+    mAvailableHeaps.push_back(static_cast<uint32_t>(mPool.size()));
     mPool.emplace_back(std::move(newBuffer));
 
     return {};
@@ -131,7 +131,7 @@ void StagingDescriptorAllocator::Deallocate(CPUDescriptorHeapAllocation* allocat
 
     const D3D12_CPU_DESCRIPTOR_HANDLE baseDescriptor = allocation->OffsetFrom(0, 0);
 
-    const Index blockIndex = (baseDescriptor.ptr - heapStart.ptr) / mBlockSize;
+    const Index blockIndex = static_cast<Index>((baseDescriptor.ptr - heapStart.ptr) / mBlockSize);
 
     freeBlockIndices.emplace_back(blockIndex);
 

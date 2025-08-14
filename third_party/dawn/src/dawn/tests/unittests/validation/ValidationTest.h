@@ -39,6 +39,7 @@
 #include "dawn/common/Log.h"
 #include "dawn/native/BindGroupLayout.h"
 #include "dawn/native/DawnNative.h"
+#include "dawn/utils/ComboLimits.h"
 
 // Argument helpers to allow macro overriding.
 #define UNIMPLEMENTED_MACRO(...) DAWN_UNREACHABLE()
@@ -163,7 +164,7 @@ class ValidationTest : public testing::Test {
 
     const dawn::native::ToggleInfo* GetToggleInfo(const char* name) const;
     bool HasToggleEnabled(const char* toggle) const;
-    wgpu::Limits GetSupportedLimits() const;
+    const dawn::utils::ComboLimits& GetSupportedLimits() const;
     dawn::utils::WireHelper* GetWireHelper() const;
 
   protected:
@@ -173,7 +174,9 @@ class ValidationTest : public testing::Test {
     // Override these appropriately for different tests.
     virtual bool AllowUnsafeAPIs();
     virtual std::vector<wgpu::FeatureName> GetRequiredFeatures();
-    virtual wgpu::Limits GetRequiredLimits(const wgpu::Limits&);
+    // Note implementations of this can assume `required` starts as default-initialized.
+    virtual void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                                   dawn::utils::ComboLimits& required);
     virtual std::vector<const char*> GetEnabledToggles();
     virtual std::vector<const char*> GetDisabledToggles();
 
@@ -191,6 +194,7 @@ class ValidationTest : public testing::Test {
     virtual bool UseCompatibilityMode() const;
 
     wgpu::Device device;
+    dawn::utils::ComboLimits deviceLimits;
     wgpu::Adapter adapter;
     WGPUDevice backendDevice;
     wgpu::Instance instance;

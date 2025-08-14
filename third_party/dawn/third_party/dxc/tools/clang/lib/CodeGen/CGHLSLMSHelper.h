@@ -159,7 +159,8 @@ struct DxilObjectProperties {
   bool AddResource(llvm::Value *V, const hlsl::DxilResourceProperties &RP);
   bool IsResource(llvm::Value *V);
   hlsl::DxilResourceProperties GetResource(llvm::Value *V);
-  void updateGLC(llvm::Value *V);
+  void updateCoherence(llvm::Value *V, bool updateGloballyCoherent,
+                       bool updateReorderCoherent);
 
   // MapVector for deterministic iteration order.
   llvm::MapVector<llvm::Value *, hlsl::DxilResourceProperties> resMap;

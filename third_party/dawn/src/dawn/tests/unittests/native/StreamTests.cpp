@@ -25,19 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <array>
 #include <cstring>
 #include <iomanip>
 #include <limits>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "dawn/common/TypedInteger.h"
 #include "dawn/native/Blob.h"
 #include "dawn/native/Serializable.h"
+#include "dawn/native/ShaderModule.h"
 #include "dawn/native/TintUtils.h"
 #include "dawn/native/stream/BlobSource.h"
 #include "dawn/native/stream/ByteVectorSink.h"
@@ -184,6 +188,20 @@ TEST(SerializeTests, StdStrings) {
     EXPECT_CACHE_KEY_EQ(str, expected);
 }
 
+// Test that ByteVectorSink serializes std::wstrings as expected.
+TEST(SerializeTests, StdWStrings) {
+    // Letter 𐩯 takes 4 bytes in UTF16
+    std::wstring str = L"∂y/∂x𐩯";
+
+    ByteVectorSink expected;
+
+    StreamIn(&expected, size_t(str.length()));
+    size_t bytes = str.length() * sizeof(wchar_t);
+    memcpy(expected.GetSpace(bytes), str.data(), bytes);
+
+    EXPECT_CACHE_KEY_EQ(str, expected);
+}
+
 // Test that ByteVectorSink serializes std::string_views as expected.
 TEST(SerializeTests, StdStringViews) {
     static constexpr std::string_view str("string");
@@ -282,6 +300,60 @@ TEST(SerializeTests, StdOptional) {
     }
 }
 
+// Test that ByteVectorSink serializes std::variant as expected.
+TEST(SerializeTests, StdVariant) {
+    using VariantType = std::variant<std::string_view, uint32_t>;
+    std::string_view stringViewInput = "hello";
+    uint32_t u32Input = 42;
+    {
+        // Type id of std::string_view is 0 in VariantType
+        VariantType v1 = stringViewInput;
+        ByteVectorSink expected;
+        StreamIn(&expected, /* Type id */ size_t(0), stringViewInput);
+        EXPECT_CACHE_KEY_EQ(v1, expected);
+    }
+    {
+        // Type id of uint32_t is 1 in VariantType
+        VariantType v2 = u32Input;
+        ByteVectorSink expected;
+        StreamIn(&expected, /* Type id */ size_t(1), u32Input);
+        EXPECT_CACHE_KEY_EQ(v2, expected);
+    }
+}
+
+// Test that ByteVectorSink serializes std::unique_ptr as expected.
+TEST(SerializeTests, StdUniquePtr) {
+    // Test serializing a non-nullptr unique_ptr
+    {
+        std::unique_ptr<int> ptr = std::make_unique<int>(456);
+        ByteVectorSink expected;
+        StreamIn(&expected, true, 456);
+        EXPECT_CACHE_KEY_EQ(ptr, expected);
+    }
+    // Test serializing a nullptr unique_ptr ByteVectorSink expected;
+    {
+        ByteVectorSink expected;
+        StreamIn(&expected, false);
+        EXPECT_CACHE_KEY_EQ(std::unique_ptr<int>(), expected);
+    }
+}
+
+// Test that ByteVectorSink serializes std::reference_wrapper as expected.
+TEST(SerializeTests, StdReferenceWrapper) {
+    const int value1 = 123;
+    int value2 = 789;
+    std::reference_wrapper<const int> cref = std::cref(value1);
+    std::reference_wrapper<int> ref = std::ref(value2);
+    auto inputPair = std::make_pair(cref, ref);
+    auto inputPairRef = std::ref(inputPair);
+
+    // Expect all reference are serialized as the referenced value.
+    ByteVectorSink expected;
+    StreamIn(&expected, 123, 789);
+
+    EXPECT_CACHE_KEY_EQ(inputPairRef, expected);
+}
+
 // Test that ByteVectorSink serializes std::unordered_map as expected.
 TEST(SerializeTests, StdUnorderedMap) {
     std::unordered_map<uint32_t, std::string_view> m;
@@ -311,6 +383,49 @@ TEST(SerializeTests, StdUnorderedSet) {
     EXPECT_CACHE_KEY_EQ(input, expected);
 }
 
+// Test that ByteVectorSink serializes ityp::array as expected.
+TEST(SerializeTests, ItypArray) {
+    const ityp::array<TypedIntegerForTest, TypedIntegerForTest, 4> input = {
+        TypedIntegerForTest(99), TypedIntegerForTest(4), TypedIntegerForTest(6),
+        TypedIntegerForTest(1)};
+
+    // Expect all values.
+    ByteVectorSink expected;
+    StreamIn(&expected, TypedIntegerForTest(99), TypedIntegerForTest(4), TypedIntegerForTest(6),
+             TypedIntegerForTest(1));
+
+    EXPECT_CACHE_KEY_EQ(input, expected);
+}
+
+// Test that ByteVectorSink serializes absl::flat_hash_map as expected.
+TEST(SerializeTests, AbslFlatHashMap) {
+    absl::flat_hash_map<uint32_t, std::string_view> m;
+
+    m[4] = "hello";
+    m[1] = "world";
+    m[7] = "test";
+    m[3] = "data";
+
+    // Expect the number of entries, followed by (K, V) pairs sorted in order of key.
+    ByteVectorSink expected;
+    StreamIn(&expected, size_t(4), std::make_pair(uint32_t(1), m[1]),
+             std::make_pair(uint32_t(3), m[3]), std::make_pair(uint32_t(4), m[4]),
+             std::make_pair(uint32_t(7), m[7]));
+
+    EXPECT_CACHE_KEY_EQ(m, expected);
+}
+
+// Test that ByteVectorSink serializes absl::flat_hash_set as expected.
+TEST(SerializeTests, AbslFlatHashSet) {
+    const absl::flat_hash_set<int> input = {99, 4, 6, 1};
+
+    // Expect the number of entries, followed by values sorted in order of key.
+    ByteVectorSink expected;
+    StreamIn(&expected, size_t(4), 1, 4, 6, 99);
+
+    EXPECT_CACHE_KEY_EQ(input, expected);
+}
+
 // Test that ByteVectorSink serializes tint::BindingPoint as expected.
 TEST(SerializeTests, TintSemBindingPoint) {
     tint::BindingPoint bp{3, 6};
@@ -319,6 +434,17 @@ TEST(SerializeTests, TintSemBindingPoint) {
     StreamIn(&expected, uint32_t(3), uint32_t(6));
 
     EXPECT_CACHE_KEY_EQ(bp, expected);
+}
+
+// Test that ByteVectorSink serialization skip UnsafeUnserializedValue as expected.
+TEST(SerializeTests, UnsafeUnserializedValue) {
+    std::pair<uint32_t, UnsafeUnserializedValue<uint32_t>> input{123, 456};
+
+    ByteVectorSink expected;
+    // The second UnsafeUnserializedValue<uint32_t> is not serialized.
+    StreamIn(&expected, uint32_t(123));
+
+    EXPECT_CACHE_KEY_EQ(input, expected);
 }
 
 // Test that serializing then deserializing a param pack yields the same values.
@@ -345,10 +471,22 @@ TEST(StreamTests, SerializeDeserializeParamPack) {
 
 #define FOO_MEMBERS(X) \
     X(int, a)          \
-    X(float, b)        \
+    X(float, b, 42.0)  \
     X(std::string, c)
 DAWN_SERIALIZABLE(struct, Foo, FOO_MEMBERS){};
 #undef FOO_MEMBERS
+
+// Test the default value of DAWN_SERIALIZABLE structures
+TEST(StreamTests, SerializableDefaultValue) {
+    Foo foo;
+
+    // Members without an explicit default still have the default constructor used.
+    EXPECT_EQ(foo.a, 0);
+    EXPECT_EQ(foo.c, "");
+
+    // Members with an explicit default use that default.
+    EXPECT_EQ(foo.b, 42.0);
+}
 
 // Test that serializing then deserializing a struct made with DAWN_SERIALIZABLE works as
 // expected.
@@ -411,6 +549,91 @@ TEST(StreamTests, SerializeDeserializeBlobs) {
     }
 }
 
+// Test that serializing then deserializing a std::unique_ptr yields the same data.
+// Tested here instead of in the type-parameterized tests since std::unique_ptr are not copyable.
+TEST(StreamTests, SerializeDeserializeUniquePtr) {
+    // Test a null unique_ptr
+    {
+        std::unique_ptr<int> in = nullptr;
+
+        ByteVectorSink sink;
+        StreamIn(&sink, in);
+
+        BlobSource src(CreateBlob(sink));
+        // Initialize the unique_ptr to a non-null value to check if it gets set to nullptr.
+        std::unique_ptr<int> out = std::make_unique<int>(123);
+        auto err = StreamOut(&src, &out);
+        EXPECT_FALSE(err.IsError());
+        EXPECT_EQ(out, nullptr);
+    }
+
+    // Test a unique_ptr holding  data
+    {
+        std::unique_ptr<int> in = std::make_unique<int>(456);
+
+        ByteVectorSink sink;
+        StreamIn(&sink, in);
+
+        BlobSource src(CreateBlob(sink));
+        // Initialize the unique_ptr to a nullptr. When deserializing, it should be pointed to a new
+        // allocated memory holding the expected data.
+        std::unique_ptr<int> out = nullptr;
+        auto err = StreamOut(&src, &out);
+        EXPECT_FALSE(err.IsError());
+        EXPECT_NE(out, nullptr);
+        // in and out should point to different memory locations, but the values should be the same.
+        EXPECT_NE(in, out);
+        EXPECT_EQ(*in, *out);
+    }
+}
+
+// Test that serializing then deserializing a ityp::array yields the same data.
+// Tested here instead of in the type-parameterized tests since ityp::array don't have operator==.
+TEST(StreamTests, SerializeDeserializeItypArray) {
+    using Array = ityp::array<TypedIntegerForTest, int, 5>;
+    constexpr Array in = {1, 5, 2, 4, 7};
+
+    ByteVectorSink sink;
+    StreamIn(&sink, in);
+
+    BlobSource src(CreateBlob(sink));
+    // Initialize the unique_ptr to a nullptr. When deserializing, it should be pointed to a new
+    // allocated memory holding the expected data.
+    Array out;
+    auto err = StreamOut(&src, &out);
+    EXPECT_FALSE(err.IsError());
+    // Check every element of the out array is the same as in.
+    for (TypedIntegerForTest i = TypedIntegerForTest(); i < in.size(); i++) {
+        EXPECT_EQ(in[i], out[i]);
+    }
+}
+
+// Test that serializing then deserializing a UnsafeUnserializedValue<T> yields the default
+// constructed T.
+TEST(StreamTests, UnsafeUnserializedValue) {
+    using ValueType = std::string;
+    using Type = UnsafeUnserializedValue<ValueType>;
+    ValueType init1 = "hello";
+    ValueType init2 = "world";
+
+    Type in = Type(ValueType(init1));
+    ASSERT_EQ(in.UnsafeGetValue(), init1);
+
+    ByteVectorSink sink;
+    StreamIn(&sink, in);
+
+    BlobSource src(CreateBlob(sink));
+    // Initialize the UnsafeUnserializedValue to a value different from default constructed. When
+    // deserializing, it should be assigned to default constructed value.
+    Type out = Type(ValueType(init2));
+    ASSERT_EQ(out.UnsafeGetValue(), init2);
+    // Do the deserialization.
+    auto err = StreamOut(&src, &out);
+    EXPECT_FALSE(err.IsError());
+    // Check that the UnsafeUnserializedValue was set to default constructed value.
+    EXPECT_EQ(out.UnsafeGetValue(), ValueType());
+}
+
 template <size_t N>
 std::bitset<N - 1> BitsetFromBitString(const char (&str)[N]) {
     // N - 1 because the last character is the null terminator.
@@ -423,6 +646,8 @@ static auto kStreamValueVectorParams = std::make_tuple(
     std::vector<float>{6.50, 78.28, 92., 8.28},
     // Test various types of strings.
     std::vector<std::string>{"abcdefg", "9461849495", ""},
+    // Test various types of wstrings.
+    std::vector<std::wstring>{L"abcde54321", L"∂y/∂x𐩯" /* Letter 𐩯 takes 4 bytes in UTF16 */, L""},
     // Test pairs.
     std::vector<std::pair<int, float>>{{1, 3.}, {6, 4.}},
     // Test TypedIntegers
@@ -438,10 +663,31 @@ static auto kStreamValueVectorParams = std::make_tuple(
         BitsetFromBitString("100110010101011001100110101011001100101010110011001011011"),
         BitsetFromBitString("000110010101011000100110101011001100101010010011001010100"),
         BitsetFromBitString("111111111111111111111111111111111111111111111111111111111"), 0},
+    // Test std::optional.
+    std::vector<std::optional<std::string>>{std::nullopt, "", "abc"},
+    // Test unordered_maps.
+    std::vector<std::unordered_map<int, int>>{{},
+                                              {{4, 5}, {6, 8}, {99, 42}, {0, 0}},
+                                              {{100, 1}, {2, 300}, {300, 2}}},
     // Test unordered_sets.
     std::vector<std::unordered_set<int>>{{}, {4, 6, 99, 0}, {100, 300, 300}},
+    // Test absl::flat_hash_map.
+    std::vector<absl::flat_hash_map<int, int>>{{},
+                                               {{4, 5}, {6, 8}, {99, 42}, {0, 0}},
+                                               {{100, 1}, {2, 300}, {300, 2}}},
+    // Test absl::flat_hash_set.
+    std::vector<absl::flat_hash_set<int>>{{}, {4, 6, 99, 0}, {100, 300, 300}},
     // Test vectors.
-    std::vector<std::vector<int>>{{}, {1, 5, 2, 7, 4}, {3, 3, 3, 3, 3, 3, 3}});
+    std::vector<std::vector<int>>{{}, {1, 5, 2, 7, 4}, {3, 3, 3, 3, 3, 3, 3}},
+    // Test variants.
+    std::vector<std::variant<uint32_t, std::string, std::vector<std::bitset<7>>>>{
+        uint32_t{123}, std::string{"1, 5, 2, 7, 4"},
+        std::vector<std::bitset<7>>{0b1001011, 0b0011010, 0b0000000, 0b1111111}},
+    // Test different size of arrays.
+    std::vector<std::array<int, 3>>{{1, 5, 2}, {-3, -3, -3}},
+    std::vector<std::array<uint8_t, 5>>{{5, 2, 7, 9, 6}, {3, 3, 3, 3, 42}},
+    // Test array of non-fundamental type.
+    std::vector<std::array<std::string, 2>>{{"abcd", "efg"}, {"123hij", ""}});
 
 static auto kStreamValueInitListParams = std::make_tuple(
     std::initializer_list<char[12]>{"test string", "string test"},

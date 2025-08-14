@@ -64,6 +64,14 @@ interop::Interface<interop::GPUTextureView> GPUTexture::createView(
         !conv(desc.usage, descriptor.usage)) {
         return {};
     }
+
+    wgpu::TextureComponentSwizzleDescriptor swizzle_desc{};
+    wgpu::TextureComponentSwizzle swizzle;
+    if (conv(swizzle, descriptor.swizzle)) {
+        swizzle_desc.swizzle = swizzle;
+        desc.nextInChain = reinterpret_cast<wgpu::ChainedStruct*>(&swizzle_desc);
+    }
+
     return interop::GPUTextureView::Create<GPUTextureView>(env, desc, texture_.CreateView(&desc));
 }
 

@@ -66,6 +66,10 @@ int SharedResourceMemoryContents::GetReadAccessCount() const {
     return mReadAccessCount;
 }
 
+bool SharedResourceMemoryContents::HasAccess() const {
+    return mSharedResourceAccessState != SharedResourceAccessState::NotAccessed;
+}
+
 void SharedResourceMemory::Initialize() {
     DAWN_ASSERT(!IsError());
     mContents = CreateContents();

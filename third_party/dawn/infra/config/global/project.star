@@ -25,6 +25,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+"""Project declaration for the Dawn project."""
+
 def _milestone_details(*, chromium_project, ref, platforms):
     """Define the details for an active milestone.
 

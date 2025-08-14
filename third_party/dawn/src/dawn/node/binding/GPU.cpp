@@ -294,16 +294,16 @@ interop::Interface<interop::WGSLLanguageFeatures> GPU::getWgslLanguageFeatures(N
 
     struct Features : public interop::WGSLLanguageFeatures {
         explicit Features(InteropWGSLFeatureSet features) : features_(features) {}
-        ~Features() = default;
+        ~Features() override = default;
 
-        bool has(Napi::Env env, std::string name) {
+        bool has(Napi::Env env, std::string name) override {
             interop::WGSLLanguageFeatureName feature;
             if (!interop::Converter<interop::WGSLLanguageFeatureName>::FromString(name, feature)) {
                 return false;
             }
-            return features_.count(feature);
+            return features_.count(feature) != 0u;
         }
-        std::vector<std::string> keys(Napi::Env env) {
+        std::vector<std::string> keys(Napi::Env env) override {
             std::vector<std::string> out;
             out.reserve(features_.size());
             for (auto feature : features_) {
@@ -312,9 +312,9 @@ interop::Interface<interop::WGSLLanguageFeatures> GPU::getWgslLanguageFeatures(N
             }
             return out;
         }
-        size_t getSize(Napi::Env env) { return features_.size(); }
-        Napi::Value iterator(const Napi::CallbackInfo& info) {
-            return CreateIterator(info, this->features_);
+        size_t getSize(Napi::Env env) override { return features_.size(); }
+        Napi::Value iterator(const Napi::CallbackInfo& info) override {
+            return CreateIterator<InteropWGSLFeatureSet>(info, this->features_);
         }
 
         InteropWGSLFeatureSet features_;

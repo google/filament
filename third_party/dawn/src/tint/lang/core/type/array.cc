@@ -58,6 +58,9 @@ core::type::Flags FlagsFrom(const Type* element, const ArrayCount* count) {
             flags.Add(Flag::kFixedFootprint);
         }
     }
+    if (element->IsHostShareable()) {
+        flags.Add(Flag::kHostShareable);
+    }
     return flags;
 }
 
@@ -97,7 +100,7 @@ Array::Array(size_t hash,
       align_(align),
       size_(size),
       stride_(stride),
-      implicit_stride_(stride_) {
+      implicit_stride_(tint::RoundUp(element->Align(), element->Size())) {
     TINT_ASSERT(count_);
     TINT_ASSERT(element_);
 }

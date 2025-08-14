@@ -37,7 +37,7 @@ ObjectType ComputePassEncoder::GetObjectType() const {
     return ObjectType::ComputePassEncoder;
 }
 
-void ComputePassEncoder::SetImmediateData(uint32_t offset, const void* data, size_t size) {
+void ComputePassEncoder::APISetImmediateData(uint32_t offset, const void* data, size_t size) {
     ComputePassEncoderSetImmediateDataCmd cmd;
     cmd.computePassEncoderId = GetWireId();
     cmd.offset = offset;

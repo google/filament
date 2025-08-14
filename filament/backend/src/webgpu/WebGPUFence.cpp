@@ -15,6 +15,7 @@
  */
 
 #include "WebGPUFence.h"
+#include "WebGPUConstants.h"
 
 #include <backend/DriverEnums.h>
 
@@ -28,23 +29,22 @@ FenceStatus WebGPUFence::getStatus() { return mStatus.load(); }
 
 void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
     queue.OnSubmittedWorkDone(
-            wgpu::CallbackMode::AllowSpontaneous,
-            [](const wgpu::QueueWorkDoneStatus status,
-                    std::atomic<FenceStatus>* const fenceStatus) {
-                if (!fenceStatus) {
-                    return;
-                }
-                switch (status) {
-                    case wgpu::QueueWorkDoneStatus::Success:
-                        fenceStatus->store(FenceStatus::CONDITION_SATISFIED);
-                        break;
-                    case wgpu::QueueWorkDoneStatus::CallbackCancelled:
-                    case wgpu::QueueWorkDoneStatus::Error:
-                        fenceStatus->store(FenceStatus::ERROR);
-                        break;
-                }
-            },
-            &mStatus);
+        wgpu::CallbackMode::AllowSpontaneous,
+        [this](const wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
+            // Note: The 'message' parameter is required by the function signature
+            // but can be ignored if not needed.
+
+            switch (status) {
+                case wgpu::QueueWorkDoneStatus::Success:
+                    mStatus.store(FenceStatus::CONDITION_SATISFIED);
+                    break;
+                case wgpu::QueueWorkDoneStatus::CallbackCancelled:
+                case wgpu::QueueWorkDoneStatus::Error:
+                    mStatus.store(FenceStatus::ERROR);
+                    FWGPU_LOGW << "WebGPUFence: wgpu::QueueWorkDoneStatus::Error. " << message;
+                    break;
+            }
+        });
 }
 
 } // namespace filament::backend

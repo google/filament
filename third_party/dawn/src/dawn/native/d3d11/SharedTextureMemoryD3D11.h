@@ -28,6 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_D3D11_SHARED_TEXTURE_MEMORY_D3D11_H_
 #define SRC_DAWN_NATIVE_D3D11_SHARED_TEXTURE_MEMORY_D3D11_H_
 
+#include <optional>
+
 #include "dawn/native/Error.h"
 #include "dawn/native/d3d/SharedTextureMemoryD3D.h"
 #include "dawn/native/d3d/d3d_platform.h"
@@ -40,6 +42,20 @@ class KeyedMutex;
 namespace d3d11 {
 class Device;
 struct SharedTextureMemoryD3D11Texture2DDescriptor;
+
+class SharedTextureMemoryContentsD3D11 final : public SharedTextureMemoryContents {
+  public:
+    using SharedTextureMemoryContents::SharedTextureMemoryContents;
+
+    bool RequiresFenceSignal() const { return mRequiresFenceSignal; }
+
+  private:
+    friend class SharedTextureMemory;
+
+    // Flag indicates whether we need to signal a fence after accessing this texture or not.
+    // This flag will be updated in BeginAccess() & reset in EndAccess().
+    bool mRequiresFenceSignal = false;
+};
 
 class SharedTextureMemory final : public d3d::SharedTextureMemory {
   public:
@@ -61,15 +77,30 @@ class SharedTextureMemory final : public d3d::SharedTextureMemory {
     SharedTextureMemory(Device* device,
                         StringView label,
                         SharedTextureMemoryProperties properties,
-                        ComPtr<ID3D11Resource> resource);
+                        ComPtr<ID3D11Resource> resource,
+                        std::optional<bool> requiresFenceSignalOverride = std::nullopt);
 
     void DestroyImpl() override;
 
     ResultOrError<Ref<TextureBase>> CreateTextureImpl(
         const UnpackedPtr<TextureDescriptor>& descriptor) override;
 
+    Ref<SharedResourceMemoryContents> CreateContents() override;
+
+    MaybeError BeginAccessImpl(TextureBase* texture,
+                               const UnpackedPtr<BeginAccessDescriptor>& descriptor) override;
+    ResultOrError<FenceAndSignalValue> EndAccessImpl(
+        TextureBase* texture,
+        ExecutionSerial lastUsageSerial,
+        UnpackedPtr<EndAccessState>& descriptor) override;
+
     ComPtr<ID3D11Resource> mResource;
     Ref<d3d::KeyedMutex> mKeyedMutex;
+
+    // Flag indicates whether we need to signal a fence after accessing this texture or not.
+    // TODO(chromium:335003893): This flag is deprecated. Remove it once clients are updated to use
+    // SharedTextureMemoryD3D11BeginState's requiresEndAccessFence.
+    const std::optional<bool> mRequiresFenceSignalOverride;
 };
 }  // namespace d3d11
 }  // namespace dawn::native

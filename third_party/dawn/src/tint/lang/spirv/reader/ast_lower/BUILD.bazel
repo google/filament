@@ -40,19 +40,31 @@ cc_library(
   name = "ast_lower",
   srcs = [
     "atomics.cc",
+    "data.cc",
     "decompose_strided_array.cc",
     "decompose_strided_matrix.cc",
     "fold_trivial_lets.cc",
+    "manager.cc",
     "pass_workgroup_id_as_argument.cc",
+    "remove_unreachable_statements.cc",
+    "simplify_pointers.cc",
+    "transform.cc",
     "transpose_row_major.cc",
+    "unshadow.cc",
   ],
   hdrs = [
     "atomics.h",
+    "data.h",
     "decompose_strided_array.h",
     "decompose_strided_matrix.h",
     "fold_trivial_lets.h",
+    "manager.h",
     "pass_workgroup_id_as_argument.h",
+    "remove_unreachable_statements.h",
+    "simplify_pointers.h",
+    "transform.h",
     "transpose_row_major.h",
+    "unshadow.h",
   ],
   deps = [
     "//src/tint/api/common",
@@ -61,9 +73,6 @@ cc_library(
     "//src/tint/lang/core/type",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
-    "//src/tint/lang/wgsl/ast/transform",
-    "//src/tint/lang/wgsl/common",
-    "//src/tint/lang/wgsl/features",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/resolver",
     "//src/tint/lang/wgsl/sem",
@@ -90,8 +99,14 @@ cc_library(
     "decompose_strided_array_test.cc",
     "decompose_strided_matrix_test.cc",
     "fold_trivial_lets_test.cc",
+    "helper_test.h",
+    "manager_test.cc",
     "pass_workgroup_id_as_argument_test.cc",
+    "remove_unreachable_statements_test.cc",
+    "simplify_pointers_test.cc",
+    "transform_test.cc",
     "transpose_row_major_test.cc",
+    "unshadow_test.cc",
   ],
   deps = [
     "//src/tint/api/common",
@@ -101,9 +116,7 @@ cc_library(
     "//src/tint/lang/core/type",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
-    "//src/tint/lang/wgsl/ast/transform",
-    "//src/tint/lang/wgsl/common",
-    "//src/tint/lang/wgsl/features",
+    "//src/tint/lang/wgsl/ast:test",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/resolver",
     "//src/tint/lang/wgsl/sem",
@@ -129,11 +142,6 @@ cc_library(
     ":tint_build_wgsl_reader": [
       "//src/tint/lang/wgsl/reader",
       "//src/tint/lang/wgsl/reader/parser",
-    ],
-    "//conditions:default": [],
-  }) + select({
-    ":tint_build_wgsl_reader_and_tint_build_wgsl_writer": [
-      "//src/tint/lang/wgsl/ast/transform:test",
     ],
     "//conditions:default": [],
   }) + select({
@@ -165,13 +173,6 @@ selects.config_setting_group(
     name = "tint_build_spv_reader_and_tint_build_wgsl_reader_and_tint_build_wgsl_writer",
     match_all = [
         ":tint_build_spv_reader",
-        ":tint_build_wgsl_reader",
-        ":tint_build_wgsl_writer",
-    ],
-)
-selects.config_setting_group(
-    name = "tint_build_wgsl_reader_and_tint_build_wgsl_writer",
-    match_all = [
         ":tint_build_wgsl_reader",
         ":tint_build_wgsl_writer",
     ],

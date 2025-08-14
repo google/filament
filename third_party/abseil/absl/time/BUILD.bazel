@@ -57,6 +57,7 @@ cc_library(
         "//absl/base:raw_logging_internal",
         "//absl/numeric:int128",
         "//absl/strings",
+        "//absl/strings:string_view",
         "//absl/time/internal/cctz:civil_time",
         "//absl/time/internal/cctz:time_zone",
         "//absl/types:optional",
@@ -96,7 +97,9 @@ cc_test(
         ":time",
         "//absl/base:config",
         "//absl/base:core_headers",
+        "//absl/hash:hash_testing",
         "//absl/numeric:int128",
+        "//absl/random",
         "//absl/strings:str_format",
         "//absl/time/internal/cctz:time_zone",
         "@googletest//:gtest",
@@ -129,8 +132,9 @@ cc_test(
     ],
 )
 
-cc_test(
+cc_binary(
     name = "time_benchmark",
+    testonly = True,
     srcs = [
         "civil_time_benchmark.cc",
         "clock_benchmark.cc",

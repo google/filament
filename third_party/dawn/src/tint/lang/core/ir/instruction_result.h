@@ -36,6 +36,9 @@ namespace tint::core::ir {
 class InstructionResult : public Castable<InstructionResult, Value> {
   public:
     /// Constructor
+    InstructionResult() = default;
+
+    /// Constructor
     /// @param type the type of the value
     explicit InstructionResult(const core::type::Type* type);
 

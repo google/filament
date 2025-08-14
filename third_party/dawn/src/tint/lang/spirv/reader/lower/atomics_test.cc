@@ -133,6 +133,62 @@ $B1: {  # root
     ASSERT_EQ(expect, str());
 }
 
+TEST_F(SpirvReader_AtomicsTest, ArrayStore_CopiedObject_AfterAtomicOp) {
+    auto* f = b.ComputeFunction("main");
+
+    core::ir::Var* wg = nullptr;
+    b.Append(mod.root_block,
+             [&] { wg = b.Var("wg", ty.ptr<workgroup, array<u32, 4>, read_write>()); });
+
+    b.Append(f->Block(), [&] {  //
+        auto* a = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, a, 1_u, 0_u,
+                                       2_u);
+
+        auto* l = b.Let(wg);
+        a = b.Access(ty.ptr<workgroup, u32, read_write>(), l, 1_i);
+        b.Load(a);
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wg:ptr<workgroup, array<u32, 4>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<workgroup, u32, read_write> = access %wg, 1i
+    %4:void = spirv.atomic_store %3, 1u, 0u, 2u
+    %5:ptr<workgroup, array<u32, 4>, read_write> = let %wg
+    %6:ptr<workgroup, u32, read_write> = access %5, 1i
+    %7:u32 = load %6
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+$B1: {  # root
+  %wg:ptr<workgroup, array<atomic<u32>, 4>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1i
+    %4:void = atomicStore %3, 2u
+    %5:ptr<workgroup, array<atomic<u32>, 4>, read_write> = let %wg
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %5, 1i
+    %7:u32 = atomicLoad %6
+    ret
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
 TEST_F(SpirvReader_AtomicsTest, ArrayNested) {
     auto* f = b.ComputeFunction("main");
 
@@ -684,6 +740,75 @@ $B1: {  # root
   $B2: {
     %3:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1u, 4i
     %4:void = atomicStore %3, 1u
+    ret
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, FunctionParam) {
+    auto* c = b.Function("c", ty.void_());
+    auto* p = b.FunctionParam("param", ty.ptr(workgroup, ty.array<u32, 4>(), read_write));
+    c->SetParams({p});
+
+    b.Append(c->Block(), [&] {
+        auto* a = b.Access(ty.ptr<workgroup, u32, read_write>(), p, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, a, 2_u, 0_u,
+                                       1_u);
+
+        b.Return(c);
+    });
+
+    auto* f = b.ComputeFunction("main");
+
+    core::ir::Var* wg = nullptr;
+    b.Append(mod.root_block,
+             [&] { wg = b.Var("wg", ty.ptr(workgroup, ty.array<u32, 4>(), read_write)); });
+
+    b.Append(f->Block(), [&] {  //
+        b.Call(ty.void_(), c, wg);
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wg:ptr<workgroup, array<u32, 4>, read_write> = var undef
+}
+
+%c = func(%param:ptr<workgroup, array<u32, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, u32, read_write> = access %param, 1i
+    %5:void = spirv.atomic_store %4, 2u, 0u, 1u
+    ret
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %7:void = call %c, %wg
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+$B1: {  # root
+  %wg:ptr<workgroup, array<atomic<u32>, 4>, read_write> = var undef
+}
+
+%c = func(%param:ptr<workgroup, array<atomic<u32>, 4>, read_write>):void {
+  $B2: {
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %param, 1i
+    %5:void = atomicStore %4, 1u
+    ret
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B3: {
+    %7:void = call %c, %wg
     ret
   }
 }
@@ -1334,7 +1459,7 @@ $B1: {  # root
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicExchange) {
+TEST_F(SpirvReader_AtomicsTest, AtomicExchange) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1360,11 +1485,11 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicExchange) {
 
         auto* a1 = b.Access(ty.ptr<storage, u32, read_write>(), sg, 1_u);
         b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicExchange, a1, 1_u, 0_u,
-                                       1_u);
+                                       2_u);
         b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicExchange, wg_i32, 1_u,
-                                       0_u, 1_i);
+                                       0_u, 3_i);
         b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicExchange, wg_u32, 1_u,
-                                       0_u, 1_u);
+                                       0_u, 4_u);
         b.Return(f);
     });
 
@@ -1385,9 +1510,9 @@ $B1: {  # root
     %5:ptr<storage, i32, read_write> = access %sb, 0u
     %6:i32 = spirv.atomic_exchange %5, 1u, 0u, 1i
     %7:ptr<storage, u32, read_write> = access %sb, 1u
-    %8:u32 = spirv.atomic_exchange %7, 1u, 0u, 1u
-    %9:i32 = spirv.atomic_exchange %wg_i32, 1u, 0u, 1i
-    %10:u32 = spirv.atomic_exchange %wg_u32, 1u, 0u, 1u
+    %8:u32 = spirv.atomic_exchange %7, 1u, 0u, 2u
+    %9:i32 = spirv.atomic_exchange %wg_i32, 1u, 0u, 3i
+    %10:u32 = spirv.atomic_exchange %wg_u32, 1u, 0u, 4u
     ret
   }
 }
@@ -1397,12 +1522,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:i32 = atomicExchange %5, 1i
+    %7:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %8:u32 = atomicExchange %7, 2u
+    %9:i32 = atomicExchange %wg_i32, 3i
+    %10:u32 = atomicExchange %wg_u32, 4u
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicCompareExchange) {
+TEST_F(SpirvReader_AtomicsTest, AtomicCompareExchange) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1424,15 +1575,15 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicCompareExchange) {
     b.Append(f->Block(), [&] {  //
         auto* a0 = b.Access(ty.ptr<storage, i32, read_write>(), sg, 0_u);
         b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicCompareExchange, a0, 1_u,
-                                       0_u, 0_u, 1_i, 1_i);
+                                       0_u, 0_u, 2_i, 3_i);
 
         auto* a1 = b.Access(ty.ptr<storage, u32, read_write>(), sg, 1_u);
         b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicCompareExchange, a1, 1_u,
-                                       0_u, 0_u, 1_u, 1_u);
+                                       0_u, 0_u, 4_u, 5_u);
         b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicCompareExchange, wg_i32,
-                                       1_u, 0_u, 0_u, 1_i, 1_i);
+                                       1_u, 0_u, 0_u, 6_i, 7_i);
         b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicCompareExchange, wg_u32,
-                                       1_u, 0_u, 0_u, 1_u, 1_u);
+                                       1_u, 0_u, 0_u, 8_u, 9_u);
         b.Return(f);
     });
 
@@ -1451,11 +1602,11 @@ $B1: {  # root
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
     %5:ptr<storage, i32, read_write> = access %sb, 0u
-    %6:i32 = spirv.atomic_compare_exchange %5, 1u, 0u, 0u, 1i, 1i
+    %6:i32 = spirv.atomic_compare_exchange %5, 1u, 0u, 0u, 2i, 3i
     %7:ptr<storage, u32, read_write> = access %sb, 1u
-    %8:u32 = spirv.atomic_compare_exchange %7, 1u, 0u, 0u, 1u, 1u
-    %9:i32 = spirv.atomic_compare_exchange %wg_i32, 1u, 0u, 0u, 1i, 1i
-    %10:u32 = spirv.atomic_compare_exchange %wg_u32, 1u, 0u, 0u, 1u, 1u
+    %8:u32 = spirv.atomic_compare_exchange %7, 1u, 0u, 0u, 4u, 5u
+    %9:i32 = spirv.atomic_compare_exchange %wg_i32, 1u, 0u, 0u, 6i, 7i
+    %10:u32 = spirv.atomic_compare_exchange %wg_u32, 1u, 0u, 0u, 8u, 9u
     ret
   }
 }
@@ -1465,12 +1616,52 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+__atomic_compare_exchange_result_i32 = struct @align(4) {
+  old_value:i32 @offset(0)
+  exchanged:bool @offset(4)
+}
+
+__atomic_compare_exchange_result_u32 = struct @align(4) {
+  old_value:u32 @offset(0)
+  exchanged:bool @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:__atomic_compare_exchange_result_i32 = atomicCompareExchangeWeak %5, 3i, 2i
+    %7:i32 = access %6, 0u
+    %8:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %9:__atomic_compare_exchange_result_u32 = atomicCompareExchangeWeak %8, 5u, 4u
+    %10:u32 = access %9, 0u
+    %11:__atomic_compare_exchange_result_i32 = atomicCompareExchangeWeak %wg_i32, 7i, 6i
+    %12:i32 = access %11, 0u
+    %13:__atomic_compare_exchange_result_u32 = atomicCompareExchangeWeak %wg_u32, 9u, 8u
+    %14:u32 = access %13, 0u
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicLoad) {
+TEST_F(SpirvReader_AtomicsTest, AtomicLoad) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1529,12 +1720,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:i32 = atomicLoad %5
+    %7:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %8:u32 = atomicLoad %7
+    %9:i32 = atomicLoad %wg_i32
+    %10:u32 = atomicLoad %wg_u32
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicStore) {
+TEST_F(SpirvReader_AtomicsTest, AtomicStore) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1560,11 +1777,11 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicStore) {
 
         auto* a1 = b.Access(ty.ptr<storage, u32, read_write>(), sg, 1_u);
         b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, a1, 1_u, 0_u,
-                                       1_u);
+                                       2_u);
         b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, wg_i32, 1_u, 0_u,
-                                       1_i);
+                                       3_i);
         b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, wg_u32, 1_u, 0_u,
-                                       1_u);
+                                       4_u);
         b.Return(f);
     });
 
@@ -1585,9 +1802,9 @@ $B1: {  # root
     %5:ptr<storage, i32, read_write> = access %sb, 0u
     %6:void = spirv.atomic_store %5, 1u, 0u, 1i
     %7:ptr<storage, u32, read_write> = access %sb, 1u
-    %8:void = spirv.atomic_store %7, 1u, 0u, 1u
-    %9:void = spirv.atomic_store %wg_i32, 1u, 0u, 1i
-    %10:void = spirv.atomic_store %wg_u32, 1u, 0u, 1u
+    %8:void = spirv.atomic_store %7, 1u, 0u, 2u
+    %9:void = spirv.atomic_store %wg_i32, 1u, 0u, 3i
+    %10:void = spirv.atomic_store %wg_u32, 1u, 0u, 4u
     ret
   }
 }
@@ -1597,12 +1814,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:void = atomicStore %5, 1i
+    %7:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %8:void = atomicStore %7, 2u
+    %9:void = atomicStore %wg_i32, 3i
+    %10:void = atomicStore %wg_u32, 4u
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicDecrement) {
+TEST_F(SpirvReader_AtomicsTest, AtomicDecrement) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1626,10 +1869,10 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicDecrement) {
         b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIDecrement, a0, 1_u, 0_u);
 
         auto* a1 = b.Access(ty.ptr<storage, u32, read_write>(), sg, 1_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIDecrement, a1, 1_u, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIDecrement, wg_i32, 1_u,
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIDecrement, a1, 4_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIDecrement, wg_i32, 3_u,
                                        0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIDecrement, wg_u32, 1_u,
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIDecrement, wg_u32, 2_u,
                                        0_u);
         b.Return(f);
     });
@@ -1651,9 +1894,9 @@ $B1: {  # root
     %5:ptr<storage, i32, read_write> = access %sb, 0u
     %6:i32 = spirv.atomic_i_decrement %5, 1u, 0u
     %7:ptr<storage, u32, read_write> = access %sb, 1u
-    %8:u32 = spirv.atomic_i_decrement %7, 1u, 0u
-    %9:i32 = spirv.atomic_i_decrement %wg_i32, 1u, 0u
-    %10:u32 = spirv.atomic_i_decrement %wg_u32, 1u, 0u
+    %8:u32 = spirv.atomic_i_decrement %7, 4u, 0u
+    %9:i32 = spirv.atomic_i_decrement %wg_i32, 3u, 0u
+    %10:u32 = spirv.atomic_i_decrement %wg_u32, 2u, 0u
     ret
   }
 }
@@ -1663,12 +1906,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:i32 = atomicSub %5, 1i
+    %7:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %8:u32 = atomicSub %7, 1u
+    %9:i32 = atomicSub %wg_i32, 1i
+    %10:u32 = atomicSub %wg_u32, 1u
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicIncrement) {
+TEST_F(SpirvReader_AtomicsTest, AtomicIncrement) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1692,10 +1961,10 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_AtomicIncrement) {
         b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIIncrement, a0, 1_u, 0_u);
 
         auto* a1 = b.Access(ty.ptr<storage, u32, read_write>(), sg, 1_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIIncrement, a1, 1_u, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIIncrement, wg_i32, 1_u,
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIIncrement, a1, 4_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kAtomicIIncrement, wg_i32, 3_u,
                                        0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIIncrement, wg_u32, 1_u,
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIIncrement, wg_u32, 2_u,
                                        0_u);
         b.Return(f);
     });
@@ -1717,9 +1986,9 @@ $B1: {  # root
     %5:ptr<storage, i32, read_write> = access %sb, 0u
     %6:i32 = spirv.atomic_i_increment %5, 1u, 0u
     %7:ptr<storage, u32, read_write> = access %sb, 1u
-    %8:u32 = spirv.atomic_i_increment %7, 1u, 0u
-    %9:i32 = spirv.atomic_i_increment %wg_i32, 1u, 0u
-    %10:u32 = spirv.atomic_i_increment %wg_u32, 1u, 0u
+    %8:u32 = spirv.atomic_i_increment %7, 4u, 0u
+    %9:i32 = spirv.atomic_i_increment %wg_i32, 3u, 0u
+    %10:u32 = spirv.atomic_i_increment %wg_u32, 2u, 0u
     ret
   }
 }
@@ -1729,12 +1998,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:i32 @offset(0)
+  b:u32 @offset(4)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<i32> @offset(0)
+  b:atomic<u32> @offset(4)
+}
+
+$B1: {  # root
+  %sb:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 0)
+  %wg_i32:ptr<workgroup, atomic<i32>, read_write> = var undef
+  %wg_u32:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %5:ptr<storage, atomic<i32>, read_write> = access %sb, 0u
+    %6:i32 = atomicAdd %5, 1i
+    %7:ptr<storage, atomic<u32>, read_write> = access %sb, 1u
+    %8:u32 = atomicAdd %7, 1u
+    %9:i32 = atomicAdd %wg_i32, 1i
+    %10:u32 = atomicAdd %wg_u32, 1u
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_Scalar) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_Scalar) {
     auto* f = b.ComputeFunction("main");
 
     core::ir::Var* wg = nullptr;
@@ -1774,12 +2069,27 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+$B1: {  # root
+  %wg:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:u32 = atomicAdd %wg, 0u
+    %5:void = atomicStore %wg, 0u
+    %6:u32 = atomicLoad %wg
+    %7:u32 = let %6
+    %8:u32 = atomicLoad %wg
+    store %b, %8
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_Struct) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_Struct) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1792,7 +2102,7 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_Struct) {
     b.Append(f->Block(), [&] {  //
         auto* b_ = b.Var("b", ty.ptr<function, u32, read_write>());
         auto* l1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 4_u);
 
         auto* l2 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
         b.Store(l2, 0_u);
@@ -1820,7 +2130,7 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, u32, read_write> = var undef
     %4:ptr<workgroup, u32, read_write> = access %wg, 0u
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 4u
     %6:ptr<workgroup, u32, read_write> = access %wg, 0u
     store %6, 0u
     %7:ptr<workgroup, u32, read_write> = access %wg, 0u
@@ -1838,12 +2148,39 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:u32 @offset(0)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<u32> @offset(0)
+}
+
+$B1: {  # root
+  %wg:ptr<workgroup, S_atomic, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %5:u32 = atomicAdd %4, 4u
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %7:void = atomicStore %6, 0u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %9:u32 = atomicLoad %8
+    %10:u32 = let %9
+    %11:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %12:u32 = atomicLoad %11
+    store %b, %12
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_NestedStruct) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_NestedStruct) {
     auto* f = b.ComputeFunction("main");
 
     auto* s0 = ty.Struct(mod.symbols.New("S0"), {
@@ -1860,7 +2197,7 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_NestedStruct) {
         auto* b_ = b.Var("b", ty.ptr<function, u32, read_write>());
 
         auto* l1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 4_u);
         auto* l2 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u, 0_u);
         b.Store(l2, 0_u);
 
@@ -1892,7 +2229,7 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, u32, read_write> = var undef
     %4:ptr<workgroup, u32, read_write> = access %wg, 0u, 0u
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 4u
     %6:ptr<workgroup, u32, read_write> = access %wg, 0u, 0u
     store %6, 0u
     %7:ptr<workgroup, u32, read_write> = access %wg, 0u, 0u
@@ -1910,12 +2247,47 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S0 = struct @align(4) {
+  a:u32 @offset(0)
+}
+
+S1 = struct @align(4) {
+  s0:S0 @offset(0)
+}
+
+S0_atomic = struct @align(4) {
+  a:atomic<u32> @offset(0)
+}
+
+S1_atomic = struct @align(4) {
+  s0:S0_atomic @offset(0)
+}
+
+$B1: {  # root
+  %wg:ptr<workgroup, S1_atomic, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u, 0u
+    %5:u32 = atomicAdd %4, 4u
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u, 0u
+    %7:void = atomicStore %6, 0u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u, 0u
+    %9:u32 = atomicLoad %8
+    %10:u32 = let %9
+    %11:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u, 0u
+    %12:u32 = atomicLoad %11
+    store %b, %12
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_StructMultipleAtomics) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_StructMultipleAtomics) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -1933,9 +2305,9 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_StructMultipleAt
         auto* f_1 = b.Var("f", ty.ptr<function, u32, read_write>());
 
         auto* l1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 3_u);
         auto* l2 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l2, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l2, 1_u, 0_u, 4_u);
         auto* l3 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
         b.Store(l3, 0_u);
 
@@ -1989,9 +2361,9 @@ $B1: {  # root
     %e:ptr<function, u32, read_write> = var undef
     %f:ptr<function, u32, read_write> = var undef
     %6:ptr<workgroup, u32, read_write> = access %wg, 0u
-    %7:u32 = spirv.atomic_i_add %6, 1u, 0u, 0u
+    %7:u32 = spirv.atomic_i_add %6, 1u, 0u, 3u
     %8:ptr<workgroup, u32, read_write> = access %wg, 1u
-    %9:u32 = spirv.atomic_i_add %8, 1u, 0u, 0u
+    %9:u32 = spirv.atomic_i_add %8, 1u, 0u, 4u
     %10:ptr<workgroup, u32, read_write> = access %wg, 0u
     store %10, 0u
     %11:ptr<workgroup, u32, read_write> = access %wg, 0u
@@ -2025,12 +2397,63 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:u32 @offset(0)
+  b:u32 @offset(4)
+  c:u32 @offset(8)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<u32> @offset(0)
+  b:atomic<u32> @offset(4)
+  c:u32 @offset(8)
+}
+
+$B1: {  # root
+  %wg:ptr<workgroup, S_atomic, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %d:ptr<function, u32, read_write> = var undef
+    %e:ptr<function, u32, read_write> = var undef
+    %f:ptr<function, u32, read_write> = var undef
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %7:u32 = atomicAdd %6, 3u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1u
+    %9:u32 = atomicAdd %8, 4u
+    %10:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %11:void = atomicStore %10, 0u
+    %12:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %13:u32 = atomicLoad %12
+    %14:u32 = let %13
+    %15:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %16:u32 = atomicLoad %15
+    store %d, %16
+    %17:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %18:void = atomicStore %17, 0u
+    %19:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1u
+    %20:u32 = atomicLoad %19
+    %21:u32 = let %20
+    %22:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1u
+    %23:u32 = atomicLoad %22
+    store %e, %23
+    %24:ptr<workgroup, u32, read_write> = access %wg, 2u
+    store %24, 0u
+    %25:ptr<workgroup, u32, read_write> = access %wg, 2u
+    %26:u32 = load %25
+    %27:u32 = let %26
+    %28:ptr<workgroup, u32, read_write> = access %wg, 2u
+    %29:u32 = load %28
+    store %f, %29
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_ArrayOfScalar) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_ArrayOfScalar) {
     auto* f = b.ComputeFunction("main");
 
     core::ir::Var* wg = nullptr;
@@ -2041,15 +2464,15 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_ArrayOfScalar) {
         auto* b_ = b.Var("b", ty.ptr<function, u32, read_write>());
 
         auto* l1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 4_u);
         auto* l2 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i);
         b.Store(l2, 0_u);
 
-        auto* l3 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i);
+        auto* l3 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_i);
         auto* v1 = b.Load(l3);
         b.Let(v1);
 
-        auto* l4 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i);
+        auto* l4 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 2_i);
         auto* v2 = b.Load(l4);
         b.Store(b_, v2);
 
@@ -2065,13 +2488,13 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, u32, read_write> = var undef
     %4:ptr<workgroup, u32, read_write> = access %wg, 1i
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 4u
     %6:ptr<workgroup, u32, read_write> = access %wg, 1i
     store %6, 0u
-    %7:ptr<workgroup, u32, read_write> = access %wg, 1i
+    %7:ptr<workgroup, u32, read_write> = access %wg, 0i
     %8:u32 = load %7
     %9:u32 = let %8
-    %10:ptr<workgroup, u32, read_write> = access %wg, 1i
+    %10:ptr<workgroup, u32, read_write> = access %wg, 2i
     %11:u32 = load %10
     store %b, %11
     ret
@@ -2083,12 +2506,31 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+$B1: {  # root
+  %wg:ptr<workgroup, array<atomic<u32>, 4>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1i
+    %5:u32 = atomicAdd %4, 4u
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1i
+    %7:void = atomicStore %6, 0u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0i
+    %9:u32 = atomicLoad %8
+    %10:u32 = let %9
+    %11:ptr<workgroup, atomic<u32>, read_write> = access %wg, 2i
+    %12:u32 = atomicLoad %11
+    store %b, %12
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_ArrayOfStruct) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_ArrayOfStruct) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -2103,15 +2545,15 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_ArrayOfStruct) {
         auto* b_ = b.Var("b", ty.ptr<function, u32, read_write>());
 
         auto* l1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 9_u);
         auto* l2 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i, 0_u);
         b.Store(l2, 0_u);
 
-        auto* l3 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i, 0_u);
+        auto* l3 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_i, 0_u);
         auto* v1 = b.Load(l3);
         b.Let(v1);
 
-        auto* l4 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 1_i, 0_u);
+        auto* l4 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 2_i, 0_u);
         auto* v2 = b.Load(l4);
         b.Store(b_, v2);
 
@@ -2130,13 +2572,13 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, u32, read_write> = var undef
     %4:ptr<workgroup, u32, read_write> = access %wg, 1i, 0u
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 9u
     %6:ptr<workgroup, u32, read_write> = access %wg, 1i, 0u
     store %6, 0u
-    %7:ptr<workgroup, u32, read_write> = access %wg, 1i, 0u
+    %7:ptr<workgroup, u32, read_write> = access %wg, 0i, 0u
     %8:u32 = load %7
     %9:u32 = let %8
-    %10:ptr<workgroup, u32, read_write> = access %wg, 1i, 0u
+    %10:ptr<workgroup, u32, read_write> = access %wg, 2i, 0u
     %11:u32 = load %10
     store %b, %11
     ret
@@ -2148,12 +2590,39 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:u32 @offset(0)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<u32> @offset(0)
+}
+
+$B1: {  # root
+  %wg:ptr<workgroup, array<S_atomic, 4>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1i, 0u
+    %5:u32 = atomicAdd %4, 9u
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 1i, 0u
+    %7:void = atomicStore %6, 0u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0i, 0u
+    %9:u32 = atomicLoad %8
+    %10:u32 = let %9
+    %11:ptr<workgroup, atomic<u32>, read_write> = access %wg, 2i, 0u
+    %12:u32 = atomicLoad %11
+    store %b, %12
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_StructOfArray) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_StructOfArray) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb =
@@ -2171,15 +2640,15 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_StructOfArray) {
         auto* b_ = b.Var("b", ty.ptr<function, u32, read_write>());
 
         auto* l1 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 4_i);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 0_u);
-        auto* l2 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 4_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, l1, 1_u, 0_u, 3_u);
+        auto* l2 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 2_i);
         b.Store(l2, 0_u);
 
-        auto* l3 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 4_i);
+        auto* l3 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 3_i);
         auto* v1 = b.Load(l3);
         b.Let(v1);
 
-        auto* l4 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 4_i);
+        auto* l4 = b.Access(ty.ptr<storage, u32, read_write>(), wg, 0_u, 1_i);
         auto* v2 = b.Load(l4);
         b.Store(b_, v2);
         b.Return(f);
@@ -2198,13 +2667,13 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, u32, read_write> = var undef
     %4:ptr<storage, u32, read_write> = access %sg, 0u, 4i
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
-    %6:ptr<storage, u32, read_write> = access %sg, 0u, 4i
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 3u
+    %6:ptr<storage, u32, read_write> = access %sg, 0u, 2i
     store %6, 0u
-    %7:ptr<storage, u32, read_write> = access %sg, 0u, 4i
+    %7:ptr<storage, u32, read_write> = access %sg, 0u, 3i
     %8:u32 = load %7
     %9:u32 = let %8
-    %10:ptr<storage, u32, read_write> = access %sg, 0u, 4i
+    %10:ptr<storage, u32, read_write> = access %sg, 0u, 1i
     %11:u32 = load %10
     store %b, %11
     ret
@@ -2216,12 +2685,39 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:array<u32> @offset(0)
+}
+
+S_atomic = struct @align(4) {
+  a:array<atomic<u32>> @offset(0)
+}
+
+$B1: {  # root
+  %sg:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 1)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<storage, atomic<u32>, read_write> = access %sg, 0u, 4i
+    %5:u32 = atomicAdd %4, 3u
+    %6:ptr<storage, atomic<u32>, read_write> = access %sg, 0u, 2i
+    %7:void = atomicStore %6, 0u
+    %8:ptr<storage, atomic<u32>, read_write> = access %sg, 0u, 3i
+    %9:u32 = atomicLoad %8
+    %10:u32 = let %9
+    %11:ptr<storage, atomic<u32>, read_write> = access %sg, 0u, 1i
+    %12:u32 = atomicLoad %11
+    store %b, %12
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_Let) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceAssignsAndDecls_Let) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -2240,7 +2736,7 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceAssignsAndDecls_Let) {
         auto* p0 = b.Let(wg);
         auto* a = b.Access(ty.ptr<storage, u32, read_write>(), p0, 0_u);
         auto* p1 = b.Let(a);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, p1, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, p1, 1_u, 0_u, 8_u);
         b.Store(p1, 0_u);
 
         auto* v1 = b.Load(p1);
@@ -2267,7 +2763,7 @@ $B1: {  # root
     %4:ptr<storage, S, read_write> = let %s
     %5:ptr<storage, u32, read_write> = access %4, 0u
     %6:ptr<storage, u32, read_write> = let %5
-    %7:u32 = spirv.atomic_i_add %6, 1u, 0u, 0u
+    %7:u32 = spirv.atomic_i_add %6, 1u, 0u, 8u
     store %6, 0u
     %8:u32 = load %6
     %9:u32 = let %8
@@ -2282,12 +2778,38 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  i:u32 @offset(0)
+}
+
+S_atomic = struct @align(4) {
+  i:atomic<u32> @offset(0)
+}
+
+$B1: {  # root
+  %s:ptr<storage, S_atomic, read_write> = var undef @binding_point(0, 1)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, u32, read_write> = var undef
+    %4:ptr<storage, S_atomic, read_write> = let %s
+    %5:ptr<storage, atomic<u32>, read_write> = access %4, 0u
+    %6:ptr<storage, atomic<u32>, read_write> = let %5
+    %7:u32 = atomicAdd %6, 8u
+    %8:void = atomicStore %6, 0u
+    %9:u32 = atomicLoad %6
+    %10:u32 = let %9
+    %11:u32 = atomicLoad %6
+    store %b, %11
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceBitcastArgument_Scalar) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceBitcastArgument_Scalar) {
     auto* f = b.ComputeFunction("main");
 
     core::ir::Var* wg = nullptr;
@@ -2296,7 +2818,7 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceBitcastArgument_Scalar) {
     b.Append(f->Block(), [&] {  //
         auto* b_ = b.Var("b", ty.ptr<function, f32, read_write>());
 
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, wg, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, wg, 1_u, 0_u, 3_u);
         b.Store(wg, 0_u);
 
         auto* v1 = b.Load(wg);
@@ -2313,7 +2835,7 @@ $B1: {  # root
 %main = @compute @workgroup_size(1u, 1u, 1u) func():void {
   $B2: {
     %b:ptr<function, f32, read_write> = var undef
-    %4:u32 = spirv.atomic_i_add %wg, 1u, 0u, 0u
+    %4:u32 = spirv.atomic_i_add %wg, 1u, 0u, 3u
     store %wg, 0u
     %5:u32 = load %wg
     %6:f32 = bitcast %5
@@ -2327,12 +2849,26 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+$B1: {  # root
+  %wg:ptr<workgroup, atomic<u32>, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, f32, read_write> = var undef
+    %4:u32 = atomicAdd %wg, 3u
+    %5:void = atomicStore %wg, 0u
+    %6:u32 = atomicLoad %wg
+    %7:f32 = bitcast %6
+    store %b, %7
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }
 
-TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceBitcastArgument_Struct) {
+TEST_F(SpirvReader_AtomicsTest, ReplaceBitcastArgument_Struct) {
     auto* f = b.ComputeFunction("main");
 
     auto* sb = ty.Struct(mod.symbols.New("S"), {
@@ -2345,7 +2881,7 @@ TEST_F(SpirvReader_AtomicsTest, DISABLED_ReplaceBitcastArgument_Struct) {
         auto* b_ = b.Var("b", ty.ptr<function, f32, read_write>());
 
         auto* a0 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
-        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, a0, 1_u, 0_u, 0_u);
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicIAdd, a0, 1_u, 0_u, 2_u);
 
         auto* a1 = b.Access(ty.ptr<workgroup, u32, read_write>(), wg, 0_u);
         b.Store(a1, 0_u);
@@ -2370,7 +2906,7 @@ $B1: {  # root
   $B2: {
     %b:ptr<function, f32, read_write> = var undef
     %4:ptr<workgroup, u32, read_write> = access %wg, 0u
-    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 0u
+    %5:u32 = spirv.atomic_i_add %4, 1u, 0u, 2u
     %6:ptr<workgroup, u32, read_write> = access %wg, 0u
     store %6, 0u
     %7:ptr<workgroup, u32, read_write> = access %wg, 0u
@@ -2386,7 +2922,335 @@ $B1: {  # root
     Run(Atomics);
 
     auto* expect = R"(
-UNIMPLEMENTED
+S = struct @align(4) {
+  a:u32 @offset(0)
+}
+
+S_atomic = struct @align(4) {
+  a:atomic<u32> @offset(0)
+}
+
+$B1: {  # root
+  %wg:ptr<workgroup, S_atomic, read_write> = var undef
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %b:ptr<function, f32, read_write> = var undef
+    %4:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %5:u32 = atomicAdd %4, 2u
+    %6:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %7:void = atomicStore %6, 0u
+    %8:ptr<workgroup, atomic<u32>, read_write> = access %wg, 0u
+    %9:u32 = atomicLoad %8
+    %10:f32 = bitcast %9
+    store %b, %10
+    ret
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, FunctionParam_AnotherCallWithNonAtomicUse) {
+    core::ir::Var* wg_atomic = nullptr;
+    core::ir::Var* wg_nonatomic = nullptr;
+    b.Append(mod.root_block, [&] {
+        wg_atomic = b.Var("wg_atomic", ty.ptr<workgroup, u32>());
+        wg_nonatomic = b.Var("wg_nonatomic", ty.ptr<workgroup, u32>());
+    });
+
+    auto* f_atomic = b.Function("f_atomic", ty.u32());
+    b.Append(f_atomic->Block(), [&] {
+        auto* p = b.FunctionParam("param", ty.ptr<workgroup, u32>());
+        f_atomic->SetParams({p});
+
+        auto* ret =
+            b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicLoad, p, 1_u, 0_u);
+        b.Return(f_atomic, ret);
+    });
+
+    auto* f_nonatomic = b.Function("f_nonatomic", ty.u32());
+    b.Append(f_nonatomic->Block(), [&] {
+        auto* p = b.FunctionParam("param", ty.ptr<workgroup, u32>());
+        f_nonatomic->SetParams({p});
+
+        auto* ret = b.Load(p);
+        b.Return(f_nonatomic, ret);
+    });
+
+    auto* main = b.ComputeFunction("main");
+    b.Append(main->Block(), [&] {  //
+        b.Call(ty.u32(), f_atomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_nonatomic);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wg_atomic:ptr<workgroup, u32, read_write> = var undef
+  %wg_nonatomic:ptr<workgroup, u32, read_write> = var undef
+}
+
+%f_atomic = func(%param:ptr<workgroup, u32, read_write>):u32 {
+  $B2: {
+    %5:u32 = spirv.atomic_load %param, 1u, 0u
+    ret %5
+  }
+}
+%f_nonatomic = func(%param_1:ptr<workgroup, u32, read_write>):u32 {  # %param_1: 'param'
+  $B3: {
+    %8:u32 = load %param_1
+    ret %8
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %10:u32 = call %f_atomic, %wg_atomic
+    %11:u32 = call %f_nonatomic, %wg_atomic
+    %12:u32 = call %f_nonatomic, %wg_atomic
+    %13:u32 = call %f_nonatomic, %wg_nonatomic
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+$B1: {  # root
+  %wg_atomic:ptr<workgroup, atomic<u32>, read_write> = var undef
+  %wg_nonatomic:ptr<workgroup, u32, read_write> = var undef
+}
+
+%f_atomic = func(%param:ptr<workgroup, atomic<u32>, read_write>):u32 {
+  $B2: {
+    %5:u32 = atomicLoad %param
+    ret %5
+  }
+}
+%f_nonatomic = func(%param_1:ptr<workgroup, u32, read_write>):u32 {  # %param_1: 'param'
+  $B3: {
+    %8:u32 = load %param_1
+    ret %8
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %10:u32 = call %f_atomic, %wg_atomic
+    %11:u32 = call %f_nonatomic_1, %wg_atomic
+    %13:u32 = call %f_nonatomic_1, %wg_atomic
+    %14:u32 = call %f_nonatomic, %wg_nonatomic
+    ret
+  }
+}
+%f_nonatomic_1 = func(%param_2:ptr<workgroup, atomic<u32>, read_write>):u32 {  # %f_nonatomic_1: 'f_nonatomic', %param_2: 'param'
+  $B5: {
+    %16:u32 = atomicLoad %param_2
+    ret %16
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, FunctionParam_MixedCalls) {
+    core::ir::Var* wg_atomic = nullptr;
+    core::ir::Var* wg_nonatomic = nullptr;
+    b.Append(mod.root_block, [&] {
+        wg_atomic = b.Var("wg_atomic", ty.ptr<workgroup, u32>());
+        wg_nonatomic = b.Var("wg_nonatomic", ty.ptr<workgroup, u32>());
+    });
+
+    auto* f_atomic = b.Function("f_atomic", ty.u32());
+    b.Append(f_atomic->Block(), [&] {
+        auto* p = b.FunctionParam("param", ty.ptr<workgroup, u32>());
+        f_atomic->SetParams({p});
+
+        auto* ret =
+            b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kAtomicLoad, p, 1_u, 0_u);
+        b.Return(f_atomic, ret);
+    });
+
+    auto* f_nonatomic = b.Function("f_nonatomic", ty.u32());
+    b.Append(f_nonatomic->Block(), [&] {
+        auto* p1 = b.FunctionParam("param1", ty.ptr<workgroup, u32>());
+        auto* p2 = b.FunctionParam("param2", ty.ptr<workgroup, u32>());
+        f_nonatomic->SetParams({p1, p2});
+
+        auto* one = b.Load(p1);
+        auto* two = b.Load(p2);
+        b.Return(f_nonatomic, b.Add(ty.u32(), one, two));
+    });
+
+    auto* main = b.ComputeFunction("main");
+    b.Append(main->Block(), [&] {  //
+        b.Call(ty.u32(), f_atomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_atomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_atomic, wg_nonatomic);
+        b.Call(ty.u32(), f_nonatomic, wg_nonatomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_nonatomic, wg_nonatomic);
+
+        // Duplicate the calls to make sure the functions don't duplicate
+        b.Call(ty.u32(), f_nonatomic, wg_atomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_atomic, wg_nonatomic);
+        b.Call(ty.u32(), f_nonatomic, wg_nonatomic, wg_atomic);
+        b.Call(ty.u32(), f_nonatomic, wg_nonatomic, wg_nonatomic);
+        b.Return(main);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %wg_atomic:ptr<workgroup, u32, read_write> = var undef
+  %wg_nonatomic:ptr<workgroup, u32, read_write> = var undef
+}
+
+%f_atomic = func(%param:ptr<workgroup, u32, read_write>):u32 {
+  $B2: {
+    %5:u32 = spirv.atomic_load %param, 1u, 0u
+    ret %5
+  }
+}
+%f_nonatomic = func(%param1:ptr<workgroup, u32, read_write>, %param2:ptr<workgroup, u32, read_write>):u32 {
+  $B3: {
+    %9:u32 = load %param1
+    %10:u32 = load %param2
+    %11:u32 = add %9, %10
+    ret %11
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %13:u32 = call %f_atomic, %wg_atomic
+    %14:u32 = call %f_nonatomic, %wg_atomic, %wg_atomic
+    %15:u32 = call %f_nonatomic, %wg_atomic, %wg_nonatomic
+    %16:u32 = call %f_nonatomic, %wg_nonatomic, %wg_atomic
+    %17:u32 = call %f_nonatomic, %wg_nonatomic, %wg_nonatomic
+    %18:u32 = call %f_nonatomic, %wg_atomic, %wg_atomic
+    %19:u32 = call %f_nonatomic, %wg_atomic, %wg_nonatomic
+    %20:u32 = call %f_nonatomic, %wg_nonatomic, %wg_atomic
+    %21:u32 = call %f_nonatomic, %wg_nonatomic, %wg_nonatomic
+    ret
+  }
+}
+)";
+
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+$B1: {  # root
+  %wg_atomic:ptr<workgroup, atomic<u32>, read_write> = var undef
+  %wg_nonatomic:ptr<workgroup, u32, read_write> = var undef
+}
+
+%f_atomic = func(%param:ptr<workgroup, atomic<u32>, read_write>):u32 {
+  $B2: {
+    %5:u32 = atomicLoad %param
+    ret %5
+  }
+}
+%f_nonatomic = func(%param1:ptr<workgroup, u32, read_write>, %param2:ptr<workgroup, u32, read_write>):u32 {
+  $B3: {
+    %9:u32 = load %param1
+    %10:u32 = load %param2
+    %11:u32 = add %9, %10
+    ret %11
+  }
+}
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B4: {
+    %13:u32 = call %f_atomic, %wg_atomic
+    %14:u32 = call %f_nonatomic_1, %wg_atomic, %wg_atomic
+    %16:u32 = call %f_nonatomic_2, %wg_atomic, %wg_nonatomic
+    %18:u32 = call %f_nonatomic_3, %wg_nonatomic, %wg_atomic
+    %20:u32 = call %f_nonatomic, %wg_nonatomic, %wg_nonatomic
+    %21:u32 = call %f_nonatomic_1, %wg_atomic, %wg_atomic
+    %22:u32 = call %f_nonatomic_2, %wg_atomic, %wg_nonatomic
+    %23:u32 = call %f_nonatomic_3, %wg_nonatomic, %wg_atomic
+    %24:u32 = call %f_nonatomic, %wg_nonatomic, %wg_nonatomic
+    ret
+  }
+}
+%f_nonatomic_1 = func(%param1_1:ptr<workgroup, atomic<u32>, read_write>, %param2_1:ptr<workgroup, atomic<u32>, read_write>):u32 {  # %f_nonatomic_1: 'f_nonatomic', %param1_1: 'param1', %param2_1: 'param2'
+  $B5: {
+    %27:u32 = atomicLoad %param1_1
+    %28:u32 = atomicLoad %param2_1
+    %29:u32 = add %27, %28
+    ret %29
+  }
+}
+%f_nonatomic_2 = func(%param1_2:ptr<workgroup, atomic<u32>, read_write>, %param2_2:ptr<workgroup, u32, read_write>):u32 {  # %f_nonatomic_2: 'f_nonatomic', %param1_2: 'param1', %param2_2: 'param2'
+  $B6: {
+    %32:u32 = atomicLoad %param1_2
+    %33:u32 = load %param2_2
+    %34:u32 = add %32, %33
+    ret %34
+  }
+}
+%f_nonatomic_3 = func(%param1_3:ptr<workgroup, u32, read_write>, %param2_3:ptr<workgroup, atomic<u32>, read_write>):u32 {  # %f_nonatomic_3: 'f_nonatomic', %param1_3: 'param1', %param2_3: 'param2'
+  $B7: {
+    %37:u32 = load %param1_3
+    %38:u32 = atomicLoad %param2_3
+    %39:u32 = add %37, %38
+    ret %39
+  }
+}
+)";
+    ASSERT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_AtomicsTest, ArrayLength) {
+    auto* f = b.ComputeFunction("main");
+
+    core::ir::Var* buffer = nullptr;
+    b.Append(mod.root_block,
+             [&] {  //
+                 buffer = b.Var("buffer", ty.ptr<storage, array<u32>, read_write>());
+                 buffer->SetBindingPoint(0u, 0u);
+             });
+
+    b.Append(f->Block(), [&] {  //
+        auto* a = b.Access(ty.ptr<storage, u32, read_write>(), buffer, 1_i);
+        b.Call<spirv::ir::BuiltinCall>(ty.void_(), spirv::BuiltinFn::kAtomicStore, a, 1_u, 0_u,
+                                       1_u);
+        b.Call<core::ir::CoreBuiltinCall>(ty.u32(), core::BuiltinFn::kArrayLength, buffer);
+        b.Return(f);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<u32>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, u32, read_write> = access %buffer, 1i
+    %4:void = spirv.atomic_store %3, 1u, 0u, 1u
+    %5:u32 = arrayLength %buffer
+    ret
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+    Run(Atomics);
+
+    auto* expect = R"(
+$B1: {  # root
+  %buffer:ptr<storage, array<atomic<u32>>, read_write> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:ptr<storage, atomic<u32>, read_write> = access %buffer, 1i
+    %4:void = atomicStore %3, 1u
+    %5:u32 = arrayLength %buffer
+    ret
+  }
+}
 )";
     ASSERT_EQ(expect, str());
 }

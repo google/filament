@@ -27,7 +27,6 @@
 
 #include "dawn/native/vulkan/BindGroupVk.h"
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/common/Range.h"
 #include "dawn/common/ityp_stack_vec.h"
@@ -79,8 +78,10 @@ MaybeError BindGroup::InitializeImpl() {
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.pNext = nullptr;
         write.dstSet = GetHandle();
-        write.dstBinding = static_cast<uint32_t>(bindingIndex);
-        write.dstArrayElement = 0;
+        // Arrays all have a single binding, so compute the binding index for the array, which is
+        // the same as the binding index for the 0th element.
+        write.dstBinding = uint32_t(bindingIndex - bindingInfo.indexInArray);
+        write.dstArrayElement = uint32_t(bindingInfo.indexInArray);
         write.descriptorCount = 1;
         write.descriptorType = VulkanDescriptorType(bindingInfo);
 

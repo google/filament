@@ -73,7 +73,7 @@ WireResult Server::DoDevicePopErrorScope(Known<WGPUDevice> device,
     userdata->future = future;
 
     mProcs.devicePopErrorScope(device->handle, {nullptr, WGPUCallbackMode_AllowProcessEvents,
-                                                ForwardToServer2<&Server::OnDevicePopErrorScope>,
+                                                ForwardToServer<&Server::OnDevicePopErrorScope>,
                                                 userdata.release(), nullptr});
     return WireResult::Success;
 }
@@ -111,7 +111,7 @@ WireResult Server::DoDeviceCreateComputePipelineAsync(
     mProcs.deviceCreateComputePipelineAsync(
         device->handle, descriptor,
         {nullptr, WGPUCallbackMode_AllowProcessEvents,
-         ForwardToServer2<&Server::OnCreateComputePipelineAsyncCallback>, userdata.release(),
+         ForwardToServer<&Server::OnCreateComputePipelineAsyncCallback>, userdata.release(),
          nullptr});
     return WireResult::Success;
 }
@@ -153,7 +153,7 @@ WireResult Server::DoDeviceCreateRenderPipelineAsync(
     mProcs.deviceCreateRenderPipelineAsync(
         device->handle, descriptor,
         {nullptr, WGPUCallbackMode_AllowProcessEvents,
-         ForwardToServer2<&Server::OnCreateRenderPipelineAsyncCallback>, userdata.release(),
+         ForwardToServer<&Server::OnCreateRenderPipelineAsyncCallback>, userdata.release(),
          nullptr});
     return WireResult::Success;
 }

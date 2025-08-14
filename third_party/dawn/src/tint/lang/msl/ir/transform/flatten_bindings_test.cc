@@ -126,34 +126,34 @@ TEST_F(FlattenBindingsTest, NotFlat_MultipleNamespaces) {
         c = b.Var("c", ty.ptr(storage, ty.i32(), read));
         c->SetBindingPoint(2, 2);
 
-        s1 = b.Var("sampler1", ty.ptr(handle, ty.sampler(), read_write));
+        s1 = b.Var("sampler1", ty.ptr(handle, ty.sampler(), read));
         s1->SetBindingPoint(3, 3);
 
-        s2 = b.Var("sampler2", ty.ptr(handle, ty.comparison_sampler(), read_write));
+        s2 = b.Var("sampler2", ty.ptr(handle, ty.comparison_sampler(), read));
         s2->SetBindingPoint(4, 4);
 
-        t1 = b.Var("texture1",
-                   ty.ptr(handle, ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()),
-                          read_write));
+        t1 = b.Var(
+            "texture1",
+            ty.ptr(handle, ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32()), read));
         t1->SetBindingPoint(5, 5);
         t2 = b.Var(
             "texture2",
             ty.ptr(handle, ty.multisampled_texture(core::type::TextureDimension::k2d, ty.f32()),
-                   read_write));
+                   read));
         t2->SetBindingPoint(6, 6);
         t3 = b.Var("texture3", ty.ptr(handle,
                                       ty.storage_texture(core::type::TextureDimension::k2d,
                                                          core::TexelFormat::kR32Float, write),
-                                      read_write));
+                                      read));
         t3->SetBindingPoint(7, 7);
         t4 = b.Var("texture4",
-                   ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d), read_write));
+                   ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d), read));
         t4->SetBindingPoint(8, 8);
-        t5 = b.Var("texture5",
-                   ty.ptr(handle, ty.depth_multisampled_texture(core::type::TextureDimension::k2d),
-                          read_write));
+        t5 = b.Var(
+            "texture5",
+            ty.ptr(handle, ty.depth_multisampled_texture(core::type::TextureDimension::k2d), read));
         t5->SetBindingPoint(9, 9);
-        t6 = b.Var("texture6", ty.ptr(handle, ty.external_texture(), read_write));
+        t6 = b.Var("texture6", ty.ptr(handle, ty.external_texture(), read));
         t6->SetBindingPoint(10, 10);
     });
 

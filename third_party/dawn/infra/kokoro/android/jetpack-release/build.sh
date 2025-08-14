@@ -41,7 +41,7 @@ cd $ROOT_DIR
 apt-get install pkg-config
 
 echo "**********Fetching Dawn's deps**********"
-python3 tools/fetch_dawn_dependencies.py -ns --use-test-deps
+python3 tools/fetch_dawn_dependencies.py -ns
 if [[ $? -ne 0 ]]
 then
     echo "FAILURE in fetching deps"
@@ -85,4 +85,3 @@ echo "Successfully built webgpu aar"
 
 # Rename .aar to Chromium branch name
 mv webgpu/build/outputs/aar/webgpu-release.aar webgpu/build/outputs/aar/$KOKORO_GOB_BRANCH.aar
-

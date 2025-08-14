@@ -41,8 +41,9 @@ BUILD_TYPE=""
 BUILD_ARCH=""
 FORCE=""
 VERBOSE=""
-REMOTEEXEC="1"
+SISO="1"
 SHARED=""
+INSTALL=""
 
 function show_usage() {
   echo "setup-build [-f] $POSSIBLE_BUILD_SYSTEMS $POSSIBLE_BUILD_TYPES $POSSIBLE_BUILD_ARCHS [fuzz|fuzzer]"
@@ -61,10 +62,11 @@ function show_usage() {
   echo "  debug         Make a debug build"
   echo " "
   echo "  fuzz, fuzzer  Build fuzzers. Forces Clang to be used"
+  echo "  install       Install to out/install (cmake only)"
   echo "  native        Target the machine you're running on"
   echo "  x86           Target a 32-bit x86 (adds -m32 to compiler flags)"
   echo "  local         Use local compilation instead of remote"
-  echo "  remoteexec    Use remoteexec to improve compile time (the default)"
+  echo "  remoteexec    Use siso to improve compile time (the default)"
   echo "  shared        Build shared libs (cmake only)"
   if [[ ! -z "$1" ]]; then
     echo
@@ -123,14 +125,17 @@ for arg in "$@"; do
     "--force" | "-f")
       FORCE=1
     ;;
+    "install")
+      INSTALL=1
+    ;;
     "--verbose" | "-v")
       VERBOSE=1
     ;;
     "remoteexec")
-      REMOTEEXEC=1
+      SISO=1
     ;;
     "local")
-      REMOTEEXEC=
+      SISO=
     ;;
     "shared")
       SHARED=1
@@ -200,13 +205,12 @@ case $BUILD_SYSTEM in
     if [[ -n "$BUILD_FUZZER" ]]; then
         GN_ARGS+=" use_libfuzzer=true"
         GN_ARGS+=" tint_build_ir_binary=true"
-        GN_ARGS+=" tint_build_ir_fuzzer=true"
     fi
-    if [[ -n "$REMOTEEXEC" ]]; then
-        GN_ARGS+=" use_remoteexec=true"
-        GN_ARGS+=" use_reclient=false"
+    if [[ -n "$SISO" ]]; then
+        GN_ARGS+=" use_siso=true"
+    else
+        GN_ARGS+=" use_siso=false"
     fi
-    GN_ARGS+=" use_siso=true"
     if grep 'dawn_node.*True' .gclient >/dev/null; then
         GN_ARGS+=" dawn_build_node_bindings=true"
     fi
@@ -223,14 +227,19 @@ case $BUILD_SYSTEM in
     CMAKE_FLAGS+=("-DTINT_BUILD_MSL_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_SPV_WRITER=1")
     CMAKE_FLAGS+=("-DTINT_BUILD_WGSL_WRITER=1")
-    CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=1")
+    # tintd requires third_party/jsoncpp and third_party/langsvr
+    # which are only downloaded when dawn_tintd=True in .gclient
+    if grep 'dawn_tintd.*True' .gclient >/dev/null; then
+        CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=1")
+    else
+        CMAKE_FLAGS+=("-DTINT_BUILD_TINTD=0")
+    fi
     CMAKE_FLAGS+=("-DDAWN_BUILD_NODE_BINDINGS=1")
     if [[ -n "$BUILD_FUZZER" ]]; then
         CMAKE_FLAGS+=("-DCMAKE_CXX_COMPILER=clang++")
         CMAKE_FLAGS+=("-DCMAKE_C_COMPILER=clang")
         CMAKE_FLAGS+=("-DTINT_BUILD_FUZZERS=ON")
         CMAKE_FLAGS+=("-DDAWN_BUILD_PROTOBUF=ON")
-        CMAKE_FLAGS+=("-DTINT_BUILD_IR_FUZZER=ON")
         CMAKE_FLAGS+=("-DTINT_BUILD_IR_BINARY=ON")
         CMAKE_FLAGS+=("-DDAWN_USE_BUILT_DXC=ON")  # TODO(b/348200364)
     fi
@@ -262,6 +271,16 @@ case $BUILD_SYSTEM in
         show_usage "invalid build architecture '$BUILD_ARCH'"
       ;;
     esac
+    if [[ -n "$INSTALL" ]]; then
+      CMAKE_FLAGS+=("-DCMAKE_INSTALL_PREFIX=out/install")
+      CMAKE_FLAGS+=("-DTINT_ENABLE_INSTALL=ON")
+      CMAKE_FLAGS+=("-DDAWN_ENABLE_INSTALL=ON")
+      if [[ -n "$SHARED" ]]; then
+        CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=SHARED")
+      else
+        CMAKE_FLAGS+=("-DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC")
+      fi
+    fi
     generate "cmake"             \
              "-S" "."            \
              "-B" "out/active"   \

@@ -79,5 +79,22 @@ TEST_F(IR_LetTest, Clone) {
     EXPECT_EQ(std::string("l"), mod.NameOf(new_let->Result()).Name());
 }
 
+TEST_F(IR_LetTest, Clone_NoName) {
+    auto* value = b.Constant(4_f);
+    auto* let = b.Let(value);
+
+    auto* new_let = clone_ctx.Clone(let);
+
+    EXPECT_NE(let, new_let);
+    EXPECT_NE(nullptr, new_let->Result());
+    EXPECT_NE(let->Result(), new_let->Result());
+
+    auto new_val = new_let->Value()->As<Constant>()->Value();
+    ASSERT_TRUE(new_val->Is<core::constant::Scalar<f32>>());
+    EXPECT_FLOAT_EQ(4_f, new_val->As<core::constant::Scalar<f32>>()->ValueAs<f32>());
+
+    EXPECT_FALSE(mod.NameOf(new_let).IsValid());
+}
+
 }  // namespace
 }  // namespace tint::core::ir

@@ -53,7 +53,7 @@ cc_library(
   deps = [
     "//src/tint/api/common",
     "//src/tint/lang/core",
-    "//src/tint/lang/core/common",
+    "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/type",
     "//src/tint/utils",
     "//src/tint/utils/containers",

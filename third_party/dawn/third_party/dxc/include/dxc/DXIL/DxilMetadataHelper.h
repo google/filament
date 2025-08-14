@@ -233,6 +233,7 @@ public:
   static const unsigned kDxilStructuredBufferElementStrideTag = 1;
   static const unsigned kDxilSamplerFeedbackKindTag = 2;
   static const unsigned kDxilAtomic64UseTag = 3;
+  static const unsigned kDxilReorderCoherentTag = 4;
 
   // Type system.
   static const char kDxilTypeSystemMDName[];

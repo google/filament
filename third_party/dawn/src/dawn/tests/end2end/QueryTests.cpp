@@ -393,6 +393,9 @@ TEST_P(OcclusionQueryTests, RewriteNoDrawToZero) {
     // TODO(dawn:2247): Failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
 
+    // TODO(42242119): hang/crash on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kQueryCount = 1;
 
     wgpu::QuerySet querySet = CreateOcclusionQuerySet(kQueryCount);
@@ -433,6 +436,9 @@ TEST_P(OcclusionQueryTests, RewriteNoDrawToZero) {
 TEST_P(OcclusionQueryTests, RewriteNoDrawToZeroSeparateSubmit) {
     // TODO(dawn:1870): D3D11_QUERY_OCCLUSION_PREDICATE doesn't work on Intel Gen12 and Xe GPUs.
     DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsIntelGen12OrLater());
+
+    // TODO(42242119): hang/crash on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
     constexpr uint32_t kQueryCount = 1;
 
@@ -1073,6 +1079,8 @@ TEST_P(TimestampQueryTests, ResolveWithoutWritten) {
 
 // Test resolving timestamp query to one slot in the buffer
 TEST_P(TimestampQueryTests, ResolveToBufferWithOffset) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());  // Flaky on WARP
+
     constexpr uint32_t kQueryCount = 2;
     constexpr uint64_t kBufferSize = kQueryCount * sizeof(uint64_t) + kMinDestinationOffset;
     constexpr uint64_t kCount = kQueryCount + kMinCount;
@@ -1184,6 +1192,8 @@ class TimestampQueryInsidePassesTests : public TimestampQueryTests {
 
 // Test calling timestamp query from render pass encoder
 TEST_P(TimestampQueryInsidePassesTests, FromOnRenderPass) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());  // Flaky on WARP
+
     constexpr uint32_t kQueryCount = 2;
 
     // Write timestamp with different query indexes
@@ -1229,8 +1239,9 @@ TEST_P(TimestampQueryInsidePassesTests, FromOnRenderPass) {
 
 // Test calling timestamp query from compute pass encoder
 TEST_P(TimestampQueryInsidePassesTests, FromComputePass) {
-    // TODO(crbug.com/dawn/1852): Flaky negative timestamps on Mac AMD.
+    // TODO(crbug.com/dawn/1852): Flaky negative timestamps on Mac AMD and Windows WARP.
     DAWN_SUPPRESS_TEST_IF(IsMacOS() && IsMetal() && IsAMD());
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
 
     constexpr uint32_t kQueryCount = 2;
 

@@ -1220,6 +1220,7 @@ void PrintResourceProperties(DxilResourceProperties &RP,
   bool bUAV = RP.isUAV();
   LPCSTR RW = bUAV ? (RP.Basic.IsROV ? "ROV" : "RW") : "";
   LPCSTR GC = bUAV && RP.Basic.IsGloballyCoherent ? "globallycoherent " : "";
+  LPCSTR RC = bUAV && RP.Basic.IsReorderCoherent ? "reordercoherent " : "";
   LPCSTR COUNTER = bUAV && RP.Basic.SamplerCmpOrHasCounter ? ", counter" : "";
 
   switch (RP.getResourceKind()) {
@@ -1233,7 +1234,7 @@ void PrintResourceProperties(DxilResourceProperties &RP,
   case DXIL::ResourceKind::TypedBuffer:
   case DXIL::ResourceKind::Texture2DMS:
   case DXIL::ResourceKind::Texture2DMSArray:
-    OS << GC << RW << ResourceKindToString(RP.getResourceKind());
+    OS << GC << RC << RW << ResourceKindToString(RP.getResourceKind());
     OS << "<";
     if (RP.Typed.CompCount > 1)
       OS << std::to_string(RP.Typed.CompCount) << "x";
@@ -1241,11 +1242,11 @@ void PrintResourceProperties(DxilResourceProperties &RP,
     break;
 
   case DXIL::ResourceKind::RawBuffer:
-    OS << GC << RW << ResourceKindToString(RP.getResourceKind());
+    OS << GC << RC << RW << ResourceKindToString(RP.getResourceKind());
     break;
 
   case DXIL::ResourceKind::StructuredBuffer:
-    OS << GC << RW << ResourceKindToString(RP.getResourceKind());
+    OS << GC << RC << RW << ResourceKindToString(RP.getResourceKind());
     OS << "<stride=" << RP.StructStrideInBytes << COUNTER << ">";
     break;
 

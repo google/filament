@@ -57,23 +57,22 @@ class Buffer final : public RefCountedWithExternalCount<ObjectWithEventsBase> {
 
     ObjectType GetObjectType() const override;
 
-    WGPUFuture MapAsync(WGPUMapMode mode,
-                        size_t offset,
-                        size_t size,
-                        const WGPUBufferMapCallbackInfo& callbackInfo);
-    void* GetMappedRange(size_t offset, size_t size);
-    const void* GetConstMappedRange(size_t offset, size_t size);
-    WGPUStatus WriteMappedRange(size_t offset, void const* data, size_t size);
-    WGPUStatus ReadMappedRange(size_t offset, void* data, size_t size);
-    void Unmap();
-
-    void Destroy();
+    WGPUFuture APIMapAsync(WGPUMapMode mode,
+                           size_t offset,
+                           size_t size,
+                           const WGPUBufferMapCallbackInfo& callbackInfo);
+    void* APIGetMappedRange(size_t offset, size_t size);
+    const void* APIGetConstMappedRange(size_t offset, size_t size);
+    WGPUStatus APIWriteMappedRange(size_t offset, void const* data, size_t size);
+    WGPUStatus APIReadMappedRange(size_t offset, void* data, size_t size);
+    void APIUnmap();
+    void APIDestroy();
 
     // Note that these values can be arbitrary since they aren't validated in the wire client.
-    WGPUBufferUsage GetUsage() const;
-    uint64_t GetSize() const;
+    WGPUBufferUsage APIGetUsage() const;
+    uint64_t APIGetSize() const;
 
-    WGPUBufferMapState GetMapState() const;
+    WGPUBufferMapState APIGetMapState() const;
 
   private:
     friend class Client;

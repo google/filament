@@ -56,12 +56,15 @@ Result<core::ir::Module> WgslToIR(const Source::File* file, const Options& optio
 
 /// Builds a core-dialect core::ir::Module from the given Program
 /// @param program the Program to use.
+/// @param ice_callback the callback to use for any ICE produced while processing the IR module
 /// @returns the core-dialect IR module.
 ///
 /// @note this assumes the `program.IsValid()`, and has had const-eval done so
 /// any abstract values have been calculated and converted into the relevant
 /// concrete types.
-Result<core::ir::Module> ProgramToLoweredIR(const Program& program);
+Result<core::ir::Module> ProgramToLoweredIR(
+    const Program& program,
+    InternalCompilerErrorCallback ice_callback = std::nullopt);
 
 /// Allows for checking if an extension is currently supported/unsupported by IR
 /// before trying to convert to it.

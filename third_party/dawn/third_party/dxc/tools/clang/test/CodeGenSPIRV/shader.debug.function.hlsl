@@ -6,7 +6,7 @@
 // CHECK:         [[fooName:%[0-9]+]] = OpString "foo"
 // CHECK:        [[emptyStr:%[0-9]+]] = OpString ""
 // CHECK:     [[srcMainName:%[0-9]+]] = OpString "main"
-// CHECK:        [[mainName:%[0-9]+]] = OpString "wrapper"
+// CHECK:        [[mainName:%[0-9]+]] = OpString "__dxc_setup"
 // CHECK:          [[clOpts:%[0-9]+]] = OpString " -E main -T ps_6_0 -spirv -fcgl -fspv-debug=vulkan
 
 // CHECK:    [[int:%[0-9]+]] = OpExtInst %void [[set]] DebugTypeBasic {{%[0-9]+}} %uint_32 %uint_4 %uint_0

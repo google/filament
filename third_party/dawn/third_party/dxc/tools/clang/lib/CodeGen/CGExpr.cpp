@@ -3646,14 +3646,8 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     if (unsigned builtinID = FD->getBuiltinID())
       return EmitBuiltinExpr(FD, builtinID, E, ReturnValue);
     // HLSL Change Starts
-    if (getLangOpts().HLSL) {
-      if (const NamespaceDecl *ns = dyn_cast<NamespaceDecl>(FD->getParent())) {
-        if (ns->getName() == "hlsl") {
-          // do hlsl intrinsic generation
-          return EmitHLSLBuiltinCallExpr(FD, E, ReturnValue);
-        }
-      }
-    }
+    if (getLangOpts().HLSL && FD->hasAttr<HLSLBuiltinCallAttr>())
+      return EmitHLSLBuiltinCallExpr(FD, E, ReturnValue);
     // HLSL Change End
   }
 

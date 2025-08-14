@@ -52,17 +52,17 @@ stages:
 
     variables:
       macOS: macOS-latest
-      linux: Ubuntu-latest
+      linux: Ubuntu-22.04 # FIXME: #7364, DXC does not build correctly with GCC 13+
 
     strategy:
       matrix:
-        Linux_Clang_Release:
+        Linux_Clang_RelWithDebInfo:
           image: ${{ variables.linux }}
-          configuration: Release
+          configuration: RelWithDebInfo
           CC: clang-18
           CXX: clang++-18
-          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On -DLLVM_USE_SANITIZER='Address;Undefined' -DLLVM_ENABLE_LIBCXX=On -DLLVM_USE_LINKER=lld
-          CHECK_ALL_ENV: ASAN_OPTIONS=alloc_dealloc_mismatch=0
+          CMAKE_OPTS: -DLLVM_ENABLE_WERROR=On -DLLVM_USE_SANITIZER='Address;Undefined' -DLLVM_ENABLE_LIBCXX=On -DLLVM_USE_LINKER=lld-18
+          CHECK_ALL_ENV: ASAN_OPTIONS=alloc_dealloc_mismatch=0 LSAN_OPTIONS=suppressions=$BUILD_SOURCESDIRECTORY/utils/asan/x86_64-pc-linux-gnu.lsan.supp:print_suppressions=0 ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18 LSAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-18
           OS: Linux
         Linux_Clang_Debug:
           image: ${{ variables.linux }}
@@ -107,6 +107,8 @@ stages:
         versionSpec: '3.x'
 
     - bash: |
+        sudo apt-get update
+        sudo apt-get upgrade libc6 libc6-dbg
         sudo apt-get install ninja-build
         wget https://apt.llvm.org/llvm.sh
         chmod u+x llvm.sh

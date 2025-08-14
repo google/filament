@@ -60,10 +60,6 @@ ObjectHandle& ObjectHandle::AssignFrom(const volatile ObjectHandle& rhs) {
     return *this;
 }
 
-bool ObjectHandle::operator==(const ObjectHandle& other) const {
-    return id == other.id && generation == other.generation;
-}
-
 bool ObjectHandle::IsValid() const {
     return id > 0;
 }

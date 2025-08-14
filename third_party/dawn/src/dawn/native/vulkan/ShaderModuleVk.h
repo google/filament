@@ -47,22 +47,6 @@ struct ProgrammableStage;
 
 namespace vulkan {
 
-// The entry point name to use when generating SPIR-V.
-constexpr char kRemappedEntryPointName[] = "dawn_entry_point";
-
-struct TransformedShaderModuleCacheKey {
-    uintptr_t layoutPtr;
-    std::string entryPoint;
-    PipelineConstantEntries constants;
-    bool emitPointSize;
-
-    bool operator==(const TransformedShaderModuleCacheKey& other) const;
-};
-
-struct TransformedShaderModuleCacheKeyHashFunc {
-    size_t operator()(const TransformedShaderModuleCacheKey& key) const;
-};
-
 class Device;
 class PipelineLayout;
 
@@ -70,8 +54,7 @@ class ShaderModule final : public ShaderModuleBase {
   public:
     struct ModuleAndSpirv {
         VkShaderModule module;
-        const uint32_t* spirv;
-        size_t wordCount;
+        std::vector<uint32_t> spirv;
         bool hasInputAttachment;
     };
 
@@ -79,9 +62,9 @@ class ShaderModule final : public ShaderModuleBase {
         Device* device,
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
         const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult,
-        OwnedCompilationMessages* compilationMessages);
+        ShaderModuleParseResult* parseResult);
 
+    // Caller is responsible for destroying the `VkShaderModule` returned.
     ResultOrError<ModuleAndSpirv> GetHandleAndSpirv(SingleShaderStage stage,
                                                     const ProgrammableStage& programmableStage,
                                                     const PipelineLayout* layout,
@@ -93,13 +76,8 @@ class ShaderModule final : public ShaderModuleBase {
                  const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
                  std::vector<tint::wgsl::Extension> internalExtensions);
     ~ShaderModule() override;
-    MaybeError Initialize(ShaderModuleParseResult* parseResult,
-                          OwnedCompilationMessages* compilationMessages);
+    MaybeError Initialize(ShaderModuleParseResult* parseResult);
     void DestroyImpl() override;
-
-    // New handles created by GetHandleAndSpirv at pipeline creation time.
-    class ConcurrentTransformedShaderModuleCache;
-    std::unique_ptr<ConcurrentTransformedShaderModuleCache> mTransformedShaderModuleCache;
 };
 
 }  // namespace vulkan

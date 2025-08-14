@@ -28,8 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_INTERPOLATION_H_
 #define SRC_TINT_LANG_CORE_INTERPOLATION_H_
 
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
+#include "src/tint/lang/core/enums.h"
 
 namespace tint::core {
 

@@ -52,6 +52,7 @@ class BindGroupTrackerBase {
                         uint32_t dynamicOffsetCount,
                         uint32_t* dynamicOffsets) {
         DAWN_ASSERT(index < kMaxBindGroupsTyped);
+        DAWN_ASSERT(dynamicOffsetCount <= kMaxDynamicOffsetsPerBindGroup);
 
         if (mBindGroupLayoutsMask[index]) {
             // It is okay to only dirty bind groups that are used by the current pipeline
@@ -69,15 +70,20 @@ class BindGroupTrackerBase {
         }
 
         mBindGroups[index] = bindGroup;
-        mDynamicOffsets[index].resize(BindingIndex(dynamicOffsetCount));
+        mDynamicOffsets[index].count = BindingIndex(dynamicOffsetCount);
         std::copy(dynamicOffsets, dynamicOffsets + dynamicOffsetCount,
-                  mDynamicOffsets[index].begin());
+                  mDynamicOffsets[index].offsets.begin());
     }
 
     void OnSetPipeline(PipelineBase* pipeline) { mPipelineLayout = pipeline->GetLayout(); }
 
   protected:
     virtual bool AreLayoutsCompatible() { return mLastAppliedPipelineLayout == mPipelineLayout; }
+
+    ityp::span<BindingIndex, DynamicOffset> GetDynamicOffsets(BindGroupIndex index) {
+        return ityp::span<BindingIndex, DynamicOffset>(mDynamicOffsets[index].offsets.data(),
+                                                       mDynamicOffsets[index].count);
+    }
 
     // The Derived class should call this before it applies bind groups.
     void BeforeApply() {
@@ -123,7 +129,6 @@ class BindGroupTrackerBase {
     BindGroupMask mDirtyBindGroupsObjectChangedOrIsDynamic = 0;
     BindGroupMask mBindGroupLayoutsMask = 0;
     PerBindGroup<BindGroupBase*> mBindGroups = {};
-    PerBindGroup<ityp::vector<BindingIndex, DynamicOffset>> mDynamicOffsets = {};
 
     // |mPipelineLayout| is the current pipeline layout set on the command buffer.
     // |mLastAppliedPipelineLayout| is the last pipeline layout for which we applied changes
@@ -133,6 +138,20 @@ class BindGroupTrackerBase {
     // freed from underneath this class.
     RAW_PTR_EXCLUSION PipelineLayoutBase* mPipelineLayout = nullptr;
     RAW_PTR_EXCLUSION PipelineLayoutBase* mLastAppliedPipelineLayout = nullptr;
+
+  private:
+    // Max possible dynamic offsets per bind group. Uses the per-pipeline limits because it's
+    // possible that one bind group uses all the available dynamic offsets and every other bind
+    // group uses none.
+    static constexpr uint32_t kMaxDynamicOffsetsPerBindGroup =
+        kMaxDynamicUniformBuffersPerPipelineLayout + kMaxDynamicStorageBuffersPerPipelineLayout;
+
+    struct BindingDynamicOffsets {
+        ityp::array<BindingIndex, DynamicOffset, kMaxDynamicOffsetsPerBindGroup> offsets = {};
+        BindingIndex count = {};
+    };
+
+    PerBindGroup<BindingDynamicOffsets> mDynamicOffsets = {};
 };
 
 }  // namespace dawn::native

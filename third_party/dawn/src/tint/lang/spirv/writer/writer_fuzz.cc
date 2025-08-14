@@ -31,6 +31,7 @@
 #include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/spirv/validate/validate.h"
 #include "src/tint/lang/spirv/writer/helpers/generate_bindings.h"
+#include "src/tint/lang/spirv/writer/printer/printer.h"
 
 namespace tint::spirv::writer {
 namespace {
@@ -44,11 +45,27 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module, const fuzz::ir::Context&,
     options.bindings = GenerateBindings(module);
     auto output = Generate(module, options);
     if (output != Success) {
-        return Failure{output.Failure().reason};
+        TINT_ICE() << "Generate() failed after CanGenerate() succeeded: "
+                   << output.Failure().reason;
+    }
+
+    spv_target_env target_env = SPV_ENV_VULKAN_1_1;
+    switch (options.spirv_version) {
+        case SpvVersion::kSpv13:
+            target_env = SPV_ENV_VULKAN_1_1;
+            break;
+        case SpvVersion::kSpv14:
+            target_env = SPV_ENV_VULKAN_1_1_SPIRV_1_4;
+            break;
+        case SpvVersion::kSpv15:
+            target_env = SPV_ENV_VULKAN_1_2;
+            break;
+        default:
+            TINT_ICE() << "unsupported SPIR-V version";
     }
 
     auto& spirv = output->spirv;
-    if (auto res = validate::Validate(Slice(spirv.data(), spirv.size()), SPV_ENV_VULKAN_1_1);
+    if (auto res = validate::Validate(Slice(spirv.data(), spirv.size()), target_env);
         res != Success) {
         TINT_ICE() << "output of SPIR-V writer failed to validate with SPIR-V Tools\n"
                    << res.Failure() << "\n\n"
@@ -62,4 +79,6 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module, const fuzz::ir::Context&,
 }  // namespace
 }  // namespace tint::spirv::writer
 
-TINT_IR_MODULE_FUZZER(tint::spirv::writer::IRFuzzer, tint::core::ir::Capabilities{});
+TINT_IR_MODULE_FUZZER(tint::spirv::writer::IRFuzzer,
+                      tint::core::ir::Capabilities{},
+                      tint::spirv::writer::kPrinterCapabilities);

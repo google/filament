@@ -36,15 +36,11 @@ namespace {
 Result<SuccessType> RobustnessFuzzer(Module& module,
                                      const fuzz::ir::Context&,
                                      RobustnessConfig config) {
-    if (!config.bindings_ignored.empty()) {
-        // TODO(jrprice): Handle config.bindings_ignored.
-        return Failure{"config.bindings_ignored is not empty"};
-    }
-
     return Robustness(module, config);
 }
 
 }  // namespace
 }  // namespace tint::core::ir::transform
 
-TINT_IR_MODULE_FUZZER(tint::core::ir::transform::RobustnessFuzzer, tint::core::ir::Capabilities{});
+TINT_IR_MODULE_FUZZER(tint::core::ir::transform::RobustnessFuzzer,
+                      tint::core::ir::transform::kRobustnessCapabilities);

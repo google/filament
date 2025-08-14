@@ -66,7 +66,6 @@ tint_add_target(tint_lang_hlsl_writer_raise lib
 tint_target_add_dependencies(tint_lang_hlsl_writer_raise lib
   tint_api_common
   tint_lang_core
-  tint_lang_core_common
   tint_lang_core_constant
   tint_lang_core_intrinsic
   tint_lang_core_ir
@@ -116,6 +115,7 @@ tint_target_add_dependencies(tint_lang_hlsl_writer_raise_test test
   tint_lang_core_constant
   tint_lang_core_intrinsic
   tint_lang_core_ir
+  tint_lang_core_ir_transform
   tint_lang_core_ir_transform_test
   tint_lang_core_type
   tint_lang_hlsl_writer_common

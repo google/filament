@@ -196,7 +196,8 @@ struct BlockInfo {
 /// @param o the stream
 /// @param bi the BlockInfo
 /// @returns the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, const BlockInfo& bi) {
     o << "BlockInfo{" << " id: " << bi.id << " pos: " << bi.pos
       << " merge_for_header: " << bi.merge_for_header
@@ -372,7 +373,8 @@ struct DefInfo {
 /// @param o the stream
 /// @param di the DefInfo
 /// @returns the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, const DefInfo& di) {
     o << "DefInfo{" << " inst.result_id: " << di.inst.result_id();
     if (di.local.has_value()) {
