@@ -109,13 +109,8 @@ function install_mac() {
     unzip -t vulkan_sdk.zip
   fi
   echo "recognized zip layout 'vulkan_sdk.zip' ${InstallVulkan}.app/Contents" >&2
-  local sdk_temp=${VULKAN_SDK_DIR}.tmp
-  sudo ${InstallVulkan}.app/Contents/MacOS/${InstallVulkan} --root "$sdk_temp" --accept-licenses --default-answer --confirm-command install
-  du -hs $sdk_temp
-  test -d $sdk_temp/macOS || { echo "unrecognized dmg folder layout: $sdk_temp" ; ls -l $sdk_temp ; }
-  cp -r $sdk_temp/macOS/* $VULKAN_SDK_DIR/
+  ${InstallVulkan}.app/Contents/MacOS/${InstallVulkan} --accept-licenses --default-answer --confirm-command install
   if [[ -d ${InstallVulkan}.app/Contents ]] ; then
-    sudo rm -rf "$sdk_temp"
     rm -rf ${InstallVulkan}.app
   fi
 }

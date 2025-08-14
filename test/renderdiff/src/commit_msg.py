@@ -41,7 +41,7 @@ def _parse_commit(commit_str):
   )
 
 if __name__ == "__main__":
-  RE_STR = rf"{RDIFF_UPDATE_GOLDEN_STR}(?:S)?=[\[]?([a-zA-Z0-9,\s\-\/]+)[\]]?"
+  RE_STR = rf"{RDIFF_UPDATE_GOLDEN_STR}(?:\s)?\=(?:\s)?([a-zA-Z0-9\s\-\/]+)"
 
   parser = ArgParseImpl()
   parser.add_argument('--file', help='A file containing the commit message')

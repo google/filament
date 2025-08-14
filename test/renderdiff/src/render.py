@@ -26,13 +26,22 @@ from golden_manager import GoldenManager
 from image_diff import same_image
 from results import RESULT_OK, RESULT_FAILED
 
-def _render_single_model(gltf_viewer, test_json_path, named_output_dir, test_name, backend, model, model_path, opengl_lib):
-  env = None
+def _render_single_model(gltf_viewer, test_json_path, named_output_dir,
+                         test_name, backend, model, model_path, opengl_lib, vk_icd):
+  # We need to pass along the old environment because it might include set up from vulkansdk.
+  env = os.environ.copy()
   if backend == 'opengl' and opengl_lib and os.path.isdir(opengl_lib):
-    env = {
+    env |= {
       'LD_LIBRARY_PATH': opengl_lib,
       # for macOS
       'DYLD_LIBRARY_PATH': opengl_lib,
+    }
+
+  if backend == 'vulkan' and os.path.exists(vk_icd):
+    env |= {
+      'VK_ICD_FILENAMES': vk_icd,
+      'VK_DRIVER_FILES': vk_icd,
+      'VK_LOADER_DEBUG': 'all',
     }
 
   out_name = f'{test_name}.{backend}.{model}'
@@ -43,10 +52,10 @@ def _render_single_model(gltf_viewer, test_json_path, named_output_dir, test_nam
 
   important_print(f'Rendering {test_desc}')
 
-  out_code, _ = execute(
+  out_code, output = execute(
     f'{gltf_viewer} -a {backend} --batch={test_json_path} -e {model_path} --headless',
     cwd=working_dir,
-    env=env, capture_output=False
+    env=env, capture_output=True
   )
 
   result = ''
@@ -56,9 +65,10 @@ def _render_single_model(gltf_viewer, test_json_path, named_output_dir, test_nam
     out_tif_name = f'{named_output_dir}/{out_tif_basename}'
     mv_f(f'{working_dir}/{test_name}0.tif', out_tif_name)
     mv_f(f'{working_dir}/{test_name}0.json', f'{named_output_dir}/{test_name}.json')
+    important_print(f'{test_desc} rendering succeeded. output=\n{output}')
   else:
     result = RESULT_FAILED
-    important_print(f'{test_desc} rendering failed with error={out_code}')
+    important_print(f'{test_desc} rendering failed with error={out_code}output=\n{output}')
 
   return {
     'name': out_name,
@@ -91,17 +101,18 @@ def _render_test_config(gltf_viewer,
         f.write(f'[{test.to_filament_format()}]')
 
       for backend in test_config.backends:
+        if backend == 'vulkan':
+          assert vk_icd, "VK ICD must be specified when testing vulkan backend"
         for model in test.models:
           model_path = os.path.abspath(test_config.models[model])
           futures.append(
             executor.submit(_render_single_model, gltf_viewer_abs,
                     test_json_path, named_output_dir,
                     test.name, backend, model, model_path,
-                    opengl_lib))
+                    opengl_lib, vk_icd))
 
     for future in concurrent.futures.as_completed(futures):
       results.append(future.result())
-  print(results)
 
   return named_output_dir, results
 
