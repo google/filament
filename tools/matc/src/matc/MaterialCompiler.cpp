@@ -76,7 +76,7 @@ bool MaterialCompiler::run(const matp::Config& config) {
         return true;
     }
 
-    JobSystem js;
+    JobSystem js(1);
     js.adopt();
 
     // Write builder.build() to output.

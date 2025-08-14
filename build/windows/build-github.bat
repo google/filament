@@ -135,7 +135,9 @@ set build_flags=-j %NUMBER_OF_PROCESSORS%
 :: cmake --build . --target sample-resources --config %config% %build_flags% || exit /b
 :: cmake --build . --target suzanne-resources --config %config% %build_flags% || exit /b
 
-cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
+cmake --build . --target sample-resources --config %config% %build_flags% -- /m || exit /b
+
+:: cmake --build . %INSTALL% --config %config% %build_flags% -- /m || exit /b
 @echo off
 
 echo Disk info after building variant: %variant%

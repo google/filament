@@ -30,13 +30,34 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 namespace filamat {
 
 namespace {
-    bool isWordChar(char const c) {
-        return std::isalnum(c) || c == '_';
+bool isWordChar(char const c) { return std::isalnum(c) || c == '_'; }
+
+
+// Function to trim specified characters from both ends of a string_view
+std::string_view trim(std::string_view sv, std::string_view chars_to_trim = " \t\r\n") {
+    // Find the first character that is not in our set of trim characters
+    const auto start = sv.find_first_not_of(chars_to_trim);
+
+    // If no such character exists, the string is empty or all trim characters
+    if (start == std::string_view::npos) {
+        return ""; // Return an empty view
     }
+
+    // Find the last character that is not in our set of trim characters
+    const auto end = sv.find_last_not_of(chars_to_trim);
+
+    // Calculate the length of the new view
+    const auto len = end - start + 1;
+
+    // Return a new view representing the trimmed string
+    return sv.substr(start, len);
+}
+
 } // anonymous namespace
 
 LineDictionary::LineDictionary() = default;
@@ -64,10 +85,15 @@ std::vector<LineDictionary::index_t> LineDictionary::getIndices(
 }
 
 void LineDictionary::addText(std::string_view const text) noexcept {
+    utils::slog.e <<"begin addText l(" << text.length() << ")=" <<
+            trim(text.substr(0, std::min(15, (int)text.length())));
+
     size_t cur = 0;
     size_t const len = text.length();
     const char* s = text.data();
+    size_t trueCount = 0;
     while (cur < len) {
+        trueCount++;
         // Start of the current line
         size_t const pos = cur;
         // Find the end of the current line or end of text
@@ -79,12 +105,22 @@ void LineDictionary::addText(std::string_view const text) noexcept {
             cur++;
         }
         addLine({ s + pos, cur - pos });
+        if (trueCount > 1000000 && trueCount > 0) {
+            utils::slog.e <<"print addText at=" << trim(text.substr(0, std::min(15, (int)text.length()))) <<
+                    " count=" << trueCount << " cur=" << cur << utils::io::endl;
+            trueCount = 0;
+        }
     }
+    utils::slog.e <<" ----- end addText" << utils::io::endl;
 }
 
 void LineDictionary::addLine(std::string_view const line) noexcept {
+    utils::slog.e <<"********** begin addline l(" << line.length() << ")=" <<
+            trim(line.substr(0, std::min(15, (int)line.length())));
+    
     auto const lines = splitString(line);
     for (std::string_view const& subline : lines) {
+        utils::slog.e <<"addline indices=" << mLineIndices.size() << utils::io::endl;    
         // Never add a line twice.
         auto pos = mLineIndices.find(subline);
         if (pos != mLineIndices.end()) {
@@ -97,6 +133,7 @@ void LineDictionary::addLine(std::string_view const line) noexcept {
                     .index = index_t(mStrings.size() - 1),
                     .count = 1 });
     }
+    utils::slog.e <<"*********** end addline" << utils::io::endl;    
 }
 
 std::string_view LineDictionary::ltrim(std::string_view s) {
@@ -110,14 +147,26 @@ std::pair<size_t, size_t> LineDictionary::findPattern(
     // Patterns are ordered from longest to shortest to ensure correct prefix matching.
     static constexpr std::string_view kPatterns[] = { "hp_copy_", "mp_copy_", "_" };
 
+    utils::slog.e <<"begin findPattern l(" << line.length() << ")=" <<
+            trim(line.substr(0, std::min(15, (int)line.length())));
+
+    if (line.length() == 2) {
+        utils::slog.e <<"begin findPattern l[0]=" << (int) line[0] << " l[1]=" << (int) line[1] <<
+                
+                utils::io::endl;
+
+    }
+
+    size_t trueCount = 1;
     const size_t line_len = line.length();
-    for (size_t i = offset; i < line_len; ++i) {
+    for (size_t i = offset; i < line_len; ++i, ++trueCount) {
         // A pattern must be a whole word (or at the start of the string).
         if (i > 0 && isWordChar(line[i - 1])) {
             continue;
         }
 
         for (const auto& prefix : kPatterns) {
+            trueCount++;
             if (line.size() - i >= prefix.size() && line.substr(i, prefix.size()) == prefix) {
                 // A known prefix has been matched. Now, check for a sequence of digits.
                 size_t const startOfDigits = i + prefix.size();
@@ -141,11 +190,19 @@ std::pair<size_t, size_t> LineDictionary::findPattern(
                 break;
             }
         }
+        if (trueCount % 10000 == 0 && trueCount > 0) {
+            utils::slog.e <<"print findPattern at=" << trim(line) <<
+                    " count=" << trueCount << utils::io::endl;
+        }
     }
+    utils::slog.e <<" ----- end findPattern" << utils::io::endl;
     return { std::string_view::npos, 0 }; // No pattern found
 }
 
 std::vector<std::string_view> LineDictionary::splitString(std::string_view const line) {
+    utils::slog.e <<"begin splitString l=" << trim(line.substr(0,
+                    std::min(15, (int)line.length())));
+
     std::vector<std::string_view> result;
     size_t current_pos = 0;
 
@@ -154,7 +211,9 @@ std::vector<std::string_view> LineDictionary::splitString(std::string_view const
         return result;
     }
 
+    size_t trueCount = 0;
     while (current_pos < line.length()) {
+        trueCount++;
         auto const [match_pos, match_len] = findPattern(line, current_pos);
 
         if (match_pos == std::string_view::npos) {
@@ -173,7 +232,13 @@ std::vector<std::string_view> LineDictionary::splitString(std::string_view const
 
         // Move cursor past the match.
         current_pos = match_pos + match_len;
+
+        if (trueCount % 10000 == 0 && trueCount > 0) {
+            utils::slog.e <<"print splitString at=" << trim(line) <<
+                    " count=" << trueCount << utils::io::endl;
+        }
     }
+    utils::slog.e <<"------- end splitString" << utils::io::endl;
 
     return result;
 }

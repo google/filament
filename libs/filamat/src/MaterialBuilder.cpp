@@ -1165,23 +1165,30 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     std::sort(metalEntries.begin(), metalEntries.end(), compare);
     std::sort(wgslEntries.begin(), wgslEntries.end(), compare);
 
+
+    utils::slog.e <<"----------------------- a" << utils::io::endl;
     // Generate the dictionaries.
     for (const auto& s : glslEntries) {
         textDictionary.addText(s.shader);
     }
+    utils::slog.e <<"----------------------- b" << utils::io::endl;    
     for (const auto& s : essl1Entries) {
         textDictionary.addText(s.shader);
     }
+    utils::slog.e <<"----------------------- c" << utils::io::endl;        
     for (auto& s : spirvEntries) {
         std::vector const spirv{ std::move(s.data) };
         s.dictionaryIndex = spirvDictionary.addBlob(spirv);
     }
+    utils::slog.e <<"----------------------- d" << utils::io::endl;        
     for (const auto& s : metalEntries) {
         textDictionary.addText(s.shader);
     }
+    utils::slog.e <<"----------------------- e" << utils::io::endl;            
     for (const auto& s : wgslEntries) {
         textDictionary.addText(s.shader);
     }
+    utils::slog.e <<"----------------------- f" << utils::io::endl;                
 
     // Emit dictionary chunk (TextDictionaryReader and DictionaryTextChunk)
     const auto& dictionaryChunk = container.push<DictionaryTextChunk>(
