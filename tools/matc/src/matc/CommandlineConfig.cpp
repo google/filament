@@ -96,6 +96,8 @@ static void usage(char* name) {
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
             "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
+            "   --workarounds, -W\n"
+            "       Workarounds to apply: all or none. (default is all).\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
@@ -202,7 +204,7 @@ static void parseDefine(std::string const& defineString, matp::Config::StringRep
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
+    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:";
     static const option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'L' },
@@ -228,6 +230,7 @@ bool CommandlineConfig::parse() {
             { "raw",                     no_argument, nullptr, 'w' },
             { "no-sampler-validation",   no_argument, nullptr, 'F' },
             { "save-raw-variants",       no_argument, nullptr, 'R' },
+            { "workarounds",       required_argument, nullptr, 'W' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -323,6 +326,16 @@ bool CommandlineConfig::parse() {
                 exit(0);
             case 'V':
                 mVariantFilter = parseVariantFilter(arg);
+                break;
+            case 'W':
+                if (arg == "none") {
+                    mWorkarounds = Workarounds::NONE;
+                } else if (arg == "all") {
+                    mWorkarounds = Workarounds::ALL;
+                } else {
+                    std::cerr << "Unrecognized workaround. Must be 'all'|'none'." << std::endl;
+                    return false;
+                }
                 break;
             // These 2 flags are supported for backward compatibility
             case 'O':

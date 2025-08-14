@@ -575,7 +575,6 @@ MaterialBuilder& MaterialBuilder::stereoscopicType(StereoscopicType const stereo
     mStereoscopicType = stereoscopicType;
     return *this;
 }
-
 MaterialBuilder& MaterialBuilder::stereoscopicEyeCount(uint8_t const eyeCount) noexcept {
     mStereoscopicEyeCount = eyeCount;
     return *this;
@@ -598,6 +597,11 @@ MaterialBuilder& MaterialBuilder::targetApi(TargetApi const targetApi) noexcept 
 
 MaterialBuilder& MaterialBuilder::optimization(Optimization const optimization) noexcept {
     mOptimization = optimization;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::workarounds(Workarounds const workarounds) noexcept {
+    mWorkarounds = workarounds;
     return *this;
 }
 
@@ -918,7 +922,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     uint32_t flags = 0;
     flags |= mPrintShaders ? GLSLPostProcessor::PRINT_SHADERS : 0;
     flags |= mGenerateDebugInfo ? GLSLPostProcessor::GENERATE_DEBUG_INFO : 0;
-    GLSLPostProcessor postProcessor(mOptimization, flags);
+    GLSLPostProcessor postProcessor(mOptimization, mWorkarounds, flags);
 
     // Start: must be protected by lock
     Mutex entriesLock;
@@ -1048,6 +1052,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .variantFilter = mVariantFilter,
                         .targetApi = targetApi,
                         .targetLanguage = targetLanguage,
+                        .workarounds = mWorkarounds,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .featureLevel = featureLevel,
