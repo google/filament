@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -27,6 +26,7 @@
 #include <imgui.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Path.h>
 
@@ -46,6 +46,10 @@
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <backend/platforms/VulkanPlatform.h>
+#endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+#include <backend/platforms/WebGPUPlatform.h>
 #endif
 
 #include <filagui/ImGuiHelper.h>
@@ -100,6 +104,36 @@ public:
 
 private:
     VulkanPlatform::Customization mCustomization;
+};
+#endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+class FilamentAppWebGPUPlatform : public WebGPUPlatform {
+public:
+    FilamentAppWebGPUPlatform(Config::WebGPUBackend backend)
+        : mBackend(backend) {}
+
+    virtual WebGPUPlatform::Configuration getConfiguration() const noexcept override {
+        WebGPUPlatform::Configuration config = {};
+        switch (mBackend) {
+            case Config::WebGPUBackend::VULKAN:
+                config.forceBackendType = wgpu::BackendType::Vulkan;
+                break;
+            case Config::WebGPUBackend::METAL:
+                config.forceBackendType = wgpu::BackendType::Metal;
+                break;
+            case Config::WebGPUBackend::DEFAULT:
+                break;
+            default:
+                LOG(ERROR) << "FilamentApp: Unsupported webgpu backend was selected(="
+                           << (int) mBackend << "). Selection is ignored.";
+                break;
+        }
+        return config;
+    }
+
+private:
+    Config::WebGPUBackend const mBackend;
 };
 #endif
 
@@ -532,6 +566,13 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         delete mVulkanPlatform;
     }
 #endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+    if (mWebGPUPlatform) {
+        delete mWebGPUPlatform;
+    }
+#endif
+
 }
 
 // RELATIVE_ASSET_PATH is set inside samples/CMakeLists.txt and used to support multi-configuration
@@ -662,21 +703,25 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         engineConfig.stereoscopicType = Engine::StereoscopicType::NONE;
 #endif
 
+        Platform* platform = nullptr;
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
         if (backend == Engine::Backend::VULKAN) {
-            #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-                mFilamentApp->mVulkanPlatform =
-                        new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
-                return Engine::Builder()
-                        .backend(backend)
-                        .platform(mFilamentApp->mVulkanPlatform)
-                        .featureLevel(config.featureLevel)
-                        .config(&engineConfig)
-                        .build();
-            #endif
+            platform = mFilamentApp->mVulkanPlatform =
+                    new FilamentAppVulkanPlatform(config.vulkanGPUHint.c_str());
         }
+#endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+        if (backend == Engine::Backend::WEBGPU) {
+            platform = mFilamentApp->mWebGPUPlatform =
+                    new FilamentAppWebGPUPlatform(config.forcedWebGPUBackend);
+        }
+#endif
+
         return Engine::Builder()
                 .backend(backend)
                 .featureLevel(config.featureLevel)
+                .platform(platform)
                 .config(&engineConfig)
                 .build();
     };

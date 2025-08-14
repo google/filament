@@ -505,6 +505,7 @@ struct AdapterDetailsHash final {
 
 // selects one preferred adapter or panics if none can be found
 wgpu::Adapter selectPreferredAdapter(
+        WebGPUPlatform::Configuration const& configuration,
         std::unordered_set<AdapterDetails, AdapterDetailsHash> const& compatibleAdapters) {
     // for each unique adapter...
     AdapterDetails const* selectedAdapter = nullptr;
@@ -512,6 +513,10 @@ wgpu::Adapter selectPreferredAdapter(
 
     // choose the most desirable adapter that meets the minimum requirements...
     for (AdapterDetails const& details: compatibleAdapters) {
+        if (configuration.forceBackendType != wgpu::BackendType::Undefined &&
+                configuration.forceBackendType != details.info.backendType) {
+            continue;
+        }
         if (!adapterMeetsMinimumRequirements(details)) {
             continue;
         }
@@ -587,7 +592,7 @@ wgpu::Adapter WebGPUPlatform::requestAdapter(wgpu::Surface const& surface) {
     }
     const std::unordered_set<AdapterDetails, AdapterDetailsHash> compatibleAdapters =
             requestCompatibleAdapters(mInstance, requests);
-    return selectPreferredAdapter(compatibleAdapters);
+    return selectPreferredAdapter(getConfiguration(), compatibleAdapters);
 }
 
 wgpu::Device WebGPUPlatform::requestDevice(wgpu::Adapter const& adapter) {

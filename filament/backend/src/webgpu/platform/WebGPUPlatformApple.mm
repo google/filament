@@ -38,7 +38,12 @@ std::vector<wgpu::RequestAdapterOptions> WebGPUPlatform::getAdapterOptions() {
     constexpr std::array powerPreferences = {
         wgpu::PowerPreference::HighPerformance,
         wgpu::PowerPreference::LowPower };
-    constexpr std::array backendTypes = { wgpu::BackendType::Metal };
+    constexpr std::array backendTypes = {
+        wgpu::BackendType::Metal,
+        // To enable software rasterization on MacOS, we need to ensure Vulkan adapters are
+        // available.
+        wgpu::BackendType::Vulkan,
+    };
     constexpr std::array forceFallbackAdapters = { false, true };
     constexpr size_t totalCombinations =
             powerPreferences.size() * backendTypes.size() * forceFallbackAdapters.size();
