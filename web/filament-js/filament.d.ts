@@ -1595,7 +1595,7 @@ export interface View$AmbientOcclusionOptions$Gtao {
      */
     sampleStepsPerSlice?: number;
     /**
-     * thickness heuristic, should be closed to 0. No effect when useBitmask sets to true.
+     * thickness heuristic, should be closed to 0. No effect when useVisibilityBitmasks sets to true.
      */
     thicknessHeuristic?: number;
     /**
@@ -1603,7 +1603,7 @@ export interface View$AmbientOcclusionOptions$Gtao {
      */
     useVisibilityBitmasks?: boolean;
     /**
-     * constant thickness value of objects on the screen in world space. Only take effect when useBitmask is set to true.
+     * constant thickness value of objects on the screen in world space. Only take effect when useVisibilityBitmasks is set to true.
      */
     constThickness?: number;
     /**
