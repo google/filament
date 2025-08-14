@@ -30,6 +30,13 @@ class BufferDescriptor;
 
 class WebGPUBufferBase /* intended to be extended */ {
 public:
+    /**
+     * IMPORTANT NOTE: when reusing a buffers with command encoders in the caller logic,
+     * e.g. the WebGPU driver/backend, make sure to flush (submit) pending commands (draws, etc.) to
+     * the GPU prior to calling this blit, because texture updates may otherwise (unintentionally)
+     * happen after draw commands encoded in the encoder. Submitting any commands up to this point
+     * ensures the calls happen in the expected sequence.
+     */
     void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Queue const&);
 
     [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
