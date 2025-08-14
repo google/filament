@@ -999,11 +999,17 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
-    return mResourceManager.allocHandle<VulkanStream>();
+    auto handle = mResourceManager.allocHandle<VulkanStream>();
+    auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
+    stream.inc();
+    return handle;
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired() {
-    return mResourceManager.allocHandle<VulkanStream>();
+    auto handle = mResourceManager.allocHandle<VulkanStream>();
+    auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
+    stream.inc();
+    return handle;
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
