@@ -365,6 +365,7 @@ bool WebGPUPipelineCache::RenderPipelineKeyEqual::operator()(RenderPipelineKey c
 }
 
 void WebGPUPipelineCache::removeExpiredPipelines() {
+    FWGPU_SYSTRACE_CONTEXT();
     using Iterator = decltype(mRenderPipelines)::const_iterator;
     for (Iterator iterator{ mRenderPipelines.begin() }; iterator != mRenderPipelines.end();) {
         RenderPipelineCacheEntry const& entry{ iterator.value() };
