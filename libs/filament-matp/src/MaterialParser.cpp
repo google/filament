@@ -501,6 +501,7 @@ bool MaterialParser::parse(filamat::MaterialBuilder& builder,
             .platform(config.getPlatform())
             .targetApi(config.getTargetApi())
             .optimization(config.getOptimizationLevel())
+            .workarounds(config.getWorkarounds())
             .printShaders(config.printShaders())
             .saveRawVariants(config.saveRawVariants())
             .generateDebugInfo(config.isDebug())
