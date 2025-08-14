@@ -16,22 +16,32 @@
 
 #include "CommandlineConfig.h"
 
-#include <private/filament/Variant.h>
+#include <filament-matp/Config.h>
 
-#include <getopt/getopt.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/Path.h>
 
-#include <istream>
+#include <getopt/getopt.h>
+
+#include <cstddef>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <string>
 
 using namespace utils;
+using namespace filament;
 
 namespace matc {
 
 static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
-static const struct option OPTIONS[] = {
+static const option OPTIONS[] = {
         { "help",                    no_argument, nullptr, 'h' },
         { "license",                 no_argument, nullptr, 'L' },
         { "output",            required_argument, nullptr, 'o' },
@@ -78,7 +88,7 @@ static bool isPIIOption(const char* longOptionName) {
 }
 
 static void usage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
+    std::string const exec_name(Path(name).getName());
     std::string usage(
             "MATC is a command-line tool to compile material definition.\n"
             "\n"
@@ -161,37 +171,37 @@ static void usage(char* name) {
 }
 
 static void license() {
-    static const char *license[] = {
+    static char const * const license[] = {
         #include "licenses/licenses.inc"
         nullptr
     };
 
-    const char **p = &license[0];
+    const char * const *p = &license[0];
     while (*p)
         std::cout << *p++ << std::endl;
 }
 
-static filament::UserVariantFilterMask parseVariantFilter(const std::string& arg) {
+static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
     std::stringstream ss(arg);
     std::string item;
-    filament::UserVariantFilterMask variantFilter = 0;
+    UserVariantFilterMask variantFilter = 0;
     while (std::getline(ss, item, ',')) {
         if (item == "directionalLighting") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
+            variantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
         } else if (item == "dynamicLighting") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
+            variantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
         } else if (item == "shadowReceiver") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SHADOW_RECEIVER;
+            variantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
         } else if (item == "skinning") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SKINNING;
+            variantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
         } else if (item == "vsm") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::VSM;
+            variantFilter |= uint32_t(UserVariantFilterBit::VSM);
         } else if (item == "fog") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::FOG;
+            variantFilter |= uint32_t(UserVariantFilterBit::FOG);
         } else if (item == "ssr") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SSR;
+            variantFilter |= uint32_t(UserVariantFilterBit::SSR);
         } else if (item == "stereo") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::STE;
+            variantFilter |= uint32_t(UserVariantFilterBit::STE);
         }
     }
     return variantFilter;
@@ -201,7 +211,7 @@ CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(ar
     mIsValid = parse();
 }
 
-static void parseDefine(std::string defineString, matp::Config::StringReplacementMap& defines) {
+static void parseDefine(std::string const& defineString, matp::Config::StringReplacementMap& defines) {
     const char* const defineArg = defineString.c_str();
     const size_t length = defineString.length();
 
@@ -217,13 +227,13 @@ static void parseDefine(std::string defineString, matp::Config::StringReplacemen
             // Edge-cases, missing define name or value.
             return;
         }
-        std::string def(defineArg, p - defineArg);
+        std::string const def(defineArg, p - defineArg);
         defines.emplace(def, p + 1);
         return;
     }
 
     // No explicit assignment, use a default value of 1.
-    std::string def(defineArg, p - defineArg);
+    std::string const def(defineArg, p - defineArg);
     defines.emplace(def, "1");
 }
 
@@ -232,17 +242,15 @@ bool CommandlineConfig::parse() {
     int option_index = 0;
 
     while ((opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+        std::string const arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
                 usage(mArgv[0]);
                 exit(0);
-                break;
             case 'L':
                 license();
                 exit(0);
-                break;
             case 'o':
                 mOutput = new FilesystemOutput(arg.c_str());
                 break;
@@ -291,13 +299,13 @@ bool CommandlineConfig::parse() {
                 }
                 break;
             case 'l': {
-                auto featureLevel = filament::backend::FeatureLevel(std::atoi(arg.c_str()));
-                mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+                auto featureLevel = backend::FeatureLevel(std::atoi(arg.c_str()));
+                mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_3;
                 switch (featureLevel) {
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_0:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_1:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_2:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_3:
+                    case backend::FeatureLevel::FEATURE_LEVEL_0:
+                    case backend::FeatureLevel::FEATURE_LEVEL_1:
+                    case backend::FeatureLevel::FEATURE_LEVEL_2:
+                    case backend::FeatureLevel::FEATURE_LEVEL_3:
                         mFeatureLevel = featureLevel;
                         break;
                 }
@@ -318,9 +326,8 @@ bool CommandlineConfig::parse() {
             case 'v':
                 // Similar to --help, the --version command does an early exit in order to avoid
                 // subsequent error spew such as "Missing input filename" etc.
-                std::cout << filament::MATERIAL_VERSION << std::endl;
+                std::cout << MATERIAL_VERSION << std::endl;
                 exit(0);
-                break;
             case 'V':
                 mVariantFilter = parseVariantFilter(arg);
                 break;
