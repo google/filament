@@ -34,13 +34,14 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 using namespace utils;
 using namespace filament;
 
 namespace matc {
 
-static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
+static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:";
 static const option OPTIONS[] = {
         { "help",                    no_argument, nullptr, 'h' },
         { "license",                 no_argument, nullptr, 'L' },
@@ -66,6 +67,7 @@ static const option OPTIONS[] = {
         { "raw",                     no_argument, nullptr, 'w' },
         { "no-sampler-validation",   no_argument, nullptr, 'F' },
         { "save-raw-variants",       no_argument, nullptr, 'R' },
+        { "workarounds",       required_argument, nullptr, 'W' },
         { nullptr, 0, nullptr, 0 }  // termination of the option list
 };
 
@@ -79,7 +81,7 @@ static bool isPIIOption(const char* longOptionName) {
     if (!longOptionName) {
         return false;
     }
-    for (auto option : PII_OPTIONS) {
+    for (auto const option : PII_OPTIONS) {
         if (option == longOptionName) {
             return true;
         }
@@ -143,6 +145,8 @@ static void usage(char* name) {
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
             "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
+            "   --workarounds, -W\n"
+            "       Workarounds to apply: all or none. (default is all).\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
@@ -207,15 +211,16 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
     return variantFilter;
 }
 
-CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(argc), mArgv(argv) {
+CommandlineConfig::CommandlineConfig(int const argc, char** argv)
+        : Config(), mArgc(argc), mArgv(argv) {
     // Add aliases for some optimization flags. We do this by pre-processing the arguments,
     // since getopt has trouble with short options that are longer than one character (e.g. -Os).
     for (int i = 1; i < mArgc; i++) {
         if (mArgv[i]) {
             if (strcmp(mArgv[i], "-Os") == 0) {
-                mArgv[i] = (char*)"-S";
+                mArgv[i] = (char *)"-S";
             } else if (strcmp(mArgv[i], "-O0") == 0) {
-                mArgv[i] = (char*)"-g";
+                mArgv[i] = (char *)"-g";
             }
         }
     }
@@ -310,7 +315,7 @@ bool CommandlineConfig::parse() {
                 }
                 break;
             case 'l': {
-                auto featureLevel = backend::FeatureLevel(std::atoi(arg.c_str()));
+                auto const featureLevel = backend::FeatureLevel(std::atoi(arg.c_str()));
                 mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_3;
                 switch (featureLevel) {
                     case backend::FeatureLevel::FEATURE_LEVEL_0:
@@ -341,6 +346,16 @@ bool CommandlineConfig::parse() {
                 exit(0);
             case 'V':
                 mVariantFilter = parseVariantFilter(arg);
+                break;
+            case 'W':
+                if (arg == "none") {
+                    mWorkarounds = Workarounds::NONE;
+                } else if (arg == "all") {
+                    mWorkarounds = Workarounds::ALL;
+                } else {
+                    std::cerr << "Unrecognized workaround. Must be 'all'|'none'." << std::endl;
+                    return false;
+                }
                 break;
             // These 2 flags are supported for backward compatibility
             case 'O':
@@ -393,7 +408,7 @@ std::string CommandlineConfig::toPIISafeString() const noexcept {
     while (true) {
         // getopt_long will only set `long_index` if a long option is parsed.
         int long_index = -1;
-        int opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
+        int const opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
         if (opt == -1) {
             break; // End of options
         }
@@ -436,7 +451,7 @@ std::string CommandlineConfig::toPIISafeString() const noexcept {
         }
 
         // Add an argument if available.
-        if (optarg && matched_option && matched_option->has_arg != no_argument) {
+        if (optarg && matched_option->has_arg != no_argument) {
             result += optarg;
             result += " ";
         }
