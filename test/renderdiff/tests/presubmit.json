@@ -1,6 +1,6 @@
 {
     "name": "presubmit",
-    "backends": ["opengl"],
+    "backends": ["opengl", "vulkan"],
     "model_search_paths": ["third_party/models"],
     "presets": [
         {
