@@ -412,6 +412,7 @@ endif()
 
 if (APPLE AND NOT IOS)
     target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+    target_link_libraries(${TARGET} PRIVATE "-framework QuartzCore")
 endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
