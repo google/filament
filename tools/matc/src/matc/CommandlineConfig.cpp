@@ -27,10 +27,10 @@
 #include <getopt/getopt.h>
 
 #include <cstddef>
-#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -111,7 +111,7 @@ static void usage(char* name) {
             "       Specify path to output file\n\n"
             "   --platform, -p\n"
             "       Shader family to generate: desktop, mobile or all (default)\n\n"
-            "   --optimize-size, -S\n"
+            "   --optimize-size, -S, -Os\n"
             "       Optimize generated shader code for size instead of just performance\n\n"
             "   --api, -a\n"
             "       Specify the target API: opengl (default), vulkan, metal, or all\n"
@@ -146,7 +146,7 @@ static void usage(char* name) {
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
-            "   --optimize-none, -g\n"
+            "   --optimize-none, -g, -O0\n"
             "       Disable all shader optimizations, for debugging\n\n"
             "   --preprocessor-only, -E\n"
             "       Optimize shaders by running only the preprocessor\n\n"
@@ -208,6 +208,17 @@ static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
 }
 
 CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(argc), mArgv(argv) {
+    // Add aliases for some optimization flags. We do this by pre-processing the arguments,
+    // since getopt has trouble with short options that are longer than one character (e.g. -Os).
+    for (int i = 1; i < mArgc; i++) {
+        if (mArgv[i]) {
+            if (strcmp(mArgv[i], "-Os") == 0) {
+                mArgv[i] = (char*)"-S";
+            } else if (strcmp(mArgv[i], "-O0") == 0) {
+                mArgv[i] = (char*)"-g";
+            }
+        }
+    }
     mIsValid = parse();
 }
 
