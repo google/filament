@@ -187,7 +187,8 @@ void initConfig(wgpu::SurfaceConfiguration& config, wgpu::Device const& device,
         wgpu::SurfaceCapabilities const& capabilities, wgpu::Extent2D const& extent,
         bool useSRGBColorSpace) {
     config.device = device;
-    config.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc;
+    config.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc |
+                   wgpu::TextureUsage::TextureBinding;
     config.width = extent.width;
     config.height = extent.height;
     config.format = selectColorFormat(capabilities.formatCount, capabilities.formats, useSRGBColorSpace);

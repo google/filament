@@ -833,10 +833,8 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
             inputData->type) };
     const wgpu::TextureFormat outputLinearFormat{ toLinearFormat(
             texture->getTexture().GetFormat()) };
-    const bool conversionNecessary{
-        inputPixelFormat != outputLinearFormat && inputData->type != PixelDataType::COMPRESSED
-    }; // compressed formats should never need conversion
-    const bool doBlit{ conversionNecessary };
+
+    const bool doBlit{ conversionNecessary(inputPixelFormat, outputLinearFormat, inputData->type) };
 #if FWGPU_ENABLED(FWGPU_DEBUG_UPDATE_IMAGE)
     if (texture->width > 1000 && texture->height > 500) {
         FWGPU_LOGD << "Update3DImage(..., level=" << level << ", xoffset=" << xoffset
@@ -1073,7 +1071,7 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
     if (!mCommandEncoder) {
-        wgpu::CommandEncoderDescriptor commandEncoderDescriptor = { .label = "frame_command_encoder" };
+        wgpu::CommandEncoderDescriptor commandEncoderDescriptor{ .label = "frame_command_encoder" };
         mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
     }
     assert_invariant(mCommandEncoder);
@@ -1324,16 +1322,16 @@ void WebGPUDriver::stopCapture(int) {
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
-    auto srcTarget = handleCast<WebGPURenderTarget>(sourceRenderTargetHandle);
+    const auto srcTarget{ handleCast<WebGPURenderTarget>(sourceRenderTargetHandle) };
     assert_invariant(srcTarget);
 
-    wgpu::Texture srcTexture = nullptr;
+    wgpu::Texture srcTexture{ nullptr };
     if (srcTarget->isDefaultRenderTarget()) {
         assert_invariant(mSwapChain);
         srcTexture = mSwapChain->getCurrentTexture();
     } else {
         // Handle custom render targets. Read from the first color attachment.
-        const auto& colorAttachmentInfos = srcTarget->getColorAttachmentInfos();
+        const auto& colorAttachmentInfos{ srcTarget->getColorAttachmentInfos() };
         // TODO we are currently assuming the first attachment is the desired texture.
         if (colorAttachmentInfos[0].handle) {
             auto texture = handleCast<WebGPUTexture>(colorAttachmentInfos[0].handle);
@@ -1348,97 +1346,144 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    const uint32_t srcWidth = srcTexture.GetWidth();
-    const uint32_t srcHeight = srcTexture.GetHeight();
+    const uint32_t srcWidth {srcTexture.GetWidth()};
+    const uint32_t srcHeight{srcTexture.GetHeight()};
 
     // Clamp read region to texture bounds
-    if (x >= srcWidth || y >= srcHeight) {
+    if (UTILS_UNLIKELY(x >= srcWidth || y >= srcHeight)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
-    auto actualWidth = std::min(width, srcWidth - x);
-    auto actualHeight = std::min(height, srcHeight - y);
+    auto actualWidth{ std::min(width, srcWidth - x) };
+    auto actualHeight{ std::min(height, srcHeight - y)};
     if (UTILS_UNLIKELY(actualWidth == 0 || actualHeight == 0)) {
         scheduleDestroy(std::move(pixelBufferDescriptor));
         return;
     }
 
-    // Once we're ready to read the pixels, we need to flush all the previous work of this frame.
-    // This ensures that the readPixels will be ordered after all the draws.
-    flush();
+    if (!mCommandEncoder) {
+        const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{
+            .label = "read_pixels_command",
+        };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&commandEncoderDescriptor);
+        FILAMENT_CHECK_POSTCONDITION(mCommandEncoder)
+                << "Failed to create command encoder for readPixels?";
+    }
 
-    const size_t dstBytesPerPixel = PixelBufferDescriptor::computePixelSize(
-            pixelBufferDescriptor.format, pixelBufferDescriptor.type);
-    const size_t srcBytesPerPixel = getWGPUTextureFormatPixelSize(srcTexture.GetFormat());
+    const wgpu::TextureFormat srcFormat{srcTexture.GetFormat()};
+    const wgpu::TextureFormat dstFormat{toWebGPUFormat(pixelBufferDescriptor.format,
+                                                       pixelBufferDescriptor.type)};
+    wgpu::Texture textureToReadFrom{srcTexture};
+    wgpu::Texture stagingTexture{ nullptr };
+    uint32_t readX{x};
+    uint32_t readY{y};
 
-    FILAMENT_CHECK_PRECONDITION(dstBytesPerPixel == srcBytesPerPixel && dstBytesPerPixel > 0)
-            << "Source texture pixel size (" << srcBytesPerPixel
-            << ") does not match destination pixel buffer pixel size (" << dstBytesPerPixel
-            << "), or the format is not supported for readPixels.";
+    // If the source format is different from the destination (e.g. BGRA vs RGBA),
+    // we need to perform a conversion using an intermediate blit.
+    if (conversionNecessary(srcFormat, dstFormat, pixelBufferDescriptor.type)) {
+        const wgpu::TextureDescriptor stagingDescriptor{
+                .label = "readpixels_staging_texture",
+                .usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::RenderAttachment,
+                .dimension = wgpu::TextureDimension::e2D, // are we sure we can assume this? thus far we have
+                .size = {
+                        .width = actualWidth,
+                        .height = actualHeight,
+                        .depthOrArrayLayers = 1,
+                },
+                .format = dstFormat,
+                .mipLevelCount = 1,
+                .sampleCount = srcTexture.GetSampleCount(),
+        };
+        stagingTexture = mDevice.CreateTexture(&stagingDescriptor);
+        assert_invariant(stagingTexture);
+        textureToReadFrom = stagingTexture;
+        const WebGPUBlitter::BlitArgs blitArgs{
+                .source = {
+                        .texture = srcTexture,
+                        .origin = {.x = x, .y = y,},
+                        .extent = {
+                                .width = actualWidth,
+                                .height = actualHeight,
+                        },
+                },
+                .destination = {
+                        .texture = stagingTexture,
+                        .origin = {.x = 0, .y = 0},
+                        .extent = {
+                                .width = actualWidth,
+                                .height = actualHeight,
+                        },
+                },
+                .filter = SamplerMagFilter::NEAREST, // Use NEAREST for a 1:1 copy
+        };
+        mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
 
-    // Create a staging buffer to copy the texture to. WebGPU requires 256 byte alignment
-    const size_t bytesPerPixel = dstBytesPerPixel;
-    const size_t unpaddedBytesPerRow = actualWidth * bytesPerPixel;
-    const size_t alignment = 256;
-    const size_t paddedBytesPerRow = (unpaddedBytesPerRow + alignment - 1) & ~(alignment - 1);
+        // The subsequent read will be from the top-left of the new intermediate texture.
+        readX = 0;
+        readY = 0;
+    }
 
-    size_t bufferSize = paddedBytesPerRow * height;
-    wgpu::BufferDescriptor bufferDesc;
-    bufferDesc.size = bufferSize;
-    bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
-    wgpu::Buffer stagingBuffer = mDevice.CreateBuffer(&bufferDesc);
+    const size_t bytesPerPixel{ PixelBufferDescriptor::computePixelSize(
+            pixelBufferDescriptor.format, pixelBufferDescriptor.type) };
+    const size_t unpaddedBytesPerRow{ actualWidth * bytesPerPixel };
+    const size_t alignment{ 256 };
+    const size_t paddedBytesPerRow = { (unpaddedBytesPerRow + alignment - 1) & ~(alignment - 1) };
+
+    const size_t bufferSize{ paddedBytesPerRow * actualHeight };
+    const wgpu::BufferDescriptor bufferDesc{
+        .usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead,
+        .size = bufferSize,
+    };
+
+    const wgpu::Buffer stagingBuffer{ mDevice.CreateBuffer(&bufferDesc) };
     assert_invariant(stagingBuffer);
 
-    wgpu::CommandEncoder encoder = mDevice.CreateCommandEncoder();
-    assert_invariant(encoder);
+    // WebGPU's texture coordinates for copies are top-left, but Filament's y-coordinate is
+    // bottom-left. We must flip the y-coordinate relative to the texture we are reading from.
+    const uint32_t textureHeight{ textureToReadFrom.GetHeight() };
+    const uint32_t flippedY{ textureHeight - readY - actualHeight };
 
-    // WebGPU flips the y axis like Metal does
-    const uint32_t flippedY = srcHeight - y - height;
-    wgpu::TexelCopyTextureInfo source{
-        .texture = srcTexture,
-        .mipLevel = 0,
-        .origin = { .x = x, .y = flippedY, .z = 0 },
+    const wgpu::TexelCopyTextureInfo source{
+            .texture = textureToReadFrom, // Read from the original or intermediate texture
+            .mipLevel = 0,
+            .origin = {.x = readX, .y = flippedY, .z = 0,},
     };
-    wgpu::TexelCopyBufferInfo destination {
-        .layout = {
-            .offset = 0,
-            .bytesPerRow = static_cast<uint32_t>(paddedBytesPerRow),
-            .rowsPerImage = actualHeight,
-        },
-        .buffer = stagingBuffer
+    const wgpu::TexelCopyBufferInfo destination{
+            .layout = {
+                    .offset = 0,
+                    .bytesPerRow = static_cast<uint32_t>(paddedBytesPerRow),
+                    .rowsPerImage = actualHeight,
+            },
+            .buffer = stagingBuffer
     };
-    wgpu::Extent3D copySize{ .width = actualWidth,
+    const wgpu::Extent3D copySize{
+        .width = actualWidth,
         .height = actualHeight,
-        .depthOrArrayLayers = 1 };
-    // TODO consider removing encoder finish + submit once we have test coverage and can
-    //      safely verify doing so will not result in strange errors. We don't think this
-    //      submit is necessary, as the encoder should get finished and the command
-    //      submitted in commit(), finish(), and/or flush() in this frame
-    //      or the next anyway. And, the read/copy bits will be encoded before other things.
-    //      Thus, not submitting here _seems_ ok. Nonetheless, doing the submit here likely
-    //      represents unnecessary inefficiency and higher bandwidth
-    //      between the CPU and GPU, but we are worried about functional correctness at this
-    //      stage.
-    encoder.CopyTextureToBuffer(&source, &destination, &copySize);
-    wgpu::CommandBuffer commandBuffer = encoder.Finish();
-    mQueue.Submit(1, &commandBuffer);
+        .depthOrArrayLayers = 1,
+    };
+    mCommandEncoder.CopyTextureToBuffer(&source, &destination, &copySize);
+    mCommandBuffer = mCommandEncoder.Finish();
+    assert_invariant(mCommandBuffer);
+    mCommandEncoder = nullptr;
+    mQueue.Submit(1, &mCommandBuffer);
+    mCommandBuffer = nullptr;
 
     // Map the buffer to read the data
-    struct UserData {
+    struct UserData final {
         PixelBufferDescriptor pixelBufferDescriptor;
         wgpu::Buffer buffer;
         size_t unpaddedBytesPerRow;
         size_t paddedBytesPerRow;
         uint32_t height;
-        WebGPUDriver* driver;
+        WebGPUDriver *driver;
     };
     auto userData = std::make_unique<UserData>(UserData{
-        .pixelBufferDescriptor = std::move(pixelBufferDescriptor),
-        .buffer = std::move(stagingBuffer),
-        .unpaddedBytesPerRow = unpaddedBytesPerRow,
-        .paddedBytesPerRow = paddedBytesPerRow,
-        .height = height,
-        .driver = this,
+            .pixelBufferDescriptor = std::move(pixelBufferDescriptor),
+            .buffer = std::move(stagingBuffer),
+            .unpaddedBytesPerRow = unpaddedBytesPerRow,
+            .paddedBytesPerRow = paddedBytesPerRow,
+            .height = actualHeight,
+            .driver = this,
     });
 
     userData->buffer.MapAsync(
@@ -1446,12 +1491,18 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
             [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
                 std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {
-                    const char* src = static_cast<const char*>(
-                            data->buffer.GetConstMappedRange(0, data->buffer.GetSize()));
-                    char* dst = static_cast<char*>(data->pixelBufferDescriptor.buffer);
-                    for (uint32_t i = 0; i < data->height; ++i) {
-                        memcpy(dst + i * data->unpaddedBytesPerRow,
-                                src + i * data->paddedBytesPerRow, data->unpaddedBytesPerRow);
+                    const char *src {static_cast<const char *>(
+                            data->buffer.GetConstMappedRange(0, data->buffer.GetSize()))};
+                    char* dst{ static_cast<char*>(data->pixelBufferDescriptor.buffer) };
+
+                    // If padding was added for alignment, we need to copy row by row.
+                    if (data->paddedBytesPerRow == data->unpaddedBytesPerRow) {
+                        memcpy(dst, src, data->unpaddedBytesPerRow * data->height);
+                    } else {
+                        for (uint32_t i{ 0 }; i < data->height; ++i) {
+                            memcpy(dst + i * data->unpaddedBytesPerRow,
+                                    src + i * data->paddedBytesPerRow, data->unpaddedBytesPerRow);
+                        }
                     }
                     data->buffer.Unmap();
                 } else {
@@ -1478,8 +1529,12 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
         const uint8_t sourceLayer, Handle<HwTexture> sourceTextureHandle,
         const uint8_t destinationLevel, const uint8_t destinationLayer) {
-    FILAMENT_CHECK_PRECONDITION(mCommandEncoder)
-            << "Resolve assumes there is a valid command encoder to piggyback on.";
+    if (!mCommandEncoder) {
+        const wgpu::CommandEncoderDescriptor encoderDescriptor{
+            .label = "command_created_with_resolve",
+        };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&encoderDescriptor);
+    }
     FILAMENT_CHECK_PRECONDITION(mRenderPassEncoder == nullptr)
             << "Resolve cannot be called during an existing render pass";
     const auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
