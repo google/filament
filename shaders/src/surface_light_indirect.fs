@@ -451,8 +451,13 @@ void refractionSolidSphere(const PixelParams pixel,
     const vec3 n, vec3 r, out Refraction ray) {
     r = refract(r, n, pixel.etaIR);
     float NoR = dot(n, r);
-    float d = pixel.thickness * -NoR;
+    float d = 0.0;
+#if defined(MATERIAL_HAS_THICKNESS)
+    d = pixel.thickness * -NoR;
     ray.position = vec3(shading_position + r * d);
+#else
+    ray.position = vec3(shading_position);
+#endif
     ray.d = d;
     vec3 n1 = normalize(NoR * r - n * 0.5);
     ray.direction = refract(r, n1,  pixel.etaRI);
