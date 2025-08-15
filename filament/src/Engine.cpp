@@ -30,6 +30,7 @@
 #include "details/Skybox.h"
 #include "details/Stream.h"
 #include "details/SwapChain.h"
+#include "details/Sync.h"
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 #include "details/View.h"
@@ -132,6 +133,8 @@ SwapChain* Engine::createSwapChain(uint32_t const width, uint32_t const height, 
     return downcast(this)->createSwapChain(width, height, flags);
 }
 
+Sync* Engine::createSync() noexcept { return downcast(this)->createSync(); }
+
 bool Engine::destroy(const BufferObject* p) {
     return downcast(this)->destroy(downcast(p));
 }
@@ -204,6 +207,8 @@ bool Engine::destroy(const SwapChain* p) {
     return downcast(this)->destroy(downcast(p));
 }
 
+bool Engine::destroy(const Sync* p) { return downcast(this)->destroy(downcast(p)); }
+
 bool Engine::destroy(const InstanceBuffer* p) {
     return downcast(this)->destroy(downcast(p));
 }
@@ -221,6 +226,7 @@ bool Engine::isValid(const VertexBuffer* p) const {
 bool Engine::isValid(const Fence* p) const {
     return downcast(this)->isValid(downcast(p));
 }
+bool Engine::isValid(const Sync* p) const { return downcast(this)->isValid(downcast(p)); }
 bool Engine::isValid(const IndexBuffer* p) const {
     return downcast(this)->isValid(downcast(p));
 }

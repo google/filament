@@ -34,6 +34,7 @@
 #include "details/Skybox.h"
 #include "details/Stream.h"
 #include "details/SwapChain.h"
+#include "details/Sync.h"
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 #include "details/View.h"
@@ -1011,6 +1012,15 @@ FSwapChain* FEngine::createSwapChain(uint32_t width, uint32_t height, uint64_t f
     return p;
 }
 
+FSync* FEngine::createSync() noexcept {
+    FSync* p = mHeapAllocator.make<FSync>(*this);
+    if (UTILS_LIKELY(p)) {
+        std::lock_guard const guard(mSyncListLock);
+        mSyncs.insert(p);
+    }
+    return p;
+}
+
 /*
  * Objects created with a component manager
  */
@@ -1201,6 +1211,11 @@ bool FEngine::destroy(const FSwapChain* p) {
 }
 
 UTILS_NOINLINE
+bool FEngine::destroy(const FSync* p) {
+    return terminateAndDestroyLocked(mSyncListLock, p, mSyncs);
+}
+
+UTILS_NOINLINE
 bool FEngine::destroy(const FStream* p) {
     return terminateAndDestroy(p, mStreams);
 }
@@ -1280,6 +1295,8 @@ bool FEngine::isValid(const FVertexBuffer* p) const {
 bool FEngine::isValid(const FFence* p) const {
     return isValid(p, mFences);
 }
+
+bool FEngine::isValid(const FSync* p) const { return isValid(p, mSyncs); }
 
 bool FEngine::isValid(const FIndexBuffer* p) const {
     return isValid(p, mIndexBuffers);
