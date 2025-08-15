@@ -438,9 +438,19 @@ struct AmbientOcclusionOptions {
         uint8_t sampleSliceCount = 4;     //!< # of slices. Higher value makes less noise.
         uint8_t sampleStepsPerSlice = 3;  //!< # of steps the radius is divided into for integration. Higher value makes less bias.
         float thicknessHeuristic = 0.004f; //!< thickness heuristic, should be closed to 0. No effect when useVisibilityBitmasks sets to true.
-        bool useVisibilityBitmasks = false; //!< enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+
+        /**
+         * Enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+         * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
+         */
+        bool useVisibilityBitmasks = false;
         float constThickness = 0.5f; //!< constant thickness value of objects on the screen in world space. Only take effect when useVisibilityBitmasks is set to true.
-        bool linearThickness = false; //!< increase thickness with distance to maintain detail on distant surfaces.
+
+        /**
+         * Increase thickness with distance to maintain detail on distant surfaces.
+         * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
+         */
+        bool linearThickness = false;
     };
     Gtao gtao;                           // %codegen_skip_javascript% %codegen_java_flatten%
 };

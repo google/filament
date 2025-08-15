@@ -1599,7 +1599,8 @@ export interface View$AmbientOcclusionOptions$Gtao {
      */
     thicknessHeuristic?: number;
     /**
-     * enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+     * Enables or disables visibility bitmasks mode. Notes that bent normal doesn't work under this mode.
+     * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
      */
     useVisibilityBitmasks?: boolean;
     /**
@@ -1607,7 +1608,8 @@ export interface View$AmbientOcclusionOptions$Gtao {
      */
     constThickness?: number;
     /**
-     * increase thickness with distance to maintain detail on distant surfaces.
+     * Increase thickness with distance to maintain detail on distant surfaces.
+     * Caution: Changing this option at runtime is very expensive as it may trigger a shader re-compilation.
      */
     linearThickness?: boolean;
 }
