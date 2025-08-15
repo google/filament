@@ -89,7 +89,7 @@ public:
         ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
         api.makeCurrent(mSwapChain, mSwapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         api.beginRenderPass(renderTarget, params);
         ps.primitiveType = PrimitiveType::TRIANGLES;
@@ -117,7 +117,6 @@ public:
         api.endRenderPass();
 
         api.commit(mSwapChain);
-        api.endFrame(0);
     }
 
     void TearDown() override {
@@ -146,9 +145,6 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
     EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "StencilBuffer", 0x3B1AEF0F));
-
-    flushAndWait();
-    getDriver().purge();
 }
 
 TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
@@ -172,9 +168,6 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
     EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "DepthAndStencilBuffer", 0x3B1AEF0F));
-
-    flushAndWait();
-    getDriver().purge();
 }
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
@@ -204,6 +197,7 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
                     { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
 
     api.startCapture(0);
+    cleanup.addPostCall([&]() { api.stopCapture(0); });
 
     // We'll be using a triangle as geometry.
     TrianglePrimitive smallTriangle(api);
@@ -233,44 +227,41 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::INCR;
 
     api.makeCurrent(mSwapChain, mSwapChain);
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    api.beginRenderPass(renderTarget0, params);
-    ps.primitiveType = PrimitiveType::TRIANGLES;
-    ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
-    api.bindPipeline(ps);
-    api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
+        api.beginRenderPass(renderTarget0, params);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = smallTriangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(smallTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
 
-    // Step 2: Render a larger triangle with the stencil test enabled.
-    params.flags.clear = TargetBufferFlags::COLOR0;
-    params.flags.discardStart = TargetBufferFlags::COLOR0;
-    params.flags.discardEnd = TargetBufferFlags::STENCIL;
-    params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
-    ps.rasterState.colorWrite = true;
-    ps.stencilState.stencilWrite = false;
-    ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
-    ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
-    ps.stencilState.front.ref = 0u;
+        // Step 2: Render a larger triangle with the stencil test enabled.
+        params.flags.clear = TargetBufferFlags::COLOR0;
+        params.flags.discardStart = TargetBufferFlags::COLOR0;
+        params.flags.discardEnd = TargetBufferFlags::STENCIL;
+        params.clearColor = math::float4(0.0f, 0.0f, 1.0f, 1.0f);
+        ps.rasterState.colorWrite = true;
+        ps.stencilState.stencilWrite = false;
+        ps.stencilState.front.stencilOpDepthStencilPass = StencilOperation::KEEP;
+        ps.stencilState.front.stencilFunc = StencilState::StencilFunction::E;
+        ps.stencilState.front.ref = 0u;
 
-    api.beginRenderPass(renderTarget1, params);
-    ps.primitiveType = PrimitiveType::TRIANGLES;
-    ps.vertexBufferInfo = triangle.getVertexBufferInfo();
-    api.bindPipeline(ps);
-    api.bindRenderPrimitive(triangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
+        api.beginRenderPass(renderTarget1, params);
+        ps.primitiveType = PrimitiveType::TRIANGLES;
+        ps.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(ps);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
 
-    api.commit(mSwapChain);
-    api.stopCapture(0);
-    api.endFrame(0);
-
+        api.commit(mSwapChain);
+        api.stopCapture(0);
+    }
     EXPECT_IMAGE(renderTarget1, ScreenshotParams(screenWidth(), screenHeight(),
                                         "StencilBufferAutoResolve", 3353562179));
-
-    flushAndWait();
-    getDriver().purge();
 }
 
 } // namespace test
