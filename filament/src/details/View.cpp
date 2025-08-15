@@ -659,10 +659,12 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         if (hasDynamicLighting()) {
             auto& froxelizer = mFroxelizer;
             if (froxelizer.prepare(driver, rootArenaScope, viewport,
-                    cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
+                    cameraInfo.projection, cameraInfo.zn, cameraInfo.zf,
+                    cameraInfo.clipTransform)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
                 //       strictly necessary
                 getColorPassDescriptorSet().prepareDynamicLights(mFroxelizer, mFroxelVizEnabled);
+                mFroxelConfigurationAge++;
             }
             // We need to pass viewMatrix by value here because it extends the scope of this
             // function.
@@ -1432,6 +1434,10 @@ View::PickingQuery& FView::pick(uint32_t const x, uint32_t const y, CallbackHand
 
 void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
     mStereoscopicOptions = options;
+}
+
+View::FroxelConfigurationInfoWithAge FView::getFroxelConfigurationInfo() const noexcept {
+    return { mFroxelizer.getFroxelConfigurationInfo(), mFroxelConfigurationAge };
 }
 
 void FView::setMaterialGlobal(uint32_t const index, float4 const& value) {

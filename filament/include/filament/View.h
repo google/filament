@@ -27,6 +27,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
+#include <math/mat4.h>
 
 #include <utility>
 
@@ -759,6 +760,27 @@ public:
 
     //! debugging: enable or disable froxel visualisation for this view.
     void setFroxelVizEnabled(bool enabled) noexcept;
+
+    //! debugging: returns information about the froxel configuration
+    struct FroxelConfigurationInfo {
+        uint8_t width;
+        uint8_t height;
+        uint8_t depth;
+        uint32_t viewportWidth;
+        uint32_t viewportHeight;
+        math::uint2 froxelDimension;
+        float zLightFar;
+        float linearizer;
+        math::mat4f p;
+        math::float4 clipTransform;
+    };
+
+    struct FroxelConfigurationInfoWithAge {
+        FroxelConfigurationInfo info;
+        uint32_t age;
+    };
+
+    FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
 
     /** Result of a picking query */
     struct PickingQueryResult {
