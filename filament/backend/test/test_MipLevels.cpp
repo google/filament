@@ -69,12 +69,12 @@ TEST_F(BackendTest, TextureViewLod) {
         Shader whiteShader = SharedShaders::makeShader(api, cleanup, ShaderRequest {
             .mVertexType = VertexShaderType::Textured,
             .mFragmentType = FragmentShaderType::White,
-            .mUniformType = ShaderUniformType::Sampler
+            .mUniformType = ShaderUniformType::Sampler2D
         });
 
         // Create a program that samples a texture.
         std::string vertexShader = SharedShaders::getVertexShaderText(
-                VertexShaderType::Textured, ShaderUniformType::Sampler);
+                VertexShaderType::Textured, ShaderUniformType::Sampler2D);
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo {
             "backend_test", "sib_tex", 0,
             SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };

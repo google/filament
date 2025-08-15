@@ -158,9 +158,19 @@ layout(binding = 0, set = 0) uniform Params {
 } params;
 )";
         }
-        case ShaderUniformType::Sampler: {
+        case ShaderUniformType::Sampler2D: {
             return R"(
 layout(location = 0, set = 0) uniform sampler2D test_tex;
+)";
+        }
+        case ShaderUniformType::ISampler2D: {
+            return R"(
+layout(location = 0, set = 0) uniform isampler2D test_tex;
+)";
+        }
+        case ShaderUniformType::USampler2D: {
+            return R"(
+layout(location = 0, set = 0) uniform usampler2D test_tex;
 )";
         }
         default:
@@ -179,12 +189,28 @@ std::vector<UniformConfig> GetUniformConfig(ShaderUniformType type) {
         case ShaderUniformType::SimpleWithPadding: {
             return {{ "Params" }};
         }
-        case ShaderUniformType::Sampler: {
+        case ShaderUniformType::Sampler2D: {
             filament::SamplerInterfaceBlock::SamplerInfo samplerInfo{
                     "backend_test", "test_tex", 0,
                     SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
             return {{
                             "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
+                    }};
+        }
+        case ShaderUniformType::ISampler2D: {
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo{
+                    "backend_test", "test_tex", 0,
+                    SamplerType::SAMPLER_2D, SamplerFormat::INT, Precision::HIGH, false };
+            return {{
+                            "test_tex", DescriptorType::SAMPLER_2D_INT, samplerInfo
+                    }};
+        }
+        case ShaderUniformType::USampler2D: {
+            filament::SamplerInterfaceBlock::SamplerInfo samplerInfo{
+                    "backend_test", "test_tex", 0,
+                    SamplerType::SAMPLER_2D, SamplerFormat::UINT, Precision::HIGH, false };
+            return {{
+                            "test_tex", DescriptorType::SAMPLER_2D_INT, samplerInfo
                     }};
         }
         default:

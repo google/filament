@@ -287,9 +287,9 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     // Test integer format uploads.
     // TODO: These cases fail on OpenGL and Vulkan.
     // TODO: These cases now also fail on Metal, but at some point previously worked.
-     testCases.emplace_back("RGB_INTEGER UBYTE to RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
-     testCases.emplace_back("RGB_INTEGER USHORT to RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
-     testCases.emplace_back("RGB_INTEGER INT to RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
+    testCases.emplace_back("RGB_INTEGER UBYTE to RGB8UI", PixelDataFormat::RGB_INTEGER, PixelDataType::UBYTE, TextureFormat::RGB8UI);
+    testCases.emplace_back("RGB_INTEGER USHORT to RGB16UI", PixelDataFormat::RGB_INTEGER, PixelDataType::USHORT, TextureFormat::RGB16UI);
+    testCases.emplace_back("RGB_INTEGER INT to RGB32I", PixelDataFormat::RGB_INTEGER, PixelDataType::INT, TextureFormat::RGB32I);
 
     // Test uploads with buffer padding.
     // TODO: Vulkan crashes with "Assertion failed: (offset + size <= allocationSize)"
@@ -319,14 +319,23 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
-        filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
-            SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
-
-        std::string const fragment = getFormattedFragment(fragmentTemplate, t.textureFormat);
-        Shader shader(api, cleanup, ShaderConfig{
-           .vertexShader = mVertexShader,
-           .fragmentShader= fragment,
-           .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
+        ShaderUniformType uniformType;
+        switch (getSamplerFormat(t.textureFormat)) {
+            case SamplerFormat::FLOAT:
+            case SamplerFormat::SHADOW: // not used for tests, but must cover all cases
+                uniformType = ShaderUniformType::Sampler2D;
+                break;
+            case SamplerFormat::INT:
+                uniformType = ShaderUniformType::ISampler2D;
+                break;
+            case SamplerFormat::UINT:
+                uniformType = ShaderUniformType::USampler2D;
+                break;
+        }
+        Shader shader = SharedShaders::makeShader(api, cleanup, {
+            .mVertexType = VertexShaderType::Textured,
+            .mFragmentType = FragmentShaderType::Textured,
+            .mUniformType = uniformType,
         });
 
         // Create a Texture.
@@ -374,8 +383,13 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget,
-                ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
+        EXPECT_IMAGE(defaultRenderTarget, ScreenshotParams::Builder()
+                                                  .width(kTexSize)
+                                                  .height(kTexSize)
+                                                  .fileName(t.name)
+                                                  .expectedPixelHash(expectedHash)
+                                                  .forceAlphaValue(1.0f)
+                                                  .build());
 
         api.commit(swapChain);
         api.endFrame(0);

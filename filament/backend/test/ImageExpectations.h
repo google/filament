@@ -19,6 +19,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <optional>
 
 #include "gtest/gtest.h"
 
@@ -45,12 +46,72 @@ class ScreenshotParams {
 public:
     // TODO(b/422804941): Add a set of environments where this test should use a different golden.
     ScreenshotParams(int width, int height, std::string fileName, uint32_t expectedPixelHash,
-            bool isSrgb = false, int numAllowedDeviations = 0, int pixelMatchThreshold = 0);
+            bool isSrgb = false, int numAllowedDeviations = 0, int pixelMatchThreshold = 0,
+            std::optional<float> forceAlphaValue = std::nullopt);
+
+    class Builder {
+    public:
+        Builder& width(int width) {
+            mWidth = width;
+            return *this;
+        }
+
+        Builder& height(int height) {
+            mHeight = height;
+            return *this;
+        }
+
+        Builder& fileName(std::string fileName) {
+            mFileName = fileName;
+            return *this;
+        }
+
+        Builder& expectedPixelHash(uint32_t pixelHash) {
+            mExpectedPixelHash = pixelHash;
+            return *this;
+        }
+
+        Builder& isSrgb(bool isSrgb) {
+            mIsSrgb = isSrgb;
+            return *this;
+        }
+
+        Builder& numAllowedDeviations(int numAllowedDeviations) {
+            mNumAllowedDeviations = numAllowedDeviations;
+            return *this;
+        }
+
+        Builder& pixelMatchTheshold(int pixelMatchTheshold) {
+            mPixelMatchThreshold = pixelMatchTheshold;
+            return *this;
+        }
+
+        Builder& forceAlphaValue(float alphaValue) {
+            mForceAlphaValue = alphaValue;
+            return *this;
+        }
+
+        ScreenshotParams build() {
+            return ScreenshotParams(mWidth, mHeight, mFileName, mExpectedPixelHash, mIsSrgb,
+                    mNumAllowedDeviations, mPixelMatchThreshold, mForceAlphaValue);
+        }
+
+    private:
+        int mWidth;
+        int mHeight;
+        std::string mFileName;
+        uint32_t mExpectedPixelHash;
+        bool mIsSrgb;
+        int mNumAllowedDeviations;
+        int mPixelMatchThreshold;
+        std::optional<float> mForceAlphaValue;
+    };
 
     int width() const;
     int height() const;
     bool isSrgb() const;
     uint32_t expectedHash() const;
+    std::optional<float> forceAlphaValue() const;
 
     static std::filesystem::path actualDirectoryPath();
     std::string actualFileName() const;
@@ -70,6 +131,7 @@ private:
     std::string mFileName;
     int mAllowedPixelDeviations;
     int mPixelMatchThreshold;
+    std::optional<float> mForceAlphaValue;
 };
 
 /**
