@@ -32,6 +32,7 @@
 #include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "CommandStreamDispatcher.h"
@@ -199,6 +200,8 @@ void WebGPUDriver::flush(int /* dummy */) {
 // Submits the currently recorded commands and waits for them to complete on the GPU.
 // This is a synchronous operation and should be used sparingly.
 void WebGPUDriver::finish(int /* dummy */) {
+    mDevice.Tick();
+    mAdapter.GetInstance().ProcessEvents();
     if (mCommandEncoder == nullptr) {
         return;
     }
@@ -221,6 +224,7 @@ void WebGPUDriver::finish(int /* dummy */) {
             });
     std::unique_lock<std::mutex> lock(syncPoint);
     syncCondition.wait(lock, [&done] { return done; });
+    mReadPixelMapsCounter.waitForAllToFinish();
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -1470,7 +1474,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         .size = bufferSize,
     };
 
-    const wgpu::Buffer stagingBuffer{ mDevice.CreateBuffer(&bufferDesc) };
+    wgpu::Buffer stagingBuffer{ mDevice.CreateBuffer(&bufferDesc) };
     assert_invariant(stagingBuffer);
 
     // WebGPU's texture coordinates for copies are top-left, but Filament's y-coordinate is
@@ -1521,6 +1525,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
             .driver = this,
     });
 
+    mReadPixelMapsCounter.startTask();
     userData->buffer.MapAsync(
             wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
@@ -1544,6 +1549,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                     FWGPU_LOGE << "Failed to map staging buffer for readPixels: " << message;
                 }
                 data->driver->scheduleDestroy(std::move(data->pixelBufferDescriptor));
+                data->driver->mReadPixelMapsCounter.finishTask();
             },
             userData.release());
 }
