@@ -196,7 +196,9 @@ static void printUsage(char* name) {
         "       a substring to match against the device name\n\n"
         "   --screenshot-as-ppm, -d\n"
         "       export PPM as oppose to TIFF screenshots\n\n"
-
+        "   --webgpu-backend=<backend>, -w\n"
+        "       You can force WebGPU to select a backend of your choice. Provided that the platform\n"
+        "       supports this backend. (See -a for argument options).\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -215,7 +217,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:d";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:dw:";
     static const struct option OPTIONS[] = {
         { "help",              no_argument,          nullptr, 'h' },
         { "api",               required_argument,    nullptr, 'a' },
@@ -232,6 +234,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "split-view",        no_argument,          nullptr, 'v' },
         { "vulkan-gpu-hint",   required_argument,    nullptr, 'g' },
         { "screenshot-as-ppm", no_argument,          nullptr, 'd' },
+        { "webgpu-backend",    required_argument,    nullptr, 'w' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -311,6 +314,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             }
             case 'd': {
                 app->screenshotAsPPM = true;
+                break;
+            }
+            case 'w': {
+                app->config.forcedWebGPUBackend = samples::parseArgumentsForBackend(arg);
                 break;
             }
         }
