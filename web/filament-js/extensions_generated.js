@@ -113,6 +113,9 @@ Filament.loadGeneratedExtensions = function() {
             sampleSliceCount: 4,
             sampleStepsPerSlice: 3,
             thicknessHeuristic: 0.004,
+            useVisibilityBitmasks: false,
+            constThickness: 0.5,
+            linearThickness: false,
         };
         return Object.assign(options, overrides);
     };
