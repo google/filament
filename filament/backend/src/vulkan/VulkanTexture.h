@@ -36,7 +36,7 @@ namespace filament::backend {
 
 struct VulkanTexture;
 
-struct VulkanStream : public HwStream, fvkmemory::ThreadSafeResource {
+struct VulkanStream : public HwStream, fvkmemory::Resource {
     fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
         fvkmemory::resource_ptr<VulkanTexture> frame;
         const auto& it = mTextures.find(ahb);
