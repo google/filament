@@ -63,6 +63,7 @@ class Scene;
 class Skybox;
 class Stream;
 class SwapChain;
+class Sync;
 class Texture;
 class VertexBuffer;
 class View;
@@ -886,9 +887,19 @@ public:
      */
     Fence* UTILS_NONNULL createFence() noexcept;
 
+    /**
+     * Creates a Sync.
+     * @param callback A callback that will be invoked when the handle for
+     *                 the created sync is set
+     *
+     * @return A pointer to the newly created Sync.
+     */
+    Sync* UTILS_NONNULL createSync() noexcept;
+
     bool destroy(const BufferObject* UTILS_NULLABLE p);         //!< Destroys a BufferObject object.
     bool destroy(const VertexBuffer* UTILS_NULLABLE p);         //!< Destroys an VertexBuffer object.
     bool destroy(const Fence* UTILS_NULLABLE p);                //!< Destroys a Fence object.
+    bool destroy(const Sync* UTILS_NULLABLE p);                 //!< Destroys a Sync object.
     bool destroy(const IndexBuffer* UTILS_NULLABLE p);          //!< Destroys an IndexBuffer object.
     bool destroy(const SkinningBuffer* UTILS_NULLABLE p);       //!< Destroys a SkinningBuffer object.
     bool destroy(const MorphTargetBuffer* UTILS_NULLABLE p);    //!< Destroys a MorphTargetBuffer object.
@@ -922,6 +933,8 @@ public:
     bool isValid(const VertexBuffer* UTILS_NULLABLE p) const;
     /** Tells whether a Fence object is valid */
     bool isValid(const Fence* UTILS_NULLABLE p) const;
+    /** Tells whether a Sync object is valid */
+    bool isValid(const Sync* UTILS_NULLABLE p) const;
     /** Tells whether an IndexBuffer object is valid */
     bool isValid(const IndexBuffer* UTILS_NULLABLE p) const;
     /** Tells whether a SkinningBuffer object is valid */

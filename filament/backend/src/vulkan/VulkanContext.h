@@ -106,6 +106,10 @@ public:
         return mPhysicalDeviceProperties.properties.vendorID;
     }
 
+    inline VkExternalFenceHandleTypeFlags getFenceExportFlags() const noexcept {
+        return mFenceExportFlags;
+    }
+
     inline bool isImageCubeArraySupported() const noexcept {
         return mPhysicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
     }
@@ -168,6 +172,9 @@ private:
         // non-conformant vulkan implementation).
         .imageView2DOn3DImage = VK_TRUE,
     };
+
+    VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
+
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mLazilyAllocatedMemorySupported = false;
