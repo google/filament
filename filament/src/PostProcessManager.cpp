@@ -569,7 +569,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                     // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
-                            .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+                            .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32UI });
 
                     data.picking = builder.write(data.picking,
                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
