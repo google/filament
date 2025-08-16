@@ -71,7 +71,7 @@ void setDefaultTargetFlags(WebGPURenderTarget& defaultRenderTarget,
     const wgpu::TextureFormat depthFormat{ swapChain.getDepthFormat() };
     TargetBufferFlags newTargetFlags{ filament::backend::TargetBufferFlags::NONE };
 
-    // Assuming Color always present in default render target.
+    // Color is always assumed to be present in the default render target.
     newTargetFlags |= filament::backend::TargetBufferFlags::COLOR;
     if (depthFormat != wgpu::TextureFormat::Undefined) {
         if (hasDepth(depthFormat)) {
@@ -86,6 +86,12 @@ void setDefaultTargetFlags(WebGPURenderTarget& defaultRenderTarget,
 
 } // namespace
 
+// The WebGPUDriver is the main entry point for the WebGPU backend. It is responsible for
+// creating and managing all WebGPU resources, and for submitting commands to the GPU.
+// It implements the Driver interface, which is the abstraction layer used by Filament's
+// renderer. The driver uses a handle-based system to manage resources, and it operates
+// asynchronously, with `create...S` methods for synchronous handle allocation and
+// `create...R` methods for resource creation on the backend thread.
 Driver* WebGPUDriver::create(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept {
     constexpr size_t defaultSize = FILAMENT_WEBGPU_HANDLE_ARENA_SIZE_IN_MB * 1024U * 1024U;
     Platform::DriverConfig validConfig {driverConfig};
@@ -160,6 +166,7 @@ void WebGPUDriver::endFrame(const uint32_t /* frameId */) {
     mPipelineLayoutCache.onFrameEnd();
     mPipelineCache.onFrameEnd();
 
+    // Clear the currently bound descriptor sets at the end of the frame.
     for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
         mCurrentDescriptorSets[i] = {};
     }
@@ -172,7 +179,7 @@ void WebGPUDriver::flush(int /* dummy */) {
     if (mCommandEncoder == nullptr) {
         return;
     }
-    // submit the command buffer thus far...
+    // Submit the commands recorded so far.
     assert_invariant(mRenderPassEncoder == nullptr);
     wgpu::CommandBufferDescriptor commandBufferDescriptor{
         .label = "frame_command_after_flush",
@@ -189,12 +196,15 @@ void WebGPUDriver::flush(int /* dummy */) {
     assert_invariant(mCommandEncoder);
 }
 
+// Submits the currently recorded commands and waits for them to complete on the GPU.
+// This is a synchronous operation and should be used sparingly.
 void WebGPUDriver::finish(int /* dummy */) {
     if (mCommandEncoder == nullptr) {
         return;
     }
 
     flush();
+    // Wait for all previously submitted work to finish.
     std::mutex syncPoint;
     std::condition_variable syncCondition;
     bool done = false;
@@ -264,10 +274,8 @@ void WebGPUDriver::destroyRenderTarget(Handle<HwRenderTarget> renderTargetHandle
         if (renderTarget == mCurrentRenderTarget) {
             mCurrentRenderTarget = nullptr;
         }
-        // WGPURenderTarget destructor is trivial.
-        // The HwTexture handles stored within WGPURenderTarget (via MRT, TargetBufferInfo)
-        // are not owned by WGPURenderTarget, so they are not destroyed here.
-        // They are destroyed via WebGPUDriver::destroyTexture.
+        // The HwTexture handles stored within WGPURenderTarget are not owned by it,
+        // so they are not destroyed here. They are destroyed via WebGPUDriver::destroyTexture.
         destructHandle<WebGPURenderTarget>(renderTargetHandle);
     }
 }
@@ -311,6 +319,14 @@ void WebGPUDriver::destroyDescriptorSet(Handle<HwDescriptorSet> descriptorSetHan
         destructHandle<WebGPUDescriptorSet>(descriptorSetHandle);
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+// Synchronous handle creation methods (S-methods)
+//
+// These methods are called from the frontend thread to allocate a handle for a backend resource.
+// They are lightweight and do not perform any GPU operations. The actual resource creation
+// happens in the corresponding R-method on the backend thread.
+// ------------------------------------------------------------------------------------------------
 
 Handle<HwSwapChain> WebGPUDriver::createSwapChainS() noexcept {
     return allocHandle<WebGPUSwapChain>();
@@ -395,6 +411,13 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImage2S() noexcept {
 Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
     return allocHandle<WebGPUTexture>();
 }
+
+// ------------------------------------------------------------------------------------------------
+// Asynchronous resource creation methods (R-methods)
+//
+// These methods are called on the backend thread to create the actual GPU resources
+// associated with a handle that was previously allocated by an S-method.
+// ------------------------------------------------------------------------------------------------
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     mNativeWindow = nativeWindow;
@@ -544,7 +567,7 @@ void WebGPUDriver::createRenderTargetR(Handle<HwRenderTarget> renderTargetHandle
 }
 
 void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, const int /* dummy */) {
-    // the handle was already constructed in createFenceS
+    // The handle is constructed synchronously in createFenceS.
     const auto fence = handleCast<WebGPUFence>(fenceHandle);
     assert_invariant(mQueue);
     fence->addMarkerToQueueState(mQueue);
@@ -614,8 +637,6 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
     return fence->getStatus();
 }
 
-// We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
-// the GPU supports the given texture format with non-zero optimal tiling features.
 bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
     return toWGPUTextureFormat(format) != wgpu::TextureFormat::Undefined;
 }
@@ -796,6 +817,10 @@ void WebGPUDriver::setVertexBufferObject(Handle<HwVertexBuffer> vertexBufferHand
     vertexBuffer->getBuffers()[index] = bufferObject->getBuffer();
 }
 
+// Updates a 3D texture region with pixel data from a buffer.
+// This function handles various pixel formats and performs a blit operation if the source
+// format needs to be converted to the destination format. For compressed textures, it ensures
+// that the offsets are aligned to the block dimensions.
 void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t level,
         const uint32_t xoffset, const uint32_t yoffset, const uint32_t zoffset,
         const uint32_t width, const uint32_t height, const uint32_t depth,
@@ -812,15 +837,15 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
     const auto texture{ handleCast<WebGPUTexture>(textureHandle) };
     FILAMENT_CHECK_PRECONDITION((texture->getTexture().GetWidth() + xoffset) >= width)
             << "Blitting requires the destination region to have enough width ("
-            << texture->getTexture().GetWidth() << " to accommodate the requested " << width
+            << texture->getTexture().GetWidth() << ") to accommodate the requested " << width
             << " width to write/blit (accounting for xoffset, which is " << xoffset << ").";
     FILAMENT_CHECK_PRECONDITION((texture->getTexture().GetHeight() + yoffset) >= height)
             << "Blitting requires the destination region to have enough height ("
-            << texture->getTexture().GetHeight() << " to accommodate the requested " << height
+            << texture->getTexture().GetHeight() << ") to accommodate the requested " << height
             << " height to write/blit (accounting for yoffset, which is " << yoffset << ").";
     FILAMENT_CHECK_PRECONDITION((texture->getTexture().GetDepthOrArrayLayers() + zoffset) >= depth)
             << "Blitting requires the destination region to have enough depth/arrayLayers ("
-            << texture->getTexture().GetDepthOrArrayLayers() << " to accommodate the requested "
+            << texture->getTexture().GetDepthOrArrayLayers() << ") to accommodate the requested "
             << depth << " depth to write/blit (accounting for zoffset, which is " << zoffset << ").";
 
     // TODO: Writing to a depth texture is illegal and errors. I'm not sure why Filament is trying
@@ -956,7 +981,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
         }
         stagingTexture.Destroy();
     } else {
-        // not doing blit (copy byte-by-byte)...
+        // Direct copy without a blit.
         const auto copyInfo { wgpu::TexelCopyTextureInfo{
             .texture = texture->getTexture(),
             .mipLevel = level,
@@ -1068,6 +1093,10 @@ void WebGPUDriver::compilePrograms(CompilerPriorityQueue priority,
     }
 }
 
+// Begins a render pass. This sets up the render pass descriptor with the appropriate
+// color and depth/stencil attachments, based on whether the target is the default
+// swap chain render target or a custom one. It also handles MSAA by setting up
+// resolve targets if necessary.
 void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
         RenderPassParams const& params) {
     if (!mCommandEncoder) {
@@ -1319,6 +1348,11 @@ void WebGPUDriver::stopCapture(int) {
     //todo
 }
 
+// Reads a block of pixels from a render target into a buffer.
+// This function is asynchronous. It copies the pixel data to a staging buffer on the GPU,
+// and then maps the buffer for reading on the CPU. The provided callback is invoked when the
+// data is ready. This function also handles the 256-byte row alignment requirement for
+// buffer-to-texture copies in WebGPU.
 void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, const uint32_t x,
         const uint32_t y, const uint32_t width, const uint32_t height,
         PixelBufferDescriptor&& pixelBufferDescriptor) {
@@ -1423,6 +1457,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         readY = 0;
     }
 
+    // Create a staging buffer to copy the texture to. WebGPU requires 256 byte alignment for buffer-to-texture copies.
     const size_t bytesPerPixel{ PixelBufferDescriptor::computePixelSize(
             pixelBufferDescriptor.format, pixelBufferDescriptor.type) };
     const size_t unpaddedBytesPerRow{ actualWidth * bytesPerPixel };
@@ -1660,13 +1695,10 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
     };
     wgpu::TextureFormat depthStencilFormat{ wgpu::TextureFormat::Undefined };
     if (renderTarget->isDefaultRenderTarget()) {
-        // default render target color(s) (one)...
         colorFormatCount = 1;
         colorFormats[0] = mSwapChain->getColorFormat();
-        // default render target depth/stencil...
         depthStencilFormat = mSwapChain->getDepthFormat();
     } else {
-        // custom render target color(s)...
         MRT const& mrtColorAttachments{ mCurrentRenderTarget->getColorAttachmentInfos() };
         for (size_t i{ 0 }; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; ++i) {
             if (mrtColorAttachments[i].handle) {
@@ -1732,7 +1764,7 @@ void WebGPUDriver::bindRenderPrimitive(Handle<HwRenderPrimitive> renderPrimitive
 
 void WebGPUDriver::draw2(const uint32_t indexOffset, const uint32_t indexCount,
         const uint32_t instanceCount) {
-    // We defer actually binding until we actually draw
+    // Bind groups are deferred until the actual draw call.
     for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; i++) {
         auto& binding = mCurrentDescriptorSets[i];
         if (binding.bindGroup) {
@@ -1802,10 +1834,8 @@ void WebGPUDriver::updateDescriptorSetTexture(Handle<HwDescriptorSet> descriptor
     auto texture = handleCast<WebGPUTexture>(textureHandle);
 
     if (!bindGroup->getIsLocked()) {
-        // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache.
-        //  Making a cache might save us minor perf by reducing param translation
+        // Dawn will cache duplicate samplers, so we don't strictly need to maintain a cache here.
         const auto sampler = makeSampler(params);
-        // TODO making assumptions that size and offset mean the same thing here.
         wgpu::BindGroupEntry tEntry{
             .binding = static_cast<uint32_t>(binding * 2),
             .textureView = texture->getDefaultTextureView() };
@@ -1839,7 +1869,7 @@ void WebGPUDriver::bindDescriptorSet(Handle<HwDescriptorSet> descriptorSetHandle
         const backend::descriptor_set_t setIndex, backend::DescriptorSetOffsetArray&& offsets) {
     assert_invariant(setIndex < MAX_DESCRIPTOR_SET_COUNT);
 
-    // An empty handle signifies we need to release this bind point
+    // An empty handle unbinds the descriptor set.
     if (!descriptorSetHandle) {
         mCurrentDescriptorSets[setIndex] = {};
         return;
@@ -1969,4 +1999,4 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     return wgpu::AddressMode::Undefined;
 }
 
-} // namespace filament
+} // namespace filament::backend

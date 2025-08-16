@@ -27,6 +27,9 @@
 
 namespace filament::backend {
 
+/**
+ * A utility class for generating mipmaps for a texture using a series of render passes.
+ */
 class WebGPURenderPassMipmapGenerator final {
 public:
     struct FormatCompatibility final {
@@ -34,6 +37,11 @@ public:
         std::string_view reason;
     };
 
+    /**
+     * Checks if a given texture format is compatible with render pass-based mipmap generation.
+     * @return A FormatCompatibility struct indicating whether the format is compatible
+     *         and a reason if not.
+     */
     [[nodiscard]] static FormatCompatibility getCompatibilityFor(wgpu::TextureFormat,
             wgpu::TextureDimension, uint32_t sampleCount);
 

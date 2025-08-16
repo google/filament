@@ -54,7 +54,7 @@ namespace {
         case CullingMode::FRONT: return wgpu::CullMode::Front;
         case CullingMode::BACK:  return wgpu::CullMode::Back;
         case CullingMode::FRONT_AND_BACK:
-            // no WegGPU equivalent of front and back
+            // WebGPU does not support culling both front and back faces simultaneously.
             FILAMENT_CHECK_POSTCONDITION(false)
                     << "WebGPU does not support CullingMode::FRONT_AND_BACK";
             return wgpu::CullMode::Undefined;
@@ -220,7 +220,7 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
     const bool requestedDepth{ any(request.targetRenderFlags & TargetBufferFlags::DEPTH) };
     const bool requestedStencil{ any(request.targetRenderFlags & TargetBufferFlags::STENCIL) };
     const bool depthOrStencilRequested{ requestedDepth || requestedStencil };
-    // depth/stencil...
+
     if (depthOrStencilRequested) {
         FILAMENT_CHECK_PRECONDITION(request.depthStencilFormat != wgpu::TextureFormat::Undefined)
                 << "Depth or Stencil requested for pipeline, but depthStencilFormat is "
@@ -312,6 +312,13 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         },
         .fragment = nullptr // will add below if fragment module is included
     };
+    // TODO:
+    if (pipelineDescriptor.primitive.topology == wgpu::PrimitiveTopology::LineStrip ||
+            pipelineDescriptor.primitive.topology == wgpu::PrimitiveTopology::TriangleStrip) {
+        PANIC_POSTCONDITION("stripIndexFormat must be set for strip topologies. "
+                            "This needs to be plumbed through from the RenderPrimitive.");
+    }
+
     wgpu::FragmentState fragmentState = {};
     const wgpu::BlendState blendState {
         .color = {

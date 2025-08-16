@@ -26,6 +26,17 @@
 
 namespace filament::backend {
 
+/**
+  * A blit essentially writes pixels to a region of one texture given a region of another texture.
+  * Such a process can be a byte-by-byte copy when possible, while other scenarios involve various
+  * transformations, such as pixel format conversion, image scaling, filtering/sampling
+  * (such as down sampling), or even multi-sample resolves. Some blits can be faster than others,
+  * depending on what is needed; for example, a byte-by-byte copy is generally faster than other
+  * operations.
+  *
+  * This class is responsible for performing blits throughout the lifecycle of its owner/caller,
+  * e.g. the WebGPU backend/driver, where it can leverage state to optimize such blit calls over time.
+  */
 class WebGPUBlitter final {
 public:
     struct BlitArgs final {
@@ -58,9 +69,14 @@ private:
     /**
      * ONLY should be called if canDoDirectCopy(...) is true (see it in WebGPUBlitter.cpp)
      */
-    void copy(wgpu::CommandEncoder const&, BlitArgs const&);
+    void copyByteByByte(wgpu::CommandEncoder const&, BlitArgs const&);
 
     void createSampler(SamplerMagFilter);
+
+    // The following methods are used to create and cache WebGPU objects.
+    // The pattern is to have a `getOrCreate...` method that looks up the object in a cache,
+    // and if it's not found, it calls a `create...` method to create it and then stores it in the
+    // cache. A `hash...` method is used to generate a key for the cache.
 
     [[nodiscard]] wgpu::RenderPipeline const& getOrCreateRenderPipeline(SamplerMagFilter,
             wgpu::TextureViewDimension sourceDimension, uint32_t sourceSampleCount,
