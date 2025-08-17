@@ -295,6 +295,9 @@ public:
     //! Set the file name of this material file. Used in error reporting.
     MaterialBuilder& fileName(const char* name) noexcept;
 
+    //! Set the commandline parameters of matc. Used for debugging purpose.
+    MaterialBuilder& compilationParameters(const char* params) noexcept;
+
     //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
 
@@ -876,6 +879,7 @@ private:
 
     utils::CString mMaterialName;
     utils::CString mFileName;
+    utils::CString mCompilationParameters;
 
     class ShaderCode {
     public:
