@@ -35,7 +35,11 @@ namespace filamat {
 
 namespace {
     bool isWordChar(char const c) {
-        return std::isalnum(c) || c == '_';
+        // Note: isalnum is locale-dependent, which can be problematic.
+        // For our purpose, we define word characters as ASCII alphanumeric characters plus underscore.
+        // This is safe for UTF-8 strings, as any byte of a multi-byte character will not be
+        // in these ranges.
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
     }
 } // anonymous namespace
 
