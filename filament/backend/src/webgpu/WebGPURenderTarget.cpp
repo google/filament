@@ -100,9 +100,6 @@ namespace {
                 sampleCountPerAttachment = texture->samples;
                 firstAttachment = false;
             }
-            FILAMENT_CHECK_PRECONDITION(texture->samples == sampleCountPerAttachment)
-                    << target.name << " attachment texture has " << +texture->samples
-                    << " samples, but the other attachment(s) have " << +sampleCountPerAttachment << ".";
             if (renderTargetSampleCount > 1 && sampleCountPerAttachment == 1) {
                 texture->createMsaaSidecarTextureIfNotAlreadyCreated(renderTargetSampleCount,
                         device);
