@@ -32,16 +32,19 @@
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
-#include "src/tint/utils/containers/reverse.h"
 #include "src/tint/utils/containers/transform.h"
-#include "src/tint/utils/rtti/switch.h"
 
-using namespace tint::core::fluent_types;     // NOLINT
-using namespace tint::core::number_suffixes;  // NOLINT
+using namespace tint::core::fluent_types;  // NOLINT
 
 namespace tint::spirv::writer::raise {
 
 namespace {
+
+// The capabilities that the transform can support.
+const core::ir::Capabilities kMergeReturnCapabilities{
+    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
+    core::ir::Capability::kAllowNonCoreTypes,
+};
 
 /// PIMPL state for the transform, for a single function.
 struct State {
@@ -61,12 +64,11 @@ struct State {
     /// Null when the function does not return a value.
     core::ir::Var* return_val = nullptr;
 
-    /// The final return at the end of the function block.
-    /// May be null when the function returns in all blocks of a control instruction.
-    core::ir::Return* fn_return = nullptr;
+    /// The set of control instructions whose subsequent instructions need to be conditionalized.
+    UniqueVector<core::ir::ControlInstruction*, 8> needs_conditionalized_merge{};
 
-    /// A set of control instructions that transitively hold a return instruction
-    Hashset<core::ir::ControlInstruction*, 8> holds_return_{};
+    /// The set of control instructions whose subsequent instructions have been conditionalized.
+    Hashset<core::ir::ControlInstruction*, 8> has_conditionalized_merge{};
 
     /// Process the function.
     /// @param fn the function to process
@@ -77,238 +79,48 @@ struct State {
             return;
         }
 
-        // Find all of the nested return instructions in the function.
-        for (const auto& usage : fn->UsagesUnsorted()) {
-            if (auto* ret = usage->instruction->As<core::ir::Return>()) {
-                TransitivelyMarkAsReturning(ret->Block()->Parent());
+        // Find all of the return instructions.
+        Vector<core::ir::Return*, 8> returns;
+        fn->ForEachUseSorted([&](const core::ir::Usage& usage) {
+            if (auto* ret = usage.instruction->As<core::ir::Return>()) {
+                returns.Push(ret);
             }
-        }
+        });
 
-        if (holds_return_.IsEmpty()) {
-            // No control instructions hold a return statement, so nothing needs to be done.
+        // If there exists at least one return that is not the final function body return, then we
+        // need to transform the function. Otherwise we can bail early here without making changes.
+        if (returns.IsEmpty() ||
+            (returns.Length() == 1 && returns[0] == fn->Block()->Terminator())) {
             return;
         }
 
-        // Create a boolean variable that can be used to check whether the function is returning.
-        continue_execution = b.Var("continue_execution", ty.ptr<function, bool>());
-        continue_execution->SetInitializer(b.Constant(true));
-        fn->Block()->Prepend(continue_execution);
+        // Create a boolean variable that can be used to check whether the function is returning,
+        // and a variable to hold the return value if needed.
+        b.InsertBefore(fn->Block()->Front(), [&] {
+            if (!fn->ReturnType()->Is<core::type::Void>()) {
+                return_val = b.Var("return_value", ty.ptr(function, fn->ReturnType()));
+            }
+            continue_execution = b.Var("continue_execution", true);
+        });
 
-        // Create a variable to hold the return value if needed.
-        if (!fn->ReturnType()->Is<core::type::Void>()) {
-            return_val = b.Var("return_value", ty.ptr(function, fn->ReturnType()));
-            fn->Block()->Prepend(return_val);
+        // Replace every return instruction with an exit instruction, setting a flag to signal that
+        // execution should not continue.
+        for (auto* ret : returns) {
+            ReplaceReturn(ret);
         }
 
-        // Look to see if the function ends with a return
-        fn_return = tint::As<core::ir::Return>(fn->Block()->Terminator());
-
-        // Process the function's block.
-        // This will traverse into control instructions that hold returns, and apply the necessary
-        // changes to remove returns.
-        ProcessBlock(fn->Block());
-
-        // If the function didn't end with a return, add one
-        if (!fn_return) {
-            AppendFinalReturn(fn);
-        }
-
-        // Cleanup - if 'continue_execution' was only ever assigned, remove it.
-        continue_execution->DestroyIfOnlyAssigned();
-    }
-
-    /// Marks all the control instructions from ctrl to the function as holding a return.
-    /// @param ctrl the control instruction to mark as returning, along with all ancestor control
-    /// instructions.
-    void TransitivelyMarkAsReturning(core::ir::ControlInstruction* ctrl) {
-        for (; ctrl; ctrl = ctrl->Block()->Parent()) {
-            if (!holds_return_.Add(ctrl)) {
-                return;
-            }
-        }
-    }
-
-    /// Walks the instructions of @p block, processing control instructions that are marked as
-    /// holding a return instruction. After processing a control instruction with a return, the
-    /// instructions following the control instruction will be wrapped in a 'if' that only executes
-    /// if a return was not reached.
-    /// @param block the block to process
-    void ProcessBlock(core::ir::Block* block) {
-        core::ir::If* inner_if = nullptr;
-        Vector<core::ir::If*, 4> inner_if_stack;
-        for (auto* inst = *block->begin(); inst;) {  // For each instruction in 'block'
-            // As we're modifying the block that we're iterating over, grab the pointer to the next
-            // instruction before (potentially) moving 'inst' to another block.
-            auto* next = inst->next.Get();
-            TINT_DEFER(inst = next);
-
-            if (auto* ret = inst->As<core::ir::Return>()) {
-                // Note: Return instructions are processed without being moved into the 'if' block.
-                ProcessReturn(ret, inner_if);
-                break;  // All instructions processed.
-            }
-
-            if (inst->Is<core::ir::Unreachable>()) {
-                // Unreachable can become reachable once returns are turned into exits.
-                // As this is the terminator for the block, simply stop processing the
-                // instructions. A appropriate terminator will be created for this block below.
-                inst->Destroy();
-                break;
-            }
-
-            // If we've already passed a control instruction holding a return, then we need to move
-            // the instructions that follow the control instruction into the inner-most 'if'.
-            if (inner_if) {
-                inst->Remove();
-                inner_if->True()->Append(inst);
-            }
-
-            // Control instructions holding a return need to be processed, and then a new 'if' needs
-            // to be created to hold the instructions that are between the control instruction and
-            // the block's terminating instruction.
-            if (auto* ctrl = inst->As<core::ir::ControlInstruction>()) {
-                if (holds_return_.Contains(ctrl)) {
-                    // Control instruction transitively holds a return.
-                    ctrl->ForeachBlock(
-                        [&](core::ir::Block* ctrl_block) { ProcessBlock(ctrl_block); });
-                    if (next && (next != fn_return || fn_return->Value()) &&
-                        !tint::IsAnyOf<core::ir::Exit, core::ir::Unreachable>(next)) {
-                        inner_if = CreateIfContinueExecution(ctrl);
-                        inner_if_stack.Push(inner_if);
-                    }
-                }
+        // Conditionalize instructions after control flow instructions that are exited from the site
+        // of a return instruction..
+        // This may discover additional control instructions that need conditionalized merges as we
+        // introduce new exit instructions that walk back up the control flow stack.
+        while (!needs_conditionalized_merge.IsEmpty()) {
+            auto* control = needs_conditionalized_merge.Pop();
+            if (has_conditionalized_merge.Add(control)) {
+                ConditionalizeMerge(control);
             }
         }
 
-        if (inner_if) {
-            // new_value_with_type returns a new RuntimeValue with the same type as 'v'
-            auto new_value_with_type = [&](core::ir::Value* v) {
-                return b.InstructionResult(v->Type());
-            };
-
-            if (auto* terminator = inner_if->True()->Terminator()) {
-                if (auto* exit_if = terminator->As<core::ir::ExitIf>()) {
-                    // Ensure the associated 'if' is updated.
-                    exit_if->SetIf(inner_if);
-
-                    if (!exit_if->Args().IsEmpty()) {
-                        // Inner-most 'if' has a 'exit_if' that returns values.
-                        // These need propagating through the if stack.
-                        inner_if->SetResults(
-                            tint::Transform<8>(exit_if->Args(), new_value_with_type));
-                    }
-                }
-            } else {
-                // Inner-most if doesn't have a terminating instruction. Add an 'exit_if'.
-                inner_if->True()->Append(b.ExitIf(inner_if));
-            }
-
-            // Walk back down the stack of 'if' instructions that were created, and add any missing
-            // terminating instructions to the blocks holding them.
-            while (!inner_if_stack.IsEmpty()) {
-                auto* i = inner_if_stack.Pop();
-                if (!i->Block()->Terminator() && i->Block()->Parent()) {
-                    // Append the exit instruction to the block holding the 'if'.
-                    Vector<core::ir::InstructionResult*, 8> exit_args = i->Results();
-                    if (i->Results().IsEmpty()) {
-                        i->SetResults(tint::Transform(exit_args, new_value_with_type));
-                    }
-                    auto* exit = b.Exit(i->Block()->Parent(), std::move(exit_args));
-                    i->Block()->Append(exit);
-                }
-            }
-        }
-
-        // If this is a non-empty block that still has no terminator, we need to insert an exit
-        // instruction (unless it is the function's top-level block).
-        if (!block->IsEmpty() && !block->Terminator() && block->Parent()) {
-            ExitFromBlock(block);
-        }
-    }
-
-    /// Transforms a return instruction.
-    /// @param ret the return instruction
-    /// @param cond the possibly null 'if(continue_execution)' instruction for the current block.
-    /// @note unlike other instructions, return instructions are not automatically moved into the
-    /// 'if(continue_execution)' block.
-    void ProcessReturn(core::ir::Return* ret, core::ir::If* cond) {
-        if (ret == fn_return) {
-            // 'ret' is the final instruction for the function.
-            ProcessFunctionBlockReturn(ret, cond);
-        } else {
-            // Return is in a nested block
-            ProcessNestedReturn(ret, cond);
-        }
-    }
-
-    /// Transforms the return instruction that is the last instruction in the function's block.
-    /// @param ret the return instruction
-    /// @param cond the possibly null 'if(continue_execution)' instruction for the current block.
-    void ProcessFunctionBlockReturn(core::ir::Return* ret, core::ir::If* cond) {
-        if (!return_val) {
-            return;  // No need to transform non-value, end-of-function returns
-        }
-
-        // Assign the return's value to 'return_val' inside a 'if(continue_execution)'
-        if (!cond) {
-            cond = CreateIfContinueExecution(ret->prev);
-        }
-        cond->True()->Append(b.Store(return_val, ret->Value()));
-        cond->True()->Append(b.ExitIf(cond));
-
-        // Change the function return to unconditionally load 'return_val' and return it
-        auto* load = b.Load(return_val);
-        load->InsertBefore(ret);
-        ret->SetValue(load->Result());
-    }
-
-    /// Transforms the return instruction that is found in a control instruction.
-    /// @param ret the return instruction
-    /// @param cond the possibly null 'if(continue_execution)' instruction for the current block.
-    void ProcessNestedReturn(core::ir::Return* ret, core::ir::If* cond) {
-        // If we have a 'if(continue_execution)' block, then insert instructions into that,
-        // otherwise insert into the block holding the return.
-        auto* block = cond ? cond->True() : ret->Block();
-
-        // Set the 'continue_execution' flag to false, and store the return value into 'return_val',
-        // if present.
-        block->Append(b.Store(continue_execution, false));
-        if (return_val) {
-            block->Append(b.Store(return_val, ret->Args()[0]));
-        }
-
-        // Replace the return instruction with an exit instruction.
-        ExitFromBlock(block);
-        ret->Destroy();
-    }
-
-    /// Append an instruction to @p block that will exit from its containing control instruction.
-    /// @param block the instruction to exit from
-    void ExitFromBlock(core::ir::Block* block) {
-        // If the outermost control instruction is expecting exit values, then return them as
-        // 'undef' values.
-        auto* ctrl = block->Parent();
-        Vector<core::ir::Value*, 8> exit_args;
-        exit_args.Resize(ctrl->Results().Length());
-
-        // Replace the return instruction with an exit instruction.
-        block->Append(b.Exit(ctrl, std::move(exit_args)));
-    }
-
-    /// Builds instructions to create a 'if(continue_execution)' conditional.
-    /// @param after new instructions will be inserted after this instruction
-    /// @return the 'If' control instruction
-    core::ir::If* CreateIfContinueExecution(core::ir::Instruction* after) {
-        auto* load = b.Load(continue_execution);
-        auto* cond = b.If(load);
-        load->InsertAfter(after);
-        cond->InsertAfter(load);
-        return cond;
-    }
-
-    /// Adds a final return instruction to the end of @p fn
-    /// @param fn the function
-    void AppendFinalReturn(core::ir::Function* fn) {
+        // Insert the final return at the end of the function.
         b.Append(fn->Block(), [&] {
             if (return_val) {
                 b.Return(fn, b.Load(return_val));
@@ -316,13 +128,148 @@ struct State {
                 b.Return(fn);
             }
         });
+
+        // Cleanup: if 'continue_execution' was only ever assigned, remove it.
+        if (continue_execution) {
+            continue_execution->DestroyIfOnlyAssigned();
+        }
+    }
+
+    /// Replace a return instruction with an exit instruction, setting the flag to signal that
+    /// execution should not continue, and capturing the return value if present.
+    /// @param ret the return instruction to replace
+    void ReplaceReturn(core::ir::Return* ret) {
+        // We will exit out of the current control instruction to the enclosing block.
+        auto* control = ret->Block()->Parent();
+
+        // Set the 'continue_execution' flag to false, and store the return value into
+        // 'return_value', if present.
+        b.InsertBefore(ret, [&] {
+            // Set the flag only if we are not in the function block, where it would be redundant.
+            if (control) {
+                b.Store(continue_execution, false);
+            }
+            if (return_val) {
+                b.Store(return_val, ret->Value());
+            }
+            if (control) {
+                ExitFromControl(control);
+            }
+        });
+        ret->Destroy();
+    }
+
+    /// Conditionalize the instructions that will be in the merge block for @p control by wrapping
+    /// them in a new `if` instruction that checks the `continue_execution` flag.
+    /// @param control the control instruction that should have its merge conditionalized
+    void ConditionalizeMerge(core::ir::ControlInstruction* control) {
+        auto* next = control->next.Get();
+
+        // If there are no instructions after the control instruction then we must be at the
+        // top-level function block (where the final return has been removed), so there's nothing to
+        // conditionalize.
+        if (next == nullptr) {
+            return;
+        }
+
+        // If we are nested somewhere inside a loop/switch instruction, we can just jump out of that
+        // instead of conditionalizing the subsequent instructions.
+        auto* exit_target = control->Block()->Parent();
+        while (exit_target) {
+            if (exit_target->IsAnyOf<core::ir::Loop, core::ir::Switch>()) {
+                b.InsertBefore(next, [&] {
+                    auto* load = b.Load(continue_execution);
+                    auto* cond = b.If(b.Not<bool>(load));
+                    b.Append(cond->True(), [&] {  //
+                        ExitFromControl(exit_target);
+                    });
+                });
+                return;
+            }
+            exit_target = exit_target->Block()->Parent();
+        }
+
+        // If the next instruction is an unreachable, we've made it reachable and need to exit up
+        // the control flow stack instead.
+        if (next->Is<core::ir::Unreachable>()) {
+            if (control->Block()->Parent()) {
+                b.InsertBefore(next, [&] {  //
+                    ExitFromControl(next->Block()->Parent());
+                });
+            }
+            next->Destroy();
+            return;
+        }
+
+        // If the next instruction is already an exit instruction, we need to conditionalize the
+        // merge that it will exit to.
+        if (auto* exit = next->As<core::ir::Exit>()) {
+            needs_conditionalized_merge.Add(exit->ControlInstruction());
+            return;
+        }
+
+        // The merge block is non-trivial, so we need to wrap all subsequent instructions in a new
+        // conditional that is based on the `continue_execution` flag.
+        auto* load = b.Load(continue_execution);
+        auto* cond = b.If(load);
+        load->InsertAfter(control);
+        cond->InsertAfter(load);
+        while (cond->next) {
+            auto inst = cond->next;
+            inst->Remove();
+            cond->True()->Append(inst);
+
+            // If the instruction is an exit if, we need to re-target it to the new `if` that we
+            // created and propagate any of its operands through the new `if` as results.
+            if (auto* exit_if = inst->As<core::ir::ExitIf>()) {
+                exit_if->SetIf(cond);
+
+                auto exit_args = exit_if->Args();
+                if (!exit_args.IsEmpty()) {
+                    cond->SetResults(tint::Transform<8>(exit_args, [&](auto* arg) {  //
+                        return b.InstructionResult(arg->Type());
+                    }));
+                }
+            }
+        }
+        // We might not have moved a terminator instruction if we are conditionalizing instructions
+        // in the function block, since the final return may have been removed.
+        if (!cond->True()->Back()->Is<core::ir::Terminator>()) {
+            cond->True()->Append(b.ExitIf(cond));
+        }
+
+        // Now exit up the control flow stack and conditionalize the containing merge block as well.
+        if (auto* parent = control->Block()->Parent()) {
+            // Propagate results from the conditional `if` through the new exit.
+            Vector<core::ir::Value*, 8> exit_args;
+            exit_args.Resize(control->Block()->Parent()->Results().Length());
+            TINT_ASSERT(cond->Results().Length() == exit_args.Length());
+            for (size_t i = 0; i < cond->Results().Length(); ++i) {
+                exit_args[i] = cond->Results()[i];
+            }
+            b.Exit(parent, std::move(exit_args))->InsertAfter(cond);
+
+            needs_conditionalized_merge.Add(parent);
+        }
+    }
+
+    /// Exit from the target control flow instruction.
+    /// @param control the control flow instruction to exit from
+    void ExitFromControl(core::ir::ControlInstruction* control) {
+        // Produce `undef` values for any results, since they will never be used.
+        Vector<core::ir::Value*, 8> exit_args;
+        exit_args.Resize(control->Results().Length());
+        b.Exit(control, std::move(exit_args));
+
+        // Mark the control flow instruction as requiring its merge to be conditionalized.
+        needs_conditionalized_merge.Add(control);
     }
 };
 
 }  // namespace
 
 Result<SuccessType> MergeReturn(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.MergeReturn");
+    auto result = ValidateAndDumpIfNeeded(ir, "spirv.MergeReturn", kMergeReturnCapabilities);
     if (result != Success) {
         return result;
     }

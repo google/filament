@@ -38,7 +38,7 @@ namespace dawn::native {
 enum class CommandType {
     Draw,
     Pipeline,
-    PushConstants,
+    Immediate,
     Big,
     Small,
 };
@@ -53,7 +53,7 @@ struct CommandPipeline {
     uint32_t attachmentPoint;
 };
 
-struct CommandPushConstants {
+struct CommandImmediate {
     uint8_t size;
     uint8_t offset;
 };
@@ -135,10 +135,9 @@ TEST(CommandAllocator, BasicWithData) {
     uint32_t myValues[5] = {6, 42, 0xFFFFFFFF, 0, 54};
 
     {
-        CommandPushConstants* pushConstants =
-            allocator.Allocate<CommandPushConstants>(CommandType::PushConstants);
-        pushConstants->size = mySize;
-        pushConstants->offset = myOffset;
+        CommandImmediate* immediates = allocator.Allocate<CommandImmediate>(CommandType::Immediate);
+        immediates->size = mySize;
+        immediates->offset = myOffset;
 
         uint32_t* values = allocator.AllocateData<uint32_t>(5);
         for (size_t i = 0; i < 5; i++) {
@@ -152,11 +151,11 @@ TEST(CommandAllocator, BasicWithData) {
 
         bool hasNext = iterator.NextCommandId(&type);
         ASSERT_TRUE(hasNext);
-        ASSERT_EQ(type, CommandType::PushConstants);
+        ASSERT_EQ(type, CommandType::Immediate);
 
-        CommandPushConstants* pushConstants = iterator.NextCommand<CommandPushConstants>();
-        ASSERT_EQ(pushConstants->size, mySize);
-        ASSERT_EQ(pushConstants->offset, myOffset);
+        CommandImmediate* immediates = iterator.NextCommand<CommandImmediate>();
+        ASSERT_EQ(immediates->size, mySize);
+        ASSERT_EQ(immediates->offset, myOffset);
 
         uint32_t* values = iterator.NextData<uint32_t>(5);
         for (size_t i = 0; i < 5; i++) {

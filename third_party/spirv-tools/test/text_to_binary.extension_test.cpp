@@ -1495,5 +1495,78 @@ INSTANTIATE_TEST_SUITE_P(
                                SaturatedToLargestFloat8NormalConversionEXT)})},
         })));
 
+// SPV_INTEL_function_variants
+// https://github.com/intel/llvm/blob/sycl/sycl/doc/design/spirv-extensions/SPV_INTEL_function_variants.asciidoc
+INSTANTIATE_TEST_SUITE_P(
+    SPV_INTEL_function_variants, ExtensionRoundTripTest,
+    Combine(
+        Values(SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_6),
+        ValuesIn(std::vector<AssemblyCase>{
+            {"OpExtension \"SPV_INTEL_function_variants\"\n",
+             MakeInstruction(spv::Op::OpExtension,
+                             MakeVector("SPV_INTEL_function_variants"))},
+            {"OpCapability SpecConditionalINTEL\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::SpecConditionalINTEL})},
+            {"OpCapability FunctionVariantsINTEL\n",
+             MakeInstruction(
+                 spv::Op::OpCapability,
+                 {(uint32_t)spv::Capability::FunctionVariantsINTEL})},
+            {"OpDecorate %1 ConditionalINTEL %2\n",
+             MakeInstruction(spv::Op::OpDecorate,
+                             {1, (uint32_t)spv::Decoration::ConditionalINTEL,
+                              2})},
+
+            {"OpConditionalExtensionINTEL %1 \"foo\"\n",
+             MakeInstruction(spv::Op::OpConditionalExtensionINTEL, {1},
+                             MakeVector("foo"))},
+
+            {"OpConditionalEntryPointINTEL %1 Kernel %2 \"foo\"\n",
+             MakeInstruction(spv::Op::OpConditionalEntryPointINTEL,
+                             {1, (uint32_t)spv::ExecutionModel::Kernel, 2},
+                             MakeVector("foo"))},
+
+            {"OpConditionalCapabilityINTEL %1 Kernel\n",
+             MakeInstruction(spv::Op::OpConditionalCapabilityINTEL,
+                             {1, (uint32_t)spv::ExecutionModel::Kernel})},
+
+            {"%2 = OpSpecConstantTargetINTEL %1 42\n",
+             MakeInstruction(spv::Op::OpSpecConstantTargetINTEL, {1, 2, 42})},
+
+            {"%2 = OpSpecConstantTargetINTEL %1 42 99\n",
+             MakeInstruction(spv::Op::OpSpecConstantTargetINTEL,
+                             {1, 2, 42, 99})},
+
+            {"%2 = OpSpecConstantTargetINTEL %1 42 99 108\n",
+             MakeInstruction(spv::Op::OpSpecConstantTargetINTEL,
+                             {1, 2, 42, 99, 108})},
+
+            {"%2 = OpSpecConstantArchitectureINTEL %1 42 99 108 72\n",
+             MakeInstruction(spv::Op::OpSpecConstantArchitectureINTEL,
+                             {1, 2, 42, 99, 108, 72})},
+
+            {"%2 = OpSpecConstantCapabilitiesINTEL %1\n",
+             MakeInstruction(spv::Op::OpSpecConstantCapabilitiesINTEL, {1, 2})},
+
+            {"%2 = OpSpecConstantCapabilitiesINTEL %1 Kernel\n",
+             MakeInstruction(spv::Op::OpSpecConstantCapabilitiesINTEL,
+                             {1, 2, (uint32_t)spv::Capability::Kernel})},
+
+            {"%2 = OpSpecConstantCapabilitiesINTEL %1 Kernel Shader\n",
+             MakeInstruction(spv::Op::OpSpecConstantCapabilitiesINTEL,
+                             {1, 2, (uint32_t)spv::Capability::Kernel,
+                              (uint32_t)spv::Capability::Shader})},
+
+            {"%2 = OpConditionalCopyObjectINTEL %1 %3 %4\n",
+             MakeInstruction(spv::Op::OpConditionalCopyObjectINTEL,
+                             {1, 2, 3, 4})},
+
+            {"%2 = OpConditionalCopyObjectINTEL %1 %3 %4 %5 %6\n",
+             MakeInstruction(spv::Op::OpConditionalCopyObjectINTEL,
+                             {1, 2, 3, 4, 5, 6})},
+
+        })));
+
 }  // namespace
 }  // namespace spvtools

@@ -401,7 +401,7 @@ TEST(ResultGeneric, ReturningSuccess) {
 class NonDefaultConstructible {
   public:
     explicit NonDefaultConstructible(float v) : v(v) {}
-    bool operator==(const NonDefaultConstructible& other) const { return v == other.v; }
+    bool operator==(const NonDefaultConstructible& other) const = default;
     float v;
 };
 

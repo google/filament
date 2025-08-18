@@ -115,9 +115,6 @@ def main(args):
         'third_party/vulkan-loader/src',
         'third_party/vulkan-utility-libraries/src',
     ]
-    if args.use_test_deps:
-        log("""WARNING: --use-test-deps argument deprecated. 
-            Test dependencies are now always included.""")
 
     root_dir = Path(args.directory).resolve()
 

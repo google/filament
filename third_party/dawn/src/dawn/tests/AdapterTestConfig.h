@@ -87,6 +87,9 @@ BackendTestConfig MetalBackend(std::initializer_list<const char*> forceEnabledWo
 BackendTestConfig NullBackend(std::initializer_list<const char*> forceEnabledWorkarounds = {},
                               std::initializer_list<const char*> forceDisabledWorkarounds = {});
 
+BackendTestConfig WebGPUBackend(std::initializer_list<const char*> forceEnabledWorkarounds = {},
+                                std::initializer_list<const char*> forceDisabledWorkarounds = {});
+
 BackendTestConfig OpenGLBackend(std::initializer_list<const char*> forceEnabledWorkarounds = {},
                                 std::initializer_list<const char*> forceDisabledWorkarounds = {});
 

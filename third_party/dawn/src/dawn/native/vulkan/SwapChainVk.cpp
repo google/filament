@@ -191,7 +191,7 @@ MaybeError SwapChain::Initialize(SwapChainBase* previousSwapChain) {
     createInfo.preTransform = mConfig.transform;
     createInfo.compositeAlpha = mConfig.alphaMode;
     createInfo.presentMode = mConfig.presentMode;
-    createInfo.clipped = false;
+    createInfo.clipped = VK_FALSE;
     createInfo.oldSwapchain = previousVkSwapChain;
 
     DAWN_TRY(CheckVkSuccess(

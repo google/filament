@@ -101,7 +101,7 @@ namespace {{native_namespace}} {
     template <typename T>
     struct EnumCount;
 
-    {% for e in by_category["enum"] if e.contiguousFromZero %}
+    {% for e in by_category["enum"] if e.contiguous and e.startValue == 0 %}
         template<>
         struct EnumCount<{{namespace}}::{{as_cppType(e.name)}}> {
             static constexpr uint32_t value = {{len(e.values)}};

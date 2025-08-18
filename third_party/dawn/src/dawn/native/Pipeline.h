@@ -46,6 +46,9 @@
 
 namespace dawn::native {
 
+class ComputePipelineBase;
+class RenderPipelineBase;
+
 ResultOrError<ShaderModuleEntryPoint> ValidateProgrammableStage(DeviceBase* device,
                                                                 const ShaderModuleBase* module,
                                                                 StringView entryPointName,
@@ -69,6 +72,12 @@ uint32_t GetRawBits(ImmediateConstantMask bits);
 class PipelineBase : public ApiObjectBase, public CachedObject {
   public:
     ~PipelineBase() override;
+
+    virtual const ComputePipelineBase* AsComputePipeline() const { return nullptr; }
+    virtual ComputePipelineBase* AsComputePipeline() { return nullptr; }
+
+    virtual const RenderPipelineBase* AsRenderPipeline() const { return nullptr; }
+    virtual RenderPipelineBase* AsRenderPipeline() { return nullptr; }
 
     PipelineLayoutBase* GetLayout();
     const PipelineLayoutBase* GetLayout() const;

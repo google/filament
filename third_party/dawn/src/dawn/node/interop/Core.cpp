@@ -206,4 +206,30 @@ std::ostream& operator<<(std::ostream& o, const UndefinedType&) {
     return o;
 }
 
+// Chain the prototype of derivedClassConstructor to the prototype of baseClassValue
+// by calling the JavaScript function Object.setPrototypeOf
+void ChainPrototype(Napi::Value baseClassValue, Napi::Function derivedClassConstructor) {
+    // Look up our base constructor
+    Napi::Function baseClassConstructor = baseClassValue.As<Napi::Function>();
+
+    // Look up base prototype
+    Napi::Value baseClassPrototypeValue = baseClassConstructor.Get("prototype");
+    Napi::Object baseClassPrototype = baseClassPrototypeValue.As<Napi::Object>();
+
+    // Lookup our prototype
+    Napi::Object derivedPrototype = derivedClassConstructor.Get("prototype").As<Napi::Object>();
+
+    Napi::Object global = derivedClassConstructor.Env().Global();
+    Napi::Function setProtoType =
+        global.Get("Object").ToObject().Get("setPrototypeOf").As<Napi::Function>();
+
+    // Makes Derived super() call Base constructor
+    // JS = Object.setPrototypeOf(Derived, Base);
+    setProtoType.Call({derivedClassConstructor, baseClassConstructor});
+
+    // Make derived.someMethod call base.someMethod if someMethod does not exist on Derived.
+    // JS = Object.setPrototypeOf(Derived.constructor, Base.constructor)
+    setProtoType.Call({derivedPrototype, baseClassPrototype});
+}
+
 }  // namespace wgpu::interop

@@ -30,11 +30,10 @@
 #include <unordered_set>
 #include <utility>
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
 #include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/bool.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
@@ -58,6 +57,7 @@
 #include "src/tint/lang/wgsl/ast/interpolate_attribute.h"
 #include "src/tint/lang/wgsl/ast/module.h"
 #include "src/tint/lang/wgsl/ast/override.h"
+#include "src/tint/lang/wgsl/sem/accessor_expression.h"
 #include "src/tint/lang/wgsl/sem/builtin_enum_expression.h"
 #include "src/tint/lang/wgsl/sem/call.h"
 #include "src/tint/lang/wgsl/sem/function.h"
@@ -149,6 +149,13 @@ ResourceBinding ConvertHandleToResourceBinding(const tint::sem::GlobalVariable* 
     result.variable_name = handle->Declaration()->name->symbol.Name();
 
     const core::type::Type* handle_type = handle->Type()->UnwrapRef();
+
+    // BindingArray only modifies the array_size member of the ResourceBinding of its inner type.
+    if (auto* array = handle_type->As<core::type::BindingArray>()) {
+        result.array_size = array->Count()->As<core::type::ConstantArrayCount>()->value;
+        handle_type = array->ElemType();
+    }
+
     Switch(
         handle_type,
 
@@ -201,6 +208,23 @@ ResourceBinding ConvertHandleToResourceBinding(const tint::sem::GlobalVariable* 
             result.resource_type = ResourceBinding::ResourceType::kExternalTexture;
             result.dim = ResourceBinding::TextureDimension::k2d;
         },
+        [&](const core::type::TexelBuffer* tex) {
+            result.resource_type = ResourceBinding::ResourceType::kReadWriteTexelBuffer;
+            switch (tex->Access()) {
+                case core::Access::kRead:
+                    result.resource_type = ResourceBinding::ResourceType::kReadOnlyTexelBuffer;
+                    break;
+                case core::Access::kReadWrite:
+                    result.resource_type = ResourceBinding::ResourceType::kReadWriteTexelBuffer;
+                    break;
+                case core::Access::kWrite:
+                case core::Access::kUndefined:
+                    TINT_UNREACHABLE() << "unhandled texel buffer access";
+            }
+            result.dim = TypeTextureDimensionToResourceBindingTextureDimension(tex->Dim());
+            result.sampled_kind = BaseTypeToSampledKind(tex->Type());
+            result.image_format = TypeTexelFormatToResourceBindingTexelFormat(tex->TexelFormat());
+        },
 
         [&](const core::type::InputAttachment* attachment) {
             result.resource_type = ResourceBinding::ResourceType::kInputAttachment;
@@ -237,7 +261,7 @@ inspector::Override MkOverride(const sem::GlobalVariable* global, OverrideId id)
         TINT_UNREACHABLE();
     }
 
-    override.is_initialized = global->Declaration()->initializer;
+    override.is_initialized = (global->Declaration()->initializer != nullptr);
     override.is_id_specified =
         ast::HasAttribute<ast::IdAttribute>(global->Declaration()->attributes);
     return override;
@@ -257,7 +281,6 @@ EntryPoint Inspector::GetEntryPoint(const tint::ast::Function* func) {
     auto* sem = program_.Sem().Get(func);
 
     entry_point.name = func->name->symbol.Name();
-    entry_point.remapped_name = func->name->symbol.Name();
 
     switch (func->PipelineStage()) {
         case ast::PipelineStage::kCompute: {
@@ -289,7 +312,7 @@ EntryPoint Inspector::GetEntryPoint(const tint::ast::Function* func) {
         }
     }
 
-    entry_point.push_constant_size = ComputePushConstantSize(func);
+    entry_point.immediate_data_size = ComputeImmediateDataSize(func);
 
     for (auto* param : sem->Parameters()) {
         AddEntryPointInOutVariables(
@@ -297,8 +320,6 @@ EntryPoint Inspector::GetEntryPoint(const tint::ast::Function* func) {
             param->Type(), param->Declaration()->attributes, param->Attributes().location,
             param->Attributes().color, /* @blend_src */ std::nullopt, entry_point.input_variables);
 
-        entry_point.input_position_used |= ContainsBuiltin(
-            core::BuiltinValue::kPosition, param->Type(), param->Declaration()->attributes);
         entry_point.front_facing_used |= ContainsBuiltin(
             core::BuiltinValue::kFrontFacing, param->Type(), param->Declaration()->attributes);
         entry_point.sample_index_used |= ContainsBuiltin(
@@ -363,46 +384,6 @@ std::vector<EntryPoint> Inspector::GetEntryPoints() {
     return result;
 }
 
-std::map<OverrideId, Scalar> Inspector::GetOverrideDefaultValues() {
-    std::map<OverrideId, Scalar> result;
-    for (auto* var : program_.AST().GlobalVariables()) {
-        auto* global = program_.Sem().Get<sem::GlobalVariable>(var);
-        if (!global || !global->Declaration()->Is<ast::Override>()) {
-            continue;
-        }
-
-        // If there are conflicting definitions for an override id, that is invalid
-        // WGSL, so the resolver should catch it. Thus here the inspector just
-        // assumes all definitions of the override id are the same, so only needs
-        // to find the first reference to override id.
-        auto override_id = global->Attributes().override_id.value();
-        if (result.find(override_id) != result.end()) {
-            continue;
-        }
-
-        if (global->Initializer()) {
-            if (auto* value = global->Initializer()->ConstantValue()) {
-                result[override_id] = Switch(
-                    value->Type(),  //
-                    [&](const core::type::I32*) { return Scalar(value->ValueAs<i32>()); },
-                    [&](const core::type::U32*) { return Scalar(value->ValueAs<u32>()); },
-                    [&](const core::type::F32*) { return Scalar(value->ValueAs<f32>()); },
-                    [&](const core::type::F16*) {
-                        // Default value of f16 override is also stored as float scalar.
-                        return Scalar(static_cast<float>(value->ValueAs<f16>()));
-                    },
-                    [&](const core::type::Bool*) { return Scalar(value->ValueAs<bool>()); });
-                continue;
-            }
-        }
-
-        // No const-expression initializer for the override
-        result[override_id] = Scalar();
-    }
-
-    return result;
-}
-
 std::map<std::string, OverrideId> Inspector::GetNamedOverrideIds() {
     std::map<std::string, OverrideId> result;
     for (auto* var : program_.AST().GlobalVariables()) {
@@ -429,7 +410,7 @@ std::vector<ResourceBinding> Inspector::GetResourceBindings(const std::string& e
             case core::AddressSpace::kPrivate:
             case core::AddressSpace::kFunction:
             case core::AddressSpace::kWorkgroup:
-            case core::AddressSpace::kPushConstant:
+            case core::AddressSpace::kImmediate:
             case core::AddressSpace::kPixelLocal:
             case core::AddressSpace::kIn:
             case core::AddressSpace::kOut:
@@ -537,6 +518,13 @@ const Inspector::EntryPointTextureMetadata& Inspector::ComputeTextureMetadata(
                                      GlobalSet* scratch_global) -> const GlobalSet* {
         TINT_ASSERT(scratch_global->IsEmpty());
 
+        // Some of the handles may come from binding_array using an indexing operation. In that case
+        // trace the usage of the binding_array instead.
+        if (auto* access = argument->As<sem::AccessorExpression>()) {
+            TINT_ASSERT(access->Object()->Type()->template Is<core::type::BindingArray>());
+            argument = access->Object();
+        }
+
         // Handle parameter can only be identifiers.
         auto* identifier = argument->RootIdentifier();
 
@@ -597,7 +585,8 @@ const Inspector::EntryPointTextureMetadata& Inspector::ComputeTextureMetadata(
                 // textureLoad uses textureNumLevels to clamp the level, unless the texture type
                 // doesn't support mipmapping.
                 uses_num_levels = !texture_type->IsAnyOf<core::type::MultisampledTexture,
-                                                         core::type::DepthMultisampledTexture>();
+                                                         core::type::DepthMultisampledTexture,
+                                                         core::type::ExternalTexture>();
                 metadata.has_texture_load_with_depth_texture |=
                     texture_type
                         ->IsAnyOf<core::type::DepthTexture, core::type::DepthMultisampledTexture>();
@@ -635,7 +624,7 @@ const Inspector::EntryPointTextureMetadata& Inspector::ComputeTextureMetadata(
     auto declarations = sem.Module()->DependencyOrderedDeclarations();
     for (auto rit = declarations.rbegin(); rit != declarations.rend(); rit++) {
         auto* fn = sem.Get<sem::Function>(*rit);
-        if (!fn || !fn->HasCallGraphEntryPoint(entry_point_symbol)) {
+        if ((fn == nullptr) || !fn->HasCallGraphEntryPoint(entry_point_symbol)) {
             continue;
         }
 
@@ -699,22 +688,6 @@ std::vector<std::string> Inspector::GetUsedExtensionNames() {
         out.push_back(tint::ToString(ext));
     }
     return out;
-}
-
-std::vector<std::pair<std::string, Source>> Inspector::GetEnableDirectives() {
-    std::vector<std::pair<std::string, Source>> result;
-
-    // Ast nodes for enable directive are stored within global declarations list
-    auto global_decls = program_.AST().GlobalDeclarations();
-    for (auto* node : global_decls) {
-        if (auto* enable = node->As<ast::Enable>()) {
-            for (auto* ext : enable->extensions) {
-                result.push_back({tint::ToString(ext->name), ext->source});
-            }
-        }
-    }
-
-    return result;
 }
 
 const ast::Function* Inspector::FindEntryPointByName(const std::string& name) {
@@ -897,11 +870,11 @@ uint32_t Inspector::ComputeWorkgroupStorageSize(const ast::Function* func) const
     return total_size;
 }
 
-uint32_t Inspector::ComputePushConstantSize(const ast::Function* func) const {
+uint32_t Inspector::ComputeImmediateDataSize(const ast::Function* func) const {
     uint32_t size = 0;
     auto* func_sem = program_.Sem().Get(func);
     for (const sem::Variable* var : func_sem->TransitivelyReferencedGlobals()) {
-        if (var->AddressSpace() == core::AddressSpace::kPushConstant) {
+        if (var->AddressSpace() == core::AddressSpace::kImmediate) {
             size += var->Type()->UnwrapRef()->Size();
         }
     }

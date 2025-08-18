@@ -87,6 +87,8 @@ enum class BuiltinFn : uint8_t {
     kSimdgroupStore,
     kSimdgroupMultiply,
     kSimdgroupMultiplyAccumulate,
+    kOsLog,
+    kPointerOffset,
     kNone,
 };
 
@@ -94,7 +96,8 @@ enum class BuiltinFn : uint8_t {
 const char* str(BuiltinFn i);
 
 /// Emits the name of the builtin function type.
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, BuiltinFn i) {
     return o << str(i);
 }

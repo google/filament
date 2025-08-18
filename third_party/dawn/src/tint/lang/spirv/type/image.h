@@ -30,8 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/texel_format.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/type.h"
 
 namespace tint::spirv::type {
@@ -43,7 +42,7 @@ enum class Dim : uint8_t {
     kCube = 3,
     // Not used in WGSL
     // Rect = 4,
-    // Buffer = 5,
+    kBuffer = 5,
     kSubpassData = 6,
 };
 

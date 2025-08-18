@@ -110,6 +110,8 @@ class UnpackedPtr {
 
     template <typename In>
     auto Get() const;
+    template <typename In>
+    bool Has() const;
 
     // Validation functions. See implementations of these below for usage, details, and examples.
     template <typename... Branches>
@@ -244,6 +246,12 @@ template <typename T>
 template <typename In>
 auto UnpackedPtr<T>::Get() const {
     return std::get<typename detail::PtrTypeFor<UnpackedPtr<T>, In>::Type>(mUnpacked);
+}
+
+template <typename T>
+template <typename In>
+bool UnpackedPtr<T>::Has() const {
+    return std::get<typename detail::PtrTypeFor<UnpackedPtr<T>, In>::Type>(mUnpacked) != nullptr;
 }
 
 template <typename T>

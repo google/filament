@@ -28,7 +28,7 @@
 #ifndef SRC_DAWN_NATIVE_ENUMMASKITERATOR_H_
 #define SRC_DAWN_NATIVE_ENUMMASKITERATOR_H_
 
-#include "dawn/common/BitSetIterator.h"
+#include "dawn/common/ityp_bitset.h"
 #include "dawn/native/EnumClassBitmasks.h"
 
 namespace dawn::native {
@@ -41,24 +41,21 @@ class EnumMaskIterator final {
     using U = std::underlying_type_t<T>;
 
   public:
-    explicit EnumMaskIterator(const T& mask)
-        : mBitSetIterator(std::bitset<N>(static_cast<U>(mask))) {
+    explicit EnumMaskIterator(const T& mask) : mBitSet(static_cast<U>(mask)) {
         // If you hit this DAWN_ASSERT it means that you forgot to update EnumBitmaskSize<T>::value;
         DAWN_ASSERT(U(mask) == 0 || Log2(uint64_t(U(mask))) < N);
     }
 
     class Iterator final {
       public:
-        explicit Iterator(const typename BitSetIterator<N, U>::Iterator& iter) : mIter(iter) {}
+        explicit Iterator(const typename ityp::bitset<U, N>::Iterator& iter) : mIter(iter) {}
 
         Iterator& operator++() {
             ++mIter;
             return *this;
         }
 
-        bool operator==(const Iterator& other) const { return mIter == other.mIter; }
-
-        bool operator!=(const Iterator& other) const { return mIter != other.mIter; }
+        bool operator==(const Iterator& other) const = default;
 
         T operator*() const {
             U value = *mIter;
@@ -66,15 +63,15 @@ class EnumMaskIterator final {
         }
 
       private:
-        typename BitSetIterator<N, U>::Iterator mIter;
+        typename ityp::bitset<U, N>::Iterator mIter;
     };
 
-    Iterator begin() const { return Iterator(mBitSetIterator.begin()); }
+    Iterator begin() const { return Iterator(mBitSet.begin()); }
 
-    Iterator end() const { return Iterator(mBitSetIterator.end()); }
+    Iterator end() const { return Iterator(mBitSet.end()); }
 
   private:
-    BitSetIterator<N, U> mBitSetIterator;
+    ityp::bitset<U, N> mBitSet;
 };
 
 template <typename T>

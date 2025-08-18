@@ -56,6 +56,8 @@ class PhysicalDevice : public d3d::PhysicalDevice {
     Backend* GetBackend() const;
     ComPtr<ID3D12Device> GetDevice() const;
 
+    bool SupportsBufferMapExtendedUsages() const;
+
   private:
     using Base = d3d::PhysicalDevice;
 

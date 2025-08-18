@@ -36,6 +36,10 @@
 
 namespace dawn::native {
 
+namespace {
+constexpr uint64_t kRingBufferSize = 4 * 1024 * 1024;
+}  // anonymous namespace
+
 DynamicUploader::DynamicUploader(DeviceBase* device) : mDevice(device) {}
 
 ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSize,
@@ -121,6 +125,29 @@ ResultOrError<UploadReservation> DynamicUploader::Reserve(uint64_t allocationSiz
     return reservation;
 }
 
+MaybeError DynamicUploader::OnStagingMemoryFreePendingOnSubmit(uint64_t size) {
+    QueueBase* queue = mDevice->GetQueue();
+
+    // Take into account that submits make the pending memory freed in finite time so we no longer
+    // need to track that memory.
+    ExecutionSerial pendingSerial = queue->GetPendingCommandSerial();
+    if (pendingSerial > mLastPendingSerialSeen) {
+        mMemoryPendingSubmit = 0;
+        mLastPendingSerialSeen = pendingSerial;
+    }
+
+    constexpr uint64_t kPendingMemorySubmitThreshold = 16 * 1024 * 1024;
+    mMemoryPendingSubmit += size;
+    if (mMemoryPendingSubmit < kPendingMemorySubmitThreshold) {
+        return {};
+    }
+
+    // TODO(crbug.com/42240396): Consider blocking when there is too much memory in flight for
+    // freeing, which could cause OOM even if we eagerly flush when too much memory is pending.
+    queue->ForceEventualFlushOfCommands();
+    return queue->SubmitPendingCommands();
+}
+
 void DynamicUploader::Deallocate(ExecutionSerial lastCompletedSerial, bool freeAll) {
     // Reclaim memory within the ring buffers by ticking (or removing requests no longer
     // in-flight).
@@ -137,23 +164,6 @@ void DynamicUploader::Deallocate(ExecutionSerial lastCompletedSerial, bool freeA
             i++;
         }
     }
-}
-
-bool DynamicUploader::ShouldFlush() const {
-    uint64_t kTotalAllocatedSizeThreshold = 64 * 1024 * 1024;
-    // We use total allocated size instead of pending-upload size to prevent Dawn from allocating
-    // too much GPU memory so that the risk of OOM can be minimized.
-    return GetTotalAllocatedSize() > kTotalAllocatedSizeThreshold;
-}
-
-uint64_t DynamicUploader::GetTotalAllocatedSize() const {
-    uint64_t size = 0;
-    for (const auto& buffer : mRingBuffers) {
-        if (buffer->mStagingBuffer != nullptr) {
-            size += buffer->mStagingBuffer->GetSize();
-        }
-    }
-    return size;
 }
 
 }  // namespace dawn::native

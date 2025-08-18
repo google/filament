@@ -30,13 +30,9 @@
 
 #include <optional>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #include "src/tint/api/common/override_id.h"
-
-#include "src/tint/lang/wgsl/ast/interpolate_attribute.h"
-#include "src/tint/lang/wgsl/ast/pipeline_stage.h"
 
 namespace tint::inspector {
 
@@ -165,18 +161,16 @@ struct EntryPoint {
 
     /// The entry point name
     std::string name;
-    /// Remapped entry point name in the backend
-    std::string remapped_name;
     /// The entry point stage
     PipelineStage stage;
     /// The workgroup size. If PipelineStage is kCompute and this holds no value, then the workgroup
     /// size is derived from an override-expression. In this situation you first need to run the
-    /// tint::ast::transform::SubstituteOverride transform before using the inspector.
+    /// SubstituteOverride transform before using the inspector.
     std::optional<WorkgroupSize> workgroup_size;
     /// The total size in bytes of all Workgroup storage-class storage accessed via the entry point.
     uint32_t workgroup_storage_size = 0;
-    /// The total size in bytes of all push_constant variables accessed by the entry point.
-    uint32_t push_constant_size = 0;
+    /// The total size in bytes of all immediate variables accessed by the entry point.
+    uint32_t immediate_data_size = 0;
     /// List of the input variable accessed via this entry point.
     std::vector<StageVariable> input_variables;
     /// List of the output variable accessed via this entry point.
@@ -192,9 +186,6 @@ struct EntryPoint {
     /// Does the entry point use the sample_mask builtin as an output builtin
     /// variable.
     bool output_sample_mask_used = false;
-    /// Does the entry point use the position builtin as an input builtin
-    /// variable.
-    bool input_position_used = false;
     /// Does the entry point use the front_facing builtin
     bool front_facing_used = false;
     /// Does the entry point use the sample_index builtin

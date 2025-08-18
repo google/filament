@@ -47,16 +47,28 @@ if (tint_build_spv_reader) {
     sources = [
       "atomics.cc",
       "atomics.h",
+      "data.cc",
+      "data.h",
       "decompose_strided_array.cc",
       "decompose_strided_array.h",
       "decompose_strided_matrix.cc",
       "decompose_strided_matrix.h",
       "fold_trivial_lets.cc",
       "fold_trivial_lets.h",
+      "manager.cc",
+      "manager.h",
       "pass_workgroup_id_as_argument.cc",
       "pass_workgroup_id_as_argument.h",
+      "remove_unreachable_statements.cc",
+      "remove_unreachable_statements.h",
+      "simplify_pointers.cc",
+      "simplify_pointers.h",
+      "transform.cc",
+      "transform.h",
       "transpose_row_major.cc",
       "transpose_row_major.h",
+      "unshadow.cc",
+      "unshadow.h",
     ]
     deps = [
       "${dawn_root}/src/utils:utils",
@@ -66,9 +78,6 @@ if (tint_build_spv_reader) {
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/ast/transform",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/resolver",
       "${tint_src_dir}/lang/wgsl/sem",
@@ -94,8 +103,14 @@ if (tint_build_unittests) {
         "decompose_strided_array_test.cc",
         "decompose_strided_matrix_test.cc",
         "fold_trivial_lets_test.cc",
+        "helper_test.h",
+        "manager_test.cc",
         "pass_workgroup_id_as_argument_test.cc",
+        "remove_unreachable_statements_test.cc",
+        "simplify_pointers_test.cc",
+        "transform_test.cc",
         "transpose_row_major_test.cc",
+        "unshadow_test.cc",
       ]
       deps = [
         "${dawn_root}/src/utils:utils",
@@ -107,9 +122,7 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/core/type",
         "${tint_src_dir}/lang/wgsl",
         "${tint_src_dir}/lang/wgsl/ast",
-        "${tint_src_dir}/lang/wgsl/ast/transform",
-        "${tint_src_dir}/lang/wgsl/common",
-        "${tint_src_dir}/lang/wgsl/features",
+        "${tint_src_dir}/lang/wgsl/ast:unittests",
         "${tint_src_dir}/lang/wgsl/program",
         "${tint_src_dir}/lang/wgsl/resolver",
         "${tint_src_dir}/lang/wgsl/sem",
@@ -135,10 +148,6 @@ if (tint_build_unittests) {
           "${tint_src_dir}/lang/wgsl/reader",
           "${tint_src_dir}/lang/wgsl/reader/parser",
         ]
-      }
-
-      if (tint_build_wgsl_reader && tint_build_wgsl_writer) {
-        deps += [ "${tint_src_dir}/lang/wgsl/ast/transform:unittests" ]
       }
 
       if (tint_build_wgsl_writer) {

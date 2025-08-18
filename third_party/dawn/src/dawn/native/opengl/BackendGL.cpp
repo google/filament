@@ -109,8 +109,8 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
         SwallowDiscoveryError(AppendNewDeviceFrom(DisplayEGL::CreateFromProcAndDisplay(
             GetType(), glGetProcOptions->getProc, glGetProcOptions->display)));
     } else {
-        SwallowDiscoveryError(
-            AppendNewDeviceFrom(DisplayEGL::CreateFromDynamicLoading(GetType(), kEGLLib)));
+        SwallowDiscoveryError(AppendNewDeviceFrom(DisplayEGL::CreateFromDynamicLoading(
+            GetType(), kEGLLib, GetInstance()->GetRuntimeSearchPaths())));
     }
 
     return devices;

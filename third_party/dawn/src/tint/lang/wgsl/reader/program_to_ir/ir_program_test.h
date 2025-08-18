@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/reader/lower/lower.h"
@@ -89,6 +90,11 @@ class IRProgramTestBase : public BASE, public ProgramBuilder {
 
         return result.Move();
     }
+
+    /// Helper to disassemble a module into a string representation
+    /// @param m the module to disassemble.
+    /// @returns the string representation
+    std::string Dis(core::ir::Module& m) { return core::ir::Disassembler(m).Plain(); }
 
     core::ir::Capabilities kCapabilities =
         core::ir::Capabilities{core::ir::Capability::kAllowOverrides};

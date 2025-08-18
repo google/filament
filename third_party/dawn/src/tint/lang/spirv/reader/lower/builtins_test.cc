@@ -532,10 +532,10 @@ TEST_F(SpirvReader_BuiltinsTest, Inverse_Mat4x4f) {
     %155:f32 = mul %7, %74
     %156:f32 = sub %153, %154
     %157:f32 = add %156, %155
-    %158:vec3<f32> = construct %80, %85, %90, %95
-    %159:vec3<f32> = construct %102, %107, %112, %117
-    %160:vec3<f32> = construct %122, %127, %132, %137
-    %161:vec3<f32> = construct %142, %147, %152, %157
+    %158:vec4<f32> = construct %80, %85, %90, %95
+    %159:vec4<f32> = construct %102, %107, %112, %117
+    %160:vec4<f32> = construct %122, %127, %132, %137
+    %161:vec4<f32> = construct %142, %147, %152, %157
     %162:mat4x4<f32> = construct %158, %159, %160, %161
     %163:mat4x4<f32> = mul %4, %162
     ret
@@ -728,10 +728,10 @@ TEST_F(SpirvReader_BuiltinsTest, Inverse_Mat4x4h) {
     %155:f16 = mul %7, %74
     %156:f16 = sub %153, %154
     %157:f16 = add %156, %155
-    %158:vec3<f16> = construct %80, %85, %90, %95
-    %159:vec3<f16> = construct %102, %107, %112, %117
-    %160:vec3<f16> = construct %122, %127, %132, %137
-    %161:vec3<f16> = construct %142, %147, %152, %157
+    %158:vec4<f16> = construct %80, %85, %90, %95
+    %159:vec4<f16> = construct %102, %107, %112, %117
+    %160:vec4<f16> = construct %122, %127, %132, %137
+    %161:vec4<f16> = construct %142, %147, %152, %157
     %162:mat4x4<f16> = construct %158, %159, %160, %161
     %163:mat4x4<f16> = mul %4, %162
     ret
@@ -8501,6 +8501,53 @@ TEST_F(SpirvReader_BuiltinsTest, ShiftRightArithmetic_Vector_SignedSigned_Signed
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(SpirvReader_BuiltinsTest, SpecConstantOp_Not) {
+    auto* ep = b.ComputeFunction("foo");
+
+    capabilities = core::ir::Capabilities{core::ir::Capability::kAllowOverrides};
+
+    b.Append(b.ir.root_block, [&] {
+        b.CallExplicit<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kNot, Vector{ty.i32()},
+                                               1_i);
+    });
+
+    b.Append(ep->Block(), [&] {  //
+        b.CallExplicit<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kNot, Vector{ty.i32()},
+                                               1_i);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+$B1: {  # root
+  %1:i32 = spirv.not<i32> 1i
+}
+
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:i32 = spirv.not<i32> 1i
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+    Run(Builtins);
+
+    auto expect = R"(
+$B1: {  # root
+  %1:i32 = complement 1i
+}
+
+%foo = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %3:i32 = complement 1i
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(expect, str());
+}
+
 TEST_F(SpirvReader_BuiltinsTest, Not_Scalar_Signed_Signed) {
     auto* ep = b.ComputeFunction("foo");
 
@@ -9170,6 +9217,1337 @@ TEST_F(SpirvReader_BuiltinsTest, OuterProduct_Vector) {
     %20:f32 = mul %19, %12
     %21:vec4<f32> = construct %14, %16, %18, %20
     %22:mat2x4<f32> = construct %11, %21
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcast_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformBroadcast, 3_u,
+                                       true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_broadcast 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupBroadcast %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcast_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformBroadcast, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_broadcast 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupBroadcast %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcast_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformBroadcast, 3_u,
+                                       2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_broadcast 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupBroadcast 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcast_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformBroadcast,
+                                       3_u, b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_broadcast 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupBroadcast vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcastFirst_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformBroadcastFirst,
+                                       3_u, true);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_broadcast_first 3u, true
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupBroadcastFirst %2
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcastFirst_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformBroadcastFirst, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_broadcast_first 3u, vec3<bool>(true, false, true)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupBroadcastFirst %2
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcastFirst_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformBroadcastFirst,
+                                       3_u, 2_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_broadcast_first 3u, 2u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupBroadcastFirst 2u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformBroadcastFirst_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(),
+                                       spirv::BuiltinFn::kGroupNonUniformBroadcastFirst, 3_u,
+                                       b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_broadcast_first 3u, vec3<u32>(2u, 3u, 2u)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupBroadcastFirst vec3<u32>(2u, 3u, 2u)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadBroadcast_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformQuadBroadcast,
+                                       3_u, true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_quad_broadcast 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = quadBroadcast %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadBroadcast_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformQuadBroadcast, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_quad_broadcast 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = quadBroadcast %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadBroadcast_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformQuadBroadcast,
+                                       3_u, 2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_quad_broadcast 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = quadBroadcast 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadBroadcast_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(),
+                                       spirv::BuiltinFn::kGroupNonUniformQuadBroadcast, 3_u,
+                                       b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_quad_broadcast 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = quadBroadcast vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadSwap_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformQuadSwap, 3_u,
+                                       true, 0_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_quad_swap 3u, true, 0u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = quadSwapX %2
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadSwap_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformQuadSwap, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_quad_swap 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = quadSwapY %2
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadSwap_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformQuadSwap, 3_u,
+                                       2_u, 2_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_quad_swap 3u, 2u, 2u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = quadSwapDiagonal 2u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformQuadSwap_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformQuadSwap,
+                                       3_u, b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_quad_swap 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = quadSwapY vec3<u32>(2u, 3u, 2u)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffle_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformShuffle, 3_u,
+                                       true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupShuffle %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffle_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformShuffle, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupShuffle %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffle_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformShuffle, 3_u,
+                                       2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupShuffle 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffle_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformShuffle,
+                                       3_u, b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupShuffle vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleXor_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformShuffleXor,
+                                       3_u, true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_xor 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupShuffleXor %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleXor_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformShuffleXor, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_xor 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupShuffleXor %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleXor_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformShuffleXor, 3_u,
+                                       2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_xor 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupShuffleXor 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleXor_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformShuffleXor,
+                                       3_u, b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_xor 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupShuffleXor vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleDown_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformShuffleDown,
+                                       3_u, true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_down 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupShuffleDown %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleDown_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformShuffleDown, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_down 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupShuffleDown %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleDown_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformShuffleDown, 3_u,
+                                       2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_down 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupShuffleDown 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleDown_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(),
+                                       spirv::BuiltinFn::kGroupNonUniformShuffleDown, 3_u,
+                                       b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_down 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupShuffleDown vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleUp_Constant_BoolScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.bool_(), spirv::BuiltinFn::kGroupNonUniformShuffleUp, 3_u,
+                                       true, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:bool = spirv.group_non_uniform_shuffle_up 3u, true, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = convert true
+    %3:u32 = subgroupShuffleUp %2, 1u
+    %4:bool = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleUp_Constant_BoolVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3(ty.bool_()),
+                                       spirv::BuiltinFn::kGroupNonUniformShuffleUp, 3_u,
+                                       b.Composite(ty.vec3(ty.bool_()), true, false, true), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<bool> = spirv.group_non_uniform_shuffle_up 3u, vec3<bool>(true, false, true), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = convert vec3<bool>(true, false, true)
+    %3:vec3<u32> = subgroupShuffleUp %2, 1u
+    %4:vec3<bool> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleUp_Constant_NumericScalar) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformShuffleUp, 3_u,
+                                       2_u, 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_shuffle_up 3u, 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = subgroupShuffleUp 2u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformShuffleUp_Constant_NumericVector) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformShuffleUp,
+                                       3_u, b.Composite(ty.vec3<u32>(), 2_u, 3_u, 2_u), 1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_shuffle_up 3u, vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = subgroupShuffleUp vec3<u32>(2u, 3u, 2u), 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMin_Scalar_i32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kGroupNonUniformSMin, 3_u, 0_u,
+                                       1_i);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = spirv.group_non_uniform_s_min 3u, 0u, 1i
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = subgroupMin 1i
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMin_Vector_i32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<i32>(), spirv::BuiltinFn::kGroupNonUniformSMin, 3_u,
+                                       0_u, b.Composite(ty.vec3<i32>(), 1_i, 3_i, 1_i));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = spirv.group_non_uniform_s_min 3u, 0u, vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupMin vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMin_Scalar_u32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformSMin, 3_u, 0_u,
+                                       1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_s_min 3u, 0u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = convert 1u
+    %3:i32 = subgroupMin %2
+    %4:u32 = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMin_Vector_u32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformSMin, 3_u,
+                                       0_u, b.Composite(ty.vec3<u32>(), 1_u, 3_u, 1_u));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_s_min 3u, 0u, vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = convert vec3<u32>(1u, 3u, 1u)
+    %3:vec3<i32> = subgroupMin %2
+    %4:vec3<u32> = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMax_Scalar_i32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.i32(), spirv::BuiltinFn::kGroupNonUniformSMax, 3_u, 0_u,
+                                       1_i);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = spirv.group_non_uniform_s_max 3u, 0u, 1i
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = subgroupMax 1i
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMax_Vector_i32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<i32>(), spirv::BuiltinFn::kGroupNonUniformSMax, 3_u,
+                                       0_u, b.Composite(ty.vec3<i32>(), 1_i, 3_i, 1_i));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = spirv.group_non_uniform_s_max 3u, 0u, vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = subgroupMax vec3<i32>(1i, 3i, 1i)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMax_Scalar_u32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.u32(), spirv::BuiltinFn::kGroupNonUniformSMax, 3_u, 0_u,
+                                       1_u);
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:u32 = spirv.group_non_uniform_s_max 3u, 0u, 1u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:i32 = convert 1u
+    %3:i32 = subgroupMax %2
+    %4:u32 = convert %3
+    ret
+  }
+}
+)";
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvReader_BuiltinsTest, NonUniformSMax_Vector_u32) {
+    auto* ep = b.ComputeFunction("main");
+
+    b.Append(ep->Block(), [&] {  //
+        b.Call<spirv::ir::BuiltinCall>(ty.vec3<u32>(), spirv::BuiltinFn::kGroupNonUniformSMax, 3_u,
+                                       0_u, b.Composite(ty.vec3<u32>(), 1_u, 3_u, 1_u));
+        b.Return(ep);
+    });
+
+    auto src = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<u32> = spirv.group_non_uniform_s_max 3u, 0u, vec3<u32>(1u, 3u, 1u)
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    Run(Builtins);
+
+    auto expect = R"(
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B1: {
+    %2:vec3<i32> = convert vec3<u32>(1u, 3u, 1u)
+    %3:vec3<i32> = subgroupMax %2
+    %4:vec3<u32> = convert %3
     ret
   }
 }

@@ -130,10 +130,12 @@ class PipelineCachingTests : public DawnTest {
 
 class SinglePipelineCachingTests : public PipelineCachingTests {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         // Just copy all the limits, though all we really care about is
         // maxStorageBuffersInFragmentStage
-        return supported;
+        supported.UnlinkedCopyTo(&required);
+        required.maxStorageBuffersInFragmentStage = supported.maxStorageBuffersInFragmentStage;
     }
 };
 
@@ -542,7 +544,7 @@ TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheNegativeCasesFragmentC
 // cached backends currently remap shader bindings based on the layout. It can be split
 // per-backend as needed.
 TEST_P(SinglePipelineCachingTests, RenderPipelineBlobCacheLayout) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     // First time should create and write out to the cache.
     {

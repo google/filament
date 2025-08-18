@@ -41,6 +41,12 @@
 #include "src/tint/utils/memory/aligned_storage.h"
 #include "src/tint/utils/rtti/traits.h"
 
+// This file implements a custom STL style container & iterator in a performant manner, using
+// C-style data access. It is not unexpected that -Wunsafe-buffer-usage triggers in this code, since
+// the type of dynamic access being used cannot be guaranteed to be safe via static analysis.
+// Attempting to change this code in simple ways to quiet these errors either a) negatively affects
+// the performance by introducing unneeded copes, or b) uses typing shenanigans to work around the
+// warning that other linters/analyses are unhappy with.
 TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
 
 namespace tint {
@@ -155,7 +161,8 @@ class HashmapKey {
 /// @param out the stream to write to
 /// @param key the HashmapKey to write
 /// @returns out so calls can be chained
-template <typename STREAM, typename T, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename T>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const HashmapKey<T>& key) {
     if constexpr (traits::HasOperatorShiftLeft<STREAM, T>) {
         return out << key.Value();
@@ -281,6 +288,7 @@ class HashmapBase {
             }
             slots_[slot_idx].nodes = nullptr;
         }
+        count_ = 0;
     }
 
     /// Ensures that the map can hold @p n entries without heap reallocation or rehashing.

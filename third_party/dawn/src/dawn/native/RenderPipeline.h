@@ -96,6 +96,9 @@ class RenderPipelineBase : public PipelineBase,
 
     ObjectType GetType() const override;
 
+    const RenderPipelineBase* AsRenderPipeline() const override { return this; }
+    RenderPipelineBase* AsRenderPipeline() override { return this; }
+
     // Vertex getters
     const VertexAttributeMask& GetAttributeLocationsUsed() const;
     const VertexAttributeInfo& GetAttribute(VertexAttributeLocation location) const;

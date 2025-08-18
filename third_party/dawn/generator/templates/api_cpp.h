@@ -82,7 +82,7 @@ namespace {{metadata.namespace}} {
             UNHANDLED
         {%- endif -%}
     {%- else -%}
-        reinterpret_cast<{{decorate("", as_cType(arg.type.name), arg)}}>({{as_varName(arg.name)}})
+        reinterpret_cast<{{decorate(as_cType(arg.type.name), arg)}}>({{as_varName(arg.name)}})
     {%- endif -%}
 {%- endmacro -%}
 
@@ -301,7 +301,7 @@ class ObjectBase {
     CType mHandle = nullptr;
 };
 
-{% macro render_cpp_default_value(member, is_struct, force_default=False, forced_default_value="") -%}
+{%- macro render_cpp_default_value(member, is_struct, force_default=False, forced_default_value="") -%}
     {%- if forced_default_value -%}
         {{" "}}= {{forced_default_value}}
     {%- elif member.json_data.get("no_default", false) -%}
@@ -349,14 +349,16 @@ class ObjectBase {
     {%- endif -%}
 {%- endmacro %}
 
+{%- macro render_member_declaration(member, make_const_member, forced_default_value="") -%}
+    {{- as_annotated_cppType(member, make_const_member) }}
+    {{- render_cpp_default_value(member, True, make_const_member, forced_default_value) }}
+{%- endmacro %}
+
 //* This rendering macro should ONLY be used for callback info type functions.
-{% macro render_cpp_callback_info_template_method_declaration(type, method, dfn=False) %}
+{%- macro render_cpp_callback_info_template_method_declaration(type, method, dfn=False) %}
     {% set CppType = as_cppType(type.name) %}
-    {% set OriginalMethodName = method.name.CamelCase() %}
-    {% set MethodName = OriginalMethodName[:-1] if method.name.chunks[-1] == "2" else OriginalMethodName %}
+    {% set MethodName = method.name.CamelCase() %}
     {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
-    //* Stripping the 2 at the end of the callback functions for now until we can deprecate old ones.
-    //* TODO: crbug.com/dawn/2509 - Remove name handling once old APIs are deprecated.
     {% set CallbackInfoType = (method.arguments|last).type %}
     {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
     {% set SfinaeArg = " = std::enable_if_t<std::is_convertible_v<F, Cb*> || std::is_convertible_v<F, CbChar*>>" if not dfn else "" %}
@@ -380,7 +382,7 @@ class ObjectBase {
                     T userdata)
                 {%- endif -%},
               typename{{SfinaeArg}}>
-    {{as_cppType(method.return_type.name)}} {{MethodName}}(
+    {{as_annotated_cppType(method.returns)}} {{MethodName}}(
         {%- for arg in method.arguments if arg.type.category != "callback info" -%}
             {%- if arg.type.category == "object" and arg.annotation == "value" -%}
                 {{as_cppType(arg.type.name)}} const& {{as_varName(arg.name)}}{{ ", "}}
@@ -395,13 +397,10 @@ class ObjectBase {
 {%- endmacro %}
 
 //* This rendering macro should ONLY be used for callback info type functions.
-{% macro render_cpp_callback_info_lambda_method_declaration(type, method, dfn=False) %}
+{%- macro render_cpp_callback_info_lambda_method_declaration(type, method, dfn=False) %}
     {% set CppType = as_cppType(type.name) %}
-    {% set OriginalMethodName = method.name.CamelCase() %}
-    {% set MethodName = OriginalMethodName[:-1] if method.name.chunks[-1] == "2" else OriginalMethodName %}
+    {% set MethodName = method.name.CamelCase() %}
     {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
-    //* Stripping the 2 at the end of the callback functions for now until we can deprecate old ones.
-    //* TODO: crbug.com/dawn/2509 - Remove name handling once old APIs are deprecated.
     {% set CallbackInfoType = (method.arguments|last).type %}
     {% set CallbackType = find_by_name(CallbackInfoType.members, "callback").type %}
     {% set SfinaeArg = " = std::enable_if_t<std::is_convertible_v<L, Cb> || std::is_convertible_v<L, CbChar>>" if not dfn else "" %}
@@ -426,7 +425,7 @@ class ObjectBase {
                     )>
                 {%- endif -%},
               typename{{SfinaeArg}}>
-    {{as_cppType(method.return_type.name)}} {{MethodName}}(
+    {{as_annotated_cppType(method.returns)}} {{MethodName}}(
         {%- for arg in method.arguments if arg.type.category != "callback info" -%}
             {%- if arg.type.category == "object" and arg.annotation == "value" -%}
                 {{as_cppType(arg.type.name)}} const& {{as_varName(arg.name)}}{{ ", "}}
@@ -441,12 +440,11 @@ class ObjectBase {
 {%- endmacro %}
 
 //* This rendering macro should NOT be used for callback info type functions.
-{% macro render_cpp_method_declaration(type, method, dfn=False) %}
+{%- macro render_cpp_method_declaration(type, method, dfn=False) %}
     {% set CppType = as_cppType(type.name) %}
-    {% set OriginalMethodName = method.name.CamelCase() %}
-    {% set MethodName = OriginalMethodName[:-1] if method.name.chunks[-1] == "f" or method.name.chunks[-1] == "2" else OriginalMethodName %}
+    {% set MethodName = method.name.CamelCase() %}
     {% set MethodName = CppType + "::" + MethodName if dfn else MethodName %}
-    {{"ConvertibleStatus" if method.return_type.name.get() == "status" else as_cppType(method.return_type.name)}} {{MethodName}}(
+    {{"ConvertibleStatus" if method.returns and method.returns.type.name.get() == "status" else as_annotated_cppType(method.returns)}} {{MethodName}}(
         {%- for arg in method.arguments -%}
             {%- if not loop.first %}, {% endif -%}
             {%- if arg.type.category == "object" and arg.annotation == "value" -%}
@@ -565,7 +563,7 @@ struct CallbackTypeBase<std::tuple<Args...>, T> {
     using {{as_cppType(type.name)}} = typename detail::CallbackTypeBase<std::tuple<
         {%- for arg in type.arguments -%}
             {%- if not loop.first %}, {% endif -%}
-            {{decorate("", as_cppType(arg.type.name), arg)}}
+            {{decorate(as_cppType(arg.type.name), arg)}}
         {%- endfor -%}
     >, T...>::Callback;
 {% endfor %}
@@ -618,13 +616,13 @@ using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<con
         }
         callbackInfo.userdata1 = reinterpret_cast<void*>(+callback);
         callbackInfo.userdata2 = reinterpret_cast<void*>(userdata);
-        {% if method.return_type.name.get() == "future" %}
+        {% if method.returns and method.returns.type.name.get() == "future" %}
             auto result = {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
                 {%- for arg in method.arguments if arg.type.category != "callback info" -%}
                     {{render_c_actual_arg(arg)}}{{", "}}
                 {%- endfor -%}
             callbackInfo);
-            return {{convert_cType_to_cppType(method.return_type, 'value', 'result') | indent(4)}};
+            return {{convert_cType_to_cppType(method.returns.type, 'value', 'result') | indent(4)}};
         {% else %}
             return {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
                 {%- for arg in method.arguments if arg.type.category != "callback info" -%}
@@ -684,13 +682,13 @@ using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<con
             callbackInfo.userdata1 = reinterpret_cast<void*>(lambda);
             callbackInfo.userdata2 = nullptr;
         }
-        {% if method.return_type.name.get() == "future" %}
+        {% if method.returns and method.returns.type.name.get() == "future" %}
             auto result = {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
             {%- for arg in method.arguments if arg.type.category != "callback info" -%}
                 {{render_c_actual_arg(arg)}}{{", "}}
             {%- endfor -%}
             callbackInfo);
-            return {{convert_cType_to_cppType(method.return_type, 'value', 'result') | indent(8)}};
+            return {{convert_cType_to_cppType(method.returns.type, 'value', 'result') | indent(8)}};
         {% else %}
             return {{as_cMethodNamespaced(type.name, method.name, c_namespace)}}(Get(){{", "}}
             {%- for arg in method.arguments if arg.type.category != "callback info" -%}
@@ -706,11 +704,11 @@ using UncapturedErrorCallback = typename detail::CallbackTypeBase<std::tuple<con
         {% for arg in method.arguments if arg.type.has_free_members_function and arg.annotation == '*' %}
             *{{as_varName(arg.name)}} = {{as_cppType(arg.type.name)}}();
         {% endfor %}
-        {% if method.return_type.name.concatcase() == "void" %}
+        {% if not method.returns %}
             {{render_cpp_to_c_method_call(type, method)}};
         {% else %}
             auto result = {{render_cpp_to_c_method_call(type, method)}};
-            return {{convert_cType_to_cppType(method.return_type, 'value', 'result') | indent(8)}};
+            return {{convert_cType_to_cppType(method.returns.type, 'value', 'result') | indent(8)}};
         {% endif %}
     }
 {%- endmacro %}
@@ -800,11 +798,11 @@ static_assert(offsetof(ChainedStruct, sType) == offsetof({{c_prefix}}ChainedStru
                     {% set forced_default_value = "{ nullptr, StorageTextureAccess::BindingNotUsed, TextureFormat::Undefined, TextureViewDimension::e2D }" %}
                 {% endif %}
             {% endif %}
-            {% set member_declaration = as_annotated_cppType(member, type.has_free_members_function) + render_cpp_default_value(member, True, type.has_free_members_function, forced_default_value) %}
+            {% set member_declaration = render_member_declaration(member, type.has_free_members_function, forced_default_value) %}
             {% if type.chained and loop.first %}
                 //* Align the first member after ChainedStruct to match the C struct layout.
                 //* It has to be aligned both to its natural and ChainedStruct's alignment.
-                static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct{{out}}), alignof({{decorate("", as_cppType(member.type.name), member)}}));
+                static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct{{out}}), alignof({{decorate(as_cppType(member.type.name), member)}}));
                 alignas(kFirstMemberAlignment) {{member_declaration}};
             {% else %}
                 {{member_declaration}};
@@ -831,7 +829,7 @@ struct {{CppType}} {
     ChainedStruct const * nextInChain = nullptr;
     {% for member in type.members %}
         {% if member.type.category != "callback info" %}
-            {{as_annotated_cppType(member, type.has_free_members_function) + render_cpp_default_value(member, True, type.has_free_members_function)}};
+            {{render_member_declaration(member, type.has_free_members_function)}};
         {% else %}
             {{as_annotated_cType(member)}} = {{CAPI}}_{{member.name.SNAKE_CASE()}}_INIT;
         {% endif %}
@@ -889,8 +887,7 @@ struct {{CppType}} : protected detail::{{CppType}} {
         struct {{CppType}}::Init {
             ChainedStruct{{Out}} * {{const}} nextInChain;
             {% for member in type.members %}
-                {% set member_declaration = as_annotated_cppType(member, type.has_free_members_function) + render_cpp_default_value(member, True, type.has_free_members_function) %}
-                {{member_declaration}};
+                {{render_member_declaration(member, type.has_free_members_function)}};
             {% endfor %}
         };
         {{CppType}}::{{CppType}}({{CppType}}::Init&& init)
@@ -993,8 +990,7 @@ struct {{CppType}} : protected detail::{{CppType}} {
 struct {{CppType}}::Init {
     ChainedStruct const * nextInChain;
     {% for member in type.members if member.type.category != "callback info" %}
-        {% set member_declaration = as_annotated_cppType(member, type.has_free_members_function) + render_cpp_default_value(member, True, type.has_free_members_function) %}
-        {{member_declaration}};
+        {{render_member_declaration(member, type.has_free_members_function)}};
     {% endfor %}
 };
 
@@ -1150,20 +1146,18 @@ void {{CppType}}::SetUncapturedErrorCallback(L callback) {
 
 // Free Functions
 {% for function in by_category["function"] if not function.no_cpp %}
-    //* TODO(crbug.com/42241188): Remove "2" suffix when WGPUStringView changes complete.
-    {% set OriginalFunctionName = as_cppType(function.name) %}
-    {% set FunctionName = OriginalFunctionName[:-1] if function.name.chunks[-1] == "2" else OriginalFunctionName %}
-    static inline {{as_cppType(function.return_type.name)}} {{FunctionName}}(
+    {% set FunctionName = as_cppType(function.name) %}
+    static inline {{as_annotated_cppType(function.returns)}} {{FunctionName}}(
         {%- for arg in function.arguments -%}
             {%- if not loop.first %}, {% endif -%}
             {{as_annotated_cppType(arg)}}{{render_cpp_default_value(arg, False)}}
         {%- endfor -%}
     ) {
-        {% if function.return_type.name.concatcase() == "void" %}
+        {% if not function.returns %}
             {{render_function_call(function)}};
         {% else %}
             auto result = {{render_function_call(function)}};
-            return {{convert_cType_to_cppType(function.return_type, 'value', 'result')}};
+            return {{convert_cType_to_cppType(function.returns.type, 'value', 'result')}};
         {% endif %}
     }
 {% endfor %}

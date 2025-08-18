@@ -41,8 +41,7 @@ namespace tint::core::ir::transform {
 
 /// The capabilities that the transform can support.
 const core::ir::Capabilities kDirectVariableAccessCapabilities{
-    core::ir::Capability::kAllowClipDistancesOnF32,
-};
+    core::ir::Capability::kAllowClipDistancesOnF32, core::ir::Capability::kAllowDuplicateBindings};
 
 /// DirectVariableAccessOptions adjusts the behaviour of the transform.
 struct DirectVariableAccessOptions {
@@ -54,12 +53,15 @@ struct DirectVariableAccessOptions {
     bool transform_handle = false;
 
     /// Reflection for this class
-    TINT_REFLECT(DirectVariableAccessOptions, transform_private, transform_function);
+    TINT_REFLECT(DirectVariableAccessOptions,
+                 transform_private,
+                 transform_function,
+                 transform_handle);
 };
 
 /// DirectVariableAccess is a transform that transforms parameters in the 'storage',
 /// 'uniform' and 'workgroup' address space so that they're accessed directly by the function,
-/// instead of being passed by pointer. It will potentiall also transform `private`, `handle` or
+/// instead of being passed by pointer. It will potentially also transform `private`, `handle` or
 /// `function` parameters depending on provided options.
 ///
 /// DirectVariableAccess works by creating specializations of functions that have matching

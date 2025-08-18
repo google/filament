@@ -1413,6 +1413,7 @@ class OutputGenerator:
         else:
             paramdecl += 'void'
         paramdecl += ");"
+
         return [pdecl + indentdecl, tdecl + paramdecl]
 
     def newline(self):

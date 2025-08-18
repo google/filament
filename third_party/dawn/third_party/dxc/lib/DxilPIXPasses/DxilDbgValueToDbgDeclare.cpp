@@ -36,7 +36,7 @@ using namespace PIXPassHelpers;
 
 using namespace llvm;
 
-//#define VALUE_TO_DECLARE_LOGGING
+// #define VALUE_TO_DECLARE_LOGGING
 
 #ifdef VALUE_TO_DECLARE_LOGGING
 #ifndef PIX_DEBUG_DUMP_HELPER
@@ -859,8 +859,8 @@ void DxilDbgValueToDbgDeclare::handleDbgValue(llvm::Module &M,
     VALUE_TO_DECLARE_LOG("... variable was null too");
   }
 
-  llvm::Value *V = DbgValue->getValue();
-  if (V == nullptr) {
+  llvm::Value *ValueFromDbgInst = DbgValue->getValue();
+  if (ValueFromDbgInst == nullptr) {
     // The metadata contained a null Value, so we ignore it. This
     // seems to be a dxcompiler bug.
     VALUE_TO_DECLARE_LOG("...Null value!");
@@ -873,20 +873,20 @@ void DxilDbgValueToDbgDeclare::handleDbgValue(llvm::Module &M,
     return;
   }
 
-  if (llvm::isa<llvm::PointerType>(V->getType())) {
+  if (llvm::isa<llvm::PointerType>(ValueFromDbgInst->getType())) {
     // Safeguard: If the type is not a pointer type, then this is
     // dbg.value directly pointing to a memory location instead of
     // a value.
     if (!IsDITypePointer(Ty, EmptyMap)) {
       // We only know how to handle AllocaInsts for now
-      if (!isa<AllocaInst>(V)) {
+      if (!isa<AllocaInst>(ValueFromDbgInst)) {
         VALUE_TO_DECLARE_LOG(
             "... variable had pointer type, but is not an alloca.");
         return;
       }
 
       IRBuilder<> B(DbgValue->getNextNode());
-      V = B.CreateLoad(V);
+      ValueFromDbgInst = B.CreateLoad(ValueFromDbgInst);
     }
   }
 
@@ -931,7 +931,7 @@ void DxilDbgValueToDbgDeclare::handleDbgValue(llvm::Module &M,
   }
 
   const OffsetInBits InitialOffset = PackedOffsetFromVar;
-  auto *insertPt = llvm::dyn_cast<llvm::Instruction>(V);
+  auto *insertPt = llvm::dyn_cast<llvm::Instruction>(ValueFromDbgInst);
   if (insertPt != nullptr && !llvm::isa<TerminatorInst>(insertPt)) {
     insertPt = insertPt->getNextNode();
     // Drivers may crash if phi nodes aren't always at the top of a block,
@@ -950,7 +950,8 @@ void DxilDbgValueToDbgDeclare::handleDbgValue(llvm::Module &M,
       // Offset}. InitialOffset is the offset from DbgValue's expression
       // (i.e., the offset from the Variable's start), and Offset is the
       // Scalar Value's packed offset from DbgValue's value.
-      for (const ValueAndOffset &VO : SplitValue(V, InitialOffset, B)) {
+      for (const ValueAndOffset &VO :
+           SplitValue(ValueFromDbgInst, InitialOffset, B)) {
 
         OffsetInBits AlignedOffset;
         if (!Offsets.GetAlignedOffsetFromPackedOffset(VO.m_PackedOffset,

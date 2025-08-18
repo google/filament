@@ -73,7 +73,7 @@ std::string GenerateFS(const BlitColorToColorWithDrawPipelineKey& pipelineKey) {
 
     finalStream << "enable chromium_internal_input_attachments;";
 
-    for (auto i : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+    for (auto i : pipelineKey.attachmentsToExpandResolve) {
         finalStream << absl::StrFormat(
             "@group(0) @binding(%u) @input_attachment_index(%u) var srcTex%u : "
             "input_attachment<f32>;\n",
@@ -186,8 +186,7 @@ MaybeError BeginRenderPassAndExpandResolveTextureWithDraw(Device* device,
     BlitColorToColorWithDrawPipelineKey pipelineKey;
     ColorAttachmentIndex colorAttachmentCount =
         GetHighestBitIndexPlusOne(renderPass->attachmentState->GetColorAttachmentsMask());
-    for (ColorAttachmentIndex colorIdx :
-         IterateBitSet(renderPass->attachmentState->GetColorAttachmentsMask())) {
+    for (ColorAttachmentIndex colorIdx : renderPass->attachmentState->GetColorAttachmentsMask()) {
         const auto& colorAttachment = renderPass->colorAttachments[colorIdx];
         const auto& view = colorAttachment.view;
         DAWN_ASSERT(view != nullptr);
@@ -237,7 +236,7 @@ MaybeError BeginRenderPassAndExpandResolveTextureWithDraw(Device* device,
     Ref<BindGroupBase> bindGroup;
     absl::InlinedVector<BindGroupEntry, kMaxColorAttachments> bgEntries = {};
 
-    for (auto colorIdx : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+    for (auto colorIdx : pipelineKey.attachmentsToExpandResolve) {
         const auto& colorAttachment = renderPass->colorAttachments[colorIdx];
         bgEntries.push_back({});
         auto& bgEntry = bgEntries.back();
@@ -291,7 +290,7 @@ MaybeError BeginRenderPassAndExpandResolveTextureWithDraw(Device* device,
     // Subpass dependency automatically transitions the layouts of the resolve textures
     // to RenderAttachment. So we need to notify TextureVk and don't need to use any explicit
     // barriers.
-    for (auto colorIdx : IterateBitSet(pipelineKey.attachmentsToExpandResolve)) {
+    for (auto colorIdx : pipelineKey.attachmentsToExpandResolve) {
         const auto& colorAttachment = renderPass->colorAttachments[colorIdx];
         auto* textureVk = static_cast<Texture*>(colorAttachment.resolveTarget->GetTexture());
         textureVk->UpdateUsage(wgpu::TextureUsage::RenderAttachment, wgpu::ShaderStage::Fragment,

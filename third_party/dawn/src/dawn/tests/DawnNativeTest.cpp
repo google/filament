@@ -88,6 +88,10 @@ std::unique_ptr<dawn::platform::Platform> DawnNativeTest::CreateTestPlatform() {
     return nullptr;
 }
 
+wgpu::DawnTogglesDescriptor DawnNativeTest::DeviceToggles() {
+    return wgpu::DawnTogglesDescriptor{};
+}
+
 WGPUDevice DawnNativeTest::CreateTestDevice() {
     wgpu::DeviceDescriptor desc = {};
     desc.SetUncapturedErrorCallback(
@@ -95,6 +99,9 @@ WGPUDevice DawnNativeTest::CreateTestDevice() {
             DAWN_ASSERT(type != wgpu::ErrorType::NoError);
             FAIL() << "Unexpected error: " << message;
         });
+
+    wgpu::DawnTogglesDescriptor toggles = DeviceToggles();
+    desc.nextInChain = &toggles;
 
     return adapter.CreateDevice(&desc);
 }

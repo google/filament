@@ -55,11 +55,6 @@ tint_target_add_dependencies(tint_lang_glsl_writer_printer lib
   tint_lang_glsl
   tint_lang_glsl_intrinsic
   tint_lang_glsl_ir
-  tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_ast_transform
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic

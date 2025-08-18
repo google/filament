@@ -65,6 +65,10 @@ class PipelineLayout final : public PipelineLayoutBase {
     uint32_t GetDynamicStorageBufferLengthsShaderRegister() const;
     uint32_t GetDynamicStorageBufferLengthsParameterIndex() const;
 
+    uint32_t GetImmediatesRegisterSpace() const;
+    uint32_t GetImmediatesShaderRegister() const;
+    uint32_t GetImmediatesParameterIndex() const;
+
     ID3D12RootSignature* GetRootSignature() const;
 
     ID3DBlob* GetRootSignatureBlob() const;
@@ -110,6 +114,7 @@ class PipelineLayout final : public PipelineLayoutBase {
     uint32_t mFirstIndexOffsetParameterIndex;
     uint32_t mNumWorkgroupsParameterIndex;
     uint32_t mDynamicStorageBufferLengthsParameterIndex;
+    uint32_t mImmediatesParameterIndex;
     ComPtr<ID3D12RootSignature> mRootSignature;
     // Store the root signature blob to put in pipeline cachekey
     ComPtr<ID3DBlob> mRootSignatureBlob;

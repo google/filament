@@ -31,7 +31,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/tint/lang/wgsl/diagnostic_severity.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/utils/diagnostic/diagnostic.h"
 
 // Forward declarations

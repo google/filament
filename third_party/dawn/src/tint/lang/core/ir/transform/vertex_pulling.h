@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_VERTEX_PULLING_H_
 
 #include "src/tint/api/common/vertex_pulling_config.h"
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -37,6 +38,11 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::core::ir::transform {
+
+/// The capabilities that the transform can support.
+// TODO(crbug.com/363031535): Remove kAllowDuplicateBindings when MSL no
+// longer needs FlattenBindings.
+const Capabilities kVertexPullingCapabilities{Capability::kAllowDuplicateBindings};
 
 /// This transform replaces vertex shader inputs with storage buffers, so that we can apply
 /// robustness to the vertex input accesses.

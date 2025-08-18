@@ -54,6 +54,13 @@ NextIteration::NextIteration(Id id, ir::Loop* loop, VectorRef<Value*> args /* = 
 
 NextIteration::~NextIteration() = default;
 
+void NextIteration::Destroy() {
+    if (loop_) {
+        loop_->Body()->RemoveInboundSiblingBranch(this);
+    }
+    Instruction::Destroy();
+}
+
 NextIteration* NextIteration::Clone(CloneContext& ctx) {
     auto* new_loop = ctx.Clone(loop_);
     auto args = ctx.Remap<NextIteration::kDefaultNumOperands>(Args());

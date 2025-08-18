@@ -459,13 +459,13 @@ TEST_F(SpirvWriterTest, Loop_NestedLoopInContinuing_UnreachableInNestedBody) {
                OpLoopMerge %12 %10 None
                OpBranch %9
           %9 = OpLabel
-               OpSelectionMerge %13 None
-               OpBranchConditional %true %14 %15
-         %14 = OpLabel
+               OpSelectionMerge %15 None
+               OpBranchConditional %true %16 %17
+         %16 = OpLabel
+               OpBranch %12
+         %17 = OpLabel
                OpBranch %12
          %15 = OpLabel
-               OpBranch %12
-         %13 = OpLabel
                OpBranch %12
          %10 = OpLabel
                OpBranchConditional %true %12 %11
@@ -514,6 +514,8 @@ TEST_F(SpirvWriterTest, Loop_NestedLoopInContinuing_UnreachableInNestedBody_With
     options.disable_robustness = true;
     ASSERT_TRUE(Generate(options)) << Error() << output_;
     EXPECT_INST(R"(
+               ; Function foo
+        %foo = OpFunction %int None %3
           %4 = OpLabel
                OpBranch %7
           %7 = OpLabel
@@ -522,27 +524,27 @@ TEST_F(SpirvWriterTest, Loop_NestedLoopInContinuing_UnreachableInNestedBody_With
           %5 = OpLabel
                OpBranch %6
           %6 = OpLabel
-               OpBranch %11
-         %11 = OpLabel
-               OpLoopMerge %12 %10 None
-               OpBranch %9
-          %9 = OpLabel
-               OpSelectionMerge %13 None
-               OpBranchConditional %true %14 %15
+               OpBranch %14
          %14 = OpLabel
+               OpLoopMerge %9 %13 None
                OpBranch %12
-         %15 = OpLabel
-               OpBranch %12
-         %13 = OpLabel
-               OpBranch %12
-         %10 = OpLabel
-               OpBranchConditional %true %12 %11
          %12 = OpLabel
-         %18 = OpPhi %int %int_3 %10 %20 %13 %int_1 %14 %int_2 %15
+               OpSelectionMerge %17 None
+               OpBranchConditional %true %15 %16
+         %15 = OpLabel
+               OpBranch %9
+         %16 = OpLabel
+               OpBranch %9
+         %17 = OpLabel
+               OpBranch %9
+         %13 = OpLabel
+               OpBranchConditional %true %9 %14
+          %9 = OpLabel
+         %11 = OpPhi %int %int_3 %13 %int_1 %15 %int_2 %16 %21 %17
                OpBranchConditional %true %8 %7
           %8 = OpLabel
-         %23 = OpPhi %int %18 %12
-               OpReturnValue %23
+         %10 = OpPhi %int %11 %9
+               OpReturnValue %10
                OpFunctionEnd
 
                ; Function unused_entry_point
@@ -592,12 +594,15 @@ TEST_F(SpirvWriterTest, Loop_Phi_SingleValue) {
                OpLoopMerge %9 %7 None
                OpBranch %6
           %6 = OpLabel
-         %14 = OpIAdd %int %11 %int_1
+         %16 = OpBitcast %uint %11
+         %17 = OpBitcast %uint %int_1
+         %18 = OpIAdd %uint %16 %17
+         %14 = OpBitcast %int %18
                OpBranch %7
           %7 = OpLabel
          %13 = OpPhi %int %14 %6
-         %15 = OpSGreaterThan %bool %13 %int_5
-               OpBranchConditional %15 %9 %8
+         %19 = OpSGreaterThan %bool %13 %int_5
+               OpBranchConditional %19 %9 %8
           %9 = OpLabel
                OpReturn
                OpFunctionEnd
@@ -647,14 +652,17 @@ TEST_F(SpirvWriterTest, Loop_Phi_MultipleValue) {
                OpLoopMerge %9 %7 None
                OpBranch %6
           %6 = OpLabel
-         %18 = OpIAdd %int %11 %int_1
+         %21 = OpBitcast %uint %11
+         %22 = OpBitcast %uint %int_1
+         %23 = OpIAdd %uint %21 %22
+         %18 = OpBitcast %int %23
                OpBranch %7
           %7 = OpLabel
          %13 = OpPhi %int %18 %6
          %19 = OpPhi %bool %15 %6
-         %20 = OpSGreaterThan %bool %13 %int_5
+         %24 = OpSGreaterThan %bool %13 %int_5
          %17 = OpLogicalNot %bool %19
-               OpBranchConditional %20 %9 %8
+               OpBranchConditional %24 %9 %8
           %9 = OpLabel
                OpReturn
                OpFunctionEnd
@@ -707,17 +715,17 @@ TEST_F(SpirvWriterTest, Loop_Phi_NestedIf) {
                OpLoopMerge %9 %7 None
                OpBranch %6
           %6 = OpLabel
-               OpSelectionMerge %14 None
-               OpBranchConditional %true %15 %16
-         %15 = OpLabel
-               OpBranch %14
+               OpSelectionMerge %15 None
+               OpBranchConditional %true %16 %17
          %16 = OpLabel
-               OpBranch %14
-         %14 = OpLabel
-         %19 = OpPhi %int %int_10 %15 %int_20 %16
+               OpBranch %15
+         %17 = OpLabel
+               OpBranch %15
+         %15 = OpLabel
+         %14 = OpPhi %int %int_10 %16 %int_20 %17
                OpBranch %7
           %7 = OpLabel
-         %13 = OpPhi %int %19 %14
+         %13 = OpPhi %int %14 %15
          %22 = OpSGreaterThan %bool %13 %int_5
                OpBranchConditional %22 %9 %8
           %9 = OpLabel
@@ -775,22 +783,22 @@ TEST_F(SpirvWriterTest, Loop_Phi_NestedLoop) {
                OpLoopMerge %9 %7 None
                OpBranch %6
           %6 = OpLabel
-               OpBranch %14
-         %14 = OpLabel
-               OpBranch %17
-         %17 = OpLabel
-               OpLoopMerge %18 %16 None
                OpBranch %15
          %15 = OpLabel
+               OpBranch %18
+         %18 = OpLabel
+               OpLoopMerge %14 %17 None
                OpBranch %16
          %16 = OpLabel
-               OpBranchConditional %true %18 %17
-         %18 = OpLabel
+               OpBranch %17
+         %17 = OpLabel
+               OpBranchConditional %true %14 %18
+         %14 = OpLabel
                OpBranch %7
           %7 = OpLabel
-         %13 = OpPhi %int %11 %18
-         %21 = OpSGreaterThan %bool %13 %int_5
-               OpBranchConditional %21 %9 %8
+         %13 = OpPhi %int %11 %14
+         %19 = OpSGreaterThan %bool %13 %int_5
+               OpBranchConditional %19 %9 %8
           %9 = OpLabel
                OpReturn
                OpFunctionEnd
@@ -944,17 +952,17 @@ TEST_F(SpirvWriterTest, Loop_ExitValue_BreakIf) {
                OpLoopMerge %8 %6 None
                OpBranch %5
           %5 = OpLabel
-               OpSelectionMerge %9 None
-               OpBranchConditional %false %10 %9
-         %10 = OpLabel
-               OpBranch %8
+               OpSelectionMerge %13 None
+               OpBranchConditional %false %9 %13
           %9 = OpLabel
+               OpBranch %8
+         %13 = OpLabel
                OpBranch %6
           %6 = OpLabel
                OpBranchConditional %true %8 %7
           %8 = OpLabel
-         %14 = OpPhi %int %int_42 %6 %int_1 %10
-               OpReturnValue %14
+         %10 = OpPhi %int %int_42 %6 %int_1 %9
+               OpReturnValue %10
                OpFunctionEnd
 )");
 }

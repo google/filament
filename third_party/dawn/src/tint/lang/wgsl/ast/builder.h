@@ -32,14 +32,12 @@
 
 #include "src/tint/api/common/override_id.h"
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/interpolation.h"
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
 #include "src/tint/lang/core/number.h"
-#include "src/tint/lang/core/subgroup_matrix_kind.h"
-#include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/sampler_kind.h"
+#include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/alias.h"
 #include "src/tint/lang/wgsl/ast/assignment_statement.h"
@@ -100,8 +98,7 @@
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 #include "src/tint/lang/wgsl/ast/while_statement.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
-#include "src/tint/lang/wgsl/builtin_fn.h"
-#include "src/tint/lang/wgsl/extension.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/memory/block_allocator.h"
 #include "src/tint/utils/symbol/symbol_table.h"
@@ -153,44 +150,44 @@ class Builder {
     /// perfectly-forward the first argument.
     template <typename... TYPES>
     using DisableIfSource =
-        traits::EnableIf<!IsSource<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<!IsSource<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to disable overloads if the first type in `TYPES` is a scalar type. Used to
     /// avoid ambiguities in overloads that take a scalar as the first parameter and those that
     /// perfectly-forward the first argument.
     template <typename... TYPES>
     using DisableIfScalar =
-        traits::EnableIf<!IsScalar<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<!IsScalar<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to enable overloads if the first type in `TYPES` is a scalar type. Used to
     /// avoid ambiguities in overloads that take a scalar as the first parameter and those that
     /// perfectly-forward the first argument.
     template <typename... TYPES>
     using EnableIfScalar =
-        traits::EnableIf<IsScalar<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<IsScalar<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to disable overloads if the first type in `TYPES` is a Vector or
     /// VectorRef.
     template <typename... TYPES>
     using DisableIfVectorLike =
-        traits::EnableIf<!IsVectorLike<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<!IsVectorLike<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to enable overloads if the first type in `TYPES` is identifier-like.
     template <typename... TYPES>
     using EnableIfIdentifierLike =
-        traits::EnableIf<IsIdentifierLike<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<IsIdentifierLike<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to disable overloads if the first type in `TYPES` is Infer or an abstract
     /// numeric.
     template <typename... TYPES>
     using DisableIfInferOrAbstract =
-        traits::EnableIf<!IsInferOrAbstract<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<!IsInferOrAbstract<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// A helper used to enable overloads if the first type in `TYPES` is Infer or an abstract
     /// numeric.
     template <typename... TYPES>
     using EnableIfInferOrAbstract =
-        traits::EnableIf<IsInferOrAbstract<traits::Decay<traits::NthTypeOf<0, TYPES..., void>>>>;
+        std::enable_if_t<IsInferOrAbstract<std::decay_t<traits::NthTypeOf<0, TYPES..., void>>>>;
 
     /// VarOptions is a helper for accepting an arbitrary number of order independent options for
     /// constructing an ast::Var.
@@ -380,7 +377,8 @@ class Builder {
     /// @param args the arguments to pass to the constructor
     /// @returns the node pointer
     template <typename T, typename... ARGS>
-    traits::EnableIfIsType<T, ast::Node>* create(const Source& source, ARGS&&... args) {
+        requires(traits::IsTypeOrDerived<T, ast::Node>)
+    T* create(const Source& source, ARGS&&... args) {
         AssertNotMoved();
         return ast_nodes_.Create<T>(id_, AllocateNodeID(), source, std::forward<ARGS>(args)...);
     }
@@ -392,7 +390,8 @@ class Builder {
     /// destructed.
     /// @returns the node pointer
     template <typename T>
-    traits::EnableIfIsType<T, ast::Node>* create() {
+        requires(traits::IsTypeOrDerived<T, ast::Node>)
+    T* create() {
         AssertNotMoved();
         return ast_nodes_.Create<T>(id_, AllocateNodeID(), source_);
     }
@@ -406,7 +405,7 @@ class Builder {
     /// @param args the remaining arguments to pass to the constructor
     /// @returns the node pointer
     template <typename T, typename ARG0, typename... ARGS>
-    traits::EnableIf</* T is ast::Node and ARG0 is not Source */
+    std::enable_if_t</* T is ast::Node and ARG0 is not Source */
                      traits::IsTypeOrDerived<T, ast::Node> &&
                          !traits::IsTypeOrDerived<ARG0, Source>,
                      T>*
@@ -509,6 +508,20 @@ class Builder {
         /// @param source the Source of the node
         /// @returns a 'u32' type
         ast::Type u32(const Source& source) const { return (*this)(source, "u32"); }
+
+        /// @returns a 'i8' type
+        ast::Type i8() const { return (*this)("i8"); }
+
+        /// @param source the Source of the node
+        /// @returns a 'i8' type
+        ast::Type i8(const Source& source) const { return (*this)(source, "i8"); }
+
+        /// @returns a 'u8' type
+        ast::Type u8() const { return (*this)("u8"); }
+
+        /// @param source the Source of the node
+        /// @returns a 'u8' type
+        ast::Type u8(const Source& source) const { return (*this)(source, "u8"); }
 
         /// @param type vector subtype
         /// @param n vector width in elements
@@ -1286,6 +1299,11 @@ class Builder {
         /// @returns the external texture
         ast::Type external_texture() const { return (*this)("texture_external"); }
 
+        /// @returns the texel buffer
+        ast::Type texel_buffer(core::TexelFormat format, core::Access access) const {
+            return (*this)("texel_buffer", format, access);
+        }
+
         /// @param subtype the texture subtype.
         /// @returns the input attachment
         ast::Type input_attachment(ast::Type subtype) const {
@@ -1407,7 +1425,8 @@ class Builder {
 
     /// @param expr the expression
     /// @return expr (passthrough)
-    template <typename T, typename = traits::EnableIfIsType<T, ast::Expression>>
+    template <typename T>
+        requires(traits::IsTypeOrDerived<T, ast::Expression>)
     const T* Expr(const T* expr) {
         return expr;
     }
@@ -3532,7 +3551,7 @@ class Builder {
     /// @param args a mix of ast::Expression, ast::Statement, ast::Variables.
     /// @returns the function
     template <typename... ARGS,
-              typename = traits::EnableIf<(CanWrapInStatement<ARGS>::value && ...)>>
+              typename = std::enable_if_t<(CanWrapInStatement<ARGS>::value && ...)>>
     const ast::Function* WrapInFunction(ARGS&&... args) {
         Vector stmts{
             WrapInStatement(std::forward<ARGS>(args))...,
@@ -3606,6 +3625,14 @@ struct Builder::TypesBuilder::CToAST<core::f16> {
 template <>
 struct Builder::TypesBuilder::CToAST<bool> {
     static ast::Type get(const Builder::TypesBuilder* t) { return t->bool_(); }
+};
+template <>
+struct Builder::TypesBuilder::CToAST<core::i8> {
+    static ast::Type get(const Builder::TypesBuilder* t) { return t->i8(); }
+};
+template <>
+struct Builder::TypesBuilder::CToAST<core::u8> {
+    static ast::Type get(const Builder::TypesBuilder* t) { return t->u8(); }
 };
 template <typename T, uint32_t N>
 struct Builder::TypesBuilder::CToAST<core::fluent_types::array<T, N>> {

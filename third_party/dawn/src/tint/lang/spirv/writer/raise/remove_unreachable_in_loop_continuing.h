@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_REMOVE_UNREACHABLE_IN_LOOP_CONTINUING_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_REMOVE_UNREACHABLE_IN_LOOP_CONTINUING_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -36,6 +37,12 @@ class Module;
 }
 
 namespace tint::spirv::writer::raise {
+
+// The capabilities that the transform can support.
+const core::ir::Capabilities kRemoveUnreachableInLoopContinuingCapabilities{
+    core::ir::Capability::kAllowAnyInputAttachmentIndexType,
+    core::ir::Capability::kAllowNonCoreTypes,
+};
 
 /// RemoveUnreachableInLoopContinuing is a transform that replaces unreachable statements that are
 /// nested inside a loop continuing block, as SPIR-V's structured control flow rules prohibit this.

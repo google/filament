@@ -193,6 +193,11 @@ void ValidationTest::SetUp() {
 
     wgpu::InstanceDescriptor instanceDesc = {};
     instanceDesc.nextInChain = &instanceToggles;
+    static constexpr auto kRequiredFeatures =
+        std::array{wgpu::InstanceFeatureName::MultipleDevicesPerAdapter,
+                   wgpu::InstanceFeatureName::ShaderSourceSPIRV};
+    instanceDesc.requiredFeatureCount = kRequiredFeatures.size();
+    instanceDesc.requiredFeatures = kRequiredFeatures.data();
 
     SetUp(&instanceDesc);
 }
@@ -281,10 +286,8 @@ bool ValidationTest::HasToggleEnabled(const char* toggle) const {
            }) != toggles.end();
 }
 
-wgpu::Limits ValidationTest::GetSupportedLimits() const {
-    wgpu::Limits supportedLimits = {};
-    device.GetLimits(&supportedLimits);
-    return supportedLimits;
+const dawn::utils::ComboLimits& ValidationTest::GetSupportedLimits() const {
+    return deviceLimits;
 }
 
 bool ValidationTest::AllowUnsafeAPIs() {
@@ -295,9 +298,8 @@ std::vector<wgpu::FeatureName> ValidationTest::GetRequiredFeatures() {
     return {};
 }
 
-wgpu::Limits ValidationTest::GetRequiredLimits(const wgpu::Limits&) {
-    return {};
-}
+void ValidationTest::GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                                       dawn::utils::ComboLimits& required) {}
 
 std::vector<const char*> ValidationTest::GetEnabledToggles() {
     return {};
@@ -409,14 +411,16 @@ void ValidationTest::SetUp(const wgpu::InstanceDescriptor* nativeDesc,
     deviceDescriptor.requiredFeatures = requiredFeatures.data();
     deviceDescriptor.requiredFeatureCount = requiredFeatures.size();
 
-    wgpu::Limits supportedLimits;
-    dawn::native::GetProcs().adapterGetLimits(mBackendAdapter.Get(),
-                                              reinterpret_cast<WGPULimits*>(&supportedLimits));
-    wgpu::Limits requiredLimits = GetRequiredLimits(supportedLimits);
-    deviceDescriptor.requiredLimits = &requiredLimits;
+    dawn::utils::ComboLimits supportedLimits;
+    dawn::native::GetProcs().adapterGetLimits(
+        mBackendAdapter.Get(), reinterpret_cast<WGPULimits*>(supportedLimits.GetLinked()));
+    dawn::utils::ComboLimits requiredLimits{};
+    GetRequiredLimits(supportedLimits, requiredLimits);
+    deviceDescriptor.requiredLimits = requiredLimits.GetLinked();
 
     device = RequestDeviceSync(deviceDescriptor);
     DAWN_ASSERT(device);
+    device.GetLimits(deviceLimits.GetLinked());
 
     // We only want to set the backendDevice when the device was created via the test setup.
     backendDevice = mLastCreatedBackendDevice;

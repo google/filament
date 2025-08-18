@@ -177,7 +177,7 @@ TEST_F(WGSLFeatureValidationTest, GetFeatures) {
     SetUp({});
 
     wgpu::SupportedWGSLLanguageFeatures supportedFeatures = {};
-    ASSERT_EQ(wgpu::Status::Success, instance.GetWGSLLanguageFeatures(&supportedFeatures));
+    instance.GetWGSLLanguageFeatures(&supportedFeatures);
     ASSERT_NE(0u, supportedFeatures.featureCount);
     const wgpu::WGSLLanguageFeatureName* features = supportedFeatures.features;
 

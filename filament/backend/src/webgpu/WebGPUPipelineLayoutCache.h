@@ -31,6 +31,11 @@
 
 namespace filament::backend {
 
+/**
+ * A cache for WebGPU pipeline layouts.
+ * This class is responsible for creating and caching wgpu::PipelineLayout objects to avoid
+ * expensive pipeline layout creation at runtime.
+ */
 class WebGPUPipelineLayoutCache final {
 public:
     struct PipelineLayoutRequest final {
@@ -45,9 +50,16 @@ public:
     WebGPUPipelineLayoutCache& operator=(WebGPUPipelineLayoutCache const&) = delete;
     WebGPUPipelineLayoutCache& operator=(WebGPUPipelineLayoutCache const&&) = delete;
 
+    /**
+     * Retrieves a pipeline layout from the cache or creates a new one if it doesn't exist.
+     * @return A constant reference to the cached or newly created pipeline layout.
+     */
     [[nodiscard]] wgpu::PipelineLayout const& getOrCreatePipelineLayout(
             PipelineLayoutRequest const&);
 
+    /**
+     * Should be called at the end of each frame to perform cache maintenance.
+     */
     void onFrameEnd();
 
 private:
@@ -59,10 +71,10 @@ private:
      *  instances, single bytes for booleans etc.), trivial copying and comparison (byte by byte),
      *  and a word-aligned structure with a size in bytes as a multiple of 4 (for murmer hash).
      */
-    struct PipelineLayoutKey final {                                                     // size : offset (need multiples of 4 bytes for hashing)
-        WGPUBindGroupLayout bindGroupLayoutHandles[MAX_DESCRIPTOR_SET_COUNT]{ nullptr }; // 32   : 0
-        uint8_t bindGroupLayoutCount{ 0 };                                               // 1    : 32
-        uint8_t padding[7]{ 0 };                                                         // 7    : 33
+    struct PipelineLayoutKey final {
+        WGPUBindGroupLayout bindGroupLayoutHandles[MAX_DESCRIPTOR_SET_COUNT]{ nullptr }; // 32 :0
+        uint8_t bindGroupLayoutCount{ 0 };                                               // 1  :32
+        uint8_t padding[7]{ 0 };                                                         // 7  :33
     };
     static_assert(sizeof(PipelineLayoutKey) == 40,
             "PipelineLayoutKey must not have implicit padding.");

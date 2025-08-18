@@ -31,6 +31,7 @@
 #include <utility>
 
 #include "dawn/native/CreatePipelineAsyncEvent.h"
+#include "dawn/native/ImmediateConstantsLayout.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d11/DeviceD3D11.h"
 #include "dawn/native/d3d11/ShaderModuleD3D11.h"
@@ -51,6 +52,11 @@ MaybeError ComputePipeline::InitializeImpl() {
     Device* device = ToBackend(GetDevice());
     uint32_t compileFlags = 0;
 
+    if (UsesNumWorkgroups()) {
+        mImmediateMask |= GetImmediateConstantBlockBits(
+            offsetof(ComputeImmediateConstants, numWorkgroups), sizeof(NumWorkgroupsDimensions));
+    }
+
     if (!device->IsToggleEnabled(Toggle::UseDXC) &&
         !device->IsToggleEnabled(Toggle::FxcOptimizations)) {
         compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL0;
@@ -70,9 +76,10 @@ MaybeError ComputePipeline::InitializeImpl() {
     }
 
     d3d::CompiledShader compiledShader;
-    DAWN_TRY_ASSIGN(compiledShader, ToBackend(programmableStage.module)
-                                        ->Compile(programmableStage, SingleShaderStage::Compute,
-                                                  ToBackend(GetLayout()), compileFlags));
+    DAWN_TRY_ASSIGN(compiledShader,
+                    ToBackend(programmableStage.module)
+                        ->Compile(programmableStage, SingleShaderStage::Compute,
+                                  ToBackend(GetLayout()), compileFlags, GetImmediateMask()));
     DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreateComputeShader(
                               compiledShader.shaderBlob.Data(), compiledShader.shaderBlob.Size(),
                               nullptr, &mComputeShader),

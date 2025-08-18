@@ -93,6 +93,9 @@ class Lexer {
     uint32_t length() const;
     /// @returns reference to character at `pos` within current line
     const char& at(uint32_t pos) const;
+    /// @returns a point to the character just beyond the end of the current line, similar to how
+    /// std::end works
+    const char* line_end() const;
     /// @returns substring view at `offset` within current line of length `count`
     std::string_view substr(uint32_t offset, uint32_t count);
     /// advances current position by `offset` within current line

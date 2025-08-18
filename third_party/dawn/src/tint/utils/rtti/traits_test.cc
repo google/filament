@@ -154,68 +154,6 @@ TEST(ParamType, Lambda) {
     static_assert(SignatureOfT<decltype(l3)>::parameter_count == 3);
 }
 
-TEST(Slice, Empty) {
-    auto sliced = Slice<0, 0>(std::make_tuple<>());
-    static_assert(std::tuple_size_v<decltype(sliced)> == 0);
-}
-
-TEST(Slice, SingleElementSliceEmpty) {
-    auto sliced = Slice<0, 0>(std::make_tuple<int>(1));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 0);
-}
-
-TEST(Slice, SingleElementSliceFull) {
-    auto sliced = Slice<0, 1>(std::make_tuple<int>(1));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 1);
-    static_assert(std::is_same_v<std::tuple_element_t<0, decltype(sliced)>, int>, "");
-    EXPECT_EQ(std::get<0>(sliced), 1);
-}
-
-TEST(Slice, MixedTupleSliceEmpty) {
-    auto sliced = Slice<1, 0>(std::make_tuple<int, bool, float>(1, true, 2.0f));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 0);
-}
-
-TEST(Slice, MixedTupleSliceFull) {
-    auto sliced = Slice<0, 3>(std::make_tuple<int, bool, float>(1, true, 2.0f));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 3);
-    static_assert(std::is_same_v<std::tuple_element_t<0, decltype(sliced)>, int>, "");
-    static_assert(std::is_same_v<std::tuple_element_t<1, decltype(sliced)>, bool>, "");
-    static_assert(std::is_same_v<std::tuple_element_t<2, decltype(sliced)>, float>);
-    EXPECT_EQ(std::get<0>(sliced), 1);
-    EXPECT_EQ(std::get<1>(sliced), true);
-    EXPECT_EQ(std::get<2>(sliced), 2.0f);
-}
-
-TEST(Slice, MixedTupleSliceLowPart) {
-    auto sliced = Slice<0, 2>(std::make_tuple<int, bool, float>(1, true, 2.0f));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 2);
-    static_assert(std::is_same_v<std::tuple_element_t<0, decltype(sliced)>, int>, "");
-    static_assert(std::is_same_v<std::tuple_element_t<1, decltype(sliced)>, bool>, "");
-    EXPECT_EQ(std::get<0>(sliced), 1);
-    EXPECT_EQ(std::get<1>(sliced), true);
-}
-
-TEST(Slice, MixedTupleSliceHighPart) {
-    auto sliced = Slice<1, 2>(std::make_tuple<int, bool, float>(1, true, 2.0f));
-    static_assert(std::tuple_size_v<decltype(sliced)> == 2);
-    static_assert(std::is_same_v<std::tuple_element_t<0, decltype(sliced)>, bool>, "");
-    static_assert(std::is_same_v<std::tuple_element_t<1, decltype(sliced)>, float>);
-    EXPECT_EQ(std::get<0>(sliced), true);
-    EXPECT_EQ(std::get<1>(sliced), 2.0f);
-}
-
-TEST(Slice, PreservesRValueRef) {
-    int i;
-    int& int_ref = i;
-    auto tuple = std::forward_as_tuple(std::move(int_ref));
-    static_assert(std::is_same_v<int&&,  //
-                                 std::tuple_element_t<0, decltype(tuple)>>);
-    auto sliced = Slice<0, 1>(std::move(tuple));
-    static_assert(std::is_same_v<int&&,  //
-                                 std::tuple_element_t<0, decltype(sliced)>>);
-}
-
 TEST(SliceTuple, Empty) {
     using sliced = SliceTuple<0, 0, std::tuple<>>;
     static_assert(std::tuple_size_v<sliced> == 0);
@@ -258,10 +196,5 @@ TEST(SliceTuple, MixedTupleSliceHighPart) {
     static_assert(std::is_same_v<std::tuple_element_t<0, sliced>, bool>);
     static_assert(std::is_same_v<std::tuple_element_t<1, sliced>, float>);
 }
-
-static_assert(std::is_same_v<char*, CharArrayToCharPtr<char[2]>>);
-static_assert(std::is_same_v<const char*, CharArrayToCharPtr<const char[2]>>);
-static_assert(std::is_same_v<int, CharArrayToCharPtr<int>>);
-static_assert(std::is_same_v<int[2], CharArrayToCharPtr<int[2]>>);
 
 }  // namespace tint::traits

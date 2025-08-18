@@ -470,10 +470,10 @@ TEST_P(BufferMappingTests, MapWrite_ManySimultaneous) {
                 waitInfos[i] = {futures[i]};
             }
             size_t count = waitInfos.size();
-            wgpu::InstanceCapabilities instanceCapabilities;
-            wgpu::GetInstanceCapabilities(&instanceCapabilities);
+            wgpu::InstanceLimits instanceLimits;
+            wgpu::GetInstanceLimits(&instanceLimits);
             do {
-                size_t waitCount = std::min(count, instanceCapabilities.timedWaitAnyMaxCount);
+                size_t waitCount = std::min(count, instanceLimits.timedWaitAnyMaxCount);
                 auto waitInfoStart = waitInfos.begin() + (count - waitCount);
                 GetInstance().WaitAny(waitCount, &*waitInfoStart, UINT64_MAX);
                 auto it = std::partition(waitInfoStart, waitInfoStart + waitCount,
@@ -623,8 +623,8 @@ TEST_P(BufferMappingTests, RegressChromium1421170) {
 }
 
 DAWN_INSTANTIATE_TEST_P(BufferMappingTests,
-                        {D3D11Backend(), D3D12Backend(), MetalBackend(), VulkanBackend(),
-                         OpenGLBackend(), OpenGLESBackend()},
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), OpenGLBackend(),
+                         OpenGLESBackend(), VulkanBackend(), WebGPUBackend()},
                         std::initializer_list<wgpu::CallbackMode>{
                             wgpu::CallbackMode::WaitAnyOnly, wgpu::CallbackMode::AllowProcessEvents,
                             wgpu::CallbackMode::AllowSpontaneous});
@@ -691,7 +691,7 @@ TEST_P(BufferMappingCallbackTests, EmptySubmissionAndThenMap) {
     // 1. submission without using buffer.
     SubmitCommandBuffer({});
     wgpu::Future f1 = queue.OnSubmittedWorkDone(
-        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status) {
+        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
             ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
             done[0] = true;
 
@@ -742,7 +742,7 @@ TEST_P(BufferMappingCallbackTests, MapThenWaitWorkDone) {
 
     // 2. Wait for command completion.
     wgpu::Future f2 = queue.OnSubmittedWorkDone(
-        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status) {
+        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
             ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
             done[1] = true;
 
@@ -766,7 +766,7 @@ TEST_P(BufferMappingCallbackTests, EmptySubmissionWriteAndThenMap) {
     // 1. submission without using buffer.
     SubmitCommandBuffer({});
     wgpu::Future f1 = queue.OnSubmittedWorkDone(
-        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status) {
+        GetParam().mFutureCallbackMode, [&](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
             ASSERT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
             done[0] = true;
 
@@ -796,7 +796,8 @@ TEST_P(BufferMappingCallbackTests, EmptySubmissionWriteAndThenMap) {
 }
 
 DAWN_INSTANTIATE_TEST_P(BufferMappingCallbackTests,
-                        {D3D11Backend(), D3D12Backend(), MetalBackend(), VulkanBackend()},
+                        {D3D11Backend(), D3D12Backend(), MetalBackend(), VulkanBackend(),
+                         WebGPUBackend()},
                         std::initializer_list<wgpu::CallbackMode>{
                             wgpu::CallbackMode::WaitAnyOnly, wgpu::CallbackMode::AllowProcessEvents,
                             wgpu::CallbackMode::AllowSpontaneous});
@@ -1048,7 +1049,8 @@ DAWN_INSTANTIATE_TEST(BufferMappedAtCreationTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class BufferTests : public DawnTest {};
 
@@ -1281,7 +1283,8 @@ DAWN_INSTANTIATE_TEST(BufferTests,
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 class BufferNoSuballocationTests : public DawnTest {};
 
@@ -1314,15 +1317,15 @@ DAWN_INSTANTIATE_TEST(BufferNoSuballocationTests,
                       MetalBackend({"disable_resource_suballocation"}),
                       OpenGLBackend({"disable_resource_suballocation"}),
                       OpenGLESBackend({"disable_resource_suballocation"}),
-                      VulkanBackend({"disable_resource_suballocation"}));
+                      VulkanBackend({"disable_resource_suballocation"}),
+                      WebGPUBackend({"disable_resource_suballocation"}));
 
 class BufferMapExtendedUsagesTests : public DawnTest {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
-        wgpu::Limits required = {};
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         required.maxStorageBuffersInVertexStage = supported.maxStorageBuffersInVertexStage;
         required.maxStorageBuffersPerShaderStage = supported.maxStorageBuffersPerShaderStage;
-        return required;
     }
 
   protected:

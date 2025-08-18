@@ -29,6 +29,7 @@
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
 #include "src/tint/lang/core/ir/construct.h"
 #include "src/tint/lang/core/ir/control_instruction.h"
+#include "src/tint/lang/core/ir/convert.h"
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/function.h"
 #include "src/tint/lang/core/ir/instruction.h"
@@ -188,6 +189,10 @@ struct State {
                 EnsureResolvable(inst->Result()->Type());
             },
             [&](core::ir::Construct*) {
+                // Ensure the type of a type constructor is resolvable
+                EnsureResolvable(inst->Result()->Type());
+            },
+            [&](core::ir::Convert*) {
                 // Ensure the type of a type constructor is resolvable
                 EnsureResolvable(inst->Result()->Type());
             },

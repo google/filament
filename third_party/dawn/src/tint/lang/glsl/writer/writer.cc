@@ -30,8 +30,10 @@
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/var.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/glsl/writer/common/option_helpers.h"
 #include "src/tint/lang/glsl/writer/printer/printer.h"
 #include "src/tint/lang/glsl/writer/raise/raise.h"
 
@@ -47,8 +49,10 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
 
     // Make sure that every texture variable is in the texture_builtins_from_uniform binding list,
     // otherwise TextureBuiltinsFromUniform will fail.
-    // Also make sure there is at most one user-declared push_constant, and make a note of its size.
-    uint32_t user_push_constant_size = 0;
+    // TODO(https://issues.chromium.org/427172887) Be more precise for the
+    // texture_builtins_from_uniform checks. Also make sure there is at most one user-declared
+    // immediate, and make a note of its size.
+    uint32_t user_immediate_size = 0;
     for (auto* inst : *ir.root_block) {
         auto* var = inst->As<core::ir::Var>();
 
@@ -62,23 +66,38 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
             return Failure("pixel_local address space is not supported by the GLSL backend");
         }
 
-        if (ptr->StoreType()->Is<core::type::Texture>()) {
-            bool found = false;
-            auto binding_point = var->BindingPoint();
-            for (auto& bp :
-                 options.bindings.texture_builtins_from_uniform.ubo_bindingpoint_ordering) {
-                if (bp == binding_point) {
-                    found = true;
-                    break;
-                }
+        if (ptr->AddressSpace() == core::AddressSpace::kHandle) {
+            const core::type::Type* handle_type = ptr->StoreType();
+            uint32_t count = 1;
+            if (auto* ba = handle_type->As<core::type::BindingArray>()) {
+                handle_type = ba->ElemType();
+                count = ba->Count()->As<core::type::ConstantArrayCount>()->value;
             }
-            if (!found) {
-                return Failure("texture missing from texture_builtins_from_uniform list");
+
+            // Check texture types that need metadata for texture_builtins_from_uniform.
+            if (handle_type->Is<core::type::Texture>() &&
+                !handle_type->IsAnyOf<core::type::StorageTexture, core::type::ExternalTexture>()) {
+                bool found = false;
+                auto binding = options.bindings.texture.at(var->BindingPoint().value());
+                for (auto& bp : options.bindings.texture_builtins_from_uniform.ubo_contents) {
+                    if (bp.binding == binding) {
+                        if (bp.count < count) {
+                            return Failure(
+                                "binding_array of textures doesn't have enough data in "
+                                "texture_builtins_from_uniform list");
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    return Failure("texture missing from texture_builtins_from_uniform list");
+                }
             }
 
             // Check texel formats for read-write storage textures when targeting ES.
             if (options.version.IsES()) {
-                if (auto* st = ptr->StoreType()->As<core::type::StorageTexture>()) {
+                if (auto* st = handle_type->As<core::type::StorageTexture>()) {
                     if (st->Access() == core::Access::kReadWrite) {
                         switch (st->TexelFormat()) {
                             case core::TexelFormat::kR32Float:
@@ -93,12 +112,12 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
             }
         }
 
-        if (ptr->AddressSpace() == core::AddressSpace::kPushConstant) {
-            if (user_push_constant_size > 0) {
-                // We've already seen a user-declared push constant.
-                return Failure("multiple user-declared push constants");
+        if (ptr->AddressSpace() == core::AddressSpace::kImmediate) {
+            if (user_immediate_size > 0) {
+                // We've already seen a user-declared immediate data.
+                return Failure("multiple user-declared immediate data");
             }
-            user_push_constant_size = tint::RoundUp(4u, ptr->StoreType()->Size());
+            user_immediate_size = tint::RoundUp(4u, ptr->StoreType()->Size());
         }
     }
 
@@ -127,13 +146,15 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
         for (auto* param : func->Params()) {
             if (auto* str = param->Type()->As<core::type::Struct>()) {
                 for (auto* member : str->Members()) {
-                    if (member->Attributes().builtin == core::BuiltinValue::kSubgroupInvocationId ||
+                    if (member->Attributes().builtin == core::BuiltinValue::kSubgroupId ||
+                        member->Attributes().builtin == core::BuiltinValue::kSubgroupInvocationId ||
                         member->Attributes().builtin == core::BuiltinValue::kSubgroupSize) {
                         return Failure("subgroups are not supported by the GLSL backend");
                     }
                 }
             } else {
-                if (param->Builtin() == core::BuiltinValue::kSubgroupInvocationId ||
+                if (param->Builtin() == core::BuiltinValue::kSubgroupId ||
+                    param->Builtin() == core::BuiltinValue::kSubgroupInvocationId ||
                     param->Builtin() == core::BuiltinValue::kSubgroupSize) {
                     return Failure("subgroups are not supported by the GLSL backend");
                 }
@@ -151,8 +172,8 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     }
 
     static constexpr uint32_t kMaxOffset = 0x1000;
-    Hashset<uint32_t, 4> push_constant_word_offsets;
-    auto check_push_constant_offset = [&](uint32_t offset) {
+    Hashset<uint32_t, 4> immediate_word_offsets;
+    auto check_immediate_offset = [&](uint32_t offset) {
         // Excessive values can cause OOM / timeouts when padding structures in the printer.
         if (offset > kMaxOffset) {
             return false;
@@ -162,36 +183,42 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
             return false;
         }
         // Offset must not have already been used.
-        if (!push_constant_word_offsets.Add(offset >> 2)) {
+        if (!immediate_word_offsets.Add(offset >> 2)) {
             return false;
         }
-        // Offset must be after the user-defined push constants.
-        if (offset < user_push_constant_size) {
+        // Offset must be after the user-defined immediate data.
+        if (offset < user_immediate_size) {
             return false;
         }
         return true;
     };
 
-    if (options.first_instance_offset &&
-        !check_push_constant_offset(*options.first_instance_offset)) {
-        return Failure("invalid offset for first_instance_offset push constant");
+    if (options.first_instance_offset && !check_immediate_offset(*options.first_instance_offset)) {
+        return Failure("invalid offset for first_instance_offset immediate data");
     }
 
-    if (options.first_vertex_offset && !check_push_constant_offset(*options.first_vertex_offset)) {
-        return Failure("invalid offset for first_vertex_offset push constant");
+    if (options.first_vertex_offset && !check_immediate_offset(*options.first_vertex_offset)) {
+        return Failure("invalid offset for first_vertex_offset immediate data");
     }
 
     if (options.depth_range_offsets) {
-        if (!check_push_constant_offset(options.depth_range_offsets->max) ||
-            !check_push_constant_offset(options.depth_range_offsets->min)) {
-            return Failure("invalid offsets for depth range push constants");
+        if (!check_immediate_offset(options.depth_range_offsets->max) ||
+            !check_immediate_offset(options.depth_range_offsets->min)) {
+            return Failure("invalid offsets for depth range immediate data");
+        }
+    }
+
+    {
+        auto res = ValidateBindingOptions(options);
+        if (res != Success) {
+            return res.Failure();
         }
     }
 
     return Success;
 }
 
-Result<Output> Generate(core::ir::Module& ir, const Options& options, const std::string&) {
+Result<Output> Generate(core::ir::Module& ir, const Options& options) {
     // Raise from core-dialect to GLSL-dialect.
     if (auto res = Raise(ir, options); res != Success) {
         return res.Failure();

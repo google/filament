@@ -10,5 +10,7 @@
 __pycache__
 *.pyc
 build
+cmake-build-*/
+.idea/
 .vscode/
 **/.*.swp

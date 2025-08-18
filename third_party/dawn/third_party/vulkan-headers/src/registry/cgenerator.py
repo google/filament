@@ -27,6 +27,8 @@ class CGeneratorOptions(GeneratorOptions):
                  protectProtoStr=None,
                  protectExtensionProto=None,
                  protectExtensionProtoStr=None,
+                 protectExportName=None,
+                 protectExportProtoStr=None,
                  apicall='',
                  apientry='',
                  apientryp='',
@@ -66,6 +68,12 @@ class CGeneratorOptions(GeneratorOptions):
         set to None
         - protectExtensionProtoStr - #ifdef/#ifndef symbol to use around
         extension prototype declarations, if protectExtensionProto is set
+        - protectExportName - name used to determine if a command is
+        exported matching an entry in the XML 'export' attribute.
+        Set to None if no matching should be done.
+        - protectExportProtoStr - #ifndef symbol to use around prototypes
+        for commands that are not exported.
+        Set to None if no protection is wanted.
         - apicall - string to use for the function declaration prefix,
         such as APICALL on Windows
         - apientry - string to use for the calling convention macro,
@@ -114,6 +122,12 @@ class CGeneratorOptions(GeneratorOptions):
 
         self.protectExtensionProtoStr = protectExtensionProtoStr
         """#ifdef/#ifndef symbol to use around extension prototype declarations, if protectExtensionProto is set"""
+
+        self.protectExportName = protectExportName
+        """Export name for commands which are exported"""
+
+        self.protectExportProtoStr = protectExportProtoStr
+        """#ifndef symbol to use around prototypes for commands which are not exported"""
 
         self.apicall = apicall
         """string to use for the function declaration prefix, such as APICALL on Windows."""
@@ -507,6 +521,23 @@ class COutputGenerator(OutputGenerator):
 
         prefix = ''
         decls = self.makeCDecls(cmdinfo.elem)
+
+        # If the 'export' attribute is not set for this command, or does not
+        # match the export name selected during generation, wrap the command
+        # prototype in a C conditional which can be enabled to make the
+        # prototype not appear at compile time.
+
+        export = cmdinfo.elem.get('export','')
+        protect_prefix = protect_suffix = ''
+        if export is None or self.genOpts.protectExportName not in export.split(','):
+            if self.genOpts.protectExportProtoStr is not None:
+                # Command is not exported, so should not be visible if
+                # suppressed by this symbol
+                protect_prefix = f'#ifndef {self.genOpts.protectExportProtoStr}\n'
+                protect_suffix = '\n#endif'
+
+        decls[0] = protect_prefix + decls[0] + protect_suffix
+
         self.appendSection('command', f"{prefix + decls[0]}\n")
         if self.genOpts.genFuncPointers:
             self.appendSection('commandPointer', decls[1])

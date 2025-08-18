@@ -20,14 +20,13 @@
 #include "src/libfuzzer/libfuzzer_macro.h"
 
 namespace {
-protobuf_mutator::protobuf::LogSilencer log_silincer;
 void ignore(void* ctx, const char* msg, ...) {}
 
 template <class T, class D>
 std::unique_ptr<T, D> MakeUnique(T* obj, D del) {
   return {obj, del};
 }
-}
+}  // namespace
 
 DEFINE_PROTO_FUZZER(const protobuf_mutator::xml::Input& message) {
   std::string xml = MessageToXml(message.document());

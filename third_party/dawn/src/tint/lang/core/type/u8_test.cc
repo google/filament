@@ -28,8 +28,9 @@
 #include "src/tint/lang/core/type/u8.h"
 
 #include "src/tint/lang/core/type/helper_test.h"
+#include "src/tint/lang/core/type/i32.h"
 #include "src/tint/lang/core/type/i8.h"
-#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/manager.h"
 
 namespace tint::core::type {
 namespace {
@@ -37,28 +38,32 @@ namespace {
 using U8Test = TestHelper;
 
 TEST_F(U8Test, Creation) {
-    auto* a = create<U8>();
-    auto* b = create<U8>();
+    Manager ty;
+    auto* a = ty.u8();
+    auto* b = ty.u8();
     EXPECT_EQ(a, b);
 }
 
 TEST_F(U8Test, SizeAndAlign) {
-    auto* a = create<U8>();
+    Manager ty;
+    auto* a = ty.u8();
     EXPECT_EQ(a->Size(), 1u);
     EXPECT_EQ(a->Align(), 1u);
 }
 
 TEST_F(U8Test, Hash) {
-    auto* a = create<U8>();
-    auto* b = create<U8>();
+    Manager ty;
+    auto* a = ty.u8();
+    auto* b = ty.u8();
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(U8Test, Equals) {
-    auto* a = create<U8>();
-    auto* b = create<U8>();
-    auto* c = create<I8>();
-    auto* d = create<I32>();
+    Manager ty;
+    auto* a = ty.u8();
+    auto* b = ty.u8();
+    auto* c = ty.i8();
+    auto* d = ty.i32();
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
     EXPECT_FALSE(a->Equals(*d));
@@ -70,7 +75,8 @@ TEST_F(U8Test, FriendlyName) {
 }
 
 TEST_F(U8Test, Clone) {
-    auto* a = create<U8>();
+    Manager ty;
+    auto* a = ty.u8();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

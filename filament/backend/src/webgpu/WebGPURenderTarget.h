@@ -31,6 +31,10 @@
 
 namespace filament::backend {
 
+/**
+ * A WebGPU implementation of the HwRenderTarget.
+ * This class represents a collection of attachments (textures) that can be rendered to.
+ */
 class WebGPURenderTarget : public HwRenderTarget {
 public:
     using Attachment = TargetBufferInfo; // Using TargetBufferInfo directly for attachments
@@ -38,7 +42,8 @@ public:
     WebGPURenderTarget(uint32_t width, uint32_t height, uint8_t samples, uint8_t layerCount,
             MRT const& colorAttachments, Attachment const& depthAttachment,
             Attachment const& stencilAttachment, TargetBufferFlags const& targetFlags,
-            std::function<WebGPUTexture*(const Handle<HwTexture>)> const&, wgpu::Device const&);
+            std::function<WebGPUTexture*(const Handle<HwTexture>)> const&,
+            wgpu::Device const&);
 
     // Default constructor for the default render target
     WebGPURenderTarget();
@@ -80,7 +85,7 @@ private:
 
     MRT mColorAttachments{};
     // TODO WebGPU only supports a DepthStencil attachment, should this be just
-    //      mDepthStencilAttachment?
+    // mDepthStencilAttachment?
     Attachment mDepthAttachment{};
     Attachment mStencilAttachment{};
 

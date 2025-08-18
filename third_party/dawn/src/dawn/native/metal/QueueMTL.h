@@ -35,7 +35,7 @@
 #include "dawn/common/SerialMap.h"
 #include "dawn/native/EventManager.h"
 #include "dawn/native/Queue.h"
-#include "dawn/native/SystemEvent.h"
+#include "dawn/native/WaitListEvent.h"
 #include "dawn/native/metal/CommandRecordingContext.h"
 #include "dawn/native/metal/SharedFenceMTL.h"
 
@@ -53,8 +53,9 @@ class Queue final : public QueueBase {
     id<MTLSharedEvent> GetMTLSharedEvent() const;
     ResultOrError<Ref<SharedFence>> GetOrCreateSharedFence();
 
-    Ref<SystemEvent> CreateWorkDoneSystemEvent(ExecutionSerial serial);
-    ResultOrError<bool> WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) override;
+    Ref<WaitListEvent> CreateWorkDoneEvent(ExecutionSerial serial);
+    ResultOrError<ExecutionSerial> WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                          Nanoseconds timeout) override;
 
   private:
     Queue(Device* device, const QueueDescriptor* descriptor);
@@ -65,7 +66,7 @@ class Queue final : public QueueBase {
 
     MaybeError SubmitImpl(uint32_t commandCount, CommandBufferBase* const* commands) override;
     bool HasPendingCommands() const override;
-    MaybeError SubmitPendingCommands() override;
+    MaybeError SubmitPendingCommandsImpl() override;
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
     MaybeError WaitForIdleForDestruction() override;
@@ -79,16 +80,12 @@ class Queue final : public QueueBase {
     std::mutex mLastSubmittedCommandsMutex;
     NSPRef<id<MTLCommandBuffer>> mLastSubmittedCommands;
 
-    // The completed serial is updated in a Metal completion handler that can be fired on a
-    // different thread, so it needs to be atomic.
-    std::atomic<uint64_t> mCompletedSerial;
-
     // This mutex must be held to access mWaitingEvents (which may happen in a Metal driver
     // thread).
     // TODO(crbug.com/dawn/2065): If we atomically knew a conservative lower bound on the
     // mWaitingEvents serials, we could avoid taking this lock sometimes. Optimize if needed.
     // See old draft code: https://dawn-review.googlesource.com/c/dawn/+/137502/29
-    MutexProtected<SerialMap<ExecutionSerial, Ref<SystemEvent>>> mWaitingEvents;
+    MutexProtected<SerialMap<ExecutionSerial, Ref<WaitListEvent>>> mWaitingEvents;
 
     // A shared event that can be exported for synchronization with other users of Metal.
     // MTLSharedEvent is not available until macOS 10.14+ so use just `id`.

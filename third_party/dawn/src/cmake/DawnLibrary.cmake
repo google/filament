@@ -186,23 +186,23 @@ function(dawn_install_target name)
       install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
     endif()
   endif (MSVC)
-  foreach(header IN LISTS arg_HEADERS)
-    # Starting from CMake 3.20 there is the cmake_path command that could simplify this code.
-    # Compute the install subdirectory for the header by stripping out the path to
-    # the 'include' (or) 'gen/include' directory...
-    string(FIND "${header}" "${DAWN_INCLUDE_DIR}" found)
-    if (found EQUAL 0)
-      string(LENGTH "${DAWN_INCLUDE_DIR}/" deduction)
-    endif()
-    string(FIND "${header}" "${DAWN_BUILD_GEN_DIR}/include/" found)
-    if (found EQUAL 0)
-      string(LENGTH "${DAWN_BUILD_GEN_DIR}/include/" deduction)
-    endif()
-    string(SUBSTRING "${header}" "${deduction}" -1 subdir)
 
-    # ... then remove everything after the last /
-    string(FIND "${subdir}" "/" found REVERSE)
-    string(SUBSTRING "${subdir}" 0 ${found} subdir)
+  # Automatically determine where each header should go based on its subdirectory in the include dir.
+  foreach(header IN LISTS arg_HEADERS)
+    cmake_path(REMOVE_FILENAME header OUTPUT_VARIABLE subdir)
+
+    string(FIND "${subdir}" "${DAWN_INCLUDE_DIR}" found)
+    if (found EQUAL 0)
+        cmake_path(RELATIVE_PATH subdir BASE_DIRECTORY "${DAWN_INCLUDE_DIR}")
+    endif()
+    string(FIND "${subdir}" "${DAWN_BUILD_GEN_DIR}/include/" found)
+    if (found EQUAL 0)
+        cmake_path(RELATIVE_PATH subdir BASE_DIRECTORY "${DAWN_BUILD_GEN_DIR}/include/")
+    endif()
+
+    if (IS_ABSOLUTE "${headerRelative}")
+        message(FATAL_ERROR "Unsupported include dir for \"${header}\"")
+    endif()
     install(FILES "${header}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${subdir}")
   endforeach()
 endfunction()

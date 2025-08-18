@@ -72,8 +72,11 @@ TEST_P(ImmediateConstantOffsetTest, ClampFragDepth) {
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() || IsOpenGL() || IsMetal() || IsD3D11() || IsD3D12());
     ImmediateConstantMask expectedImmediateConstantMask = ImmediateConstantMask(0);
     // Hard coded bits and index.
-    expectedImmediateConstantMask |= (1u << 4u);
-    expectedImmediateConstantMask |= (1u << 5u);
+    expectedImmediateConstantMask |= 1u << (offsetof(RenderImmediateConstants, clampFragDepth) /
+                                            kImmediateConstantElementByteSize);
+    expectedImmediateConstantMask |= 1u << (offsetof(RenderImmediateConstants, clampFragDepth) /
+                                                kImmediateConstantElementByteSize +
+                                            1u);
 
     // Check dirty bits are set correctly.
     EXPECT_TRUE(FromAPI(MakeTestRenderPipelineWithClampingFragDepth().Get())->GetImmediateMask() ==

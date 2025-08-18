@@ -576,7 +576,6 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 
     //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
-    tint::wgsl::writer::Options writerOpts{};
 
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
@@ -602,7 +601,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #endif
     }
 
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead);
     /// An instance of SuccessType that can be used to check a tint Result.
     tint::SuccessType tintSuccess;
 

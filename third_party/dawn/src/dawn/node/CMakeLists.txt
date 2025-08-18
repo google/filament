@@ -90,6 +90,8 @@ add_subdirectory(binding)
 add_subdirectory(interop)
 
 add_library(dawn_node SHARED
+    "ManualConstructors.cpp"
+    "ManualConstructors.h"
     "Module.cpp"
 )
 common_compile_options(dawn_node)
@@ -100,15 +102,27 @@ set_target_properties(dawn_node PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
     LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-    CXX_STANDARD 17
+    CXX_STANDARD 20
 )
-target_link_libraries(dawn_node dawn_node_binding dawn_node_interop dawn_native dawncpp dawn_proc
-                      libtint)
-target_include_directories(dawn_node PRIVATE
-    "${PROJECT_SOURCE_DIR}"
-    "${NODE_ADDON_API_DIR}"
-    "${NODE_API_HEADERS_DIR}/include"
-    "${DAWN_NODE_GEN_DIR}"
+target_link_libraries(dawn_node
+    PRIVATE
+        dawncpp
+        dawn_native
+        dawn_node_binding
+        dawn_node_interop
+        dawn_proc
+        dawn_warnings_config
+        libtint
+)
+target_include_directories(dawn_node
+    PRIVATE
+        "${PROJECT_SOURCE_DIR}"
+        "${DAWN_NODE_GEN_DIR}"
+)
+target_include_directories(dawn_node SYSTEM
+    PRIVATE
+        "${NODE_ADDON_API_DIR}"
+        "${NODE_API_HEADERS_DIR}/include"
 )
 
 # To reduce the build dependencies for compiling the dawn.node targets, we do
@@ -156,7 +170,7 @@ if (WIN32)
     )
     add_custom_target(napi-symbols DEPENDS "${NAPI_SYMBOLS_LIB}")
     add_dependencies(dawn_node napi-symbols)
-    target_link_libraries(dawn_node "${NAPI_SYMBOLS_LIB}")
+    target_link_libraries(dawn_node PRIVATE "${NAPI_SYMBOLS_LIB}")
 else()
     # Generate the NapiSymbols.h file from the Napi symbol list
     set(NAPI_SYMBOLS_H "${DAWN_NODE_GEN_DIR}/NapiSymbols.h")

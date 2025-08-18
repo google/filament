@@ -81,7 +81,8 @@ struct BindingPoint {
 /// @param o the stream to write to
 /// @param bp the BindingPoint
 /// @return the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, const BindingPoint& bp) {
     return o << "[group: " << bp.group << ", binding: " << bp.binding << "]";
 }

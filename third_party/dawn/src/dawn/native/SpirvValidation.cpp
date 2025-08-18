@@ -29,41 +29,41 @@
 
 #include <spirv-tools/libspirv.hpp>
 
+#include <memory>
 #include <sstream>
 #include <string>
 
-#include "dawn/native/Device.h"
-
 namespace dawn::native {
 
-MaybeError ValidateSpirv(DeviceBase* device,
+MaybeError ValidateSpirv(LogEmitter* logEmitter,
                          const uint32_t* spirv,
                          size_t wordCount,
-                         bool dumpSpirv) {
-    spvtools::SpirvTools spirvTools(SPV_ENV_VULKAN_1_1);
-    spirvTools.SetMessageConsumer([device](spv_message_level_t level, const char*,
-                                           const spv_position_t& position, const char* message) {
-        WGPULoggingType wgpuLogLevel;
+                         bool spv14) {
+    spvtools::SpirvTools spirvTools(spv14 ? SPV_ENV_VULKAN_1_1_SPIRV_1_4 : SPV_ENV_VULKAN_1_1);
+    spirvTools.SetMessageConsumer([logEmitter](spv_message_level_t level, const char*,
+                                               const spv_position_t& position,
+                                               const char* message) {
+        wgpu::LoggingType wgpuLogLevel;
         switch (level) {
             case SPV_MSG_FATAL:
             case SPV_MSG_INTERNAL_ERROR:
             case SPV_MSG_ERROR:
-                wgpuLogLevel = WGPULoggingType_Error;
+                wgpuLogLevel = wgpu::LoggingType::Error;
                 break;
             case SPV_MSG_WARNING:
-                wgpuLogLevel = WGPULoggingType_Warning;
+                wgpuLogLevel = wgpu::LoggingType::Warning;
                 break;
             case SPV_MSG_INFO:
-                wgpuLogLevel = WGPULoggingType_Info;
+                wgpuLogLevel = wgpu::LoggingType::Info;
                 break;
             default:
-                wgpuLogLevel = WGPULoggingType_Error;
+                wgpuLogLevel = wgpu::LoggingType::Error;
                 break;
         }
 
         std::ostringstream ss;
         ss << "SPIRV line " << position.index << ": " << message << "\n";
-        device->EmitLog(wgpuLogLevel, ss.str().c_str());
+        logEmitter->EmitLog(wgpuLogLevel, ss.str().c_str());
     });
 
     // Don't prepare to emit friendly names. The preparation costs
@@ -72,22 +72,37 @@ MaybeError ValidateSpirv(DeviceBase* device,
     val_opts.SetFriendlyNames(false);
 
     const bool valid = spirvTools.Validate(spirv, wordCount, val_opts);
-    if (dumpSpirv || !valid) {
-        std::ostringstream dumpedMsg;
-        std::string disassembly;
-        if (spirvTools.Disassemble(
-                spirv, wordCount, &disassembly,
-                SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_INDENT)) {
-            dumpedMsg << "/* Dumped generated SPIRV disassembly */\n" << disassembly;
-        } else {
-            dumpedMsg << "/* Failed to disassemble generated SPIRV */";
-        }
-        device->EmitLog(WGPULoggingType_Info, dumpedMsg.str().c_str());
+    // Dump the generated SPIRV if it is invalid.
+    if (!valid) {
+        DumpSpirv(logEmitter, spirv, wordCount, &spirvTools);
     }
 
     DAWN_INVALID_IF(!valid, "Produced invalid SPIRV. Please file a bug at https://crbug.com/tint.");
 
     return {};
+}
+
+void DumpSpirv(LogEmitter* logEmitter,
+               const uint32_t* spirv,
+               size_t wordCount,
+               spvtools::SpirvTools* spirvTools) {
+    std::unique_ptr<spvtools::SpirvTools> inplaceSpirvTools;
+    if (spirvTools == nullptr) {
+        // Use the newest environment Dawn supports because disassembly supports older versions.
+        inplaceSpirvTools = std::make_unique<spvtools::SpirvTools>(SPV_ENV_VULKAN_1_1_SPIRV_1_4);
+        spirvTools = inplaceSpirvTools.get();
+    }
+
+    std::ostringstream dumpedMsg;
+    std::string disassembly;
+    if (spirvTools->Disassemble(
+            spirv, wordCount, &disassembly,
+            SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_INDENT)) {
+        dumpedMsg << "/* Dumped SPIRV disassembly */\n" << disassembly;
+    } else {
+        dumpedMsg << "/* Failed to disassemble SPIRV */";
+    }
+    logEmitter->EmitLog(wgpu::LoggingType::Info, dumpedMsg.str().c_str());
 }
 
 }  // namespace dawn::native

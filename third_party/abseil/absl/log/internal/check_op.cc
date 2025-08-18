@@ -35,26 +35,26 @@ namespace absl {
 ABSL_NAMESPACE_BEGIN
 namespace log_internal {
 
-#define ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(x) \
-  template absl::Nonnull<const char*> MakeCheckOpString(     \
-      x, x, absl::Nonnull<const char*>)
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(bool);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(int64_t);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(uint64_t);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(float);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(double);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(char);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(unsigned char);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const std::string&);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const absl::string_view&);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const char*);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const signed char*);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const unsigned char*);
-ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const void*);
-#undef ABSL_LOGGING_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING
+#define ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(x) \
+  template const char* absl_nonnull MakeCheckOpString(   \
+      x, x, const char* absl_nonnull)
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(bool);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(int64_t);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(uint64_t);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(float);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(double);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(char);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(unsigned char);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const std::string&);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const absl::string_view&);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const char*);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const signed char*);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const unsigned char*);
+ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING(const void*);
+#undef ABSL_LOG_INTERNAL_DEFINE_MAKE_CHECK_OP_STRING
 
 CheckOpMessageBuilder::CheckOpMessageBuilder(
-    absl::Nonnull<const char*> exprtext) {
+    const char* absl_nonnull exprtext) {
   stream_ << exprtext << " (";
 }
 
@@ -63,7 +63,7 @@ std::ostream& CheckOpMessageBuilder::ForVar2() {
   return stream_;
 }
 
-absl::Nonnull<const char*> CheckOpMessageBuilder::NewString() {
+const char* absl_nonnull CheckOpMessageBuilder::NewString() {
   stream_ << ")";
   // There's no need to free this string since the process is crashing.
   return absl::IgnoreLeak(new std::string(std::move(stream_).str()))->c_str();
@@ -103,9 +103,9 @@ void MakeCheckOpValueString(std::ostream& os, const void* p) {
 
 // Helper functions for string comparisons.
 #define DEFINE_CHECK_STROP_IMPL(name, func, expected)                          \
-  absl::Nullable<const char*> Check##func##expected##Impl(                     \
-      absl::Nullable<const char*> s1, absl::Nullable<const char*> s2,          \
-      absl::Nonnull<const char*> exprtext) {                                   \
+  const char* absl_nullable Check##func##expected##Impl(                       \
+      const char* absl_nullable s1, const char* absl_nullable s2,              \
+      const char* absl_nonnull exprtext) {                                     \
     bool equal = s1 == s2 || (s1 && s2 && !func(s1, s2));                      \
     if (equal == expected) {                                                   \
       return nullptr;                                                          \

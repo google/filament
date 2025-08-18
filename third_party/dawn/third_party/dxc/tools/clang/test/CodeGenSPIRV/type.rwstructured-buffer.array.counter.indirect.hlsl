@@ -10,8 +10,8 @@ struct PSInput
 // CHECK: OpDecorate %counter_var_g_rwbuffer DescriptorSet 2
 // CHECK: OpDecorate %counter_var_g_rwbuffer Binding 1
 
-// CHECK: %g_rwbuffer = OpVariable %_ptr_Uniform__arr_type_RWStructuredBuffer_uint_uint_5 Uniform
 // CHECK: %counter_var_g_rwbuffer = OpVariable %_ptr_Uniform__arr_type_ACSBuffer_counter_uint_5 Uniform
+// CHECK: %g_rwbuffer = OpVariable %_ptr_Uniform__arr_type_RWStructuredBuffer_uint_uint_5 Uniform
 RWStructuredBuffer<uint> g_rwbuffer[5] : register(u0, space2);
 
 void func(RWStructuredBuffer<uint> local) {

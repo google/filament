@@ -990,8 +990,7 @@ TEST_F(IR_ValueToLetTest, TextureInline) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));

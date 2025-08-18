@@ -43,10 +43,11 @@ cc_library(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     deps = [
         ":city",
-        ":low_level_hash",
+        ":weakly_mixed_integer",
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:endian",
+        "//absl/base:prefetch",
         "//absl/container:fixed_array",
         "//absl/functional:function_ref",
         "//absl/meta:type_traits",
@@ -75,17 +76,21 @@ cc_library(
 
 cc_test(
     name = "hash_test",
+    size = "large",
     srcs = [
         "hash_test.cc",
         "internal/hash_test.h",
     ],
     copts = ABSL_TEST_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
+    # TODO(b/417700722): Fix HashValueTest.PointerAlignment reporting more collisions under ubsan.
+    tags = ["noubsan"],
     deps = [
         ":hash",
         ":hash_testing",
         ":spy_hash_state",
         "//absl/base:config",
+        "//absl/container:flat_hash_map",
         "//absl/container:flat_hash_set",
         "//absl/memory",
         "//absl/meta:type_traits",
@@ -150,6 +155,7 @@ cc_library(
     visibility = ["//visibility:private"],
     deps = [
         ":hash",
+        ":weakly_mixed_integer",
         "//absl/strings",
         "//absl/strings:str_format",
     ],
@@ -183,17 +189,17 @@ cc_test(
 )
 
 cc_library(
-    name = "low_level_hash",
-    srcs = ["internal/low_level_hash.cc"],
-    hdrs = ["internal/low_level_hash.h"],
+    name = "weakly_mixed_integer",
+    hdrs = ["internal/weakly_mixed_integer.h"],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
-    visibility = ["//visibility:private"],
+    visibility = [
+        "//absl/container:__pkg__",
+        "//absl/strings:__pkg__",
+        "//absl/types:__pkg__",
+    ],
     deps = [
         "//absl/base:config",
-        "//absl/base:endian",
-        "//absl/base:prefetch",
-        "//absl/numeric:int128",
     ],
 )
 
@@ -204,7 +210,7 @@ cc_test(
     linkopts = ABSL_DEFAULT_LINKOPTS,
     visibility = ["//visibility:private"],
     deps = [
-        ":low_level_hash",
+        ":hash",
         "//absl/strings",
         "@googletest//:gtest",
         "@googletest//:gtest_main",

@@ -196,7 +196,7 @@ void ClearErrors(const OpenGLFunctions& gl,
                  const char* function,
                  unsigned int line) {
     GLenum error = gl.GetError();
-    if (DAWN_LIKELY(error == GL_NO_ERROR)) {
+    if (error == GL_NO_ERROR) [[likely]] {
         return;
     }
 
@@ -223,7 +223,7 @@ MaybeError CheckError(const OpenGLFunctions& gl,
                       const char* function,
                       unsigned int line) {
     GLenum error = gl.GetError();
-    if (DAWN_LIKELY(error == GL_NO_ERROR)) {
+    if (error == GL_NO_ERROR) [[likely]] {
         return {};
     }
 

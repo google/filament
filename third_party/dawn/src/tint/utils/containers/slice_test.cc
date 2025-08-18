@@ -29,8 +29,6 @@
 
 #include "gmock/gmock.h"
 
-TINT_BEGIN_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);
-
 namespace tint {
 namespace {
 
@@ -158,8 +156,8 @@ TEST(TintSliceTest, BeginEnd) {
 }
 
 TEST(TintSliceTest, ReverseBeginEnd) {
-    int elements[] = {1, 2, 3};
-    auto slice = Slice{elements};
+    constexpr std::array<int, 3> elements = {1, 2, 3};
+    auto slice = Slice{elements.data(), 3};
     size_t i = 0;
     for (auto it = slice.rbegin(); it != slice.rend(); it++) {
         EXPECT_EQ(*it, elements[2 - i]);
@@ -207,8 +205,8 @@ TEST(TintSliceTest, Truncate_PastEnd) {
 }
 
 TEST(TintSliceTest, Equality) {
-    int elements[] = {1, 2, 3};
-    const auto a = Slice{elements};
+    constexpr std::array<int, 3> elements = {1, 2, 3};
+    const auto a = Slice{elements.data(), elements.size()};
     {
         auto b = a;
         EXPECT_TRUE(a == b);
@@ -216,7 +214,7 @@ TEST(TintSliceTest, Equality) {
     }
     {
         auto b = a;
-        b.data++;
+        b.data = &elements[1];
         EXPECT_FALSE(a == b);
         EXPECT_TRUE(a != b);
     }
@@ -236,5 +234,3 @@ TEST(TintSliceTest, Equality) {
 
 }  // namespace
 }  // namespace tint
-
-TINT_END_DISABLE_WARNING(UNSAFE_BUFFER_USAGE);

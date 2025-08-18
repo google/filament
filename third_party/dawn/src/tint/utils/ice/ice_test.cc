@@ -32,28 +32,84 @@
 namespace tint {
 namespace {
 
-TEST(ICETest_AssertTrue_DeathTest, Unreachable) {
+TEST(ICETest_DeathTest, Unimplemented) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_UNIMPLEMENTED();
+            }
+        },
+        "ice_test.cc:.* internal compiler error: TINT_UNIMPLEMENTED");
+}
+
+TEST(ICETest_DeathTest, Unreachable) {
     EXPECT_DEATH_IF_SUPPORTED(
         {
             if ((true)) {
                 TINT_UNREACHABLE();
             }
         },
-        "internal compiler error");
+        "ice_test.cc:.* internal compiler error: TINT_UNREACHABLE");
 }
 
-TEST(ICETest_AssertTrue_Test, AssertTrue) {
+TEST(ICETest, AssertTrue) {
     TINT_ASSERT(true);
 }
 
-TEST(ICETest_AssertTrue_DeathTest, AssertFalse) {
+TEST(ICETest_DeathTest, AssertFalse) {
     EXPECT_DEATH_IF_SUPPORTED(
         {
             if ((true)) {
                 TINT_ASSERT(false);
             }
         },
-        "internal compiler error");
+        "ice_test.cc:.* internal compiler error: TINT_ASSERT.false.");
+}
+
+TEST(ICETest_DeathTest, AssertFalse_WithCallback) {
+    uint32_t data = 42;
+    InternalCompilerErrorCallbackInfo callback{
+        .callback =
+            [](std::string err, void* userdata) {
+                std::cerr << "callback called with " << *static_cast<uint32_t*>(userdata) << err;
+            },
+        .userdata = &data,
+    };
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_ASSERT(false, callback);
+            }
+        },
+        "callback called with 42.*ice_test.cc:.* internal compiler error: TINT_ASSERT.false.");
+}
+
+TEST(ICETest_DeathTest, ICE) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_ICE() << "custom message " << 123;
+            }
+        },
+        "ice_test.cc:.* internal compiler error: custom message 123");
+}
+
+TEST(ICETest_DeathTest, ICE_WithCallback) {
+    uint32_t data = 42;
+    InternalCompilerErrorCallbackInfo callback{
+        .callback =
+            [](std::string err, void* userdata) {
+                std::cerr << "callback called with " << *static_cast<uint32_t*>(userdata) << err;
+            },
+        .userdata = &data,
+    };
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_ICE(callback) << "custom message " << 123;
+            }
+        },
+        "callback called with 42.*ice_test.cc:.* internal compiler error: custom message 123");
 }
 
 }  // namespace

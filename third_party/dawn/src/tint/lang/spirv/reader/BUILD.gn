@@ -58,8 +58,6 @@ if (tint_build_spv_reader) {
       "${tint_src_dir}/lang/spirv/reader/lower",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
       "${tint_src_dir}/utils",
@@ -90,6 +88,7 @@ if (tint_build_unittests) {
         "helper_test.h",
         "import_glsl_std450_test.cc",
         "reader_test.cc",
+        "texture_test.cc",
       ]
       deps = [
         "${dawn_root}/src/utils:utils",
@@ -101,8 +100,6 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/core/type",
         "${tint_src_dir}/lang/wgsl",
         "${tint_src_dir}/lang/wgsl/ast",
-        "${tint_src_dir}/lang/wgsl/common",
-        "${tint_src_dir}/lang/wgsl/features",
         "${tint_src_dir}/lang/wgsl/program",
         "${tint_src_dir}/lang/wgsl/sem",
         "${tint_src_dir}/utils",

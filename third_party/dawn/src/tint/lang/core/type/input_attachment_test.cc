@@ -29,11 +29,16 @@
 
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
+#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/storage_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -41,10 +46,11 @@ namespace {
 using InputAttachmentTest = TestHelper;
 
 TEST_F(InputAttachmentTest, Creation) {
-    auto* a = create<InputAttachment>(create<F32>());
-    auto* b = create<InputAttachment>(create<F32>());
-    auto* c = create<InputAttachment>(create<U32>());
-    auto* d = create<InputAttachment>(create<I32>());
+    Manager ty;
+    auto* a = ty.input_attachment(ty.f32());
+    auto* b = ty.input_attachment(ty.f32());
+    auto* c = ty.input_attachment(ty.u32());
+    auto* d = ty.input_attachment(ty.i32());
     EXPECT_EQ(a, b);
     EXPECT_NE(a, c);
     EXPECT_NE(a, d);
@@ -52,15 +58,17 @@ TEST_F(InputAttachmentTest, Creation) {
 }
 
 TEST_F(InputAttachmentTest, Hash) {
-    auto* a = create<InputAttachment>(create<F32>());
-    auto* b = create<InputAttachment>(create<F32>());
+    Manager ty;
+    auto* a = ty.input_attachment(ty.f32());
+    auto* b = ty.input_attachment(ty.f32());
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(InputAttachmentTest, Equals) {
-    auto* a = create<InputAttachment>(create<F32>());
-    auto* b = create<InputAttachment>(create<F32>());
-    auto* c = create<InputAttachment>(create<I32>());
+    Manager ty;
+    auto* a = ty.input_attachment(ty.f32());
+    auto* b = ty.input_attachment(ty.f32());
+    auto* c = ty.input_attachment(ty.i32());
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
     EXPECT_FALSE(a->Equals(Void{}));
@@ -91,8 +99,9 @@ TEST_F(InputAttachmentTest, FriendlyName) {
 }
 
 TEST_F(InputAttachmentTest, Clone) {
-    auto* a = create<InputAttachment>(create<F32>());
-    auto* b = create<InputAttachment>(create<I32>());
+    Manager ty;
+    auto* a = ty.input_attachment(ty.f32());
+    auto* b = ty.input_attachment(ty.i32());
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

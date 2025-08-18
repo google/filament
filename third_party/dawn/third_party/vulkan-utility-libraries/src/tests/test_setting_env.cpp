@@ -97,6 +97,34 @@ TEST(test_layer_setting_env, EnvVar_TrimNamespace) {
 }
 
 TEST(test_layer_setting_env, EnvVar_TrimNamespace_OveriddenPrefix) {
+    SetEnv("VK_MY_SETTING_C=true,false");
+
+    VkuLayerSettingSet layerSettingSet = VK_NULL_HANDLE;
+    vkuCreateLayerSettingSet("VK_LAYER_LUNARG_test", nullptr, nullptr, nullptr, &layerSettingSet);
+
+    // The prefix is overridden but it doesn't affect built-in environment variables
+    vkuSetLayerSettingCompatibilityNamespace(layerSettingSet, "POUET");
+
+    EXPECT_TRUE(vkuHasLayerSetting(layerSettingSet, "my_setting_c"));
+
+    uint32_t value_count_c = 0;
+    VkResult result_count_c =
+        vkuGetLayerSettingValues(layerSettingSet, "my_setting_c", VKU_LAYER_SETTING_TYPE_BOOL32, &value_count_c, nullptr);
+    EXPECT_EQ(VK_SUCCESS, result_count_c);
+    EXPECT_EQ(2u, value_count_c);
+
+    std::vector<VkBool32> values_c(static_cast<std::size_t>(value_count_c));
+    VkResult result_complete_c =
+        vkuGetLayerSettingValues(layerSettingSet, "my_setting_c", VKU_LAYER_SETTING_TYPE_BOOL32, &value_count_c, &values_c[0]);
+    EXPECT_EQ(VK_SUCCESS, result_complete_c);
+    EXPECT_EQ(VK_TRUE, values_c[0]);
+    EXPECT_EQ(VK_FALSE, values_c[1]);
+    EXPECT_EQ(2u, value_count_c);
+
+    vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
+}
+
+TEST(test_layer_setting_env, EnvVar_OveriddenPrefix) {
     SetEnv("VK_POUET_MY_SETTING_C=true,false");
 
     VkuLayerSettingSet layerSettingSet = VK_NULL_HANDLE;

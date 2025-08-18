@@ -194,7 +194,9 @@ class Impl {
 
     diag::Diagnostic& AddError(const Source& source) { return diagnostics_.AddError(source); }
 
-    bool NeedTerminator() { return current_block_ && !current_block_->Terminator(); }
+    bool NeedTerminator() {
+        return (current_block_ != nullptr) && (current_block_->Terminator() == nullptr);
+    }
 
     void SetTerminator(core::ir::Terminator* terminator) {
         TINT_ASSERT(current_block_);
@@ -286,6 +288,8 @@ class Impl {
 
                     auto attr = ast::GetAttribute<ast::WorkgroupAttribute>(ast_func->attributes);
                     if (attr) {
+                        TINT_SCOPED_ASSIGNMENT(current_block_, mod.root_block);
+
                         // The x size is always required (y, z are optional).
                         auto value_x = EmitValueExpression(attr->x);
                         bool is_unsigned = value_x->Type()->IsUnsignedIntegerScalar();

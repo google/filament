@@ -44,7 +44,7 @@ struct UserImmediateConstants {
     uint32_t userImmediateData[kMaxExternalImmediateConstantsPerPipeline];
 };
 
-// 8 bytes of push constant data to be used by the ClampFragDepth Tint transform.
+// 8 bytes of immediate data data to be used by the ClampFragDepth Tint transform.
 struct ClampFragDepthArgs {
     float minClampFragDepth;
     float maxClampFragDepth;
@@ -114,6 +114,20 @@ bool HasImmediateConstants(Member Object::*ptr,
     return pipelineImmediateMask.to_ulong() &
            GetImmediateConstantBlockBits(offset, size).to_ulong();
 }
+
+template <typename Object, typename Member>
+std::optional<uint32_t> GetImmediateByteOffsetInPipelineIfAny(
+    Member Object::* ptr,
+    const ImmediateConstantMask& pipelineImmediateMask) {
+    if (!HasImmediateConstants(ptr, pipelineImmediateMask)) {
+        return std::nullopt;
+    }
+
+    return GetImmediateByteOffsetInPipeline(ptr, pipelineImmediateMask);
+}
+
+uint32_t GetImmediateIndexInPipeline(const uint32_t layoutOffset,
+                                     const ImmediateConstantMask& pipelineImmediateMask);
 
 }  // namespace dawn::native
 

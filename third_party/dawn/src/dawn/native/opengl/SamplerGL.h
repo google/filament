@@ -40,23 +40,16 @@ class Sampler final : public SamplerBase {
   public:
     static ResultOrError<Ref<Sampler>> Create(Device* device, const SamplerDescriptor* descriptor);
 
-    GLuint GetFilteringHandle() const;
-    GLuint GetNonFilteringHandle() const;
+    GLuint GetHandle() const;
 
   private:
     Sampler(Device* device, const SamplerDescriptor* descriptor);
     ~Sampler() override;
+
+    MaybeError Initialize(const SamplerDescriptor* descriptor);
     void DestroyImpl() override;
 
-    MaybeError SetupGLSampler(GLuint sampler,
-                              const SamplerDescriptor* descriptor,
-                              bool forceNearest);
-
-    GLuint mFilteringHandle;
-
-    // This is a sampler equivalent to mFilteringHandle except that it uses NEAREST filtering
-    // for everything, which is important to preserve texture completeness for u/int textures.
-    GLuint mNonFilteringHandle;
+    GLuint mHandle = 0;
 };
 
 }  // namespace dawn::native::opengl

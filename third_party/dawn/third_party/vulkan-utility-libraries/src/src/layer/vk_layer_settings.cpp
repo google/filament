@@ -1,6 +1,6 @@
-// Copyright 2023 The Khronos Group Inc.
-// Copyright 2023 Valve Corporation
-// Copyright 2023 LunarG, Inc.
+// Copyright 2023-2025 The Khronos Group Inc.
+// Copyright 2023-2025 Valve Corporation
+// Copyright 2023-2025 LunarG, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -690,17 +690,30 @@ static bool vkuHasSetting(uint32_t settingsCount, const char **pSettings, const 
     return false;
 }
 
-VkResult vkuGetUnknownSettings(const VkLayerSettingsCreateInfoEXT *pCreateInfo, uint32_t settingsCount, const char **pSettings,
-                               uint32_t *pUnknownSettingCount, const char **pUnknownSettings) {
+VkResult vkuGetUnknownSettings(VkuLayerSettingSet layerSettingSet, uint32_t layerSettingsCount, const char **pLayerSettings,
+                               const VkLayerSettingsCreateInfoEXT *pCreateInfo, uint32_t *pUnknownSettingCount,
+                               const char **pUnknownSettings) {
     assert(pUnknownSettingCount != nullptr);
+
+    if (layerSettingSet == VK_NULL_HANDLE) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    vl::LayerSettings *layer_setting_set = (vl::LayerSettings *)layerSettingSet;
 
     const VkLayerSettingsCreateInfoEXT *current_create_info = pCreateInfo;
 
     uint32_t current_unknown_setting_count = 0;
     while (current_create_info != nullptr) {
         for (uint32_t info_index = 0, info_count = current_create_info->settingCount; info_index < info_count; ++info_index) {
+            const VkLayerSettingEXT *setting = &current_create_info->pSettings[info_index];
+
+            if (layer_setting_set->GetLayerName() != setting->pLayerName) {
+                continue;
+            }
+
             const char *current_setting_name = current_create_info->pSettings[info_index].pSettingName;
-            if (!vkuHasSetting(settingsCount, pSettings, current_setting_name)) {
+            if (!vkuHasSetting(layerSettingsCount, pLayerSettings, current_setting_name)) {
                 if (pUnknownSettings != nullptr && current_unknown_setting_count < *pUnknownSettingCount) {
                     pUnknownSettings[current_unknown_setting_count] = current_setting_name;
                 }

@@ -29,13 +29,13 @@
 
 #include <utility>
 
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/core_builtin_call.h"
 #include "src/tint/lang/core/ir/load.h"
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
 #include "src/tint/lang/core/type/pointer.h"
-#include "src/tint/lang/wgsl/builtin_fn.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/ir/builtin_call.h"
 #include "src/tint/lang/wgsl/writer/raise/ptr_to_ref.h"
 #include "src/tint/lang/wgsl/writer/raise/value_to_let.h"
@@ -198,6 +198,7 @@ wgsl::BuiltinFn Convert(core::BuiltinFn fn) {
         CASE(kSubgroupMatrixStore)
         CASE(kSubgroupMatrixMultiply)
         CASE(kSubgroupMatrixMultiplyAccumulate)
+        CASE(kPrint)
         case core::BuiltinFn::kNone:
             break;
     }
@@ -256,6 +257,10 @@ void ReplaceWorkgroupBarrier(core::ir::Builder& b, core::ir::CoreBuiltinCall* ca
 }  // namespace
 
 Result<SuccessType> Raise(core::ir::Module& mod) {
+    if (auto result = core::ir::transform::RenameConflicts(mod); result != Success) {
+        return result.Failure();
+    }
+
     core::ir::Builder b{mod};
     for (auto* inst : mod.Instructions()) {
         if (auto* call = inst->As<core::ir::CoreBuiltinCall>()) {
@@ -268,10 +273,6 @@ Result<SuccessType> Raise(core::ir::Module& mod) {
                     break;
             }
         }
-    }
-
-    if (auto result = core::ir::transform::RenameConflicts(mod); result != Success) {
-        return result.Failure();
     }
     if (auto result = raise::ValueToLet(mod); result != Success) {
         return result.Failure();

@@ -25,6 +25,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# This file exists for two reasons:
+# a) it allows for when using Dawn outside of Chromium to only include
+#    the minimal amount of abseil needed (Chromium already includes
+#    all of abseil, so there is no need to minimize there)
+# b) addresses the fact that the BUILD.gn files supplied via Chromium
+#    for abseil are opinionated on exactly where the checkout of
+#    abseil should be, and some embedders (i.e. Skia) use a different
+#    location.
+
 import("../../../scripts/dawn_overrides_with_defaults.gni")
 
 import("${dawn_root}/scripts/dawn_features.gni")
@@ -35,6 +44,12 @@ config("absl_config") {
       # Allow the use of enable_if()
       "-Wno-gcc-compat",
       "-Wno-unreachable-code-break",
+
+      # Allows use of _Nullable, _Nonnull & _Null_unspecified
+      "-Wno-nullability-extension",
+
+      # vlog has some shadowing, which Windows Clang doesn't like
+      "-Wno-shadow",
     ]
   }
 
@@ -53,6 +68,140 @@ template("absl_source_set") {
 }
 
 #
+# absl
+#
+
+# Includes only what is defined in this file, not all deps from the
+# original abseil GN file. If there are missing dependencies when
+# using this target that indicates they need to be ported over.
+#
+# DO NOT DEPEND ON THIS IN DAWN CODE
+#
+# This exists only for third party dependencies that need it. When
+# using abseil in Dawn, use depend directly on the target that is
+# needed
+source_set("absl") {
+  public_deps = [ ":absl_component_deps" ]
+}
+
+# Commented out deps are targets that exist in the original BUILD.gn,
+# but currently do not have an equivalent here. DO NOT just uncomment
+# them, since that will cause symbol duplication issues. The rules
+# will need to be ported to this file to use.
+group("absl_component_deps") {
+  public_deps = [
+    ":absl_check",
+    ":absl_log",
+    ":absl_vlog_is_on",
+    ":algorithm",
+    ":any_invocable",
+    ":base",
+    ":bits",
+    ":cleanup",
+    ":config",
+    ":container",
+    ":cord",
+    ":core_headers",
+    ":die_if_null",
+
+    # "//third_party/abseil-cpp/absl/container:btree",
+    ":fixed_array",
+    ":flat_hash_map",
+    ":flat_hash_set",
+
+    # "//third_party/abseil-cpp/absl/functional:bind_front",
+    ":function_ref",
+    ":has_ostream_operator",
+    ":hash",
+    ":inlined_vector",
+    ":int128",
+    ":log_entry",
+    ":log_globals",
+    ":log_initialize",
+    ":log_severity",
+    ":log_sink",
+    ":log_sink_registry",
+    ":memory",
+    ":no_destructor",
+    ":nullability",
+    ":optional",
+    ":overload",
+    ":prefetch",
+    ":span",
+
+    # "//third_party/abseil-cpp/absl/container:node_hash_map",
+    # "//third_party/abseil-cpp/absl/container:node_hash_set",
+    # "//third_party/abseil-cpp/absl/debugging:failure_signal_handler",
+    ":stacktrace",
+
+    # "//third_party/abseil-cpp/absl/random",
+    # "//third_party/abseil-cpp/absl/random:bit_gen_ref",
+    # "//third_party/abseil-cpp/absl/random:distributions",
+    ":status",
+    ":statusor",
+    ":str_format",
+    ":string_view",
+    ":strings",
+    ":symbolize",
+    ":synchronization",
+    ":time",
+    ":type_traits",
+    ":utility",
+    ":variant",
+  ]
+
+  # Dependencies that preferably shouldn't be public in chromium.
+  public_deps += [
+    # public in abseil, but deprecated in chromium, yet used.
+    ":dynamic_annotations",
+
+    # base/logging.cc uses this non-public absl dependency while there no better
+    # alternative to inject abort hook. See notes in `base/logging.cc`.
+    ":raw_logging_internal",
+
+    # absl internal utilities used by protobuf.
+    ":layout",
+  ]
+
+  if (is_component_build) {
+    public_deps += [ ":absl_full_deps" ]
+  }
+}
+
+# The 'absl_full' target is not implemented here, since it includes a
+# bunch of targets that are generally not allowed in Chromium.  If you
+# think you need to add it in, because a dependency uses it, seriously
+# consider if you can avoid doing that, since it will likely be a lot
+# of effort to implement, and opens the door to should we just fork
+# the entire GN structure from upstream.
+#
+# Examples of of how to avoid implementing this, there are custom
+# build rules for googletest in standalone builds, and a stub fuzztest
+# BUILD.gn.
+
+# Commented out deps are targets that exist in the original BUILD.gn,
+# but currently do not have an equivalent here. DO NOT just uncomment
+# them, since that will cause symbol duplication issues. The rules
+# will need to be ported to this file to use.
+group("absl_full_deps") {
+  public_deps = [
+    # Banned because each flag registration generates a static initializer, and
+    # the flag registration mechanism is problematic in component builds.
+    # "//third_party/abseil-cpp/absl/flags:config",
+    # "//third_party/abseil-cpp/absl/flags:flag",
+    # "//third_party/abseil-cpp/absl/flags:parse",
+    # "//third_party/abseil-cpp/absl/flags:reflection",
+    # "//third_party/abseil-cpp/absl/flags:usage",
+
+    # Banned because the LOG and CHECK macros conflict with Chrome's version of
+    # those macros.
+    ":log",
+    ":check",
+  ]
+  # public_configs = [ "//third_party/abseil-cpp/absl/flags:absl_flags_config" ]
+}
+
+#
 # absl/algorithm
 #
 
@@ -63,7 +212,7 @@ absl_source_set("algorithm") {
 
 absl_source_set("container") {
   public = [ "${dawn_abseil_dir}/absl/algorithm/container.h" ]
-  deps = [
+  public_deps = [
     ":algorithm",
     ":core_headers",
     ":nullability",
@@ -123,8 +272,6 @@ absl_source_set("base_internal") {
   public = [
     "${dawn_abseil_dir}/absl/base/internal/hide_ptr.h",
     "${dawn_abseil_dir}/absl/base/internal/identity.h",
-    "${dawn_abseil_dir}/absl/base/internal/inline_variable.h",
-    "${dawn_abseil_dir}/absl/base/internal/invoke.h",
     "${dawn_abseil_dir}/absl/base/internal/scheduling_mode.h",
   ]
   public_deps = [
@@ -190,6 +337,14 @@ absl_source_set("errno_saver") {
   public_deps = [ ":config" ]
 }
 
+absl_source_set("iterator_traits_internal") {
+  public = [ "${dawn_abseil_dir}/absl/base/internal/iterator_traits.h" ]
+  deps = [
+    ":config",
+    ":type_traits",
+  ]
+}
+
 absl_source_set("log_severity") {
   sources = [ "${dawn_abseil_dir}/absl/base/log_severity.cc" ]
   public = [ "${dawn_abseil_dir}/absl/base/log_severity.h" ]
@@ -215,13 +370,17 @@ absl_source_set("malloc_internal") {
   ]
 }
 
-absl_source_set("nullability") {
-  sources = [ "${dawn_abseil_dir}/absl/base/internal/nullability_impl.h" ]
-  public = [ "${dawn_abseil_dir}/absl/base/nullability.h" ]
+absl_source_set("no_destructor") {
+  public = [ "${dawn_abseil_dir}/absl/base/no_destructor.h" ]
   deps = [
-    ":core_headers",
-    ":type_traits",
+    ":config",
+    ":nullability",
   ]
+}
+
+absl_source_set("nullability") {
+  public = [ "${dawn_abseil_dir}/absl/base/nullability.h" ]
+  deps = [ ":core_headers" ]
 }
 
 absl_source_set("prefetch") {
@@ -259,10 +418,50 @@ absl_source_set("spinlock_wait") {
   ]
 }
 
+absl_source_set("strerror") {
+  sources = [ "${dawn_abseil_dir}/absl/base/internal/strerror.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/base/internal/strerror.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":errno_saver",
+  ]
+}
+
 absl_source_set("throw_delegate") {
   sources = [ "${dawn_abseil_dir}/absl/base/internal/throw_delegate.cc" ]
   public = [ "${dawn_abseil_dir}/absl/base/internal/throw_delegate.h" ]
   public_deps = [ ":raw_logging_internal" ]
+}
+
+absl_source_set("tracing_internal") {
+  public = [ "${dawn_abseil_dir}/absl/base/internal/tracing.h" ]
+  sources = [ "${dawn_abseil_dir}/absl/base/internal/tracing.cc" ]
+  deps = [
+    ":config",
+    ":core_headers",
+  ]
+}
+
+#
+# absl/cleanup
+#
+
+absl_source_set("cleanup") {
+  public = [ "${dawn_abseil_dir}/absl/cleanup/cleanup.h" ]
+  deps = [
+    ":cleanup_internal",
+    ":config",
+    ":core_headers",
+  ]
+}
+
+absl_source_set("cleanup_internal") {
+  public = [ "${dawn_abseil_dir}/absl/cleanup/internal/cleanup.h" ]
+  deps = [
+    ":core_headers",
+    ":utility",
+  ]
 }
 
 #
@@ -292,6 +491,7 @@ absl_source_set("container_memory") {
   public = [ "${dawn_abseil_dir}/absl/container/internal/container_memory.h" ]
   deps = [
     ":config",
+    ":hash",
     ":memory",
     ":type_traits",
     ":utility",
@@ -306,8 +506,10 @@ absl_source_set("fixed_array") {
     ":config",
     ":core_headers",
     ":dynamic_annotations",
+    ":iterator_traits_internal",
     ":memory",
     ":throw_delegate",
+    ":weakly_mixed_integer",
   ]
 }
 
@@ -341,6 +543,7 @@ absl_source_set("hash_function_defaults") {
   deps = [
     ":common",
     ":config",
+    ":cord",
     ":hash",
     ":string_view",
     ":type_traits",
@@ -349,8 +552,9 @@ absl_source_set("hash_function_defaults") {
 
 absl_source_set("hash_policy_traits") {
   public = [ "${dawn_abseil_dir}/absl/container/internal/hash_policy_traits.h" ]
-  deps = [
+  public_deps = [
     ":common_policy_traits",
+    ":container_memory",
     ":type_traits",
   ]
 }
@@ -379,6 +583,7 @@ absl_source_set("hashtablez_sampler") {
     ":stacktrace",
     ":synchronization",
     ":time",
+    ":tracing_internal",
     ":utility",
   ]
 }
@@ -389,9 +594,11 @@ absl_source_set("inlined_vector") {
     ":algorithm",
     ":core_headers",
     ":inlined_vector_internal",
+    ":iterator_traits_internal",
     ":memory",
     ":throw_delegate",
     ":type_traits",
+    ":weakly_mixed_integer",
   ]
 }
 
@@ -408,21 +615,46 @@ absl_source_set("inlined_vector_internal") {
   ]
 }
 
-absl_source_set("no_destructor") {
-  public = [ "${dawn_abseil_dir}/absl/base/no_destructor.h" ]
+absl_source_set("layout") {
+  public = [ "${dawn_abseil_dir}/absl/container/internal/layout.h" ]
   deps = [
     ":config",
-    ":nullability",
+    ":core_headers",
+    ":demangle_internal",
+    ":span",
+    ":strings",
+    ":type_traits",
+    ":utility",
   ]
 }
 
 absl_source_set("raw_hash_map") {
   public = [ "${dawn_abseil_dir}/absl/container/internal/raw_hash_map.h" ]
   deps = [
+    ":common_policy_traits",
     ":container_memory",
     ":raw_hash_set",
     ":throw_delegate",
+    ":type_traits",
   ]
+}
+
+absl_source_set("hashtable_control_bytes") {
+  public =
+      [ "${dawn_abseil_dir}/absl/container/internal/hashtable_control_bytes.h" ]
+  deps = [
+    ":bits",
+    ":config",
+    ":core_headers",
+    ":endian",
+  ]
+}
+
+absl_source_set("raw_hash_set_resize_impl") {
+  public = [
+    "${dawn_abseil_dir}/absl/container/internal/raw_hash_set_resize_impl.h",
+  ]
+  deps = [ ":config" ]
 }
 
 absl_source_set("raw_hash_set") {
@@ -437,15 +669,109 @@ absl_source_set("raw_hash_set") {
     ":core_headers",
     ":dynamic_annotations",
     ":endian",
+    ":function_ref",
     ":hash",
+    ":hash_function_defaults",
     ":hash_policy_traits",
+    ":hashtable_control_bytes",
     ":hashtable_debug_hooks",
     ":hashtablez_sampler",
+    ":iterator_traits_internal",
     ":memory",
     ":prefetch",
+    ":raw_hash_set_resize_impl",
     ":raw_logging_internal",
     ":type_traits",
     ":utility",
+    ":weakly_mixed_integer",
+  ]
+}
+
+#
+# absl/crc
+#
+
+absl_source_set("crc32c") {
+  public = [
+    "${dawn_abseil_dir}/absl/crc/crc32c.h",
+    "${dawn_abseil_dir}/absl/crc/internal/crc32c.h",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_memcpy.h",
+  ]
+  sources = [
+    "${dawn_abseil_dir}/absl/crc/crc32c.cc",
+    "${dawn_abseil_dir}/absl/crc/internal/crc32c_inline.h",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_memcpy_fallback.cc",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_memcpy_x86_arm_combined.cc",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_non_temporal_memcpy.cc",
+  ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":cpu_detect",
+    ":crc_internal",
+    ":endian",
+    ":non_temporal_memcpy",
+    ":prefetch",
+    ":str_format",
+    ":string_view",
+  ]
+}
+
+absl_source_set("crc_internal") {
+  public = [
+    "${dawn_abseil_dir}/absl/crc/internal/crc.h",
+    "${dawn_abseil_dir}/absl/crc/internal/crc32_x86_arm_combined_simd.h",
+  ]
+  sources = [
+    "${dawn_abseil_dir}/absl/crc/internal/crc.cc",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_internal.h",
+    "${dawn_abseil_dir}/absl/crc/internal/crc_x86_arm_combined.cc",
+  ]
+  deps = [
+    ":bits",
+    ":config",
+    ":core_headers",
+    ":cpu_detect",
+    ":endian",
+    ":memory",
+    ":prefetch",
+    ":raw_logging_internal",
+  ]
+}
+
+absl_source_set("cpu_detect") {
+  public = [ "${dawn_abseil_dir}/absl/crc/internal/cpu_detect.h" ]
+  sources = [ "${dawn_abseil_dir}/absl/crc/internal/cpu_detect.cc" ]
+  deps = [
+    ":base",
+    ":config",
+    ":optional",
+  ]
+}
+
+absl_source_set("crc_cord_state") {
+  public = [ "${dawn_abseil_dir}/absl/crc/internal/crc_cord_state.h" ]
+  sources = [ "${dawn_abseil_dir}/absl/crc/internal/crc_cord_state.cc" ]
+  deps = [
+    ":bits",
+    ":config",
+    ":crc32c",
+    ":no_destructor",
+  ]
+}
+
+absl_source_set("non_temporal_arm_intrinsics") {
+  public =
+      [ "${dawn_abseil_dir}/absl/crc/internal/non_temporal_arm_intrinsics.h" ]
+  deps = [ ":config" ]
+}
+
+absl_source_set("non_temporal_memcpy") {
+  public = [ "${dawn_abseil_dir}/absl/crc/internal/non_temporal_memcpy.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":non_temporal_arm_intrinsics",
   ]
 }
 
@@ -461,6 +787,7 @@ absl_source_set("debugging_internal") {
   ]
   public = [
     "${dawn_abseil_dir}/absl/debugging/internal/address_is_readable.h",
+    "${dawn_abseil_dir}/absl/debugging/internal/addresses.h",
     "${dawn_abseil_dir}/absl/debugging/internal/elf_mem_image.h",
     "${dawn_abseil_dir}/absl/debugging/internal/vdso_support.h",
   ]
@@ -470,6 +797,29 @@ absl_source_set("debugging_internal") {
     ":dynamic_annotations",
     ":errno_saver",
     ":raw_logging_internal",
+  ]
+}
+
+absl_source_set("bounded_utf8_length_sequence") {
+  public = [
+    "${dawn_abseil_dir}/absl/debugging/internal/bounded_utf8_length_sequence.h",
+  ]
+  deps = [
+    ":bits",
+    ":config",
+  ]
+}
+
+absl_source_set("decode_rust_punycode") {
+  sources =
+      [ "${dawn_abseil_dir}/absl/debugging/internal/decode_rust_punycode.cc" ]
+  public =
+      [ "${dawn_abseil_dir}/absl/debugging/internal/decode_rust_punycode.h" ]
+  deps = [
+    ":bounded_utf8_length_sequence",
+    ":config",
+    ":nullability",
+    ":utf8_for_code_point",
   ]
 }
 
@@ -484,6 +834,28 @@ absl_source_set("demangle_internal") {
   ]
   deps = [
     ":base",
+    ":config",
+    ":core_headers",
+    ":decode_rust_punycode",
+  ]
+}
+
+absl_source_set("examine_stack") {
+  sources = [ "${dawn_abseil_dir}/absl/debugging/internal/examine_stack.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/debugging/internal/examine_stack.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":raw_logging_internal",
+    ":stacktrace",
+    ":symbolize",
+  ]
+}
+
+absl_source_set("leak_check") {
+  sources = [ "${dawn_abseil_dir}/absl/debugging/leak_check.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/debugging/leak_check.h" ]
+  deps = [
     ":config",
     ":core_headers",
   ]
@@ -513,6 +885,39 @@ absl_source_set("stacktrace") {
   ]
 }
 
+absl_source_set("symbolize") {
+  sources = [
+    "${dawn_abseil_dir}/absl/debugging/symbolize.cc",
+    "${dawn_abseil_dir}/absl/debugging/symbolize_darwin.inc",
+    "${dawn_abseil_dir}/absl/debugging/symbolize_elf.inc",
+    "${dawn_abseil_dir}/absl/debugging/symbolize_emscripten.inc",
+    "${dawn_abseil_dir}/absl/debugging/symbolize_unimplemented.inc",
+    "${dawn_abseil_dir}/absl/debugging/symbolize_win32.inc",
+  ]
+  public = [
+    "${dawn_abseil_dir}/absl/debugging/internal/symbolize.h",
+    "${dawn_abseil_dir}/absl/debugging/symbolize.h",
+  ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":debugging_internal",
+    ":demangle_internal",
+    ":dynamic_annotations",
+    ":malloc_internal",
+    ":raw_logging_internal",
+    ":string_view",
+    ":strings",
+  ]
+
+  # Silence a macro redefinition conflict between ntstatus.h (used for
+  # STATUS_INFO_LENGTH_MISTMATCH) and winnt.h (included by windows.h).
+  if (is_win && !is_clang) {
+    cflags = [ "/wd4005" ]
+  }
+}
+
 #
 # absl/functional
 #
@@ -521,7 +926,6 @@ absl_source_set("any_invocable") {
   sources = [ "${dawn_abseil_dir}/absl/functional/internal/any_invocable.h" ]
   public = [ "${dawn_abseil_dir}/absl/functional/any_invocable.h" ]
   deps = [
-    ":base_internal",
     ":config",
     ":core_headers",
     ":type_traits",
@@ -534,10 +938,25 @@ absl_source_set("function_ref") {
   public = [ "${dawn_abseil_dir}/absl/functional/function_ref.h" ]
   deps = [
     ":any_invocable",
-    ":base_internal",
     ":core_headers",
     ":type_traits",
   ]
+}
+
+absl_source_set("overload") {
+  public = [ "${dawn_abseil_dir}/absl/functional/overload.h" ]
+  deps = [
+    ":config",
+    ":type_traits",
+  ]
+}
+
+absl_source_set("utf8_for_code_point") {
+  sources =
+      [ "${dawn_abseil_dir}/absl/debugging/internal/utf8_for_code_point.cc" ]
+  public =
+      [ "${dawn_abseil_dir}/absl/debugging/internal/utf8_for_code_point.h" ]
+  deps = [ ":config" ]
 }
 
 #
@@ -569,23 +988,384 @@ absl_source_set("hash") {
     ":fixed_array",
     ":function_ref",
     ":int128",
-    ":low_level_hash",
     ":optional",
+    ":prefetch",
     ":string_view",
     ":type_traits",
     ":utility",
     ":variant",
+    ":weakly_mixed_integer",
   ]
 }
 
-absl_source_set("low_level_hash") {
-  public = [ "${dawn_abseil_dir}/absl/hash/internal/low_level_hash.h" ]
-  sources = [ "${dawn_abseil_dir}/absl/hash/internal/low_level_hash.cc" ]
+absl_source_set("weakly_mixed_integer") {
+  public = [ "${dawn_abseil_dir}/absl/hash/internal/weakly_mixed_integer.h" ]
+  deps = [ ":config" ]
+}
+
+#
+# absl/log
+#
+
+absl_source_set("log") {
+  public = [ "${dawn_abseil_dir}/absl/log/log.h" ]
+  deps = [
+    ":log_impl",
+    ":vlog_is_on",
+  ]
+}
+
+# There are separated absl/log:globals and absl/log/internal:globals
+# targets in the original GN files. Renamed to log_global and
+# _log_global respectively.
+
+absl_source_set("log_globals") {
+  sources = [ "${dawn_abseil_dir}/absl/log/globals.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/globals.h" ]
+  deps = [
+    ":atomic_hook",
+    ":config",
+    ":core_headers",
+    ":hash",
+    ":log_severity",
+    ":raw_logging_internal",
+    ":string_view",
+    ":vlog_config",
+  ]
+}
+
+absl_source_set("_log_globals") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/globals.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/globals.h" ]
   deps = [
     ":config",
-    ":endian",
-    ":int128",
-    ":prefetch",
+    ":core_headers",
+    ":log_severity",
+    ":raw_logging_internal",
+    ":string_view",
+    ":strings",
+    ":time",
+  ]
+}
+
+absl_source_set("log_config") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/config.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+  ]
+}
+
+absl_source_set("absl_check") {
+  public = [ "${dawn_abseil_dir}/absl/log/absl_check.h" ]
+  deps = [ ":check_impl" ]
+}
+
+absl_source_set("absl_log") {
+  public = [ "${dawn_abseil_dir}/absl/log/absl_log.h" ]
+  deps = [ ":log_impl" ]
+}
+
+absl_source_set("absl_vlog_is_on") {
+  public = [ "${dawn_abseil_dir}/absl/log/absl_vlog_is_on.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":strings",
+    ":vlog_config",
+  ]
+}
+
+absl_source_set("append_truncated") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/append_truncated.h" ]
+  deps = [
+    ":config",
+    ":span",
+    ":string_view",
+    ":strings_internal",
+  ]
+}
+
+absl_source_set("check") {
+  public = [ "${dawn_abseil_dir}/absl/log/check.h" ]
+  deps = [
+    ":check_impl",
+    ":check_op",
+    ":conditions",
+    ":log_message",
+    ":strip",
+  ]
+}
+
+absl_source_set("check_impl") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/check_impl.h" ]
+  deps = [
+    ":check_op",
+    ":conditions",
+    ":core_headers",
+    ":log_message",
+    ":strip",
+  ]
+}
+
+absl_source_set("check_op") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/check_op.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/check_op.h" ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":leak_check",
+    ":nullability",
+    ":nullguard",
+    ":nullstream",
+    ":strings",
+    ":strip",
+  ]
+}
+
+absl_source_set("conditions") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/conditions.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/conditions.h" ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":voidify",
+  ]
+}
+
+absl_source_set("die_if_null") {
+  sources = [ "${dawn_abseil_dir}/absl/log/die_if_null.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/die_if_null.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":log",
+    ":strings",
+  ]
+}
+
+absl_source_set("fnmatch") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/fnmatch.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/fnmatch.h" ]
+  deps = [
+    ":config",
+    ":strings",
+  ]
+}
+
+absl_source_set("format") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/log_format.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/log_format.h" ]
+  deps = [
+    ":_log_globals",
+    ":append_truncated",
+    ":config",
+    ":core_headers",
+    ":log_config",
+    ":log_severity",
+    ":span",
+    ":str_format",
+    ":string_view",
+    ":strings",
+    ":time",
+  ]
+}
+
+absl_source_set("log_initialize") {
+  sources = [ "${dawn_abseil_dir}/absl/log/initialize.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/initialize.h" ]
+  deps = [
+    ":_log_globals",
+    ":config",
+    ":log_globals",
+    ":time",
+  ]
+}
+
+absl_source_set("log_entry") {
+  public = [ "${dawn_abseil_dir}/absl/log/log_entry.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":log_config",
+    ":log_severity",
+    ":span",
+    ":string_view",
+    ":time",
+  ]
+}
+
+absl_source_set("log_impl") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/log_impl.h" ]
+  deps = [
+    ":absl_vlog_is_on",
+    ":conditions",
+    ":log_message",
+    ":strip",
+  ]
+}
+
+absl_source_set("log_message") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/log_message.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/log_message.h" ]
+  deps = [
+    ":_log_globals",
+    ":_log_globals",
+    ":append_truncated",
+    ":base",
+    ":config",
+    ":core_headers",
+    ":errno_saver",
+    ":examine_stack",
+    ":format",
+    ":inlined_vector",
+    ":log_entry",
+    ":log_globals",
+    ":log_severity",
+    ":log_sink",
+    ":log_sink_registry",
+    ":log_sink_set",
+    ":memory",
+    ":nullability",
+    ":nullguard",
+    ":proto",
+    ":raw_logging_internal",
+    ":span",
+    ":strerror",
+    ":string_view",
+    ":strings",
+    ":strings_internal",
+    ":structured_proto",
+    ":time",
+  ]
+}
+
+absl_source_set("log_sink") {
+  sources = [ "${dawn_abseil_dir}/absl/log/log_sink.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/log_sink.h" ]
+  deps = [
+    ":config",
+    ":log_entry",
+  ]
+}
+
+absl_source_set("log_sink_registry") {
+  public = [ "${dawn_abseil_dir}/absl/log/log_sink_registry.h" ]
+  deps = [
+    ":config",
+    ":log_sink",
+    ":log_sink_set",
+    ":nullability",
+  ]
+}
+
+absl_source_set("log_sink_set") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/log_sink_set.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/log_sink_set.h" ]
+  deps = [
+    ":_log_globals",
+    ":base",
+    ":cleanup",
+    ":config",
+    ":core_headers",
+    ":log_config",
+    ":log_entry",
+    ":log_globals",
+    ":log_severity",
+    ":log_sink",
+    ":no_destructor",
+    ":raw_logging_internal",
+    ":span",
+    ":string_view",
+    ":synchronization",
+  ]
+  if (is_android) {
+    libs = [ "log" ]
+  }
+}
+
+absl_source_set("nullguard") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/nullguard.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/nullguard.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+  ]
+}
+
+absl_source_set("nullstream") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/nullstream.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":log_severity",
+    ":string_view",
+  ]
+}
+
+absl_source_set("proto") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/proto.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/proto.h" ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":span",
+    ":string_view",
+  ]
+}
+
+absl_source_set("strip") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/strip.h" ]
+  deps = [
+    ":core_headers",
+    ":log_message",
+    ":log_severity",
+    ":nullstream",
+  ]
+}
+
+absl_source_set("structured_proto") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/structured_proto.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/structured_proto.h" ]
+  deps = [
+    ":config",
+    ":proto",
+    ":span",
+    ":strings",
+    ":variant",
+  ]
+}
+
+absl_source_set("vlog_config") {
+  sources = [ "${dawn_abseil_dir}/absl/log/internal/vlog_config.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/log/internal/vlog_config.h" ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":fnmatch",
+    ":memory",
+    ":no_destructor",
+    ":nullability",
+    ":optional",
+    ":strings",
+    ":synchronization",
+  ]
+}
+
+absl_source_set("vlog_is_on") {
+  public = [ "${dawn_abseil_dir}/absl/log/vlog_is_on.h" ]
+  deps = [ ":absl_vlog_is_on" ]
+}
+
+absl_source_set("voidify") {
+  public = [ "${dawn_abseil_dir}/absl/log/internal/voidify.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
   ]
 }
 
@@ -625,6 +1405,7 @@ absl_source_set("bits") {
   deps = [
     ":config",
     ":core_headers",
+    ":endian",
   ]
 }
 
@@ -637,6 +1418,7 @@ absl_source_set("int128") {
   public = [ "${dawn_abseil_dir}/absl/numeric/int128.h" ]
   deps = [
     ":bits",
+    ":compare",
     ":config",
     ":core_headers",
   ]
@@ -684,6 +1466,8 @@ absl_source_set("strings") {
     "${dawn_abseil_dir}/absl/strings/internal/stl_type_traits.h",
     "${dawn_abseil_dir}/absl/strings/internal/str_join_internal.h",
     "${dawn_abseil_dir}/absl/strings/internal/str_split_internal.h",
+    "${dawn_abseil_dir}/absl/strings/internal/stringify_sink.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/stringify_sink.h",
     "${dawn_abseil_dir}/absl/strings/match.cc",
     "${dawn_abseil_dir}/absl/strings/numbers.cc",
     "${dawn_abseil_dir}/absl/strings/str_cat.cc",
@@ -705,17 +1489,163 @@ absl_source_set("strings") {
     "${dawn_abseil_dir}/absl/strings/strip.h",
     "${dawn_abseil_dir}/absl/strings/substitute.h",
   ]
-  deps = [
+  public_deps = [
     ":base",
     ":bits",
     ":endian",
     ":int128",
+    ":iterator_traits_internal",
     ":raw_logging_internal",
     ":string_view",
     ":strings_internal",
     ":throw_delegate",
     ":type_traits",
   ]
+}
+
+absl_source_set("cord") {
+  sources = [
+    "${dawn_abseil_dir}/absl/strings/cord.cc",
+    "${dawn_abseil_dir}/absl/strings/cord_analysis.cc",
+    "${dawn_abseil_dir}/absl/strings/cord_analysis.h",
+  ]
+  public = [
+    "${dawn_abseil_dir}/absl/strings/cord.h",
+    "${dawn_abseil_dir}/absl/strings/cord_buffer.h",
+  ]
+  deps = [
+    ":bits",
+    ":compare",
+    ":config",
+    ":cord_internal",
+    ":cordz_info",
+    ":cordz_update_scope",
+    ":cordz_update_tracker",
+    ":core_headers",
+    ":crc32c",
+    ":crc_cord_state",
+    ":endian",
+    ":function_ref",
+    ":inlined_vector",
+    ":nullability",
+    ":optional",
+    ":raw_logging_internal",
+    ":span",
+    ":string_view",
+    ":strings",
+    ":strings_internal",
+    ":type_traits",
+    ":weakly_mixed_integer",
+  ]
+}
+
+absl_source_set("cord_internal") {
+  sources = [
+    "${dawn_abseil_dir}/absl/strings/internal/cord_internal.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree_navigator.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree_reader.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_consume.cc",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_crc.cc",
+  ]
+  public = [
+    "${dawn_abseil_dir}/absl/strings/internal/cord_data_edge.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_internal.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree_navigator.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_btree_reader.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_consume.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_crc.h",
+    "${dawn_abseil_dir}/absl/strings/internal/cord_rep_flat.h",
+  ]
+  visibility = [ ":*" ]
+  deps = [
+    ":compressed_tuple",
+    ":config",
+    ":container_memory",
+    ":core_headers",
+    ":crc_cord_state",
+    ":endian",
+    ":function_ref",
+    ":inlined_vector",
+    ":nullability",
+    ":raw_logging_internal",
+    ":span",
+    ":string_view",
+    ":strings",
+  ]
+}
+
+absl_source_set("cordz_functions") {
+  sources = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_functions.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_functions.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":exponential_biased",
+    ":raw_logging_internal",
+  ]
+}
+
+absl_source_set("cordz_handle") {
+  sources = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_handle.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_handle.h" ]
+  deps = [
+    ":config",
+    ":no_destructor",
+    ":raw_logging_internal",
+    ":synchronization",
+  ]
+}
+
+absl_source_set("cordz_info") {
+  sources = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_info.cc" ]
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_info.h" ]
+  deps = [
+    ":base",
+    ":config",
+    ":cord_internal",
+    ":cordz_functions",
+    ":cordz_handle",
+    ":cordz_statistics",
+    ":cordz_update_tracker",
+    ":core_headers",
+    ":inlined_vector",
+    ":raw_logging_internal",
+    ":span",
+    ":stacktrace",
+    ":synchronization",
+    ":time",
+  ]
+}
+
+absl_source_set("cordz_statistics") {
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_statistics.h" ]
+  deps = [
+    ":config",
+    ":cordz_update_tracker",
+  ]
+}
+
+absl_source_set("cordz_update_scope") {
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_update_scope.h" ]
+  deps = [
+    ":config",
+    ":cord_internal",
+    ":cordz_info",
+    ":cordz_update_tracker",
+    ":core_headers",
+  ]
+}
+
+absl_source_set("cordz_update_tracker") {
+  public = [ "${dawn_abseil_dir}/absl/strings/internal/cordz_update_tracker.h" ]
+  deps = [ ":config" ]
+}
+
+absl_source_set("has_ostream_operator") {
+  public = [ "${dawn_abseil_dir}/absl/strings/has_ostream_operator.h" ]
+  deps = [ ":config" ]
 }
 
 absl_source_set("strings_internal") {
@@ -785,11 +1715,73 @@ absl_source_set("str_format_internal") {
     ":function_ref",
     ":inlined_vector",
     ":int128",
+    ":optional",
     ":span",
     ":string_view",
     ":strings",
     ":type_traits",
     ":utility",
+  ]
+}
+
+#
+# absl/status
+#
+
+absl_source_set("status") {
+  public = [
+    "${dawn_abseil_dir}/absl/status/status.h",
+    "${dawn_abseil_dir}/absl/status/status_payload_printer.h",
+  ]
+  sources = [
+    "${dawn_abseil_dir}/absl/status/internal/status_internal.cc",
+    "${dawn_abseil_dir}/absl/status/internal/status_internal.h",
+    "${dawn_abseil_dir}/absl/status/status.cc",
+    "${dawn_abseil_dir}/absl/status/status_payload_printer.cc",
+  ]
+  deps = [
+    ":atomic_hook",
+    ":config",
+    ":cord",
+    ":core_headers",
+    ":function_ref",
+    ":inlined_vector",
+    ":leak_check",
+    ":memory",
+    ":no_destructor",
+    ":nullability",
+    ":optional",
+    ":raw_logging_internal",
+    ":span",
+    ":stacktrace",
+    ":str_format",
+    ":strerror",
+    ":string_view",
+    ":strings",
+    ":symbolize",
+  ]
+}
+
+absl_source_set("statusor") {
+  public = [ "${dawn_abseil_dir}/absl/status/statusor.h" ]
+  sources = [
+    "${dawn_abseil_dir}/absl/status/internal/statusor_internal.h",
+    "${dawn_abseil_dir}/absl/status/statusor.cc",
+  ]
+  deps = [
+    ":base",
+    ":config",
+    ":core_headers",
+    ":has_ostream_operator",
+    ":nullability",
+    ":raw_logging_internal",
+    ":status",
+    ":str_format",
+    ":string_view",
+    ":strings",
+    ":type_traits",
+    ":utility",
+    ":variant",
   ]
 }
 
@@ -823,33 +1815,6 @@ absl_source_set("kernel_timeout_internal") {
     ":core_headers",
     ":raw_logging_internal",
     ":time",
-  ]
-}
-
-absl_source_set("symbolize") {
-  sources = [
-    "${dawn_abseil_dir}/absl/debugging/symbolize.cc",
-    "${dawn_abseil_dir}/absl/debugging/symbolize_darwin.inc",
-    "${dawn_abseil_dir}/absl/debugging/symbolize_elf.inc",
-    "${dawn_abseil_dir}/absl/debugging/symbolize_emscripten.inc",
-    "${dawn_abseil_dir}/absl/debugging/symbolize_unimplemented.inc",
-    "${dawn_abseil_dir}/absl/debugging/symbolize_win32.inc",
-  ]
-  public = [
-    "${dawn_abseil_dir}/absl/debugging/internal/symbolize.h",
-    "${dawn_abseil_dir}/absl/debugging/symbolize.h",
-  ]
-  deps = [
-    ":base",
-    ":config",
-    ":core_headers",
-    ":debugging_internal",
-    ":demangle_internal",
-    ":dynamic_annotations",
-    ":malloc_internal",
-    ":raw_logging_internal",
-    ":string_view",
-    ":strings",
   ]
 }
 
@@ -894,10 +1859,12 @@ absl_source_set("synchronization") {
     ":graphcycles_internal",
     ":kernel_timeout_internal",
     ":malloc_internal",
+    ":nullability",
     ":raw_logging_internal",
     ":stacktrace",
     ":symbolize",
     ":time",
+    ":tracing_internal",
   ]
 }
 
@@ -996,30 +1963,19 @@ absl_source_set("time_zone") {
 # absl/types
 #
 
-absl_source_set("bad_optional_access") {
-  sources = [ "${dawn_abseil_dir}/absl/types/bad_optional_access.cc" ]
-  public = [ "${dawn_abseil_dir}/absl/types/bad_optional_access.h" ]
-  public_deps = [ ":config" ]
-  deps = [ ":raw_logging_internal" ]
-}
-
-absl_source_set("bad_variant_access") {
-  sources = [ "${dawn_abseil_dir}/absl/types/bad_variant_access.cc" ]
-  public = [ "${dawn_abseil_dir}/absl/types/bad_variant_access.h" ]
-  public_deps = [ ":config" ]
-  deps = [ ":raw_logging_internal" ]
+absl_source_set("compare") {
+  public = [ "${dawn_abseil_dir}/absl/types/compare.h" ]
+  deps = [
+    ":config",
+    ":core_headers",
+    ":type_traits",
+  ]
 }
 
 absl_source_set("optional") {
-  sources = [ "${dawn_abseil_dir}/absl/types/internal/optional.h" ]
-  public = [ "${dawn_abseil_dir}/absl/types/internal/optional.h" ]
+  public = [ "${dawn_abseil_dir}/absl/types/optional.h" ]
   public_deps = [
-    ":bad_optional_access",
-    ":base_internal",
     ":config",
-    ":core_headers",
-    ":memory",
-    ":type_traits",
     ":utility",
   ]
 }
@@ -1033,18 +1989,14 @@ absl_source_set("span") {
     ":nullability",
     ":throw_delegate",
     ":type_traits",
+    ":weakly_mixed_integer",
   ]
 }
 
 absl_source_set("variant") {
-  sources = [ "${dawn_abseil_dir}/absl/types/internal/variant.h" ]
   public = [ "${dawn_abseil_dir}/absl/types/variant.h" ]
   public_deps = [
-    ":bad_variant_access",
-    ":base_internal",
     ":config",
-    ":core_headers",
-    ":type_traits",
     ":utility",
   ]
 }

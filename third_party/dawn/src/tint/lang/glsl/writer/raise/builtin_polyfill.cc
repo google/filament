@@ -526,7 +526,9 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "glsl.BuiltinPolyfill");
+    auto result = ValidateAndDumpIfNeeded(
+        ir, "glsl.BuiltinPolyfill",
+        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
     if (result != Success) {
         return result.Failure();
     }

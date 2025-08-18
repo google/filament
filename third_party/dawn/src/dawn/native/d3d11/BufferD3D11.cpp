@@ -549,7 +549,7 @@ void Buffer::UnmapImpl() {
     }
 }
 
-void* Buffer::GetMappedPointer() {
+void* Buffer::GetMappedPointerImpl() {
     // The frontend asks that the pointer returned is from the start of the resource
     // irrespective of the offset passed in MapAsyncImpl, which is what mMappedData is.
     return mMappedData;
@@ -1257,7 +1257,7 @@ GPUUsableBuffer::CreateD3D11ShaderResourceViewFromD3DBuffer(ID3D11Buffer* d3d11B
                               ->CreateShaderResourceView(d3d11Buffer, &desc, &srv),
                           "ShaderResourceView creation"));
 
-    return srv;
+    return std::move(srv);
 }
 
 ResultOrError<ComPtr<ID3D11UnorderedAccessView1>>
@@ -1284,7 +1284,7 @@ GPUUsableBuffer::CreateD3D11UnorderedAccessViewFromD3DBuffer(ID3D11Buffer* d3d11
                               ->CreateUnorderedAccessView1(d3d11Buffer, &desc, &uav),
                           "UnorderedAccessView creation"));
 
-    return uav;
+    return std::move(uav);
 }
 
 ResultOrError<ComPtr<ID3D11ShaderResourceView>> GPUUsableBuffer::UseAsSRV(
@@ -1306,10 +1306,10 @@ ResultOrError<ComPtr<ID3D11ShaderResourceView>> GPUUsableBuffer::UseAsSRV(
 
     mSRVCache[key] = srv;
 
-    return srv;
+    return std::move(srv);
 }
 
-ResultOrError<ComPtr<ID3D11UnorderedAccessView1>> GPUUsableBuffer::UseAsUAV(
+ResultOrError<ComPtr<ID3D11UnorderedAccessView>> GPUUsableBuffer::UseAsUAV(
     const ScopedCommandRecordingContext* commandContext,
     uint64_t offset,
     uint64_t size) {
@@ -1333,7 +1333,7 @@ ResultOrError<ComPtr<ID3D11UnorderedAccessView1>> GPUUsableBuffer::UseAsUAV(
     // Since UAV will modify the storage's content, increment its revision.
     IncrStorageRevAndMakeLatest(commandContext, storage);
 
-    return uav;
+    return ComPtr<ID3D11UnorderedAccessView>(std::move(uav));
 }
 
 MaybeError GPUUsableBuffer::UpdateD3D11ConstantBuffer(

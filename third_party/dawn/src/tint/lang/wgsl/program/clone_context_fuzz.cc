@@ -78,12 +78,10 @@ void CloneContextFuzzer(const tint::Program& src) {
         ASSERT_EQ(src_types.count(dst_type), 0u);
     }
 
-    tint::wgsl::writer::Options wgsl_options;
-
-    auto src_wgsl = tint::wgsl::writer::Generate(src, wgsl_options);
+    auto src_wgsl = tint::wgsl::writer::Generate(src);
     ASSERT_TRUE(src_wgsl);
 
-    auto dst_wgsl = tint::wgsl::writer::Generate(dst, wgsl_options);
+    auto dst_wgsl = tint::wgsl::writer::Generate(dst);
     ASSERT_TRUE(dst_wgsl);
 
     ASSERT_EQ(src_wgsl->wgsl, dst_wgsl->wgsl);

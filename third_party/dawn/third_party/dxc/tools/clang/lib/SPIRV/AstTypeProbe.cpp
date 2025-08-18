@@ -1353,6 +1353,27 @@ bool isOrContainsNonFpColMajorMatrix(const ASTContext &astContext,
   return false;
 }
 
+bool isOrContainsBoolType(QualType type) {
+  if (isBoolOrVecMatOfBoolType(type)) {
+    return true;
+  }
+
+  if (const auto *arrayType = type->getAsArrayTypeUnsafe()) {
+    return isOrContainsBoolType(arrayType->getElementType());
+  }
+
+  if (const auto *recordType = type->getAs<RecordType>()) {
+    for (auto field : recordType->getDecl()->fields()) {
+      if (isOrContainsBoolType(field->getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  return false;
+}
+
 bool isTypeInVkNamespace(const RecordType *type) {
   if (const auto *nameSpaceDecl =
           dyn_cast<NamespaceDecl>(type->getDecl()->getDeclContext())) {
@@ -1580,7 +1601,10 @@ void forEachSpirvField(
   uint32_t lastConvertedIndex = 0;
   size_t astFieldIndex = 0;
   for (const auto &base : cxxDecl->bases()) {
-    const auto &type = base.getType();
+    auto type = base.getType();
+    if (auto *templatedType = dyn_cast<SubstTemplateTypeParmType>(type))
+      type = templatedType->getReplacementType();
+
     const auto &spirvField = spirvType->getFields()[astFieldIndex];
     if (!operation(spirvField.fieldIndex, type, spirvField)) {
       return;
@@ -1599,7 +1623,10 @@ void forEachSpirvField(
       continue;
     }
 
-    const auto &type = field->getType();
+    auto type = field->getType();
+    if (auto *templatedType = dyn_cast<SubstTemplateTypeParmType>(type))
+      type = templatedType->getReplacementType();
+
     if (!operation(currentFieldIndex, type, spirvField)) {
       return;
     }

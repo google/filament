@@ -42,15 +42,8 @@ struct TexturePolyfillConfig {
     /// The binding point to use for placeholder samplers.
     BindingPoint placeholder_sampler_bind_point;
 
-    /// Options used to map WGSL textureNumLevels/textureNumSamples builtins to internal uniform
-    /// buffer values. If not specified, emits corresponding GLSL builtins
-    /// textureQueryLevels/textureSamples directly.
-    TextureBuiltinsFromUniformOptions texture_builtins_from_uniform;
-
     /// Reflection for this class
-    TINT_REFLECT(TexturePolyfillConfig,
-                 placeholder_sampler_bind_point,
-                 texture_builtins_from_uniform);
+    TINT_REFLECT(TexturePolyfillConfig, placeholder_sampler_bind_point);
 };
 
 /// TexturePolyfill is a transform that replaces textures, samplers and functions calls to make them

@@ -84,5 +84,17 @@ TEST_F(IR_NextIterationTest, CloneNoArgs) {
     EXPECT_EQ(new_loop, new_inst->Loop());
 }
 
+TEST_F(IR_NextIterationTest, Destroy) {
+    auto* loop = b.Loop();
+    auto* inst = b.NextIteration(loop);
+
+    ASSERT_EQ(1u, loop->Body()->InboundSiblingBranches().Length());
+    EXPECT_EQ(inst, loop->Body()->InboundSiblingBranches()[0]);
+
+    inst->Destroy();
+
+    EXPECT_EQ(0u, loop->Body()->InboundSiblingBranches().Length());
+}
+
 }  // namespace
 }  // namespace tint::core::ir

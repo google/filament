@@ -320,7 +320,11 @@ public:
       return Count;
     } else {
       // We want to shrink, copy to sib.
-      unsigned Count = std::min(std::min(unsigned(-Add), Size), N - SSize);
+      // Count <= INT_MAX: Since Add is an int, unsigned(-Add) <= 2^31, so
+      // std::min result <= INT_MAX. Meaning its safe to store the result in an
+      // int to avoid the compiler warning for '-Count' if we were to use an
+      // unsigned value instead.
+      int Count = std::min(std::min(unsigned(-Add), Size), N - SSize);
       transferToLeftSib(Size, Sib, SSize, Count);
       return -Count;
     }

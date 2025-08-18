@@ -19,8 +19,7 @@ using namespace sys;
 
 const TimeValue::SecondsType
   TimeValue::PosixZeroTimeSeconds = -946684800;
-const TimeValue::SecondsType
-  TimeValue::Win32ZeroTimeSeconds = -12591158400ULL;
+const TimeValue::SecondsType TimeValue::Win32ZeroTimeSeconds = -12591158400LL;
 
 void
 TimeValue::normalize( void ) {

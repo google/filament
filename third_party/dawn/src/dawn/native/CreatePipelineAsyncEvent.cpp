@@ -41,7 +41,7 @@
 #include "dawn/native/EventManager.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/RenderPipeline.h"
-#include "dawn/native/SystemEvent.h"
+#include "dawn/native/WaitListEvent.h"
 #include "dawn/native/dawn_platform_autogen.h"
 #include "dawn/native/utils/WGPUHelpers.h"
 #include "dawn/native/wgpu_structs_autogen.h"
@@ -65,7 +65,7 @@ template <>
 void CreatePipelineAsyncEvent<ComputePipelineBase, WGPUCreateComputePipelineAsyncCallbackInfo>::
     AddOrGetCachedPipeline() {
     DeviceBase* device = mPipeline->GetDevice();
-    auto deviceLock(device->GetScopedLock());
+    auto deviceGuard = device->GetGuard();
     if (device->GetState() == DeviceBase::State::Alive) {
         mPipeline = device->AddOrGetCachedComputePipeline(std::move(mPipeline));
     }
@@ -85,7 +85,7 @@ template <>
 void CreatePipelineAsyncEvent<RenderPipelineBase,
                               WGPUCreateRenderPipelineAsyncCallbackInfo>::AddOrGetCachedPipeline() {
     DeviceBase* device = mPipeline->GetDevice();
-    auto deviceLock(device->GetScopedLock());
+    auto deviceGuard = device->GetGuard();
     if (device->GetState() == DeviceBase::State::Alive) {
         mPipeline = device->AddOrGetCachedRenderPipeline(std::move(mPipeline));
     }
@@ -96,8 +96,8 @@ CreatePipelineAsyncEvent<PipelineType, CreatePipelineAsyncCallbackInfo>::CreateP
     DeviceBase* device,
     const CreatePipelineAsyncCallbackInfo& callbackInfo,
     Ref<PipelineType> pipeline,
-    Ref<SystemEvent> systemEvent)
-    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), std::move(systemEvent)),
+    Ref<WaitListEvent> event)
+    : TrackedEvent(static_cast<wgpu::CallbackMode>(callbackInfo.mode), std::move(event)),
       mCallback(callbackInfo.callback),
       mUserdata1(callbackInfo.userdata1),
       mUserdata2(callbackInfo.userdata2),
