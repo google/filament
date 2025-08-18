@@ -267,6 +267,7 @@ void VulkanExternalImageManager::bindStream(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanStream> stream,
         SamplerParams samplerParams) {
     mSetSreamBindings.push_back({ bindingPoint, stream, set, samplerParams });
+    set->setHasStreamedTexture();
 }
 
 void VulkanExternalImageManager::bindStreamFrame(fvkmemory::resource_ptr<VulkanStream> stream,
