@@ -41,21 +41,12 @@ namespace tint::msl::writer::raise {
 
 namespace {
 
-/// State that persists across the whole module and can be shared between entry points.
-struct PerModuleState {
-    /// The frag_depth clamp arguments.
-    core::ir::Value* frag_depth_clamp_args = nullptr;
-};
-
 /// PIMPL state for the parts of the shader IO transform specific to MSL.
 /// For MSL, we take builtin inputs as entry point parameters, move non-builtin inputs to a struct
 /// passed as an entry point parameter, and wrap outputs in a structure returned by the entry point.
 struct StateImpl : core::ir::transform::ShaderIOBackendState {
     /// The configuration options.
     const ShaderIOConfig& config;
-
-    /// The per-module state object.
-    PerModuleState& module_state;
 
     /// The input parameters of the entry point.
     Vector<core::ir::FunctionParam*, 4> input_params;
@@ -77,11 +68,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
     std::optional<uint32_t> fixed_sample_mask_index;
 
     /// Constructor
-    StateImpl(core::ir::Module& mod,
-              core::ir::Function* f,
-              const ShaderIOConfig& cfg,
-              PerModuleState& mod_state)
-        : ShaderIOBackendState(mod, f), config(cfg), module_state(mod_state) {}
+    StateImpl(core::ir::Module& mod, core::ir::Function* f, const ShaderIOConfig& cfg)
+        : ShaderIOBackendState(mod, f), config(cfg) {}
 
     /// Destructor
     ~StateImpl() override {}
@@ -230,26 +218,25 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
         // Create a new builtin sample mask output.
         fixed_sample_mask_index = AddOutput(ir.symbols.New("tint_sample_mask"), ty.u32(),
                                             core::IOAttributes{
-                                                /* location */ std::nullopt,
-                                                /* index */ std::nullopt,
-                                                /* color */ std::nullopt,
-                                                /* builtin */ core::BuiltinValue::kSampleMask,
-                                                /* interpolation */ std::nullopt,
-                                                /* invariant */ false,
+                                                .builtin = core::BuiltinValue::kSampleMask,
                                             });
     }
 };
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "msl.ShaderIO");
+    auto result = ValidateAndDumpIfNeeded(ir, "msl.ShaderIO",
+                                          tint::core::ir::Capabilities{
+                                              core::ir::Capability::kAllow8BitIntegers,
+                                              core::ir::Capability::kAllowDuplicateBindings,
+                                              core::ir::Capability::kAllowNonCoreTypes,
+                                          });
     if (result != Success) {
         return result;
     }
 
-    PerModuleState module_state;
     core::ir::transform::RunShaderIOBase(ir, [&](core::ir::Module& mod, core::ir::Function* func) {
-        return std::make_unique<StateImpl>(mod, func, config, module_state);
+        return std::make_unique<StateImpl>(mod, func, config);
     });
 
     return Success;

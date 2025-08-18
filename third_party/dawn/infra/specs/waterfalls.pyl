@@ -1,0 +1,23 @@
+[
+  {
+    'name': 'ci',
+    'mixins': [
+      'chromium-tester-service-account',
+      'swarming_containment_auto',
+    ],
+    'machines': {
+      'dawn-linux-x64-sws-rel': {
+        'os_type': 'linux',
+        'mixins': [
+          'gpu-swarming-pool',
+          'no_gpu',
+          'linux-jammy',
+          'x86-64',
+        ],
+        'test_suites': {
+          'gtest_tests': 'swiftshader_gtests',
+        },
+      },
+    },
+  },
+]

@@ -1518,9 +1518,9 @@ TEST_F(IR_Std140Test, NonDefaultAlignAndSize) {
 
     auto* src = R"(
 MyStruct = struct @align(128), @block {
-  a:i32 @offset(0)
-  m:mat4x2<f32> @offset(64)
-  b:i32 @offset(128)
+  a:i32 @offset(0) @size(16)
+  m:mat4x2<f32> @offset(64) @size(64)
+  b:i32 @offset(128) @size(32)
 }
 
 $B1: {  # root
@@ -1546,18 +1546,18 @@ $B1: {  # root
 
     auto* expect = R"(
 MyStruct = struct @align(128), @block {
-  a:i32 @offset(0)
-  m:mat4x2<f32> @offset(64)
-  b:i32 @offset(128)
+  a:i32 @offset(0) @size(16)
+  m:mat4x2<f32> @offset(64) @size(64)
+  b:i32 @offset(128) @size(32)
 }
 
 MyStruct_std140 = struct @align(128), @block {
-  a:i32 @offset(0)
+  a:i32 @offset(0) @size(16)
   m_col0:vec2<f32> @offset(64)
   m_col1:vec2<f32> @offset(72)
   m_col2:vec2<f32> @offset(80)
   m_col3:vec2<f32> @offset(88)
-  b:i32 @offset(128)
+  b:i32 @offset(128) @size(32)
 }
 
 $B1: {  # root

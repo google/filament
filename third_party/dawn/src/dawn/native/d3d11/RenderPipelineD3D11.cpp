@@ -36,6 +36,7 @@
 
 #include "dawn/common/Range.h"
 #include "dawn/native/CreatePipelineAsyncEvent.h"
+#include "dawn/native/ImmediateConstantsLayout.h"
 #include "dawn/native/d3d/D3DError.h"
 #include "dawn/native/d3d/ShaderUtils.h"
 #include "dawn/native/d3d11/DeviceD3D11.h"
@@ -234,6 +235,16 @@ RenderPipeline::RenderPipeline(Device* device,
       mD3DPrimitiveTopology(D3DPrimitiveTopology(GetPrimitiveTopology())) {}
 
 MaybeError RenderPipeline::InitializeImpl() {
+    // Set firstVertex and firstInstance bits together to ensure non immediate case has correct
+    // offset.
+    // TODO(crbug.com/366291600): Setting these bits respectively after immediate covers all cases.
+    if (UsesVertexIndex() || UsesInstanceIndex()) {
+        mImmediateMask |= GetImmediateConstantBlockBits(
+            offsetof(RenderImmediateConstants, firstVertex), kImmediateConstantElementByteSize);
+        mImmediateMask |= GetImmediateConstantBlockBits(
+            offsetof(RenderImmediateConstants, firstInstance), kImmediateConstantElementByteSize);
+    }
+
     DAWN_TRY(InitializeRasterizerState());
     DAWN_TRY(InitializeBlendState());
     DAWN_TRY(InitializeShaders());
@@ -243,14 +254,14 @@ MaybeError RenderPipeline::InitializeImpl() {
     // slots.
     uint32_t colorAttachments =
         static_cast<uint8_t>(GetHighestBitIndexPlusOne(GetColorAttachmentsMask()));
-    uint32_t unusedUAVs = ToBackend(GetLayout())->GetUnusedUAVBindingCount();
-    uint32_t usedUAVs = ToBackend(GetLayout())->GetTotalUAVBindingCount() - unusedUAVs;
+    uint32_t startUAVIndex = ToBackend(GetLayout())->GetUAVStartIndex(SingleShaderStage::Fragment);
+    uint32_t usedUAVs = ToBackend(GetLayout())->GetUAVCount(SingleShaderStage::Fragment);
     // TODO(dawn:1814): Move the validation to the frontend, if we eventually regard it as a compat
     // restriction.
-    DAWN_INVALID_IF(colorAttachments > unusedUAVs,
+    DAWN_INVALID_IF(colorAttachments > startUAVIndex,
                     "The pipeline uses up to color attachment %u, but there are only %u remaining "
                     "slots because the pipeline uses %u UAVs",
-                    colorAttachments, unusedUAVs, usedUAVs);
+                    colorAttachments, startUAVIndex, usedUAVs);
 
     SetLabelImpl();
     return {};
@@ -326,7 +337,7 @@ MaybeError RenderPipeline::InitializeInputLayout(const Blob& vertexShader) {
 
     std::array<D3D11_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElementDescriptors;
     UINT count = 0;
-    for (VertexAttributeLocation loc : IterateBitSet(GetAttributeLocationsUsed())) {
+    for (VertexAttributeLocation loc : GetAttributeLocationsUsed()) {
         D3D11_INPUT_ELEMENT_DESC& inputElementDescriptor = inputElementDescriptors[count++];
 
         const VertexAttributeInfo& attribute = GetAttribute(loc);
@@ -462,18 +473,16 @@ MaybeError RenderPipeline::InitializeShaders() {
             additionalCompileFlags |= D3DCOMPILE_IEEE_STRICTNESS;
         }
 
-        DAWN_TRY_ASSIGN(
-            compiledShader[SingleShaderStage::Vertex],
-            ToBackend(programmableStage.module)
-                ->Compile(programmableStage, SingleShaderStage::Vertex, ToBackend(GetLayout()),
-                          compileFlags | additionalCompileFlags, usedInterstageVariables));
+        DAWN_TRY_ASSIGN(compiledShader[SingleShaderStage::Vertex],
+                        ToBackend(programmableStage.module)
+                            ->Compile(programmableStage, SingleShaderStage::Vertex,
+                                      ToBackend(GetLayout()), compileFlags | additionalCompileFlags,
+                                      GetImmediateMask(), usedInterstageVariables));
         const Blob& shaderBlob = compiledShader[SingleShaderStage::Vertex].shaderBlob;
         DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreateVertexShader(
                                   shaderBlob.Data(), shaderBlob.Size(), nullptr, &mVertexShader),
                               "D3D11 create vertex shader"));
         DAWN_TRY(InitializeInputLayout(shaderBlob));
-        mUsesVertexIndex = compiledShader[SingleShaderStage::Vertex].usesVertexIndex;
-        mUsesInstanceIndex = compiledShader[SingleShaderStage::Vertex].usesInstanceIndex;
     }
 
     std::optional<tint::hlsl::writer::PixelLocalOptions> pixelLocalOptions;
@@ -485,14 +494,15 @@ MaybeError RenderPipeline::InitializeShaders() {
         if (GetAttachmentState()->HasPixelLocalStorage()) {
             const std::vector<wgpu::TextureFormat>& storageAttachmentSlots =
                 GetAttachmentState()->GetStorageAttachmentSlots();
-            DAWN_ASSERT(ToBackend(GetLayout())->GetTotalUAVBindingCount() >
-                        storageAttachmentSlots.size());
+            const uint32_t uavEndIndex =
+                ToBackend(GetLayout())->GetUAVStartIndex(SingleShaderStage::Fragment) +
+                ToBackend(GetLayout())->GetUAVCount(SingleShaderStage::Fragment);
+            DAWN_ASSERT(uavEndIndex > storageAttachmentSlots.size());
             // Currently all the pixel local storage UAVs are allocated at the last several UAV
             // slots. For example, when there are 4 pixel local storage attachments, we will
             // allocate register u60 to u63 for them.
-            uint32_t basePixelLocalAttachmentIndex =
-                ToBackend(GetLayout())->GetTotalUAVBindingCount() -
-                static_cast<uint32_t>(storageAttachmentSlots.size());
+            const uint32_t basePixelLocalAttachmentIndex =
+                uavEndIndex - static_cast<uint32_t>(storageAttachmentSlots.size());
             for (size_t i = 0; i < storageAttachmentSlots.size(); i++) {
                 auto& attachment = pixelLocalOptions->attachments[i];
                 attachment.index = basePixelLocalAttachmentIndex + i;
@@ -529,11 +539,12 @@ MaybeError RenderPipeline::InitializeShaders() {
             additionalCompileFlags |= D3DCOMPILE_IEEE_STRICTNESS;
         }
 
-        DAWN_TRY_ASSIGN(compiledShader[SingleShaderStage::Fragment],
-                        ToBackend(programmableStage.module)
-                            ->Compile(programmableStage, SingleShaderStage::Fragment,
-                                      ToBackend(GetLayout()), compileFlags | additionalCompileFlags,
-                                      usedInterstageVariables, pixelLocalOptions));
+        DAWN_TRY_ASSIGN(
+            compiledShader[SingleShaderStage::Fragment],
+            ToBackend(programmableStage.module)
+                ->Compile(programmableStage, SingleShaderStage::Fragment, ToBackend(GetLayout()),
+                          compileFlags | additionalCompileFlags, GetImmediateMask(),
+                          usedInterstageVariables, pixelLocalOptions));
         DAWN_TRY(CheckHRESULT(device->GetD3D11Device()->CreatePixelShader(
                                   compiledShader[SingleShaderStage::Fragment].shaderBlob.Data(),
                                   compiledShader[SingleShaderStage::Fragment].shaderBlob.Size(),

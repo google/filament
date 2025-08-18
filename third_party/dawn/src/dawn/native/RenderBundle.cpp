@@ -30,7 +30,6 @@
 #include <utility>
 
 #include "absl/strings/str_format.h"
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/native/Commands.h"
 #include "dawn/native/Device.h"
 #include "dawn/native/ObjectType_autogen.h"

@@ -376,11 +376,16 @@ class MatcherCastImpl {
 
   // M can't be implicitly converted to Matcher<T>, so M isn't a polymorphic
   // matcher. It's a value of a type implicitly convertible to T. Use direct
-  // initialization to create a matcher.
+  // initialization or `ImplicitCastEqMatcher` to create a matcher.
   static Matcher<T> CastImpl(const M& value,
                              std::false_type /* convertible_to_matcher */,
                              std::true_type /* convertible_to_T */) {
-    return Matcher<T>(ImplicitCast_<T>(value));
+    using NoRefT = std::remove_cv_t<std::remove_reference_t<T>>;
+    if constexpr (std::is_same_v<M, NoRefT>) {
+      return Matcher<T>(value);
+    } else {
+      return ImplicitCastEqMatcher<NoRefT, std::decay_t<const M&>>(value);
+    }
   }
 
   // M can't be implicitly converted to either Matcher<T> or T. Attempt to use
@@ -391,11 +396,11 @@ class MatcherCastImpl {
   // latter calls bool operator==(const Lhs& lhs, const Rhs& rhs) in the end
   // which might be undefined even when Rhs is implicitly convertible to Lhs
   // (e.g. std::pair<const int, int> vs. std::pair<int, int>).
-  //
-  // We don't define this method inline as we need the declaration of Eq().
   static Matcher<T> CastImpl(const M& value,
                              std::false_type /* convertible_to_matcher */,
-                             std::false_type /* convertible_to_T */);
+                             std::false_type /* convertible_to_T */) {
+    return Eq(value);
+  }
 };
 
 // This more specialized version is used when MatcherCast()'s argument
@@ -1312,6 +1317,15 @@ class AllOfMatcherImpl : public MatcherInterface<const T&> {
 
   bool MatchAndExplain(const T& x,
                        MatchResultListener* listener) const override {
+    if (!listener->IsInterested()) {
+      // Fast path to avoid unnecessary formatting.
+      for (const Matcher<T>& matcher : matchers_) {
+        if (!matcher.Matches(x)) {
+          return false;
+        }
+      }
+      return true;
+    }
     // This method uses matcher's explanation when explaining the result.
     // However, if matcher doesn't provide one, this method uses matcher's
     // description.
@@ -1431,6 +1445,15 @@ class AnyOfMatcherImpl : public MatcherInterface<const T&> {
 
   bool MatchAndExplain(const T& x,
                        MatchResultListener* listener) const override {
+    if (!listener->IsInterested()) {
+      // Fast path to avoid unnecessary formatting of match explanations.
+      for (const Matcher<T>& matcher : matchers_) {
+        if (matcher.Matches(x)) {
+          return true;
+        }
+      }
+      return false;
+    }
     // This method uses matcher's explanation when explaining the result.
     // However, if matcher doesn't provide one, this method uses matcher's
     // description.
@@ -3415,6 +3438,35 @@ auto UnpackStructImpl(const T& in, std::make_index_sequence<22>, char) {
   return std::tie(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u,
                   v);
 }
+
+template <typename T>
+auto UnpackStructImpl(const T& in, std::make_index_sequence<23>, char) {
+  const auto& [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v,
+               w] = in;
+  return std::tie(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u,
+                  v, w);
+}
+template <typename T>
+auto UnpackStructImpl(const T& in, std::make_index_sequence<24>, char) {
+  const auto& [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v,
+               w, x] = in;
+  return std::tie(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u,
+                  v, w, x);
+}
+template <typename T>
+auto UnpackStructImpl(const T& in, std::make_index_sequence<25>, char) {
+  const auto& [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v,
+               w, x, y] = in;
+  return std::tie(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u,
+                  v, w, x, y);
+}
+template <typename T>
+auto UnpackStructImpl(const T& in, std::make_index_sequence<26>, char) {
+  const auto& [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v,
+               w, x, y, z] = in;
+  return std::tie(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u,
+                  v, w, x, y, z);
+}
 #endif  // defined(__cpp_structured_bindings)
 
 template <size_t I, typename T>
@@ -4118,6 +4170,10 @@ class OptionalMatcher {
         return false;
       }
       const ValueType& value = *optional;
+      if (!listener->IsInterested()) {
+        // Fast path to avoid unnecessary generation of match explanation.
+        return value_matcher_.Matches(value);
+      }
       StringMatchResultListener value_listener;
       const bool match = value_matcher_.MatchAndExplain(value, &value_listener);
       *listener << "whose value " << PrintToString(value)
@@ -4451,13 +4507,6 @@ inline Matcher<T> A() {
 template <typename T>
 inline Matcher<T> An() {
   return _;
-}
-
-template <typename T, typename M>
-Matcher<T> internal::MatcherCastImpl<T, M>::CastImpl(
-    const M& value, std::false_type /* convertible_to_matcher */,
-    std::false_type /* convertible_to_T */) {
-  return Eq(value);
 }
 
 // Creates a polymorphic matcher that matches any NULL pointer.

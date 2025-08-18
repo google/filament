@@ -39,6 +39,7 @@ F32::F32()
                Flag::kConstructable,
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }) {}
 
 F32::~F32() = default;

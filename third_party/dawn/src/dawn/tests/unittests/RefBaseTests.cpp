@@ -47,6 +47,7 @@ struct Event {
     Action action;
     Id thisId = 0;
     Id otherId = 0;
+    bool operator==(const Event& event) const = default;
 };
 
 std::ostream& operator<<(std::ostream& os, const Event& event) {
@@ -65,10 +66,6 @@ std::ostream& operator<<(std::ostream& os, const Event& event) {
             break;
     }
     return os;
-}
-
-bool operator==(const Event& a, const Event& b) {
-    return a.action == b.action && a.thisId == b.thisId && a.otherId == b.otherId;
 }
 
 using Events = std::vector<Event>;
@@ -94,9 +91,7 @@ struct RefTracker {
         return *this;
     }
 
-    bool operator==(const RefTracker& other) const { return mId == other.mId; }
-
-    bool operator!=(const RefTracker& other) const { return mId != other.mId; }
+    bool operator==(const RefTracker& other) const = default;
 
     Id mId;
     Events* mEvents;

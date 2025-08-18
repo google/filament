@@ -43,10 +43,9 @@ AsyncRunner::AsyncRunner(dawn::native::Instance* instance) : instance_(instance)
 
 void AsyncRunner::Begin(Napi::Env env) {
     assert(tasks_waiting_ != std::numeric_limits<decltype(tasks_waiting_)>::max());
-    if (tasks_waiting_ == 0) {
+    if (tasks_waiting_++ == 0) {
         ScheduleProcessEvents(env);
     }
-    tasks_waiting_++;
 }
 
 void AsyncRunner::End() {
@@ -58,6 +57,9 @@ void AsyncRunner::ScheduleProcessEvents(Napi::Env env) {
     // TODO(crbug.com/dawn/1127): We probably want to reduce the frequency at which this gets
     // called.
     if (process_events_queued_) {
+        return;
+    }
+    if (tasks_waiting_ == 0) {
         return;
     }
     process_events_queued_ = true;

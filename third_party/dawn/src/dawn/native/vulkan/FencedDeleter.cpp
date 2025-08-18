@@ -51,7 +51,6 @@ FencedDeleter::~FencedDeleter() {
     DAWN_ASSERT(mSamplerYcbcrConversionsToDelete.Empty());
     DAWN_ASSERT(mSamplersToDelete.Empty());
     DAWN_ASSERT(mSemaphoresToDelete.Empty());
-    DAWN_ASSERT(mShaderModulesToDelete.Empty());
     DAWN_ASSERT(mSurfacesToDelete.Empty());
     DAWN_ASSERT(mSwapChainsToDelete.Empty());
 }
@@ -112,10 +111,6 @@ void FencedDeleter::DeleteWhenUnused(VkSemaphore semaphore) {
     mSemaphoresToDelete.Enqueue(semaphore, GetCurrentDeletionSerial());
 }
 
-void FencedDeleter::DeleteWhenUnused(VkShaderModule module) {
-    mShaderModulesToDelete.Enqueue(module, GetCurrentDeletionSerial());
-}
-
 void FencedDeleter::DeleteWhenUnused(VkSurfaceKHR surface) {
     mSurfacesToDelete.Enqueue(surface, GetCurrentDeletionSerial());
 }
@@ -146,7 +141,6 @@ ExecutionSerial FencedDeleter::GetLastPendingDeletionSerial() {
     GetLastSubmitted(mSamplerYcbcrConversionsToDelete);
     GetLastSubmitted(mSamplersToDelete);
     GetLastSubmitted(mSemaphoresToDelete);
-    GetLastSubmitted(mShaderModulesToDelete);
     GetLastSubmitted(mSurfacesToDelete);
     GetLastSubmitted(mSwapChainsToDelete);
 
@@ -201,11 +195,6 @@ void FencedDeleter::Tick(ExecutionSerial completedSerial) {
         mDevice->fn.DestroyImageView(vkDevice, view, nullptr);
     }
     mImageViewsToDelete.ClearUpTo(completedSerial);
-
-    for (VkShaderModule module : mShaderModulesToDelete.IterateUpTo(completedSerial)) {
-        mDevice->fn.DestroyShaderModule(vkDevice, module, nullptr);
-    }
-    mShaderModulesToDelete.ClearUpTo(completedSerial);
 
     for (VkPipeline pipeline : mPipelinesToDelete.IterateUpTo(completedSerial)) {
         mDevice->fn.DestroyPipeline(vkDevice, pipeline, nullptr);

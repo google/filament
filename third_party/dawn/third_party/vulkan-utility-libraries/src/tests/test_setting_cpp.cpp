@@ -484,7 +484,7 @@ TEST(test_layer_setting_cpp, vkuGetLayerSettingValues_VkuCustomSTypeInfo) {
     vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
 }
 
-TEST(test_layer_setting_cpp, vkuGetUnknownSettings) {
+TEST(test_layer_setting_cpp, vkuGetUnknownSettings_legacy) {
     std::vector<VkLayerSettingEXT> settings;
 
     VkBool32 value_bool = VK_TRUE;
@@ -568,10 +568,66 @@ TEST(test_layer_setting_cpp, vkuGetUnknownSettings) {
     const char* setting_names[] = {"int32_value", "int64_value", "uint32_value", "uint64_value", "float_value", "double_value"};
     const std::uint32_t setting_name_count = static_cast<std::uint32_t>(std::size(setting_names));
 
+    VkuLayerSettingSet layerSettingSet = VK_NULL_HANDLE;
+    vkuCreateLayerSettingSet("VK_LAYER_LUNARG_test", &layer_settings_create_info, nullptr, nullptr, &layerSettingSet);
+
     std::vector<const char*> unknown_settings;
-    vkuGetUnknownSettings(&layer_settings_create_info, setting_name_count, setting_names, unknown_settings);
+    vkuGetUnknownSettings(layerSettingSet, setting_name_count, setting_names, &layer_settings_create_info, unknown_settings);
     EXPECT_EQ(2, unknown_settings.size());
 
     EXPECT_STREQ("bool_value", unknown_settings[0]);
     EXPECT_STREQ("frameset_value", unknown_settings[1]);
+
+    vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
+}
+
+TEST(test_layer_setting_cpp, vkuGetUnknownSettings) {
+    std::vector<VkLayerSettingEXT> settings;
+
+    std::int32_t value_a = 75;
+    VkLayerSettingEXT setting_a{};
+    setting_a.pLayerName = "VK_LAYER_LUNARG_a";
+    setting_a.pSettingName = "value_a";
+    setting_a.type = VK_LAYER_SETTING_TYPE_INT32_EXT;
+    setting_a.pValues = &value_a;
+    setting_a.valueCount = 1;
+    settings.push_back(setting_a);
+
+    std::int32_t value_b = 76;
+    VkLayerSettingEXT setting_b{};
+    setting_b.pLayerName = "VK_LAYER_LUNARG_a";
+    setting_b.pSettingName = "value_b";
+    setting_b.type = VK_LAYER_SETTING_TYPE_INT32_EXT;
+    setting_b.pValues = &value_b;
+    setting_b.valueCount = 1;
+    settings.push_back(setting_b);
+
+    std::int32_t value_c = 77;
+    VkLayerSettingEXT setting_c{};
+    setting_c.pLayerName = "VK_LAYER_LUNARG_c";
+    setting_c.pSettingName = "value_c";
+    setting_c.type = VK_LAYER_SETTING_TYPE_INT32_EXT;
+    setting_c.pValues = &value_c;
+    setting_c.valueCount = 1;
+    settings.push_back(setting_c);
+
+    VkLayerSettingsCreateInfoEXT layer_settings_create_info;
+    layer_settings_create_info.sType = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
+    layer_settings_create_info.pNext = nullptr;
+    layer_settings_create_info.settingCount = static_cast<uint32_t>(settings.size());
+    layer_settings_create_info.pSettings = &settings[0];
+
+    VkuLayerSettingSet layerSettingSet = VK_NULL_HANDLE;
+    vkuCreateLayerSettingSet("VK_LAYER_LUNARG_a", &layer_settings_create_info, nullptr, nullptr, &layerSettingSet);
+
+    const char* setting_names[] = {"value_a", "value_c"};
+    const std::uint32_t setting_name_count = static_cast<std::uint32_t>(std::size(setting_names));
+
+    std::vector<const char*> unknown_settings;
+    vkuGetUnknownSettings(layerSettingSet, setting_name_count, setting_names, &layer_settings_create_info, unknown_settings);
+    EXPECT_EQ(1, unknown_settings.size());
+
+    EXPECT_STREQ("value_b", unknown_settings[0]);
+
+    vkuDestroyLayerSettingSet(layerSettingSet, nullptr);
 }

@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/ast/attribute.h"
 
 namespace tint::ast {

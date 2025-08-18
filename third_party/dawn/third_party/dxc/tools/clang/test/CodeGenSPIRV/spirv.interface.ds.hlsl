@@ -85,7 +85,6 @@ struct DsOut {
 // CHECK: OpDecorateString %gl_PointSize UserSemantic "PSIZE"
 // CHECK: OpDecorate %gl_TessCoord BuiltIn TessCoord
 // CHECK: OpDecorateString %gl_TessCoord UserSemantic "SV_DomainLocation"
-// CHECK: OpDecorate %gl_TessCoord Patch
 // CHECK: OpDecorate %gl_TessLevelOuter BuiltIn TessLevelOuter
 // CHECK: OpDecorateString %gl_TessLevelOuter UserSemantic "SV_TessFactor"
 // CHECK: OpDecorate %gl_TessLevelOuter Patch

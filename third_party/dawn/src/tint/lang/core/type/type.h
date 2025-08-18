@@ -58,6 +58,9 @@ enum Flag {
     /// Type has a fixed footprint.
     /// @see https://www.w3.org/TR/WGSL/#fixed-footprint-types
     kFixedFootprint,
+    /// Type is host-shareable.
+    /// @see https://www.w3.org/TR/WGSL/#host-shareable
+    kHostShareable,
 };
 
 /// An alias to tint::EnumSet<Flag>
@@ -129,6 +132,10 @@ class Type : public Castable<Type, UniqueNode> {
     /// @see https://www.w3.org/TR/WGSL/#fixed-footprint-types
     inline bool HasFixedFootprint() const { return flags_.Contains(Flag::kFixedFootprint); }
 
+    /// @returns true if type is host-shareable
+    /// https://www.w3.org/TR/WGSL/#host-shareable
+    inline bool IsHostShareable() const { return flags_.Contains(Flag::kHostShareable); }
+
     /// @returns true if the type is a scalar
     bool IsScalar() const;
     /// @returns true if this type is a float scalar
@@ -163,8 +170,6 @@ class Type : public Castable<Type, UniqueNode> {
     bool IsBoolScalarOrVector() const;
     /// @returns true if this type is boolean vector
     bool IsBoolVector() const;
-    /// @returns true if this type is a vector of scalar type
-    bool IsScalarVector() const;
     /// @returns true if this type is a numeric scale or vector
     bool IsNumericScalarOrVector() const;
     /// @returns true if this type is a handle type

@@ -33,7 +33,6 @@
 
 #include "absl/container/inlined_vector.h"
 #include "dawn/common/Assert.h"
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/Enumerator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/common/Numeric.h"
@@ -93,26 +92,19 @@ ResultOrError<UnpackedPtr<PipelineLayoutDescriptor>> ValidatePipelineLayoutDescr
                         "created as part of a pipeline's default layout.",
                         i, descriptor->bindGroupLayouts[i]);
 
-        AccumulateBindingCounts(
-            &bindingCounts,
-            descriptor->bindGroupLayouts[i]->GetInternalBindGroupLayout()->GetBindingCountInfo());
+        AccumulateBindingCounts(&bindingCounts, descriptor->bindGroupLayouts[i]
+                                                    ->GetInternalBindGroupLayout()
+                                                    ->GetValidationBindingCounts());
     }
 
     DAWN_TRY(ValidateBindingCounts(device->GetLimits(), bindingCounts, device->GetAdapter()));
 
-    // Validate immediateDataRangeByteSize.
-    if (descriptor->immediateDataRangeByteSize) {
-        DAWN_INVALID_IF(!device->HasFeature(Feature::ChromiumExperimentalImmediateData),
-                        "Set non-zero immediateDatRangeByteSize without "
-                        "%s feature is not allowed.",
-                        ToAPI(Feature::ChromiumExperimentalImmediateData));
-
-        uint32_t maxImmediateDataRangeByteSize =
-            device->GetLimits().experimentalImmediateDataLimits.maxImmediateDataRangeByteSize;
-
-        DAWN_INVALID_IF(descriptor->immediateDataRangeByteSize > maxImmediateDataRangeByteSize,
-                        "immediateDataRangeByteSize (%i) is larger than the maximum allowed (%i).",
-                        descriptor->immediateDataRangeByteSize, maxImmediateDataRangeByteSize);
+    // Validate immediateSize.
+    if (descriptor->immediateSize) {
+        uint32_t maxImmediateSize = device->GetLimits().v1.maxImmediateSize;
+        DAWN_INVALID_IF(descriptor->immediateSize > maxImmediateSize,
+                        "immediateSize (%i) is larger than the maximum allowed (%i).",
+                        descriptor->immediateSize, maxImmediateSize);
     }
 
     return unpacked;
@@ -135,7 +127,7 @@ PipelineLayoutBase::PipelineLayoutBase(DeviceBase* device,
                                        const UnpackedPtr<PipelineLayoutDescriptor>& descriptor,
                                        ApiObjectBase::UntrackedByDeviceTag tag)
     : ApiObjectBase(device, descriptor->label),
-      mImmediateDataRangeByteSize(descriptor->immediateDataRangeByteSize) {
+      mImmediateDataRangeByteSize(descriptor->immediateSize) {
     DAWN_ASSERT(descriptor->bindGroupLayoutCount <= kMaxBindGroups);
 
     // According to WebGPU SPEC of CreatePipelineLayout(), if bindGroupLayouts[i] is null or
@@ -169,10 +161,10 @@ PipelineLayoutBase::PipelineLayoutBase(DeviceBase* device,
     }
 
     BindingCounts bindingCounts = {};
-    for (BindGroupIndex i : IterateBitSet(mMask)) {
+    for (BindGroupIndex i : mMask) {
         AccumulateBindingCounts(
             &bindingCounts,
-            mBindGroupLayouts[i]->GetInternalBindGroupLayout()->GetBindingCountInfo());
+            mBindGroupLayouts[i]->GetInternalBindGroupLayout()->GetValidationBindingCounts());
     }
     mNumStorageBufferBindingsInVertexStage =
         bindingCounts.perStage[SingleShaderStage::Vertex].storageBufferCount;
@@ -211,11 +203,11 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
     DeviceBase* device,
     std::vector<StageAndDescriptor> stages,
     bool allowInternalBinding) {
-    using EntryMap = absl::flat_hash_map<BindingNumber, BindGroupLayoutEntry>;
+    using EntryData = BindGroupLayoutEntry;
+    using EntryMap = absl::flat_hash_map<BindingNumber, EntryData>;
 
     // Merges two entries at the same location, if they are allowed to be merged.
-    auto MergeEntries = [](BindGroupLayoutEntry* modifiedEntry,
-                           const BindGroupLayoutEntry& mergedEntry) -> MaybeError {
+    auto MergeEntries = [](EntryData* modifiedEntry, const EntryData& mergedEntry) -> MaybeError {
         // Visibility is excluded because we take the OR across stages.
         bool compatible =
             modifiedEntry->binding == mergedEntry.binding &&
@@ -274,15 +266,19 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
         // Use the OR of all the stages at which we find this binding.
         modifiedEntry->visibility |= mergedEntry.visibility;
 
+        // Size binding_arrays to be the maximum of the required array sizes.
+        modifiedEntry->bindingArraySize =
+            std::max(modifiedEntry->bindingArraySize, mergedEntry.bindingArraySize);
+
         return {};
     };
 
     // Does the trivial conversions from a ShaderBindingInfo to a BindGroupLayoutEntry
     auto ConvertMetadataToEntry =
         [](const ShaderBindingInfo& shaderBinding,
-           const ExternalTextureBindingLayout* externalTextureBindingEntry)
-        -> BindGroupLayoutEntry {
-        BindGroupLayoutEntry entry = {};
+           const ExternalTextureBindingLayout* externalTextureBindingEntry) -> EntryData {
+        EntryData entry = {};
+        entry.bindingArraySize = uint32_t(shaderBinding.arraySize);
 
         MatchVariant(
             shaderBinding.bindingInfo,
@@ -319,15 +315,17 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
     };
 
     // Creates the BGL from the entries for a stage, checking it is valid.
-    auto CreateBGL = [](DeviceBase* device, const EntryMap& entries,
+    auto CreateBGL = [](DeviceBase* device, EntryMap entries,
                         PipelineCompatibilityToken pipelineCompatibilityToken,
                         bool allowInternalBinding) -> ResultOrError<Ref<BindGroupLayoutBase>> {
+        // Put all the values from the map in a vector
         std::vector<BindGroupLayoutEntry> entryVec;
         entryVec.reserve(entries.size());
         for (auto& [_, entry] : entries) {
             entryVec.push_back(entry);
         }
 
+        // Create and validate the BGL
         BindGroupLayoutDescriptor desc = {};
         desc.entries = entryVec.data();
         desc.entryCount = entryVec.size();
@@ -368,9 +366,9 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
         for (auto [group, groupBindings] : Enumerate(metadata.bindings)) {
             for (const auto& [bindingNumber, shaderBinding] : groupBindings) {
                 // Create the BindGroupLayoutEntry
-                BindGroupLayoutEntry entry =
+                EntryData entry =
                     ConvertMetadataToEntry(shaderBinding, &externalTextureBindingLayout);
-                entry.binding = static_cast<uint32_t>(bindingNumber);
+                entry.binding = uint32_t(bindingNumber);
                 entry.visibility = StageBit(stage.shaderStage);
 
                 // Add it to our map of all entries, if there is an existing entry, then we
@@ -380,13 +378,17 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
                 if (!inserted) {
                     DAWN_TRY_CONTEXT(MergeEntries(&existingEntry->second, entry),
                                      "merging implicit bindings for @group(%u) @binding(%u).",
-                                     uint32_t(group), uint32_t(bindingNumber));
+                                     group, bindingNumber);
                 }
             }
         }
 
         // Promote any Unfilterable textures used with a sampler to Filtering.
-        for (const EntryPointMetadata::SamplerTexturePair& pair : metadata.samplerTexturePairs) {
+        for (const EntryPointMetadata::SamplerTexturePair& pair :
+             metadata.samplerAndNonSamplerTexturePairs) {
+            if (pair.sampler == EntryPointMetadata::nonSamplerBindingPoint) {
+                continue;
+            }
             BindGroupLayoutEntry* entry = &entryData[pair.texture.group][pair.texture.binding];
             if (entry->texture.sampleType == wgpu::TextureSampleType::UnfilterableFloat) {
                 entry->texture.sampleType = wgpu::TextureSampleType::Float;
@@ -405,9 +407,9 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
     // be created with `pipelineCompatibilityToken` whether they are empty or not.
     PerBindGroup<Ref<BindGroupLayoutBase>> bindGroupLayouts = {};
     for (auto group : Range(kMaxBindGroupsTyped)) {
-        DAWN_TRY_ASSIGN(
-            bindGroupLayouts[group],
-            CreateBGL(device, entryData[group], pipelineCompatibilityToken, allowInternalBinding));
+        DAWN_TRY_ASSIGN(bindGroupLayouts[group],
+                        CreateBGL(device, std::move(entryData[group]), pipelineCompatibilityToken,
+                                  allowInternalBinding));
     }
 
     // Create the deduced pipeline layout, validating if it is valid.
@@ -419,7 +421,7 @@ ResultOrError<Ref<PipelineLayoutBase>> PipelineLayoutBase::CreateDefault(
     PipelineLayoutDescriptor desc = {};
     desc.bindGroupLayouts = bgls.data();
     desc.bindGroupLayoutCount = static_cast<uint32_t>(kMaxBindGroupsTyped);
-    desc.immediateDataRangeByteSize = immediateDataRangeByteSize;
+    desc.immediateSize = immediateDataRangeByteSize;
 
     Ref<PipelineLayoutBase> result;
     DAWN_TRY_ASSIGN(result, device->CreatePipelineLayout(&desc, pipelineCompatibilityToken));
@@ -458,7 +460,7 @@ BindGroupLayoutBase* PipelineLayoutBase::GetFrontendBindGroupLayout(BindGroupInd
 
 const BindGroupLayoutInternalBase* PipelineLayoutBase::GetBindGroupLayout(
     BindGroupIndex group) const {
-        return GetFrontendBindGroupLayout(group)->GetInternalBindGroupLayout();
+    return GetFrontendBindGroupLayout(group)->GetInternalBindGroupLayout();
 }
 
 const BindGroupMask& PipelineLayoutBase::GetBindGroupLayoutsMask() const {
@@ -503,7 +505,7 @@ size_t PipelineLayoutBase::ComputeContentHash() {
     ObjectContentHasher recorder;
     recorder.Record(mMask);
 
-    for (BindGroupIndex group : IterateBitSet(mMask)) {
+    for (BindGroupIndex group : mMask) {
         recorder.Record(GetBindGroupLayout(group)->GetContentHash());
     }
 
@@ -525,7 +527,7 @@ bool PipelineLayoutBase::EqualityFunc::operator()(const PipelineLayoutBase* a,
         return false;
     }
 
-    for (BindGroupIndex group : IterateBitSet(a->mMask)) {
+    for (BindGroupIndex group : a->mMask) {
         if (a->GetBindGroupLayout(group) != b->GetBindGroupLayout(group)) {
             return false;
         }

@@ -256,7 +256,8 @@ struct EnumSet {
 /// @param out the stream to write to
 /// @param set the EnumSet to write
 /// @returns out so calls can be chained
-template <typename STREAM, typename ENUM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename ENUM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, EnumSet<ENUM> set) {
     out << "{";
     bool first = true;

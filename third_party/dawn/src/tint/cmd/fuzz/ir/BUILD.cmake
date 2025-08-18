@@ -36,12 +36,13 @@
 
 include(cmd/fuzz/ir/as/BUILD.cmake)
 include(cmd/fuzz/ir/dis/BUILD.cmake)
+include(cmd/fuzz/ir/helpers/BUILD.cmake)
 
-if(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
+if(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER)
 ################################################################################
 # Target:    tint_cmd_fuzz_ir_fuzz_cmd
 # Kind:      fuzz_cmd
-# Condition: TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER
+# Condition: TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER
 ################################################################################
 tint_add_target(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
   cmd/fuzz/ir/main_fuzz.cc
@@ -49,6 +50,7 @@ tint_add_target(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
 
 tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
   tint_api_common
+  tint_cmd_fuzz_ir_helpers
   tint_cmd_fuzz_ir_fuzz
   tint_lang_core
   tint_lang_core_constant
@@ -94,14 +96,9 @@ if(TINT_BUILD_IR_BINARY)
   tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
     tint_lang_core_ir_binary
     tint_lang_core_ir_binary_fuzz
-  )
-endif(TINT_BUILD_IR_BINARY)
-
-if(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
-  tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
     tint_utils_protos_ir_fuzz_proto
   )
-endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
+endif(TINT_BUILD_IR_BINARY)
 
 if(TINT_BUILD_MSL_WRITER)
   tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd
@@ -129,7 +126,7 @@ endif(TINT_BUILD_WGSL_WRITER)
 
 tint_target_set_output_name(tint_cmd_fuzz_ir_fuzz_cmd fuzz_cmd "tint_ir_fuzzer")
 
-endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_IR_FUZZER)
+endif(TINT_BUILD_IR_BINARY AND TINT_BUILD_WGSL_READER)
 ################################################################################
 # Target:    tint_cmd_fuzz_ir_fuzz
 # Kind:      fuzz
@@ -141,6 +138,7 @@ tint_add_target(tint_cmd_fuzz_ir_fuzz fuzz
 
 tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz fuzz
   tint_api_common
+  tint_cmd_fuzz_ir_helpers
   tint_lang_core
   tint_lang_core_constant
   tint_lang_core_ir
@@ -148,9 +146,6 @@ tint_target_add_dependencies(tint_cmd_fuzz_ir_fuzz fuzz
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
-  tint_lang_wgsl_helpers
   tint_lang_wgsl_program
   tint_lang_wgsl_sem
   tint_utils

@@ -30,8 +30,7 @@
 #include <tuple>
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/address_space.h"
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/reference.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
@@ -2289,23 +2288,6 @@ TEST_F(ResolverTest, MaxNumStructMembers_Invalid) {
     Structure(Source{{12, 34}}, "S", std::move(members));
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), "12:34 error: 'struct S' has 16384 members, maximum is 16383");
-}
-
-TEST_F(ResolverTest, MaxNumStructMembers_WithIgnoreStructMemberLimit_Valid) {
-    Vector<const ast::StructMember*, 0> members;
-    members.Reserve(kMaxNumStructMembers);
-    for (size_t i = 0; i < kMaxNumStructMembers; ++i) {
-        members.Push(Member("m" + std::to_string(i), ty.i32()));
-    }
-
-    // Add 10 more members, but we set the limit to be ignored on the struct
-    for (size_t i = 0; i < 10; ++i) {
-        members.Push(Member("ignored" + std::to_string(i), ty.i32()));
-    }
-
-    Structure("S", std::move(members),
-              Vector{Disable(ast::DisabledValidation::kIgnoreStructMemberLimit)});
-    EXPECT_TRUE(r()->Resolve()) << r()->error();
 }
 
 uint32_t kMaxNestDepthOfCompositeType = 255;

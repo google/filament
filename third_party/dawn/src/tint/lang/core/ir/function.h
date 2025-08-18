@@ -243,7 +243,8 @@ std::string_view ToString(Function::PipelineStage value);
 /// @param out the stream to write to
 /// @param value the Function::PipelineStage
 /// @returns @p out so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, Function::PipelineStage value) {
     return out << ToString(value);
 }

@@ -38,11 +38,11 @@
 #include "src/tint/utils/macros/defer.h"
 
 #if TINT_BUILD_WGSL_READER
+#include "src/tint/cmd/fuzz/ir/helpers/substitute_overrides_config.h"
 #include "src/tint/cmd/fuzz/wgsl/fuzz.h"
 #include "src/tint/lang/core/ir/transform/substitute_overrides.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/wgsl/ast/module.h"
-#include "src/tint/lang/wgsl/helpers/apply_substitute_overrides.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 #endif
 
@@ -58,39 +58,49 @@ Vector<IRFuzzer, 32>& Fuzzers() {
 }
 
 thread_local std::string_view currently_running;
-
-[[noreturn]] void TintInternalCompilerErrorReporter(const tint::InternalCompilerError& err) {
-    std::cerr << "ICE while running fuzzer: '" << currently_running << "'" << '\n';
-    std::cerr << err.Error() << "\n";
-    __builtin_trap();
-}
 #endif  // TINT_BUILD_IR_BINARY
 
 void Register(const IRFuzzer& fuzzer) {
 #if TINT_BUILD_WGSL_READER
     wgsl::Register({
         fuzzer.name,
-        [fn = fuzzer.fn](const Program& program, const fuzz::wgsl::Context& context,
-                         Slice<const std::byte> data) {
+        [fn = fuzzer.fn, pre_capabilities = fuzzer.pre_capabilities](
+            const Program& program, const fuzz::wgsl::Context& context,
+            Slice<const std::byte> data) {
             if (program.AST().Enables().Any(tint::wgsl::reader::IsUnsupportedByIR)) {
+                if (context.options.verbose) {
+                    std::cout << "   - Features are not supported by IR.\n";
+                }
                 return;
             }
-            auto cfg = tint::wgsl::SubstituteOverridesConfig(program);
 
             auto ir = tint::wgsl::reader::ProgramToLoweredIR(program);
             if (ir != Success) {
                 return;
             }
 
+            auto cfg = SubstituteOverridesConfig(ir.Get());
             auto substituteOverridesResult =
                 tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
             if (substituteOverridesResult != Success) {
+                if (context.options.verbose) {
+                    std::cout << "   - Substitute overrides failed.\n";
+                }
                 return;
             }
 
-            if (auto val = core::ir::Validate(ir.Get()); val != Success) {
-                TINT_ICE() << val.Failure();
+            // Validate the IR against the fuzzer's preconditions before running.
+            // We don't consider validation failure here to be an issue, as it only signals that
+            // there is a bug somewhere in the components run above. Those components have their own
+            // IR fuzzers.
+            if (auto val = core::ir::Validate(ir.Get(), pre_capabilities); val != Success) {
+                if (context.options.verbose) {
+                    std::cout
+                        << "   Failed to validate against fuzzer capabilities before running\n";
+                }
+                return;
             }
+
             // Copy relevant options from wgsl::Context to ir::Context
             fuzz::ir::Context ir_context;
             ir_context.options.filter = context.options.filter;
@@ -112,8 +122,6 @@ void Register(const IRFuzzer& fuzzer) {
 void Run(const std::function<tint::core::ir::Module()>& acquire_module,
          const Options& options,
          Slice<const std::byte> data) {
-    tint::SetInternalCompilerErrorReporter(&TintInternalCompilerErrorReporter);
-
     // Ensure that fuzzers are sorted. Without this, the fuzzers may be registered in any order,
     // leading to non-determinism, which we must avoid.
     TINT_STATIC_INIT(Fuzzers().Sort([](auto& a, auto& b) { return a.name < b.name; }));

@@ -231,20 +231,16 @@ void assertLimitsAreExpressedInRequirementsStruct() {
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
 void printInstanceDetails(wgpu::Instance const& instance) {
     wgpu::SupportedWGSLLanguageFeatures supportedWGSLLanguageFeatures{};
-    if (!instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures)) {
-        FWGPU_LOGW << "Failed to get WebGPU instance supported WGSL language features";
-    } else {
-        FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
-                   << supportedWGSLLanguageFeatures.featureCount << "):";
-        if (supportedWGSLLanguageFeatures.featureCount > 0 &&
-                supportedWGSLLanguageFeatures.features != nullptr) {
-            std::for_each(supportedWGSLLanguageFeatures.features,
-                    supportedWGSLLanguageFeatures.features +
-                            supportedWGSLLanguageFeatures.featureCount,
-                    [](wgpu::WGSLLanguageFeatureName const featureName) {
-                        FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
-                    });
-        }
+    instance.GetWGSLLanguageFeatures(&supportedWGSLLanguageFeatures);
+    FWGPU_LOGI << "WebGPU instance supported WGSL language features ("
+               << supportedWGSLLanguageFeatures.featureCount << "):";
+    if (supportedWGSLLanguageFeatures.featureCount > 0 &&
+            supportedWGSLLanguageFeatures.features != nullptr) {
+        std::for_each(supportedWGSLLanguageFeatures.features,
+                supportedWGSLLanguageFeatures.features + supportedWGSLLanguageFeatures.featureCount,
+                [](wgpu::WGSLLanguageFeatureName const featureName) {
+                    FWGPU_LOGI << "  " << webGPUPrintableToString(featureName);
+                });
     }
 }
 #endif
@@ -266,12 +262,12 @@ void printInstanceDetails(wgpu::Instance const& instance) {
     dawnTogglesDescriptor.enabledToggleCount = 1;
     dawnTogglesDescriptor.enabledToggles = &toggleName;
 #endif
+    const wgpu::InstanceFeatureName features[] = {wgpu::InstanceFeatureName::TimedWaitAny};
     wgpu::InstanceDescriptor instanceDescriptor{
         .nextInChain = &dawnTogglesDescriptor,
-        .capabilities = {
-            .timedWaitAnyEnable = true// TODO consider using pure async instead
-        }
+        .requiredFeatures = features,
     };
+    instanceDescriptor.requiredFeatureCount = 1;
     wgpu::Instance instance = wgpu::CreateInstance(&instanceDescriptor);
     FILAMENT_CHECK_POSTCONDITION(instance != nullptr) << "Unable to create WebGPU instance.";
 #if FWGPU_ENABLED(FWGPU_PRINT_SYSTEM)
@@ -336,10 +332,6 @@ void printLimits(wgpu::Limits const& limits) {
     printLimit("maxComputeWorkgroupSizeY", limits.maxComputeWorkgroupSizeY);
     printLimit("maxComputeWorkgroupSizeZ", limits.maxComputeWorkgroupSizeZ);
     printLimit("maxComputeWorkgroupsPerDimension", limits.maxComputeWorkgroupsPerDimension);
-    printLimit("maxStorageBuffersInVertexStage", limits.maxStorageBuffersInVertexStage);
-    printLimit("maxStorageTexturesInVertexStage", limits.maxStorageTexturesInVertexStage);
-    printLimit("maxStorageBuffersInFragmentStage", limits.maxStorageBuffersInFragmentStage);
-    printLimit("maxStorageTexturesInFragmentStage", limits.maxStorageTexturesInFragmentStage);
 }
 #endif
 

@@ -31,6 +31,7 @@
 
 #include "src/tint/lang/core/type/helper_test.h"
 #include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/u32.h"
 
 namespace tint::spirv::type {
@@ -39,22 +40,24 @@ namespace {
 using ExplicitLayoutArrayTest = core::type::TestHelper;
 
 TEST_F(ExplicitLayoutArrayTest, Hash) {
-    auto* a = create<ExplicitLayoutArray>(create<core::type::U32>(),
-                                          create<core::type::ConstantArrayCount>(2u), 4u, 8u, 32u);
-    auto* b = create<ExplicitLayoutArray>(create<core::type::U32>(),
-                                          create<core::type::ConstantArrayCount>(2u), 4u, 8u, 32u);
+    core::type::Manager ty;
+    auto* a = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 4u,
+                                          8u, 32u);
+    auto* b = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u), 4u,
+                                          8u, 32u);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(ExplicitLayoutArrayTest, Equals) {
-    auto* count = create<core::type::ConstantArrayCount>(4u);
-    auto* a = create<ExplicitLayoutArray>(create<core::type::I32>(), count, 4u, 16u, 4u);
-    auto* b = create<ExplicitLayoutArray>(create<core::type::I32>(), count, 4u, 16u, 4u);
-    auto* c = create<ExplicitLayoutArray>(create<core::type::U32>(), count, 4u, 16u, 4u);
+    core::type::Manager ty;
+    auto* count = ty.Get<core::type::ConstantArrayCount>(4u);
+    auto* a = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 4u, 16u, 4u);
+    auto* b = ty.Get<ExplicitLayoutArray>(ty.i32(), count, 4u, 16u, 4u);
+    auto* c = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 4u, 16u, 4u);
 
     // Make sure it does not match the equivalent regular array.
-    auto* d = create<core::type::Array>(create<core::type::I32>(), count, 4u, 16u, 4u, 4u);
+    auto* d = ty.Get<core::type::Array>(ty.i32(), count, 4u, 16u, 4u, 4u);
 
     EXPECT_EQ(a, b);
     EXPECT_NE(a, c);
@@ -62,14 +65,16 @@ TEST_F(ExplicitLayoutArrayTest, Equals) {
 }
 
 TEST_F(ExplicitLayoutArrayTest, FriendlyName) {
-    auto* count = create<core::type::ConstantArrayCount>(4u);
-    auto* a = create<ExplicitLayoutArray>(create<core::type::U32>(), count, 4u, 16u, 4u);
-    EXPECT_EQ(a->FriendlyName(), "spirv.explicit_layout_array<u32, 4>");
+    core::type::Manager ty;
+    auto* count = ty.Get<core::type::ConstantArrayCount>(4u);
+    auto* a = ty.Get<ExplicitLayoutArray>(ty.u32(), count, 4u, 16u, 4u);
+    EXPECT_EQ(a->FriendlyName(), "spirv.explicit_layout_array<u32, 4, stride=4>");
 }
 
 TEST_F(ExplicitLayoutArrayTest, CloneArray) {
-    auto* ary = create<ExplicitLayoutArray>(
-        create<core::type::U32>(), create<core::type::ConstantArrayCount>(2u), 4u, 8u, 32u);
+    core::type::Manager ty;
+    auto* ary = ty.Get<ExplicitLayoutArray>(ty.u32(), ty.Get<core::type::ConstantArrayCount>(2u),
+                                            4u, 8u, 32u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

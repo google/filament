@@ -35,91 +35,48 @@
 #include <vector>
 
 #include "src/tint/api/common/binding_point.h"
-#include "src/tint/lang/core/access.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/utils/math/hash.h"
 #include "src/tint/utils/reflection.h"
 
 namespace tint::hlsl::writer {
 
-namespace binding {
-
-/// Generic binding point
-struct BindingInfo {
-    /// The group
-    uint32_t group = 0;
-    /// The binding
-    uint32_t binding = 0;
-
-    /// Equality operator
-    /// @param rhs the BindingInfo to compare against
-    /// @returns true if this BindingInfo is equal to `rhs`
-    inline bool operator==(const BindingInfo& rhs) const {
-        return group == rhs.group && binding == rhs.binding;
-    }
-    /// Inequality operator
-    /// @param rhs the BindingInfo to compare against
-    /// @returns true if this BindingInfo is not equal to `rhs`
-    inline bool operator!=(const BindingInfo& rhs) const { return !(*this == rhs); }
-
-    /// @returns the hash code of the BindingInfo
-    tint::HashCode HashCode() const { return Hash(group, binding); }
-
-    /// Reflect the fields of this class so that it can be used by tint::ForeachField()
-    TINT_REFLECT(BindingInfo, group, binding);
-};
-
-using Uniform = BindingInfo;
-using Storage = BindingInfo;
-using Texture = BindingInfo;
-using StorageTexture = BindingInfo;
-using Sampler = BindingInfo;
-
 /// An external texture
 struct ExternalTexture {
     /// Metadata
-    BindingInfo metadata{};
+    BindingPoint metadata{};
     /// Plane0 binding data
-    BindingInfo plane0{};
+    BindingPoint plane0{};
     /// Plane1 binding data;
-    BindingInfo plane1{};
+    BindingPoint plane1{};
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(ExternalTexture, metadata, plane0, plane1);
 };
 
-}  // namespace binding
-
-/// Maps the WGSL binding point to the SPIR-V group,binding for uniforms
-using UniformBindings = std::unordered_map<BindingPoint, binding::Uniform>;
-/// Maps the WGSL binding point to the SPIR-V group,binding for storage
-using StorageBindings = std::unordered_map<BindingPoint, binding::Storage>;
-/// Maps the WGSL binding point to the SPIR-V group,binding for textures
-using TextureBindings = std::unordered_map<BindingPoint, binding::Texture>;
-/// Maps the WGSL binding point to the SPIR-V group,binding for storage textures
-using StorageTextureBindings = std::unordered_map<BindingPoint, binding::StorageTexture>;
-/// Maps the WGSL binding point to the SPIR-V group,binding for samplers
-using SamplerBindings = std::unordered_map<BindingPoint, binding::Sampler>;
-/// Maps the WGSL binding point to the plane0, plane1, and metadata for external textures
-using ExternalTextureBindings = std::unordered_map<BindingPoint, binding::ExternalTexture>;
+using BindingMap = std::unordered_map<BindingPoint, BindingPoint>;
+using ExternalTextureBindings = std::unordered_map<BindingPoint, ExternalTexture>;
 
 /// Binding information
 struct Bindings {
     /// Uniform bindings
-    UniformBindings uniform{};
+    BindingMap uniform{};
     /// Storage bindings
-    StorageBindings storage{};
+    BindingMap storage{};
     /// Texture bindings
-    TextureBindings texture{};
+    BindingMap texture{};
     /// Storage texture bindings
-    StorageTextureBindings storage_texture{};
+    BindingMap storage_texture{};
     /// Sampler bindings
-    SamplerBindings sampler{};
+    BindingMap sampler{};
     /// External bindings
     ExternalTextureBindings external_texture{};
     /// Mapping of BindingPoint to new Access
     std::unordered_map<BindingPoint, tint::core::Access> access_controls;
     /// The binding points that will be ignored by the rebustness transform.
     std::vector<BindingPoint> ignored_by_robustness_transform;
+
+    bool operator==(const Bindings& other) const = default;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(Bindings,
@@ -141,10 +98,12 @@ constexpr uint32_t kMaxInterStageLocations = 30;
 /// from which to load buffer sizes.
 struct ArrayLengthFromUniformOptions {
     /// The HLSL binding point to use to generate a uniform buffer from which to read buffer sizes.
-    binding::Uniform ubo_binding;
+    BindingPoint ubo_binding;
     /// The mapping from the storage buffer binding points in WGSL binding-point space to the index
     /// into the uniform buffer where the length of the buffer is stored.
     std::unordered_map<BindingPoint, uint32_t> bindpoint_to_size_index;
+
+    bool operator==(const ArrayLengthFromUniformOptions& other) const = default;
 
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(ArrayLengthFromUniformOptions, ubo_binding, bindpoint_to_size_index);
@@ -178,6 +137,8 @@ struct PixelLocalOptions {
     /// The bind group index of all pixel local storage attachments
     uint32_t group_index = 0;
 
+    bool operator==(const PixelLocalOptions& other) const = default;
+
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(PixelLocalOptions, attachments, group_index);
 };
@@ -209,6 +170,9 @@ struct Options {
     /// Set to `true` to disable software robustness that prevents out-of-bounds accesses.
     bool disable_robustness = false;
 
+    /// Set to `true` to enable integer range analysis in robustness transform.
+    bool enable_integer_range_analysis = false;
+
     /// Set to `true` to disable workgroup memory zero initialization
     bool disable_workgroup_init = false;
 
@@ -223,6 +187,9 @@ struct Options {
 
     /// Set to `true` to disable the polyfills on integer division and modulo.
     bool disable_polyfill_integer_div_mod = false;
+
+    /// Set to `true` to scalarize max, min, and clamp builtins.
+    bool scalarize_max_min_clamp = false;
 
     /// Set to `true` to generate polyfill for `pack4xI8`, `pack4xU8`, `pack4xI8Clamp`,
     /// `unpack4xI8` and `unpack4xU8` builtins
@@ -242,27 +209,47 @@ struct Options {
     /// The binding point to use for information passed via root constants.
     std::optional<BindingPoint> root_constant_binding_point;
 
+    /// Immediate binding point info
+    std::optional<BindingPoint> immediate_binding_point;
+
+    /// The offset of the first_index_offset push constant.
+    std::optional<uint32_t> first_index_offset;
+
+    /// The offset of the first_instance_offset push constant.
+    std::optional<uint32_t> first_instance_offset;
+
+    /// Offsets of num_workgroups push constant.
+    std::optional<uint32_t> num_workgroups_start_offset;
+
     /// The bindings
     Bindings bindings;
 
     /// Pixel local configuration
     PixelLocalOptions pixel_local;
 
+    bool operator==(const Options& other) const = default;
+
     /// Reflect the fields of this class so that it can be used by tint::ForeachField()
     TINT_REFLECT(Options,
                  remapped_entry_point_name,
                  strip_all_names,
                  disable_robustness,
+                 enable_integer_range_analysis,
                  disable_workgroup_init,
                  truncate_interstage_variables,
                  polyfill_reflect_vec2_f32,
                  polyfill_dot_4x8_packed,
                  disable_polyfill_integer_div_mod,
+                 scalarize_max_min_clamp,
                  polyfill_pack_unpack_4x8,
                  compiler,
                  array_length_from_uniform,
                  interstage_locations,
                  root_constant_binding_point,
+                 immediate_binding_point,
+                 first_index_offset,
+                 first_instance_offset,
+                 num_workgroups_start_offset,
                  bindings,
                  pixel_local);
 };

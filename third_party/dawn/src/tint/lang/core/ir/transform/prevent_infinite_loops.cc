@@ -116,7 +116,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PreventInfiniteLoops(Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.PreventInfiniteLoops");
+    auto result =
+        ValidateAndDumpIfNeeded(ir, "core.PreventInfiniteLoops", kPreventInfiniteLoopsCapabilities);
     if (result != Success) {
         return result;
     }

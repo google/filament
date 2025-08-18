@@ -18,7 +18,6 @@
 #include "dxc/Support/dxcapi.impl.h"
 #include "dxc/Support/microcom.h"
 #include "dxc/dxcapi.h"
-#include "dxillib.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>

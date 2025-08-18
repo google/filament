@@ -80,6 +80,7 @@ struct PhysicalDevice {
 
     DispatchableHandle<VkPhysicalDevice> vk_physical_device;
     BUILDER_VALUE(std::string, deviceName)
+    BUILDER_VALUE(VulkanUUID, deviceUUID)
     BUILDER_VALUE(VkPhysicalDeviceProperties, properties)
     BUILDER_VALUE(VkPhysicalDeviceFeatures, features)
     BUILDER_VALUE(VkPhysicalDeviceMemoryProperties, memory_properties)
@@ -220,41 +221,11 @@ struct TestICD {
     BUILDER_VALUE_WITH_DEFAULT(VkResult, enum_physical_devices_return_code, VK_SUCCESS);
     BUILDER_VALUE_WITH_DEFAULT(VkResult, enum_adapter_physical_devices_return_code, VK_SUCCESS);
 
-    PhysicalDevice& GetPhysDevice(VkPhysicalDevice physicalDevice) {
-        for (auto& phys_dev : physical_devices) {
-            if (phys_dev.vk_physical_device.handle == physicalDevice) return phys_dev;
-        }
-        assert(false && "vkPhysicalDevice not found!");
-        return physical_devices[0];
-    }
-
     InstanceCreateInfo GetVkInstanceCreateInfo() {
         InstanceCreateInfo info;
         for (auto& layer : instance_layers) info.enabled_layers.push_back(layer.layerName.data());
         for (auto& ext : instance_extensions) info.enabled_extensions.push_back(ext.extensionName.data());
         return info;
-    }
-
-    struct FindDevice {
-        bool found = false;
-        uint32_t phys_dev_index = 0;
-        uint32_t dev_index = 0;
-    };
-
-    FindDevice lookup_device(VkDevice device) {
-        FindDevice fd{};
-        for (uint32_t p = 0; p < physical_devices.size(); p++) {
-            auto const& phys_dev = physical_devices.at(p);
-            for (uint32_t d = 0; d < phys_dev.device_handles.size(); d++) {
-                if (phys_dev.device_handles.at(d) == device) {
-                    fd.found = true;
-                    fd.phys_dev_index = p;
-                    fd.dev_index = d;
-                    return fd;
-                }
-            }
-        }
-        return fd;
     }
 
 #if defined(WIN32)

@@ -38,8 +38,7 @@ import("../../../../../../scripts/dawn_overrides_with_defaults.gni")
 import("../../../../../../scripts/tint_overrides_with_defaults.gni")
 
 import("${tint_src_dir}/tint.gni")
-if (tint_build_ir_binary && tint_build_ir_fuzzer && tint_build_wgsl_writer &&
-    tint_build_spv_writer) {
+if (tint_build_ir_binary && tint_build_wgsl_writer && tint_build_spv_writer) {
   tint_executable("dis") {
     output_name = "ir_fuzz_dis"
     sources = [ "main.cc" ]
@@ -54,8 +53,6 @@ if (tint_build_ir_binary && tint_build_ir_fuzzer && tint_build_wgsl_writer &&
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/inspector",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
@@ -75,11 +72,10 @@ if (tint_build_ir_binary && tint_build_ir_fuzzer && tint_build_wgsl_writer &&
     ]
 
     if (tint_build_ir_binary) {
-      deps += [ "${tint_src_dir}/lang/core/ir/binary" ]
-    }
-
-    if (tint_build_ir_binary && tint_build_ir_fuzzer) {
-      deps += [ "${tint_src_dir}/utils/protos/ir_fuzz:proto" ]
+      deps += [
+        "${tint_src_dir}/lang/core/ir/binary",
+        "${tint_src_dir}/utils/protos/ir_fuzz:proto",
+      ]
     }
 
     if (tint_build_spv_reader) {

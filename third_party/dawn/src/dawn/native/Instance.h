@@ -50,7 +50,7 @@
 #include "dawn/native/Toggles.h"
 #include "dawn/native/dawn_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-#include "tint/lang/wgsl/features/language_feature.h"
+#include "tint/lang/wgsl/enums.h"
 
 namespace dawn::platform {
 class Platform;
@@ -67,7 +67,9 @@ using BackendsBitset = ityp::bitset<wgpu::BackendType, kEnumCount<wgpu::BackendT
 using BackendsArray = ityp::
     array<wgpu::BackendType, std::unique_ptr<BackendConnection>, kEnumCount<wgpu::BackendType>>;
 
-wgpu::Status APIGetInstanceCapabilities(InstanceCapabilities* capabilities);
+wgpu::Status APIGetInstanceLimits(InstanceLimits* limits);
+bool APIHasInstanceFeature(wgpu::InstanceFeatureName feature);
+void APIGetInstanceFeatures(SupportedInstanceFeatures* features);
 InstanceBase* APICreateInstance(const InstanceDescriptor* descriptor);
 
 // This is called InstanceBase for consistency across the frontend, even if the backends don't
@@ -93,7 +95,7 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
 
     template <typename T>
     [[nodiscard]] bool ConsumedErrorAndWarnOnce(ResultOrError<T> resultOrError, T* result) {
-        if (DAWN_UNLIKELY(resultOrError.IsError())) {
+        if (resultOrError.IsError()) [[unlikely]] {
             return ConsumedErrorAndWarnOnce(resultOrError.AcquireError());
         }
         *result = resultOrError.AcquireSuccess();
@@ -129,6 +131,8 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
     void AddDevice(DeviceBase* device);
     void RemoveDevice(DeviceBase* device);
 
+    bool HasFeature(wgpu::InstanceFeatureName feature) const;
+
     const std::vector<std::string>& GetRuntimeSearchPaths() const;
 
     const Ref<CallbackTaskManager>& GetCallbackTaskManager() const;
@@ -148,7 +152,7 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
                                               FutureWaitInfo* futures,
                                               uint64_t timeoutNS);
     bool APIHasWGSLLanguageFeature(wgpu::WGSLLanguageFeatureName feature) const;
-    wgpu::Status APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const;
+    void APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const;
 
     void DisconnectDawnPlatform();
 
@@ -204,6 +208,7 @@ class InstanceBase final : public ErrorSink, public RefCountedWithExternalCount<
     TogglesState mToggles;
     TogglesInfo mTogglesInfo;
 
+    absl::flat_hash_set<wgpu::InstanceFeatureName> mInstanceFeatures;
     absl::flat_hash_set<wgpu::WGSLLanguageFeatureName> mWGSLFeatures;
     absl::flat_hash_set<tint::wgsl::LanguageFeature> mTintLanguageFeatures;
 

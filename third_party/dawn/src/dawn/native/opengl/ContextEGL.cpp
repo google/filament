@@ -215,7 +215,8 @@ void ContextEGL::RequestRequiredExtensionsExplicitly() {
 void ContextEGL::MakeCurrent() {
     EGLBoolean success = mDisplay->egl.MakeCurrent(mDisplay->GetDisplay(), mCurrentSurface,
                                                    mCurrentSurface, mContext);
-    IgnoreErrors(CheckEGL(mDisplay->egl, success == EGL_TRUE, "eglMakeCurrent"));
+    IgnoreErrors(
+        CheckEGL(mDisplay->egl, static_cast<EGLBoolean>(success == EGL_TRUE), "eglMakeCurrent"));
 }
 
 // ScopedMakeSurfaceCurrent

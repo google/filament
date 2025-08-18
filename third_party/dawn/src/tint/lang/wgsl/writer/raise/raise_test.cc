@@ -175,5 +175,57 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
+TEST_F(WgslWriter_RaiseTest, BuiltinShadowedByUserFunction) {
+    auto* user_min = b.Function("min", ty.u32());
+    auto* x = b.FunctionParam<u32>("x");
+    auto* y = b.FunctionParam<u32>("y");
+    user_min->SetParams({x, y});
+    b.Append(user_min->Block(), [&] {  //
+        b.Return(user_min, b.Add<u32>(x, y));
+    });
+
+    auto* f = b.Function("f", ty.void_());
+    b.Append(f->Block(), [&] {  //
+        b.Call<u32>(core::BuiltinFn::kMin, 1_u, 2_u);
+        b.Return(f);
+    });
+
+    auto* src = R"(
+%min = func(%x:u32, %y:u32):u32 {
+  $B1: {
+    %4:u32 = add %x, %y
+    ret %4
+  }
+}
+%f = func():void {
+  $B2: {
+    %6:u32 = min 1u, 2u
+    ret
+  }
+}
+)";
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%min_1 = func(%x:u32, %y:u32):u32 {
+  $B1: {
+    %4:u32 = add %x, %y
+    ret %4
+  }
+}
+%f = func():void {
+  $B2: {
+    %6:u32 = wgsl.min 1u, 2u
+    undef = phony %6
+    ret
+  }
+}
+)";
+
+    Run(Raise);
+
+    EXPECT_EQ(expect, str());
+}
+
 }  // namespace
 }  // namespace tint::wgsl::writer::raise

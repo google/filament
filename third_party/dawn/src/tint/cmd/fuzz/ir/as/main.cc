@@ -32,12 +32,12 @@
 
 #include "src/tint/api/tint.h"
 #include "src/tint/cmd/common/helper.h"
+#include "src/tint/cmd/fuzz/ir/helpers/substitute_overrides_config.h"
 #include "src/tint/lang/core/ir/binary/encode.h"
 #include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/wgsl/ast/module.h"
-#include "src/tint/lang/wgsl/helpers/apply_substitute_overrides.h"
 #include "src/tint/lang/wgsl/reader/reader.h"
 #include "src/tint/utils/command/args.h"
 #include "src/tint/utils/command/cli.h"
@@ -133,18 +133,21 @@ Options:
         return false;
     }
 
-    if (is_directory(std::filesystem::path{args[0]}) &&
-        is_directory(std::filesystem::path{args[1]})) {
+    bool is_arg0_dir = is_directory(std::filesystem::path{args[0]});
+    bool is_arg1_dir = is_directory(std::filesystem::path{args[1]});
+
+    if (is_arg0_dir && is_arg1_dir) {
         opts->input_dirname = args[0];
         opts->output_dirname = args[1];
         opts->batch_mode = true;
-    } else if ((!is_directory(std::filesystem::path{args[0]}) &&
-                !is_directory(std::filesystem::path{args[1]}))) {
+    } else if (!is_arg0_dir && !is_arg1_dir) {
         opts->input_filename = args[0];
         opts->output_filename = args[1];
         opts->batch_mode = false;
     } else {
-        std::cerr << "Expected args to either both be directories or both be files\n";
+        std::cerr << "Expected args to either both be directories or both be files ('" << args[0]
+                  << "' is " << (is_arg0_dir ? "DIR" : "FILE") << " and '" << args[1] << "' is "
+                  << (is_arg1_dir ? "DIR" : "FILE") << "\n";
         return false;
     }
 
@@ -177,13 +180,12 @@ tint::Result<tint::core::ir::Module> GenerateIrModule(const tint::Program& progr
         return tint::Failure{"Unsupported enable used in shader"};
     }
 
-    auto cfg = tint::wgsl::SubstituteOverridesConfig(program);
-
     auto ir = tint::wgsl::reader::ProgramToLoweredIR(program);
     if (ir != tint::Success) {
         return ir.Failure();
     }
 
+    auto cfg = tint::fuzz::ir::SubstituteOverridesConfig(ir.Get());
     auto substituteOverridesResult = tint::core::ir::transform::SubstituteOverrides(ir.Get(), cfg);
     if (substituteOverridesResult != tint::Success) {
         return substituteOverridesResult.Failure();
@@ -291,7 +293,6 @@ int main(int argc, const char** argv) {
     Options options;
 
     tint::Initialize();
-    tint::SetInternalCompilerErrorReporter(&tint::cmd::TintInternalCompilerErrorReporter);
 
     if (!ParseArgs(arguments, &options)) {
         return EXIT_FAILURE;

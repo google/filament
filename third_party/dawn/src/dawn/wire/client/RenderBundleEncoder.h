@@ -41,8 +41,8 @@ class RenderBundleEncoder : public ObjectBase {
     ~RenderBundleEncoder() override;
     ObjectType GetObjectType() const override;
 
-    // DAWN API
-    void SetImmediateData(uint32_t offset, const void* data, size_t size);
+    // Dawn API
+    void APISetImmediateData(uint32_t offset, const void* data, size_t size);
 };
 
 }  // namespace dawn::wire::client

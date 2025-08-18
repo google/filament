@@ -36,6 +36,7 @@
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Log.h"
+#include "JNIClasses.h"
 #include "JNIContext.h"
 
 // Converts Kotlin objects representing Dawn structures into native structures that can be passed
@@ -101,9 +102,9 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
         if (!input) {
             return nullptr;
         }
-
+        JNIClasses* classes = JNIClasses::getInstance(env);
         //* Make a new Kotlin object to receive a copy of the structure.
-        jclass clz = env->FindClass("{{ jni_name(structure) }}");
+        jclass clz = classes->{{ structure.name.camelCase() }};
         //* JNI signature needs to be built using the same logic used in the Kotlin structure spec.
         jmethodID ctor = env->GetMethodID(clz, "<init>", "(
         {%- for member in kotlin_record_members(structure.members) %}
@@ -158,7 +159,8 @@ jobject ToKotlin(JNIEnv* env, const WGPUStringView* s) {
     {{ define_kotlin_record_structure(KotlinRecord, structure.members)}}
     {{ define_kotlin_to_struct_conversion("ConvertInternal", KotlinRecord, Struct, structure.members)}}
     void ToNative(JNIContext* c, JNIEnv* env, jobject obj, {{ as_cType(structure.name) }}* converted) {
-        jclass clz = env->FindClass("{{ jni_name(structure) }}");
+        JNIClasses* classes = JNIClasses::getInstance(env);
+        jclass clz = classes->{{ structure.name.camelCase() }};
 
         //* Use getters to fill in the Kotlin record that will get converted to our struct.
         {{KotlinRecord}} kotlinRecord;

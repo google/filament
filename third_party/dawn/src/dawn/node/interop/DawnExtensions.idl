@@ -30,9 +30,9 @@
 
 enum GPUFeatureName {
     "multi-draw-indirect",
-    "chromium-experimental-immediate-data",
     "chromium-experimental-subgroup-matrix",
-    "core-features-and-limits",
+    "texture-component-swizzle",
+    "chromium-experimental-primitive-id",
 };
 
 enum GPUSubgroupMatrixComponentType {
@@ -70,7 +70,7 @@ interface GPURenderPassEncoder {
 };
 
 dictionary GPUTextureDescriptor {
-    GPUTextureViewDimension? textureBindingViewDimension;
+    GPUTextureViewDimension textureBindingViewDimension;
 };
 
 enum WGSLLanguageFeatureName {
@@ -79,12 +79,37 @@ enum WGSLLanguageFeatureName {
     "unrestricted_pointer_parameters",
     "pointer_composite_access",
     "sized_binding_array",
+    "texel_buffers",
+    "chromium_print",
 };
 
-// TODO(crbug.com/354751907) Move to GPUAdapterInfo
+dictionary GPUBindGroupLayoutEntry {
+    GPUSize32 bindingArraySize = 1;
+};
+
 interface GPUSupportedLimits {
-    readonly attribute (unsigned long or undefined) maxStorageBuffersInFragmentStage;
-    readonly attribute (unsigned long or undefined) maxStorageTexturesInFragmentStage;
-    readonly attribute (unsigned long or undefined) maxStorageBuffersInVertexStage;
-    readonly attribute (unsigned long or undefined) maxStorageTexturesInVertexStage;
+    readonly attribute unsigned long maxStorageBuffersInFragmentStage;
+    readonly attribute unsigned long maxStorageTexturesInFragmentStage;
+    readonly attribute unsigned long maxStorageBuffersInVertexStage;
+    readonly attribute unsigned long maxStorageTexturesInVertexStage;
+};
+
+dictionary GPUTextureViewDescriptor {
+    GPUTextureComponentSwizzle swizzle;
+};
+
+dictionary GPUTextureComponentSwizzle {
+    GPUComponentSwizzle r = "r";
+    GPUComponentSwizzle g = "g";
+    GPUComponentSwizzle b = "b";
+    GPUComponentSwizzle a = "a";
+};
+
+enum GPUComponentSwizzle {
+    "zero",
+    "one",
+    "r",
+    "g",
+    "b",
+    "a",
 };

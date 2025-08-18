@@ -203,12 +203,9 @@ MaybeError ValidateSampledTextureBinding(DeviceBase* device,
     DAWN_TRY(ValidateTextureBindGroupEntry(device, entry));
 
     TextureViewBase* view = entry.textureView;
-
-    Aspect aspect = view->GetAspects();
-    DAWN_INVALID_IF(!HasOneBit(aspect), "Multiple aspects (%s) selected in %s.", aspect, view);
-
     TextureBase* texture = view->GetTexture();
 
+    Aspect aspect = view->GetAspects();
     SampleTypeBit supportedTypes = texture->GetFormat().GetAspectInfo(aspect).supportedSampleTypes;
     if (supportedTypes == SampleTypeBit::External) {
         DAWN_ASSERT(texture->GetSharedResourceMemoryContents());
@@ -371,7 +368,7 @@ MaybeError ValidateExternalTextureBinding(
         entry.sampler != nullptr || entry.textureView != nullptr || entry.buffer != nullptr,
         "Expected only external texture to be set for binding entry.");
 
-    DAWN_INVALID_IF(expansions.find(BindingNumber(entry.binding)) == expansions.end(),
+    DAWN_INVALID_IF(!expansions.contains(BindingNumber(entry.binding)),
                     "External texture binding entry %u is not present in the bind group layout.",
                     entry.binding);
 
@@ -500,7 +497,8 @@ MaybeError ValidateBindGroupDescriptor(DeviceBase* device,
         // TODO(42240282): Store external textures in
         // BindGroupLayoutBase::BindingDataPointers::bindings so checking external textures can
         // be moved in the switch below.
-        if (layout->GetExternalTextureBindingExpansionMap().count(BindingNumber(entry.binding))) {
+        if (layout->GetExternalTextureBindingExpansionMap().contains(
+                BindingNumber(entry.binding))) {
             UnpackedPtr<BindGroupEntry> unpacked;
             DAWN_TRY_ASSIGN(unpacked, ValidateAndUnpack(&entry));
             if (auto* externalTextureBindingEntry = unpacked.Get<ExternalTextureBindingEntry>()) {
@@ -509,8 +507,7 @@ MaybeError ValidateBindGroupDescriptor(DeviceBase* device,
                     layout->GetExternalTextureBindingExpansionMap()));
                 continue;
             }
-            // TODO(crbug.com/398752857): Make this controlled by a toggle before shipping.
-            if (device->IsToggleEnabled(Toggle::AllowUnsafeAPIs)) {
+            if (!device->IsToggleEnabled(Toggle::DisableTextureViewBindingUsedAsExternalTexture)) {
                 DAWN_TRY_CONTEXT(ValidateTextureViewBindingUsedAsExternalTexture(device, entry),
                                  "validating entries[%u] as a TextureView."
                                  "\nExpected entry layout: %s",

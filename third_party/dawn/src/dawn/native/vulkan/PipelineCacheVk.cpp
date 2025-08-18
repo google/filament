@@ -114,7 +114,7 @@ void PipelineCache::Initialize() {
         "CreatePipelineCache");
     if (maybeError.IsError()) {
         std::unique_ptr<ErrorData> error = maybeError.AcquireError();
-        mDevice->EmitLog(WGPULoggingType_Info, error->GetFormattedMessage().c_str());
+        mDevice->EmitLog(wgpu::LoggingType::Info, error->GetFormattedMessage().c_str());
         return;
     }
 

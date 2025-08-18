@@ -27,6 +27,7 @@
 
 #include "src/tint/lang/core/type/texture.h"
 
+#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
 

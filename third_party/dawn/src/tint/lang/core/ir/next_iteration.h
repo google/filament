@@ -59,6 +59,9 @@ class NextIteration final : public Castable<NextIteration, Terminator> {
 
     ~NextIteration() override;
 
+    /// @copydoc Instruction::Destroy()
+    void Destroy() override;
+
     /// @copydoc Instruction::Clone()
     NextIteration* Clone(CloneContext& ctx) override;
 

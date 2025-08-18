@@ -35,6 +35,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
 #include "dawn/common/Constants.h"
 #include "dawn/utils/TextureUtils.h"
 
@@ -42,12 +43,6 @@ namespace dawn::utils {
 
 enum Expectation { Success, Failure };
 
-#if TINT_BUILD_SPV_READER
-wgpu::ShaderModule CreateShaderModuleFromASM(
-    const wgpu::Device& device,
-    const char* source,
-    wgpu::DawnShaderModuleSPIRVOptionsDescriptor* spirv_options = nullptr);
-#endif
 wgpu::ShaderModule CreateShaderModule(const wgpu::Device& device, const char* source);
 wgpu::ShaderModule CreateShaderModule(const wgpu::Device& device, const std::string& source);
 
@@ -219,6 +214,14 @@ ColorSpaceConversionInfo GetYUVBT709ToRGBSRGBColorSpaceConversionInfo();
 ColorSpaceConversionInfo GetNoopRGBColorSpaceConversionInfo();
 
 bool BackendRequiresCompat(wgpu::BackendType backend);
+
+absl::flat_hash_set<wgpu::FeatureName> FeatureAndImplicitlyEnabled(wgpu::FeatureName featureName);
+
+int8_t ConvertFloatToSnorm8(float value);
+
+int16_t ConvertFloatToSnorm16(float value);
+
+uint16_t ConvertFloatToUnorm16(float value);
 
 }  // namespace dawn::utils
 

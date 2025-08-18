@@ -31,47 +31,39 @@ package oswrapper
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/spf13/afero"
 )
 
+// RealOSWrapper provides a concrete implementation of OSWrapper that interacts
+// with the real operating system.
 type RealOSWrapper struct {
 	RealEnvironProvider
 	RealFilesystemReaderWriter
 }
 
+// RealEnvironProvider provides a concrete implementation of EnvironProvider.
 type RealEnvironProvider struct{}
 
+// RealFilesystemReaderWriter provides a concrete implementation of FilesystemReaderWriter.
 type RealFilesystemReaderWriter struct {
 	RealFilesystemReader
 	RealFilesystemWriter
 }
 
-// Since these take Fs interface references instead of concrete implementations,
-// we could theoretically share most of the implementation between this and
-// MemMapFilesystemReader/Writer, relying on the fact that the real one will
-// have an OsFs and the test one will with a MemMapFs. However, since afero.Fs
-// does not implement MkdirTemp or Symlink, we would need to have some
-// differences anyways. So, keep the implementations completely separate for
-// now.
-type RealFilesystemReader struct {
-	fs afero.Fs
-}
-type RealFilesystemWriter struct {
-	fs afero.Fs
-}
+// RealFilesystemReader provides a concrete implementation of FilesystemReader
+// that interacts with the real operating system.
+type RealFilesystemReader struct{}
 
+// RealFilesystemWriter provides a concrete implementation of FilesystemWriter
+// that interacts with the real operating system.
+type RealFilesystemWriter struct{}
+
+// GetRealOSWrapper creates a new RealOSWrapper that interacts with the real OS.
 func GetRealOSWrapper() RealOSWrapper {
-	filesystem := afero.NewOsFs()
 	return RealOSWrapper{
 		RealEnvironProvider{},
 		RealFilesystemReaderWriter{
-			RealFilesystemReader{
-				fs: filesystem,
-			},
-			RealFilesystemWriter{
-				fs: filesystem,
-			},
+			RealFilesystemReader{},
+			RealFilesystemWriter{},
 		},
 	}
 }
@@ -92,16 +84,20 @@ func (RealEnvironProvider) UserHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
-func (rfsr RealFilesystemReader) Open(name string) (afero.File, error) {
-	return rfsr.fs.Open(name)
+func (RealFilesystemReader) Open(name string) (File, error) {
+	return os.Open(name)
 }
 
-func (rfsr RealFilesystemReader) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	return rfsr.fs.OpenFile(name, flag, perm)
+func (RealFilesystemReader) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	return os.OpenFile(name, flag, perm)
 }
 
 func (RealFilesystemReader) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
+}
+
+func (RealFilesystemReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(name)
 }
 
 func (RealFilesystemReader) Stat(name string) (os.FileInfo, error) {
@@ -112,8 +108,8 @@ func (RealFilesystemReader) Walk(root string, fn filepath.WalkFunc) error {
 	return filepath.Walk(root, fn)
 }
 
-func (rfsw RealFilesystemWriter) Create(name string) (afero.File, error) {
-	return rfsw.fs.Create(name)
+func (RealFilesystemWriter) Create(name string) (File, error) {
+	return os.Create(name)
 }
 
 func (RealFilesystemWriter) Mkdir(path string, perm os.FileMode) error {

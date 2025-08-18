@@ -40,22 +40,41 @@ namespace {
 
 class ImmediateDataDisableTest : public ValidationTest {};
 
-// Check that creating a PipelineLayout with non-zero immediateDataRangeByteSize is disallowed
+// Check that creating a PipelineLayout with non-zero immediateSize is disallowed
 // without the feature enabled.
-TEST_F(ImmediateDataDisableTest, ImmediateDataRangeByteSizeNotAllowed) {
+TEST_F(ImmediateDataDisableTest, ImmediateSizeNotAllowed) {
     wgpu::PipelineLayoutDescriptor desc;
     desc.bindGroupLayoutCount = 0;
-    desc.immediateDataRangeByteSize = 1;
+    desc.immediateSize = 1;
 
     ASSERT_DEVICE_ERROR(device.CreatePipelineLayout(&desc));
 }
 
+// Check that SetImmediateData doesn't work (even with size=0) without maxImmediateSize>0.
+TEST_F(ImmediateDataDisableTest, SetImmediateData) {
+    {
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetImmediateData(0, nullptr, 0);
+        pass.End();
+        ASSERT_DEVICE_ERROR(encoder.Finish());
+    }
+    {
+        const uint32_t data = 0;
+
+        wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
+        wgpu::ComputePassEncoder pass = encoder.BeginComputePass();
+        pass.SetImmediateData(0, &data, 4);
+        pass.End();
+        ASSERT_DEVICE_ERROR(encoder.Finish());
+    }
+}
+
 class ImmediateDataTest : public ValidationTest {
   protected:
-    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
-        // Test only the non-coherent version, ad assume that the same validaiton code paths are
-        // taken for the coherent path
-        return {wgpu::FeatureName::ChromiumExperimentalImmediateData};
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
+        required.maxImmediateSize = kDefaultMaxImmediateDataBytes;
     }
 
     wgpu::BindGroupLayout CreateBindGroupLayout() {
@@ -71,44 +90,40 @@ class ImmediateDataTest : public ValidationTest {
         return device.CreateBindGroupLayout(&bindGroupLayoutDesc);
     }
 
-    wgpu::PipelineLayout CreatePipelineLayout(uint32_t requiredImmediateDataRangeByteSize) {
+    wgpu::PipelineLayout CreatePipelineLayout(uint32_t requiredImmediateSize) {
         wgpu::BindGroupLayout bindGroupLayout = CreateBindGroupLayout();
 
         wgpu::PipelineLayoutDescriptor pipelineLayoutDesc;
         pipelineLayoutDesc.bindGroupLayoutCount = 1;
         pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
-        pipelineLayoutDesc.immediateDataRangeByteSize = requiredImmediateDataRangeByteSize;
+        pipelineLayoutDesc.immediateSize = requiredImmediateSize;
         return device.CreatePipelineLayout(&pipelineLayoutDesc);
     }
 
     wgpu::ShaderModule mShaderModule;
 };
 
-// Check that non-zero immediateDataRangeByteSize is possible with feature enabled and size must
+// Check that non-zero immediateSize is possible with feature enabled and size must
 // below max size limits.
-TEST_F(ImmediateDataTest, ValidateImmediateDataRangeByteSize) {
-    DAWN_SKIP_TEST_IF(!device.HasFeature(wgpu::FeatureName::ChromiumExperimentalImmediateData));
-
+TEST_F(ImmediateDataTest, ValidateImmediateSize) {
     wgpu::PipelineLayoutDescriptor desc;
     desc.bindGroupLayoutCount = 0;
 
-    // Success case with valid immediateDataRangeByteSize.
+    // Success case with valid immediateSize.
     {
-        desc.immediateDataRangeByteSize = kMaxImmediateDataBytes;
+        desc.immediateSize = kDefaultMaxImmediateDataBytes;
         device.CreatePipelineLayout(&desc);
     }
 
-    // Failed case with invalid immediateDataRangeByteSize that exceed limits.
+    // Failed case with invalid immediateSize that exceed limits.
     {
-        desc.immediateDataRangeByteSize = kMaxImmediateDataBytes + 1;
+        desc.immediateSize = kDefaultMaxImmediateDataBytes + 1;
         ASSERT_DEVICE_ERROR(device.CreatePipelineLayout(&desc));
     }
 }
 
 // Check that SetImmediateData offset and length must be aligned to 4 bytes.
 TEST_F(ImmediateDataTest, ValidateSetImmediateDataAlignment) {
-    DAWN_SKIP_TEST_IF(!device.HasFeature(wgpu::FeatureName::ChromiumExperimentalImmediateData));
-
     // Success cases
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
@@ -149,14 +164,12 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataAlignment) {
 
 // Check that SetImmediateData offset + length must be in bound.
 TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
-    DAWN_SKIP_TEST_IF(!device.HasFeature(wgpu::FeatureName::ChromiumExperimentalImmediateData));
-
     // Success cases
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        std::vector<uint32_t> data(kMaxImmediateDataBytes / 4, 0);
+        std::vector<uint32_t> data(kDefaultMaxImmediateDataBytes / 4, 0);
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
-        computePass.SetImmediateData(0, data.data(), kMaxImmediateDataBytes);
+        computePass.SetImmediateData(0, data.data(), kDefaultMaxImmediateDataBytes);
         computePass.End();
         encoder.Finish();
     }
@@ -164,7 +177,7 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
-        computePass.SetImmediateData(kMaxImmediateDataBytes, nullptr, 0);
+        computePass.SetImmediateData(kDefaultMaxImmediateDataBytes, nullptr, 0);
         computePass.End();
         encoder.Finish();
     }
@@ -173,7 +186,7 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
         uint32_t data = 0;
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
-        computePass.SetImmediateData(kMaxImmediateDataBytes - 4, &data, 4);
+        computePass.SetImmediateData(kDefaultMaxImmediateDataBytes - 4, &data, 4);
         computePass.End();
         encoder.Finish();
     }
@@ -181,7 +194,7 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
     // Failed case with offset oob
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        uint32_t offset = kMaxImmediateDataBytes + 4;
+        uint32_t offset = kDefaultMaxImmediateDataBytes + 4;
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
         computePass.SetImmediateData(offset, nullptr, 0);
         computePass.End();
@@ -191,7 +204,7 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
     // Failed cases with size oob
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        uint32_t size = kMaxImmediateDataBytes + 4;
+        uint32_t size = kDefaultMaxImmediateDataBytes + 4;
         std::vector<uint32_t> data(size / 4, 0);
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
         computePass.SetImmediateData(0, data.data(), size);
@@ -202,7 +215,7 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
     // Failed cases with offset + size oob
     {
         wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
-        uint32_t offset = kMaxImmediateDataBytes;
+        uint32_t offset = kDefaultMaxImmediateDataBytes;
         uint32_t data[] = {0};
         wgpu::ComputePassEncoder computePass = encoder.BeginComputePass();
         computePass.SetImmediateData(offset, data, 4);
@@ -224,12 +237,11 @@ TEST_F(ImmediateDataTest, ValidateSetImmediateDataOOB) {
 
 // Check that pipelineLayout immediate data bytes compatible with shaders.
 TEST_F(ImmediateDataTest, ValidatePipelineLayoutImmediateDataBytesAndShaders) {
-    DAWN_SKIP_TEST_IF(!device.HasFeature(wgpu::FeatureName::ChromiumExperimentalImmediateData));
     constexpr uint32_t kShaderImmediateDataBytes = 12u;
     wgpu::ShaderModule shaderModule = utils::CreateShaderModule(device, R"(
-        enable chromium_experimental_push_constant;
-        var<push_constant> fragmentConstants: vec3f;
-        var<push_constant> computeConstants: vec3u;
+        enable chromium_experimental_immediate;
+        var<immediate> fragmentConstants: vec3f;
+        var<immediate> computeConstants: vec3u;
         @vertex fn vsMain(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
             const pos = array(
                 vec2( 1.0, -1.0),
@@ -308,11 +320,10 @@ TEST_F(ImmediateDataTest, ValidatePipelineLayoutImmediateDataBytesAndShaders) {
 
 // Check that default pipelineLayout has too many immediate data bytes .
 TEST_F(ImmediateDataTest, ValidateDefaultPipelineLayout) {
-    DAWN_SKIP_TEST_IF(!device.HasFeature(wgpu::FeatureName::ChromiumExperimentalImmediateData));
     wgpu::ShaderModule shaderModule = utils::CreateShaderModule(device, R"(
-        enable chromium_experimental_push_constant;
-        var<push_constant> fragmentConstants: vec4f;
-        var<push_constant> computeConstants: vec4u;
+        enable chromium_experimental_immediate;
+        var<immediate> fragmentConstants: vec4f;
+        var<immediate> computeConstants: vec4u;
         @vertex fn vsMain(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
             const pos = array(
                 vec2( 1.0, -1.0),
@@ -335,7 +346,7 @@ TEST_F(ImmediateDataTest, ValidateDefaultPipelineLayout) {
         })");
 
     wgpu::ShaderModule oobShaderModule = utils::CreateShaderModule(device, R"(
-            enable chromium_experimental_push_constant;
+            enable chromium_experimental_immediate;
             struct FragmentConstants {
                 constants: vec4f,
                 constantsOOB: f32,
@@ -345,8 +356,8 @@ TEST_F(ImmediateDataTest, ValidateDefaultPipelineLayout) {
                 constants: vec4u,
                 constantsOOB: u32,
             };
-            var<push_constant> fragmentConstants: FragmentConstants;
-            var<push_constant> computeConstants: ComputeConstants;
+            var<immediate> fragmentConstants: FragmentConstants;
+            var<immediate> computeConstants: ComputeConstants;
             @vertex fn vsMain(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
                 const pos = array(
                     vec2( 1.0, -1.0),

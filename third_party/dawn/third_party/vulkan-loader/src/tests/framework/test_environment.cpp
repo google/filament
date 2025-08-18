@@ -680,18 +680,20 @@ TestICD& FrameworkEnvironment::add_icd(TestICDDetails icd_details) noexcept {
                 }
                 platform_shim->add_known_path(folder.location());
                 break;
-            case (ManifestDiscoveryType::override_folder):
             case (ManifestDiscoveryType::macos_bundle):
                 platform_shim->add_manifest(ManifestCategory::icd, icds.back().manifest_path);
                 break;
             case (ManifestDiscoveryType::unsecured_generic):
                 platform_shim->add_unsecured_manifest(ManifestCategory::icd, icds.back().manifest_path);
                 break;
-            case (ManifestDiscoveryType::null_dir):
-            case (ManifestDiscoveryType::none):
-                break;
             case (ManifestDiscoveryType::windows_app_package):
                 platform_shim->set_app_package_path(folder.location());
+                break;
+
+            case (ManifestDiscoveryType::override_folder):  // should be found through override layer/settings file, not 'normal'
+                                                            // search paths
+            case (ManifestDiscoveryType::null_dir):
+            case (ManifestDiscoveryType::none):
                 break;
         }
     }
@@ -901,6 +903,32 @@ std::string get_loader_settings_file_contents(const LoaderSettings& loader_setti
                 writer.StartKeyedArray("filter");
                 for (const auto& filter : config.filters) {
                     writer.AddString(filter);
+                }
+                writer.EndArray();
+                writer.EndObject();
+            }
+            writer.EndArray();
+        }
+        if (!setting.driver_configurations.empty()) {
+            writer.AddKeyedBool("additional_drivers_use_exclusively", setting.additional_drivers_use_exclusively);
+            writer.StartKeyedArray("additional_drivers");
+            for (const auto& driver : setting.driver_configurations) {
+                writer.StartObject();
+                writer.AddKeyedString("path", driver.path);
+                writer.EndObject();
+            }
+            writer.EndArray();
+        }
+        if (!setting.device_configurations.empty()) {
+            writer.StartKeyedArray("device_configurations");
+            for (const auto& device : setting.device_configurations) {
+                writer.StartObject();
+                if (!device.deviceName.empty()) {
+                    writer.AddKeyedString("deviceName", device.deviceName);
+                }
+                writer.StartKeyedArray("deviceUUID");
+                for (const auto& u : device.deviceUUID) {
+                    writer.AddInteger(u);
                 }
                 writer.EndArray();
                 writer.EndObject();

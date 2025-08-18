@@ -58,10 +58,11 @@ const std::vector<uint32_t> kStencilValues = {0, 1, 38, 255};
 
 class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingTestParams> {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         // Just copy all the limits, though all we really care about is
         // maxStorageBuffersInFragmentStage
-        return supported;
+        supported.UnlinkedCopyTo(&required);
     }
 
     enum class TestAspectAndSamplerType {
@@ -74,12 +75,6 @@ class DepthStencilSamplingTest : public DawnTestWithParams<DepthStencilSamplingT
         DawnTestWithParams<DepthStencilSamplingTestParams>::SetUp();
 
         DAWN_TEST_UNSUPPORTED_IF(!mIsFormatSupported);
-
-        // Skip formats other than Depth24PlusStencil8 if we're specifically testing with the packed
-        // depth24_unorm_stencil8 toggle.
-        DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("use_packed_depth24_unorm_stencil8_format") &&
-                                 GetParam().mTextureFormat !=
-                                     wgpu::TextureFormat::Depth24PlusStencil8);
 
         wgpu::BufferDescriptor uniformBufferDesc;
         uniformBufferDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
@@ -649,11 +644,6 @@ TEST_P(DepthStencilSamplingTest, CheckDepthTextureRange) {
     // TODO(crbug.com/dawn/1187): The test fails on ANGLE D3D11, investigate why.
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
 
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 4 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
-    // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
-
     constexpr uint32_t kWidth = 16;
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         const kWidth = 16.0;
@@ -788,7 +778,7 @@ TEST_P(DepthStencilSamplingTest, CheckDepthTextureRange) {
 TEST_P(DepthStencilSamplingTest, SampleExtraComponents) {
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 
@@ -1000,7 +990,7 @@ class StencilSamplingTest : public DepthStencilSamplingTest {};
 TEST_P(StencilSamplingTest, SampleStencilOnly) {
     // TODO(crbug.com/dawn/2295): diagnose this failure on Pixel 6 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsARM());
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     wgpu::TextureFormat format = GetParam().mTextureFormat;
 

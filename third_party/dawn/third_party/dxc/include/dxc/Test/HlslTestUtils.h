@@ -10,6 +10,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // *** THIS FILE CANNOT TAKE ANY LLVM DEPENDENCIES  *** //
+#ifndef HLSLTESTUTILS_H
+#define HLSLTESTUTILS_H
 
 #include <algorithm>
 #include <atomic>
@@ -258,6 +260,29 @@ inline void LogErrorFmt(const wchar_t *fmt, ...) {
   WEX::Logging::Log::Error(buf.data());
 }
 
+inline void LogErrorFmtThrow(const char *fileName, int line, const wchar_t *fmt,
+                             ...) {
+  va_list args;
+  va_start(args, fmt);
+  std::wstring buf(vFormatToWString(fmt, args));
+  va_end(args);
+
+  std::wstringstream wss;
+  wss << L"Error in file: " << fileName << L" at line: " << line << L"\n"
+      << buf.data() << L"\n"
+      << buf;
+
+  WEX::Logging::Log::Error(wss.str().c_str());
+
+  // Throws an exception to abort the test.
+  VERIFY_FAIL(L"Test error");
+}
+
+// Macro to pass the file name and line number. Otherwise TAEF prints this file
+// and line number.
+#define LOG_ERROR_FMT_THROW(fmt, ...)                                          \
+  hlsl_test::LogErrorFmtThrow(__FILE__, __LINE__, fmt, __VA_ARGS__)
+
 inline std::wstring
 GetPathToHlslDataFile(const wchar_t *relative,
                       LPCWSTR paramName = HLSLDATAFILEPARAM,
@@ -459,15 +484,17 @@ inline bool GetTestParamUseWARP(bool defaultVal) {
 
 #ifdef FP_SUBNORMAL
 
-inline bool isdenorm(float f) { return FP_SUBNORMAL == std::fpclassify(f); }
+template <typename T> inline bool isdenorm(T f) {
+  return FP_SUBNORMAL == std::fpclassify(f);
+}
 
 #else
 
-inline bool isdenorm(float f) {
-  return (std::numeric_limits<float>::denorm_min() <= f &&
-          f < std::numeric_limits<float>::min()) ||
-         (-std::numeric_limits<float>::min() < f &&
-          f <= -std::numeric_limits<float>::denorm_min());
+template <typename T> inline bool isdenorm(T f) {
+  return (std::numeric_limits<T>::denorm_min() <= f &&
+          f < std::numeric_limits<T>::min()) ||
+         (-std::numeric_limits<T>::min() < f &&
+          f <= -std::numeric_limits<T>::denorm_min());
 }
 
 #endif // FP_SUBNORMAL
@@ -514,6 +541,44 @@ inline bool isnanFloat16(uint16_t val) {
 // These are defined in ShaderOpTest.cpp using DirectXPackedVector functions.
 uint16_t ConvertFloat32ToFloat16(float val) throw();
 float ConvertFloat16ToFloat32(uint16_t val) throw();
+
+inline bool CompareDoubleULP(
+    const double &Src, const double &Ref, int64_t ULPTolerance,
+    hlsl::DXIL::Float32DenormMode Mode = hlsl::DXIL::Float32DenormMode::Any) {
+  if (Src == Ref) {
+    return true;
+  }
+  if (std::isnan(Src)) {
+    return std::isnan(Ref);
+  }
+
+  if (Mode == hlsl::DXIL::Float32DenormMode::Any) {
+    // If denorm expected, output can be sign preserved zero. Otherwise output
+    // should pass the regular ulp testing.
+    if (isdenorm(Ref) && Src == 0 && std::signbit(Src) == std::signbit(Ref))
+      return true;
+  }
+
+  // For FTZ or Preserve mode, we should get the expected number within
+  // ULPTolerance for any operations.
+  int64_t Diff = *((const uint64_t *)&Src) - *((const uint64_t *)&Ref);
+
+  uint64_t AbsoluteDiff = Diff < 0 ? -Diff : Diff;
+  return AbsoluteDiff <= (uint64_t)ULPTolerance;
+}
+
+inline bool CompareDoubleEpsilon(const double &Src, const double &Ref,
+                                 float Epsilon) {
+  if (Src == Ref) {
+    return true;
+  }
+  if (std::isnan(Src)) {
+    return std::isnan(Ref);
+  }
+  // For FTZ or Preserve mode, we should get the expected number within
+  // epsilon for any operations.
+  return fabs(Src - Ref) < Epsilon;
+}
 
 inline bool CompareFloatULP(
     const float &fsrc, const float &fref, int ULPTolerance,
@@ -566,12 +631,26 @@ inline bool CompareFloatRelativeEpsilon(
 
 inline bool CompareHalfULP(const uint16_t &fsrc, const uint16_t &fref,
                            float ULPTolerance) {
+  // Treat +0 and -0 as equal
+  if ((fsrc & ~FLOAT16_BIT_SIGN) == 0 && (fref & ~FLOAT16_BIT_SIGN) == 0)
+    return true;
   if (fsrc == fref)
     return true;
-  if (isnanFloat16(fsrc))
-    return isnanFloat16(fref);
+
+  const bool nanRef = isnanFloat16(fref);
+  const bool nanSrc = isnanFloat16(fsrc);
+  if (nanRef || nanSrc)
+    return nanRef && nanSrc;
+
+  // Map to monotonic ordering for correct ULP diff
+  auto toOrdered = [](uint16_t h) -> int {
+    return (h & FLOAT16_BIT_SIGN) ? (~h & 0xFFFF) : (h | 0x8000);
+  };
+
   // 16-bit floating point numbers must preserve denorms
-  int diff = fsrc - fref;
+  int i_fsrc = toOrdered(fsrc);
+  int i_fref = toOrdered(fref);
+  int diff = i_fsrc - i_fref;
   unsigned int uDiff = diff < 0 ? -diff : diff;
   return uDiff <= (unsigned int)ULPTolerance;
 }
@@ -735,3 +814,5 @@ inline UINT GetByteSizeForFormat(DXGI_FORMAT value) {
   }
 }
 #endif
+
+#endif // HLSLTESTUTILS_H

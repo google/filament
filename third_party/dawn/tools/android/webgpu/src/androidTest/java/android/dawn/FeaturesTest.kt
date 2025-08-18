@@ -1,8 +1,8 @@
 package android.dawn
 
-import android.dawn.FeatureName
-import android.dawn.dawnTestLauncher
+import android.dawn.helper.createWebGpu
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -13,9 +13,10 @@ class FeaturesTest {
      */
     @Test
     fun featuresTest() {
-        val requiredFeatures =
-            arrayOf(FeatureName.BGRA8UnormStorage, FeatureName.TextureCompressionASTC)
-        dawnTestLauncher(requiredFeatures) { device ->
+        val requiredFeatures = arrayOf(FeatureName.TextureCompressionASTC)
+        runBlocking {
+            val webGpu = createWebGpu(requiredFeatures = requiredFeatures)
+            val device = webGpu.device
             val deviceFeatures = device.getFeatures().features
             requiredFeatures.forEach {
                 assert(deviceFeatures.contains(it)) { "Requested feature $it available on device" }

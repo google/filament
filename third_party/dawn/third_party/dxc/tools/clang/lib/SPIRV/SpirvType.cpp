@@ -167,6 +167,10 @@ bool RuntimeArrayType::operator==(const RuntimeArrayType &that) const {
          (!stride.hasValue() || stride.getValue() == that.stride.getValue());
 }
 
+bool NodePayloadArrayType::operator==(const NodePayloadArrayType &that) const {
+  return elementType == that.elementType && nodeDecl == that.nodeDecl;
+}
+
 bool SpvIntrinsicTypeOperand::operator==(
     const SpvIntrinsicTypeOperand &that) const {
   if (isTypeOperand != that.isTypeOperand)

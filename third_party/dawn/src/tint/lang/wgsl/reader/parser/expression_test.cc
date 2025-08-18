@@ -487,7 +487,7 @@ struct Case {
 };
 
 static bool ParsedAsTemplateArgumentList(BinaryOperatorInfo lhs_op, BinaryOperatorInfo rhs_op) {
-    return lhs_op.bit == kOpLt && rhs_op.bit & (kOpGt | kOpGe | kOpShr);
+    return lhs_op.bit == kOpLt && ((rhs_op.bit & (kOpGt | kOpGe | kOpShr)) != 0u);
 }
 static StringStream& operator<<(StringStream& o, const Case& c) {
     return o << "a " << c.lhs_op.symbol << " b " << c.rhs_op.symbol << " c ";
@@ -498,7 +498,7 @@ static std::vector<Case> Cases() {
     for (auto& lhs_op : kBinaryOperators) {
         for (auto& rhs_op : kBinaryOperators) {
             if (!ParsedAsTemplateArgumentList(lhs_op, rhs_op)) {
-                bool should_parse = lhs_op.can_follow_without_paren & rhs_op.bit;
+                bool should_parse = (lhs_op.can_follow_without_paren & rhs_op.bit) != 0u;
                 out.push_back({lhs_op, rhs_op, should_parse});
             }
         }

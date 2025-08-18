@@ -772,6 +772,16 @@ class ValidationState_t {
     pointer_to_storage_image_.insert(type_id);
   }
 
+  // Is the ID the type of a pointer to a tensor?  That is, the pointee
+  // type is a tensor type.
+  bool IsPointerToTensor(uint32_t type_id) const {
+    return pointer_to_tensor_.find(type_id) != pointer_to_tensor_.cend();
+  }
+  // Save the ID of a pointer to a tensor.
+  void RegisterPointerToTensor(uint32_t type_id) {
+    pointer_to_tensor_.insert(type_id);
+  }
+
   // Tries to evaluate a any scalar integer OpConstant as uint64.
   // OpConstantNull is defined as zero for scalar int (will return true)
   // OpSpecConstant* return false since their values cannot be relied upon
@@ -1036,6 +1046,9 @@ class ValidationState_t {
   // The IDs of types of pointers to storage images.  This is populated in the
   // TypePass.
   std::unordered_set<uint32_t> pointer_to_storage_image_;
+  // The IDs of types of pointers to tensors.  This is populated in the
+  // TypePass.
+  std::unordered_set<uint32_t> pointer_to_tensor_;
 
   /// Maps ids to friendly names.
   std::unique_ptr<spvtools::FriendlyNameMapper> friendly_mapper_;

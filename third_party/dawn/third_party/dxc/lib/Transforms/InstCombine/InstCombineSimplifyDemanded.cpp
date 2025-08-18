@@ -998,7 +998,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     for (unsigned i = 0; i < VWidth; i++) {
       if (DemandedElts[i]) {
         unsigned MaskVal = Shuffle->getMaskValue(i);
-        if (MaskVal != -1u) {
+        if (MaskVal != ~0u) {
           assert(MaskVal < LHSVWidth * 2 &&
                  "shufflevector mask index out of range!");
           if (MaskVal < LHSVWidth)
@@ -1022,7 +1022,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     bool NewUndefElts = false;
     for (unsigned i = 0; i < VWidth; i++) {
       unsigned MaskVal = Shuffle->getMaskValue(i);
-      if (MaskVal == -1u) {
+      if (MaskVal == ~0u) {
         UndefElts.setBit(i);
       } else if (!DemandedElts[i]) {
         NewUndefElts = true;

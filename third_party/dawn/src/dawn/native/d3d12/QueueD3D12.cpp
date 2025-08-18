@@ -119,10 +119,10 @@ MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* co
     TRACE_EVENT_END1(GetDevice()->GetPlatform(), Recording, "CommandBufferD3D12::RecordCommands",
                      "serial", uint64_t(pendingSerial));
 
-    return SubmitPendingCommands();
+    return SubmitPendingCommandsImpl();
 }
 
-MaybeError Queue::SubmitPendingCommands() {
+MaybeError Queue::SubmitPendingCommandsImpl() {
     Device* device = ToBackend(GetDevice());
     DAWN_ASSERT(device->IsLockedByCurrentThreadIfNeeded());
 
@@ -161,7 +161,7 @@ MaybeError Queue::WaitForSerial(ExecutionSerial serial) {
         return {};
     }
     DAWN_TRY_ASSIGN(std::ignore,
-                    WaitForQueueSerial(serial, std::numeric_limits<Nanoseconds>::max()));
+                    WaitForQueueSerialImpl(serial, std::numeric_limits<Nanoseconds>::max()));
     return CheckPassedSerials();
 }
 
@@ -170,8 +170,11 @@ bool Queue::HasPendingCommands() const {
 }
 
 ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
+    // TODO(crbug.com/40643114): Revisit whether this lock is needed for this backend.
+    auto deviceGuard = GetDevice()->GetGuard();
+
     ExecutionSerial completedSerial = ExecutionSerial(mFence->GetCompletedValue());
-    if (DAWN_UNLIKELY(completedSerial == ExecutionSerial(UINT64_MAX))) {
+    if (completedSerial == ExecutionSerial(UINT64_MAX)) [[unlikely]] {
         // GetCompletedValue returns UINT64_MAX if the device was removed.
         // Try to query the failure reason.
         ID3D12Device* d3d12Device = ToBackend(GetDevice())->GetD3D12Device();
@@ -238,7 +241,7 @@ MaybeError Queue::OpenPendingCommands() {
     ID3D12Device* d3d12Device = ToBackend(GetDevice())->GetD3D12Device();
 
     // Get the index of the first free allocator from the bitset
-    uint32_t freeIndex = *(IterateBitSet(mFreeAllocators).begin());
+    uint32_t freeIndex = *(mFreeAllocators).begin();
     mFreeAllocators.reset(freeIndex);
     auto& allocator = mCommandAllocators[freeIndex];
 

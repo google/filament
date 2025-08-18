@@ -38,13 +38,14 @@ namespace {
 
 class ShaderTests : public DawnTest {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         // Just copy all the limits, though all we really care about is
         // maxStorageBuffersInFragmentStage
         // maxStorageTexturesInFragmentStage
         // maxStorageBuffersInVertexStage
         // maxStorageTexturesInVertexStage
-        return supported;
+        supported.UnlinkedCopyTo(&required);
     }
 
   public:
@@ -1840,8 +1841,8 @@ TEST_P(ShaderTests, Robustness_Uniform_Mat4x3) {
 // GLSL. If not renamed properly, names of binding at (2, 2) in the vertex stage and (0, 3) in the
 // fragment stage can possibly collide.
 TEST_P(ShaderTests, StorageAcrossStages) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 4);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 3);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 4);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 3);
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         @group(2) @binding(2) var<storage> u0_2: f32;
@@ -1880,8 +1881,8 @@ TEST_P(ShaderTests, StorageAcrossStages) {
 // GLSL. If not renamed properly, names of binding at (2, 2) in the vertex stage and (0, 3) in the
 // fragment stage can possibly collide.
 TEST_P(ShaderTests, StorageAcrossStagesStruct) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 2);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 2);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         struct block {
@@ -1915,8 +1916,8 @@ TEST_P(ShaderTests, StorageAcrossStagesStruct) {
 // GLSL. If not renamed properly, names of binding at (2, 2) in the vertex stage and (0, 3) in the
 // fragment stage can possibly collide.
 TEST_P(ShaderTests, StorageAcrossStagesSeparateModules) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 4);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 3);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 4);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 3);
 
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(
         @group(2) @binding(2) var<storage> u0_2: f32;
@@ -1954,8 +1955,8 @@ TEST_P(ShaderTests, StorageAcrossStagesSeparateModules) {
 
 // Deliberately mismatch an SSBO block name at differrent stages.
 TEST_P(ShaderTests, StorageAcrossStagesSeparateModuleMismatch) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 2);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 2);
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         @group(0) @binding(0) var<storage> tint_symbol_ubo_0: f32;
@@ -1982,8 +1983,8 @@ TEST_P(ShaderTests, StorageAcrossStagesSeparateModuleMismatch) {
 
 // Having different block contents at the same binding point used in different stages is allowed.
 TEST_P(ShaderTests, StorageAcrossStagesSameBindingPointCollide) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         struct X { x : vec4f }
@@ -2013,8 +2014,8 @@ TEST_P(ShaderTests, StorageAcrossStagesSameBindingPointCollide) {
 // Having different block contents at the same binding point used in different stages is allowed,
 // with or without struct wrapper.
 TEST_P(ShaderTests, StorageAcrossStagesSameBindingPointCollideMixedStructDef) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInVertexStage < 1);
 
     wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
         struct X { x : vec4f }
@@ -2671,6 +2672,68 @@ TEST_P(ShaderTests, CollisionHandle_DifferentModules) {
     device.CreateRenderPipeline(&desc);
 }
 
+// Regression test for crbug.com/dawn/388870480.
+// length on SSBO on PowerVR device has compile error on ES31 backend.
+// Need to workaround using the arrayLengthFromUniform transform.
+// We do not have hardware on test suite to trigger the failure though.
+TEST_P(ShaderTests, SSBOLength) {
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersPerShaderStage < 1);
+
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(R"(
+@group(0) @binding(0) var tex: texture_multisampled_2d<f32>;
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+
+override kSize: u32 = 4u;
+override kSampleCount: u32 = 1u;
+
+@compute @workgroup_size(8, 8)
+fn main(@builtin(global_invocation_id) xyz: vec3u) {
+    let xy = xyz.xy;
+
+    // Reconstruct the mask from which samples were written
+    var mask = 0u;
+    for (var sampleIndex = 0u; sampleIndex < kSampleCount; sampleIndex += 1) {
+        let color = textureLoad(tex, xy, sampleIndex);
+        let maskBit = u32(color.r > 0.5); // color is either black or white
+        mask |= maskBit << sampleIndex;
+    }
+
+    out[xy.y * kSize + xy.x] = mask;
+}
+)");
+}
+
+TEST_P(ShaderTests, ForLoopReconstructionFXC) {
+    // This test is a minimal reproduction for a varying control flow compiler error in FXC. The
+    // test should make use of the 'ForLoopAnalysis' in the hlsl printer. See crbug.com/429187478
+    wgpu::ComputePipeline pipeline = CreateComputePipeline(R"(
+struct Scalars {
+  f0 : vec4<f32>,
+  i1 : vec4<i32>,
+  i2 : vec4<i32>,
+  i3 : vec4<i32>,
+};
+@group(0) @binding(3) var<uniform> U: Scalars;
+@group(0) @binding(1) var dst_image2d : texture_storage_2d<rgba32uint, write>;
+@group(0) @binding(2) var src_image2d : texture_2d<f32>;
+var<workgroup> outputs : array<array<vec4<u32>, 32>, 8>;
+@compute @workgroup_size(32, 1, 8)
+
+fn main(@builtin(local_invocation_id) lid : vec3<u32>) {
+  let init = i32(lid.z);
+  for (var S = init; S < U.i3.x; S += 8i) {
+  }
+
+  for (var s_group = 0i; s_group < U.i3.z; s_group += 8i) {
+    outputs[lid.z][lid.x] = vec4<u32>(textureLoad(src_image2d, vec2u(u32(U.i3.x)), 0));
+    workgroupBarrier();
+    var result = outputs[lid.z][lid.x];;
+    textureStore(dst_image2d, vec2u(u32(U.i3.x)), result);
+  }
+}
+)");
+}
+
 DAWN_INSTANTIATE_TEST(ShaderTests,
                       D3D11Backend(),
                       D3D12Backend(),
@@ -2680,6 +2743,7 @@ DAWN_INSTANTIATE_TEST(ShaderTests,
                       OpenGLESBackend(),
                       OpenGLBackend({"disable_symbol_renaming"}),
                       OpenGLESBackend({"disable_symbol_renaming"}),
+                      OpenGLESBackend({"gl_use_array_length_from_uniform"}),
                       VulkanBackend());
 
 }  // anonymous namespace

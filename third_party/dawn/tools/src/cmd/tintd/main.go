@@ -36,6 +36,7 @@ import (
 	"os"
 
 	"dawn.googlesource.com/dawn/tools/src/cmd/tintd/common"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/subcmd"
 
 	// Register sub-commands
@@ -44,9 +45,10 @@ import (
 
 func main() {
 	ctx := context.Background()
+	cfg := &common.Config{}
+	cfg.OsWrapper = oswrapper.GetRealOSWrapper()
 
-	var noArg any
-	if err := subcmd.Run(ctx, noArg, common.Commands()...); err != nil {
+	if err := subcmd.Run(ctx, cfg, common.Commands()...); err != nil {
 		if err != subcmd.ErrInvalidCLA {
 			fmt.Fprintln(os.Stderr, err)
 		}

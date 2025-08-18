@@ -280,11 +280,4 @@ bool IndirectDrawMetadata::IndexedIndirectConfig::operator<(
                     other.drawType);
 }
 
-bool IndirectDrawMetadata::IndexedIndirectConfig::operator==(
-    const IndexedIndirectConfig& other) const {
-    return std::tie(inputIndirectBufferPtr, duplicateBaseVertexInstance, drawType) ==
-           std::tie(other.inputIndirectBufferPtr, other.duplicateBaseVertexInstance,
-                    other.drawType);
-}
-
 }  // namespace dawn::native

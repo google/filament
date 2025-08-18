@@ -31,10 +31,15 @@ group("samples") {
   deps = [
     ":Animometer",
     ":ComputeBoids",
-    ":DawnInfo",
     ":HelloTriangle",
-    ":ManualSurfaceTest",
   ]
+
+  if (!is_wasm) {
+    deps += [
+      ":DawnInfo",
+      ":ManualSurfaceTest",
+    ]
+  }
 }
 
 # Static library to contain code and dependencies common to all samples
@@ -48,10 +53,16 @@ static_library("utils") {
   public_deps = [
     "${dawn_root}/include/dawn:cpp_headers",
     "${dawn_root}/src/dawn/common",
-    "${dawn_root}/src/dawn/glfw",
-    "${dawn_root}/src/dawn/native",
-    "${dawn_root}/src/dawn/utils",
+    "${dawn_root}/src/dawn/utils:system_utils",
+    "${dawn_root}/src/dawn/utils:wgpu_utils",
   ]
+
+  if (!is_wasm) {
+    public_deps += [
+      "${dawn_root}/src/dawn/glfw",
+      "${dawn_root}/src/dawn/native",
+    ]
+  }
 }
 
 # Template for samples to avoid listing utils as a dep every time
@@ -62,6 +73,15 @@ template("sample") {
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+
+    if (is_wasm) {
+      # The Dawn samples require either JSPI or ASYNCIFY to run. Note that
+      # JSPI is still experimental, so we need to turn off warnings.
+      ldflags = [
+        "-Wno-experimental",
+        "-sJSPI=1",
+      ]
     }
   }
 }

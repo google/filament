@@ -174,12 +174,15 @@ TEST_F(SpirvWriterTest, Convert_F32_to_I32) {
 %tint_f32_to_i32 = OpFunction %int None %5
       %value = OpFunctionParameter %float
          %10 = OpLabel
-         %11 = OpConvertFToS %int %value
-         %12 = OpFOrdGreaterThanEqual %bool %value %float_n2_14748365e_09
-         %15 = OpSelect %int %12 %11 %int_n2147483648
-         %17 = OpFOrdLessThanEqual %bool %value %float_2_14748352e_09
-         %19 = OpSelect %int %17 %15 %int_2147483647
-               OpReturnValue %19
+         %11 = OpExtInst %float %12 NClamp %value %float_n2_14748365e_09 %float_2_14748352e_09
+         %15 = OpConvertFToS %int %11
+               OpReturnValue %15
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %18
+         %19 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -207,12 +210,15 @@ TEST_F(SpirvWriterTest, Convert_F32_to_U32) {
 %tint_f32_to_u32 = OpFunction %uint None %5
       %value = OpFunctionParameter %float
          %10 = OpLabel
-         %11 = OpConvertFToU %uint %value
-         %12 = OpFOrdGreaterThanEqual %bool %value %float_0
-         %15 = OpSelect %uint %12 %11 %uint_0
-         %17 = OpFOrdLessThanEqual %bool %value %float_4_29496704e_09
-         %19 = OpSelect %uint %17 %15 %uint_4294967295
-               OpReturnValue %19
+         %11 = OpExtInst %float %12 NClamp %value %float_0 %float_4_29496704e_09
+         %15 = OpConvertFToU %uint %11
+               OpReturnValue %15
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %18
+         %19 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -240,12 +246,15 @@ TEST_F(SpirvWriterTest, Convert_F16_to_I32) {
 %tint_f16_to_i32 = OpFunction %int None %5
       %value = OpFunctionParameter %half
          %10 = OpLabel
-         %11 = OpConvertFToS %int %value
-         %12 = OpFOrdGreaterThanEqual %bool %value %half_n0x1_ffcp_15
-         %15 = OpSelect %int %12 %11 %int_n2147483648
-         %17 = OpFOrdLessThanEqual %bool %value %half_0x1_ffcp_15
-         %19 = OpSelect %int %17 %15 %int_2147483647
-               OpReturnValue %19
+         %11 = OpExtInst %half %12 NClamp %value %half_n0x1_ffcp_15 %half_0x1_ffcp_15
+         %15 = OpConvertFToS %int %11
+               OpReturnValue %15
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %18
+         %19 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -273,12 +282,15 @@ TEST_F(SpirvWriterTest, Convert_F16_to_U32) {
 %tint_f16_to_u32 = OpFunction %uint None %5
       %value = OpFunctionParameter %half
          %10 = OpLabel
-         %11 = OpConvertFToU %uint %value
-         %12 = OpFOrdGreaterThanEqual %bool %value %half_0x0p_0
-         %15 = OpSelect %uint %12 %11 %uint_0
-         %17 = OpFOrdLessThanEqual %bool %value %half_0x1_ffcp_15
-         %19 = OpSelect %uint %17 %15 %uint_4294967295
-               OpReturnValue %19
+         %11 = OpExtInst %half %12 NClamp %value %half_0x0p_0 %half_0x1_ffcp_15
+         %15 = OpConvertFToU %uint %11
+               OpReturnValue %15
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %18
+         %19 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -294,18 +306,31 @@ TEST_F(SpirvWriterTest, Convert_F32_to_I32_Vec2) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+         %14 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %arg "arg"                    ; id %6
+               OpName %result "result"              ; id %9
+               OpName %tint_v2f32_to_v2i32 "tint_v2f32_to_v2i32"    ; id %10
+               OpName %value "value"                                ; id %11
+               OpName %unused_entry_point "unused_entry_point"      ; id %20
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+          %7 = OpTypeFunction %v2int %v2float
 %float_n2_14748365e_09 = OpConstant %float -2.14748365e+09
          %15 = OpConstantComposite %v2float %float_n2_14748365e_09 %float_n2_14748365e_09
-       %bool = OpTypeBool
-     %v2bool = OpTypeVector %bool 2
-%int_n2147483648 = OpConstant %int -2147483648
-         %20 = OpConstantComposite %v2int %int_n2147483648 %int_n2147483648
 %float_2_14748352e_09 = OpConstant %float 2.14748352e+09
-         %23 = OpConstantComposite %v2float %float_2_14748352e_09 %float_2_14748352e_09
-%int_2147483647 = OpConstant %int 2147483647
-         %26 = OpConstantComposite %v2int %int_2147483647 %int_2147483647
+         %17 = OpConstantComposite %v2float %float_2_14748352e_09 %float_2_14748352e_09
        %void = OpTypeVoid
-         %30 = OpTypeFunction %void
+         %22 = OpTypeFunction %void
 
                ; Function foo
         %foo = OpFunction %v2int None %7
@@ -319,12 +344,15 @@ TEST_F(SpirvWriterTest, Convert_F32_to_I32_Vec2) {
 %tint_v2f32_to_v2i32 = OpFunction %v2int None %7
       %value = OpFunctionParameter %v2float
          %12 = OpLabel
-         %13 = OpConvertFToS %v2int %value
-         %14 = OpFOrdGreaterThanEqual %v2bool %value %15
-         %19 = OpSelect %v2int %14 %13 %20
-         %22 = OpFOrdLessThanEqual %v2bool %value %23
-         %25 = OpSelect %v2int %22 %19 %26
-               OpReturnValue %25
+         %13 = OpExtInst %v2float %14 NClamp %value %15 %17
+         %19 = OpConvertFToS %v2int %13
+               OpReturnValue %19
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %22
+         %23 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -340,12 +368,30 @@ TEST_F(SpirvWriterTest, Convert_F32_to_U32_Vec3) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+         %14 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %arg "arg"                    ; id %6
+               OpName %result "result"              ; id %9
+               OpName %tint_v3f32_to_v3u32 "tint_v3f32_to_v3u32"    ; id %10
+               OpName %value "value"                                ; id %11
+               OpName %unused_entry_point "unused_entry_point"      ; id %19
+
+               ; Types, variables and constants
+       %uint = OpTypeInt 32 0
+     %v3uint = OpTypeVector %uint 3
+      %float = OpTypeFloat 32
+    %v3float = OpTypeVector %float 3
+          %7 = OpTypeFunction %v3uint %v3float
+         %15 = OpConstantNull %v3float
 %float_4_29496704e_09 = OpConstant %float 4.29496704e+09
-         %21 = OpConstantComposite %v3float %float_4_29496704e_09 %float_4_29496704e_09 %float_4_29496704e_09
-%uint_4294967295 = OpConstant %uint 4294967295
-         %24 = OpConstantComposite %v3uint %uint_4294967295 %uint_4294967295 %uint_4294967295
+         %16 = OpConstantComposite %v3float %float_4_29496704e_09 %float_4_29496704e_09 %float_4_29496704e_09
        %void = OpTypeVoid
-         %28 = OpTypeFunction %void
+         %21 = OpTypeFunction %void
 
                ; Function foo
         %foo = OpFunction %v3uint None %7
@@ -359,12 +405,15 @@ TEST_F(SpirvWriterTest, Convert_F32_to_U32_Vec3) {
 %tint_v3f32_to_v3u32 = OpFunction %v3uint None %7
       %value = OpFunctionParameter %v3float
          %12 = OpLabel
-         %13 = OpConvertFToU %v3uint %value
-         %14 = OpFOrdGreaterThanEqual %v3bool %value %15
-         %18 = OpSelect %v3uint %14 %13 %19
-         %20 = OpFOrdLessThanEqual %v3bool %value %21
-         %23 = OpSelect %v3uint %20 %18 %24
-               OpReturnValue %23
+         %13 = OpExtInst %v3float %14 NClamp %value %15 %16
+         %18 = OpConvertFToU %v3uint %13
+               OpReturnValue %18
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %21
+         %22 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -380,18 +429,34 @@ TEST_F(SpirvWriterTest, Convert_F16_to_I32_Vec2) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+         %14 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %arg "arg"                    ; id %6
+               OpName %result "result"              ; id %9
+               OpName %tint_v2f16_to_v2i32 "tint_v2f16_to_v2i32"    ; id %10
+               OpName %value "value"                                ; id %11
+               OpName %unused_entry_point "unused_entry_point"      ; id %20
+
+               ; Types, variables and constants
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+       %half = OpTypeFloat 16
+     %v2half = OpTypeVector %half 2
+          %7 = OpTypeFunction %v2int %v2half
 %half_n0x1_ffcp_15 = OpConstant %half -0x1.ffcp+15
          %15 = OpConstantComposite %v2half %half_n0x1_ffcp_15 %half_n0x1_ffcp_15
-       %bool = OpTypeBool
-     %v2bool = OpTypeVector %bool 2
-%int_n2147483648 = OpConstant %int -2147483648
-         %20 = OpConstantComposite %v2int %int_n2147483648 %int_n2147483648
 %half_0x1_ffcp_15 = OpConstant %half 0x1.ffcp+15
-         %23 = OpConstantComposite %v2half %half_0x1_ffcp_15 %half_0x1_ffcp_15
-%int_2147483647 = OpConstant %int 2147483647
-         %26 = OpConstantComposite %v2int %int_2147483647 %int_2147483647
+         %17 = OpConstantComposite %v2half %half_0x1_ffcp_15 %half_0x1_ffcp_15
        %void = OpTypeVoid
-         %30 = OpTypeFunction %void
+         %22 = OpTypeFunction %void
 
                ; Function foo
         %foo = OpFunction %v2int None %7
@@ -405,12 +470,15 @@ TEST_F(SpirvWriterTest, Convert_F16_to_I32_Vec2) {
 %tint_v2f16_to_v2i32 = OpFunction %v2int None %7
       %value = OpFunctionParameter %v2half
          %12 = OpLabel
-         %13 = OpConvertFToS %v2int %value
-         %14 = OpFOrdGreaterThanEqual %v2bool %value %15
-         %19 = OpSelect %v2int %14 %13 %20
-         %22 = OpFOrdLessThanEqual %v2bool %value %23
-         %25 = OpSelect %v2int %22 %19 %26
-               OpReturnValue %25
+         %13 = OpExtInst %v2half %14 NClamp %value %15 %17
+         %19 = OpConvertFToS %v2int %13
+               OpReturnValue %19
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %22
+         %23 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -425,13 +493,34 @@ TEST_F(SpirvWriterTest, Convert_F16_to_U32_Vec4) {
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST(R"(
+    EXPECT_INST(R"(hader
+               OpCapability Float16
+               OpCapability UniformAndStorageBuffer16BitAccess
+               OpCapability StorageBuffer16BitAccess
+         %14 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %unused_entry_point "unused_entry_point"
+               OpExecutionMode %unused_entry_point LocalSize 1 1 1
+
+               ; Debug Information
+               OpName %foo "foo"                    ; id %1
+               OpName %arg "arg"                    ; id %6
+               OpName %result "result"              ; id %9
+               OpName %tint_v4f16_to_v4u32 "tint_v4f16_to_v4u32"    ; id %10
+               OpName %value "value"                                ; id %11
+               OpName %unused_entry_point "unused_entry_point"      ; id %19
+
+               ; Types, variables and constants
+       %uint = OpTypeInt 32 0
+     %v4uint = OpTypeVector %uint 4
+       %half = OpTypeFloat 16
+     %v4half = OpTypeVector %half 4
+          %7 = OpTypeFunction %v4uint %v4half
+         %15 = OpConstantNull %v4half
 %half_0x1_ffcp_15 = OpConstant %half 0x1.ffcp+15
-         %21 = OpConstantComposite %v4half %half_0x1_ffcp_15 %half_0x1_ffcp_15 %half_0x1_ffcp_15 %half_0x1_ffcp_15
-%uint_4294967295 = OpConstant %uint 4294967295
-         %24 = OpConstantComposite %v4uint %uint_4294967295 %uint_4294967295 %uint_4294967295 %uint_4294967295
+         %16 = OpConstantComposite %v4half %half_0x1_ffcp_15 %half_0x1_ffcp_15 %half_0x1_ffcp_15 %half_0x1_ffcp_15
        %void = OpTypeVoid
-         %28 = OpTypeFunction %void
+         %21 = OpTypeFunction %void
 
                ; Function foo
         %foo = OpFunction %v4uint None %7
@@ -445,12 +534,15 @@ TEST_F(SpirvWriterTest, Convert_F16_to_U32_Vec4) {
 %tint_v4f16_to_v4u32 = OpFunction %v4uint None %7
       %value = OpFunctionParameter %v4half
          %12 = OpLabel
-         %13 = OpConvertFToU %v4uint %value
-         %14 = OpFOrdGreaterThanEqual %v4bool %value %15
-         %18 = OpSelect %v4uint %14 %13 %19
-         %20 = OpFOrdLessThanEqual %v4bool %value %21
-         %23 = OpSelect %v4uint %20 %18 %24
-               OpReturnValue %23
+         %13 = OpExtInst %v4half %14 NClamp %value %15 %16
+         %18 = OpConvertFToU %v4uint %13
+               OpReturnValue %18
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %21
+         %22 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }

@@ -34,6 +34,7 @@
 #include <vector>
 
 #include "src/tint/lang/core/intrinsic/table.h"
+#include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/utils/containers/transform.h"
 
 TINT_INSTANTIATE_TYPEINFO(tint::sem::BuiltinFn);
@@ -116,6 +117,16 @@ bool BuiltinFn::IsQuadSwap() const {
     return wgsl::IsQuadSwap(fn_);
 }
 
+bool BuiltinFn::IsTexelBuffer() const {
+    for (auto* param : Parameters()) {
+        if (param->Type()->UnwrapRef()->Is<core::type::TexelBuffer>()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool BuiltinFn::HasSideEffects() const {
     return wgsl::HasSideEffects(fn_);
 }
@@ -126,6 +137,9 @@ wgsl::LanguageFeature BuiltinFn::RequiredLanguageFeature() const {
     }
     if (IsPacked4x8IntegerDotProductBuiltin()) {
         return wgsl::LanguageFeature::kPacked4X8IntegerDotProduct;
+    }
+    if (IsTexelBuffer()) {
+        return wgsl::LanguageFeature::kTexelBuffers;
     }
     return wgsl::LanguageFeature::kUndefined;
 }

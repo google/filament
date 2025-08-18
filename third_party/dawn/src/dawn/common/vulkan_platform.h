@@ -95,8 +95,7 @@ class alignas(detail::kNativeVkHandleAlignment) VkHandle {
     VkHandle& operator=(const VkHandle<Tag, HandleType>&) = default;
 
     // Comparisons between handles
-    bool operator==(VkHandle<Tag, HandleType> other) const { return mHandle == other.mHandle; }
-    bool operator!=(VkHandle<Tag, HandleType> other) const { return mHandle != other.mHandle; }
+    bool operator==(const VkHandle<Tag, HandleType>& other) const = default;
 
     // Comparisons between handles and VK_NULL_HANDLE
     bool operator==(std::nullptr_t) const { return mHandle == 0; }
@@ -123,6 +122,11 @@ class alignas(detail::kNativeVkHandleAlignment) VkHandle {
 template <typename Tag, typename HandleType>
 HandleType* AsVkArray(detail::VkHandle<Tag, HandleType>* handle) {
     return reinterpret_cast<HandleType*>(handle);
+}
+
+template <typename Tag, typename HandleType>
+const HandleType* AsVkArray(const detail::VkHandle<Tag, HandleType>* handle) {
+    return reinterpret_cast<const HandleType*>(handle);
 }
 
 }  // namespace dawn::native::vulkan

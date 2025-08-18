@@ -87,7 +87,7 @@ bool SamplerHeapCacheEntry::Populate(MutexProtected<ShaderVisibleDescriptorAlloc
 
     // Attempt to allocate descriptors for the currently bound shader-visible heaps.
     // If either failed, return early to re-allocate and switch the heaps.
-    const uint32_t descriptorCount = mSamplers.size();
+    const uint32_t descriptorCount = static_cast<uint32_t>(mSamplers.size());
     D3D12_CPU_DESCRIPTOR_HANDLE baseCPUDescriptor;
     if (!allocator->AllocateGPUDescriptors(descriptorCount,
                                            device->GetQueue()->GetPendingCommandSerial(),

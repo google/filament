@@ -30,7 +30,6 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 
 namespace tint::core::ir {
@@ -41,11 +40,7 @@ using ::testing::ElementsAre;
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class IR_ReferencedModuleVarsTest : public IRTestHelper {
-  protected:
-    /// @returns the module as a disassembled string
-    std::string Disassemble() const { return "\n" + ir::Disassembler(mod).Plain(); }
-};
+using IR_ReferencedModuleVarsTest = IRTestHelper;
 
 TEST_F(IR_ReferencedModuleVarsTest, EmptyRootBlock) {
     auto* foo = b.Function("foo", ty.void_());
@@ -60,7 +55,7 @@ TEST_F(IR_ReferencedModuleVarsTest, EmptyRootBlock) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     auto& foo_vars = vars.TransitiveReferences(foo);
@@ -96,7 +91,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_a, var_b));
@@ -139,7 +134,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_a, var_b, var_c, var_d, var_e));
@@ -196,7 +191,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_a, var_b));
@@ -273,7 +268,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_a, var_b, var_c, var_d));
@@ -333,7 +328,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(bar), ElementsAre(var_b));
@@ -366,7 +361,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     EXPECT_THAT(vars.TransitiveReferences(foo), ElementsAre(var_a));
@@ -409,7 +404,7 @@ $B1: {  # root
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod, [](const Var* var) {
         auto* view = var->Result()->Type()->As<type::MemoryView>();
@@ -431,7 +426,7 @@ TEST_F(IR_ReferencedModuleVarsTest, ReferencesForNullFunction) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedModuleVars<Module> vars(mod);
     auto& null_vars = vars.TransitiveReferences(nullptr);

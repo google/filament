@@ -30,6 +30,10 @@ enum class IndexFormat : uint32_t;
 
 namespace filament::backend {
 
+/**
+ * A WebGPU implementation of the HwIndexBuffer.
+ * This class represents a GPU buffer that stores indices for indexed drawing.
+ */
 class WebGPUIndexBuffer final : public HwIndexBuffer, public WebGPUBufferBase {
 public:
     WebGPUIndexBuffer(wgpu::Device const&, uint8_t elementSize, uint32_t indexCount);

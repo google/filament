@@ -39,13 +39,14 @@
 #include "src/tint/lang/core/ir/transform/demote_to_helper.h"
 #include "src/tint/lang/core/ir/transform/direct_variable_access.h"
 #include "src/tint/lang/core/ir/transform/multiplanar_external_texture.h"
-#include "src/tint/lang/core/ir/transform/prepare_push_constants.h"
+#include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
 #include "src/tint/lang/core/ir/transform/preserve_padding.h"
 #include "src/tint/lang/core/ir/transform/prevent_infinite_loops.h"
 #include "src/tint/lang/core/ir/transform/remove_continue_in_switch.h"
 #include "src/tint/lang/core/ir/transform/remove_terminator_args.h"
 #include "src/tint/lang/core/ir/transform/rename_conflicts.h"
 #include "src/tint/lang/core/ir/transform/robustness.h"
+#include "src/tint/lang/core/ir/transform/signed_integer_polyfill.h"
 #include "src/tint/lang/core/ir/transform/std140.h"
 #include "src/tint/lang/core/ir/transform/value_to_let.h"
 #include "src/tint/lang/core/ir/transform/vectorize_scalar_matrix_constructors.h"
@@ -75,47 +76,53 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
     // Must come before TextureBuiltinsFromUniform as it may add `textureNumLevels` calls.
     if (!options.disable_robustness) {
         core::ir::transform::RobustnessConfig config{};
+        config.use_integer_range_analysis = options.enable_integer_range_analysis;
         RUN_TRANSFORM(core::ir::transform::Robustness, module, config);
 
         RUN_TRANSFORM(core::ir::transform::PreventInfiniteLoops, module);
     }
 
-    // PreparePushConstants must come before any transform that needs internal push constants.
-    core::ir::transform::PreparePushConstantsConfig push_constant_config;
+    // PrepareImmediateData must come before any transform that needs internal immediate data.
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
     if (options.first_instance_offset) {
-        push_constant_config.AddInternalConstant(options.first_instance_offset.value(),
-                                                 module.symbols.New("tint_first_instance"),
-                                                 module.Types().u32());
+        immediate_data_config.AddInternalImmediateData(options.first_instance_offset.value(),
+                                                       module.symbols.New("tint_first_instance"),
+                                                       module.Types().u32());
     }
     if (options.first_vertex_offset) {
-        push_constant_config.AddInternalConstant(options.first_vertex_offset.value(),
-                                                 module.symbols.New("tint_first_vertex"),
-                                                 module.Types().u32());
+        immediate_data_config.AddInternalImmediateData(options.first_vertex_offset.value(),
+                                                       module.symbols.New("tint_first_vertex"),
+                                                       module.Types().u32());
     }
     if (options.depth_range_offsets) {
-        push_constant_config.AddInternalConstant(options.depth_range_offsets.value().min,
-                                                 module.symbols.New("tint_frag_depth_min"),
-                                                 module.Types().f32());
-        push_constant_config.AddInternalConstant(options.depth_range_offsets.value().max,
-                                                 module.symbols.New("tint_frag_depth_max"),
-                                                 module.Types().f32());
+        immediate_data_config.AddInternalImmediateData(options.depth_range_offsets.value().min,
+                                                       module.symbols.New("tint_frag_depth_min"),
+                                                       module.Types().f32());
+        immediate_data_config.AddInternalImmediateData(options.depth_range_offsets.value().max,
+                                                       module.symbols.New("tint_frag_depth_max"),
+                                                       module.Types().f32());
     }
-    auto push_constant_layout =
-        core::ir::transform::PreparePushConstants(module, push_constant_config);
-    if (push_constant_layout != Success) {
-        return push_constant_layout.Failure();
+    auto immediate_data_layout =
+        core::ir::transform::PrepareImmediateData(module, immediate_data_config);
+    if (immediate_data_layout != Success) {
+        return immediate_data_layout.Failure();
     }
 
-    // Note, this comes before binding remapper as Dawn inserts _pre-remapping_ binding information.
-    // So, in order to move this later we'd need to update Dawn to send the _post-remapping_ data.
-    RUN_TRANSFORM(raise::TextureBuiltinsFromUniform, module,
-                  options.bindings.texture_builtins_from_uniform);
+    // Note, this must come after Robustness as it may add `arrayLength`.
+    // This also needs to come before binding remapper as Dawn inserts _pre-remapping_ binding
+    // information. So, in order to move this later we'd need to update Dawn to send the
+    // _post-remapping_ data.
+    if (options.use_array_length_from_uniform) {
+        RUN_TRANSFORM(core::ir::transform::ArrayLengthFromUniform, module,
+                      options.bindings.array_length_from_uniform.ubo_binding,
+                      options.bindings.array_length_from_uniform.bindpoint_to_size_index);
+    }
 
     tint::transform::multiplanar::BindingsMap multiplanar_map{};
     RemapperData remapper_data{};
     PopulateBindingInfo(options, remapper_data, multiplanar_map);
     RUN_TRANSFORM(core::ir::transform::BindingRemapper, module, remapper_data);
-
+    // Capability::kAllowDuplicateBindings needed after BindingRemapper
     {
         core::ir::transform::BinaryPolyfillConfig binary_polyfills{};
         binary_polyfills.int_div_mod = !options.disable_polyfill_integer_div_mod;
@@ -137,7 +144,7 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         core_polyfills.dot_4x8_packed = true;
         core_polyfills.pack_unpack_4x8 = true;
         core_polyfills.pack_4xu8_clamp = true;
-
+        core_polyfills.abs_signed_int = true;
         RUN_TRANSFORM(core::ir::transform::BuiltinPolyfill, module, core_polyfills);
     }
 
@@ -165,6 +172,12 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         RUN_TRANSFORM(core::ir::transform::DirectVariableAccess, module, dva_config);
     }
 
+    // Note, this must come after remapping as it uses post-remapping indices for its options.
+    // Note, this must come after DirectVariableAccess as it doesn't handle tracing through function
+    // calls.
+    RUN_TRANSFORM(raise::TextureBuiltinsFromUniform, module,
+                  options.bindings.texture_builtins_from_uniform);
+
     if (!options.disable_workgroup_init) {
         RUN_TRANSFORM(core::ir::transform::ZeroInitWorkgroupMemory, module);
     }
@@ -180,9 +193,13 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
         // Must come after DirectVariableAccess
         raise::TexturePolyfillConfig tex_config;
         tex_config.placeholder_sampler_bind_point = options.bindings.placeholder_sampler_bind_point;
-        tex_config.texture_builtins_from_uniform = options.bindings.texture_builtins_from_uniform;
         RUN_TRANSFORM(raise::TexturePolyfill, module, tex_config);
     }
+
+    // must come before 'BitcastPolyfill' as this adds bitcasts
+    core::ir::transform::SignedIntegerPolyfillConfig signed_integer_cfg{
+        .signed_negation = true, .signed_arithmetic = true, .signed_shiftleft = true};
+    RUN_TRANSFORM(core::ir::transform::SignedIntegerPolyfill, module, signed_integer_cfg);
 
     // Must come after BuiltinPolyfill as builtins can add bitcasts
     RUN_TRANSFORM(raise::BitcastPolyfill, module);
@@ -193,13 +210,13 @@ Result<SuccessType> Raise(core::ir::Module& module, const Options& options) {
     RUN_TRANSFORM(core::ir::transform::AddEmptyEntryPoint, module);
 
     RUN_TRANSFORM(raise::ShaderIO, module,
-                  raise::ShaderIOConfig{push_constant_layout.Get(), options.depth_range_offsets,
+                  raise::ShaderIOConfig{immediate_data_layout.Get(), options.depth_range_offsets,
                                         options.bgra_swizzle_locations});
 
     // Must come after ShaderIO as it operates on module-scope `in` variables.
     RUN_TRANSFORM(
         raise::OffsetFirstIndex, module,
-        raise::OffsetFirstIndexConfig{push_constant_layout.Get(), options.first_vertex_offset,
+        raise::OffsetFirstIndexConfig{immediate_data_layout.Get(), options.first_vertex_offset,
                                       options.first_instance_offset});
 
     RUN_TRANSFORM(core::ir::transform::Std140, module);

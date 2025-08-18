@@ -4034,12 +4034,17 @@ hlsl::DxilResourceProperties DxilObjectProperties::GetResource(llvm::Value *V) {
     return it->second;
   return DxilResourceProperties();
 }
-void DxilObjectProperties::updateGLC(llvm::Value *V) {
+void DxilObjectProperties::updateCoherence(llvm::Value *V,
+                                           bool updateGloballyCoherent,
+                                           bool updateReorderCoherent) {
   auto it = resMap.find(V);
   if (it == resMap.end())
     return;
 
-  it->second.Basic.IsGloballyCoherent ^= 1;
+  if (updateGloballyCoherent)
+    it->second.Basic.IsGloballyCoherent ^= 1;
+  if (updateReorderCoherent)
+    it->second.Basic.IsReorderCoherent ^= 1;
 }
 
 } // namespace CGHLSLMSHelper

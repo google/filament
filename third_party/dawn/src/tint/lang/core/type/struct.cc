@@ -51,6 +51,7 @@ Flags FlagsFrom(VectorRef<const StructMember*> members) {
         Flag::kConstructable,
         Flag::kCreationFixedFootprint,
         Flag::kFixedFootprint,
+        Flag::kHostShareable,
     };
     for (auto* member : members) {
         if (!member->Type()->IsConstructible()) {
@@ -61,6 +62,9 @@ Flags FlagsFrom(VectorRef<const StructMember*> members) {
         }
         if (!member->Type()->HasCreationFixedFootprint()) {
             flags.Remove(Flag::kCreationFixedFootprint);
+        }
+        if (!member->Type()->IsHostShareable()) {
+            flags.Remove(Flag::kHostShareable);
         }
     }
     return flags;
@@ -242,7 +246,14 @@ StructMember::~StructMember() = default;
 StructMember* StructMember::Clone(CloneContext& ctx) const {
     auto sym = ctx.dst.st->Register(name_.Name());
     auto* ty = type_->Clone(ctx);
-    return ctx.dst.mgr->Get<StructMember>(sym, ty, index_, offset_, align_, size_, attributes_);
+    auto* member =
+        ctx.dst.mgr->Get<StructMember>(sym, ty, index_, offset_, align_, size_, attributes_);
+
+    if (is_row_major_) {
+        member->SetRowMajor();
+    }
+    member->SetMatrixStride(matrix_stride_);
+    return member;
 }
 
 }  // namespace tint::core::type

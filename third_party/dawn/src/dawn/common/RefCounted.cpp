@@ -148,6 +148,10 @@ void RefCounted::Release() {
     }
 }
 
+bool RefCounted::TryAddRef() {
+    return mRefCount.TryIncrement();
+}
+
 void RefCounted::ReleaseAndLockBeforeDestroy() {
     if (mRefCount.Decrement()) {
         LockAndDeleteThis();

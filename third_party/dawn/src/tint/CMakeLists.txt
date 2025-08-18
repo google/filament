@@ -31,12 +31,9 @@
 if(NOT TINT_BUILD_AS_OTHER_OS)
   if(APPLE)  # Must come before UNIX
     set(TINT_BUILD_IS_MAC TRUE)
-    set(TINT_BUILD_IS_MAC TRUE)
   elseif(UNIX)
     set(TINT_BUILD_IS_LINUX TRUE)
-    set(TINT_BUILD_IS_LINUX TRUE)
   elseif(WIN32)
-    set(TINT_BUILD_IS_WIN TRUE)
     set(TINT_BUILD_IS_WIN TRUE)
   endif()
 endif()
@@ -58,10 +55,6 @@ if (TINT_BUILD_IR_BINARY)
   endif()
 endif()
 
-if (TINT_BUILD_IR_FUZZER AND NOT TINT_BUILD_IR_BINARY)
-  message(FATAL_ERROR "TINT_BUILD_IR_FUZZER requires TINT_BUILD_IR_BINARY")
-endif()
-
 ################################################################################
 # Helper functions
 ################################################################################
@@ -72,7 +65,6 @@ function(tint_core_compile_options TARGET)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_GLSL_WRITER=$<BOOL:${TINT_BUILD_GLSL_WRITER}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_HLSL_WRITER=$<BOOL:${TINT_BUILD_HLSL_WRITER}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_IR_BINARY=$<BOOL:${TINT_BUILD_IR_BINARY}>)
-  target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_IR_FUZZER=$<BOOL:${TINT_BUILD_IR_FUZZER}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_IS_LINUX=$<BOOL:${TINT_BUILD_IS_LINUX}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_IS_MAC=$<BOOL:${TINT_BUILD_IS_MAC}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_IS_WIN=$<BOOL:${TINT_BUILD_IS_WIN}>)
@@ -83,6 +75,7 @@ function(tint_core_compile_options TARGET)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_WGSL_READER=$<BOOL:${TINT_BUILD_WGSL_READER}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_WGSL_WRITER=$<BOOL:${TINT_BUILD_WGSL_WRITER}>)
   target_compile_definitions(${TARGET} PUBLIC -DTINT_BUILD_TINTD=$<BOOL:${TINT_BUILD_TINTD}>)
+  target_compile_definitions(${TARGET} PUBLIC -DTINT_ENABLE_IR_VALIDATION=$<BOOL:${TINT_ENABLE_IR_VALIDATION}>)
 
   if(TINT_BUILD_FUZZERS)
     target_compile_options(${TARGET} PRIVATE "-fsanitize=fuzzer")
@@ -120,6 +113,7 @@ function(tint_default_compile_options TARGET)
     -Weverything
     -Wunsafe-buffer-usage
     -Wno-unsafe-buffer-usage-in-libc-call
+    -Wno-covered-switch-default
   )
 
   if(COMPILER_IS_GNU)
@@ -200,6 +194,8 @@ function(tint_default_compile_options TARGET)
         )
       endif()
     endif()
+
+    target_compile_definitions(${TARGET} INTERFACE "NOMINMAX")
   endif()
 
   if(TINT_RANDOMIZE_HASHES)
@@ -511,6 +507,16 @@ function(tint_target_add_external_dependencies TARGET KIND)
       target_link_libraries(${TARGET} PRIVATE
         absl::strings
       )
+
+      if(NOT MSVC)
+        target_compile_options(${TARGET} PUBLIC
+          -Wno-gcc-compat
+          -Wno-unreachable-code-break
+          -Wno-nullability-extension
+          -Wno-shadow
+        )
+      endif()
+
     elseif(${DEPENDENCY} STREQUAL "dl")
       target_link_libraries(${TARGET} PRIVATE ${CMAKE_DL_LIBS})
     elseif(${DEPENDENCY} STREQUAL "dxc-include")
@@ -575,6 +581,8 @@ function(tint_target_add_external_dependencies TARGET KIND)
       target_link_libraries(${TARGET} PRIVATE ws2_32)
     elseif(${DEPENDENCY} STREQUAL "src_utils")
       target_link_libraries(${TARGET} PRIVATE dawn_shared_utils)
+    elseif(${DEPENDENCY} STREQUAL "src_utils_chromium_test_compat")
+      target_link_libraries(${TARGET} PRIVATE dawn_shared_utils_chromium_test_compat)
     else()
       message(FATAL_ERROR "unhandled external dependency ${DEPENDENCY}")
     endif()

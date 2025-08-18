@@ -12,10 +12,10 @@
 // CHECK:           OpString
 // CHECK:           [[file1:%[0-9]+]] = OpString
 // CHECK-SAME:      spirv.debug.opline.include-file-1.hlsli
+// CHECK:      [[src0:%[0-9]+]] = OpExtInst %void %1 DebugSource [[main]]
 // CHECK:      [[src3:%[0-9]+]] = OpExtInst %void %1 DebugSource [[file3]]
 // CHECK:      [[src2:%[0-9]+]] = OpExtInst %void %1 DebugSource [[file2]]
 // CHECK:      [[src1:%[0-9]+]] = OpExtInst %void %1 DebugSource [[file1]]
-// CHECK:      [[src0:%[0-9]+]] = OpExtInst %void %1 DebugSource [[main]]
 
 // DebugLine cannot preceed OpFunction
 // CHECK:      %src_main = OpFunction %void None

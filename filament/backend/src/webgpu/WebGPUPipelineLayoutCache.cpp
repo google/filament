@@ -77,12 +77,13 @@ wgpu::PipelineLayout WebGPUPipelineLayoutCache::createPipelineLayout(
     };
     const wgpu::PipelineLayout layout{ mDevice.CreatePipelineLayout(&descriptor) };
     FILAMENT_CHECK_POSTCONDITION(layout)
-            << "Failed to create pipeline layout " << descriptor.label << "?";
+            << "Failed to create pipeline layout " << descriptor.label << ".";
     return layout;
 }
 
 bool WebGPUPipelineLayoutCache::PipelineLayoutKeyEqual::operator()(PipelineLayoutKey const& key1,
         PipelineLayoutKey const& key2) const {
+    // Compare the raw bytes of the keys for equality.
     return 0 == memcmp(reinterpret_cast<void const*>(&key1), reinterpret_cast<void const*>(&key2),
                         sizeof(key1));
 }
@@ -93,10 +94,9 @@ void WebGPUPipelineLayoutCache::removeExpiredPipelineLayouts() {
         PipelineLayoutCacheEntry const& entry{ iterator.value() };
         if (mFrameCount > (entry.lastUsedFrameCount +
                                   FILAMENT_WEBGPU_PIPELINE_LAYOUT_EXPIRATION_IN_FRAME_COUNT)) {
-            // pipeline layout expired...
+            // The pipeline layout has not been used recently, so we can remove it from the cache.
             iterator = mPipelineLayouts.erase(iterator);
         } else {
-            // pipeline layout not yet expired...
             ++iterator;
         }
     }

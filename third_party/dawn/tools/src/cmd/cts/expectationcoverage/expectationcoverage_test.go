@@ -115,7 +115,8 @@ func createRunSampleQueryResults() resultsdb.PrefixGroupedQueryResults {
 }
 
 func TestRun_GetTrimmedContentFailure(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
 	expectationFileContent := `# BEGIN TAG HEADER
@@ -125,21 +126,22 @@ func TestRun_GetTrimmedContentFailure(t *testing.T) {
 
 crbug.com/0000 [ android ] foo
 `
-	wrapper.WriteFile(common.DefaultExpectationsPath(), []byte(expectationFileContent), 0o700)
+	wrapper.WriteFile(common.DefaultExpectationsPath(wrapper), []byte(expectationFileContent), 0o700)
 
 	ctx := context.Background()
 	cfg := createConfig(wrapper, client)
 	c := cmd{}
-	err := c.Run(ctx, cfg)
-	require.ErrorContains(t, err, "/expectations.txt:6:31 error: expected status")
+	err = c.Run(ctx, cfg)
+	require.ErrorContains(t, err, "/webgpu-cts/expectations.txt:6:31 error: expected status")
 }
 
 func TestRun_GetResultsFailure(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
-	wrapper.WriteFile(common.DefaultExpectationsPath(), []byte(expectationFileContent), 0o700)
+	wrapper.WriteFile(common.DefaultExpectationsPath(wrapper), []byte(expectationFileContent), 0o700)
 
 	client.RecentUniqueSuppressedReturnValues = resultsdb.PrefixGroupedQueryResults{
 		"core_prefix": []resultsdb.QueryResult{
@@ -153,33 +155,35 @@ func TestRun_GetResultsFailure(t *testing.T) {
 	ctx := context.Background()
 	cfg := createConfig(wrapper, client)
 	c := cmd{}
-	err := c.Run(ctx, cfg)
+	err = c.Run(ctx, cfg)
 	require.ErrorContains(t, err,
 		"Test ID invalid_prefix_test did not start with core_prefix even though query should have filtered.")
 }
 
 func TestRun_SuccessCore(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
-	wrapper.WriteFile(common.DefaultExpectationsPath(), []byte(expectationFileContent), 0o700)
+	wrapper.WriteFile(common.DefaultExpectationsPath(wrapper), []byte(expectationFileContent), 0o700)
 
 	client.RecentUniqueSuppressedReturnValues = createRunSampleQueryResults()
 
 	ctx := context.Background()
 	cfg := createConfig(wrapper, client)
 	c := cmd{}
-	err := c.Run(ctx, cfg)
+	err = c.Run(ctx, cfg)
 	require.NoErrorf(t, err, "Got error: %v", err)
 }
 
 func TestRun_SuccessCompat(t *testing.T) {
-	wrapper := oswrapper.CreateMemMapOSWrapper()
+	wrapper, err := common.CreateMemMapOSWrapperWithFakeDefaultPaths()
+	require.NoErrorf(t, err, "Error creating fake Dawn directories: %v", err)
 	client := resultsdb.MockBigQueryClient{}
 
 	expectationFileContent := getExpectationContentForTrimmedContentTest()
-	wrapper.WriteFile(common.DefaultCompatExpectationsPath(), []byte(expectationFileContent), 0o700)
+	wrapper.WriteFile(common.DefaultCompatExpectationsPath(wrapper), []byte(expectationFileContent), 0o700)
 
 	client.RecentUniqueSuppressedReturnValues = createRunSampleQueryResults()
 
@@ -187,7 +191,7 @@ func TestRun_SuccessCompat(t *testing.T) {
 	cfg := createConfig(wrapper, client)
 	c := cmd{}
 	c.flags.checkCompatExpectations = true
-	err := c.Run(ctx, cfg)
+	err = c.Run(ctx, cfg)
 	require.NoErrorf(t, err, "Got error: %v", err)
 }
 

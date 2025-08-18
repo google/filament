@@ -51,8 +51,10 @@ public:
     TK_SampledImage,
     TK_Array,
     TK_RuntimeArray,
+    TK_NodePayloadArrayAMD,
     TK_Struct,
     TK_Pointer,
+    TK_ForwardPointer,
     TK_Function,
     TK_AccelerationStructureNV,
     TK_RayQueryKHR,
@@ -290,6 +292,26 @@ private:
   llvm::Optional<uint32_t> stride;
 };
 
+class NodePayloadArrayType : public SpirvType {
+public:
+  NodePayloadArrayType(const SpirvType *elemType, const ParmVarDecl *decl)
+      : SpirvType(TK_NodePayloadArrayAMD), elementType(elemType),
+        nodeDecl(decl) {}
+
+  static bool classof(const SpirvType *t) {
+    return t->getKind() == TK_NodePayloadArrayAMD;
+  }
+
+  bool operator==(const NodePayloadArrayType &that) const;
+
+  const SpirvType *getElementType() const { return elementType; }
+  const ParmVarDecl *getNodeDecl() const { return nodeDecl; }
+
+private:
+  const SpirvType *elementType;
+  const ParmVarDecl *nodeDecl;
+};
+
 // The StructType is the lowered type that best represents what a structure type
 // is in SPIR-V. Contains all necessary information for properly emitting a
 // SPIR-V structure type.
@@ -385,6 +407,26 @@ public:
 private:
   const SpirvType *pointeeType;
   spv::StorageClass storageClass;
+};
+
+/// Represents a SPIR-V forwarding pointer type.
+class ForwardPointerType : public SpirvType {
+public:
+  ForwardPointerType(QualType pointee)
+      : SpirvType(TK_ForwardPointer), pointeeType(pointee) {}
+
+  static bool classof(const SpirvType *t) {
+    return t->getKind() == TK_ForwardPointer;
+  }
+
+  const QualType getPointeeType() const { return pointeeType; }
+
+  bool operator==(const ForwardPointerType &that) const {
+    return pointeeType == that.pointeeType;
+  }
+
+private:
+  const QualType pointeeType;
 };
 
 /// Represents a SPIR-V function type. None of the parameters nor the return
@@ -606,6 +648,8 @@ bool SpirvType::isOrContainsType(const SpirvType *type) {
     return isOrContainsType<T, Bitwidth>(pointerType->getPointeeType());
   if (const auto *raType = dyn_cast<RuntimeArrayType>(type))
     return isOrContainsType<T, Bitwidth>(raType->getElementType());
+  if (const auto *npaType = dyn_cast<NodePayloadArrayType>(type))
+    return isOrContainsType<T, Bitwidth>(npaType->getElementType());
   if (const auto *imgType = dyn_cast<ImageType>(type))
     return isOrContainsType<T, Bitwidth>(imgType->getSampledType());
   if (const auto *sampledImageType = dyn_cast<SampledImageType>(type))

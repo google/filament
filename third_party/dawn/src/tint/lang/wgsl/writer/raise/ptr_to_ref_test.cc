@@ -32,8 +32,7 @@
 
 #include "gtest/gtest.h"
 #include "src/tint/lang/core/ir/builder.h"
-#include "src/tint/lang/core/ir/disassembler.h"
-#include "src/tint/lang/core/ir/validator.h"
+#include "src/tint/lang/core/ir/transform/helper_test.h"
 
 namespace tint::wgsl::writer::raise {
 namespace {
@@ -41,39 +40,11 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-class WgslWriter_PtrToRefTest : public testing::Test {
+class WgslWriter_PtrToRefTest : public core::ir::transform::TransformTest {
   public:
-    /// Transforms the module, using the PtrToRef transform
-    void Run() {
-        // Validate the input IR.
-        {
-            auto res = core::ir::Validate(mod);
-            EXPECT_EQ(res, Success);
-            if (res != Success) {
-                return;
-            }
-        }
-
-        // Run the transforms.
-        auto result = PtrToRef(mod);
-        EXPECT_EQ(result, Success);
-
-        // Validate the output IR.
-        core::ir::Capabilities caps{core::ir::Capability::kAllowRefTypes};
-        auto res = core::ir::Validate(mod, caps);
-        EXPECT_EQ(res, Success);
+    void SetUp() override {
+        capabilities = core::ir::Capabilities{core::ir::Capability::kAllowRefTypes};
     }
-
-    /// @returns the transformed module as a disassembled string
-    std::string str() { return "\n" + core::ir::Disassembler(mod).Plain(); }
-
-  protected:
-    /// The test IR module.
-    core::ir::Module mod;
-    /// The test IR builder.
-    core::ir::Builder b{mod};
-    /// The type manager.
-    core::type::Manager& ty{mod.Types()};
 };
 
 TEST_F(WgslWriter_PtrToRefTest, PtrParam_NoChange) {
@@ -92,7 +63,7 @@ TEST_F(WgslWriter_PtrToRefTest, PtrParam_NoChange) {
 
     auto* expect = src;
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -115,7 +86,7 @@ $B1: {  # root
 
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -148,7 +119,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadVar) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -182,7 +153,7 @@ TEST_F(WgslWriter_PtrToRefTest, StoreVar) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -213,7 +184,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadPtrParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -247,7 +218,7 @@ TEST_F(WgslWriter_PtrToRefTest, StorePtrParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -295,7 +266,7 @@ TEST_F(WgslWriter_PtrToRefTest, VarUsedAsPtrArg) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -331,7 +302,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadPtrParamViaLet) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -368,7 +339,7 @@ TEST_F(WgslWriter_PtrToRefTest, StorePtrParamViaLet) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -404,7 +375,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadAccessFromPtrArrayParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -441,7 +412,7 @@ TEST_F(WgslWriter_PtrToRefTest, StoreAccessFromPtrArrayParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -482,7 +453,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadAccessFromPtrArrayParamViaLet) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -524,7 +495,7 @@ TEST_F(WgslWriter_PtrToRefTest, StoreAccessFromPtrArrayParamViaLet) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -555,7 +526,7 @@ TEST_F(WgslWriter_PtrToRefTest, LoadVectorElementFromPtrParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }
@@ -589,7 +560,7 @@ TEST_F(WgslWriter_PtrToRefTest, StoreVectorElementFromPtrParam) {
 }
 )";
 
-    Run();
+    Run(PtrToRef);
 
     EXPECT_EQ(expect, str());
 }

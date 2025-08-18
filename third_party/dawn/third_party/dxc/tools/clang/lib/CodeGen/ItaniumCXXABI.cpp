@@ -639,8 +639,8 @@ llvm::Constant *
 ItaniumCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
   // Itanium C++ ABI 2.3:
   //   A NULL pointer is represented as -1.
-  if (MPT->isMemberDataPointer()) 
-    return llvm::ConstantInt::get(CGM.PtrDiffTy, -1ULL, /*isSigned=*/true);
+  if (MPT->isMemberDataPointer())
+    return llvm::ConstantInt::get(CGM.PtrDiffTy, -1LL, /*isSigned=*/true);
 
   llvm::Constant *Zero = llvm::ConstantInt::get(CGM.PtrDiffTy, 0);
   llvm::Constant *Values[2] = { Zero, Zero };
@@ -1023,7 +1023,7 @@ static CharUnits computeOffsetHint(ASTContext &Context,
   // If Dst is not derived from Src we can skip the whole computation below and
   // return that Src is not a public base of Dst.  Record all inheritance paths.
   if (!Dst->isDerivedFrom(Src, Paths))
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2LL);
 
   unsigned NumPublicPaths = 0;
   CharUnits Offset;
@@ -1040,7 +1040,7 @@ static CharUnits computeOffsetHint(ASTContext &Context,
       // If the path contains a virtual base class we can't give any hint.
       // -1: no hint.
       if (J->Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
+        return CharUnits::fromQuantity(-1LL);
 
       if (NumPublicPaths > 1) // Won't use offsets, skip computation.
         continue;
@@ -1053,11 +1053,11 @@ static CharUnits computeOffsetHint(ASTContext &Context,
 
   // -2: Src is not a public base of Dst.
   if (NumPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2LL);
 
   // -3: Src is a multiple public base type but never a virtual base type.
   if (NumPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
+    return CharUnits::fromQuantity(-3LL);
 
   // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
   // Return the offset of Src from the origin of Dst.
@@ -1090,7 +1090,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
       CGF.GetVTablePtr(ThisPtr, StdTypeInfoPtrTy->getPointerTo());
 
   // Load the type info.
-  Value = CGF.Builder.CreateConstInBoundsGEP1_64(Value, -1ULL);
+  Value = CGF.Builder.CreateConstInBoundsGEP1_64(Value, -1LL);
   return CGF.Builder.CreateLoad(Value);
 }
 
@@ -1154,7 +1154,7 @@ llvm::Value *ItaniumCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF,
 
   // Get the offset-to-top from the vtable.
   llvm::Value *OffsetToTop =
-      CGF.Builder.CreateConstInBoundsGEP1_64(VTable, -2ULL);
+      CGF.Builder.CreateConstInBoundsGEP1_64(VTable, -2LL);
   OffsetToTop = CGF.Builder.CreateLoad(OffsetToTop, "offset.to.top");
 
   // Finally, add the offset to the pointer.

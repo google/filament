@@ -3075,7 +3075,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     // optional sharpen pass from FSR1
     if (taaOptions.sharpness > 0.0f) {
         input = rcas(fg, taaOptions.sharpness,
-                input, fg.getDescriptor(input), colorGradingConfig.translucent);
+                input, fg.getDescriptor(input),
+                colorGradingConfig.translucent ? RcasMode::ALPHA_PASSTHROUGH : RcasMode::OPAQUE);
     }
 
     struct ExportColorHistoryData {
@@ -3100,7 +3101,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
         float const sharpness,
         FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor const& outDesc,
-        bool const translucent) {
+        RcasMode const mode) {
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -3122,8 +3123,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 auto const out = resources.getRenderPassInfo();
                 auto const& outputDesc = resources.getDescriptor(data.input);
 
-                PostProcessVariant const variant = translucent ?
-                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
+                PostProcessVariant const variant = mode == RcasMode::OPAQUE ?
+                        PostProcessVariant::OPAQUE : PostProcessVariant::TRANSLUCENT;
 
                 auto const& material = getPostProcessMaterial("fsr_rcas");
                 FMaterialInstance* const mi =
@@ -3136,14 +3137,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 mi->setParameter("resolution", float4{
                         outputDesc.width, outputDesc.height,
                         1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                commitAndRenderFullScreenQuad(driver, out, mi, variant);
+                mi->commit(driver);
+                mi->use(driver);
+
+                auto pipeline = getPipelineState(material.getMaterial(mEngine), variant);
+                if (mode == RcasMode::BLENDED) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+                renderFullScreenQuad(out, pipeline, driver);
                 unbindAllDescriptorSets(driver);
             });
 
     return ppFsrRcas->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
+FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool const translucent,
     bool sourceHasLuminance, DynamicResolutionOptions dsrOptions,
     FrameGraphId<FrameGraphTexture> const input, filament::Viewport const& vp,
     FrameGraphTexture::Descriptor const& outDesc, SamplerMagFilter filter) noexcept {
@@ -3151,14 +3162,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
     assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
 
-    const bool lowQualityFallback = translucent;
-    if (lowQualityFallback) {
+    if (const bool lowQualityFallback = translucent; lowQualityFallback) {
         // FidelityFX-FSR nor SGSR support the source alpha channel currently
         dsrOptions.quality = QualityLevel::LOW;
     }
 
     if (dsrOptions.quality == QualityLevel::LOW) {
-        return upscaleBilinear(fg, dsrOptions, input, vp, outDesc, filter);
+        return upscaleBilinear(fg, translucent, dsrOptions, input, vp, outDesc, filter);
     }
     if (dsrOptions.quality == QualityLevel::MEDIUM) {
         return upscaleSGSR1(fg, sourceHasLuminance, dsrOptions, input, vp, outDesc);
@@ -3167,6 +3177,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg,
+        bool const translucent,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
@@ -3175,6 +3186,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
     };
+
+    // upscaleBilinear is responsible for upscaling AND blending the result (so we don't
+    // have to do it with an extra pass). Blending must then happen either during the upsacling
+    // or during the RCAS pass, whichever is last
+
+    bool const blended = translucent && (dsrOptions.sharpness == 0.0f);
 
     auto const& ppQuadBlit = fg.addPass<QuadBlitData>(dsrOptions.enabled ? "upscaling" : "compositing",
             [&](FrameGraph::Builder& builder, auto& data) {
@@ -3185,7 +3202,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                         .attachments = { .color = { data.output } },
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [this, vp, filter](FrameGraphResources const& resources,
+            [this, blended, vp, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -3217,6 +3234,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                 auto out = resources.getRenderPassInfo();
 
                 auto pipeline = getPipelineState(material.getMaterial(mEngine));
+                if (blended) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+
                 renderFullScreenQuad(out, pipeline, driver);
                 unbindAllDescriptorSets(driver);
             });
@@ -3226,7 +3250,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
     if (dsrOptions.sharpness > 0.0f) {
         output = rcas(fg, dsrOptions.sharpness, output, outDesc,
-                false /* translucent=false, because dst buffer is allocated */);
+                translucent ? RcasMode::BLENDED : RcasMode::OPAQUE);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3439,7 +3463,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
 
     auto output = ppQuadBlit->output;
     if (dsrOptions.sharpness > 0.0f) {
-        output = rcas(fg, dsrOptions.sharpness, output, outDesc, false);
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc, RcasMode::OPAQUE);
     }
 
     // we rely on automatic culling of unused render passes

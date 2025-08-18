@@ -125,12 +125,20 @@ namespace {
 // Some platforms use a special .opd section to store function pointers.
 const char kOpdSectionName[] = ".opd";
 
-#if (defined(__powerpc__) && !(_CALL_ELF > 1)) || defined(__ia64)
+#if defined(__powerpc64__) && defined(_CALL_ELF)
+#if _CALL_ELF <= 1
+#define ABSL_INTERNAL_HAVE_PPC64_ELFV1_ABI 1
+#endif
+#endif
+#if defined(ABSL_INTERNAL_HAVE_PPC64_ELFV1_ABI) || defined(__ia64)
 // Use opd section for function descriptors on these platforms, the function
 // address is the first word of the descriptor.
-enum { kPlatformUsesOPDSections = 1 };
-#else  // not PPC or IA64
-enum { kPlatformUsesOPDSections = 0 };
+//
+// https://maskray.me/blog/2023-02-26-linker-notes-on-power-isa notes that
+// opd sections are used on 64-bit PowerPC with the ELFv1 ABI.
+inline constexpr bool kPlatformUsesOPDSections = true;
+#else
+inline constexpr bool kPlatformUsesOPDSections = false;
 #endif
 
 // This works for PowerPC & IA64 only.  A function descriptor consist of two
@@ -163,18 +171,18 @@ struct FileMappingHint {
 // is being modified (is busy), we skip all decorators, and possibly
 // loose some info. Sorry, that's the best we could do.
 ABSL_CONST_INIT absl::base_internal::SpinLock g_decorators_mu(
-    absl::kConstInit, absl::base_internal::SCHEDULE_KERNEL_ONLY);
+    absl::base_internal::SCHEDULE_KERNEL_ONLY);
 
 const int kMaxFileMappingHints = 8;
 int g_num_file_mapping_hints;
 FileMappingHint g_file_mapping_hints[kMaxFileMappingHints];
 // Protects g_file_mapping_hints.
 ABSL_CONST_INIT absl::base_internal::SpinLock g_file_mapping_mu(
-    absl::kConstInit, absl::base_internal::SCHEDULE_KERNEL_ONLY);
+    absl::base_internal::SCHEDULE_KERNEL_ONLY);
 
 // Async-signal-safe function to zero a buffer.
 // memset() is not guaranteed to be async-signal-safe.
-static void SafeMemZero(void* p, size_t size) {
+static void SafeMemZero(void *p, size_t size) {
   unsigned char *c = static_cast<unsigned char *>(p);
   while (size--) {
     *c++ = 0;
@@ -1451,24 +1459,25 @@ static bool MaybeInitializeObjFile(ObjFile *obj) {
       }
       phoff += phentsize;
 
-#if defined(__powerpc__) && !(_CALL_ELF > 1)
-      // On the PowerPC ELF v1 ABI, function pointers actually point to function
-      // descriptors. These descriptors are stored in an .opd section, which is
-      // mapped read-only. We thus need to look at all readable segments, not
-      // just the executable ones.
+#ifdef ABSL_INTERNAL_HAVE_PPC64_ELFV1_ABI
+      // On the PowerPC 64-bit ELFv1 ABI, function pointers actually point to
+      // function descriptors. These descriptors are stored in an .opd section,
+      // which is mapped read-only. We thus need to look at all readable
+      // segments, not just the executable ones.
       constexpr int interesting = PF_R;
 #else
       constexpr int interesting = PF_X | PF_R;
 #endif
 
-      if (phdr.p_type != PT_LOAD
-          || (phdr.p_flags & interesting) != interesting) {
+      if (phdr.p_type != PT_LOAD ||
+          (phdr.p_flags & interesting) != interesting) {
         // Not a LOAD segment, not executable code, and not a function
         // descriptor.
         continue;
       }
       if (num_interesting_load_segments < obj->phdr.size()) {
-        memcpy(&obj->phdr[num_interesting_load_segments++], &phdr, sizeof(phdr));
+        memcpy(&obj->phdr[num_interesting_load_segments++], &phdr,
+               sizeof(phdr));
       } else {
         ABSL_RAW_LOG(
             WARNING, "%s: too many interesting LOAD segments: %zu >= %zu",
@@ -1517,7 +1526,8 @@ const char *Symbolizer::GetUncachedSymbol(const void *pc) {
             ABSL_RAW_CHECK(p.p_type == PT_NULL, "unexpected p_type");
             break;
           }
-          if (pc < reinterpret_cast<void *>(start_addr + p.p_vaddr + p.p_memsz)) {
+          if (pc <
+              reinterpret_cast<void *>(start_addr + p.p_vaddr + p.p_memsz)) {
             phdr = &p;
             break;
           }
@@ -1663,8 +1673,8 @@ int InstallSymbolDecorator(SymbolDecorator decorator, void *arg) {
   return ret;
 }
 
-bool RegisterFileMappingHint(const void *start, const void *end, uint64_t offset,
-                             const char *filename) {
+bool RegisterFileMappingHint(const void *start, const void *end,
+                             uint64_t offset, const char *filename) {
   SAFE_ASSERT(start <= end);
   SAFE_ASSERT(filename != nullptr);
 
@@ -1757,8 +1767,11 @@ ABSL_NAMESPACE_END
 }  // namespace absl
 
 extern "C" bool AbslInternalGetFileMappingHint(const void **start,
-                                               const void **end, uint64_t *offset,
+                                               const void **end,
+                                               uint64_t *offset,
                                                const char **filename) {
   return absl::debugging_internal::GetFileMappingHint(start, end, offset,
                                                       filename);
 }
+
+#undef ABSL_INTERNAL_HAVE_PPC64_ELFV1_ABI

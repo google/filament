@@ -68,14 +68,14 @@ class WgslIRWriterTest : public core::ir::IRTestHelper {
     Result Run(std::string_view expected_wgsl) {
         Result result;
 
-        result.ir_pre_raise = core::ir::Disassembler(mod).Plain();
+        result.ir_pre_raise = str();
 
         if (auto res = tint::wgsl::writer::Raise(mod); res != Success) {
             result.err = res.Failure().reason;
             return result;
         }
 
-        result.ir_post_raise = core::ir::Disassembler(mod).Plain();
+        result.ir_post_raise = str();
 
         writer::ProgramOptions program_options;
         program_options.allowed_features = AllowedFeatures::Everything();
@@ -86,7 +86,7 @@ class WgslIRWriterTest : public core::ir::IRTestHelper {
             return result;
         }
 
-        auto output = wgsl::writer::Generate(output_program, {});
+        auto output = wgsl::writer::Generate(output_program);
         if (output != Success) {
             std::stringstream ss;
             ss << "wgsl::Generate() errored: " << output.Failure();

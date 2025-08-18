@@ -168,7 +168,7 @@ int64_t DataExtractor::getSLEB128(uint32_t *offset_ptr) const {
 
   // Sign bit of byte is 2nd high order bit (0x40)
   if (shift < 64 && (byte & 0x40))
-    result |= -(1ULL << shift);
+    result |= (~(1ULL << shift) + 1);
 
   *offset_ptr = offset;
   return result;

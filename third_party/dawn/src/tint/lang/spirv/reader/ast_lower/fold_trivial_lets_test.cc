@@ -27,7 +27,7 @@
 
 #include "src/tint/lang/spirv/reader/ast_lower/fold_trivial_lets.h"
 
-#include "src/tint/lang/wgsl/ast/transform/helper_test.h"
+#include "src/tint/lang/spirv/reader/ast_lower/helper_test.h"
 
 namespace tint::spirv::reader {
 namespace {

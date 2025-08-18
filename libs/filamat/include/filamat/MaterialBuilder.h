@@ -295,6 +295,9 @@ public:
     //! Set the file name of this material file. Used in error reporting.
     MaterialBuilder& fileName(const char* name) noexcept;
 
+    //! Set the commandline parameters of matc. Used for debugging purpose.
+    MaterialBuilder& compilationParameters(const char* params) noexcept;
+
     //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
 
@@ -534,6 +537,9 @@ public:
 
     //! Enable / disable the cheapest linear fog, disabled by default.
     MaterialBuilder& linearFog(bool enabled) noexcept;
+
+    //! Enable / disable shadow far attenuation, enabled by default.
+    MaterialBuilder& shadowFarAttenuation(bool enabled) noexcept;
 
     //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
@@ -873,6 +879,7 @@ private:
 
     utils::CString mMaterialName;
     utils::CString mFileName;
+    utils::CString mCompilationParameters;
 
     class ShaderCode {
     public:
@@ -958,6 +965,7 @@ private:
 
     bool mFlipUV = true;
     bool mLinearFog = false;
+    bool mShadowFarAttenuation = true;
 
     bool mMultiBounceAO = false;
     bool mMultiBounceAOSet = false;

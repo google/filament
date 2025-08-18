@@ -28,10 +28,11 @@
 #include <cmath>
 #include <cstdint>
 #include <tuple>
+#include <utility>
 #include <variant>
 #include <vector>
 
-#include "src/tint/lang/wgsl/program/program_builder.h"
+#include "src/tint/lang/core/number.h"
 #include "src/tint/utils/macros/compiler.h"
 #include "src/tint/utils/text/string_stream.h"
 
@@ -216,9 +217,9 @@ TEST(NumberTest, CheckedConvertExceedsPositiveLimit) {
     EXPECT_EQ(CheckedConvert<i32>(u32(0x80000000)), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i8>(u8::Highest()), ConversionFailure::kExceedsPositiveLimit);
     EXPECT_EQ(CheckedConvert<i8>(u8(0x80)), ConversionFailure::kExceedsPositiveLimit);
-    EXPECT_EQ(CheckedConvert<u32>(f32::Highest()), u32::Highest());
+    EXPECT_EQ(CheckedConvert<u32>(f32::Highest()), u32(tint::core::kMaxU32WhichIsAlsoF32));
     EXPECT_EQ(CheckedConvert<u8>(f32::Highest()), u8::Highest());
-    EXPECT_EQ(CheckedConvert<i32>(f32::Highest()), i32::Highest());
+    EXPECT_EQ(CheckedConvert<i32>(f32::Highest()), i32(tint::core::kMaxI32WhichIsAlsoF32));
     EXPECT_EQ(CheckedConvert<i8>(f32::Highest()), i8::Highest());
     EXPECT_EQ(CheckedConvert<u32>(AFloat::Highest()), u32::Highest());
     EXPECT_EQ(CheckedConvert<u8>(AFloat::Highest()), u8::Highest());

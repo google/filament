@@ -828,7 +828,8 @@ BasicBlock* MergeReturnPass::CreateContinueTarget(uint32_t header_label_id) {
 
 bool MergeReturnPass::CreateSingleCaseSwitch(BasicBlock* merge_target) {
   // Insert the switch before any code is run.  We have to split the entry
-  // block to make sure the OpVariable instructions remain in the entry block.
+  // block to make sure the OpVariable instructions and DebugFunctionDefinition
+  // instructions remain in the entry block.
   BasicBlock* start_block = &*function_->begin();
   auto split_pos = start_block->begin();
   while (split_pos->opcode() == spv::Op::OpVariable) {
@@ -837,6 +838,18 @@ bool MergeReturnPass::CreateSingleCaseSwitch(BasicBlock* merge_target) {
 
   BasicBlock* old_block =
       start_block->SplitBasicBlock(context(), TakeNextId(), split_pos);
+
+  // Find DebugFunctionDefinition inst in the old block, and if we can find it,
+  // move it to the entry block. Since DebugFunctionDefinition is not necessary
+  // after OpVariable inst, we have to traverse the whole block to find it.
+  for (auto pos = old_block->begin(); pos != old_block->end(); ++pos) {
+    if (pos->GetShader100DebugOpcode() ==
+        NonSemanticShaderDebugInfo100DebugFunctionDefinition) {
+      start_block->AddInstruction(MakeUnique<Instruction>(*pos));
+      pos.Erase();
+      break;
+    }
+  }
 
   // Add the switch to the end of the entry block.
   InstructionBuilder builder(

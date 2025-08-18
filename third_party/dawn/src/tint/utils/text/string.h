@@ -99,14 +99,14 @@ std::string ToString(const std::variant<TYs...>& value) {
 /// @param str the input string
 /// @param prefix the prefix string
 /// @returns true iff @p str has the prefix @p prefix
-inline size_t HasPrefix(std::string_view str, std::string_view prefix) {
+inline bool HasPrefix(std::string_view str, std::string_view prefix) {
     return str.length() >= prefix.length() && str.substr(0, prefix.length()) == prefix;
 }
 
 /// @param str the input string
 /// @param suffix the suffix string
 /// @returns true iff @p str has the suffix @p suffix
-inline size_t HasSuffix(std::string_view str, std::string_view suffix) {
+inline bool HasSuffix(std::string_view str, std::string_view suffix) {
     return str.length() >= suffix.length() && str.substr(str.length() - suffix.length()) == suffix;
 }
 

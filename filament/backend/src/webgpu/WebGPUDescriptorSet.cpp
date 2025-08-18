@@ -42,6 +42,9 @@ constexpr uint8_t INVALID_INDEX = MAX_DESCRIPTOR_COUNT + 1;
 
 } // namespace
 
+// The constructor initializes the descriptor set based on a given layout.
+// It pre-allocates space for the bind group entries and sets up a mapping from binding index
+// to the internal entry array index. This prepares the object to be populated with resources.
 WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
         std::vector<WebGPUDescriptorSetLayout::BindGroupEntryInfo> const& bindGroupEntries)
     : mLayout{ layout },
@@ -52,11 +55,10 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
     for (size_t i = 0; i < bindGroupEntries.size(); ++i) {
         mEntries[i].binding = bindGroupEntries[i].binding;
     }
-    // Establish the size of entries based on the layout. This should be reliable and efficient.
+
+    // Create a mapping from binding index to entry index for efficient lookup.
     assert_invariant(INVALID_INDEX > mEntryIndexByBinding.size());
-    for (size_t i = 0; i < mEntryIndexByBinding.size(); i++) {
-        mEntryIndexByBinding[i] = INVALID_INDEX;
-    }
+    std::fill(mEntryIndexByBinding.begin(), mEntryIndexByBinding.end(), INVALID_INDEX);
     for (size_t index = 0; index < mEntries.size(); index++) {
         wgpu::BindGroupEntry const& entry = mEntries[index];
         assert_invariant(entry.binding < mEntryIndexByBinding.size());
@@ -66,19 +68,20 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(wgpu::BindGroupLayout const& layout,
 
 void WebGPUDescriptorSet::addEntry(const unsigned int index, wgpu::BindGroupEntry&& entry) {
     if (mBindGroup) {
-        // We will keep getting hits from future updates, but shouldn't do anything
-        // Filament guarantees this won't change after things have locked.
+        // The bind group has already been created, so we can't add new entries.
+        // Filament guarantees that the descriptor set will not be modified after it has been locked.
         return;
     }
     // TODO: Putting some level of trust that Filament is not going to reuse indexes or go past the
     // layout index for efficiency. Add guards if wrong.
     FILAMENT_CHECK_POSTCONDITION(index < mEntryIndexByBinding.size())
-            << "impossible/invalid index for a descriptor/binding (our of range or >= "
+            << "impossible/invalid index for a descriptor/binding (out of range or >= "
                "MAX_DESCRIPTOR_COUNT) "
             << index;
     uint8_t entryIndex = mEntryIndexByBinding[index];
     FILAMENT_CHECK_POSTCONDITION(entryIndex != INVALID_INDEX && entryIndex < mEntries.size())
-            << "Invalid binding " << index;
+            << "Invalid binding index: " << index;
+
     entry.binding = index;
     mEntries[entryIndex] = std::move(entry);
 }
@@ -94,8 +97,9 @@ wgpu::BindGroup WebGPUDescriptorSet::lockAndReturn(wgpu::Device const& device) {
         .entries = mEntries.data()
     };
     mBindGroup = device.CreateBindGroup(&descriptor);
-    FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group?";
-    // once we have created the bind group itself we should no longer need any other state
+    FILAMENT_CHECK_POSTCONDITION(mBindGroup) << "Failed to create bind group.";
+
+    // Once the bind group is created, we can release the resources used to create it.
 #if FWGPU_ENABLED(FWGPU_DEBUG_BIND_GROUPS)
     FWGPU_LOGD << "WebGPUDescriptorSet (lockAndReturn):";
     FWGPU_LOGD << "  wgpu::BindGroupLayout handle: " << mLayout.Get();

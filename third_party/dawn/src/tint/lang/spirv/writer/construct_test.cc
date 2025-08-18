@@ -175,5 +175,81 @@ TEST_F(SpirvWriterTest, Construct_SubgroupMatrix_SingleValue) {
     EXPECT_INST("%result = OpCompositeConstruct %17 %arg");
 }
 
+TEST_F(SpirvWriterTest, Construct_ArrayOfSubgroupMatrix_ZeroValue) {
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {
+        b.Let("left", b.Construct(ty.array(ty.subgroup_matrix_left(ty.f32(), 8, 4), 4u)));
+        b.Let("right", b.Construct(ty.array(ty.subgroup_matrix_right(ty.i32(), 4, 8), 4u)));
+        b.Let("result", b.Construct(ty.array(ty.subgroup_matrix_result(ty.u32(), 2, 2), 4u)));
+        b.Return(func);
+    });
+
+    Options options{
+        .use_vulkan_memory_model = true,
+    };
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST(R"(
+          %7 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0
+%_arr_7_uint_4 = OpTypeArray %7 %uint_4
+    %float_0 = OpConstant %float 0
+         %14 = OpConstantComposite %7 %float_0
+       %left = OpConstantComposite %_arr_7_uint_4 %14 %14 %14 %14
+        %int = OpTypeInt 32 1
+     %uint_1 = OpConstant %uint 1
+         %18 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1
+%_arr_18_uint_4 = OpTypeArray %18 %uint_4
+      %int_0 = OpConstant %int 0
+         %21 = OpConstantComposite %18 %int_0
+      %right = OpConstantComposite %_arr_18_uint_4 %21 %21 %21 %21
+     %uint_2 = OpConstant %uint 2
+         %25 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2
+%_arr_25_uint_4 = OpTypeArray %25 %uint_4
+         %27 = OpConstantComposite %25 %uint_0
+     %result = OpConstantComposite %_arr_25_uint_4 %27 %27 %27 %27
+)");
+}
+
+TEST_F(SpirvWriterTest, Construct_StructOfSubgroupMatrix_ZeroValue) {
+    auto* str = ty.Struct(
+        mod.symbols.New("MyStruct"),
+        {
+            {mod.symbols.Register("left"), ty.array(ty.subgroup_matrix_left(ty.f32(), 8, 4), 4u)},
+            {mod.symbols.Register("right"), ty.array(ty.subgroup_matrix_right(ty.i32(), 4, 8), 4u)},
+            {mod.symbols.Register("res"), ty.array(ty.subgroup_matrix_result(ty.u32(), 2, 2), 4u)},
+        });
+
+    auto* func = b.Function("foo", ty.void_());
+    b.Append(func->Block(), [&] {
+        b.Let("s", b.Construct(str));
+        b.Return(func);
+    });
+
+    Options options{
+        .use_vulkan_memory_model = true,
+    };
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST(R"(
+          %8 = OpTypeCooperativeMatrixKHR %float %uint_3 %uint_4 %uint_8 %uint_0
+%_arr_8_uint_4 = OpTypeArray %8 %uint_4
+        %int = OpTypeInt 32 1
+     %uint_1 = OpConstant %uint 1
+         %16 = OpTypeCooperativeMatrixKHR %int %uint_3 %uint_8 %uint_4 %uint_1
+%_arr_16_uint_4 = OpTypeArray %16 %uint_4
+     %uint_2 = OpConstant %uint 2
+         %20 = OpTypeCooperativeMatrixKHR %uint %uint_3 %uint_2 %uint_2 %uint_2
+%_arr_20_uint_4 = OpTypeArray %20 %uint_4
+   %MyStruct = OpTypeStruct %_arr_8_uint_4 %_arr_16_uint_4 %_arr_20_uint_4
+    %float_0 = OpConstant %float 0
+         %23 = OpConstantComposite %8 %float_0
+         %22 = OpConstantComposite %_arr_8_uint_4 %23 %23 %23 %23
+      %int_0 = OpConstant %int 0
+         %26 = OpConstantComposite %16 %int_0
+         %25 = OpConstantComposite %_arr_16_uint_4 %26 %26 %26 %26
+         %29 = OpConstantComposite %20 %uint_0
+         %28 = OpConstantComposite %_arr_20_uint_4 %29 %29 %29 %29
+          %s = OpConstantComposite %MyStruct %22 %25 %28
+)");
+}
+
 }  // namespace
 }  // namespace tint::spirv::writer

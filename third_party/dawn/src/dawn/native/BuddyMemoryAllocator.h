@@ -58,7 +58,9 @@ class BuddyMemoryAllocator {
                          ResourceHeapAllocator* heapAllocator);
     ~BuddyMemoryAllocator();
 
-    ResultOrError<ResourceMemoryAllocation> Allocate(uint64_t allocationSize, uint64_t alignment);
+    ResultOrError<ResourceMemoryAllocation> Allocate(uint64_t allocationSize,
+                                                     uint64_t alignment,
+                                                     bool isLazyMemoryType);
     void Deallocate(const ResourceMemoryAllocation& allocation);
 
     uint64_t GetMemoryBlockSize() const;

@@ -43,13 +43,17 @@ import (
 	"time"
 
 	"dawn.googlesource.com/dawn/tools/src/cmd/run-cts/common"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/utils"
 )
 
+// TODO(crbug.com/416755658): Add unittest coverage when there is a way to fake
+// the node process.
 // runTestCasesWithServers spawns c.flags.NumRunners server instances to run all
 // the test cases in testCases. The results of the tests are streamed to results.
 // Blocks until all the tests have been run.
-func (c *cmd) runTestCasesWithServers(ctx context.Context, testCases []common.TestCase, results chan<- common.Result) {
+func (c *cmd) runTestCasesWithServers(
+	ctx context.Context, testCases []common.TestCase, results chan<- common.Result, fsReader oswrapper.FilesystemReader) {
 	// Create a chan of test indices.
 	// This will be read by the test runner goroutines.
 	testCaseIndices := make(chan int, 256)
@@ -67,7 +71,7 @@ func (c *cmd) runTestCasesWithServers(ctx context.Context, testCases []common.Te
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if err := c.runServer(ctx, id, testCases, testCaseIndices, results); err != nil {
+			if err := c.runServer(ctx, id, testCases, testCaseIndices, results, fsReader); err != nil {
 				results <- common.Result{
 					Status: common.Fail,
 					Error:  fmt.Errorf("Test server error: %w", err),
@@ -79,6 +83,8 @@ func (c *cmd) runTestCasesWithServers(ctx context.Context, testCases []common.Te
 	wg.Wait()
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage when exec is handled via
+// dependency injection.
 // runServer starts a test runner server instance, takes case indices from
 // testCaseIndices, and requests the server run the test with the given index.
 // The result of the test run is written to the results chan.
@@ -89,7 +95,8 @@ func (c *cmd) runServer(
 	id int,
 	testCases []common.TestCase,
 	testCaseIndices <-chan int,
-	results chan<- common.Result) error {
+	results chan<- common.Result,
+	fsReader oswrapper.FilesystemReader) error {
 
 	var port int
 	testCaseLog := &bytes.Buffer{}
@@ -249,7 +256,7 @@ func (c *cmd) runServer(
 			}
 
 			if resp.CoverageData != "" {
-				coverage, covErr := c.coverage.Env.Import(resp.CoverageData)
+				coverage, covErr := c.coverage.Env.Import(resp.CoverageData, fsReader)
 				os.Remove(resp.CoverageData)
 				if covErr != nil {
 					if res.Message != "" {

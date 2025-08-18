@@ -84,6 +84,9 @@ config("internal_config") {
   if (dawn_enable_null) {
     defines += [ "DAWN_ENABLE_BACKEND_NULL" ]
   }
+  if (dawn_enable_webgpu_on_webgpu) {
+    defines += [ "DAWN_ENABLE_BACKEND_WEBGPU" ]
+  }
   if (dawn_enable_opengl) {
     defines += [ "DAWN_ENABLE_BACKEND_OPENGL" ]
   }
@@ -118,6 +121,10 @@ config("internal_config") {
     defines += [ "DAWN_ENABLE_ERROR_INJECTION" ]
   }
 
+  if (dawn_force_system_component_load) {
+    defines += [ "DAWN_FORCE_SYSTEM_COMPONENT_LOAD" ]
+  }
+
   # Only internal Dawn targets can use this config, this means only targets in
   # this BUILD.gn file and related subdirs.
   visibility = [
@@ -130,6 +137,9 @@ config("internal_config") {
   if (is_clang) {
     # We use __builtin_assume liberally in DAWN_ASSERT, allow ignoring side-effects there.
     cflags += [ "-Wno-assume" ]
+
+    # Dawn doesn't have the annotations to work with this analysis.
+    cflags_cc = [ "-Wno-thread-safety" ]
   }
 
   # Enable more warnings that were found when using Dawn in other projects.
@@ -189,6 +199,9 @@ config("internal_config") {
     # (otherwise we have to add default: DAWN_UNREACHABLE() that silences clang too)
     cflags += [ "/wd4715" ]
 
+    # MSVC needs a flag to enable a standard-compliant preprocessor.
+    cflags += [ "/Zc:preprocessor" ]
+
     if (dawn_is_winuwp) {
       # /ZW makes sure we don't add calls that are forbidden in UWP.
       # and /EHsc is required to be used in combination with it,
@@ -245,9 +258,11 @@ group("abseil") {
     public_deps = [ "$dawn_abseil_dir:absl" ]
   } else {
     public_deps = [
+      "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_map",
       "${dawn_root}/third_party/gn/abseil-cpp:flat_hash_set",
       "${dawn_root}/third_party/gn/abseil-cpp:inlined_vector",
       "${dawn_root}/third_party/gn/abseil-cpp:no_destructor",
+      "${dawn_root}/third_party/gn/abseil-cpp:overload",
     ]
   }
 }
@@ -256,7 +271,7 @@ group("abseil") {
 # all of Chromium's OSes so we explicitly make the target visible only on
 # systems we know Dawn is able to compile on.
 if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
-    is_ios) {
+    is_ios || is_wasm) {
   static_library("common") {
     sources = [
       "AlignedAlloc.cpp",
@@ -264,12 +279,15 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "Alloc.h",
       "Assert.cpp",
       "Assert.h",
-      "BitSetIterator.h",
+      "Atomic.h",
+      "BitSetRangeIterator.h",
       "Compiler.h",
       "Constants.h",
       "ContentLessObjectCache.h",
       "ContentLessObjectCacheable.h",
       "CoreFoundationRef.h",
+      "Defer.cpp",
+      "Defer.h",
       "DynamicLib.cpp",
       "DynamicLib.h",
       "Enumerator.h",
@@ -279,13 +297,13 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
       "GPUInfo.h",
       "HashUtils.h",
       "IOKitRef.h",
+      "LRUCache.h",
       "LinkedList.h",
       "Log.cpp",
       "Log.h",
       "MatchVariant.h",
       "Math.cpp",
       "Math.h",
-      "Mutex.cpp",
       "Mutex.h",
       "MutexProtected.h",
       "NSRef.h",
@@ -358,10 +376,7 @@ if (is_win || is_linux || is_chromeos || is_mac || is_fuchsia || is_android ||
     # Dawn libraries because `:common` is only used as a private deps of Dawn
     # targets, so `internal_config` doesn't leak out of Dawn.
     public_configs = [ ":internal_config" ]
-    deps = [
-      "${dawn_root}/include/dawn:cpp_headers",
-      "${dawn_root}/include/dawn:headers",
-    ]
+    deps = [ "${dawn_root}/include/dawn:cpp_headers" ]
 
     if (is_win) {
       sources += [
