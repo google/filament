@@ -52,11 +52,10 @@ class Queue final : public QueueBase {
 
     CommandRecordingContext* GetPendingRecordingContext(SubmitMode submitMode = SubmitMode::Normal);
     MaybeError SplitRecordingContext(CommandRecordingContext* recordingContext);
-    MaybeError SubmitPendingCommands() override;
-
     void RecycleCompletedCommands(ExecutionSerial completedSerial);
 
-    ResultOrError<bool> WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) override;
+    ResultOrError<ExecutionSerial> WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                          Nanoseconds timeout) override;
 
   private:
     Queue(Device* device, const QueueDescriptor* descriptor, uint32_t family);
@@ -70,6 +69,7 @@ class Queue final : public QueueBase {
     ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() override;
     void ForceEventualFlushOfCommands() override;
     MaybeError WaitForIdleForDestruction() override;
+    MaybeError SubmitPendingCommandsImpl() override;
     void DestroyImpl() override;
 
     // Dawn API

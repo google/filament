@@ -32,20 +32,47 @@ set(BUILD_TESTING OFF)
 # It is particularly interesting when building dawn as a subdirectory in
 # a parent project that does not want to use depot_tools.
 if (DAWN_FETCH_DEPENDENCIES)
-    set(EXTRA_FETCH_ARGS)
-    if (NOT TARGET gmock AND (DAWN_BUILD_TESTS OR TINT_BUILD_TESTS))
-        list(APPEND EXTRA_FETCH_ARGS --use-test-deps)
-    endif()
-
     message(STATUS "Running fetch_dawn_dependencies:")
     execute_process(
         COMMAND
             ${Python3_EXECUTABLE}
             "${PROJECT_SOURCE_DIR}/tools/fetch_dawn_dependencies.py"
             --directory ${PROJECT_SOURCE_DIR}
-            ${EXTRA_FETCH_ARGS}
     )
 endif ()
+
+set(ABSL_ROOT_DIR ${DAWN_ABSEIL_DIR})
+if (NOT TARGET absl::strings)
+    # Recommended setting for compatibility with future abseil releases.
+    set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+    message(STATUS "Dawn: using Abseil at ${DAWN_ABSEIL_DIR}")
+    if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+        add_compile_options(
+                -Wno-array-parameter
+                -Wno-deprecated-builtins
+                -Wno-unknown-warning-option
+                -Wno-gcc-compat
+                -Wno-unreachable-code-break
+                -Wno-nullability-extension
+                -Wno-shadow
+                -Wno-redundant-parens
+        )
+    endif()
+
+    add_subdirectory(${DAWN_ABSEIL_DIR} "${CMAKE_CURRENT_BINARY_DIR}/abseil")
+endif()
+
+if (DAWN_BUILD_PROTOBUF AND EXISTS "${DAWN_PROTOBUF_DIR}/cmake")
+    if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") AND WIN32)
+        set(protobuf_HAVE_BUILTIN_ATOMICS 1)
+    endif()
+endif()
+
+if (DAWN_BUILD_PROTOBUF AND EXISTS "${DAWN_PROTOBUF_DIR}/cmake")
+    # Needs to come before SPIR-V Tools
+    include("protobuf.cmake")
+endif()
 
 ################################################################################
 # Start of Emscripten enabled third party directories
@@ -53,39 +80,39 @@ endif ()
 #   Emscripten to the minimal set, only subdirectories added within the Start
 #   and End of the Emscripten block are enabled .
 ################################################################################
-
-if (NOT TARGET absl::strings)
-    # Recommended setting for compability with future abseil releases.
-    set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
-    message(STATUS "Dawn: using Abseil at ${DAWN_ABSEIL_DIR}")
-    if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
-        ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
-        add_compile_options(
-            -Wno-array-parameter
-            -Wno-deprecated-builtins
-            -Wno-unknown-warning-option
-        )
-    endif()
-
-    add_subdirectory(${DAWN_ABSEIL_DIR} "${CMAKE_CURRENT_BINARY_DIR}/abseil")
-endif()
-
 if ((DAWN_BUILD_TESTS OR TINT_BUILD_TESTS) AND NOT TARGET gmock)
     set(gtest_force_shared_crt ON CACHE BOOL "Controls whether a shared run-time library should be used even when Google Test is built as static library" FORCE)
     if (EMSCRIPTEN)
         # For Emscripten builds, we need to disable pthreads.
+        # https://discourse.cmake.org/t/set-definitions-for-external-sub-directory/1136
         set(gtest_disable_pthreads ON)
     endif()
 
-    # We don't use exceptions, so we don't need gtest to handle them. Emscripten
-    # builds in particular, with JSPI enabled, crash without this enabled.
-    # There doesn't seem to be an option to tell the gtest build files to do
-    # this, so we set it globally. (This seems to be the intended usage.)
-    add_definitions(-DGTEST_HAS_EXCEPTIONS=0)
-
     add_subdirectory(${DAWN_GOOGLETEST_DIR} "${CMAKE_CURRENT_BINARY_DIR}/googletest" EXCLUDE_FROM_ALL)
-endif()
 
+    # The CMake target GTest::gmock_main always sets -fexceptions, which is
+    # incompatible with WASM JSPI (though works with Asyncify). The only way to
+    # avoid this is to define our own custom CMake rule for it.
+    # (This is based on GMock's internal `gmock_main_no_exception` target.)
+    add_library(gmock_main_wasmsafe
+        "${gtest_SOURCE_DIR}/src/gtest-all.cc"
+        "${gmock_SOURCE_DIR}/src/gmock-all.cc"
+        "${gmock_SOURCE_DIR}/src/gmock_main.cc"
+    )
+    target_compile_options(gmock_main_wasmsafe
+        PUBLIC
+            "-fno-exceptions"
+            "-fno-rtti"
+    )
+    target_include_directories(gmock_main_wasmsafe SYSTEM
+        PRIVATE
+            "${gtest_SOURCE_DIR}"
+            "${gmock_SOURCE_DIR}"
+        PUBLIC
+            "${gtest_SOURCE_DIR}/include"
+            "${gmock_SOURCE_DIR}/include"
+    )
+endif()
 ################################################################################
 # End of Emscripten enabled third party directories
 ################################################################################
@@ -152,16 +179,16 @@ if (DAWN_ENABLE_DESKTOP_GL OR DAWN_ENABLE_OPENGLES)
     target_include_directories(dawn_khronos_platform INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos/EGL-Registry/api")
 endif()
 
-if (NOT TARGET Vulkan-Headers AND DAWN_ENABLE_VULKAN)
-    message(STATUS "Dawn: using Vulkan-Headers at ${DAWN_VULKAN_HEADERS_DIR}")
+if (NOT TARGET Vulkan::Headers AND DAWN_ENABLE_VULKAN)
+    message(STATUS "Dawn: using Vulkan::Headers at ${DAWN_VULKAN_HEADERS_DIR}")
 
     set(VULKAN_HEADERS_ENABLE_MODULE OFF)
-    add_subdirectory(${DAWN_VULKAN_HEADERS_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers")
+    add_subdirectory(${DAWN_VULKAN_HEADERS_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-headers/src")
 endif()
 
-if (NOT TARGET VulkanUtilityHeaders AND DAWN_ENABLE_VULKAN)
+if (NOT TARGET Vulkan::UtilityHeaders AND DAWN_ENABLE_VULKAN)
     message(STATUS "Dawn: using VulkanUtilityLibraries at ${DAWN_VULKAN_UTILITY_LIBRARIES_DIR}")
-    add_subdirectory(${DAWN_VULKAN_UTILITY_LIBRARIES_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-utility-libraries")
+    add_subdirectory(${DAWN_VULKAN_UTILITY_LIBRARIES_DIR} "${CMAKE_CURRENT_BINARY_DIR}/vulkan-utility-libraries/src")
 endif()
 
 if (DAWN_ENABLE_SWIFTSHADER AND NOT TARGET vk_swiftshader)
@@ -352,6 +379,8 @@ function(AddSubdirectoryDXC)
             TARGET copy_dxil_dll
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DXIL_DLL_PATH} $<TARGET_FILE_DIR:dxcompiler>
             COMMENT "Copying ${DXIL_DLL_PATH} to $<TARGET_FILE_DIR:dxcompiler>")
+        # Ensure folder "$<TARGET_FILE_DIR:dxcompiler>" exists when copying the dll
+        add_dependencies(copy_dxil_dll dxcompiler)
         # Make dxc target depend on copy_dxil_dll
         add_dependencies(dxc copy_dxil_dll)
     endif()

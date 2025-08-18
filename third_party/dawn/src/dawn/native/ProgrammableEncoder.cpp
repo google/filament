@@ -29,7 +29,6 @@
 
 #include <cstring>
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/ityp_array.h"
 #include "dawn/native/BindGroup.h"
 #include "dawn/native/Buffer.h"
@@ -37,6 +36,7 @@
 #include "dawn/native/Commands.h"
 #include "dawn/native/Device.h"
 #include "dawn/native/ObjectType_autogen.h"
+#include "dawn/native/PhysicalDevice.h"
 #include "dawn/native/ValidationUtils_autogen.h"
 #include "dawn/native/utils/WGPUHelpers.h"
 
@@ -120,30 +120,23 @@ void ProgrammableEncoder::APISetImmediateData(uint32_t offset, const void* data,
     mEncodingContext->TryEncode(
         this,
         [&](CommandAllocator* allocator) -> MaybeError {
-            DAWN_INVALID_IF(!GetDevice()->HasFeature(Feature::ChromiumExperimentalImmediateData),
-                            "SetImmediateData() called without "
-                            "Feature::ChromiumExperimentalImmediateData supported.");
-
             if (IsValidationEnabled()) {
-                uint32_t maxImmediateDataRangeByteSize =
-                    GetDevice()
-                        ->GetLimits()
-                        .experimentalImmediateDataLimits.maxImmediateDataRangeByteSize;
+                uint32_t maxImmediateSize = GetDevice()->GetLimits().v1.maxImmediateSize;
+                DAWN_INVALID_IF(maxImmediateSize == 0,
+                                "immediates are not enabled (the device's maxImmediateSize is 0; "
+                                "AllowUnsafeAPIs may be needed to raise the adapter limit)");
+
                 // Validate offset and size are aligned to 4 bytes.
                 DAWN_INVALID_IF(offset % 4 != 0, "offset (%u) is not a multiple of 4", offset);
                 DAWN_INVALID_IF(size % 4 != 0, "size (%u) is not a multiple of 4", size);
 
                 // Validate OOB
-                DAWN_INVALID_IF(offset > maxImmediateDataRangeByteSize,
-                                "offset (%u) is larger than maxImmediateDataRangeByteSize (%u).",
-                                offset, maxImmediateDataRangeByteSize);
-                DAWN_INVALID_IF(size > maxImmediateDataRangeByteSize,
-                                "size (%u) is larger than maxImmediateDataRangeByteSize (%u).",
-                                size, maxImmediateDataRangeByteSize);
-                DAWN_INVALID_IF(
-                    size > maxImmediateDataRangeByteSize - offset,
-                    "offset (%u) + size (%u): is larger than maxImmediateDataRangeByteSize (%u).",
-                    offset, size, maxImmediateDataRangeByteSize);
+                DAWN_INVALID_IF(offset > maxImmediateSize,
+                                "offset (%u) is larger than maxImmediateSize (%u).", offset,
+                                maxImmediateSize);
+                DAWN_INVALID_IF(size > maxImmediateSize - offset,
+                                "offset (%u) + size (%u): is larger than maxImmediateSize (%u).",
+                                offset, size, maxImmediateSize);
             }
 
             // Skip SetImmediateData when uploading constants are empty.

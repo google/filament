@@ -114,13 +114,6 @@ struct RewriterOpts {
   bool DeclGlobalCB = false;          // OPT_rw_decl_global_cb
 };
 
-enum class ValidatorSelection : int {
-  Auto,        // Try DXIL.dll; fallback to internal validator
-  Internal,    // Force internal validator (even if DXIL.dll is present)
-  External,    // Use DXIL.dll, failing compilation if not available
-  Invalid = -1 // Invalid
-};
-
 /// Use this class to capture all options.
 class DxcOpts {
 public:
@@ -225,8 +218,6 @@ public:
   bool ResMayAlias = false;                  // OPT_res_may_alias
   unsigned long ValVerMajor = UINT_MAX,
                 ValVerMinor = UINT_MAX; // OPT_validator_version
-  ValidatorSelection SelectValidator =
-      ValidatorSelection::Auto;         // OPT_select_validator
   unsigned ScanLimit = 0;               // OPT_memdep_block_scan_limit
   bool ForceZeroStoreLifetimes = false; // OPT_force_zero_store_lifetimes
   bool EnableLifetimeMarkers = false;   // OPT_enable_lifetime_markers

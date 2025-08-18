@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/intrinsic/table.h"
 #include "src/tint/lang/core/ir/constant.h"
 #include "src/tint/lang/core/ir/core_binary.h"

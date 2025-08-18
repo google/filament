@@ -154,6 +154,137 @@ TEST_F(SpirvWriterTest, EntryPointName_NotRemapped) {
     EXPECT_INST("OpEntryPoint GLCompute %main \"main\"");
 }
 
+TEST_F(SpirvWriterTest, EntryPoint_FunctionVar_Spirv1p3) {
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        b.Var("x", 0_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_FunctionVar_Spirv1p4) {
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        b.Var("x", 0_u);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    options.spirv_version = SpvVersion::kSpv14;
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_StorageVar_Spirv1p3) {
+    auto* v = b.Var("v", core::AddressSpace::kStorage, ty.u32(), core::Access::kReadWrite);
+    mod.root_block->Append(v);
+    v->SetBindingPoint(0, 0);
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        b.Load(v);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST("OpEntryPoint GLCompute %main \"main\"\n");
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_StorageVar_Spirv1p4) {
+    auto* v = b.Var("v", core::AddressSpace::kStorage, ty.u32(), core::Access::kReadWrite);
+    mod.root_block->Append(v);
+    v->SetBindingPoint(0, 0);
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        b.Load(v);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    options.spirv_version = SpvVersion::kSpv14;
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST("OpEntryPoint GLCompute %main \"main\" %1");
+}
+
+TEST_F(SpirvWriterTest, EntryPoint_StorageVar_CalledFunction_Spirv1p4) {
+    auto* v = b.Var("v", core::AddressSpace::kStorage, ty.u32(), core::Access::kReadWrite);
+    mod.root_block->Append(v);
+    v->SetBindingPoint(0, 0);
+    auto* foo = b.Function("foo", ty.void_());
+    b.Append(foo->Block(), [&] {  //
+        b.Load(v);
+        b.Return(foo);
+    });
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        b.Call(foo);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    options.spirv_version = SpvVersion::kSpv14;
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST("OpEntryPoint GLCompute %main \"main\" %1");
+}
+
+TEST_F(SpirvWriterTest, Spv14_CopyLogical) {
+    auto* ssbo = b.Var("ssbo", core::AddressSpace::kStorage, ty.array(ty.u32(), 4, 4),
+                       core::Access::kReadWrite);
+    mod.root_block->Append(ssbo);
+    ssbo->SetBindingPoint(0, 0);
+    auto* wg = b.Var("wg", core::AddressSpace::kWorkgroup, ty.array(ty.u32(), 4, 4),
+                     core::Access::kReadWrite);
+    mod.root_block->Append(wg);
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {  //
+        auto* load = b.Load(ssbo);
+        b.Store(wg, load);
+        b.Return(func);
+    });
+
+    Options options;
+    options.remapped_entry_point_name = "";
+    options.spirv_version = SpvVersion::kSpv14;
+    ASSERT_TRUE(Generate(options)) << Error() << output_;
+    EXPECT_INST(R"(
+               ; Annotations
+               OpDecorate %_arr_uint_uint_4 ArrayStride 4
+               OpMemberDecorate %ssbo_block_tint_explicit_layout 0 Offset 0
+               OpDecorate %ssbo_block_tint_explicit_layout Block
+               OpDecorate %1 DescriptorSet 0
+               OpDecorate %1 Binding 0
+               OpDecorate %1 Coherent
+)");
+    EXPECT_INST(R"(
+               ; Types, variables and constants
+       %uint = OpTypeInt 32 0
+     %uint_4 = OpConstant %uint 4
+%_arr_uint_uint_4 = OpTypeArray %uint %uint_4       ; ArrayStride 4
+%ssbo_block_tint_explicit_layout = OpTypeStruct %_arr_uint_uint_4   ; Block
+%_ptr_StorageBuffer_ssbo_block_tint_explicit_layout = OpTypePointer StorageBuffer %ssbo_block_tint_explicit_layout
+          %1 = OpVariable %_ptr_StorageBuffer_ssbo_block_tint_explicit_layout StorageBuffer     ; DescriptorSet 0, Binding 0, Coherent
+%_arr_uint_uint_4_0 = OpTypeArray %uint %uint_4
+%_ptr_Workgroup__arr_uint_uint_4_0 = OpTypePointer Workgroup %_arr_uint_uint_4_0
+         %wg = OpVariable %_ptr_Workgroup__arr_uint_uint_4_0 Workgroup
+)");
+    EXPECT_INST(R"(
+         %27 = OpAccessChain %_ptr_StorageBuffer__arr_uint_uint_4 %1 %uint_0
+         %30 = OpLoad %_arr_uint_uint_4 %27 None
+         %31 = OpCopyLogical %_arr_uint_uint_4_0 %30
+               OpStore %wg %31 None
+               OpReturn
+)");
+}
+
 TEST_F(SpirvWriterTest, StripAllNames) {
     auto* str =
         ty.Struct(mod.symbols.New("MyStruct"), {

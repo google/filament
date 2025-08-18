@@ -45,7 +45,7 @@ ABSL_NAMESPACE_BEGIN
 //   absl::string_view input("abc");
 //   EXPECT_TRUE(absl::ConsumePrefix(&input, "a"));
 //   EXPECT_EQ(input, "bc");
-inline constexpr bool ConsumePrefix(absl::Nonnull<absl::string_view*> str,
+inline constexpr bool ConsumePrefix(absl::string_view* absl_nonnull str,
                                     absl::string_view expected) {
   if (!absl::StartsWith(*str, expected)) return false;
   str->remove_prefix(expected.size());
@@ -62,7 +62,7 @@ inline constexpr bool ConsumePrefix(absl::Nonnull<absl::string_view*> str,
 //   absl::string_view input("abcdef");
 //   EXPECT_TRUE(absl::ConsumeSuffix(&input, "def"));
 //   EXPECT_EQ(input, "abc");
-inline constexpr bool ConsumeSuffix(absl::Nonnull<absl::string_view*> str,
+inline constexpr bool ConsumeSuffix(absl::string_view* absl_nonnull str,
                                     absl::string_view expected) {
   if (!absl::EndsWith(*str, expected)) return false;
   str->remove_suffix(expected.size());
@@ -74,7 +74,7 @@ inline constexpr bool ConsumeSuffix(absl::Nonnull<absl::string_view*> str,
 // Returns a view into the input string `str` with the given `prefix` removed,
 // but leaving the original string intact. If the prefix does not match at the
 // start of the string, returns the original string instead.
-ABSL_MUST_USE_RESULT inline constexpr absl::string_view StripPrefix(
+[[nodiscard]] inline constexpr absl::string_view StripPrefix(
     absl::string_view str ABSL_ATTRIBUTE_LIFETIME_BOUND,
     absl::string_view prefix) {
   if (absl::StartsWith(str, prefix)) str.remove_prefix(prefix.size());
@@ -86,7 +86,7 @@ ABSL_MUST_USE_RESULT inline constexpr absl::string_view StripPrefix(
 // Returns a view into the input string `str` with the given `suffix` removed,
 // but leaving the original string intact. If the suffix does not match at the
 // end of the string, returns the original string instead.
-ABSL_MUST_USE_RESULT inline constexpr absl::string_view StripSuffix(
+[[nodiscard]] inline constexpr absl::string_view StripSuffix(
     absl::string_view str ABSL_ATTRIBUTE_LIFETIME_BOUND,
     absl::string_view suffix) {
   if (absl::EndsWith(str, suffix)) str.remove_suffix(suffix.size());

@@ -14,6 +14,8 @@
 
 #include "src/utf8_fix.h"
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <cassert>
 

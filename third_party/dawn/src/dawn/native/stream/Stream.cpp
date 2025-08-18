@@ -54,6 +54,27 @@ MaybeError Stream<std::string>::Read(Source* s, std::string* t) {
 }
 
 template <>
+void Stream<std::wstring>::Write(Sink* s, const std::wstring& t) {
+    StreamIn(s, t.length());
+    size_t size = t.length() * sizeof(wchar_t);
+    if (size > 0) {
+        void* ptr = s->GetSpace(size);
+        memcpy(ptr, t.data(), size);
+    }
+}
+
+template <>
+MaybeError Stream<std::wstring>::Read(Source* s, std::wstring* t) {
+    size_t length;
+    DAWN_TRY(StreamOut(s, &length));
+    size_t size = length * sizeof(wchar_t);
+    const void* ptr;
+    DAWN_TRY(s->Read(&ptr, size));
+    *t = std::wstring(static_cast<const wchar_t*>(ptr), length);
+    return {};
+}
+
+template <>
 void Stream<std::string_view>::Write(Sink* s, const std::string_view& t) {
     StreamIn(s, t.length());
     size_t size = t.length() * sizeof(char);

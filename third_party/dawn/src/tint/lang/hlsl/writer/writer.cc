@@ -34,10 +34,10 @@
 #include "src/tint/lang/core/ir/module.h"
 #include "src/tint/lang/core/ir/var.h"
 #include "src/tint/lang/core/type/input_attachment.h"
-#include "src/tint/lang/hlsl/writer/ast_printer/ast_printer.h"
+#include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/hlsl/writer/common/option_helpers.h"
 #include "src/tint/lang/hlsl/writer/printer/printer.h"
 #include "src/tint/lang/hlsl/writer/raise/raise.h"
-#include "src/tint/lang/wgsl/ast/pipeline_stage.h"
 
 namespace tint::hlsl::writer {
 
@@ -53,9 +53,6 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
     for (auto* inst : *ir.root_block) {
         auto* var = inst->As<core::ir::Var>();
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-        if (ptr->AddressSpace() == core::AddressSpace::kPushConstant) {
-            return Failure("push constants are not supported by the HLSL backend");
-        }
         if (ptr->AddressSpace() == core::AddressSpace::kPixelLocal) {
             // Check the pixel_local variables have corresponding entries in the PLS attachment map.
             auto* str = ptr->StoreType()->As<core::type::Struct>();
@@ -70,6 +67,46 @@ Result<SuccessType> CanGenerate(const core::ir::Module& ir, const Options& optio
             return Failure("input attachments are not supported by the HLSL backend");
         }
     }
+
+    // Check for unsupported shader IO builtins.
+    for (auto& func : ir.functions) {
+        if (!func->IsEntryPoint()) {
+            continue;
+        }
+
+        for (auto* param : func->Params()) {
+            if (auto* str = param->Type()->As<core::type::Struct>()) {
+                for (auto* member : str->Members()) {
+                    if (member->Attributes().builtin == core::BuiltinValue::kSubgroupId) {
+                        return Failure("subgroup_id is not yet supported by the HLSL backend");
+                    }
+
+                    if (member->Attributes().builtin == core::BuiltinValue::kBarycentricCoord &&
+                        options.compiler == Options::Compiler::kFXC) {
+                        return Failure(
+                            "barycentric_coord is not supported by the FXC HLSL backend");
+                    }
+                }
+            } else {
+                if (param->Builtin() == core::BuiltinValue::kSubgroupId) {
+                    return Failure("subgroup_id is not yet supported by the HLSL backend");
+                }
+
+                if (param->Builtin() == core::BuiltinValue::kBarycentricCoord &&
+                    options.compiler == Options::Compiler::kFXC) {
+                    return Failure("barycentric_coord is not supported by the FXC HLSL backend");
+                }
+            }
+        }
+    }
+
+    {
+        auto res = ValidateBindingOptions(options);
+        if (res != Success) {
+            return res.Failure();
+        }
+    }
+
     return Success;
 }
 
@@ -81,40 +118,6 @@ Result<Output> Generate(core::ir::Module& ir, const Options& options) {
     }
 
     return Print(ir, options);
-}
-
-Result<Output> Generate(const Program& program, const Options& options) {
-    if (!program.IsValid()) {
-        return Failure{program.Diagnostics().Str()};
-    }
-
-    // Sanitize the program.
-    auto sanitized_result = Sanitize(program, options);
-    if (!sanitized_result.program.IsValid()) {
-        return Failure{sanitized_result.program.Diagnostics().Str()};
-    }
-
-    // Generate the HLSL code.
-    auto impl = std::make_unique<ASTPrinter>(sanitized_result.program);
-    if (!impl->Generate()) {
-        return Failure{impl->Diagnostics().Str()};
-    }
-
-    Output output;
-    output.hlsl = impl->Result();
-
-    // Collect the list of entry points in the sanitized program.
-    for (auto* func : sanitized_result.program.AST().Functions()) {
-        if (func->IsEntryPoint()) {
-            auto name = func->name->symbol.Name();
-            output.entry_points.push_back({name, func->PipelineStage()});
-        }
-    }
-
-    output.used_array_length_from_uniform_indices =
-        std::move(sanitized_result.used_array_length_from_uniform_indices);
-
-    return output;
 }
 
 }  // namespace tint::hlsl::writer

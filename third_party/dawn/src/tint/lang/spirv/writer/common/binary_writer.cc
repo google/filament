@@ -52,9 +52,9 @@ void BinaryWriter::WriteInstruction(const Instruction& inst) {
     ProcessInstruction(inst);
 }
 
-void BinaryWriter::WriteHeader(uint32_t bound, uint32_t version) {
+void BinaryWriter::WriteHeader(uint32_t bound, uint32_t version, uint32_t spirv_version) {
     out_.push_back(spv::MagicNumber);
-    out_.push_back(0x00010300);  // Version 1.3
+    out_.push_back(spirv_version);
     out_.push_back(kGeneratorId | version);
     out_.push_back(bound);
     out_.push_back(0);

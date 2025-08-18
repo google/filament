@@ -30,13 +30,8 @@
 
 #include <string>
 
-#include "src/tint/lang/wgsl/ast/pipeline_stage.h"
+#include "src/tint/lang/core/ir/function.h"
 #include "src/tint/utils/result.h"
-
-// Forward declarations
-namespace tint {
-class Program;
-}  // namespace tint
 
 namespace tint::glsl::validate {
 
@@ -44,7 +39,7 @@ namespace tint::glsl::validate {
 /// @param source the GLSL source
 /// @param stage the pipeline stage
 /// @return the result
-Result<SuccessType> Validate(const std::string& source, tint::ast::PipelineStage stage);
+Result<SuccessType> Validate(const std::string& source, core::ir::Function::PipelineStage stage);
 
 }  // namespace tint::glsl::validate
 

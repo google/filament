@@ -64,9 +64,10 @@ class GlslWriterTestHelperBase : public BASE {
     /// @param options the writer options
     /// @param stage the validation stage
     /// @returns true if generation and validation succeeded
-    bool Generate(Options options = {},
-                  tint::ast::PipelineStage stage = tint::ast::PipelineStage::kCompute) {
-        auto result = writer::Generate(mod, options, "");
+    bool Generate(
+        Options options = {},
+        core::ir::Function::PipelineStage stage = core::ir::Function::PipelineStage::kCompute) {
+        auto result = writer::Generate(mod, options);
         if (result != Success) {
             err_ = result.Failure().reason;
             return false;

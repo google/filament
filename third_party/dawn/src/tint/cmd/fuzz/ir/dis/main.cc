@@ -34,6 +34,7 @@
 #include "src/tint/cmd/common/helper.h"
 #include "src/tint/lang/core/ir/binary/decode.h"
 #include "src/tint/lang/core/ir/disassembler.h"
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/spirv/writer/writer.h"
 #include "src/tint/lang/wgsl/writer/writer.h"
 #include "src/tint/utils/command/args.h"
@@ -126,6 +127,7 @@ struct Options {
 
     Format format = Format::kUnknown;
 
+    bool validate = false;
     bool dump_wgsl = false;
     bool dump_spirv = false;
 };
@@ -165,6 +167,10 @@ If not provided, will be inferred from output filename extension:
         "Output file name for shader output, if not specified nothing will be written to file",
         ShortName{"o"}, Parameter{"name"});
     TINT_DEFER(opts->output_filename = output.value.value_or(""));
+
+    auto& validate = options.Add<BoolOption>("validate", "Runs the IR validator on the source IR",
+                                             ShortName{"V"}, Default{false});
+    TINT_DEFER(opts->validate = *validate.value);
 
     auto& dump_wgsl = options.Add<BoolOption>(
         "dump-wgsl", "Writes the WGSL form of input to stdout, may fail due to validation errors",
@@ -363,6 +369,29 @@ bool Run(const Options& options) {
     {
         auto module = tint::core::ir::binary::Decode(fuzz_pb.Get().module());
         EmitIR(options, module.Get());
+
+        if (options.validate) {
+            auto res = tint::core::ir::Validate(
+                module.Get(), tint::core::ir::Capabilities{
+                                  tint::core::ir::Capability::kAllow8BitIntegers,
+                                  tint::core::ir::Capability::kAllow64BitIntegers,
+                                  tint::core::ir::Capability::kAllowClipDistancesOnF32,
+                                  tint::core::ir::Capability::kAllowHandleVarsWithoutBindings,
+                                  tint::core::ir::Capability::kAllowModuleScopeLets,
+                                  tint::core::ir::Capability::kAllowOverrides,
+                                  tint::core::ir::Capability::kAllowPointersAndHandlesInStructures,
+                                  tint::core::ir::Capability::kAllowRefTypes,
+                                  tint::core::ir::Capability::kAllowVectorElementPointer,
+                                  tint::core::ir::Capability::kAllowPrivateVarsInFunctions,
+                                  tint::core::ir::Capability::kAllowPhonyInstructions,
+                                  tint::core::ir::Capability::kAllowAnyLetType,
+                              });
+            if (res == tint::Success) {
+                std::cout << "IR module is valid.\n";
+            } else {
+                std::cerr << res.Failure();
+            }
+        }
     }
 
     {
@@ -389,7 +418,6 @@ int main(int argc, const char** argv) {
     Options options;
 
     tint::Initialize();
-    tint::SetInternalCompilerErrorReporter(&tint::cmd::TintInternalCompilerErrorReporter);
 
     if (!ParseArgs(arguments, &options)) {
         return EXIT_FAILURE;

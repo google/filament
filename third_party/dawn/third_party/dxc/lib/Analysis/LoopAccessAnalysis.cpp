@@ -1179,7 +1179,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
                                    MemAccessInfoSet &CheckDeps,
                                    const ValueToValueMap &Strides) {
 
-  MaxSafeDepDistBytes = -1U;
+  MaxSafeDepDistBytes = std::numeric_limits<unsigned>::max();
   while (!CheckDeps.empty()) {
     MemAccessInfo CurAccess = *CheckDeps.begin();
 
@@ -1677,8 +1677,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const ValueToValueMap &Strides)
     : PtrRtChecking(SE), DepChecker(SE, L), TheLoop(L), SE(SE), DL(DL),
       TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
-      MaxSafeDepDistBytes(-1U), CanVecMem(false),
-      StoreToLoopInvariantAddress(false) {
+      MaxSafeDepDistBytes(std::numeric_limits<unsigned>::max()),
+      CanVecMem(false), StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
     analyzeLoop(Strides);
 }

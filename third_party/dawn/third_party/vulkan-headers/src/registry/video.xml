@@ -29,6 +29,7 @@ The current public version of video.xml is maintained in the default branch
         <type category="include" name="vk_video/vulkan_video_codecs_common.h">#include "vulkan_video_codecs_common.h"</type>
         <type category="include" name="vk_video/vulkan_video_codec_h264std.h">#include "vulkan_video_codec_h264std.h"</type>
         <type category="include" name="vk_video/vulkan_video_codec_h265std.h">#include "vulkan_video_codec_h265std.h"</type>
+        <type category="include" name="vk_video/vulkan_video_codec_vp9std.h">#include "vulkan_video_codec_vp9std.h"</type>
         <type category="include" name="vk_video/vulkan_video_codec_av1std.h">#include "vulkan_video_codec_av1std.h"</type>
 
             <!-- vulkan_video_codecs_common macros -->
@@ -50,6 +51,10 @@ The current public version of video.xml is maintained in the default branch
             <!-- vulkan_video_codec_h265std_encode.h macros -->
         <type category="define" requires="VK_MAKE_VIDEO_STD_VERSION">
 #define <name>VK_STD_VULKAN_VIDEO_CODEC_H265_ENCODE_API_VERSION_1_0_0</name> <type>VK_MAKE_VIDEO_STD_VERSION</type>(1, 0, 0)</type>
+
+            <!-- vulkan_video_codec_vp9std_decode.h macros -->
+        <type category="define" requires="VK_MAKE_VIDEO_STD_VERSION">
+#define <name>VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_API_VERSION_1_0_0</name> <type>VK_MAKE_VIDEO_STD_VERSION</type>(1, 0, 0)</type>
 
             <!-- vulkan_video_codec_av1std_decode.h macros -->
         <type category="define" requires="VK_MAKE_VIDEO_STD_VERSION">
@@ -118,7 +123,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                              <name>chroma_sample_loc_type_top_field</name></member>
             <member><type>uint8_t</type>                              <name>chroma_sample_loc_type_bottom_field</name></member>
             <member><type>uint32_t</type>                              <name>reserved1</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoH264HrdParameters</type>*     <name>pHrdParameters</name><comment>must be a valid ptr to hrd_parameters, if nal_hrd_parameters_present_flag or vcl_hrd_parameters_present_flag are set</comment></member>
+            <member optional="true">const <type>StdVideoH264HrdParameters</type>* <name>pHrdParameters</name><comment>must be a valid ptr to hrd_parameters, if nal_hrd_parameters_present_flag or vcl_hrd_parameters_present_flag are set</comment></member>
         </type>
         <type category="struct" name="StdVideoH264SpsFlags">
             <member><type>uint32_t</type>                             <name>constraint_set0_flag</name> : 1</member>
@@ -185,9 +190,9 @@ The current public version of video.xml is maintained in the default branch
                 pOffsetForRefFrame is a pointer representing the offset_for_ref_frame array with num_ref_frames_in_pic_order_cnt_cycle number of elements.
                 If pOffsetForRefFrame has nullptr value, then num_ref_frames_in_pic_order_cnt_cycle must also be "0".
             </comment>
-            <member>const <type>int32_t</type>*                             <name>pOffsetForRefFrame</name></member>
-            <member>const <type>StdVideoH264ScalingLists</type>*            <name>pScalingLists</name><comment>Must be a valid pointer if seq_scaling_matrix_present_flag is set</comment></member>
-            <member>const <type>StdVideoH264SequenceParameterSetVui</type>* <name>pSequenceParameterSetVui</name><comment>Must be a valid pointer if StdVideoH264SpsFlags:vui_parameters_present_flag is set</comment></member>
+            <member len="num_ref_frames_in_pic_order_cnt_cycle">const <type>int32_t</type>* <name>pOffsetForRefFrame</name></member>
+            <member optional="true">const <type>StdVideoH264ScalingLists</type>*            <name>pScalingLists</name><comment>Must be a valid pointer if seq_scaling_matrix_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoH264SequenceParameterSetVui</type>* <name>pSequenceParameterSetVui</name><comment>Must be a valid pointer if StdVideoH264SpsFlags:vui_parameters_present_flag is set</comment></member>
         </type>
         <type category="struct" name="StdVideoH264PpsFlags">
             <member><type>uint32_t</type>                             <name>transform_8x8_mode_flag</name> : 1</member>
@@ -210,7 +215,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>int8_t</type>                               <name>pic_init_qs_minus26</name></member>
             <member><type>int8_t</type>                               <name>chroma_qp_index_offset</name></member>
             <member><type>int8_t</type>                               <name>second_chroma_qp_index_offset</name></member>
-            <member>const <type>StdVideoH264ScalingLists</type>*      <name>pScalingLists</name><comment>Must be a valid pointer if StdVideoH264PpsFlags::pic_scaling_matrix_present_flag is set.</comment></member>
+            <member optional="true">const <type>StdVideoH264ScalingLists</type>* <name>pScalingLists</name><comment>Must be a valid pointer if StdVideoH264PpsFlags::pic_scaling_matrix_present_flag is set.</comment></member>
         </type>
 
             <!-- vulkan_video_codec_h264std_decode.h enumerated types -->
@@ -324,9 +329,9 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                                     <name>refList1ModOpCount</name></member>
             <member><type>uint8_t</type>                                     <name>refPicMarkingOpCount</name></member>
             <member><type>uint8_t</type>                                     <name>reserved1</name>[7]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoEncodeH264RefListModEntry</type>*    <name>pRefList0ModOperations</name><comment>Must be a valid pointer to an array with size refList0ModOpCount if ref_pic_list_modification_flag_l0 is set and contains the RefList0 modification parameters as defined in section 7.4.3.1</comment></member>
-            <member>const <type>StdVideoEncodeH264RefListModEntry</type>*    <name>pRefList1ModOperations</name><comment>Must be a valid pointer to an array with size refList1ModOpCount if ref_pic_list_modification_flag_l1 is set and contains the RefList1 modification parameters as defined in section 7.4.3.1</comment></member>
-            <member>const <type>StdVideoEncodeH264RefPicMarkingEntry</type>* <name>pRefPicMarkingOperations</name><comment>Must be a valid pointer to an array with size refPicMarkingOpCount and contains the reference picture markings as defined in section 7.4.3.3</comment></member>
+            <member len="refList0ModOpCount">const <type>StdVideoEncodeH264RefListModEntry</type>*      <name>pRefList0ModOperations</name><comment>Must be a valid pointer to an array with size refList0ModOpCount if ref_pic_list_modification_flag_l0 is set and contains the RefList0 modification parameters as defined in section 7.4.3.1</comment></member>
+            <member len="refList1ModOpCount">const <type>StdVideoEncodeH264RefListModEntry</type>*      <name>pRefList1ModOperations</name><comment>Must be a valid pointer to an array with size refList1ModOpCount if ref_pic_list_modification_flag_l1 is set and contains the RefList1 modification parameters as defined in section 7.4.3.1</comment></member>
+            <member len="refPicMarkingOpCount">const <type>StdVideoEncodeH264RefPicMarkingEntry</type>* <name>pRefPicMarkingOperations</name><comment>Must be a valid pointer to an array with size refPicMarkingOpCount and contains the reference picture markings as defined in section 7.4.3.3</comment></member>
         </type>
         <type category="struct" name="StdVideoEncodeH264PictureInfo">
             <member><type>StdVideoEncodeH264PictureInfoFlags</type>   <name>flags</name></member>
@@ -338,7 +343,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>int32_t</type>                              <name>PicOrderCnt</name><comment>Picture order count, as defined in 8.2</comment></member>
             <member><type>uint8_t</type>                              <name>temporal_id</name><comment>Temporal identifier of the picture, as defined in G.7.3.1.1 / G.7.4.1.1</comment></member>
             <member><type>uint8_t</type>                              <name>reserved1</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoEncodeH264ReferenceListsInfo</type>* <name>pRefLists</name></member>
+            <member optional="true">const <type>StdVideoEncodeH264ReferenceListsInfo</type>* <name>pRefLists</name></member>
         </type>
         <type category="struct" name="StdVideoEncodeH264ReferenceInfo">
             <member><type>StdVideoEncodeH264ReferenceInfoFlags</type> <name>flags</name></member>
@@ -359,7 +364,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                              <name>reserved1</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
             <member><type>StdVideoH264CabacInitIdc</type>             <name>cabac_init_idc</name></member>
             <member><type>StdVideoH264DisableDeblockingFilterIdc</type> <name>disable_deblocking_filter_idc</name></member>
-            <member>const <type>StdVideoEncodeH264WeightTable</type>* <name>pWeightTable</name><comment></comment></member>
+            <member optional="true">const <type>StdVideoEncodeH264WeightTable</type>* <name>pWeightTable</name><comment></comment></member>
         </type>
 
             <!-- vulkan_video_codec_h265std.h enumerated types -->
@@ -418,8 +423,9 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                                    <name>cpb_cnt_minus1</name>[<enum>STD_VIDEO_H265_SUBLAYERS_LIST_SIZE</enum>]</member>
             <member><type>uint16_t</type>                                   <name>elemental_duration_in_tc_minus1</name>[<enum>STD_VIDEO_H265_SUBLAYERS_LIST_SIZE</enum>]</member>
             <member><type>uint16_t</type>                                   <name>reserved</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoH265SubLayerHrdParameters</type>*   <name>pSubLayerHrdParametersNal</name><comment>if flags.nal_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
-            <member>const <type>StdVideoH265SubLayerHrdParameters</type>*   <name>pSubLayerHrdParametersVcl</name><comment>if flags.vcl_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
+            <!-- NOTE: These arrays are sized according to parameters coming from their encompassing structures -->
+            <member optional="true" len="sps_max_sub_layers_minus1 + 1,vps_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersNal</name><comment>if flags.nal_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
+            <member optional="true" len="sps_max_sub_layers_minus1 + 1,vps_max_sub_layers_minus1 + 1">const <type>StdVideoH265SubLayerHrdParameters</type>* <name>pSubLayerHrdParametersVcl</name><comment>if flags.vcl_hrd_parameters_present_flag is set, then this must be a ptr to an array of StdVideoH265SubLayerHrdParameters with a size specified by sps_max_sub_layers_minus1 + 1 or vps_max_sub_layers_minus1 + 1, depending on whether the HRD parameters are part of the SPS or VPS, respectively.</comment></member>
         </type>
         <type category="struct" name="StdVideoH265VpsFlags">
             <member><type>uint32_t</type>                             <name>vps_temporal_id_nesting_flag</name> : 1</member>
@@ -437,9 +443,9 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint32_t</type>                             <name>vps_time_scale</name></member>
             <member><type>uint32_t</type>                             <name>vps_num_ticks_poc_diff_one_minus1</name></member>
             <member><type>uint32_t</type>                             <name>reserved3</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoH265DecPicBufMgr</type>*      <name>pDecPicBufMgr</name></member>
-            <member>const <type>StdVideoH265HrdParameters</type>*     <name>pHrdParameters</name></member>
-            <member>const <type>StdVideoH265ProfileTierLevel</type>*  <name>pProfileTierLevel</name></member>
+            <member optional="true">const <type>StdVideoH265DecPicBufMgr</type>*      <name>pDecPicBufMgr</name></member>
+            <member optional="true">const <type>StdVideoH265HrdParameters</type>*     <name>pHrdParameters</name></member>
+            <member optional="true">const <type>StdVideoH265ProfileTierLevel</type>*  <name>pProfileTierLevel</name></member>
         </type>
         <type category="struct" name="StdVideoH265ScalingLists">
             <member><type>uint8_t</type>                              <name>ScalingList4x4</name>[<enum>STD_VIDEO_H265_SCALING_LIST_4X4_NUM_LISTS</enum>][<enum>STD_VIDEO_H265_SCALING_LIST_4X4_NUM_ELEMENTS</enum>]<comment>ScalingList[ 0 ][ MatrixID ][ i ] (sizeID = 0)</comment></member>
@@ -519,7 +525,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                              <name>max_bits_per_min_cu_denom</name></member>
             <member><type>uint8_t</type>                              <name>log2_max_mv_length_horizontal</name></member>
             <member><type>uint8_t</type>                              <name>log2_max_mv_length_vertical</name></member>
-            <member>const <type>StdVideoH265HrdParameters</type>*     <name>pHrdParameters</name></member>
+            <member optional="true">const <type>StdVideoH265HrdParameters</type>* <name>pHrdParameters</name></member>
         </type>
         <type category="struct" name="StdVideoH265PredictorPaletteEntries">
             <member><type>uint16_t</type>                             <name>PredictorPaletteEntries</name>[<enum>STD_VIDEO_H265_PREDICTOR_PALETTE_COMPONENTS_LIST_SIZE</enum>][<enum>STD_VIDEO_H265_PREDICTOR_PALETTE_COMP_ENTRIES_LIST_SIZE</enum>]</member>
@@ -601,13 +607,13 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint32_t</type>                             <name>conf_win_right_offset</name></member>
             <member><type>uint32_t</type>                             <name>conf_win_top_offset</name></member>
             <member><type>uint32_t</type>                             <name>conf_win_bottom_offset</name></member>
-            <member>const <type>StdVideoH265ProfileTierLevel</type>*  <name>pProfileTierLevel</name></member>
-            <member>const <type>StdVideoH265DecPicBufMgr</type>*      <name>pDecPicBufMgr</name></member>
-            <member>const <type>StdVideoH265ScalingLists</type>*      <name>pScalingLists</name><comment>Must be a valid pointer if sps_scaling_list_data_present_flag is set</comment></member>
-            <member>const <type>StdVideoH265ShortTermRefPicSet</type>*      <name>pShortTermRefPicSet</name><comment>Must be a valid pointer to an array with size num_short_term_ref_pic_sets if num_short_term_ref_pic_sets is not 0.</comment></member>
-            <member>const <type>StdVideoH265LongTermRefPicsSps</type>*      <name>pLongTermRefPicsSps</name><comment>Must be a valid pointer if long_term_ref_pics_present_flag is set</comment></member>
-            <member>const <type>StdVideoH265SequenceParameterSetVui</type>* <name>pSequenceParameterSetVui</name><comment>Must be a valid pointer if StdVideoH265SpsFlags:vui_parameters_present_flag is set palette_max_size</comment></member>
-            <member>const <type>StdVideoH265PredictorPaletteEntries</type>* <name>pPredictorPaletteEntries</name><comment>Must be a valid pointer if sps_palette_predictor_initializer_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoH265ProfileTierLevel</type>*        <name>pProfileTierLevel</name></member>
+            <member optional="true">const <type>StdVideoH265DecPicBufMgr</type>*            <name>pDecPicBufMgr</name></member>
+            <member optional="true">const <type>StdVideoH265ScalingLists</type>*            <name>pScalingLists</name><comment>Must be a valid pointer if sps_scaling_list_data_present_flag is set</comment></member>
+            <member len="num_short_term_ref_pic_sets">const <type>StdVideoH265ShortTermRefPicSet</type>* <name>pShortTermRefPicSet</name><comment>Must be a valid pointer to an array with size num_short_term_ref_pic_sets if num_short_term_ref_pic_sets is not 0.</comment></member>
+            <member optional="true">const <type>StdVideoH265LongTermRefPicsSps</type>*      <name>pLongTermRefPicsSps</name><comment>Must be a valid pointer if long_term_ref_pics_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoH265SequenceParameterSetVui</type>* <name>pSequenceParameterSetVui</name><comment>Must be a valid pointer if StdVideoH265SpsFlags:vui_parameters_present_flag is set palette_max_size</comment></member>
+            <member optional="true">const <type>StdVideoH265PredictorPaletteEntries</type>* <name>pPredictorPaletteEntries</name><comment>Must be a valid pointer if sps_palette_predictor_initializer_present_flag is set</comment></member>
         </type>
         <type category="struct" name="StdVideoH265PpsFlags">
             <member><type>uint32_t</type>                             <name>dependent_slice_segments_enabled_flag</name> : 1</member>
@@ -689,8 +695,8 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint16_t</type>                             <name>column_width_minus1</name>[<enum>STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_COLS_LIST_SIZE</enum>]</member>
             <member><type>uint16_t</type>                             <name>row_height_minus1</name>[<enum>STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_ROWS_LIST_SIZE</enum>]</member>
             <member><type>uint32_t</type>                             <name>reserved3</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoH265ScalingLists</type>*      <name>pScalingLists</name><comment>Must be a valid pointer if pps_scaling_list_data_present_flag is set</comment></member>
-            <member>const <type>StdVideoH265PredictorPaletteEntries</type>* <name>pPredictorPaletteEntries</name><comment>Must be a valid pointer if pps_palette_predictor_initializer_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoH265ScalingLists</type>*            <name>pScalingLists</name><comment>Must be a valid pointer if pps_scaling_list_data_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoH265PredictorPaletteEntries</type>* <name>pPredictorPaletteEntries</name><comment>Must be a valid pointer if pps_palette_predictor_initializer_present_flag is set</comment></member>
         </type>
 
             <!-- vulkan_video_codec_h265std_decode.h structs -->
@@ -788,7 +794,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>int8_t</type>                               <name>slice_act_cr_qp_offset</name></member>
             <member><type>int8_t</type>                               <name>slice_qp_delta</name></member>
             <member><type>uint16_t</type>                             <name>reserved1</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoEncodeH265WeightTable</type>* <name>pWeightTable</name><comment></comment></member>
+            <member optional="true">const <type>StdVideoEncodeH265WeightTable</type>* <name>pWeightTable</name><comment></comment></member>
         </type>
         <type category="struct" name="StdVideoEncodeH265ReferenceListsInfoFlags">
             <member><type>uint32_t</type>                             <name>ref_pic_list_modification_flag_l0</name> : 1</member>
@@ -826,9 +832,9 @@ The current public version of video.xml is maintained in the default branch
             <member><type>int32_t</type>                              <name>PicOrderCntVal</name><comment>Picture order count derived as specified in 8.3.1</comment></member>
             <member><type>uint8_t</type>                              <name>TemporalId</name><comment>Temporal ID, as defined in 7.4.2.2</comment></member>
             <member><type>uint8_t</type>                              <name>reserved1</name>[7]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoEncodeH265ReferenceListsInfo</type>* <name>pRefLists</name></member>
-            <member>const <type>StdVideoH265ShortTermRefPicSet</type>* <name>pShortTermRefPicSet</name><comment>Must be a valid pointer if short_term_ref_pic_set_sps_flag is not set</comment></member>
-            <member>const <type>StdVideoEncodeH265LongTermRefPics</type>* <name>pLongTermRefPics</name><comment>Must be a valid pointer if long_term_ref_pics_present_flag is set</comment></member>
+            <member optional="true">const <type>StdVideoEncodeH265ReferenceListsInfo</type>*    <name>pRefLists</name></member>
+            <member optional="true">const <type>StdVideoH265ShortTermRefPicSet</type>*          <name>pShortTermRefPicSet</name><comment>Must be a valid pointer if short_term_ref_pic_set_sps_flag is not set</comment></member>
+            <member optional="true">const <type>StdVideoEncodeH265LongTermRefPics</type>*       <name>pLongTermRefPics</name><comment>Must be a valid pointer if long_term_ref_pics_present_flag is set</comment></member>
         </type>
         <type category="struct" name="StdVideoEncodeH265ReferenceInfoFlags">
             <member><type>uint32_t</type>                             <name>used_for_long_term_reference</name> : 1<comment>A picture that is marked as "used for long-term reference", derived binary value from clause 8.3.2 Decoding process for reference picture set</comment></member>
@@ -841,6 +847,94 @@ The current public version of video.xml is maintained in the default branch
             <member><type>StdVideoH265PictureType</type>              <name>pic_type</name></member>
             <member><type>int32_t</type>                              <name>PicOrderCntVal</name><comment>Picture order count derived as specified in 8.3.1</comment></member>
             <member><type>uint8_t</type>                              <name>TemporalId</name><comment>Temporal ID, as defined in 7.4.2.2</comment></member>
+        </type>
+
+            <!-- vulkan_video_codec_vp9std.h enumerated types -->
+        <type name="StdVideoVP9Profile" category="enum"/>
+        <type name="StdVideoVP9Level" category="enum"/>
+        <type name="StdVideoVP9FrameType" category="enum"/>
+        <type name="StdVideoVP9ReferenceName" category="enum"/>
+        <type name="StdVideoVP9InterpolationFilter" category="enum"/>
+        <type name="StdVideoVP9ColorSpace" category="enum"/>
+
+        <type category="struct" name="StdVideoVP9ColorConfigFlags">
+            <comment>Syntax defined in section 6.2.2, semantics defined in section 7.2.2</comment>
+            <member><type>uint32_t</type>                           <name>color_range</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>reserved</name> : 31</member>
+        </type>
+        <type category="struct" name="StdVideoVP9ColorConfig">
+            <comment>Syntax defined in section 6.2.2, semantics defined in section 7.2.2</comment>
+            <member><type>StdVideoVP9ColorConfigFlags</type>        <name>flags</name></member>
+            <member><type>uint8_t</type>                            <name>BitDepth</name></member>
+            <member><type>uint8_t</type>                            <name>subsampling_x</name></member>
+            <member><type>uint8_t</type>                            <name>subsampling_y</name></member>
+            <member><type>uint8_t</type>                            <name>reserved1</name><comment>Reserved for future use and must be initialized with 0.</comment></member>
+            <member><type>StdVideoVP9ColorSpace</type>              <name>color_space</name></member>
+        </type>
+        <type category="struct" name="StdVideoVP9LoopFilterFlags">
+            <comment>Syntax defined in section 6.2.8, semantics defined in section 7.2.8</comment>
+            <member><type>uint32_t</type>                           <name>loop_filter_delta_enabled</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>loop_filter_delta_update</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>reserved</name> : 30</member>
+        </type>
+        <type category="struct" name="StdVideoVP9LoopFilter">
+            <comment>Syntax defined in section 6.2.8, semantics defined in section 7.2.8</comment>
+            <member><type>StdVideoVP9LoopFilterFlags</type>         <name>flags</name></member>
+            <member><type>uint8_t</type>                            <name>loop_filter_level</name></member>
+            <member><type>uint8_t</type>                            <name>loop_filter_sharpness</name></member>
+            <member><type>uint8_t</type>                            <name>update_ref_delta</name></member>
+            <member><type>int8_t</type>                             <name>loop_filter_ref_deltas</name>[<enum>STD_VIDEO_VP9_MAX_REF_FRAMES</enum>]</member>
+            <member><type>uint8_t</type>                            <name>update_mode_delta</name></member>
+            <member><type>int8_t</type>                             <name>loop_filter_mode_deltas</name>[<enum>STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS</enum>]</member>
+        </type>
+        <type category="struct" name="StdVideoVP9SegmentationFlags">
+            <comment>Syntax defined in section 6.2.11, semantics defined in section 7.2.10</comment>
+            <member><type>uint32_t</type>                           <name>segmentation_update_map</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>segmentation_temporal_update</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>segmentation_update_data</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>segmentation_abs_or_delta_update</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>reserved</name> : 28</member>
+        </type>
+        <type category="struct" name="StdVideoVP9Segmentation">
+            <comment>Syntax defined in section 6.2.11, semantics defined in section 7.2.10</comment>
+            <member><type>StdVideoVP9SegmentationFlags</type>       <name>flags</name></member>
+            <member><type>uint8_t</type>                            <name>segmentation_tree_probs</name>[<enum>STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS</enum>]</member>
+            <member><type>uint8_t</type>                            <name>segmentation_pred_prob</name>[<enum>STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB</enum>]</member>
+            <member><type>uint8_t</type>                            <name>FeatureEnabled</name>[<enum>STD_VIDEO_VP9_MAX_SEGMENTS</enum>]</member><comment>Each element contains 4 (SEG_LVL_MAX) bits, one bit for each feature within the segment</comment>
+            <member><type>int16_t</type>                            <name>FeatureData</name>[<enum>STD_VIDEO_VP9_MAX_SEGMENTS</enum>][<enum>STD_VIDEO_VP9_SEG_LVL_MAX</enum>]</member>
+        </type>
+        <type category="struct" name="StdVideoDecodeVP9PictureInfoFlags">
+            <comment>Syntax defined in section 6.2, semantics defined in section 7.2</comment>
+            <member><type>uint32_t</type>                           <name>error_resilient_mode</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>intra_only</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>allow_high_precision_mv</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>refresh_frame_context</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>frame_parallel_decoding_mode</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>segmentation_enabled</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>show_frame</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>UsePrevFrameMvs</name> : 1</member>
+            <member><type>uint32_t</type>                           <name>reserved</name> : 24</member>
+        </type>
+        <type category="struct" name="StdVideoDecodeVP9PictureInfo">
+            <comment>Syntax defined in section 6.2, semantics defined in section 7.2</comment>
+            <member><type>StdVideoDecodeVP9PictureInfoFlags</type>  <name>flags</name></member>
+            <member><type>StdVideoVP9Profile</type>                 <name>profile</name></member><comment></comment>
+            <member><type>StdVideoVP9FrameType</type>               <name>frame_type</name></member>
+            <member><type>uint8_t</type>                            <name>frame_context_idx</name></member>
+            <member><type>uint8_t</type>                            <name>reset_frame_context</name></member>
+            <member><type>uint8_t</type>                            <name>refresh_frame_flags</name></member>
+            <member><type>uint8_t</type>                            <name>ref_frame_sign_bias_mask</name></member>
+            <member><type>StdVideoVP9InterpolationFilter</type>     <name>interpolation_filter</name></member>
+            <member><type>uint8_t</type>                            <name>base_q_idx</name></member>
+            <member><type>int8_t</type>                             <name>delta_q_y_dc</name></member>
+            <member><type>int8_t</type>                             <name>delta_q_uv_dc</name></member>
+            <member><type>int8_t</type>                             <name>delta_q_uv_ac</name></member>
+            <member><type>uint8_t</type>                            <name>tile_cols_log2</name></member>
+            <member><type>uint8_t</type>                            <name>tile_rows_log2</name></member>
+            <member><type>uint16_t</type>                           <name>reserved1</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
+            <member>const <type>StdVideoVP9ColorConfig</type>*                  <name>pColorConfig</name></member>
+            <member>const <type>StdVideoVP9LoopFilter</type>*                   <name>pLoopFilter</name></member>
+            <member optional="true">const <type>StdVideoVP9Segmentation</type>* <name>pSegmentation</name></member>
         </type>
 
             <!-- vulkan_video_codec_av1std.h enumerated types -->
@@ -925,8 +1019,8 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                            <name>seq_force_integer_mv</name><comment>The final value of of seq_force_integer_mv per the value of seq_choose_integer_mv.</comment></member>
             <member><type>uint8_t</type>                            <name>seq_force_screen_content_tools</name><comment>The final value of of seq_force_screen_content_tools per the value of seq_choose_screen_content_tools.</comment></member>
             <member><type>uint8_t</type>                            <name>reserved1</name>[5]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoAV1ColorConfig</type>*      <name>pColorConfig</name></member>
-            <member>const <type>StdVideoAV1TimingInfo</type>*       <name>pTimingInfo</name></member>
+            <member>const <type>StdVideoAV1ColorConfig</type>*                  <name>pColorConfig</name></member>
+            <member optional="true">const <type>StdVideoAV1TimingInfo</type>*   <name>pTimingInfo</name></member>
         </type>
         <type category="struct" name="StdVideoAV1LoopFilterFlags">
             <comment>Syntax defined in section 5.9.11, semantics defined in section 6.8.10</comment>
@@ -981,10 +1075,10 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint16_t</type>                           <name>context_update_tile_id</name></member>
             <member><type>uint8_t</type>                            <name>tile_size_bytes_minus_1</name></member>
             <member><type>uint8_t</type>                            <name>reserved1</name>[7]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>uint16_t</type>*                    <name>pMiColStarts</name><comment>TileCols number of elements</comment></member>
-            <member>const <type>uint16_t</type>*                    <name>pMiRowStarts</name><comment>TileRows number of elements</comment></member>
-            <member>const <type>uint16_t</type>*                    <name>pWidthInSbsMinus1</name><comment>TileCols number of elements</comment></member>
-            <member>const <type>uint16_t</type>*                    <name>pHeightInSbsMinus1</name><comment>TileRows number of elements</comment></member>
+            <member len="TileCols">const <type>uint16_t</type>*     <name>pMiColStarts</name><comment>TileCols number of elements</comment></member>
+            <member len="TileRows">const <type>uint16_t</type>*     <name>pMiRowStarts</name><comment>TileRows number of elements</comment></member>
+            <member len="TileCols">const <type>uint16_t</type>*     <name>pWidthInSbsMinus1</name><comment>TileCols number of elements</comment></member>
+            <member len="TileRows">const <type>uint16_t</type>*     <name>pHeightInSbsMinus1</name><comment>TileRows number of elements</comment></member>
         </type>
         <type category="struct" name="StdVideoAV1CDEF">
             <comment>Syntax defined in section 5.9.19, semantics defined in section 6.10.14</comment>
@@ -1092,14 +1186,14 @@ The current public version of video.xml is maintained in the default branch
             <member><type>uint8_t</type>                            <name>reserved2</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
             <member><type>uint8_t</type>                            <name>OrderHints</name>[<enum>STD_VIDEO_AV1_NUM_REF_FRAMES</enum>]</member>
             <member><type>uint32_t</type>                           <name>expectedFrameId</name>[<enum>STD_VIDEO_AV1_NUM_REF_FRAMES</enum>]</member>
-            <member>const <type>StdVideoAV1TileInfo</type>*         <name>pTileInfo</name></member>
-            <member>const <type>StdVideoAV1Quantization</type>*     <name>pQuantization</name></member>
-            <member>const <type>StdVideoAV1Segmentation</type>*     <name>pSegmentation</name></member>
-            <member>const <type>StdVideoAV1LoopFilter</type>*       <name>pLoopFilter</name></member>
-            <member>const <type>StdVideoAV1CDEF</type>*             <name>pCDEF</name></member>
-            <member>const <type>StdVideoAV1LoopRestoration</type>*  <name>pLoopRestoration</name></member>
-            <member>const <type>StdVideoAV1GlobalMotion</type>*     <name>pGlobalMotion</name></member>
-            <member>const <type>StdVideoAV1FilmGrain</type>*        <name>pFilmGrain</name></member>
+            <member>const <type>StdVideoAV1TileInfo</type>*                         <name>pTileInfo</name></member>
+            <member>const <type>StdVideoAV1Quantization</type>*                     <name>pQuantization</name></member>
+            <member optional="true">const <type>StdVideoAV1Segmentation</type>*     <name>pSegmentation</name></member>
+            <member>const <type>StdVideoAV1LoopFilter</type>*                       <name>pLoopFilter</name></member>
+            <member optional="true">const <type>StdVideoAV1CDEF</type>*             <name>pCDEF</name></member>
+            <member optional="true">const <type>StdVideoAV1LoopRestoration</type>*  <name>pLoopRestoration</name></member>
+            <member>const <type>StdVideoAV1GlobalMotion</type>*                     <name>pGlobalMotion</name></member>
+            <member optional="true">const <type>StdVideoAV1FilmGrain</type>*        <name>pFilmGrain</name></member>
         </type>
         <type category="struct" name="StdVideoDecodeAV1ReferenceInfoFlags">
             <member><type>uint32_t</type>                           <name>disable_frame_end_update_cdf</name> : 1</member>
@@ -1193,15 +1287,15 @@ The current public version of video.xml is maintained in the default branch
             <member><type>int8_t</type>                             <name>ref_frame_idx</name>[<enum>STD_VIDEO_AV1_REFS_PER_FRAME</enum>]</member>
             <member><type>uint8_t</type>                            <name>reserved1</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
             <member><type>uint32_t</type>                           <name>delta_frame_id_minus_1</name>[<enum>STD_VIDEO_AV1_REFS_PER_FRAME</enum>]</member>
-            <member>const <type>StdVideoAV1TileInfo</type>*         <name>pTileInfo</name></member>
-            <member>const <type>StdVideoAV1Quantization</type>*     <name>pQuantization</name></member>
-            <member>const <type>StdVideoAV1Segmentation</type>*     <name>pSegmentation</name></member>
-            <member>const <type>StdVideoAV1LoopFilter</type>*       <name>pLoopFilter</name></member>
-            <member>const <type>StdVideoAV1CDEF</type>*             <name>pCDEF</name></member>
-            <member>const <type>StdVideoAV1LoopRestoration</type>*  <name>pLoopRestoration</name></member>
-            <member>const <type>StdVideoAV1GlobalMotion</type>*     <name>pGlobalMotion</name></member>
-            <member>const <type>StdVideoEncodeAV1ExtensionHeader</type>* <name>pExtensionHeader</name></member>
-            <member>const <type>uint32_t</type>*                    <name>pBufferRemovalTimes</name></member>
+            <member optional="true">const <type>StdVideoAV1TileInfo</type>*                 <name>pTileInfo</name></member>
+            <member>const <type>StdVideoAV1Quantization</type>*                             <name>pQuantization</name></member>
+            <member optional="true">const <type>StdVideoAV1Segmentation</type>*             <name>pSegmentation</name></member>
+            <member>const <type>StdVideoAV1LoopFilter</type>*                               <name>pLoopFilter</name></member>
+            <member optional="true">const <type>StdVideoAV1CDEF</type>*                     <name>pCDEF</name></member>
+            <member optional="true">const <type>StdVideoAV1LoopRestoration</type>*          <name>pLoopRestoration</name></member>
+            <member>const <type>StdVideoAV1GlobalMotion</type>*                             <name>pGlobalMotion</name></member>
+            <member optional="true">const <type>StdVideoEncodeAV1ExtensionHeader</type>*    <name>pExtensionHeader</name></member>
+            <member optional="true">const <type>uint32_t</type>*                            <name>pBufferRemovalTimes</name></member>
         </type>
         <type category="struct" name="StdVideoEncodeAV1ReferenceInfoFlags">
             <!-- TODO: Are these needed? For now it is simply copied from AV1 decode -->
@@ -1215,7 +1309,7 @@ The current public version of video.xml is maintained in the default branch
             <member><type>StdVideoAV1FrameType</type>                <name>frame_type</name></member>
             <member><type>uint8_t</type>                             <name>OrderHint</name></member>
             <member><type>uint8_t</type>                             <name>reserved1</name>[3]<comment>Reserved for future use and must be initialized with 0.</comment></member>
-            <member>const <type>StdVideoEncodeAV1ExtensionHeader</type>* <name>pExtensionHeader</name></member>
+            <member optional="true">const <type>StdVideoEncodeAV1ExtensionHeader</type>* <name>pExtensionHeader</name></member>
         </type>
     </types>
 
@@ -1424,7 +1518,64 @@ The current public version of video.xml is maintained in the default branch
         <enum name="STD_VIDEO_H265_ASPECT_RATIO_IDC_INVALID"                value="0x7FFFFFFF"/>
     </enums>
 
-                <!-- vulkan_video_codec_av1std.h enums -->
+            <!-- vulkan_video_codec_vp9std.h enums -->
+    <enums name="StdVideoVP9Profile" type="enum">
+        <enum name="STD_VIDEO_VP9_PROFILE_0"                                value="0"/>
+        <enum name="STD_VIDEO_VP9_PROFILE_1"                                value="1"/>
+        <enum name="STD_VIDEO_VP9_PROFILE_2"                                value="2"/>
+        <enum name="STD_VIDEO_VP9_PROFILE_3"                                value="3"/>
+        <enum name="STD_VIDEO_VP9_PROFILE_INVALID"                          value="0x7FFFFFFF"/>
+    </enums>
+    <enums name="StdVideoVP9Level" type="enum">
+        <enum name="STD_VIDEO_VP9_LEVEL_1_0"                                value="0"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_1_1"                                value="1"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_2_0"                                value="2"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_2_1"                                value="3"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_3_0"                                value="4"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_3_1"                                value="5"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_4_0"                                value="6"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_4_1"                                value="7"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_5_0"                                value="8"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_5_1"                                value="9"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_5_2"                                value="10"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_6_0"                                value="11"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_6_1"                                value="12"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_6_2"                                value="13"/>
+        <enum name="STD_VIDEO_VP9_LEVEL_INVALID"                            value="0x7FFFFFFF"/>
+    </enums>
+    <enums name="StdVideoVP9FrameType" type="enum">
+        <enum name="STD_VIDEO_VP9_FRAME_TYPE_KEY"                           value="0"/>
+        <enum name="STD_VIDEO_VP9_FRAME_TYPE_NON_KEY"                       value="1"/>
+        <enum name="STD_VIDEO_VP9_FRAME_TYPE_INVALID"                       value="0x7FFFFFFF"/>
+    </enums>
+    <enums name="StdVideoVP9ReferenceName" type="enum">
+        <enum name="STD_VIDEO_VP9_REFERENCE_NAME_INTRA_FRAME"               value="0"/>
+        <enum name="STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME"                value="1"/>
+        <enum name="STD_VIDEO_VP9_REFERENCE_NAME_GOLDEN_FRAME"              value="2"/>
+        <enum name="STD_VIDEO_VP9_REFERENCE_NAME_ALTREF_FRAME"              value="3"/>
+        <enum name="STD_VIDEO_VP9_REFERENCE_NAME_INVALID"                   value="0x7FFFFFFF"/>
+    </enums>
+    <enums name="StdVideoVP9InterpolationFilter" type="enum">
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP"            value="0"/>
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SMOOTH"     value="1"/>
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_EIGHTTAP_SHARP"      value="2"/>
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_BILINEAR"            value="3"/>
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_SWITCHABLE"          value="4"/>
+        <enum name="STD_VIDEO_VP9_INTERPOLATION_FILTER_INVALID"             value="0x7FFFFFFF"/>
+    </enums>
+    <enums name="StdVideoVP9ColorSpace" type="enum">
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_UNKNOWN"                      value="0"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_BT_601"                       value="1"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_BT_709"                       value="2"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_SMPTE_170"                    value="3"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_SMPTE_240"                    value="4"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_BT_2020"                      value="5"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_RESERVED"                     value="6"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_RGB"                          value="7"/>
+        <enum name="STD_VIDEO_VP9_COLOR_SPACE_INVALID"                      value="0x7FFFFFFF"/>
+    </enums>
+    
+            <!-- vulkan_video_codec_av1std.h enums -->
     <enums name="StdVideoAV1Profile" type="enum">
         <enum name="STD_VIDEO_AV1_PROFILE_MAIN"                             value="0"/>
         <enum name="STD_VIDEO_AV1_PROFILE_HIGH"                             value="1"/>
@@ -1562,24 +1713,24 @@ The current public version of video.xml is maintained in the default branch
     </enums>
 
     <extensions>
-        <extension name="vulkan_video_codecs_common" comment="protect with VULKAN_VIDEO_CODEC_COMMON_H_" supported="vulkan">
+        <extension name="vulkan_video_codecs_common" number="1" comment="protect with VULKAN_VIDEO_CODEC_COMMON_H_" supported="vulkan">
             <require>
                 <type name="VK_MAKE_VIDEO_STD_VERSION"/>
                 <type name="stdint"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h264std" comment="protect with VULKAN_VIDEO_CODEC_H264STD_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h264std" number="2" comment="protect with VULKAN_VIDEO_CODEC_H264STD_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codecs_common.h"/>
 
-                <enum name="STD_VIDEO_H264_CPB_CNT_LIST_SIZE"               value="32"/>
-                <enum name="STD_VIDEO_H264_SCALING_LIST_4X4_NUM_LISTS"      value="6"/>
-                <enum name="STD_VIDEO_H264_SCALING_LIST_4X4_NUM_ELEMENTS"   value="16"/>
-                <enum name="STD_VIDEO_H264_SCALING_LIST_8X8_NUM_LISTS"      value="6"/>
-                <enum name="STD_VIDEO_H264_SCALING_LIST_8X8_NUM_ELEMENTS"   value="64"/>
-                <enum name="STD_VIDEO_H264_MAX_NUM_LIST_REF"                value="32"/>
-                <enum name="STD_VIDEO_H264_MAX_CHROMA_PLANES"               value="2"/>
-                <enum name="STD_VIDEO_H264_NO_REFERENCE_PICTURE"            value="0xFF"/>
+                <enum name="STD_VIDEO_H264_CPB_CNT_LIST_SIZE"               value="32"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_SCALING_LIST_4X4_NUM_LISTS"      value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_SCALING_LIST_4X4_NUM_ELEMENTS"   value="16"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_SCALING_LIST_8X8_NUM_LISTS"      value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_SCALING_LIST_8X8_NUM_ELEMENTS"   value="64"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_MAX_NUM_LIST_REF"                value="32"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_MAX_CHROMA_PLANES"               value="2"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H264_NO_REFERENCE_PICTURE"            value="0xFF"    type="uint8_t"/>
 
                 <type name="StdVideoH264ChromaFormatIdc"/>
                 <type name="StdVideoH264ProfileIdc"/>
@@ -1605,7 +1756,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoH264PictureParameterSet"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h264std_decode" comment="protect with VULKAN_VIDEO_CODEC_H264STD_DECODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h264std_decode" number="3" comment="protect with VULKAN_VIDEO_CODEC_H264STD_DECODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_h264std.h"/>
 
@@ -1613,7 +1764,7 @@ The current public version of video.xml is maintained in the default branch
                 <enum name="VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION"    value="VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_API_VERSION_1_0_0"/>
                 <enum name="VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME"  value="&quot;VK_STD_vulkan_video_codec_h264_decode&quot;"/>
 
-                <enum name="STD_VIDEO_DECODE_H264_FIELD_ORDER_COUNT_LIST_SIZE" value="2"/>
+                <enum name="STD_VIDEO_DECODE_H264_FIELD_ORDER_COUNT_LIST_SIZE" value="2" type="uint32_t"/>
 
                 <type name="StdVideoDecodeH264FieldOrderCount"/>
                 <type name="StdVideoDecodeH264PictureInfoFlags"/>
@@ -1622,7 +1773,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoDecodeH264ReferenceInfo"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h264std_encode" comment="protect with VULKAN_VIDEO_CODEC_H264STD_ENCODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h264std_encode" number="4" comment="protect with VULKAN_VIDEO_CODEC_H264STD_ENCODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_h264std.h"/>
 
@@ -1644,33 +1795,33 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoEncodeH264SliceHeader"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h265std" comment="protect with VULKAN_VIDEO_CODEC_H265STD_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h265std" number="5" comment="protect with VULKAN_VIDEO_CODEC_H265STD_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codecs_common.h"/>
 
-                <enum name="STD_VIDEO_H265_CPB_CNT_LIST_SIZE"                           value="32"/>
-                <enum name="STD_VIDEO_H265_SUBLAYERS_LIST_SIZE"                         value="7"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_4X4_NUM_LISTS"                  value="6"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_4X4_NUM_ELEMENTS"               value="16"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_8X8_NUM_LISTS"                  value="6"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_8X8_NUM_ELEMENTS"               value="64"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_16X16_NUM_LISTS"                value="6"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_16X16_NUM_ELEMENTS"             value="64"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_32X32_NUM_LISTS"                value="2"/>
-                <enum name="STD_VIDEO_H265_SCALING_LIST_32X32_NUM_ELEMENTS"             value="64"/>
-                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_LIST_SIZE"                  value="6"/>
-                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_COLS_LIST_SIZE"        value="19"/>
-                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_ROWS_LIST_SIZE"        value="21"/>
-                <enum name="STD_VIDEO_H265_PREDICTOR_PALETTE_COMPONENTS_LIST_SIZE"      value="3"/>
-                <enum name="STD_VIDEO_H265_PREDICTOR_PALETTE_COMP_ENTRIES_LIST_SIZE"    value="128"/>
-                <enum name="STD_VIDEO_H265_MAX_NUM_LIST_REF"                            value="15"/>
-                <enum name="STD_VIDEO_H265_MAX_CHROMA_PLANES"                           value="2"/>
-                <enum name="STD_VIDEO_H265_MAX_SHORT_TERM_REF_PIC_SETS"                 value="64"/>
-                <enum name="STD_VIDEO_H265_MAX_DPB_SIZE"                                value="16"/>
-                <enum name="STD_VIDEO_H265_MAX_LONG_TERM_REF_PICS_SPS"                  value="32"/>
-                <enum name="STD_VIDEO_H265_MAX_LONG_TERM_PICS"                          value="16"/>
-                <enum name="STD_VIDEO_H265_MAX_DELTA_POC"                               value="48"/>
-                <enum name="STD_VIDEO_H265_NO_REFERENCE_PICTURE"                        value="0xFF"/>
+                <enum name="STD_VIDEO_H265_CPB_CNT_LIST_SIZE"                           value="32"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SUBLAYERS_LIST_SIZE"                         value="7"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_4X4_NUM_LISTS"                  value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_4X4_NUM_ELEMENTS"               value="16"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_8X8_NUM_LISTS"                  value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_8X8_NUM_ELEMENTS"               value="64"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_16X16_NUM_LISTS"                value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_16X16_NUM_ELEMENTS"             value="64"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_32X32_NUM_LISTS"                value="2"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_SCALING_LIST_32X32_NUM_ELEMENTS"             value="64"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_LIST_SIZE"                  value="6"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_COLS_LIST_SIZE"        value="19"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_CHROMA_QP_OFFSET_TILE_ROWS_LIST_SIZE"        value="21"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_PREDICTOR_PALETTE_COMPONENTS_LIST_SIZE"      value="3"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_PREDICTOR_PALETTE_COMP_ENTRIES_LIST_SIZE"    value="128"     type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_NUM_LIST_REF"                            value="15"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_CHROMA_PLANES"                           value="2"       type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_SHORT_TERM_REF_PIC_SETS"                 value="64"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_DPB_SIZE"                                value="16"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_LONG_TERM_REF_PICS_SPS"                  value="32"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_LONG_TERM_PICS"                          value="16"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_MAX_DELTA_POC"                               value="48"      type="uint32_t"/>
+                <enum name="STD_VIDEO_H265_NO_REFERENCE_PICTURE"                        value="0xFF"    type="uint8_t"/>
 
                 <type name="StdVideoH265ChromaFormatIdc"/>
                 <type name="StdVideoH265ProfileIdc"/>
@@ -1699,7 +1850,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoH265PictureParameterSet"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h265std_decode" comment="protect with VULKAN_VIDEO_CODEC_H265STD_DECODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h265std_decode" number="6" comment="protect with VULKAN_VIDEO_CODEC_H265STD_DECODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_h265std.h"/>
 
@@ -1707,7 +1858,7 @@ The current public version of video.xml is maintained in the default branch
                 <enum name="VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION"    value="VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_API_VERSION_1_0_0"/>
                 <enum name="VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME"  value="&quot;VK_STD_vulkan_video_codec_h265_decode&quot;"/>
 
-                <enum name="STD_VIDEO_DECODE_H265_REF_PIC_SET_LIST_SIZE"    value="8"/>
+                <enum name="STD_VIDEO_DECODE_H265_REF_PIC_SET_LIST_SIZE"    value="8"   type="uint32_t"/>
 
                 <type name="StdVideoDecodeH265PictureInfoFlags"/>
                 <type name="StdVideoDecodeH265PictureInfo"/>
@@ -1715,7 +1866,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoDecodeH265ReferenceInfo"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_h265std_encode" comment="protect with VULKAN_VIDEO_CODEC_H265STD_ENCODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_h265std_encode" number="7" comment="protect with VULKAN_VIDEO_CODEC_H265STD_ENCODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_h265std.h"/>
 
@@ -1736,31 +1887,70 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoEncodeH265ReferenceInfo"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_av1std" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_vp9std" number="11" comment="protect with VULKAN_VIDEO_CODEC_VP9STD_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codecs_common.h"/>
 
-                <enum name="STD_VIDEO_AV1_NUM_REF_FRAMES"                           value="8"/>
-                <enum name="STD_VIDEO_AV1_REFS_PER_FRAME"                           value="7"/>
-                <enum name="STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME"                     value="8"/>
-                <enum name="STD_VIDEO_AV1_MAX_TILE_COLS"                            value="64"/>
-                <enum name="STD_VIDEO_AV1_MAX_TILE_ROWS"                            value="64"/>
-                <enum name="STD_VIDEO_AV1_MAX_SEGMENTS"                             value="8"/>
-                <enum name="STD_VIDEO_AV1_SEG_LVL_MAX"                              value="8"/>
-                <enum name="STD_VIDEO_AV1_PRIMARY_REF_NONE"                         value="7"/>
-                <enum name="STD_VIDEO_AV1_SELECT_INTEGER_MV"                        value="2"/>
-                <enum name="STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS"              value="2"/>
-                <enum name="STD_VIDEO_AV1_SKIP_MODE_FRAMES"                         value="2"/>
-                <enum name="STD_VIDEO_AV1_MAX_LOOP_FILTER_STRENGTHS"                value="4"/>
-                <enum name="STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS"                  value="2"/>
-                <enum name="STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS"                value="8"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_PLANES"                           value="3"/>
-                <enum name="STD_VIDEO_AV1_GLOBAL_MOTION_PARAMS"                     value="6"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_Y_POINTS"                         value="14"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_CB_POINTS"                        value="10"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_CR_POINTS"                        value="10"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_POS_LUMA"                         value="24"/>
-                <enum name="STD_VIDEO_AV1_MAX_NUM_POS_CHROMA"                       value="25"/>
+                <enum name="STD_VIDEO_VP9_NUM_REF_FRAMES"                           value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_REFS_PER_FRAME"                           value="3"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_MAX_REF_FRAMES"                           value="4"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS"                  value="2"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_MAX_SEGMENTS"                             value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_SEG_LVL_MAX"                              value="4"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS"              value="7"   type="uint32_t"/>
+                <enum name="STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB"               value="3"   type="uint32_t"/>
+
+                <type name="StdVideoVP9Profile"/>
+                <type name="StdVideoVP9Level"/>
+                <type name="StdVideoVP9FrameType"/>
+                <type name="StdVideoVP9ReferenceName"/>
+                <type name="StdVideoVP9InterpolationFilter"/>
+                <type name="StdVideoVP9ColorSpace"/>
+                <type name="StdVideoVP9ColorConfigFlags"/>
+                <type name="StdVideoVP9ColorConfig"/>
+                <type name="StdVideoVP9LoopFilterFlags"/>
+                <type name="StdVideoVP9LoopFilter"/>
+                <type name="StdVideoVP9SegmentationFlags"/>
+                <type name="StdVideoVP9Segmentation"/>
+            </require>
+        </extension>
+        <extension name="vulkan_video_codec_vp9std_decode" number="12" comment="protect with VULKAN_VIDEO_CODEC_VP9STD_DECODE_H_" supported="vulkan">
+            <require>
+                <type name="vk_video/vulkan_video_codec_vp9std.h"/>
+
+                <type name="VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_API_VERSION_1_0_0"/>
+                <enum name="VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_SPEC_VERSION"      value="VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_API_VERSION_1_0_0"/>
+                <enum name="VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_EXTENSION_NAME"    value="&quot;VK_STD_vulkan_video_codec_vp9_decode&quot;"/>
+
+                <type name="StdVideoDecodeVP9PictureInfoFlags"/>
+                <type name="StdVideoDecodeVP9PictureInfo"/>
+            </require>
+        </extension>
+        <extension name="vulkan_video_codec_av1std" number="8" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_H_" supported="vulkan">
+            <require>
+                <type name="vk_video/vulkan_video_codecs_common.h"/>
+
+                <enum name="STD_VIDEO_AV1_NUM_REF_FRAMES"                           value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_REFS_PER_FRAME"                           value="7"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME"                     value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_TILE_COLS"                            value="64"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_TILE_ROWS"                            value="64"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_SEGMENTS"                             value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_SEG_LVL_MAX"                              value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_PRIMARY_REF_NONE"                         value="7"   type="uint8_t"/>
+                <enum name="STD_VIDEO_AV1_SELECT_INTEGER_MV"                        value="2"   type="uint8_t"/>
+                <enum name="STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS"              value="2"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_SKIP_MODE_FRAMES"                         value="2"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_LOOP_FILTER_STRENGTHS"                value="4"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS"                  value="2"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_CDEF_FILTER_STRENGTHS"                value="8"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_PLANES"                           value="3"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_GLOBAL_MOTION_PARAMS"                     value="6"   type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_Y_POINTS"                         value="14"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_CB_POINTS"                        value="10"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_CR_POINTS"                        value="10"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_POS_LUMA"                         value="24"  type="uint32_t"/>
+                <enum name="STD_VIDEO_AV1_MAX_NUM_POS_CHROMA"                       value="25"  type="uint32_t"/>
 
                 <type name="StdVideoAV1Profile"/>
                 <type name="StdVideoAV1Level"/>
@@ -1794,7 +1984,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoAV1SequenceHeader"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_av1std_decode" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_DECODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_av1std_decode" number="9" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_DECODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_av1std.h"/>
 
@@ -1808,7 +1998,7 @@ The current public version of video.xml is maintained in the default branch
                 <type name="StdVideoDecodeAV1ReferenceInfo"/>
             </require>
         </extension>
-        <extension name="vulkan_video_codec_av1std_encode" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_ENCODE_H_" supported="vulkan">
+        <extension name="vulkan_video_codec_av1std_encode" number="10" comment="protect with VULKAN_VIDEO_CODEC_AV1STD_ENCODE_H_" supported="vulkan">
             <require>
                 <type name="vk_video/vulkan_video_codec_av1std.h"/>
 

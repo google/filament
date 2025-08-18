@@ -72,8 +72,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), HasHLSLLongVector(false), NumBases(0),
-      NumVBases(0), Bases(), VBases(), Definition(D), FirstFriend() {}
+      IsParsingBaseSpecifiers(false), NumBases(0), NumVBases(0), Bases(),
+      VBases(), Definition(D), FirstFriend() {}
 // HLSL Change End - Add HasLongVector and clang-format
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
@@ -202,11 +202,6 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     //    -- has no non-standard-layout base classes
     if (!BaseClassDecl->isStandardLayout())
       data().IsStandardLayout = false;
-
-    // HLSL Change Begin - Propagate presence of long vector to child classes.
-    if (BaseClassDecl->hasHLSLLongVector())
-      data().HasHLSLLongVector = true;
-    // HLSL Change End
 
     // Record if this base is the first non-literal field or base.
     if (!hasNonLiteralTypeFieldsOrBases() && !BaseType->isLiteralType(C))
@@ -389,11 +384,6 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForMoveConstructor = true;
     data().NeedOverloadResolutionForDestructor = true;
   }
-
-  // HLSL Change Begin - Propagate presence of long vector to child classes.
-  if (Subobj->hasHLSLLongVector())
-    data().HasHLSLLongVector = true;
-  // HLSL Change End
 }
 
 /// Callback function for CXXRecordDecl::forallBases that acknowledges

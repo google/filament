@@ -206,7 +206,7 @@ TEST_F(ComputePipelineOverridableConstantsValidationTest, UninitializedConstants
     {
         // Error: uninitialized constants exist
         std::vector<wgpu::ConstantEntry> constants{
-            {nullptr, "c0", false},
+            {nullptr, "c0", 0.0},
             {nullptr, "c2", 1},
             // c5 is missing
             {nullptr, "c8", 1},
@@ -217,16 +217,16 @@ TEST_F(ComputePipelineOverridableConstantsValidationTest, UninitializedConstants
     {
         // Valid: all constants initialized
         std::vector<wgpu::ConstantEntry> constants{
-            {nullptr, "c0", false}, {nullptr, "c2", 1},  {nullptr, "c5", 1},
-            {nullptr, "c8", 1},     {nullptr, "c11", 1},
+            {nullptr, "c0", 0.0}, {nullptr, "c2", 1},  {nullptr, "c5", 1},
+            {nullptr, "c8", 1},   {nullptr, "c11", 1},
         };
         TestCreatePipeline(constants);
     }
     {
         // Error: duplicate initializations
         std::vector<wgpu::ConstantEntry> constants{
-            {nullptr, "c0", false}, {nullptr, "c2", 1},  {nullptr, "c5", 1},
-            {nullptr, "c8", 1},     {nullptr, "c11", 1}, {nullptr, "c2", 2},
+            {nullptr, "c0", 0.0}, {nullptr, "c2", 1},  {nullptr, "c5", 1},
+            {nullptr, "c8", 1},   {nullptr, "c11", 1}, {nullptr, "c2", 2},
         };
         ASSERT_DEVICE_ERROR(TestCreatePipeline(constants));
     }

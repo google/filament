@@ -30,8 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/texel_format.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/texture.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 
@@ -49,7 +48,7 @@ class StorageTexture final : public Castable<StorageTexture, Texture> {
     /// @param dim the dimensionality of the texture
     /// @param format the texel format of the texture
     /// @param access the access control type of the texture
-    /// @param subtype the storage subtype. Use SubtypeFor() to calculate this.
+    /// @param subtype the storage subtype.
     StorageTexture(TextureDimension dim,
                    core::TexelFormat format,
                    core::Access access,
@@ -74,11 +73,6 @@ class StorageTexture final : public Castable<StorageTexture, Texture> {
     /// @returns the name for this type that closely resembles how it would be
     /// declared in WGSL.
     std::string FriendlyName() const override;
-
-    /// @param format the storage texture image format
-    /// @param type_mgr the Manager used to build the returned type
-    /// @returns the storage texture subtype for the given TexelFormat
-    static type::Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr);
 
     /// @param ctx the clone context
     /// @returns a clone of this type

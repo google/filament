@@ -26,7 +26,7 @@ add_test(NAME integration.find_package
         --build-and-test ${CMAKE_CURRENT_LIST_DIR}/integration
                          ${CMAKE_CURRENT_BINARY_DIR}/find_package
         --build-generator ${CMAKE_GENERATOR}
-        --build-options -DFIND_PACKAGE_TESTING=ON -DCMAKE_PREFIX_PATH=${test_install_dir}
+        --build-options -DFIND_PACKAGE_TESTING=ON -DCMAKE_PREFIX_PATH=${test_install_dir} -DVULKAN_HEADERS_ENABLE_MODULE=${VULKAN_HEADERS_ENABLE_MODULE}
 )
 
 # Installing comes before testing

@@ -115,27 +115,49 @@ match writable
 
 match f32_texel_format
   : texel_format.r8unorm
+  | texel_format.r8snorm
+  | texel_format.rg8unorm
+  | texel_format.rg8snorm
   | texel_format.bgra8unorm
   | texel_format.rgba8unorm
   | texel_format.rgba8snorm
+  | texel_format.r16unorm
+  | texel_format.r16snorm
+  | texel_format.rg16unorm
+  | texel_format.rg16snorm
+  | texel_format.rgba16unorm
+  | texel_format.rgba16snorm
+  | texel_format.r16float
+  | texel_format.rg16float
   | texel_format.rgba16float
   | texel_format.r32float
   | texel_format.rg32float
   | texel_format.rgba32float
-
-match u32_texel_format
-  : texel_format.rgba8uint
-  | texel_format.rgba16uint
-  | texel_format.r32uint
-  | texel_format.rg32uint
-  | texel_format.rgba32uint
+  | texel_format.rgb10a2unorm
+  | texel_format.rg11b10ufloat
 
 match i32_texel_format
-  : texel_format.rgba8sint
+  : texel_format.r8sint
+  | texel_format.rg8sint
+  | texel_format.rgba8sint
+  | texel_format.r16sint
+  | texel_format.rg16sint
   | texel_format.rgba16sint
   | texel_format.r32sint
   | texel_format.rg32sint
   | texel_format.rgba32sint
+
+match u32_texel_format
+  : texel_format.r8uint
+  | texel_format.rg8uint
+  | texel_format.r16uint
+  | texel_format.rg16uint
+  | texel_format.rgba8uint
+  | texel_format.rgba16uint
+  | texel_format.r32uint
+  | texel_format.rg32uint
+  | texel_format.rgba32uint
+  | texel_format.rgb10a2uint
 
 ////////////////////////////////////////////////////////////////////////////////
 // Builtin Functions                                                          //
@@ -797,6 +819,10 @@ implicit(N: num, T: f32_f16) fn frexp(vec<N, T>, vec<N, T>) -> vec<N, T>
                                    ddx: vec3<f32>,
                                    ddy: vec3<f32>) -> vec4<f32>
 
+@member_function fn SampleLevel(texture: texture_1d<f32>,
+                                sampler: sampler,
+                                 coords: f32,
+                                  level: f32) -> vec4<f32>
 @member_function fn SampleLevel(texture: texture_2d<f32>,
                                 sampler: sampler,
                                  coords: vec2<f32>,

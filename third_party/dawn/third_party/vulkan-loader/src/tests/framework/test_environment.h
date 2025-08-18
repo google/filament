@@ -513,6 +513,7 @@ struct LoaderSettingsLayerConfiguration {
     BUILDER_VALUE(std::string, control)
     BUILDER_VALUE(bool, treat_as_implicit_manifest)
 };
+// Needed for next_permutation
 inline bool operator==(LoaderSettingsLayerConfiguration const& a, LoaderSettingsLayerConfiguration const& b) {
     return a.name == b.name && a.path == b.path && a.control == b.control &&
            a.treat_as_implicit_manifest == b.treat_as_implicit_manifest;
@@ -525,6 +526,15 @@ inline bool operator>(LoaderSettingsLayerConfiguration const& a, LoaderSettingsL
 inline bool operator<=(LoaderSettingsLayerConfiguration const& a, LoaderSettingsLayerConfiguration const& b) { return !(b < a); }
 inline bool operator>=(LoaderSettingsLayerConfiguration const& a, LoaderSettingsLayerConfiguration const& b) { return !(a < b); }
 
+struct LoaderSettingsDriverConfiguration {
+    BUILDER_VALUE(std::filesystem::path, path)
+};
+
+struct LoaderSettingsDeviceConfiguration {
+    BUILDER_VALUE(VulkanUUID, deviceUUID)
+    BUILDER_VALUE(std::string, deviceName)
+};
+
 // Log files and their associated filter
 struct LoaderLogConfiguration {
     BUILDER_VECTOR(std::string, destinations, destination)
@@ -533,6 +543,9 @@ struct LoaderLogConfiguration {
 struct AppSpecificSettings {
     BUILDER_VECTOR(std::string, app_keys, app_key)
     BUILDER_VECTOR(LoaderSettingsLayerConfiguration, layer_configurations, layer_configuration)
+    BUILDER_VECTOR(LoaderSettingsDriverConfiguration, driver_configurations, driver_configuration)
+    BUILDER_VECTOR(LoaderSettingsDeviceConfiguration, device_configurations, device_configuration)
+    BUILDER_VALUE(bool, additional_drivers_use_exclusively)
     BUILDER_VECTOR(std::string, stderr_log, stderr_log_filter)
     BUILDER_VECTOR(LoaderLogConfiguration, log_configurations, log_configuration)
 };

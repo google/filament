@@ -90,8 +90,20 @@ MaybeError ComputePipeline::InitializeImpl() {
                                               /*emitPointSize*/ false, GetImmediateMask()));
 
     createInfo.stage.module = moduleAndSpirv.module;
-    createInfo.stage.pName = kRemappedEntryPointName;
+    // string_view returned by GetIsolatedEntryPointName() points to a null-terminated string.
+    createInfo.stage.pName = device->GetIsolatedEntryPointName().data();
     createInfo.stage.pSpecializationInfo = nullptr;
+
+    // This is required to ensure SubgroupSize is reported as the actual size of the subgroups
+    // (even if some invocations may be disabled), and that the subgroup size will be uniform
+    // across the entire dispatch. This becomes unnecessary with SPIR-V 1.6.
+    createInfo.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_ALLOW_VARYING_SUBGROUP_SIZE_BIT;
+
+    // If the shader stage uses subgroup matrix types, we need to enable full subgroups to guarantee
+    // that all shader invocations are active. This becomes unnecessary with SPIR-V 1.6.
+    if (computeStage.metadata->usesSubgroupMatrix) {
+        createInfo.flags |= VK_PIPELINE_SHADER_STAGE_CREATE_REQUIRE_FULL_SUBGROUPS_BIT;
+    }
 
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT subgroupSizeInfo = {};
     PNextChainBuilder stageExtChain(&createInfo.stage);
@@ -107,30 +119,24 @@ MaybeError ComputePipeline::InitializeImpl() {
 
     if (buildCacheKey) {
         // Record cache key information now since the createInfo is not stored.
-        StreamIn(&mCacheKey, createInfo, layout,
-                 stream::Iterable(moduleAndSpirv.spirv, moduleAndSpirv.wordCount));
+        StreamIn(&mCacheKey, createInfo, layout, moduleAndSpirv.spirv);
     }
 
     // Try to see if we have anything in the blob cache.
     platform::metrics::DawnHistogramTimer cacheTimer(GetDevice()->GetPlatform());
     Ref<PipelineCache> cache = ToBackend(GetDevice()->GetOrCreatePipelineCache(GetCacheKey()));
-    if (cache->CacheHit()) {
-        DAWN_TRY(CheckVkSuccess(
-            device->fn.CreateComputePipelines(device->GetVkDevice(), cache->GetHandle(), 1,
-                                              &createInfo, nullptr, &*mHandle),
-            "CreateComputePipelines"));
-        cacheTimer.RecordMicroseconds("Vulkan.CreateComputePipelines.CacheHit");
-    } else {
-        cacheTimer.Reset();
-        DAWN_TRY(CheckVkSuccess(
-            device->fn.CreateComputePipelines(device->GetVkDevice(), cache->GetHandle(), 1,
-                                              &createInfo, nullptr, &*mHandle),
-            "CreateComputePipelines"));
-        cacheTimer.RecordMicroseconds("Vulkan.CreateComputePipelines.CacheMiss");
-    }
+    DAWN_TRY(
+        CheckVkSuccess(device->fn.CreateComputePipelines(device->GetVkDevice(), cache->GetHandle(),
+                                                         1, &createInfo, nullptr, &*mHandle),
+                       "CreateComputePipelines"));
+    cacheTimer.RecordMicroseconds(cache->CacheHit() ? "Vulkan.CreateComputePipelines.CacheHit"
+                                                    : "Vulkan.CreateComputePipelines.CacheMiss");
+
     DAWN_TRY(cache->DidCompilePipeline());
 
     SetLabelImpl();
+
+    device->fn.DestroyShaderModule(device->GetVkDevice(), moduleAndSpirv.module, nullptr);
 
     return {};
 }

@@ -63,7 +63,7 @@ void GlobalVariable::AddTransitivelyReferencedOverride(const GlobalVariable* var
 }
 
 Parameter::Parameter(const ast::Parameter* declaration,
-                     uint32_t index /* = 0 */,
+                     uint32_t index,
                      const core::type::Type* type /* = nullptr */,
                      core::ParameterUsage usage /* = core::ParameterUsage::kNone */)
     : Base(declaration), index_(index), usage_(usage) {

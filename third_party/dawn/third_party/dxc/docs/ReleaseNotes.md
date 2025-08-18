@@ -19,9 +19,48 @@ The included licenses apply to the following files:
 
 ### Upcoming Release
 
-Place release notes for the upcoming release below this line and remove this line upon naming this release.
+- Fix regression: [#7510](https://github.com/microsoft/DirectXShaderCompiler/issues/7510) crash when calling `sizeof` on templated type.
+- Fix regression: [#7508](https://github.com/microsoft/DirectXShaderCompiler/issues/7508) crash when calling `Load` with `status`.
+- Header file `dxcpix.h` was added to the release package.
+
+### Version 1.8.2505
+
+#### Potentially breaking changes
 
 - Typed buffers (including ROV buffers) no longer accept types other than vectors and scalars. Any other types will produce descriptive errors. This removes support for appropriately sized matrices and structs. Though it worked in some contexts, code generated from such types was unreliable.
+  - Load and Store operations have been refactored as a consequence. Behavior should be identical, please file issues if discrepancies are observed.
+- The compiler will now always use the internal validator instead of searching for an external DXIL.dll.  The (hidden) `-select-validator` option has been removed.
+
+#### Notable SPIR-V updates
+
+- Fix unnecessary Int64 requirement when loading Float64
+- Added vk::BufferPointer, see [proposal](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0010-vk-buffer-ref.md) for more details.
+- Implement QuadAny and QuadAll (#7266)
+- Fix -fvk-invert-y (#7447)
+
+#### Shader Model 6.9 Preview
+
+You can now compile shaders to SM 6.9, but this is a preview, so shader hashes will be set to the PREVIEW_BYPASS pattern.
+SM 6.9 shaders will only work with AgilitySDK 1.717.0-preview, a supported preview driver, and use of experimental shader models in developer mode.
+Preview shaders will not be compatible with the SM 6.9 release, or likely even later versions of the SM 6.9 preview.
+
+SM 6.9 Preview Additions:
+
+- Long vectors are allowed in HLSL when targeting shader model 6.9. Vectors up to 1024 elements in length can be loaded from/stored to raw buffers and used in elementwise operations. See the [long vector proposal](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0026-hlsl-long-vector-type.md) for more details.
+- HLSL Vectors are still limited to a maximum of 4 elements when used in certain contexts:
+  - entry function inputs/outputs
+  - parameter, payload, attribute, and node record types for mesh, raytracing, and node shaders
+  - constant buffers (cbuffer), texture buffers (tbuffer), textures and typed buffers
+  - Note: some HLSL elementwise intrinsics do not yet support long vectors in this preview
+- Native vectors of up to 1024 elements are now present in DXIL. This includes vector llvm instructions, load/store, and various elementwise DXIL operations. This may result in smaller DXIL and potentially other performance improvements. See the [dxil vectors proposal](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0030-dxil-vectors.md) for more details.
+- Cooperative Vector operations, a subset of Linear Algebra (LinAlg). See the [cooperative vectors proposal](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0029-cooperative-vector.md) and the [HLSL header based API proposal](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0031-hlsl-vector-matrix-operations.md) for more details.
+  - New built-in operations are added for multiplying long vectors with a matrix in a ByteAddressBuffer, optionally with accumulation and bias data, as well as outer product and vector accumulate operations.
+  - An HLSL header shipped with this release provides a more convenient API for using these built-in operations.
+- Support for [Opacity Micromaps](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0024-opacity-micromaps.md) in DXR shaders as well as for RayQuery.
+  - Unlocks DXR performance improvements using triangle sub-divisions for fast hit/miss detection to reduce the need for anyhit invocations.
+- Support for [Shader Execution Reordering](https://github.com/microsoft/hlsl-specs/blob/main/proposals/0027-shader-execution-reordering.md) in DXR.
+  - Introduces `MaybeReorderThread()` to explicitly specify where and how shader execution coherence can be improved. `MaybeReorderThread()` can be used in raygeneration shaders.
+  - `HitObject` decouples traversal, intersection testing and anyhit shading from closesthit and miss shading for more control and better reordering opportunities. `HitObject` can be used in raygeneration, closesthit and miss shaders.
 
 ### Version 1.8.2502
 

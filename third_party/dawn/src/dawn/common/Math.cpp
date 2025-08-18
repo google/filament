@@ -28,6 +28,7 @@
 #include "dawn/common/Math.h"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <limits>
 
@@ -37,39 +38,12 @@ namespace dawn {
 
 uint32_t Log2(uint32_t value) {
     DAWN_ASSERT(value != 0);
-#if DAWN_COMPILER_IS(MSVC)
-    // NOLINTNEXTLINE(runtime/int)
-    unsigned long firstBitIndex = 0ul;
-    unsigned char ret = _BitScanReverse(&firstBitIndex, value);
-    DAWN_ASSERT(ret != 0);
-    return firstBitIndex;
-#else
-    return 31 - static_cast<uint32_t>(__builtin_clz(value));
-#endif
+    return 31 - std::countl_zero(value);
 }
 
 uint32_t Log2(uint64_t value) {
     DAWN_ASSERT(value != 0);
-#if DAWN_COMPILER_IS(MSVC)
-#if DAWN_PLATFORM_IS(64_BIT)
-    // NOLINTNEXTLINE(runtime/int)
-    unsigned long firstBitIndex = 0ul;
-    unsigned char ret = _BitScanReverse64(&firstBitIndex, value);
-    DAWN_ASSERT(ret != 0);
-    return firstBitIndex;
-#else   // DAWN_PLATFORM_IS(64_BIT)
-    // NOLINTNEXTLINE(runtime/int)
-    unsigned long firstBitIndex = 0ul;
-    if (_BitScanReverse(&firstBitIndex, value >> 32)) {
-        return firstBitIndex + 32;
-    }
-    unsigned char ret = _BitScanReverse(&firstBitIndex, value & 0xFFFFFFFF);
-    DAWN_ASSERT(ret != 0);
-    return firstBitIndex;
-#endif  // DAWN_PLATFORM_IS(64_BIT)
-#else   // DAWN_COMPILER_IS(MSVC)
-    return 63 - static_cast<uint32_t>(__builtin_clzll(value));
-#endif  // DAWN_COMPILER_IS(MSVC)
+    return 63 - std::countl_zero(value);
 }
 
 uint64_t NextPowerOfTwo(uint64_t n) {
@@ -100,7 +74,7 @@ bool IsAligned(uint32_t value, size_t alignment) {
 }
 
 uint16_t Float32ToFloat16(float fp32) {
-    uint32_t fp32i = BitCast<uint32_t>(fp32);
+    uint32_t fp32i = std::bit_cast<uint32_t>(fp32);
     uint32_t sign16 = (fp32i & 0x80000000) >> 16;
     uint32_t mantissaAndExponent = fp32i & 0x7FFFFFFF;
 

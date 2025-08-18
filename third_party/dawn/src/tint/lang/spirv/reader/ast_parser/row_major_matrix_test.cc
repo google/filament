@@ -86,7 +86,7 @@ class SpirvReaderRowMajorMatrixTest : public testing::Test {
         auto errs = program.Diagnostics().Str();
         EXPECT_TRUE(program.IsValid()) << errs;
         EXPECT_EQ(program.Diagnostics().Count(), 0u) << errs;
-        auto result = wgsl::writer::Generate(program, {});
+        auto result = wgsl::writer::Generate(program);
         EXPECT_EQ(result, Success);
         return "\n" + result->wgsl;
     }

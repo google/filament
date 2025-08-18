@@ -76,7 +76,7 @@ void node07(RWThreadNodeInputRecord<f2x2> input) // expected-error {{'f2x2' (aka
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node08(ThreadNodeInputRecord<BAD_RECORD> input) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node08(ThreadNodeInputRecord<BAD_RECORD> input) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }
 
 [Shader("node")]
@@ -86,17 +86,17 @@ void node09(ThreadNodeInputRecord<BAD_RECORD[4]> input) // expected-error {{'BAD
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node10(RWThreadNodeInputRecord<BAD_RECORD2> input) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node10(RWThreadNodeInputRecord<BAD_RECORD2> input) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node11(NodeOutput<BAD_RECORD> input) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node11(NodeOutput<BAD_RECORD> input) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node12(NodeOutputArray<MyBadRecord> output) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node12(NodeOutputArray<MyBadRecord> output) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }
 
 [Shader("node")]
@@ -129,7 +129,7 @@ void node16()
 
   ThreadNodeOutputRecords<f2x2> outrec2; // expected-error {{'f2x2' (aka 'matrix<float, 2, 2>') is not valid as a node record type - struct/class required}}
 
-  GroupNodeOutputRecords<MyBadRecord> outrec3; // expected-error {{object 'SamplerState' may not appear in a node record}}
+  GroupNodeOutputRecords<MyBadRecord> outrec3; // expected-error {{object 'SamplerState' is not allowed in node records}}
 
   ThreadNodeOutputRecords<SamplerState> outrec4; // expected-error {{'SamplerState' is not valid as a node record type - struct/class required}}
 }
@@ -151,10 +151,10 @@ void node17(ThreadNodeInputRecord<MyTemplateStruct<int> > input)
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node18(ThreadNodeInputRecord<MyTemplateStruct<SamplerState> > input) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node18(ThreadNodeInputRecord<MyTemplateStruct<SamplerState> > input) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }
 
 [Shader("node")]
 [NodeLaunch("thread")]
-void node19(RWThreadNodeInputRecord<MyNestedTemplateStruct> input) // expected-error {{object 'SamplerState' may not appear in a node record}}
+void node19(RWThreadNodeInputRecord<MyNestedTemplateStruct> input) // expected-error {{object 'SamplerState' is not allowed in node records}}
 { }

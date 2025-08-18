@@ -541,9 +541,9 @@ void PrintCandidate(StyledText& ss,
             bool matched = false;
             if (i < template_args.Length()) {
                 auto* matcher_indices = context.data[tmpl.matcher_indices];
-                matched = !matcher_indices ||
-                          context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                              .Type(template_args[i]);
+                matched = (matcher_indices == nullptr) ||
+                          (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
+                               .Type(template_args[i]) != nullptr);
             }
 
             if (i > 0) {
@@ -567,8 +567,8 @@ void PrintCandidate(StyledText& ss,
 
         bool matched = false;
         if (i < args.Length()) {
-            matched = context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                          .Type(args[i]);
+            matched = (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
+                           .Type(args[i]) != nullptr);
         }
         all_params_match = all_params_match && matched;
 
@@ -625,8 +625,8 @@ void PrintCandidate(StyledText& ss,
             if (tmpl.kind == TemplateInfo::Kind::kType) {
                 if (auto* ty = templates.Type(i)) {
                     matched =
-                        context.Match(templates, overload, matcher_indices, earliest_eval_stage)
-                            .Type(ty);
+                        (context.Match(templates, overload, matcher_indices, earliest_eval_stage)
+                             .Type(ty) != nullptr);
                 }
             } else {
                 matched = context.Match(templates, overload, matcher_indices, earliest_eval_stage)

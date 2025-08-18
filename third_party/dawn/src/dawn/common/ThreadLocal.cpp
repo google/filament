@@ -69,7 +69,7 @@ ThreadUniqueId GetThreadUniqueId() {
 }
 
 bool IsThreadAlive(ThreadUniqueId ThreadUniqueId) {
-    return GetAliveThreads()->count(ThreadUniqueId);
+    return GetAliveThreads()->count(ThreadUniqueId) != 0u;
 }
 
 }  // namespace dawn

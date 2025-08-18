@@ -28,6 +28,7 @@
 #include "src/tint/lang/core/type/u64.h"
 
 #include "src/tint/lang/core/type/helper_test.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/u32.h"
 
 namespace tint::core::type {
@@ -36,26 +37,30 @@ namespace {
 using U64Test = TestHelper;
 
 TEST_F(U64Test, Creation) {
-    auto* a = create<U64>();
+    Manager ty;
+    auto* a = ty.u64();
     EXPECT_TRUE(a->Is<U64>());
 }
 
 TEST_F(U64Test, SizeAndAlign) {
-    auto* a = create<U64>();
+    Manager ty;
+    auto* a = ty.u64();
     EXPECT_EQ(a->Size(), 8u);
     EXPECT_EQ(a->Align(), 8u);
 }
 
 TEST_F(U64Test, Hash) {
-    auto* a = create<U64>();
-    auto* b = create<U64>();
+    Manager ty;
+    auto* a = ty.u64();
+    auto* b = ty.u64();
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(U64Test, Equals) {
-    auto* a = create<U64>();
-    auto* b = create<U64>();
-    auto* c = create<U32>();
+    Manager ty;
+    auto* a = ty.u64();
+    auto* b = ty.u64();
+    auto* c = ty.u32();
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
 }
@@ -66,7 +71,8 @@ TEST_F(U64Test, FriendlyName) {
 }
 
 TEST_F(U64Test, Clone) {
-    auto* a = create<U64>();
+    Manager ty;
+    auto* a = ty.u64();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

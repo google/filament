@@ -46,7 +46,9 @@ public:
     void addText(std::string_view text) noexcept;
 
     // Returns the total number of unique lines stored in the dictionary.
-    size_t getDictionaryLineCount() const;
+    size_t getDictionaryLineCount() const {
+        return mStrings.size();
+    }
 
     // Checks if the dictionary is empty.
     bool isEmpty() const noexcept {
@@ -61,6 +63,19 @@ public:
 
     // Prints statistics about the dictionary to the given output stream.
     void printStatistics(utils::io::ostream& stream) const noexcept;
+
+    // conveniences...
+    size_t size() const {
+        return getDictionaryLineCount();
+    }
+
+    bool empty() const noexcept {
+        return isEmpty();
+    }
+
+    std::string const& operator[](index_t const index) const noexcept {
+        return getString(index);
+    }
 
 private:
     // Adds a single line to the dictionary.

@@ -783,23 +783,22 @@ TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_WrongAddressSpace) {
     EXPECT_EQ(r()->error(),
               R"(error: no matching call to 'workgroupUniformLoad(ptr<storage, i32, read_write>)'
 
-1 candidate function:
- • 'workgroupUniformLoad(ptr<workgroup, T, read_write>  ✗ ) -> T'
+2 candidate functions:
+ • 'workgroupUniformLoad(ptr<workgroup, T, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'any concrete constructible type'
+ • 'workgroupUniformLoad(ptr<workgroup, atomic<T>, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'i32' or 'u32'
 )");
 }
 
 TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_Atomic) {
-    // var<workgroup> v : atomic<i32>;
-    // fn foo() {
-    //   workgroupUniformLoad(&v);
-    // }
     GlobalVar("v", ty.atomic<i32>(), core::AddressSpace::kWorkgroup);
-    WrapInFunction(CallStmt(Call("workgroupUniformLoad", AddressOf(Source{{12, 34}}, "v"))));
+    Func("func", tint::Empty, ty.i32(),
+         Vector{
+             Return(Call("workgroupUniformLoad", AddressOf(Source{{12, 34}}, "v"))),
+         });
 
-    EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(
-        r()->error(),
-        R"(12:34 error: workgroupUniformLoad must not be called with an argument that contains an atomic type)");
+    EXPECT_TRUE(r()->Resolve());
 }
 
 TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInArray) {
@@ -813,7 +812,14 @@ TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInArray) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(12:34 error: workgroupUniformLoad must not be called with an argument that contains an atomic type)");
+        R"(error: no matching call to 'workgroupUniformLoad(ptr<workgroup, array<atomic<i32>, 4>, read_write>)'
+
+2 candidate functions:
+ • 'workgroupUniformLoad(ptr<workgroup, T, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'any concrete constructible type'
+ • 'workgroupUniformLoad(ptr<workgroup, atomic<T>, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'i32' or 'u32'
+)");
 }
 
 TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInStruct) {
@@ -831,7 +837,14 @@ TEST_F(ResolverBuiltinValidationTest, WorkgroupUniformLoad_AtomicInStruct) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(error: workgroupUniformLoad must not be called with an argument that contains an atomic type)");
+        R"(error: no matching call to 'workgroupUniformLoad(ptr<workgroup, array<S, 4>, read_write>)'
+
+2 candidate functions:
+ • 'workgroupUniformLoad(ptr<workgroup, T, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'any concrete constructible type'
+ • 'workgroupUniformLoad(ptr<workgroup, atomic<T>, read_write>  ✗ ) -> T' where:
+      ✗  'T' is 'i32' or 'u32'
+)");
 }
 
 TEST_F(ResolverBuiltinValidationTest, SubgroupShuffleLaneArgMustBeNonNeg) {
@@ -974,7 +987,7 @@ TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithExtension) {
     EXPECT_TRUE(r()->Resolve());
 }
 
-TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutSubgroupsF16Extension_F16) {
+TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithExtension_F16) {
     // enable f16;
     // enable subgroups;
     // fn func -> f16 { return subgroupBroadcast(1.h,0); }
@@ -1003,7 +1016,6 @@ TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutSubgroupsExtension
 }
 
 TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutShaderF16Extension_F16) {
-    // enable f16;
     // fn func -> f16 { return subgroupBroadcast(1.h,0); }
     Enable(wgsl::Extension::kSubgroups);
     Func("func", tint::Empty, ty.f16(),
@@ -1012,39 +1024,6 @@ TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutShaderF16Extension
          });
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(error: 'f16' type used without 'f16' extension enabled)");
-}
-
-TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithSubgroupsF16WithoutShaderF16Extension) {
-    // enable f16;
-    // fn func -> f16 { return subgroupBroadcast(1.h,0); }
-    Enable(wgsl::Extension::kSubgroups);
-    Enable(wgsl::Extension::kSubgroupsF16);
-    Func("func", tint::Empty, ty.f16(),
-         Vector{
-             Return(Call(Source{{12, 34}}, "subgroupBroadcast", 1_h, 0_u)),
-         });
-    EXPECT_FALSE(r()->Resolve());
-    EXPECT_EQ(r()->error(),
-              R"(error: 'f16' type used without 'f16' extension enabled
-error: extension 'subgroups_f16' cannot be used without extension 'f16')");
-}
-
-TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithExtensions_F16) {
-    // enable f16;
-    // enable subgroups;
-    // enable subgroups_f16;
-    // fn func -> f16 { return subgroupBroadcast(1.h,0); }
-    Enable(wgsl::Extension::kF16);
-    Enable(wgsl::Extension::kSubgroups);
-    // TODO(crbug.com/380244620): Remove when 'subgroups_f16' has been fully deprecated.
-    Enable(wgsl::Extension::kSubgroupsF16);
-
-    Func("func", tint::Empty, ty.f16(),
-         Vector{
-             Return(Call("subgroupBroadcast", 1_h, 0_u)),
-         });
-
-    EXPECT_TRUE(r()->Resolve());
 }
 
 TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutExtension_VecF16) {
@@ -1061,15 +1040,12 @@ TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithoutExtension_VecF16) 
     EXPECT_TRUE(r()->Resolve());
 }
 
-TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithExtensions_VecF16) {
+TEST_F(ResolverBuiltinValidationTest, SubgroupBroadcastWithExtension_VecF16) {
     // enable f16;
     // enable subgroups;
-    // enable subgroups_f16;
     // fn func -> vec4<f16> { return subgroupBroadcast(vec4(1.h),0); }
     Enable(wgsl::Extension::kF16);
     Enable(wgsl::Extension::kSubgroups);
-    // TODO(crbug.com/380244620): Remove when 'subgroups_f16' has been fully deprecated.
-    Enable(wgsl::Extension::kSubgroupsF16);
 
     Func("func", tint::Empty, ty.vec4<f16>(),
          Vector{
@@ -1280,6 +1256,30 @@ TEST_F(ResolverBuiltinValidationTest, TextureBarrier_FeatureDisallowed) {
     EXPECT_EQ(
         resolver.error(),
         R"(12:34 error: built-in function 'textureBarrier' requires the 'readonly_and_readwrite_storage_textures' language feature, which is not allowed in the current environment)");
+}
+
+TEST_F(ResolverBuiltinValidationTest, ChromiumPrint) {
+    // fn func { print(42); }
+    Func("func", tint::Empty, ty.void_(),
+         Vector{
+             CallStmt(Call(Source{Source::Location{12, 34}}, "print", 42_a)),
+         });
+
+    EXPECT_TRUE(r()->Resolve()) << r()->error();
+}
+
+TEST_F(ResolverBuiltinValidationTest, ChromiumPrint_FeatureDisallowed) {
+    // fn func { print(42); }
+    Func("func", tint::Empty, ty.void_(),
+         Vector{
+             CallStmt(Call(Source{Source::Location{12, 34}}, "print", 42_a)),
+         });
+
+    Resolver resolver{this, wgsl::AllowedFeatures{}};
+    EXPECT_FALSE(resolver.Resolve());
+    EXPECT_EQ(
+        resolver.error(),
+        R"(12:34 error: the 'chromium_print' language feature is not allowed in the current environment)");
 }
 
 }  // namespace

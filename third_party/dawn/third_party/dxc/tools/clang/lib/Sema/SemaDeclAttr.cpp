@@ -5105,6 +5105,17 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
   for (const AttributeList* l = AttrList; l; l = l->getNext())
     ProcessDeclAttribute(*this, S, D, *l, IncludeCXX11Attributes);
 
+  // HLSL Change Starts - Warn of redundant reorder / globally coherent
+  // attributes
+  if (D->hasAttr<HLSLGloballyCoherentAttr>() &&
+      D->hasAttr<HLSLReorderCoherentAttr>()) {
+    Diag(AttrList->getLoc(), diag::warn_hlsl_gc_implies_rc_attribute)
+        << cast<NamedDecl>(D);
+    D->dropAttr<HLSLReorderCoherentAttr>();
+    return;
+  }
+  // HLSL Change Ends
+
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
   // static int a9 __attribute__((weakref));

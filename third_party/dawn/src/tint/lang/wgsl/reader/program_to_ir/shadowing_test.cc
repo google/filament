@@ -25,7 +25,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/wgsl/reader/program_to_ir/ir_program_test.h"
 
 namespace tint::wgsl {
@@ -53,7 +52,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(S = struct @align(4) {
+    EXPECT_EQ(Dis(m.Get()), R"(S = struct @align(4) {
   i:i32 @offset(0)
 }
 
@@ -81,7 +80,7 @@ fn f(S : S) -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(S = struct @align(4) {
+    EXPECT_EQ(Dis(m.Get()), R"(S = struct @align(4) {
   i:i32 @offset(0)
 }
 
@@ -107,7 +106,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
+    EXPECT_EQ(Dis(m.Get()), R"($B1: {  # root
   %i:ptr<private, i32, read_write> = var 1i
 }
 
@@ -139,7 +138,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"($B1: {  # root
+    EXPECT_EQ(Dis(m.Get()), R"($B1: {  # root
   %i:ptr<private, i32, read_write> = var 1i
 }
 
@@ -172,7 +171,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     if true [t: $B2] {  # if_1
@@ -211,7 +210,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     if true [t: $B2] {  # if_1
@@ -246,7 +245,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -292,7 +291,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -336,7 +335,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [i: $B2, b: $B3] {  # loop_1
@@ -380,7 +379,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [i: $B2, b: $B3] {  # loop_1
@@ -423,7 +422,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [i: $B2, b: $B3] {  # loop_1
@@ -470,7 +469,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [i: $B2, b: $B3] {  # loop_1
@@ -521,7 +520,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -575,7 +574,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -629,7 +628,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -679,7 +678,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     loop [b: $B2, c: $B3] {  # loop_1
@@ -729,7 +728,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     %3:i32 = load %i
@@ -777,7 +776,7 @@ fn f() -> i32 {
 
     ASSERT_EQ(m, Success);
 
-    EXPECT_EQ(core::ir::Disassembler(m.Get()).Plain(), R"(%f = func():i32 {
+    EXPECT_EQ(Dis(m.Get()), R"(%f = func():i32 {
   $B1: {
     %i:ptr<function, i32, read_write> = var undef
     %3:i32 = load %i

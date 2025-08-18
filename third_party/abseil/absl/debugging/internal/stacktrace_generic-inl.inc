@@ -43,21 +43,11 @@ static __thread int recursive = 0;
 // glibc implementation itself will trigger malloc the first time it is called.
 // As such, we suppress usage of backtrace during this early stage of execution.
 static std::atomic<bool> disable_stacktraces(true);  // Disabled until healthy.
-// Waiting until static initializers run seems to be late enough.
-// This file is included into stacktrace.cc so this will only run once.
-ABSL_ATTRIBUTE_UNUSED static int stacktraces_enabler = []() {
-  void* unused_stack[1];
-  // Force the first backtrace to happen early to get the one-time shared lib
-  // loading (allocation) out of the way. After the first call it is much safer
-  // to use backtrace from a signal handler if we crash somewhere later.
-  backtrace(unused_stack, 1);
-  disable_stacktraces.store(false, std::memory_order_relaxed);
-  return 0;
-}();
 
 template <bool IS_STACK_FRAMES, bool IS_WITH_CONTEXT>
-static int UnwindImpl(void** result, int* sizes, int max_depth, int skip_count,
-                      const void *ucp, int *min_dropped_frames) {
+static int UnwindImpl(void** result, uintptr_t* frames, int* sizes,
+                      int max_depth, int skip_count, const void* ucp,
+                      int* min_dropped_frames) {
   if (recursive || disable_stacktraces.load(std::memory_order_relaxed)) {
     return 0;
   }
@@ -79,8 +69,13 @@ static int UnwindImpl(void** result, int* sizes, int max_depth, int skip_count,
     result[i] = stack[i + skip_count];
 
   if (IS_STACK_FRAMES) {
-    // No implementation for finding out the stack frame sizes yet.
-    memset(sizes, 0, sizeof(*sizes) * static_cast<size_t>(result_count));
+    // No implementation for finding out the stack frames yet.
+    if (frames != nullptr) {
+      memset(frames, 0, sizeof(*frames) * static_cast<size_t>(result_count));
+    }
+    if (sizes != nullptr) {
+      memset(sizes, 0, sizeof(*sizes) * static_cast<size_t>(result_count));
+    }
   }
   if (min_dropped_frames != nullptr) {
     if (size - skip_count - max_depth > 0) {
@@ -99,7 +94,7 @@ namespace absl {
 ABSL_NAMESPACE_BEGIN
 namespace debugging_internal {
 bool StackTraceWorksForTest() {
-  return true;
+  return false;
 }
 }  // namespace debugging_internal
 ABSL_NAMESPACE_END

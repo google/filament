@@ -135,12 +135,9 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_I32) {
 }
 %tint_f32_to_i32 = func(%value:f32):i32 {
   $B2: {
-    %6:i32 = convert %value
-    %7:bool = gte %value, -2147483648.0f
-    %8:i32 = select -2147483648i, %6, %7
-    %9:bool = lte %value, 2147483520.0f
-    %10:i32 = select 2147483647i, %8, %9
-    ret %10
+    %6:f32 = clamp %value, -2147483648.0f, 2147483520.0f
+    %7:i32 = convert %6
+    ret %7
   }
 }
 )";
@@ -172,12 +169,9 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_U32) {
 }
 %tint_f32_to_u32 = func(%value:f32):u32 {
   $B2: {
-    %6:u32 = convert %value
-    %7:bool = gte %value, 0.0f
-    %8:u32 = select 0u, %6, %7
-    %9:bool = lte %value, 4294967040.0f
-    %10:u32 = select 4294967295u, %8, %9
-    ret %10
+    %6:f32 = clamp %value, 0.0f, 4294967040.0f
+    %7:u32 = convert %6
+    ret %7
   }
 }
 )";
@@ -209,12 +203,9 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_I32_Vec2) {
 }
 %tint_v2f32_to_v2i32 = func(%value:vec2<f32>):vec2<i32> {
   $B2: {
-    %6:vec2<i32> = convert %value
-    %7:vec2<bool> = gte %value, vec2<f32>(-2147483648.0f)
-    %8:vec2<i32> = select vec2<i32>(-2147483648i), %6, %7
-    %9:vec2<bool> = lte %value, vec2<f32>(2147483520.0f)
-    %10:vec2<i32> = select vec2<i32>(2147483647i), %8, %9
-    ret %10
+    %6:vec2<f32> = clamp %value, vec2<f32>(-2147483648.0f), vec2<f32>(2147483520.0f)
+    %7:vec2<i32> = convert %6
+    ret %7
   }
 }
 )";
@@ -246,12 +237,9 @@ TEST_F(IR_ConversionPolyfillTest, F32_to_U32_Vec3) {
 }
 %tint_v2f32_to_v2u32 = func(%value:vec2<f32>):vec2<u32> {
   $B2: {
-    %6:vec2<u32> = convert %value
-    %7:vec2<bool> = gte %value, vec2<f32>(0.0f)
-    %8:vec2<u32> = select vec2<u32>(0u), %6, %7
-    %9:vec2<bool> = lte %value, vec2<f32>(4294967040.0f)
-    %10:vec2<u32> = select vec2<u32>(4294967295u), %8, %9
-    ret %10
+    %6:vec2<f32> = clamp %value, vec2<f32>(0.0f), vec2<f32>(4294967040.0f)
+    %7:vec2<u32> = convert %6
+    ret %7
   }
 }
 )";
@@ -283,12 +271,9 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_I32) {
 }
 %tint_f16_to_i32 = func(%value:f16):i32 {
   $B2: {
-    %6:i32 = convert %value
-    %7:bool = gte %value, -65504.0h
-    %8:i32 = select -2147483648i, %6, %7
-    %9:bool = lte %value, 65504.0h
-    %10:i32 = select 2147483647i, %8, %9
-    ret %10
+    %6:f16 = clamp %value, -65504.0h, 65504.0h
+    %7:i32 = convert %6
+    ret %7
   }
 }
 )";
@@ -320,12 +305,9 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_U32) {
 }
 %tint_f16_to_u32 = func(%value:f16):u32 {
   $B2: {
-    %6:u32 = convert %value
-    %7:bool = gte %value, 0.0h
-    %8:u32 = select 0u, %6, %7
-    %9:bool = lte %value, 65504.0h
-    %10:u32 = select 4294967295u, %8, %9
-    ret %10
+    %6:f16 = clamp %value, 0.0h, 65504.0h
+    %7:u32 = convert %6
+    ret %7
   }
 }
 )";
@@ -357,12 +339,9 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_I32_Vec2) {
 }
 %tint_v2f16_to_v2i32 = func(%value:vec2<f16>):vec2<i32> {
   $B2: {
-    %6:vec2<i32> = convert %value
-    %7:vec2<bool> = gte %value, vec2<f16>(-65504.0h)
-    %8:vec2<i32> = select vec2<i32>(-2147483648i), %6, %7
-    %9:vec2<bool> = lte %value, vec2<f16>(65504.0h)
-    %10:vec2<i32> = select vec2<i32>(2147483647i), %8, %9
-    ret %10
+    %6:vec2<f16> = clamp %value, vec2<f16>(-65504.0h), vec2<f16>(65504.0h)
+    %7:vec2<i32> = convert %6
+    ret %7
   }
 }
 )";
@@ -394,12 +373,9 @@ TEST_F(IR_ConversionPolyfillTest, F16_to_U32_Vec3) {
 }
 %tint_v2f16_to_v2u32 = func(%value:vec2<f16>):vec2<u32> {
   $B2: {
-    %6:vec2<u32> = convert %value
-    %7:vec2<bool> = gte %value, vec2<f16>(0.0h)
-    %8:vec2<u32> = select vec2<u32>(0u), %6, %7
-    %9:vec2<bool> = lte %value, vec2<f16>(65504.0h)
-    %10:vec2<u32> = select vec2<u32>(4294967295u), %8, %9
-    ret %10
+    %6:vec2<f16> = clamp %value, vec2<f16>(0.0h), vec2<f16>(65504.0h)
+    %7:vec2<u32> = convert %6
+    ret %7
   }
 }
 )";

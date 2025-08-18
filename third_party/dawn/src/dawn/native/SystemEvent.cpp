@@ -52,6 +52,7 @@ namespace dawn::native {
 SystemEventReceiver::SystemEventReceiver(SystemHandle primitive)
     : mPrimitive(std::move(primitive)) {}
 
+// static
 SystemEventReceiver SystemEventReceiver::CreateAlreadySignaled() {
     SystemEventPipeSender sender;
     SystemEventReceiver receiver;
@@ -131,21 +132,6 @@ std::pair<SystemEventPipeSender, SystemEventReceiver> CreateSystemEventPipe() {
 // SystemEvent
 
 // static
-Ref<SystemEvent> SystemEvent::CreateSignaled() {
-    auto ev = AcquireRef(new SystemEvent());
-    ev->Signal();
-    return ev;
-}
-
-// static
-Ref<SystemEvent> SystemEvent::CreateNonProgressingEvent() {
-    return AcquireRef(new SystemEvent(kNonProgressingPayload));
-}
-
-bool SystemEvent::IsProgressing() const {
-    return GetRefCountPayload() != kNonProgressingPayload;
-}
-
 bool SystemEvent::IsSignaled() const {
     return mSignaled.load(std::memory_order_acquire);
 }

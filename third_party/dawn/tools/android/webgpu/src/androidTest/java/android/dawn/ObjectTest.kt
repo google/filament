@@ -13,7 +13,10 @@ class ObjectTest {
 
     @Test
     fun sameObjectCompare() {
-        val surface = createInstance().createSurface()
+        val surface = createInstance().createSurface(SurfaceDescriptor(
+            surfaceSourceAndroidNativeWindow =
+                SurfaceSourceAndroidNativeWindow(0)
+        ))
 
         val texture1 = surface.getCurrentTexture().texture
 
@@ -32,9 +35,14 @@ class ObjectTest {
     fun differentObjectCompare() {
         val instance = createInstance()
 
-        val surface1 = instance.createSurface()
+        val surfaceDescriptor = SurfaceDescriptor(
+            surfaceSourceAndroidNativeWindow =
+                SurfaceSourceAndroidNativeWindow(0)
+        )
 
-        val surface2 = instance.createSurface()
+        val surface1 = instance.createSurface(surfaceDescriptor)
+
+        val surface2 = instance.createSurface(surfaceDescriptor)
 
         assert(!(surface1 == surface2)) {
             "== fails to match two Kotlin objects representing different Dawn objects"

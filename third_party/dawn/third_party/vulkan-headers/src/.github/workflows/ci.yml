@@ -28,7 +28,7 @@ jobs:
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON -G Ninja
+      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
       - run: ctest --output-on-failure
@@ -46,7 +46,7 @@ jobs:
         with:
           cmakeVersion: ${{ matrix.cmake-version }}
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON -G Ninja
+      - run: cmake -S . -B build -D VULKAN_HEADERS_ENABLE_TESTS=ON -D VULKAN_HEADERS_ENABLE_INSTALL=ON
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
       - run: ctest --output-on-failure
@@ -68,7 +68,6 @@ jobs:
             -D CMAKE_BUILD_TYPE=Release `
             -D VULKAN_HEADERS_ENABLE_TESTS=ON `
             -D VULKAN_HEADERS_ENABLE_INSTALL=ON `
-            -G Ninja
         - run: cmake --build ./build
         - run: cmake --install build/ --prefix build/install
         - run: ctest --output-on-failure
@@ -95,7 +94,6 @@ jobs:
           -D VULKAN_HEADERS_ENABLE_MODULE=ON \
           -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF \
           -D CMAKE_CXX_COMPILER=${{ matrix.compiler }} \
-          -G Ninja
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
       - run: CXX=${{ matrix.compiler }} ctest --output-on-failure
@@ -120,7 +118,6 @@ jobs:
           -D VULKAN_HEADERS_ENABLE_INSTALL=ON `
           -D VULKAN_HEADERS_ENABLE_MODULE=ON `
           -D VULKAN_HEADERS_ENABLE_MODULE_STD=OFF `
-          -G Ninja
       - run: cmake --build ./build
       - run: cmake --install build/ --prefix build/install
       - run: ctest --output-on-failure

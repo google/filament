@@ -27,7 +27,7 @@
 
 #include "src/tint/lang/wgsl/ast/builtin_texture_helper_test.h"
 
-#include "src/tint/lang/core/texel_format.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/sampled_texture.h"

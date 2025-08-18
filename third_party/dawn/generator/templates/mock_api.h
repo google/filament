@@ -65,7 +65,7 @@ class ProcTableAsClass {
             {% for method in type.methods %}
                 {% set Suffix = as_CppMethodSuffix(type.name, method.name) %}
                 {% if not has_callbackInfoStruct(method) %}
-                    virtual {{as_cType(method.return_type.name)}} {{Suffix}}(
+                    virtual {{as_annotated_cType(method.returns)}} {{Suffix}}(
                         {{-as_cType(type.name)}} {{as_varName(type.name)}}
                         {%- for arg in method.arguments -%}
                             , {{as_annotated_cType(arg)}}
@@ -73,7 +73,7 @@ class ProcTableAsClass {
                     ) = 0;
                 {% else %}
                     //* For functions with callbacks, store callback and userdata and call the On* method.
-                    {{as_cType(method.return_type.name)}} {{Suffix}}(
+                    {{as_annotated_cType(method.returns)}} {{Suffix}}(
                         {{-as_cType(type.name)}} {{as_varName(type.name)}}
                         {%- for arg in method.arguments -%}
                             , {{as_annotated_cType(arg)}}
@@ -147,7 +147,7 @@ class MockProcTable : public ProcTableAsClass {
             MOCK_METHOD(void, {{as_MethodSuffix(type.name, Name("add ref"))}}, ({{as_cType(type.name)}} self), (override));
             MOCK_METHOD(void, {{as_MethodSuffix(type.name, Name("release"))}}, ({{as_cType(type.name)}} self), (override));
             {% for method in type.methods if not has_callbackInfoStruct(method) %}
-                MOCK_METHOD({{as_cType(method.return_type.name)}},{{" "}}
+                MOCK_METHOD({{as_annotated_cType(method.returns)}},{{" "}}
                     {{-as_MethodSuffix(type.name, method.name)}}, (
                         {{-as_cType(type.name)}} {{as_varName(type.name)}}
                         {%- for arg in method.arguments -%}

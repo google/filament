@@ -120,7 +120,7 @@ typedef struct VkPipelineShaderStageNodeCreateInfoAMDX {
     uint32_t             index;
 } VkPipelineShaderStageNodeCreateInfoAMDX;
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateExecutionGraphPipelinesAMDX)(VkDevice                                        device, VkPipelineCache                 pipelineCache, uint32_t                                        createInfoCount, const VkExecutionGraphPipelineCreateInfoAMDX* pCreateInfos, const VkAllocationCallbacks*    pAllocator, VkPipeline*               pPipelines);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateExecutionGraphPipelinesAMDX)(VkDevice                                        device, VkPipelineCache pipelineCache, uint32_t                                        createInfoCount, const VkExecutionGraphPipelineCreateInfoAMDX* pCreateInfos, const VkAllocationCallbacks*    pAllocator, VkPipeline*               pPipelines);
 typedef VkResult (VKAPI_PTR *PFN_vkGetExecutionGraphPipelineScratchSizeAMDX)(VkDevice                                        device, VkPipeline                                      executionGraph, VkExecutionGraphPipelineScratchSizeAMDX*        pSizeInfo);
 typedef VkResult (VKAPI_PTR *PFN_vkGetExecutionGraphPipelineNodeIndexAMDX)(VkDevice                                        device, VkPipeline                                      executionGraph, const VkPipelineShaderStageNodeCreateInfoAMDX*  pNodeInfo, uint32_t*                                       pNodeIndex);
 typedef void (VKAPI_PTR *PFN_vkCmdInitializeGraphScratchMemoryAMDX)(VkCommandBuffer                                 commandBuffer, VkPipeline                                      executionGraph, VkDeviceAddress                                 scratch, VkDeviceSize                                    scratchSize);
@@ -129,6 +129,7 @@ typedef void (VKAPI_PTR *PFN_vkCmdDispatchGraphIndirectAMDX)(VkCommandBuffer    
 typedef void (VKAPI_PTR *PFN_vkCmdDispatchGraphIndirectCountAMDX)(VkCommandBuffer                                 commandBuffer, VkDeviceAddress                                 scratch, VkDeviceSize                                    scratchSize, VkDeviceAddress                                 countInfo);
 
 #ifndef VK_NO_PROTOTYPES
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateExecutionGraphPipelinesAMDX(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
@@ -136,41 +137,158 @@ VKAPI_ATTR VkResult VKAPI_CALL vkCreateExecutionGraphPipelinesAMDX(
     const VkExecutionGraphPipelineCreateInfoAMDX* pCreateInfos,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipelines);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkGetExecutionGraphPipelineScratchSizeAMDX(
     VkDevice                                    device,
     VkPipeline                                  executionGraph,
     VkExecutionGraphPipelineScratchSizeAMDX*    pSizeInfo);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkGetExecutionGraphPipelineNodeIndexAMDX(
     VkDevice                                    device,
     VkPipeline                                  executionGraph,
     const VkPipelineShaderStageNodeCreateInfoAMDX* pNodeInfo,
     uint32_t*                                   pNodeIndex);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR void VKAPI_CALL vkCmdInitializeGraphScratchMemoryAMDX(
     VkCommandBuffer                             commandBuffer,
     VkPipeline                                  executionGraph,
     VkDeviceAddress                             scratch,
     VkDeviceSize                                scratchSize);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR void VKAPI_CALL vkCmdDispatchGraphAMDX(
     VkCommandBuffer                             commandBuffer,
     VkDeviceAddress                             scratch,
     VkDeviceSize                                scratchSize,
     const VkDispatchGraphCountInfoAMDX*         pCountInfo);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR void VKAPI_CALL vkCmdDispatchGraphIndirectAMDX(
     VkCommandBuffer                             commandBuffer,
     VkDeviceAddress                             scratch,
     VkDeviceSize                                scratchSize,
     const VkDispatchGraphCountInfoAMDX*         pCountInfo);
+#endif
 
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
 VKAPI_ATTR void VKAPI_CALL vkCmdDispatchGraphIndirectCountAMDX(
     VkCommandBuffer                             commandBuffer,
     VkDeviceAddress                             scratch,
     VkDeviceSize                                scratchSize,
     VkDeviceAddress                             countInfo);
+#endif
+#endif
+
+
+// VK_NV_cuda_kernel_launch is a preprocessor guard. Do not pass it to API calls.
+#define VK_NV_cuda_kernel_launch 1
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaModuleNV)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCudaFunctionNV)
+#define VK_NV_CUDA_KERNEL_LAUNCH_SPEC_VERSION 2
+#define VK_NV_CUDA_KERNEL_LAUNCH_EXTENSION_NAME "VK_NV_cuda_kernel_launch"
+typedef struct VkCudaModuleCreateInfoNV {
+    VkStructureType    sType;
+    const void*        pNext;
+    size_t             dataSize;
+    const void*        pData;
+} VkCudaModuleCreateInfoNV;
+
+typedef struct VkCudaFunctionCreateInfoNV {
+    VkStructureType    sType;
+    const void*        pNext;
+    VkCudaModuleNV     module;
+    const char*        pName;
+} VkCudaFunctionCreateInfoNV;
+
+typedef struct VkCudaLaunchInfoNV {
+    VkStructureType        sType;
+    const void*            pNext;
+    VkCudaFunctionNV       function;
+    uint32_t               gridDimX;
+    uint32_t               gridDimY;
+    uint32_t               gridDimZ;
+    uint32_t               blockDimX;
+    uint32_t               blockDimY;
+    uint32_t               blockDimZ;
+    uint32_t               sharedMemBytes;
+    size_t                 paramCount;
+    const void* const *    pParams;
+    size_t                 extraCount;
+    const void* const *    pExtras;
+} VkCudaLaunchInfoNV;
+
+typedef struct VkPhysicalDeviceCudaKernelLaunchFeaturesNV {
+    VkStructureType    sType;
+    void*              pNext;
+    VkBool32           cudaKernelLaunchFeatures;
+} VkPhysicalDeviceCudaKernelLaunchFeaturesNV;
+
+typedef struct VkPhysicalDeviceCudaKernelLaunchPropertiesNV {
+    VkStructureType    sType;
+    void*              pNext;
+    uint32_t           computeCapabilityMinor;
+    uint32_t           computeCapabilityMajor;
+} VkPhysicalDeviceCudaKernelLaunchPropertiesNV;
+
+typedef VkResult (VKAPI_PTR *PFN_vkCreateCudaModuleNV)(VkDevice device, const VkCudaModuleCreateInfoNV* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCudaModuleNV* pModule);
+typedef VkResult (VKAPI_PTR *PFN_vkGetCudaModuleCacheNV)(VkDevice device, VkCudaModuleNV module, size_t* pCacheSize, void* pCacheData);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateCudaFunctionNV)(VkDevice device, const VkCudaFunctionCreateInfoNV* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCudaFunctionNV* pFunction);
+typedef void (VKAPI_PTR *PFN_vkDestroyCudaModuleNV)(VkDevice device, VkCudaModuleNV module, const VkAllocationCallbacks* pAllocator);
+typedef void (VKAPI_PTR *PFN_vkDestroyCudaFunctionNV)(VkDevice device, VkCudaFunctionNV function, const VkAllocationCallbacks* pAllocator);
+typedef void (VKAPI_PTR *PFN_vkCmdCudaLaunchKernelNV)(VkCommandBuffer commandBuffer, const VkCudaLaunchInfoNV* pLaunchInfo);
+
+#ifndef VK_NO_PROTOTYPES
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateCudaModuleNV(
+    VkDevice                                    device,
+    const VkCudaModuleCreateInfoNV*             pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkCudaModuleNV*                             pModule);
+#endif
+
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkGetCudaModuleCacheNV(
+    VkDevice                                    device,
+    VkCudaModuleNV                              module,
+    size_t*                                     pCacheSize,
+    void*                                       pCacheData);
+#endif
+
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR VkResult VKAPI_CALL vkCreateCudaFunctionNV(
+    VkDevice                                    device,
+    const VkCudaFunctionCreateInfoNV*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkCudaFunctionNV*                           pFunction);
+#endif
+
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR void VKAPI_CALL vkDestroyCudaModuleNV(
+    VkDevice                                    device,
+    VkCudaModuleNV                              module,
+    const VkAllocationCallbacks*                pAllocator);
+#endif
+
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR void VKAPI_CALL vkDestroyCudaFunctionNV(
+    VkDevice                                    device,
+    VkCudaFunctionNV                            function,
+    const VkAllocationCallbacks*                pAllocator);
+#endif
+
+#ifndef VK_ONLY_EXPORTED_PROTOTYPES
+VKAPI_ATTR void VKAPI_CALL vkCmdCudaLaunchKernelNV(
+    VkCommandBuffer                             commandBuffer,
+    const VkCudaLaunchInfoNV*                   pLaunchInfo);
+#endif
 #endif
 
 

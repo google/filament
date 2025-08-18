@@ -38,12 +38,12 @@ enum class [[nodiscard]] WireResult {
 };
 
 // Macro to simplify error handling, similar to DAWN_TRY but for WireResult.
-#define WIRE_TRY(EXPR)                                          \
-    do {                                                        \
-        WireResult exprResult = EXPR;                           \
-        if (DAWN_UNLIKELY(exprResult != WireResult::Success)) { \
-            return exprResult;                                  \
-        }                                                       \
+#define WIRE_TRY(EXPR)                                        \
+    do {                                                      \
+        WireResult exprResult = EXPR;                         \
+        if (exprResult != WireResult::Success) [[unlikely]] { \
+            return exprResult;                                \
+        }                                                     \
     } while (0)
 
 }  // namespace dawn::wire

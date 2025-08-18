@@ -103,7 +103,7 @@ MaybeError Queue::SubmitImpl(uint32_t commandCount, CommandBufferBase* const* co
     }
     TRACE_EVENT_END0(GetDevice()->GetPlatform(), Recording, "CommandBufferVk::RecordCommands");
 
-    DAWN_TRY(SubmitPendingCommands());
+    DAWN_TRY(SubmitPendingCommandsImpl());
 
     return {};
 }
@@ -124,6 +124,9 @@ VkQueue Queue::GetVkQueue() const {
 }
 
 ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
+    // TODO(crbug.com/40643114): Revisit whether this lock is needed for this backend.
+    auto deviceGuard = GetDevice()->GetGuard();
+
     Device* device = ToBackend(GetDevice());
     return mFencesInFlight.Use([&](auto fencesInFlight) -> ResultOrError<ExecutionSerial> {
         ExecutionSerial fenceSerial(0);
@@ -145,8 +148,6 @@ ResultOrError<ExecutionSerial> Queue::CheckAndUpdateCompletedSerials() {
             fenceSerial = tentativeSerial;
 
             mUnusedFences->push_back(fence);
-
-            DAWN_ASSERT(fenceSerial > GetCompletedCommandSerial());
             fencesInFlight->pop_front();
         }
         return fenceSerial;
@@ -181,9 +182,6 @@ MaybeError Queue::WaitForIdleForDestruction() {
     mFencesInFlight.Use([&](auto fencesInFlight) {
         while (!fencesInFlight->empty()) {
             VkFence fence = fencesInFlight->front().first;
-            ExecutionSerial fenceSerial = fencesInFlight->front().second;
-            DAWN_ASSERT(fenceSerial > GetCompletedCommandSerial());
-
             VkResult result = VkResult::WrapUnsafe(VK_TIMEOUT);
             do {
                 // If WaitForIdleForDesctruction is called while we are Disconnected, it means that
@@ -318,7 +316,7 @@ void Queue::RecycleCompletedCommands(ExecutionSerial completedSerial) {
     mCommandsInFlight.ClearUpTo(completedSerial);
 }
 
-MaybeError Queue::SubmitPendingCommands() {
+MaybeError Queue::SubmitPendingCommandsImpl() {
     if (!mRecordingContext.needsSubmit) {
         return {};
     }
@@ -469,7 +467,8 @@ void Queue::DestroyImpl() {
     QueueBase::DestroyImpl();
 }
 
-ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) {
+ResultOrError<ExecutionSerial> Queue::WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                             Nanoseconds timeout) {
     Device* device = ToBackend(GetDevice());
     VkDevice vkDevice = device->GetVkDevice();
     // If the client has passed a finite timeout, the function will eventually return due to
@@ -480,19 +479,21 @@ ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanosecond
     // TODO(crbug.com/344798087): Handle the issue of timeouts in a more general way further up the
     // stack.
     while (1) {
+        ExecutionSerial completedSerial = kWaitSerialTimeout;
         VkResult waitResult = mFencesInFlight.Use([&](auto fencesInFlight) {
             // Search from for the first fence >= serial.
             VkFence waitFence = VK_NULL_HANDLE;
             for (auto it = fencesInFlight->begin(); it != fencesInFlight->end(); ++it) {
-                if (it->second >= serial) {
+                if (it->second >= waitSerial) {
                     waitFence = it->first;
+                    completedSerial = it->second;
                     break;
                 }
             }
             if (waitFence == VK_NULL_HANDLE) {
                 // Fence not found. This serial must have already completed.
                 // Return a VK_SUCCESS status.
-                DAWN_ASSERT(serial <= GetCompletedCommandSerial());
+                completedSerial = waitSerial;
                 return VkResult::WrapUnsafe(VK_SUCCESS);
             }
             // Wait for the fence.
@@ -515,10 +516,10 @@ ResultOrError<bool> Queue::WaitForQueueSerial(ExecutionSerial serial, Nanosecond
             if (static_cast<uint64_t>(timeout) == std::numeric_limits<uint64_t>::max()) {
                 continue;
             }
-            return false;
+            return kWaitSerialTimeout;
         }
         DAWN_TRY(CheckVkSuccess(::VkResult(waitResult), "vkWaitForFences"));
-        return true;
+        return completedSerial;
     }
 }
 

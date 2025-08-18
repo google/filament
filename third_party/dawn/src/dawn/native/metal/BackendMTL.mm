@@ -76,15 +76,15 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
     }
 
     bool metalValidationEnabled = CheckMetalValidationEnabled(GetInstance());
-    @autoreleasepool {
 #if DAWN_PLATFORM_IS(MACOS)
-        for (id<MTLDevice> device in MTLCopyAllDevices()) {
-            Ref<PhysicalDevice> physicalDevice = AcquireRef(
-                new PhysicalDevice(GetInstance(), AcquireNSPRef(device), metalValidationEnabled));
-            if (!GetInstance()->ConsumedErrorAndWarnOnce(physicalDevice->Initialize())) {
-                mPhysicalDevices.push_back(std::move(physicalDevice));
-            }
+    NSRef<NSArray<id<MTLDevice>>> devices = AcquireNSRef(MTLCopyAllDevices());
+    for (id<MTLDevice> device in* devices) {
+        Ref<PhysicalDevice> physicalDevice =
+            AcquireRef(new PhysicalDevice(GetInstance(), {device}, metalValidationEnabled));
+        if (!GetInstance()->ConsumedErrorAndWarnOnce(physicalDevice->Initialize())) {
+            mPhysicalDevices.push_back(std::move(physicalDevice));
         }
+    }
 #endif
 
         // iOS only has a single device so MTLCopyAllDevices doesn't exist there.
@@ -95,7 +95,7 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
             mPhysicalDevices.push_back(std::move(physicalDevice));
         }
 #endif
-    }
+
     return std::vector<Ref<PhysicalDeviceBase>>{mPhysicalDevices};
 }
 

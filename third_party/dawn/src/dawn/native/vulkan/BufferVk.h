@@ -91,7 +91,7 @@ class Buffer final : public BufferBase {
     void DestroyImpl() override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointer() override;
+    void* GetMappedPointerImpl() override;
     MaybeError UploadData(uint64_t bufferOffset, const void* data, size_t size) override;
 
     VkBuffer mHandle = VK_NULL_HANDLE;

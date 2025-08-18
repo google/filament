@@ -294,9 +294,10 @@ void SpirvModule::addEntryPoint(SpirvEntryPoint *ep) {
   entryPoints.push_back(ep);
 }
 
-SpirvExecutionMode *SpirvModule::findExecutionMode(SpirvFunction *entryPoint,
-                                                   spv::ExecutionMode em) {
-  for (SpirvExecutionMode *cem : executionModes) {
+SpirvExecutionModeBase *
+SpirvModule::findExecutionMode(SpirvFunction *entryPoint,
+                               spv::ExecutionMode em) {
+  for (SpirvExecutionModeBase *cem : executionModes) {
     if (cem->getEntryPoint() != entryPoint)
       continue;
     if (cem->getExecutionMode() != em)
@@ -306,7 +307,7 @@ SpirvExecutionMode *SpirvModule::findExecutionMode(SpirvFunction *entryPoint,
   return nullptr;
 }
 
-void SpirvModule::addExecutionMode(SpirvExecutionMode *em) {
+void SpirvModule::addExecutionMode(SpirvExecutionModeBase *em) {
   assert(em && "cannot add null execution mode");
   executionModes.push_back(em);
 }
@@ -338,6 +339,12 @@ SpirvExtInstImport *SpirvModule::getExtInstSet(llvm::StringRef name) {
 void SpirvModule::addVariable(SpirvVariable *var) {
   assert(var && "cannot add null variable to the module");
   variables.push_back(var);
+}
+
+void SpirvModule::addVariable(SpirvVariable *var, SpirvInstruction *pos) {
+  assert(var && "cannot add null variable to the module");
+  auto location = std::find(variables.begin(), variables.end(), pos);
+  variables.insert(location, var);
 }
 
 void SpirvModule::addDecoration(SpirvDecoration *decor) {
@@ -373,6 +380,17 @@ void SpirvModule::addDebugInfo(SpirvDebugInstruction *info) {
 void SpirvModule::addModuleProcessed(SpirvModuleProcessed *p) {
   assert(p);
   moduleProcesses.push_back(p);
+}
+
+SpirvDebugCompilationUnit *SpirvModule::getDebugCompilationUnit() {
+  SpirvDebugCompilationUnit *unit = debugCompilationUnit;
+  assert(unit && "null DebugCompilationUnit");
+  return unit;
+}
+
+void SpirvModule::setDebugCompilationUnit(SpirvDebugCompilationUnit *unit) {
+  assert(unit);
+  debugCompilationUnit = unit;
 }
 
 } // end namespace spirv

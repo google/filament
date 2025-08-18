@@ -41,4 +41,26 @@ float4 PSMain(float4 color : COLOR) : SV_TARGET { return color; }
           "OpSource HLSL 600 %4 \"// RUN: %dxc -T ps_6_0 -E PSMain -Zi"));
 }
 
+// This test demonstrates that in-memory source is transmitted
+// to OpDebugSource only once when there are multiple files referenced
+TEST_F(LibTest, InlinedCodeWithDebugMultipleFilesTest) {
+  const std::string command(
+      R"(// RUN: %dxc -T vs_6_0 -E main -fspv-debug=vulkan-with-source)");
+  const std::string code = command + R"(
+#line 1 "otherfile.hlsl"
+struct VertexOutput {
+  [[vk::location(0)]] float3 Color : COLOR0;
+};
+
+float4 main(VertexOutput v) : SV_Position
+{
+  return float4(v.Color, 1.0);
+}
+)";
+  std::string spirv = compileCodeAndGetSpirvAsm(code);
+  EXPECT_THAT(spirv, ContainsRegex("%23 = OpString \"// RUN: %dxc -T vs_6_0 -E "
+                                   "main -fspv-debug=vulkan-with-source"));
+  EXPECT_THAT(spirv, ContainsRegex("DebugSource %5 %23\n"));
+  EXPECT_THAT(spirv, ContainsRegex("DebugSource %28\n"));
+}
 } // namespace

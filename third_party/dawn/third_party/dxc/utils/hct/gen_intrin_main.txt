@@ -336,9 +336,9 @@ float<4,3> [[rn]] ObjectToWorld4x3();
 float<4,3> [[rn]] WorldToObject4x3();
 
 // Packed dot products with accumulate:
-$type3 [[rn]] dot4add_u8packed(in uint a, in $type1 b, in uint c);
-$type3 [[rn]] dot4add_i8packed(in uint a, in $type1 b, in int c);
-$type3 [[rn]] dot2add(in float16_t<2> a, in $type1 b, in float c);
+uint [[rn]] dot4add_u8packed(in uint a, in $type1 b, in uint c);
+int [[rn]] dot4add_i8packed(in uint a, in $type1 b, in int c);
+float [[rn]] dot2add(in float16_t<2> a, in $type1 b, in float c);
 
 // Unpacking intrinsics
 int16_t<4> [[rn]] unpack_s8s16(in p32i8 pk);
@@ -380,6 +380,14 @@ void [[]] Barrier(in NodeRecordOrUAV o, in uint SemanticFlags);
 
 uint [[]] GetRemainingRecursionLevels();
 
+void [[min_sm=6.9]] __builtin_MatVecMul(out LinAlg<c> OutputVector, in bool OutputIsUnsigned, in LinAlg<c2> InputVector, in bool InputIsUnsigned, in uint InputInterpretation, in ByteAddressBuffer MatrixBuffer, in uint MatrixOffset, in uint MatrixInterpretation, in uint M, in uint K, in uint MatrixLayout, in bool MatrixIsTransposed, in uint MatrixStride);
+
+void [[min_sm=6.9]] __builtin_MatVecMulAdd(out LinAlg<c> OutputVector, in bool OutputIsUnsigned, in LinAlg<c2> InputVector, in bool InputIsUnsigned, in uint InputInterpretation, in ByteAddressBuffer MatrixBuffer, in uint MatrixOffset, in uint MatrixInterpretation, in uint M, in uint K, in uint MatrixLayout, in bool MatrixIsTransposed, in uint MatrixStride, in ByteAddressBuffer BiasVector, in uint BiasOffset, in uint BiasInterpretation);
+
+void [[min_sm=6.9]] __builtin_OuterProductAccumulate(in LinAlg<c> InputVector1, in LinAlg<c2> InputVector2, in RWByteAddressBuffer MatrixBuffer, in uint MatrixOffset, in uint MatrixInterpretation, in uint MatrixLayout, in uint MatrixStride);
+
+void [[min_sm=6.9]] __builtin_VectorAccumulate(in LinAlg<c> InputVector, in RWByteAddressBuffer MatrixBuffer, in uint MatrixOffset);
+
 } namespace
 
 
@@ -393,7 +401,13 @@ void [[]] RawBufferStore(in u64 addr, in $funcT value);
 void [[]] RawBufferStore(in u64 addr, in $funcT value, in uint alignment);
 void [[]] ext_execution_mode(in uint mode, ...);
 void [[]] ext_execution_mode_id(in uint mode, ...);
+$funcT2 [[]] static_pointer_cast(in VkBufferPointer ptr);
+$funcT2 [[]] reinterpret_pointer_cast(in VkBufferPointer ptr);
 
+} namespace
+
+namespace BufferPointerMethods {
+$classT [[ro]] GetBufferContents();
 } namespace
 // SPIRV Change Ends
 
@@ -1092,6 +1106,34 @@ uint [[ro]] CommittedInstanceContributionToHitGroupIndex();
 // Shader Execution Reordering
 namespace DxHitObjectMethods {
     DxHitObject [[static,class_prefix,min_sm=6.9]] MakeNop();
+    DxHitObject [[static,class_prefix,min_sm=6.9]] MakeMiss(in uint RayFlags, in uint MissShaderIndex, in ray_desc Ray);
+    DxHitObject [[static,class_prefix,min_sm=6.9]] FromRayQuery(in RayQuery rq);
+    DxHitObject [[static,class_prefix,min_sm=6.9]] FromRayQuery(in RayQuery rq, in uint HitKind, in udt Attributes);
+    DxHitObject [[static,class_prefix,min_sm=6.9]] TraceRay(in acceleration_struct AccelerationStructure, in uint RayFlags, in uint InstanceInclusionMask, in uint RayContributionToHitGroupIndex, in uint MultiplierForGeometryContributionToHitGroupIndex, in uint MissShaderIndex, in ray_desc Ray, inout udt Payload);
+    void [[static,class_prefix,min_sm=6.9]] Invoke(in DxHitObject ho, inout udt Payload);
+    bool [[rn,class_prefix,min_sm=6.9]] IsMiss();
+    bool [[rn,class_prefix,min_sm=6.9]] IsHit();
+    bool [[rn,class_prefix,min_sm=6.9]] IsNop();
+    uint [[rn,class_prefix,min_sm=6.9]] GetRayFlags();
+    float [[rn,class_prefix,min_sm=6.9]] GetRayTMin();
+    float [[rn,class_prefix,min_sm=6.9]] GetRayTCurrent();
+    float<3> [[rn,class_prefix,min_sm=6.9]] GetWorldRayOrigin();
+    float<3> [[rn,class_prefix,min_sm=6.9]] GetWorldRayDirection();
+    float<3> [[rn,class_prefix,min_sm=6.9]] GetObjectRayOrigin();
+    float<3> [[rn,class_prefix,min_sm=6.9]] GetObjectRayDirection();
+    float<3,4> [[rn,class_prefix,min_sm=6.9]] GetObjectToWorld3x4();
+    float<4,3> [[rn,class_prefix,min_sm=6.9]] GetObjectToWorld4x3();
+    float<3,4> [[rn,class_prefix,min_sm=6.9]] GetWorldToObject3x4();
+    float<4,3> [[rn,class_prefix,min_sm=6.9]] GetWorldToObject4x3();
+    uint [[rn,class_prefix,min_sm=6.9]] GetGeometryIndex();
+    uint [[rn,class_prefix,min_sm=6.9]] GetInstanceIndex();
+    uint [[rn,class_prefix,min_sm=6.9]] GetInstanceID();
+    uint [[rn,class_prefix,min_sm=6.9]] GetPrimitiveIndex();
+    uint [[rn,class_prefix,min_sm=6.9]] GetHitKind();
+    uint [[rn,class_prefix,min_sm=6.9]] GetShaderTableIndex();
+    void [[class_prefix,min_sm=6.9]] GetAttributes(out udt Attributes);
+    void [[class_prefix,min_sm=6.9]] SetShaderTableIndex(in uint RecordIndex);
+    uint [[ro,class_prefix,min_sm=6.9]] LoadLocalRootTableConstant(in uint RootConstantOffsetInBytes);
 } namespace
 
 namespace DxIntrinsics {
@@ -1147,4 +1189,3 @@ $classT [[]] SubpassLoad(in int sample) : subpassinputms_load;
 } namespace
 
 // SPIRV Change Ends
-

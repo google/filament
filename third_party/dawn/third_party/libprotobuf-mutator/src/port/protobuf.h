@@ -24,12 +24,45 @@
 #include "google/protobuf/util/message_differencer.h"
 #include "google/protobuf/wire_format.h"
 
+// clang-format off
+#include "google/protobuf/port_def.inc"  // MUST be last header included
+// clang-format on
+namespace google {
+namespace protobuf {
+#if PROTOBUF_VERSION < 4025000
+
+template <typename T>
+const T* DownCastMessage(const Message* message) {
+  return static_cast<const T*>(message);
+}
+
+template <typename T>
+T* DownCastMessage(Message* message) {
+  const Message* message_const = message;
+  return const_cast<T*>(DownCastMessage<T>(message_const));
+}
+
+#elif PROTOBUF_VERSION < 5029000
+
+template <typename T>
+const T* DownCastMessage(const Message* message) {
+  return DownCastToGenerated<T>(message);
+}
+
+template <typename T>
+T* DownCastMessage(Message* message) {
+  return DownCastToGenerated<T>(message);
+}
+
+#endif  // PROTOBUF_VERSION
+}  // namespace protobuf
+}  // namespace google
+#include "google/protobuf/port_undef.inc"
+
+
 namespace protobuf_mutator {
 
 namespace protobuf = google::protobuf;
-
-// String type used by google::protobuf.
-using String = std::string;
 
 }  // namespace protobuf_mutator
 

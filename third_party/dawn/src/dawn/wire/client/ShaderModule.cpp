@@ -117,7 +117,8 @@ ObjectType ShaderModule::GetObjectType() const {
     return ObjectType::ShaderModule;
 }
 
-WGPUFuture ShaderModule::GetCompilationInfo(const WGPUCompilationInfoCallbackInfo& callbackInfo) {
+WGPUFuture ShaderModule::APIGetCompilationInfo(
+    const WGPUCompilationInfoCallbackInfo& callbackInfo) {
     auto [futureIDInternal, tracked] =
         GetEventManager().TrackEvent(std::make_unique<CompilationInfoEvent>(callbackInfo, this));
     if (!tracked) {
@@ -144,8 +145,8 @@ WireResult Client::DoShaderModuleGetCompilationInfoCallback(ObjectHandle eventMa
                                                             WGPUFuture future,
                                                             WGPUCompilationInfoRequestStatus status,
                                                             const WGPUCompilationInfo* info) {
-    return GetEventManager(eventManager)
-        .SetFutureReady<ShaderModule::CompilationInfoEvent>(future.id, status, info);
+    return SetFutureReady<ShaderModule::CompilationInfoEvent>(eventManager, future.id, status,
+                                                              info);
 }
 
 }  // namespace dawn::wire::client

@@ -77,6 +77,7 @@ template("tint_proto_library") {
   if (!tint_has_protobuf) {
     error("Tint needs protobuf to build a proto library")
   }
+
   proto_library(target_name) {
     forward_variables_from(invoker, "*", [ "configs" ])
     proto_in_dir = "${tint_root_dir}"
@@ -87,13 +88,11 @@ template("tint_proto_library") {
 }
 
 ###############################################################################
-# Executables - only built when tint_build_cmds is enabled
+# Executables
 ###############################################################################
-if (tint_build_cmds) {
-  template("tint_executable") {
-    executable(target_name) {
-      forward_variables_from(invoker, "*")
-    }
+template("tint_executable") {
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
   }
 }
 
@@ -162,12 +161,6 @@ template("tint_benchmarks_source_set") {
 ###############################################################################
 if (tint_has_fuzzers) {
   import("//testing/libfuzzer/fuzzer_test.gni")
-  fuzzer_corpus_dir = "${root_gen_dir}/fuzzers"
-  fuzzer_corpus_wgsl_dir = "${fuzzer_corpus_dir}/wgsl_corpus"
-  fuzzer_corpus_wgsl_stamp = "${fuzzer_corpus_dir}/wgsl.stamp"
-  fuzzer_corpus_ir_dir = "${fuzzer_corpus_dir}/ir_corpus"
-  fuzzer_corpus_ir_stamp = "${fuzzer_corpus_dir}/ir.stamp"
-
   template("tint_fuzz_source_set") {
     source_set(target_name) {
       forward_variables_from(invoker, "*", [ "configs" ])
@@ -227,15 +220,12 @@ if (tint_has_fuzzers) {
           "max_len=10000",
         ]
 
-        deps += [ "${tint_src_dir}:tint_generate_wgsl_corpus" ]
-        seed_corpus = fuzzer_corpus_wgsl_dir
-        seed_corpus_deps = [ "${tint_src_dir}:tint_generate_wgsl_corpus" ]
-      } else if (target_name == "ir") {
-        deps += [ "${tint_src_dir}:tint_generate_ir_corpus" ]
-        seed_corpus = fuzzer_corpus_ir_dir
-        seed_corpus_deps = [ "${tint_src_dir}:tint_generate_ir_corpus" ]
-      } else {
-        assert(false, "unsupported tint fuzzer target")
+        # There is a nightly job that generates the corpus for each of
+        # the fuzzers and uploads them to cloud storage that
+        # ClusterFuzz uses, so there is no need for this rule to
+        # automatically generate the corpus. There are instructions in
+        # docs/tint/fuzzers.md for how to generate the corpus locally
+        # if needed.
       }
     }
 

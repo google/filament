@@ -109,7 +109,7 @@ struct VertexOutputs {
 // It represents the current stencil mask we're testing in the
 // source.
 // This is a cheap way to get the stencil value into the shader
-// since WebGPU doesn't have push constants.
+// since WebGPU doesn't have immediate data.
 @vertex fn vert_fullscreen_quad(
   @builtin(vertex_index) vertex_index : u32,
   @builtin(instance_index) instance_index: u32,
@@ -497,7 +497,7 @@ MaybeError BlitR8ToStencil(DeviceBase* device,
             pass->APISetPipeline(pipelines.setStencilPipelines[bit].Get());
             // Draw one instance, and use the stencil value as firstInstance.
             // This is a cheap way to get the stencil value into the shader
-            // since WebGPU doesn't have push constants.
+            // since WebGPU doesn't have immediate data.
             pass->APIDraw(3, 1, 0, 1u << bit);
         }
         pass->End();

@@ -10,8 +10,8 @@ struct PSInput
 // CHECK: OpDecorate %counter_var_g_rwbuffer DescriptorSet 2
 // CHECK: OpDecorate %counter_var_g_rwbuffer Binding 1
 
-// CHECK: %g_rwbuffer = OpVariable %_ptr_Uniform__runtimearr_type_RWStructuredBuffer_uint Uniform
 // CHECK: %counter_var_g_rwbuffer = OpVariable %_ptr_Uniform__runtimearr_type_ACSBuffer_counter Uniform
+// CHECK: %g_rwbuffer = OpVariable %_ptr_Uniform__runtimearr_type_RWStructuredBuffer_uint Uniform
 RWStructuredBuffer<uint> g_rwbuffer[] : register(u0, space2);
 
 float4 main(PSInput input) : SV_TARGET

@@ -75,6 +75,8 @@ const char* HRESULTAsString(HRESULT result) {
             return "DXGI_ERROR_DRIVER_INTERNAL_ERROR";
         case DXGI_ERROR_WAS_STILL_DRAWING:
             return "DXGI_ERROR_WAS_STILL_DRAWING";
+        case DXGI_ERROR_NOT_CURRENTLY_AVAILABLE:
+            return "DXGI_ERROR_NOT_CURRENTLY_AVAILABLE";
 
         // D3D11 errors:
         case D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS:
@@ -104,7 +106,7 @@ const char* HRESULTAsString(HRESULT result) {
 }
 
 MaybeError CheckHRESULTImpl(HRESULT result, const char* context) {
-    if (DAWN_LIKELY(SUCCEEDED(result))) {
+    if (SUCCEEDED(result)) [[likely]] {
         return {};
     }
 

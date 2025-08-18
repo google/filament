@@ -29,10 +29,13 @@
 #define SRC_DAWN_NATIVE_EXECUTIONQUEUE_H_
 
 #include <atomic>
+#include <functional>
 
+#include "dawn/common/MutexProtected.h"
+#include "dawn/common/SerialMap.h"
 #include "dawn/native/Error.h"
-#include "dawn/native/EventManager.h"
 #include "dawn/native/IntegerTypes.h"
+#include "partition_alloc/pointers/raw_ptr.h"
 
 namespace dawn::native {
 
@@ -42,6 +45,8 @@ namespace dawn::native {
 // only partially safe - where observation of the last-submitted and pending serials is atomic.
 class ExecutionQueueBase {
   public:
+    using Task = std::function<void()>;
+
     // The latest serial known to have completed execution on the queue.
     ExecutionSerial GetCompletedCommandSerial() const;
     // The serial of the latest batch of work sent for execution.
@@ -53,8 +58,14 @@ class ExecutionQueueBase {
     // Whether the execution queue has scheduled commands to be submitted or executing.
     bool HasScheduledCommands() const;
 
-    // Check for passed fences and set the new completed serial.
+    // Check for passed fences and set the new completed serial. Note that the two functions below
+    // effectively do the same thing initially, however, |UpdateCompletedSerials| requires
+    // that the device-wide lock is NOT held since it may additionally trigger user callbacks. Note
+    // that for the purpose of going forwards, |CheckPassedSerials| should not be used anymore since
+    // it assumes that the device-wide lock IS held.
+    // TODO(crbug.com/42240396): Remove |CheckPassedSerials| in favor of |UpdateCompletedSerial|.
     MaybeError CheckPassedSerials();
+    MaybeError UpdateCompletedSerial();
 
     // For the commands being internally recorded in backend, that were not urgent to submit, this
     // method makes them to be submitted as soon as possible in next ticks.
@@ -62,6 +73,9 @@ class ExecutionQueueBase {
 
     // Ensures that all commands which were recorded are flushed upto the given serial.
     MaybeError EnsureCommandsFlushed(ExecutionSerial serial);
+
+    // Submit any pending commands that are enqueued.
+    MaybeError SubmitPendingCommands();
 
     // During shut down of device, some operations might have been started since the last submit
     // and waiting on a serial that doesn't have a corresponding fence enqueued. Fake serials to
@@ -79,17 +93,43 @@ class ExecutionQueueBase {
 
     // Wait at most `timeout` synchronously for the ExecutionSerial to pass. Returns true
     // if the serial passed.
-    virtual ResultOrError<bool> WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout) = 0;
+    ResultOrError<bool> WaitForQueueSerial(ExecutionSerial serial, Nanoseconds timeout);
+
+    // Tracks a new task to complete when |serial| is reached.
+    void TrackSerialTask(ExecutionSerial serial, Task&& task);
 
     // In the 'Normal' mode, currently recorded commands in the backend submitted in the next Tick.
     // However in the 'Passive' mode, the submission will be postponed as late as possible, for
     // example, until the client has explictly issued a submission.
     enum class SubmitMode { Normal, Passive };
 
+    // Tracks whether we are in a submit to avoid submit reentrancy. Reentrancy could otherwise
+    // happen when allocating resources or staging memory during submission (for workarounds, or
+    // emulation) and the heuristics ask for an early submit to happen (which would cause a
+    // submit-in-submit and many issues).
+    // TODO(crbug.com/42240396): Move all handling of Submit(command buffers) in this class as well,
+    // at which point this member can be private.
+    bool mInSubmit = false;
+
+  protected:
+    static constexpr ExecutionSerial kWaitSerialTimeout = kBeginningOfGPUTime;
+
+    // Currently, the queue has two paths for serial updating, one is via DeviceBase::Tick which
+    // calls into the backend specific polling mechanisms implemented in
+    // CheckAndUpdateCompletedSerials. Alternatively, the backend can actively call
+    // UpdateCompletedSerial when a new serial is complete to make forward progress proactively.
+    void UpdateCompletedSerialTo(ExecutionSerial completedSerial);
+
   private:
     // Each backend should implement to check their passed fences if there are any and return a
     // completed serial. Return 0 should indicate no fences to check.
     virtual ResultOrError<ExecutionSerial> CheckAndUpdateCompletedSerials() = 0;
+
+    // Backend specific wait function, returns kWaitSerialTimeout if we did not successfully wait
+    // for |waitSerial|.
+    virtual ResultOrError<ExecutionSerial> WaitForQueueSerialImpl(ExecutionSerial waitSerial,
+                                                                  Nanoseconds timeout) = 0;
+
     // mCompletedSerial tracks the last completed command serial that the fence has returned.
     // mLastSubmittedSerial tracks the last submitted command serial.
     // During device removal, the serials could be artificially incremented
@@ -97,11 +137,13 @@ class ExecutionQueueBase {
     std::atomic<uint64_t> mCompletedSerial = static_cast<uint64_t>(kBeginningOfGPUTime);
     std::atomic<uint64_t> mLastSubmittedSerial = static_cast<uint64_t>(kBeginningOfGPUTime);
 
+    MutexProtected<SerialMap<ExecutionSerial, Task>> mWaitingTasks;
+
     // Indicates whether the backend has pending commands to be submitted as soon as possible.
     virtual bool HasPendingCommands() const = 0;
 
     // Submit any pending commands that are enqueued.
-    virtual MaybeError SubmitPendingCommands() = 0;
+    virtual MaybeError SubmitPendingCommandsImpl() = 0;
 };
 
 }  // namespace dawn::native

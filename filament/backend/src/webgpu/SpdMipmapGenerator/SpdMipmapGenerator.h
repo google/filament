@@ -38,7 +38,15 @@ public:
     // Pre-creates pipelines for specified formats and filters.
     void PreparePipelines(wgpu::TextureFormat format, SPDFilter filter, bool halfPrecision = false);
 
-    // Generates a compute pass for creating mipmaps.
+    /**
+     * Generates a compute pass for creating mipmaps.
+     *
+     * IMPORTANT NOTE: when reusing a command encoder and/or textures make sure to flush/submit
+     * pending commands (draws, etc.) to the GPU prior to calling this pass, because texture updates
+     * may otherwise (unintentionally) happen after draw commands encoded in the encoder.
+     * Submitting any commands up to this point ensures the calls happen in the expected
+     * sequence.
+     */
     void Generate(wgpu::CommandEncoder& commandEncoder, wgpu::Texture srcTexture,
             const SPDPassConfig& config);
 

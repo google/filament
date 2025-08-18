@@ -29,6 +29,7 @@
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_ARRAY_LENGTH_FROM_UNIFORM_H_
 
 #include <unordered_map>
+#include "src/tint/lang/core/ir/validator.h"
 
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/utils/result.h"
@@ -39,6 +40,9 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
+
+/// The capabilities that the transform can support.
+const Capabilities kArrayLengthFromUniformCapabilities{Capability::kAllowDuplicateBindings};
 
 /// The result of running the ArrayLengthFromUniform transform.
 struct ArrayLengthFromUniformResult {

@@ -1014,6 +1014,126 @@ TEST_F(GetBindGroupLayoutTests, StageAggregation) {
     }
 }
 
+// Test that a binding_array is reflected into a BGLEntry with an arraySize.
+TEST_F(GetBindGroupLayoutTests, ArraySizeReflected) {
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    wgpu::BindGroupLayoutEntry entry;
+    entry.binding = 0;
+    entry.visibility = wgpu::ShaderStage::Fragment;
+    entry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+
+    wgpu::BindGroupLayoutDescriptor bglDesc;
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &entry;
+
+    // The pipeline using binding_array
+    wgpu::RenderPipeline pipeline = RenderPipelineFromFragmentShader(R"(
+        @group(0) @binding(0) var t: binding_array<texture_2d<f32>, 3>;
+        @fragment fn main() {
+            _ = t[0];
+        })");
+
+    entry.bindingArraySize = 3;
+    EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
+    entry.bindingArraySize = 2;
+    EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                Not(BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0))));
+    entry.bindingArraySize = 1;
+    EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                Not(BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0))));
+}
+
+// Test that a binding_array is reflected into an entry with the max of both sizes
+TEST_F(GetBindGroupLayoutTests, ArraySizeTwoStages) {
+    DAWN_SKIP_TEST_IF(UsesWire());
+
+    // A BGL with arraySize = 3
+    wgpu::BindGroupLayoutEntry entry;
+    entry.binding = 0;
+    entry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    entry.bindingArraySize = 3;
+    entry.texture.sampleType = wgpu::TextureSampleType::UnfilterableFloat;
+
+    wgpu::BindGroupLayoutDescriptor bglDesc;
+    bglDesc.entryCount = 1;
+    bglDesc.entries = &entry;
+
+    // The pipeline using binding_array, with differing binding_array sizes. VS = 3, FS = 2
+    {
+        wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+            @group(0) @binding(0) var vs_t: binding_array<texture_2d<f32>, 3>;
+            @vertex fn vs() -> @builtin(position) vec4f {
+                _ = vs_t[0];
+                return vec4(0);
+            }
+
+            @group(0) @binding(0) var fs_t: binding_array<texture_2d<f32>, 2>;
+            @fragment fn fs() {
+                _ = fs_t[0];
+            })");
+
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.layout = nullptr;
+        descriptor.vertex.module = module;
+        descriptor.cFragment.module = module;
+        descriptor.cTargets[0].writeMask = wgpu::ColorWriteMask::None;
+
+        wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+        EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                    BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
+    }
+    // The pipeline using binding_array, with differing binding_array sizes. VS = 2, FS = 3
+    {
+        wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+            @group(0) @binding(0) var vs_t: binding_array<texture_2d<f32>, 2>;
+            @vertex fn vs() -> @builtin(position) vec4f {
+                _ = vs_t[0];
+                return vec4(0);
+            }
+
+            @group(0) @binding(0) var fs_t: binding_array<texture_2d<f32>, 3>;
+            @fragment fn fs() {
+                _ = fs_t[0];
+            })");
+
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.layout = nullptr;
+        descriptor.vertex.module = module;
+        descriptor.cFragment.module = module;
+        descriptor.cTargets[0].writeMask = wgpu::ColorWriteMask::None;
+
+        wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+        EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                    BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
+    }
+    // The pipeline using binding_array, with differing binding_array sizes. VS = 3, FS = NotArrayed
+    {
+        wgpu::ShaderModule module = utils::CreateShaderModule(device, R"(
+            @group(0) @binding(0) var vs_t: binding_array<texture_2d<f32>, 3>;
+            @vertex fn vs() -> @builtin(position) vec4f {
+                _ = vs_t[0];
+                return vec4(0);
+            }
+
+            @group(0) @binding(0) var fs_t: texture_2d<f32>;
+            @fragment fn fs() {
+                _ = fs_t;
+            })");
+
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.layout = nullptr;
+        descriptor.vertex.module = module;
+        descriptor.cFragment.module = module;
+        descriptor.cTargets[0].writeMask = wgpu::ColorWriteMask::None;
+
+        wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+        EXPECT_THAT(device.CreateBindGroupLayout(&bglDesc),
+                    BindGroupLayoutCacheEq(pipeline.GetBindGroupLayout(0)));
+    }
+}
+
 // Test it is invalid to have conflicting binding types in the shaders.
 TEST_F(GetBindGroupLayoutTests, ConflictingBindingType) {
     wgpu::ShaderModule vsModule = utils::CreateShaderModule(device, R"(

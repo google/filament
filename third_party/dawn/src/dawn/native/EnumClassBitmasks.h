@@ -28,6 +28,8 @@
 #ifndef SRC_DAWN_NATIVE_ENUMCLASSBITMASKS_H_
 #define SRC_DAWN_NATIVE_ENUMCLASSBITMASKS_H_
 
+#include <bit>
+
 #include "webgpu/webgpu_enum_class_bitmasks.h"
 
 namespace dawn::native {
@@ -44,7 +46,8 @@ struct EnumBitmaskSize {
 
 template <typename T>
 constexpr bool HasOneBit(T value) {
-    return HasZeroOrOneBits(value) && value != T(0);
+    using Integral = typename std::underlying_type<T>::type;
+    return std::has_single_bit(static_cast<Integral>(value));
 }
 
 }  // namespace dawn::native

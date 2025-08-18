@@ -29,8 +29,11 @@
 #define SRC_DAWN_NODE_BINDING_ERRORS_H_
 
 #include <string>
+#include <tuple>
 
+#include "src/dawn/node/interop/Core.h"
 #include "src/dawn/node/interop/NodeAPI.h"
+#include "src/dawn/node/interop/WebGPU.h"
 
 namespace wgpu::binding {
 
@@ -68,7 +71,36 @@ class Errors {
     static Napi::Error VersionError(Napi::Env, std::string message = {});
     static Napi::Error OperationError(Napi::Env, std::string message = {});
     static Napi::Error NotAllowedError(Napi::Env, std::string message = {});
-    static Napi::Error GPUPipelineError(Napi::Env, std::string message = {});
+};
+
+class GPUOutOfMemoryError : public interop::GPUOutOfMemoryError {
+  public:
+    explicit GPUOutOfMemoryError(const std::tuple<std::string>& args);
+
+    std::string getMessage(Napi::Env) override;
+
+  private:
+    std::string message_;
+};
+
+class GPUValidationError : public interop::GPUValidationError {
+  public:
+    explicit GPUValidationError(const std::tuple<std::string>& args);
+
+    std::string getMessage(Napi::Env) override;
+
+  private:
+    std::string message_;
+};
+
+class GPUInternalError : public interop::GPUInternalError {
+  public:
+    explicit GPUInternalError(const std::tuple<std::string>& args);
+
+    std::string getMessage(Napi::Env) override;
+
+  private:
+    std::string message_;
 };
 
 }  // namespace wgpu::binding

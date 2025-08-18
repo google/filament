@@ -467,6 +467,10 @@ hlsl::DxilParamInputQual deduceParamQual(const DeclaratorDecl *decl,
   if (decl->hasAttr<HLSLPayloadAttr>())
     return hlsl::DxilParamInputQual::InPayload;
 
+  if (hlsl::IsHLSLNodeType(type)) {
+    return hlsl::DxilParamInputQual::NodeIO;
+  }
+
   return asInput ? hlsl::DxilParamInputQual::In : hlsl::DxilParamInputQual::Out;
 }
 
@@ -475,6 +479,9 @@ hlsl::DxilParamInputQual deduceParamQual(const DeclaratorDecl *decl,
 const hlsl::SigPoint *deduceSigPoint(const DeclaratorDecl *decl, bool asInput,
                                      const hlsl::ShaderModel::Kind kind,
                                      bool forPCF) {
+  if (kind == hlsl::ShaderModel::Kind::Node) {
+    return hlsl::SigPoint::GetSigPoint(hlsl::SigPoint::Kind::CSIn);
+  }
   return hlsl::SigPoint::GetSigPoint(hlsl::SigPointFromInputQual(
       deduceParamQual(decl, asInput), kind, forPCF));
 }
@@ -1854,7 +1861,7 @@ void DeclResultIdMapper::createCounterVar(
   }
 
   SpirvVariable *counterInstr = spvBuilder.addModuleVar(
-      counterType, sc, /*isPrecise*/ false, false, counterName);
+      counterType, sc, /*isPrecise*/ false, false, declInstr, counterName);
 
   if (!isAlias) {
     // Non-alias counter variables should be put in to resourceVars so that
@@ -2158,6 +2165,8 @@ bool DeclResultIdMapper::assignLocations(
     llvm::DenseSet<StageVariableLocationInfo, StageVariableLocationInfo>
         *stageVariableLocationInfo) {
   for (const auto *var : vars) {
+    if (hlsl::IsHLSLNodeType(var->getAstType()))
+      continue;
     auto locCount = var->getLocationCount();
     uint32_t location = nextLocs(locCount);
     spvBuilder.decorateLocation(var->getSpirvInstr(), location);
@@ -3489,7 +3498,9 @@ SpirvVariable *DeclResultIdMapper::createSpirvInterfaceVariable(
   StageVar stageVar(
       stageVarData.sigPoint, *stageVarData.semantic, builtinAttr, evalType,
       // For HS/DS/GS, we have already stripped the outmost arrayness on type.
-      getLocationAndComponentCount(astContext, stageVarData.type));
+      hlsl::IsHLSLNodeInputType(stageVarData.type)
+          ? LocationAndComponent({0, 0, false})
+          : getLocationAndComponentCount(astContext, stageVarData.type));
   const auto name =
       stageVarData.namePrefix.str() + "." + stageVar.getSemanticStr();
   SpirvVariable *varInstr = createSpirvStageVar(
@@ -3522,7 +3533,8 @@ SpirvVariable *DeclResultIdMapper::createSpirvInterfaceVariable(
       // Decorate with PerPrimitiveNV for per-primitive out variables.
       spvBuilder.decoratePerPrimitiveNV(varInstr,
                                         varInstr->getSourceLocation());
-    } else {
+    } else if (stageVar.getSemanticInfo().getKind() !=
+               hlsl::Semantic::Kind::DomainLocation) {
       spvBuilder.decoratePatch(varInstr, varInstr->getSourceLocation());
     }
   }
@@ -3705,6 +3717,22 @@ bool DeclResultIdMapper::createStageVars(StageVarDataBundle &stageVarData,
     }
   } else {
     stageVarData.semantic = &thisSemantic;
+  }
+
+  if (hlsl::IsHLSLNodeType(stageVarData.type)) {
+    // Hijack the notion of semantic to use createSpirvInterfaceVariable
+    StringRef str = stageVarData.decl->getName();
+    stageVarData.semantic->str = stageVarData.semantic->name = str;
+    stageVarData.semantic->semantic = hlsl::Semantic::GetArbitrary();
+    SpirvVariable *varInstr = createSpirvInterfaceVariable(stageVarData);
+    if (!varInstr) {
+      return false;
+    }
+
+    *value = hlsl::IsHLSLNodeInputType(stageVarData.type)
+                 ? varInstr
+                 : loadShaderInputVariable(varInstr, stageVarData);
+    return true;
   }
 
   if (stageVarData.semantic->isValid() &&
@@ -4160,6 +4188,8 @@ SpirvVariable *DeclResultIdMapper::getBuiltinVar(spv::BuiltIn builtIn,
   case spv::BuiltIn::GlobalInvocationId:
   case spv::BuiltIn::WorkgroupId:
   case spv::BuiltIn::LocalInvocationIndex:
+  case spv::BuiltIn::RemainingRecursionLevelsAMDX:
+  case spv::BuiltIn::ShaderIndexAMDX:
     sc = spv::StorageClass::Input;
     break;
   case spv::BuiltIn::TaskCountNV:
@@ -4195,7 +4225,9 @@ SpirvVariable *DeclResultIdMapper::createSpirvStageVar(
   const auto type = stageVar->getAstType();
   const auto isPrecise = decl->hasAttr<HLSLPreciseAttr>();
   auto isNointerp = decl->hasAttr<HLSLNoInterpolationAttr>();
-  spv::StorageClass sc = getStorageClassForSigPoint(sigPoint);
+  spv::StorageClass sc = hlsl::IsHLSLNodeInputType(stageVar->getAstType())
+                             ? spv::StorageClass::NodePayloadAMDX
+                             : getStorageClassForSigPoint(sigPoint);
   if (sc == spv::StorageClass::Max)
     return 0;
   stageVar->setStorageClass(sc);

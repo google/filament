@@ -276,8 +276,8 @@ struct loader_icd_term {
     struct loader_icd_term *next;
 
     PFN_PhysDevExt phys_dev_ext[MAX_NUM_UNKNOWN_EXTS];
-    bool supports_get_dev_prop_2;
-    bool supports_ext_surface_maintenance_1;
+
+    struct loader_instance_extension_enable_list enabled_instance_extensions;
 
     uint32_t physical_device_count;
 
@@ -360,7 +360,7 @@ struct loader_instance {
     VkInstance instance;  // layers/ICD instance returned to trampoline
 
     struct loader_extension_list ext_list;  // icds and loaders extensions
-    struct loader_instance_extension_enables enabled_known_extensions;
+    struct loader_instance_extension_enable_list enabled_extensions;
 
     // Indicates which indices in the array are in-use and which are free to be reused
     struct loader_used_object_list surfaces_list;
@@ -379,52 +379,7 @@ struct loader_instance {
     loader_settings settings;
 
     bool portability_enumeration_enabled;
-    bool portability_enumeration_flag_bit_set;
-    bool portability_enumeration_extension_enabled;
 
-    bool wsi_surface_enabled;
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-    bool wsi_win32_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    bool wsi_wayland_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_XCB_KHR)
-    bool wsi_xcb_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    bool wsi_xlib_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-    bool wsi_directfb_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-    bool wsi_android_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_MACOS_MVK)
-    bool wsi_macos_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_IOS_MVK)
-    bool wsi_ios_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_GGP)
-    bool wsi_ggp_surface_enabled;
-#endif
-    bool wsi_headless_surface_enabled;
-#if defined(VK_USE_PLATFORM_METAL_EXT)
-    bool wsi_metal_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_FUCHSIA)
-    bool wsi_imagepipe_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_SCREEN_QNX)
-    bool wsi_screen_surface_enabled;
-#endif
-#if defined(VK_USE_PLATFORM_VI_NN)
-    bool wsi_vi_surface_enabled;
-#endif
-    bool wsi_display_enabled;
-    bool wsi_display_props2_enabled;
     bool create_terminator_invalid_extension;
     bool supports_get_dev_prop_2;
 };

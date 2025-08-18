@@ -1191,23 +1191,23 @@ TEST_F(ExtensionTest, IntrinsicWhenAvailableThenUsed) {
   // - second argument is float, ie it got scalarized
   VERIFY_IS_TRUE(disassembly.npos !=
                  disassembly.find("call void "
-                                  "@\"test.\\01?test_proc@hlsl@@YAXV?$vector@M$"
+                                  "@\"test.\\01?test_proc@@YAXV?$vector@M$"
                                   "01@@@Z.r\"(i32 2, float"));
   VERIFY_IS_TRUE(disassembly.npos !=
                  disassembly.find("call float "
-                                  "@\"test.\\01?test_fn@hlsl@@YA?AV?$vector@M$"
-                                  "01@@V2@@Z.r\"(i32 1, float"));
+                                  "@\"test.\\01?test_fn@@YA?AV?$vector@M$"
+                                  "01@@V1@@Z.r\"(i32 1, float"));
   VERIFY_IS_TRUE(disassembly.npos !=
                  disassembly.find("call i32 "
-                                  "@\"test.\\01?test_fn@hlsl@@YA?AV?$vector@H$"
-                                  "01@@V2@@Z.r\"(i32 1, i32"));
+                                  "@\"test.\\01?test_fn@@YA?AV?$vector@H$"
+                                  "01@@V1@@Z.r\"(i32 1, i32"));
 
   // - attributes are added to the declaration (the # at the end of the decl)
   //   TODO: would be nice to check for the actual attribute (e.g. readonly)
   VERIFY_IS_TRUE(disassembly.npos !=
                  disassembly.find("declare float "
-                                  "@\"test.\\01?test_fn@hlsl@@YA?AV?$vector@M$"
-                                  "01@@V2@@Z.r\"(i32, float) #"));
+                                  "@\"test.\\01?test_fn@@YA?AV?$vector@M$"
+                                  "01@@V1@@Z.r\"(i32, float) #"));
 }
 
 TEST_F(ExtensionTest, CustomIntrinsicName) {
@@ -1629,8 +1629,8 @@ TEST_F(ExtensionTest, WaveIntrinsic) {
                  disassembly.find("%2 = icmp eq i32 %1, 0"));
   VERIFY_IS_TRUE(disassembly.npos !=
                  disassembly.find("call float "
-                                  "@\"test.\\01?wave_proc@hlsl@@YA?AV?$vector@"
-                                  "M$01@@V2@@Z.r\"(i32 16, float"));
+                                  "@\"test.\\01?wave_proc@@YA?AV?$vector@"
+                                  "M$01@@V1@@Z.r\"(i32 16, float"));
   VERIFY_IS_TRUE(disassembly.npos != disassembly.find("br i1 %2"));
 }
 

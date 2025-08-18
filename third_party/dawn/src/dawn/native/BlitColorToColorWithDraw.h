@@ -105,7 +105,7 @@ using ResolveMultisampleWithDrawPipelinesCache =
 // 'dst' single-sampled texture.
 MaybeError ResolveMultisampleWithDraw(DeviceBase* device,
                                       CommandEncoder* encoder,
-                                      Rect2D rect,
+                                      const RenderPassDescriptorResolveRect& rect,
                                       TextureViewBase* src,
                                       TextureViewBase* dst);
 }  // namespace dawn::native

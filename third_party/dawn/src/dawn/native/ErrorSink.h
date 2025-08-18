@@ -46,7 +46,7 @@ class ErrorSink {
     [[nodiscard]] bool ConsumedError(
         MaybeError maybeError,
         InternalErrorType additionalAllowedErrors = InternalErrorType::None) {
-        if (DAWN_UNLIKELY(maybeError.IsError())) {
+        if (maybeError.IsError()) [[unlikely]] {
             ConsumeError(maybeError.AcquireError(), additionalAllowedErrors);
             return true;
         }
@@ -58,7 +58,7 @@ class ErrorSink {
                                      InternalErrorType additionalAllowedErrors,
                                      const char* formatStr,
                                      const Args&... args) {
-        if (DAWN_UNLIKELY(maybeError.IsError())) {
+        if (maybeError.IsError()) [[unlikely]] {
             std::unique_ptr<ErrorData> error = maybeError.AcquireError();
             if (static_cast<uint32_t>(error->GetType()) &
                 (static_cast<uint32_t>(additionalAllowedErrors) |
@@ -83,7 +83,7 @@ class ErrorSink {
         ResultOrError<T> resultOrError,
         T* result,
         InternalErrorType additionalAllowedErrors = InternalErrorType::None) {
-        if (DAWN_UNLIKELY(resultOrError.IsError())) {
+        if (resultOrError.IsError()) [[unlikely]] {
             ConsumeError(resultOrError.AcquireError(), additionalAllowedErrors);
             return true;
         }
@@ -97,7 +97,7 @@ class ErrorSink {
                                      InternalErrorType additionalAllowedErrors,
                                      const char* formatStr,
                                      const Args&... args) {
-        if (DAWN_UNLIKELY(resultOrError.IsError())) {
+        if (resultOrError.IsError()) [[unlikely]] {
             std::unique_ptr<ErrorData> error = resultOrError.AcquireError();
             if (static_cast<uint32_t>(error->GetType()) &
                 (static_cast<uint32_t>(additionalAllowedErrors) |

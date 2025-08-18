@@ -232,6 +232,11 @@ MaterialBuilder& MaterialBuilder::fileName(const char* name) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::compilationParameters(const char* params) noexcept {
+    mCompilationParameters = CString(params);
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t const line) noexcept {
     mMaterialFragmentCode.setUnresolved(CString(code));
     mMaterialFragmentCode.setLineOffset(line);
@@ -549,6 +554,11 @@ MaterialBuilder& MaterialBuilder::linearFog(bool const enabled) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::shadowFarAttenuation(bool const enabled) noexcept {
+    mShadowFarAttenuation = enabled;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::customSurfaceShading(bool const customSurfaceShading) noexcept {
     mCustomSurfaceShading = customSurfaceShading;
     return *this;
@@ -719,6 +729,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
     info.linearFog = mLinearFog;
+    info.shadowFarAttenuation = mShadowFarAttenuation;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.postLightingBlendingMode = mPostLightingBlendingMode;
@@ -1588,6 +1599,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.emplace<uint32_t>(MaterialVersion, MATERIAL_VERSION);
     container.emplace<uint8_t>(MaterialFeatureLevel, (uint8_t)info.featureLevel);
     container.emplace<const char*>(MaterialName, mMaterialName.c_str_safe());
+    container.emplace<const char*>(MaterialCompilationParameters,
+            mCompilationParameters.c_str_safe());
     container.emplace<uint32_t>(MaterialShaderModels, mShaderModels.getValue());
     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 

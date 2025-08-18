@@ -27,6 +27,8 @@
 
 #include "src/tint/lang/core/ir/module.h"
 
+#include <string>
+
 #include "gmock/gmock.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 #include "src/tint/lang/core/ir/var.h"
@@ -40,6 +42,7 @@ using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
 using IR_ModuleTest = IRTestHelper;
+using IR_ModuleDeathTest = IRTestHelper;
 
 TEST_F(IR_ModuleTest, NameOfUnnamed) {
     auto* v = b.Var(ty.ptr<function, i32>());
@@ -96,6 +99,35 @@ TEST_F(IR_ModuleTest, DependencyOrderedFunctions) {
     mod.functions.Push(fb);
     mod.functions.Push(fc);
     EXPECT_THAT(mod.DependencyOrderedFunctions(), ElementsAre(fd, fc, fb, fa));
+}
+
+TEST_F(IR_ModuleDeathTest, IR_ASSERT_WithoutCallback) {
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_IR_ASSERT(mod, false);
+            }
+        },
+        "module_test.cc:.* internal compiler error: TINT_ASSERT");
+}
+
+TEST_F(IR_ModuleDeathTest, IR_ASSERT_WithCallback) {
+    uint32_t data = 42;
+    InternalCompilerErrorCallbackInfo callback{
+        .callback =
+            [](std::string err, void* userdata) {
+                std::cerr << "callback called with " << *static_cast<uint32_t*>(userdata) << err;
+            },
+        .userdata = &data,
+    };
+    mod.ice_callback = callback;
+    EXPECT_DEATH_IF_SUPPORTED(
+        {
+            if ((true)) {
+                TINT_IR_ASSERT(mod, false);
+            }
+        },
+        "callback called with 42.*module_test.cc:.* internal compiler error: TINT_ASSERT");
 }
 
 }  // namespace

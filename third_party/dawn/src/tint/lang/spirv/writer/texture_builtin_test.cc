@@ -25,7 +25,7 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
@@ -79,7 +79,8 @@ struct TextureBuiltinTestCase {
     Vector<const char*, 2> instructions;
 };
 
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, TextureType type) {
     switch (type) {
         case kSampledTexture:
@@ -119,11 +120,11 @@ class TextureBuiltinTest : public SpirvWriterTestWithParam<TextureBuiltinTestCas
             case kSampledTexture:
                 return ty.sampled_texture(dim, MakeScalarType(texel_type));
             case kMultisampledTexture:
-                return ty.Get<core::type::MultisampledTexture>(dim, MakeScalarType(texel_type));
+                return ty.multisampled_texture(dim, MakeScalarType(texel_type));
             case kDepthTexture:
-                return ty.Get<core::type::DepthTexture>(dim);
+                return ty.depth_texture(dim);
             case kDepthMultisampledTexture:
-                return ty.Get<core::type::DepthMultisampledTexture>(dim);
+                return ty.depth_multisampled_texture(dim);
             case kStorageTexture:
                 core::TexelFormat format;
                 switch (texel_type) {
@@ -646,6 +647,17 @@ INSTANTIATE_TEST_SUITE_P(
     SpirvWriterTest,
     TextureSampleLevel,
     testing::Values(
+        TextureBuiltinTestCase{
+            kSampledTexture,
+            core::type::TextureDimension::k1d,
+            /* texel type */ kF32,
+            {{"coords", 1, kF32}, {"lod", 1, kF32}},
+            {"result", 4, kF32},
+            {
+                "%10 = OpSampledImage %11 %t %s",
+                "OpImageSampleExplicitLod %v4float %10 %coords Lod %lod",
+            },
+        },
         TextureBuiltinTestCase{
             kSampledTexture,
             core::type::TextureDimension::k2d,

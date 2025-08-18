@@ -52,7 +52,7 @@ MaybeError ComputePipeline::InitializeImpl() {
 }
 
 MaybeError ComputePipeline::ApplyNow() {
-    DAWN_TRY(PipelineGL::ApplyNow(ToBackend(GetDevice())->GetGL()));
+    DAWN_TRY(PipelineGL::ApplyNow(ToBackend(GetDevice())->GetGL(), ToBackend(GetLayout())));
     return {};
 }
 

@@ -94,7 +94,11 @@ class ReferencedModuleVars {
             }
             if (auto* var = inst->template As<VarT>()) {
                 if (pred(var)) {
-                    if (!var->Result(0)) {
+                    // One of the locations this class is constructed, is by the validator during
+                    // its own constructor, which means this can run before validation occurs. So
+                    // skipping malformed Vars here, since the validator will reject the shader
+                    // later.
+                    if (!var->Result(0) || var->Results().Length() != 1) {
                         continue;
                     }
                     var->Result()->ForEachUseUnsorted([&](const Usage& use) {

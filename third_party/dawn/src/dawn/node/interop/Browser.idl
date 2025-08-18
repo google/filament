@@ -40,19 +40,16 @@ dictionary EventInit {
 
 [LegacyNoInterfaceObject] interface Navigator {};
 
-[LegacyNoInterfaceObject] interface Event {
-  readonly attribute boolean bubbles;
-  readonly attribute boolean cancelable;
-  attribute boolean returnValue;
-};
-
 [LegacyNoInterfaceObject] interface WorkerNavigator{};
 
-[LegacyNoInterfaceObject] interface EventListener {
+[LegacyNoInterfaceObject] interface EventListenerInterface {
   undefined handleEvent(Event event);
 };
+callback EventListenerCallback = undefined (Event event);
+typedef(EventListenerInterface or EventListenerCallback) EventListener;
+typedef EventListenerCallback? EventHandler;
 
-[LegacyNoInterfaceObject] interface EventTarget {
+[LegacyNoInterfaceObject] [ManualImplementation] interface EventTarget {
   undefined addEventListener(DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options);
   undefined removeEventListener(DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options);
   boolean dispatchEvent(Event event);
@@ -75,8 +72,6 @@ typedef(ArrayBufferView or ArrayBuffer) BufferSource;
 typedef (ArrayBuffer or /* SharedArrayBuffer or [AllowShared] */ ArrayBufferView) AllowSharedBufferSource;
 
 // Interfaces used in the WebGPU IDL that don't have an equivalent in the NAPI world.
-[LegacyNoInterfaceObject] interface DOMException {};
-[LegacyNoInterfaceObject] interface EventHandler{};
 [LegacyNoInterfaceObject] interface HTMLCanvasElement {};
 [LegacyNoInterfaceObject] interface HTMLImageElement {};
 [LegacyNoInterfaceObject] interface HTMLVideoElement {};
@@ -86,3 +81,7 @@ typedef (ArrayBuffer or /* SharedArrayBuffer or [AllowShared] */ ArrayBufferView
 [LegacyNoInterfaceObject] interface VideoFrame {};
 
 enum PredefinedColorSpace { "srgb", "display-p3" };
+
+// Add this annotation to these classes as we need to treat them special.
+[ManualImplementation] interface GPUUncapturedErrorEvent {};
+[ManualImplementation] interface GPUPipelineError {};

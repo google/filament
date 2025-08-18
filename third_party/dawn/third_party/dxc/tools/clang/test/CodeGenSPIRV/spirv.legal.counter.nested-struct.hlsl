@@ -1,7 +1,7 @@
 // RUN: %dxc -T vs_6_0 -E main -fcgl  %s -spirv | FileCheck %s
 
-// CHECK: %counter_var_t_1_0 = OpVariable %_ptr_Private__ptr_Uniform_type_ACSBuffer_counter Private
 // CHECK: %counter_var_rw = OpVariable %_ptr_Uniform_type_ACSBuffer_counter Uniform
+// CHECK: %counter_var_t_1_0 = OpVariable %_ptr_Private__ptr_Uniform_type_ACSBuffer_counter Private
 // CHECK: %counter_var_s_0 = OpVariable %_ptr_Private__ptr_Uniform_type_ACSBuffer_counter Private
   
 RWStructuredBuffer<uint> rw : register(u0); 

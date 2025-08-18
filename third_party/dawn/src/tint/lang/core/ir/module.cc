@@ -183,4 +183,9 @@ Vector<const Function*, 16> Module::DependencyOrderedFunctions() const {
     return FunctionSorter<const Function>::SortFunctions(*this);
 }
 
+void Module::Destroy(Function* func) {
+    functions.EraseIf([&](const core::ir::Function* o) { return o == func; });
+    func->Destroy();
+}
+
 }  // namespace tint::core::ir

@@ -26,6 +26,7 @@ RWStructuredBuffer<S1>      selectRWSBuffer(RWStructuredBuffer<S1>    paramRWSBu
 AppendStructuredBuffer<S2>  selectASBuffer(AppendStructuredBuffer<S2>  paramASBuffer,  bool selector);
 ConsumeStructuredBuffer<S3> selectCSBuffer(ConsumeStructuredBuffer<S3> paramCSBuffer,  bool selector);
 
+// CHECK: %counter_var_globalRWSBuffer = OpVariable %_ptr_Uniform_type_ACSBuffer_counter Uniform
 RWStructuredBuffer<S1>      globalRWSBuffer;
 // CHECK: %counter_var_globalASBuffer = OpVariable %_ptr_Uniform_type_ACSBuffer_counter Uniform
 AppendStructuredBuffer<S2>  globalASBuffer;
@@ -38,7 +39,6 @@ static RWStructuredBuffer<S1>      staticgRWSBuffer = globalRWSBuffer;
 // CHECK: %counter_var_staticgASBuffer = OpVariable %_ptr_Private__ptr_Uniform_type_ACSBuffer_counter Private
 static AppendStructuredBuffer<S2>  staticgASBuffer  = globalASBuffer;
 // CHECK: %counter_var_staticgCSBuffer = OpVariable %_ptr_Private__ptr_Uniform_type_ACSBuffer_counter Private
-// CHECK: %counter_var_globalRWSBuffer = OpVariable %_ptr_Uniform_type_ACSBuffer_counter Uniform
 static ConsumeStructuredBuffer<S3> staticgCSBuffer  = globalCSBuffer;
 
 // Counter variables for function returns, function parameters, and local variables have an extra level of pointer.

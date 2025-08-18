@@ -1488,7 +1488,7 @@ TEST_F(ValidationTest, StructBufGlobalCoherentAndCounter) {
       L"..\\DXILValidation\\struct_buf1.hlsl", "ps_6_0",
       "!\"buf2\", i32 0, i32 0, i32 1, i32 12, i1 false, i1 false",
       "!\"buf2\", i32 0, i32 0, i32 1, i32 12, i1 true, i1 true",
-      "globallycoherent cannot be used with append/consume buffers: 'buf2'");
+      "globallycoherent cannot be used on buffer with counter 'buf2'");
 }
 
 TEST_F(ValidationTest, StructBufStrideAlign) {
@@ -1506,21 +1506,23 @@ TEST_F(ValidationTest, StructBufStrideOutOfBound) {
 }
 
 TEST_F(ValidationTest, StructBufLoadCoordinates) {
-  RewriteAssemblyCheckMsg(L"..\\DXILValidation\\struct_buf1.hlsl", "ps_6_0",
-                          "bufferLoad.f32(i32 68, %dx.types.Handle "
-                          "%buf1_texture_structbuf, i32 1, i32 8)",
-                          "bufferLoad.f32(i32 68, %dx.types.Handle "
-                          "%buf1_texture_structbuf, i32 1, i32 undef)",
-                          "structured buffer require 2 coordinates");
+  RewriteAssemblyCheckMsg(
+      L"..\\DXILValidation\\struct_buf1.hlsl", "ps_6_0",
+      "bufferLoad.f32(i32 68, %dx.types.Handle "
+      "%buf1_texture_structbuf, i32 1, i32 8)",
+      "bufferLoad.f32(i32 68, %dx.types.Handle "
+      "%buf1_texture_structbuf, i32 1, i32 undef)",
+      "structured buffer requires defined index and offset coordinates");
 }
 
 TEST_F(ValidationTest, StructBufStoreCoordinates) {
-  RewriteAssemblyCheckMsg(L"..\\DXILValidation\\struct_buf1.hlsl", "ps_6_0",
-                          "bufferStore.f32(i32 69, %dx.types.Handle "
-                          "%buf2_UAV_structbuf, i32 0, i32 0",
-                          "bufferStore.f32(i32 69, %dx.types.Handle "
-                          "%buf2_UAV_structbuf, i32 0, i32 undef",
-                          "structured buffer require 2 coordinates");
+  RewriteAssemblyCheckMsg(
+      L"..\\DXILValidation\\struct_buf1.hlsl", "ps_6_0",
+      "bufferStore.f32(i32 69, %dx.types.Handle "
+      "%buf2_UAV_structbuf, i32 0, i32 0",
+      "bufferStore.f32(i32 69, %dx.types.Handle "
+      "%buf2_UAV_structbuf, i32 0, i32 undef",
+      "structured buffer requires defined index and offset coordinates");
 }
 
 TEST_F(ValidationTest, TypedBufRetType) {

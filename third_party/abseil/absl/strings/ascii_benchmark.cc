@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "absl/strings/ascii.h"
-
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <string>
-#include <array>
-#include <random>
 
+#include "absl/random/random.h"
+#include "absl/strings/ascii.h"
 #include "benchmark/benchmark.h"
 
 namespace {
@@ -28,10 +27,8 @@ namespace {
 std::array<unsigned char, 256> MakeShuffledBytes() {
   std::array<unsigned char, 256> bytes;
   for (size_t i = 0; i < 256; ++i) bytes[i] = static_cast<unsigned char>(i);
-  std::random_device rd;
-  std::seed_seq seed({rd(), rd(), rd(), rd(), rd(), rd(), rd(), rd()});
-  std::mt19937 g(seed);
-  std::shuffle(bytes.begin(), bytes.end(), g);
+  absl::InsecureBitGen gen;
+  std::shuffle(bytes.begin(), bytes.end(), gen);
   return bytes;
 }
 

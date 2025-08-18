@@ -379,7 +379,7 @@ void UniformBufferUpdatePerf::Step() {
                 } else {
                     queue.OnSubmittedWorkDone(
                         wgpu::CallbackMode::AllowProcessEvents,
-                        [this, uniformBuffer](wgpu::QueueWorkDoneStatus status) {
+                        [this, uniformBuffer](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
                             if (status == wgpu::QueueWorkDoneStatus::Success) {
                                 this->ReturnUniformBuffer(uniformBuffer);
                             }

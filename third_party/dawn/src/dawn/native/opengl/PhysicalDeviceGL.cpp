@@ -41,6 +41,7 @@
 #include "dawn/native/opengl/DisplayEGL.h"
 #include "dawn/native/opengl/SwapChainEGL.h"
 #include "dawn/native/opengl/UtilsGL.h"
+#include "dawn/platform/DawnPlatform.h"
 
 namespace dawn::native::opengl {
 
@@ -231,12 +232,18 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
 
         if (supportsS3TC && (supportsTextureSRGB || supportsS3TCSRGB) && supportsRGTC &&
             supportsBPTC) {
-            EnableFeature(dawn::native::Feature::TextureCompressionBC);
+            EnableFeature(Feature::TextureCompressionBC);
         }
     }
 
     if (mFunctions.IsGLExtensionSupported("GL_KHR_texture_compression_astc_ldr")) {
         EnableFeature(Feature::TextureCompressionASTC);
+
+        // GL_KHR_texture_compression_astc_sliced_3d is an extension in OpenGL ES 3.1.
+        // https://registry.khronos.org/OpenGL/extensions/KHR/KHR_texture_compression_astc_sliced_3d.txt
+        if (mFunctions.IsGLExtensionSupported("GL_KHR_texture_compression_astc_sliced_3d")) {
+            EnableFeature(Feature::TextureCompressionASTCSliced3D);
+        }
     }
 
     // ETC2 is core in ES 3.0.
@@ -293,6 +300,11 @@ void PhysicalDevice::InitializeSupportedFeaturesImpl() {
     if (mFunctions.IsGLExtensionSupported("GL_EXT_float_blend")) {
         EnableFeature(Feature::Float32Blendable);
     }
+
+    // TextureComponentSwizzle
+    if (mFunctions.IsAtLeastGLES(3, 0) || mFunctions.IsAtLeastGL(3, 3)) {
+        EnableFeature(Feature::TextureComponentSwizzle);
+    }
 }
 
 namespace {
@@ -311,7 +323,7 @@ ResultOrError<GLint> GetIndexed(const OpenGLFunctions& gl, GLenum pname, GLuint 
 
 MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits) {
     const OpenGLFunctions& gl = mFunctions;
-    GetDefaultLimitsForSupportedFeatureLevel(&limits->v1);
+    GetDefaultLimitsForSupportedFeatureLevel(limits);
 
     DAWN_TRY_ASSIGN(limits->v1.maxTextureDimension2D, Get(gl, GL_MAX_TEXTURE_SIZE));
     limits->v1.maxTextureDimension1D = limits->v1.maxTextureDimension2D;
@@ -338,14 +350,14 @@ MaybeError PhysicalDevice::InitializeSupportedLimitsImpl(CombinedLimits* limits)
     // image uniforms, so this isn't technically correct for vertex shaders.
     DAWN_TRY_ASSIGN(limits->v1.maxStorageTexturesPerShaderStage,
                     Get(gl, GL_MAX_COMPUTE_IMAGE_UNIFORMS));
-    DAWN_TRY_ASSIGN(limits->v1.maxStorageTexturesInFragmentStage,
+    DAWN_TRY_ASSIGN(limits->compat.maxStorageTexturesInFragmentStage,
                     Get(gl, GL_MAX_FRAGMENT_IMAGE_UNIFORMS));
 
-    DAWN_TRY_ASSIGN(limits->v1.maxStorageBuffersInFragmentStage,
+    DAWN_TRY_ASSIGN(limits->compat.maxStorageBuffersInFragmentStage,
                     Get(gl, GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS));
-    DAWN_TRY_ASSIGN(limits->v1.maxStorageTexturesInVertexStage,
+    DAWN_TRY_ASSIGN(limits->compat.maxStorageTexturesInVertexStage,
                     Get(gl, GL_MAX_VERTEX_IMAGE_UNIFORMS));
-    DAWN_TRY_ASSIGN(limits->v1.maxStorageBuffersInVertexStage,
+    DAWN_TRY_ASSIGN(limits->compat.maxStorageBuffersInVertexStage,
                     Get(gl, GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS));
 
     DAWN_TRY_ASSIGN(limits->v1.maxUniformBuffersPerShaderStage,
@@ -480,6 +492,20 @@ void PhysicalDevice::SetupBackendDeviceToggles(dawn::platform::Platform* platfor
     deviceToggles->Default(Toggle::GLDepthBiasModifier, gl.GetVersion().IsDesktop() ||
                                                             IsANGLEDesktopGL(mName) ||
                                                             IsSwiftShader(mName));
+
+    // (crbug.com/379805731): PowerVR GE8300 GLES 3.1 driver cannot compile .length() on SSBO
+    // dynamic array.
+    // (crbug.com/42240914): Nividia GLES driver returns wrong value for .length() on
+    // SSBO dynamic array.
+    deviceToggles->Default(
+        Toggle::GLUseArrayLengthFromUniform,
+        mVendorId == gpu_info::kVendorID_ImgTec || mVendorId == gpu_info::kVendorID_Nvidia);
+
+    // Enable the integer range analysis for shader robustness by default if the corresponding
+    // platform feature is enabled.
+    deviceToggles->Default(
+        Toggle::EnableIntegerRangeAnalysisInRobustness,
+        platform->IsFeatureEnabled(platform::Features::kWebGPUEnableRangeAnalysisForRobustness));
 }
 
 ResultOrError<Ref<DeviceBase>> PhysicalDevice::CreateDeviceImpl(

@@ -547,10 +547,11 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // group of instructions whose segment values are variable.
-    FilterChooserMap.insert(
-        std::make_pair(-1U, llvm::make_unique<FilterChooser>(
-                                Owner->AllInstructions, VariableInstructions,
-                                Owner->Operands, BitValueArray, *Owner)));
+    FilterChooserMap.insert(std::make_pair(
+        std::numeric_limits<unsigned>::max(),
+        llvm::make_unique<FilterChooser>(Owner->AllInstructions,
+                                         VariableInstructions, Owner->Operands,
+                                         BitValueArray, *Owner)));
   }
 
   // No need to recurse for a singleton filtered instruction.

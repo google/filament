@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_CORE_IR_TRANSFORM_ZERO_INIT_WORKGROUP_MEMORY_H_
 #define SRC_TINT_LANG_CORE_IR_TRANSFORM_ZERO_INIT_WORKGROUP_MEMORY_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -36,6 +37,9 @@ class Module;
 }
 
 namespace tint::core::ir::transform {
+
+/// The capabilities that the transform can support.
+const Capabilities kZeroInitWorkgroupMemoryCapabilities{Capability::kAllowDuplicateBindings};
 
 /// ZeroInitWorkgroupMemory is a transform that injects code at the top of each entry point to
 /// zero-initialize workgroup memory used by that entry point.

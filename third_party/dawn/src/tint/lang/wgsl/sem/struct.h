@@ -30,7 +30,7 @@
 
 #include <optional>
 
-#include "src/tint/lang/core/address_space.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/lang/wgsl/ast/struct.h"

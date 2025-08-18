@@ -633,7 +633,7 @@ void MicrosoftCXXNameMangler::mangleNumber(int64_t Number) {
 
   uint64_t Value = static_cast<uint64_t>(Number);
   if (Number < 0) {
-    Value = -Value;
+    Value = ~Value + 1ULL;
     Out << '?';
   }
 
@@ -2308,7 +2308,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
       Out << AccessSpec;
       Mangler.mangleNumber(
           static_cast<uint32_t>(Adjustment.Virtual.Microsoft.VtordispOffset));
-      Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
+      Mangler.mangleNumber(~static_cast<uint32_t>(Adjustment.NonVirtual) + 1);
     }
   } else if (Adjustment.NonVirtual != 0) {
     switch (MD->getAccess()) {
@@ -2323,7 +2323,7 @@ static void mangleThunkThisAdjustment(const CXXMethodDecl *MD,
     case AS_public:
       Out << 'W';
     }
-    Mangler.mangleNumber(-static_cast<uint32_t>(Adjustment.NonVirtual));
+    Mangler.mangleNumber(~static_cast<uint32_t>(Adjustment.NonVirtual) + 1);
   } else {
     switch (MD->getAccess()) {
     case AS_none:

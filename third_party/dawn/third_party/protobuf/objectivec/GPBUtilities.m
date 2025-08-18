@@ -1,43 +1,27 @@
 // Protocol Buffers - Google's data interchange format
 // Copyright 2008 Google Inc.  All rights reserved.
-// https://developers.google.com/protocol-buffers/
 //
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-//
-//     * Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above
-// copyright notice, this list of conditions and the following disclaimer
-// in the documentation and/or other materials provided with the
-// distribution.
-//     * Neither the name of Google Inc. nor the names of its
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file or at
+// https://developers.google.com/open-source/licenses/bsd
 
-#import "GPBUtilities_PackagePrivate.h"
+#import "GPBUtilities.h"
 
 #import <objc/runtime.h>
 
+#import "GPBArray.h"
 #import "GPBArray_PackagePrivate.h"
+#import "GPBDescriptor.h"
 #import "GPBDescriptor_PackagePrivate.h"
+#import "GPBDictionary.h"
 #import "GPBDictionary_PackagePrivate.h"
+#import "GPBMessage.h"
 #import "GPBMessage_PackagePrivate.h"
 #import "GPBUnknownField.h"
-#import "GPBUnknownFieldSet.h"
+#import "GPBUnknownField_PackagePrivate.h"
+#import "GPBUnknownFields.h"
+#import "GPBUtilities.h"
+#import "GPBUtilities_PackagePrivate.h"
 
 // Direct access is use for speed, to avoid even internally declaring things
 // read/write, etc. The warning is enabled in the project to ensure code calling
@@ -45,28 +29,24 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdirect-ivar-access"
 
-static void AppendTextFormatForMessage(GPBMessage *message,
-                                       NSMutableString *toStr,
+static void AppendTextFormatForMessage(GPBMessage *message, NSMutableString *toStr,
                                        NSString *lineIndent);
 
 // Are two datatypes the same basic type representation (ex Int32 and SInt32).
 // Marked unused because currently only called from asserts/debug.
-static BOOL DataTypesEquivalent(GPBDataType type1,
-                                GPBDataType type2) __attribute__ ((unused));
+static BOOL DataTypesEquivalent(GPBDataType type1, GPBDataType type2) __attribute__((unused));
 
 // Basic type representation for a type (ex: for SInt32 it is Int32).
 // Marked unused because currently only called from asserts/debug.
-static GPBDataType BaseDataType(GPBDataType type) __attribute__ ((unused));
+static GPBDataType BaseDataType(GPBDataType type) __attribute__((unused));
 
 // String name for a data type.
 // Marked unused because currently only called from asserts/debug.
-static NSString *TypeToString(GPBDataType dataType) __attribute__ ((unused));
+static NSString *TypeToString(GPBDataType dataType) __attribute__((unused));
 
 // Helper for clearing oneofs.
-static void GPBMaybeClearOneofPrivate(GPBMessage *self,
-                                      GPBOneofDescriptor *oneof,
-                                      int32_t oneofHasIndex,
-                                      uint32_t fieldNumberNotToClear);
+static void GPBMaybeClearOneofPrivate(GPBMessage *self, GPBOneofDescriptor *oneof,
+                                      int32_t oneofHasIndex, uint32_t fieldNumberNotToClear);
 
 NSData *GPBEmptyNSData(void) {
   static dispatch_once_t onceToken;
@@ -90,7 +70,7 @@ void GPBMessageDropUnknownFieldsRecursively(GPBMessage *initialMessage) {
     [todo removeLastObject];
 
     // Clear unknowns.
-    msg.unknownFields = nil;
+    [msg clearUnknownFields];
 
     // Handle the message fields.
     GPBDescriptor *descriptor = [[msg class] descriptor];
@@ -118,52 +98,53 @@ void GPBMessageDropUnknownFieldsRecursively(GPBMessage *initialMessage) {
           id rawFieldMap = GPBGetObjectIvarWithFieldNoAutocreate(msg, field);
           switch (field.mapKeyDataType) {
             case GPBDataTypeBool:
-              [(GPBBoolObjectDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  BOOL key, id _Nonnull object, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:object];
-              }];
+              [(GPBBoolObjectDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused BOOL key, id _Nonnull object,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:object];
+                  }];
               break;
             case GPBDataTypeFixed32:
             case GPBDataTypeUInt32:
-              [(GPBUInt32ObjectDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  uint32_t key, id _Nonnull object, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:object];
-              }];
+              [(GPBUInt32ObjectDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused uint32_t key, id _Nonnull object,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:object];
+                  }];
               break;
             case GPBDataTypeInt32:
             case GPBDataTypeSFixed32:
             case GPBDataTypeSInt32:
-              [(GPBInt32ObjectDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  int32_t key, id _Nonnull object, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:object];
-              }];
+              [(GPBInt32ObjectDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused int32_t key, id _Nonnull object,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:object];
+                  }];
               break;
             case GPBDataTypeFixed64:
             case GPBDataTypeUInt64:
-              [(GPBUInt64ObjectDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  uint64_t key, id _Nonnull object, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:object];
-              }];
+              [(GPBUInt64ObjectDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused uint64_t key, id _Nonnull object,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:object];
+                  }];
               break;
             case GPBDataTypeInt64:
             case GPBDataTypeSFixed64:
             case GPBDataTypeSInt64:
-              [(GPBInt64ObjectDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  int64_t key, id _Nonnull object, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:object];
-              }];
+              [(GPBInt64ObjectDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused int64_t key, id _Nonnull object,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:object];
+                  }];
               break;
             case GPBDataTypeString:
-              [(NSDictionary*)rawFieldMap enumerateKeysAndObjectsUsingBlock:^(
-                  NSString * _Nonnull key, GPBMessage * _Nonnull obj, BOOL * _Nonnull stop) {
-                #pragma unused(key, stop)
-                [todo addObject:obj];
-              }];
+              [(NSDictionary *)rawFieldMap
+                  enumerateKeysAndObjectsUsingBlock:^(__unused NSString *_Nonnull key,
+                                                      GPBMessage *_Nonnull obj,
+                                                      __unused BOOL *_Nonnull stop) {
+                    [todo addObject:obj];
+                  }];
               break;
             case GPBDataTypeFloat:
             case GPBDataTypeDouble:
@@ -194,7 +175,6 @@ void GPBMessageDropUnknownFieldsRecursively(GPBMessage *initialMessage) {
 
   }  // while(todo.count)
 }
-
 
 // -- About Version Checks --
 // There's actually 3 places these checks all come into play:
@@ -228,23 +208,15 @@ void GPBCheckRuntimeVersionSupport(int32_t objcRuntimeVersion) {
                 format:@"Proto generation source compiled against runtime"
                        @" version %d, but this version of the runtime only"
                        @" supports back to %d!",
-                       objcRuntimeVersion,
-                       GOOGLE_PROTOBUF_OBJC_MIN_SUPPORTED_VERSION];
+                       objcRuntimeVersion, GOOGLE_PROTOBUF_OBJC_MIN_SUPPORTED_VERSION];
   }
 }
 
-// This api is no longer used for version checks. 30001 is the last version
-// using this old versioning model. When that support is removed, this function
-// can be removed (along with the declaration in GPBUtilities_PackagePrivate.h).
-void GPBCheckRuntimeVersionInternal(int32_t version) {
-  GPBInternalCompileAssert(GOOGLE_PROTOBUF_OBJC_MIN_SUPPORTED_VERSION == 30001,
-                           time_to_remove_this_old_version_shim);
-  if (version != GOOGLE_PROTOBUF_OBJC_MIN_SUPPORTED_VERSION) {
-    [NSException raise:NSInternalInconsistencyException
-                format:@"Linked to ProtocolBuffer runtime version %d,"
-                       @" but code compiled with version %d!",
-                       GOOGLE_PROTOBUF_OBJC_GEN_VERSION, version];
-  }
+void GPBRuntimeMatchFailure(void) {
+  [NSException raise:NSInternalInconsistencyException
+              format:@"Proto generation source appears to have been from a"
+                     @" version newer that this runtime (%d).",
+                     GOOGLE_PROTOBUF_OBJC_VERSION];
 }
 
 BOOL GPBMessageHasFieldNumberSet(GPBMessage *self, uint32_t fieldNumber) {
@@ -288,18 +260,16 @@ void GPBClearMessageField(GPBMessage *self, GPBFieldDescriptor *field) {
 }
 
 void GPBClearOneof(GPBMessage *self, GPBOneofDescriptor *oneof) {
-  #if defined(DEBUG) && DEBUG
-    NSCAssert([[self descriptor] oneofWithName:oneof.name] == oneof,
-              @"OneofDescriptor %@ doesn't appear to be for %@ messages.",
-              oneof.name, [self class]);
-  #endif
+#if defined(DEBUG) && DEBUG
+  NSCAssert([[self descriptor] oneofWithName:oneof.name] == oneof,
+            @"OneofDescriptor %@ doesn't appear to be for %@ messages.", oneof.name, [self class]);
+#endif
   GPBFieldDescriptor *firstField = oneof->fields_[0];
   GPBMaybeClearOneofPrivate(self, oneof, firstField->description_->hasIndex, 0);
 }
 
 BOOL GPBGetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber) {
-  NSCAssert(self->messageStorage_ != NULL,
-            @"%@: All messages should have storage (from init)",
+  NSCAssert(self->messageStorage_ != NULL, @"%@: All messages should have storage (from init)",
             [self class]);
   if (idx < 0) {
     NSCAssert(fieldNumber != 0, @"Invalid field number.");
@@ -307,23 +277,20 @@ BOOL GPBGetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber) {
     return hasIvar;
   } else {
     NSCAssert(idx != GPBNoHasBit, @"Invalid has bit.");
-    uint32_t byteIndex = idx / 32;
+    uint32_t byteIndex = (uint32_t)idx / 32;
     uint32_t bitMask = (1U << (idx % 32));
-    BOOL hasIvar =
-        (self->messageStorage_->_has_storage_[byteIndex] & bitMask) ? YES : NO;
+    BOOL hasIvar = (self->messageStorage_->_has_storage_[byteIndex] & bitMask) ? YES : NO;
     return hasIvar;
   }
 }
 
 uint32_t GPBGetHasOneof(GPBMessage *self, int32_t idx) {
-  NSCAssert(idx < 0, @"%@: invalid index (%d) for oneof.",
-            [self class], idx);
+  NSCAssert(idx < 0, @"%@: invalid index (%d) for oneof.", [self class], idx);
   uint32_t result = self->messageStorage_->_has_storage_[-idx];
   return result;
 }
 
-void GPBSetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber,
-                   BOOL value) {
+void GPBSetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber, BOOL value) {
   if (idx < 0) {
     NSCAssert(fieldNumber != 0, @"Invalid field number.");
     uint32_t *has_storage = self->messageStorage_->_has_storage_;
@@ -331,7 +298,7 @@ void GPBSetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber,
   } else {
     NSCAssert(idx != GPBNoHasBit, @"Invalid has bit.");
     uint32_t *has_storage = self->messageStorage_->_has_storage_;
-    uint32_t byte = idx / 32;
+    uint32_t byte = (uint32_t)idx / 32;
     uint32_t bitMask = (1U << (idx % 32));
     if (value) {
       has_storage[byte] |= bitMask;
@@ -341,10 +308,8 @@ void GPBSetHasIvar(GPBMessage *self, int32_t idx, uint32_t fieldNumber,
   }
 }
 
-static void GPBMaybeClearOneofPrivate(GPBMessage *self,
-                                      GPBOneofDescriptor *oneof,
-                                      int32_t oneofHasIndex,
-                                      uint32_t fieldNumberNotToClear) {
+static void GPBMaybeClearOneofPrivate(GPBMessage *self, GPBOneofDescriptor *oneof,
+                                      int32_t oneofHasIndex, uint32_t fieldNumberNotToClear) {
   uint32_t fieldNumberSet = GPBGetHasOneof(self, oneofHasIndex);
   if ((fieldNumberSet == fieldNumberNotToClear) || (fieldNumberSet == 0)) {
     // Do nothing/nothing set in the oneof.
@@ -354,9 +319,8 @@ static void GPBMaybeClearOneofPrivate(GPBMessage *self,
   // Like GPBClearMessageField(), free the memory if an objecttype is set,
   // pod types don't need to do anything.
   GPBFieldDescriptor *fieldSet = [oneof fieldWithNumber:fieldNumberSet];
-  NSCAssert(fieldSet,
-            @"%@: oneof set to something (%u) not in the oneof?",
-            [self class], fieldNumberSet);
+  NSCAssert(fieldSet, @"%@: oneof set to something (%u) not in the oneof?", [self class],
+            fieldNumberSet);
   if (fieldSet && GPBFieldStoresObject(fieldSet)) {
     uint8_t *storage = (uint8_t *)self->messageStorage_;
     id *typePtr = (id *)&storage[fieldSet->description_->offset];
@@ -370,6 +334,8 @@ static void GPBMaybeClearOneofPrivate(GPBMessage *self,
 }
 
 #pragma mark - IVar accessors
+
+// clang-format off
 
 //%PDDM-DEFINE IVAR_POD_ACCESSORS_DEFN(NAME, TYPE)
 //%TYPE GPBGetMessage##NAME##Field(GPBMessage *self,
@@ -501,11 +467,12 @@ static void GPBMaybeClearOneofPrivate(GPBMessage *self,
 //%}
 //%
 
+// clang-format on
+
 // Object types are handled slightly differently, they need to be released
 // and retained.
 
-void GPBClearAutocreatedMessageIvarWithField(GPBMessage *self,
-                                             GPBFieldDescriptor *field) {
+void GPBClearAutocreatedMessageIvarWithField(GPBMessage *self, GPBFieldDescriptor *field) {
   if (GPBGetHasIvarField(self, field)) {
     return;
   }
@@ -518,14 +485,12 @@ void GPBClearAutocreatedMessageIvarWithField(GPBMessage *self,
 }
 
 // This exists only for bridging some aliased types, nothing else should use it.
-static void GPBSetObjectIvarWithField(GPBMessage *self,
-                                      GPBFieldDescriptor *field, id value) {
+static void GPBSetObjectIvarWithField(GPBMessage *self, GPBFieldDescriptor *field, id value) {
   if (self == nil || field == nil) return;
   GPBSetRetainedObjectIvarWithFieldPrivate(self, field, [value retain]);
 }
 
-static void GPBSetCopyObjectIvarWithField(GPBMessage *self,
-                                          GPBFieldDescriptor *field, id value);
+static void GPBSetCopyObjectIvarWithField(GPBMessage *self, GPBFieldDescriptor *field, id value);
 
 // GPBSetCopyObjectIvarWithField is blocked from the analyzer because it flags
 // a leak for the -copy even though GPBSetRetainedObjectIvarWithFieldPrivate
@@ -533,23 +498,19 @@ static void GPBSetCopyObjectIvarWithField(GPBMessage *self,
 // with the -retain in GPBSetObjectIvarWithField.
 #if !defined(__clang_analyzer__)
 // This exists only for bridging some aliased types, nothing else should use it.
-static void GPBSetCopyObjectIvarWithField(GPBMessage *self,
-                                          GPBFieldDescriptor *field, id value) {
+static void GPBSetCopyObjectIvarWithField(GPBMessage *self, GPBFieldDescriptor *field, id value) {
   if (self == nil || field == nil) return;
   GPBSetRetainedObjectIvarWithFieldPrivate(self, field, [value copy]);
 }
 #endif  // !defined(__clang_analyzer__)
 
-void GPBSetObjectIvarWithFieldPrivate(GPBMessage *self,
-                                      GPBFieldDescriptor *field, id value) {
+void GPBSetObjectIvarWithFieldPrivate(GPBMessage *self, GPBFieldDescriptor *field, id value) {
   GPBSetRetainedObjectIvarWithFieldPrivate(self, field, [value retain]);
 }
 
-void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
-                                              GPBFieldDescriptor *field,
+void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self, GPBFieldDescriptor *field,
                                               id value) {
-  NSCAssert(self->messageStorage_ != NULL,
-            @"%@: All messages should have storage (from init)",
+  NSCAssert(self->messageStorage_ != NULL, @"%@: All messages should have storage (from init)",
             [self class]);
 #if defined(__clang_analyzer__)
   if (self->messageStorage_ == NULL) return;
@@ -558,8 +519,7 @@ void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
   BOOL isMapOrArray = GPBFieldIsMapOrArray(field);
   BOOL fieldIsMessage = GPBDataTypeIsMessage(fieldType);
 #if defined(DEBUG) && DEBUG
-  if (value == nil && !isMapOrArray && !fieldIsMessage &&
-      field.hasDefaultValue) {
+  if (value == nil && !isMapOrArray && !fieldIsMessage && field.hasDefaultValue) {
     // Setting a message to nil is an obvious way to "clear" the value
     // as there is no way to set a non-empty default value for messages.
     //
@@ -572,16 +532,17 @@ void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
     // field, and fall back on the default value. The warning below will only
     // appear in debug, but the could should be changed so the intention is
     // clear.
-    NSString *hasSel = NSStringFromSelector(field->hasOrCountSel_);
     NSString *propName = field.name;
     NSString *className = self.descriptor.name;
+    NSString *firstLetterCapitalizedName = [[[className substringToIndex:1] uppercaseString]
+        stringByAppendingString:[className substringFromIndex:1]];
     NSLog(@"warning: '%@.%@ = nil;' is not clearly defined for fields with "
           @"default values. Please use '%@.%@ = %@' if you want to set it to "
-          @"empty, or call '%@.%@ = NO' to reset it to it's default value of "
+          @"empty, or call '%@.has%@ = NO' to reset it to it's default value of "
           @"'%@'. Defaulting to resetting default value.",
           className, propName, className, propName,
-          (fieldType == GPBDataTypeString) ? @"@\"\"" : @"GPBEmptyNSData()",
-          className, hasSel, field.defaultValue.valueString);
+          (fieldType == GPBDataTypeString) ? @"@\"\"" : @"GPBEmptyNSData()", className,
+          firstLetterCapitalizedName, field.defaultValue.valueString);
     // Note: valueString, depending on the type, it could easily be
     // valueData/valueMessage.
   }
@@ -598,8 +559,7 @@ void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
     BOOL setHasValue = (value != nil);
     // If the field should clear on a "zero" value, then check if the string/data
     // was zero length, and clear instead.
-    if (((fieldDesc->flags & GPBFieldClearHasIvarOnZero) != 0) &&
-        ([value length] == 0)) {
+    if (((fieldDesc->flags & GPBFieldClearHasIvarOnZero) != 0) && ([value length] == 0)) {
       setHasValue = NO;
       // The value passed in was retained, it must be released since we
       // aren't saving anything in the field.
@@ -633,10 +593,9 @@ void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
             gpbArray->_autocreator = nil;
           }
         }
-      } else { // GPBFieldTypeMap
+      } else {  // GPBFieldTypeMap
         // If the old map was autocreated by us, then clear it.
-        if ((field.mapKeyDataType == GPBDataTypeString) &&
-            GPBDataTypeIsObject(fieldType)) {
+        if ((field.mapKeyDataType == GPBDataTypeString) && GPBDataTypeIsObject(fieldType)) {
           if ([oldValue isKindOfClass:[GPBAutocreatedDictionary class]]) {
             GPBAutocreatedDictionary *autoDict = oldValue;
             if (autoDict->_autocreator == self) {
@@ -664,8 +623,7 @@ void GPBSetRetainedObjectIvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-id GPBGetObjectIvarWithFieldNoAutocreate(GPBMessage *self,
-                                         GPBFieldDescriptor *field) {
+id GPBGetObjectIvarWithFieldNoAutocreate(GPBMessage *self, GPBFieldDescriptor *field) {
   if (self->messageStorage_ == nil) {
     return nil;
   }
@@ -676,80 +634,66 @@ id GPBGetObjectIvarWithFieldNoAutocreate(GPBMessage *self,
 
 // Only exists for public api, no core code should use this.
 int32_t GPBGetMessageEnumField(GPBMessage *self, GPBFieldDescriptor *field) {
-  #if defined(DEBUG) && DEBUG
-    NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
-              @"FieldDescriptor %@ doesn't appear to be for %@ messages.",
-              field.name, [self class]);
-    NSCAssert(GPBGetFieldDataType(field) == GPBDataTypeEnum,
-              @"Attempting to get value of type Enum from field %@ "
-              @"of %@ which is of type %@.",
-              [self class], field.name,
-              TypeToString(GPBGetFieldDataType(field)));
-  #endif
+#if defined(DEBUG) && DEBUG
+  NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
+            @"FieldDescriptor %@ doesn't appear to be for %@ messages.", field.name, [self class]);
+  NSCAssert(GPBGetFieldDataType(field) == GPBDataTypeEnum,
+            @"Attempting to get value of type Enum from field %@ "
+            @"of %@ which is of type %@.",
+            [self class], field.name, TypeToString(GPBGetFieldDataType(field)));
+#endif
 
   int32_t result = GPBGetMessageInt32Field(self, field);
   // If this is presevering unknown enums, make sure the value is valid before
   // returning it.
-
-  GPBFileSyntax syntax = [self descriptor].file.syntax;
-  if (GPBHasPreservingUnknownEnumSemantics(syntax) &&
-      ![field isValidEnumValue:result]) {
+  if (!field.enumDescriptor.isClosed && ![field isValidEnumValue:result]) {
     result = kGPBUnrecognizedEnumeratorValue;
   }
   return result;
 }
 
 // Only exists for public api, no core code should use this.
-void GPBSetMessageEnumField(GPBMessage *self, GPBFieldDescriptor *field,
-                            int32_t value) {
-  #if defined(DEBUG) && DEBUG
-    NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
-              @"FieldDescriptor %@ doesn't appear to be for %@ messages.",
-              field.name, [self class]);
-    NSCAssert(GPBGetFieldDataType(field) == GPBDataTypeEnum,
-              @"Attempting to set field %@ of %@ which is of type %@ with "
-              @"value of type Enum.",
-              [self class], field.name,
-              TypeToString(GPBGetFieldDataType(field)));
-  #endif
+void GPBSetMessageEnumField(GPBMessage *self, GPBFieldDescriptor *field, int32_t value) {
+#if defined(DEBUG) && DEBUG
+  NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
+            @"FieldDescriptor %@ doesn't appear to be for %@ messages.", field.name, [self class]);
+  NSCAssert(GPBGetFieldDataType(field) == GPBDataTypeEnum,
+            @"Attempting to set field %@ of %@ which is of type %@ with "
+            @"value of type Enum.",
+            [self class], field.name, TypeToString(GPBGetFieldDataType(field)));
+#endif
   GPBSetEnumIvarWithFieldPrivate(self, field, value);
 }
 
-void GPBSetEnumIvarWithFieldPrivate(GPBMessage *self,
-                                    GPBFieldDescriptor *field, int32_t value) {
+void GPBSetEnumIvarWithFieldPrivate(GPBMessage *self, GPBFieldDescriptor *field, int32_t value) {
   // Don't allow in unknown values.  Proto3 can use the Raw method.
   if (![field isValidEnumValue:value]) {
     [NSException raise:NSInvalidArgumentException
-                format:@"%@.%@: Attempt to set an unknown enum value (%d)",
-                       [self class], field.name, value];
+                format:@"%@.%@: Attempt to set an unknown enum value (%d)", [self class],
+                       field.name, value];
   }
   GPBSetInt32IvarWithFieldPrivate(self, field, value);
 }
 
 // Only exists for public api, no core code should use this.
-int32_t GPBGetMessageRawEnumField(GPBMessage *self,
-                                  GPBFieldDescriptor *field) {
+int32_t GPBGetMessageRawEnumField(GPBMessage *self, GPBFieldDescriptor *field) {
   int32_t result = GPBGetMessageInt32Field(self, field);
   return result;
 }
 
 // Only exists for public api, no core code should use this.
-void GPBSetMessageRawEnumField(GPBMessage *self, GPBFieldDescriptor *field,
-                               int32_t value) {
+void GPBSetMessageRawEnumField(GPBMessage *self, GPBFieldDescriptor *field, int32_t value) {
   GPBSetInt32IvarWithFieldPrivate(self, field, value);
 }
 
-BOOL GPBGetMessageBoolField(GPBMessage *self,
-                            GPBFieldDescriptor *field) {
+BOOL GPBGetMessageBoolField(GPBMessage *self, GPBFieldDescriptor *field) {
 #if defined(DEBUG) && DEBUG
   NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
-            @"FieldDescriptor %@ doesn't appear to be for %@ messages.",
-            field.name, [self class]);
+            @"FieldDescriptor %@ doesn't appear to be for %@ messages.", field.name, [self class]);
   NSCAssert(DataTypesEquivalent(GPBGetFieldDataType(field), GPBDataTypeBool),
             @"Attempting to get value of type bool from field %@ "
             @"of %@ which is of type %@.",
-            [self class], field.name,
-            TypeToString(GPBGetFieldDataType(field)));
+            [self class], field.name, TypeToString(GPBGetFieldDataType(field)));
 #endif
   if (GPBGetHasIvarField(self, field)) {
     // Bools are stored in the has bits to avoid needing explicit space in the
@@ -764,26 +708,20 @@ BOOL GPBGetMessageBoolField(GPBMessage *self,
 }
 
 // Only exists for public api, no core code should use this.
-void GPBSetMessageBoolField(GPBMessage *self,
-                            GPBFieldDescriptor *field,
-                            BOOL value) {
+void GPBSetMessageBoolField(GPBMessage *self, GPBFieldDescriptor *field, BOOL value) {
   if (self == nil || field == nil) return;
-  #if defined(DEBUG) && DEBUG
-    NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
-              @"FieldDescriptor %@ doesn't appear to be for %@ messages.",
-              field.name, [self class]);
-    NSCAssert(DataTypesEquivalent(GPBGetFieldDataType(field), GPBDataTypeBool),
-              @"Attempting to set field %@ of %@ which is of type %@ with "
-              @"value of type bool.",
-              [self class], field.name,
-              TypeToString(GPBGetFieldDataType(field)));
-  #endif
+#if defined(DEBUG) && DEBUG
+  NSCAssert([[self descriptor] fieldWithNumber:field.number] == field,
+            @"FieldDescriptor %@ doesn't appear to be for %@ messages.", field.name, [self class]);
+  NSCAssert(DataTypesEquivalent(GPBGetFieldDataType(field), GPBDataTypeBool),
+            @"Attempting to set field %@ of %@ which is of type %@ with "
+            @"value of type bool.",
+            [self class], field.name, TypeToString(GPBGetFieldDataType(field)));
+#endif
   GPBSetBoolIvarWithFieldPrivate(self, field, value);
 }
 
-void GPBSetBoolIvarWithFieldPrivate(GPBMessage *self,
-                                    GPBFieldDescriptor *field,
-                                    BOOL value) {
+void GPBSetBoolIvarWithFieldPrivate(GPBMessage *self, GPBFieldDescriptor *field, BOOL value) {
   GPBMessageFieldDescription *fieldDesc = field->description_;
   GPBOneofDescriptor *oneof = field->containingOneof_;
   if (oneof) {
@@ -798,15 +736,15 @@ void GPBSetBoolIvarWithFieldPrivate(GPBMessage *self,
 
   // If the value is zero, then we only count the field as "set" if the field
   // shouldn't auto clear on zero.
-  BOOL hasValue = ((value != (BOOL)0)
-                   || ((fieldDesc->flags & GPBFieldClearHasIvarOnZero) == 0));
+  BOOL hasValue = ((value != (BOOL)0) || ((fieldDesc->flags & GPBFieldClearHasIvarOnZero) == 0));
   GPBSetHasIvar(self, fieldDesc->hasIndex, fieldDesc->number, hasValue);
   GPBBecomeVisibleToAutocreator(self);
 }
 
+// clang-format off
+
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(Int32, int32_t)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 int32_t GPBGetMessageInt32Field(GPBMessage *self,
                                 GPBFieldDescriptor *field) {
@@ -876,10 +814,8 @@ void GPBSetInt32IvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(UInt32, uint32_t)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 uint32_t GPBGetMessageUInt32Field(GPBMessage *self,
                                   GPBFieldDescriptor *field) {
@@ -949,10 +885,8 @@ void GPBSetUInt32IvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(Int64, int64_t)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 int64_t GPBGetMessageInt64Field(GPBMessage *self,
                                 GPBFieldDescriptor *field) {
@@ -1022,10 +956,8 @@ void GPBSetInt64IvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(UInt64, uint64_t)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 uint64_t GPBGetMessageUInt64Field(GPBMessage *self,
                                   GPBFieldDescriptor *field) {
@@ -1095,10 +1027,8 @@ void GPBSetUInt64IvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(Float, float)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 float GPBGetMessageFloatField(GPBMessage *self,
                               GPBFieldDescriptor *field) {
@@ -1168,10 +1098,8 @@ void GPBSetFloatIvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_POD_ACCESSORS_DEFN(Double, double)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 double GPBGetMessageDoubleField(GPBMessage *self,
                                 GPBFieldDescriptor *field) {
@@ -1241,14 +1169,12 @@ void GPBSetDoubleIvarWithFieldPrivate(GPBMessage *self,
   GPBBecomeVisibleToAutocreator(self);
 }
 
-// clang-format on
 //%PDDM-EXPAND-END (6 expansions)
 
 // Aliases are function calls that are virtually the same.
 
 //%PDDM-EXPAND IVAR_ALIAS_DEFN_COPY_OBJECT(String, NSString)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 // Only exists for public api, no core code should use this.
 NSString *GPBGetMessageStringField(GPBMessage *self,
@@ -1279,10 +1205,8 @@ void GPBSetMessageStringField(GPBMessage *self,
   GPBSetCopyObjectIvarWithField(self, field, (id)value);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_ALIAS_DEFN_COPY_OBJECT(Bytes, NSData)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 // Only exists for public api, no core code should use this.
 NSData *GPBGetMessageBytesField(GPBMessage *self,
@@ -1313,10 +1237,8 @@ void GPBSetMessageBytesField(GPBMessage *self,
   GPBSetCopyObjectIvarWithField(self, field, (id)value);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_ALIAS_DEFN_OBJECT(Message, GPBMessage)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 // Only exists for public api, no core code should use this.
 GPBMessage *GPBGetMessageMessageField(GPBMessage *self,
@@ -1347,10 +1269,8 @@ void GPBSetMessageMessageField(GPBMessage *self,
   GPBSetObjectIvarWithField(self, field, (id)value);
 }
 
-// clang-format on
 //%PDDM-EXPAND IVAR_ALIAS_DEFN_OBJECT(Group, GPBMessage)
 // This block of code is generated, do not edit it directly.
-// clang-format off
 
 // Only exists for public api, no core code should use this.
 GPBMessage *GPBGetMessageGroupField(GPBMessage *self,
@@ -1381,8 +1301,9 @@ void GPBSetMessageGroupField(GPBMessage *self,
   GPBSetObjectIvarWithField(self, field, (id)value);
 }
 
-// clang-format on
 //%PDDM-EXPAND-END (4 expansions)
+
+// clang-format on
 
 // GPBGetMessageRepeatedField is defined in GPBMessage.m
 
@@ -1391,8 +1312,7 @@ void GPBSetMessageRepeatedField(GPBMessage *self, GPBFieldDescriptor *field, id 
 #if defined(DEBUG) && DEBUG
   if (field.fieldType != GPBFieldTypeRepeated) {
     [NSException raise:NSInvalidArgumentException
-                format:@"%@.%@ is not a repeated field.",
-                       [self class], field.name];
+                format:@"%@.%@ is not a repeated field.", [self class], field.name];
   }
   Class expectedClass = Nil;
   switch (GPBGetFieldDataType(field)) {
@@ -1435,8 +1355,8 @@ void GPBSetMessageRepeatedField(GPBMessage *self, GPBFieldDescriptor *field, id 
   }
   if (array && ![array isKindOfClass:expectedClass]) {
     [NSException raise:NSInvalidArgumentException
-                format:@"%@.%@: Expected %@ object, got %@.",
-                       [self class], field.name, expectedClass, [array class]];
+                format:@"%@.%@: Expected %@ object, got %@.", [self class], field.name,
+                       expectedClass, [array class]];
   }
 #endif
   GPBSetObjectIvarWithField(self, field, array);
@@ -1468,7 +1388,7 @@ static GPBDataType BaseDataType(GPBDataType type) {
     case GPBDataTypeBytes:
     case GPBDataTypeString:
       return type;
-   }
+  }
 }
 
 static BOOL DataTypesEquivalent(GPBDataType type1, GPBDataType type2) {
@@ -1510,13 +1430,11 @@ static NSString *TypeToString(GPBDataType dataType) {
 // GPBGetMessageMapField is defined in GPBMessage.m
 
 // Only exists for public api, no core code should use this.
-void GPBSetMessageMapField(GPBMessage *self, GPBFieldDescriptor *field,
-                           id dictionary) {
+void GPBSetMessageMapField(GPBMessage *self, GPBFieldDescriptor *field, id dictionary) {
 #if defined(DEBUG) && DEBUG
   if (field.fieldType != GPBFieldTypeMap) {
     [NSException raise:NSInvalidArgumentException
-                format:@"%@.%@ is not a map<> field.",
-                       [self class], field.name];
+                format:@"%@.%@ is not a map<> field.", [self class], field.name];
   }
   if (dictionary) {
     GPBDataType keyDataType = field.mapKeyDataType;
@@ -1527,20 +1445,17 @@ void GPBSetMessageMapField(GPBMessage *self, GPBFieldDescriptor *field,
       keyStr = @"String";
     }
     Class expectedClass = Nil;
-    if ((keyDataType == GPBDataTypeString) &&
-        GPBDataTypeIsObject(valueDataType)) {
+    if ((keyDataType == GPBDataTypeString) && GPBDataTypeIsObject(valueDataType)) {
       expectedClass = [NSMutableDictionary class];
     } else {
-      NSString *className =
-          [NSString stringWithFormat:@"GPB%@%@Dictionary", keyStr, valueStr];
+      NSString *className = [NSString stringWithFormat:@"GPB%@%@Dictionary", keyStr, valueStr];
       expectedClass = NSClassFromString(className);
       NSCAssert(expectedClass, @"Missing a class (%@)?", expectedClass);
     }
     if (![dictionary isKindOfClass:expectedClass]) {
       [NSException raise:NSInvalidArgumentException
-                  format:@"%@.%@: Expected %@ object, got %@.",
-                         [self class], field.name, expectedClass,
-                         [dictionary class]];
+                  format:@"%@.%@: Expected %@ object, got %@.", [self class], field.name,
+                         expectedClass, [dictionary class]];
     }
   }
 #endif
@@ -1550,13 +1465,12 @@ void GPBSetMessageMapField(GPBMessage *self, GPBFieldDescriptor *field,
 #pragma mark - Misc Dynamic Runtime Utils
 
 const char *GPBMessageEncodingForSelector(SEL selector, BOOL instanceSel) {
-  Protocol *protocol =
-      objc_getProtocol(GPBStringifySymbol(GPBMessageSignatureProtocol));
+  Protocol *protocol = objc_getProtocol(GPBStringifySymbol(GPBMessageSignatureProtocol));
   NSCAssert(protocol, @"Missing GPBMessageSignatureProtocol");
   struct objc_method_description description =
       protocol_getMethodDescription(protocol, selector, NO, instanceSel);
-  NSCAssert(description.name != Nil && description.types != nil,
-            @"Missing method for selector %@", NSStringFromSelector(selector));
+  NSCAssert(description.name != Nil && description.types != nil, @"Missing method for selector %@",
+            NSStringFromSelector(selector));
   return description.types;
 }
 
@@ -1568,19 +1482,30 @@ static void AppendStringEscaped(NSString *toPrint, NSMutableString *destStr) {
   for (NSUInteger i = 0; i < len; ++i) {
     unichar aChar = [toPrint characterAtIndex:i];
     switch (aChar) {
-      case '\n': [destStr appendString:@"\\n"];  break;
-      case '\r': [destStr appendString:@"\\r"];  break;
-      case '\t': [destStr appendString:@"\\t"];  break;
-      case '\"': [destStr appendString:@"\\\""]; break;
-      case '\'': [destStr appendString:@"\\\'"]; break;
-      case '\\': [destStr appendString:@"\\\\"]; break;
+      case '\n':
+        [destStr appendString:@"\\n"];
+        break;
+      case '\r':
+        [destStr appendString:@"\\r"];
+        break;
+      case '\t':
+        [destStr appendString:@"\\t"];
+        break;
+      case '\"':
+        [destStr appendString:@"\\\""];
+        break;
+      case '\'':
+        [destStr appendString:@"\\\'"];
+        break;
+      case '\\':
+        [destStr appendString:@"\\\\"];
+        break;
       default:
         // This differs slightly from the C++ code in that the C++ doesn't
         // generate UTF8; it looks at the string in UTF8, but escapes every
         // byte > 0x7E.
         if (aChar < 0x20) {
-          [destStr appendFormat:@"\\%d%d%d",
-                                (aChar / 64), ((aChar % 64) / 8), (aChar % 8)];
+          [destStr appendFormat:@"\\%d%d%d", (aChar / 64), ((aChar % 64) / 8), (aChar % 8)];
         } else {
           [destStr appendFormat:@"%C", aChar];
         }
@@ -1596,12 +1521,24 @@ static void AppendBufferAsString(NSData *buffer, NSMutableString *destStr) {
   [destStr appendString:@"\""];
   for (const char *srcEnd = src + srcLen; src < srcEnd; src++) {
     switch (*src) {
-      case '\n': [destStr appendString:@"\\n"];  break;
-      case '\r': [destStr appendString:@"\\r"];  break;
-      case '\t': [destStr appendString:@"\\t"];  break;
-      case '\"': [destStr appendString:@"\\\""]; break;
-      case '\'': [destStr appendString:@"\\\'"]; break;
-      case '\\': [destStr appendString:@"\\\\"]; break;
+      case '\n':
+        [destStr appendString:@"\\n"];
+        break;
+      case '\r':
+        [destStr appendString:@"\\r"];
+        break;
+      case '\t':
+        [destStr appendString:@"\\t"];
+        break;
+      case '\"':
+        [destStr appendString:@"\\\""];
+        break;
+      case '\'':
+        [destStr appendString:@"\\\'"];
+        break;
+      case '\\':
+        [destStr appendString:@"\\\\"];
+        break;
       default:
         if (isprint(*src)) {
           [destStr appendFormat:@"%c", *src];
@@ -1617,31 +1554,28 @@ static void AppendBufferAsString(NSData *buffer, NSMutableString *destStr) {
   [destStr appendString:@"\""];
 }
 
-static void AppendTextFormatForMapMessageField(
-    id map, GPBFieldDescriptor *field, NSMutableString *toStr,
-    NSString *lineIndent, NSString *fieldName, NSString *lineEnding) {
+static void AppendTextFormatForMapMessageField(id map, GPBFieldDescriptor *field,
+                                               NSMutableString *toStr, NSString *lineIndent,
+                                               NSString *fieldName, NSString *lineEnding) {
   GPBDataType keyDataType = field.mapKeyDataType;
   GPBDataType valueDataType = GPBGetFieldDataType(field);
   BOOL isMessageValue = GPBDataTypeIsMessage(valueDataType);
 
   NSString *msgStartFirst =
       [NSString stringWithFormat:@"%@%@ {%@\n", lineIndent, fieldName, lineEnding];
-  NSString *msgStart =
-      [NSString stringWithFormat:@"%@%@ {\n", lineIndent, fieldName];
+  NSString *msgStart = [NSString stringWithFormat:@"%@%@ {\n", lineIndent, fieldName];
   NSString *msgEnd = [NSString stringWithFormat:@"%@}\n", lineIndent];
 
   NSString *keyLine = [NSString stringWithFormat:@"%@  key: ", lineIndent];
-  NSString *valueLine = [NSString stringWithFormat:@"%@  value%s ", lineIndent,
-                                                   (isMessageValue ? "" : ":")];
+  NSString *valueLine =
+      [NSString stringWithFormat:@"%@  value%s ", lineIndent, (isMessageValue ? "" : ":")];
 
   __block BOOL isFirst = YES;
 
-  if ((keyDataType == GPBDataTypeString) &&
-      GPBDataTypeIsObject(valueDataType)) {
+  if ((keyDataType == GPBDataTypeString) && GPBDataTypeIsObject(valueDataType)) {
     // map is an NSDictionary.
     NSDictionary *dict = map;
-    [dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, BOOL *stop) {
-      #pragma unused(stop)
+    [dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id value, __unused BOOL *stop) {
       [toStr appendString:(isFirst ? msgStartFirst : msgStart)];
       isFirst = NO;
 
@@ -1741,10 +1675,8 @@ static void AppendTextFormatForMapMessageField(
   }
 }
 
-static void AppendTextFormatForMessageField(GPBMessage *message,
-                                            GPBFieldDescriptor *field,
-                                            NSMutableString *toStr,
-                                            NSString *lineIndent) {
+static void AppendTextFormatForMessageField(GPBMessage *message, GPBFieldDescriptor *field,
+                                            NSMutableString *toStr, NSString *lineIndent) {
   id arrayOrMap;
   NSUInteger count;
   GPBFieldType fieldType = field.fieldType;
@@ -1792,8 +1724,7 @@ static void AppendTextFormatForMessageField(GPBMessage *message,
   }
 
   if (fieldType == GPBFieldTypeMap) {
-    AppendTextFormatForMapMessageField(arrayOrMap, field, toStr, lineIndent,
-                                       fieldName, lineEnding);
+    AppendTextFormatForMapMessageField(arrayOrMap, field, toStr, lineIndent, fieldName, lineEnding);
     return;
   }
 
@@ -1804,8 +1735,7 @@ static void AppendTextFormatForMessageField(GPBMessage *message,
   BOOL isMessageField = GPBDataTypeIsMessage(fieldDataType);
   for (NSUInteger j = 0; j < count; ++j) {
     // Start the line.
-    [toStr appendFormat:@"%@%@%s ", lineIndent, fieldName,
-                        (isMessageField ? "" : ":")];
+    [toStr appendFormat:@"%@%@%s ", lineIndent, fieldName, (isMessageField ? "" : ":")];
 
     // The value.
     switch (fieldDataType) {
@@ -1871,9 +1801,8 @@ static void AppendTextFormatForMessageField(GPBMessage *message,
 
       case GPBDataTypeGroup:
       case GPBDataTypeMessage: {
-        GPBMessage *v =
-            (isRepeated ? [(NSArray *)array objectAtIndex:j]
-                        : GPBGetObjectIvarWithField(message, field));
+        GPBMessage *v = (isRepeated ? [(NSArray *)array objectAtIndex:j]
+                                    : GPBGetObjectIvarWithField(message, field));
         [toStr appendFormat:@"{%@\n", lineEnding];
         NSString *subIndent = [lineIndent stringByAppendingString:@"  "];
         AppendTextFormatForMessage(v, toStr, subIndent);
@@ -1890,11 +1819,9 @@ static void AppendTextFormatForMessageField(GPBMessage *message,
   }  // for(count)
 }
 
-static void AppendTextFormatForMessageExtensionRange(GPBMessage *message,
-                                                     NSArray *activeExtensions,
+static void AppendTextFormatForMessageExtensionRange(GPBMessage *message, NSArray *activeExtensions,
                                                      GPBExtensionRange range,
-                                                     NSMutableString *toStr,
-                                                     NSString *lineIndent) {
+                                                     NSMutableString *toStr, NSString *lineIndent) {
   uint32_t start = range.start;
   uint32_t end = range.end;
   for (GPBExtensionDescriptor *extension in activeExtensions) {
@@ -1943,7 +1870,7 @@ static void AppendTextFormatForMessageExtensionRange(GPBMessage *message,
 
         FIELD_CASE(Int32, int32_t, intValue, @"%d")
         FIELD_CASE(SInt32, int32_t, intValue, @"%d")
-        FIELD_CASE(SFixed32, int32_t, unsignedIntValue, @"%d")
+        FIELD_CASE(SFixed32, int32_t, intValue, @"%d")
         FIELD_CASE(UInt32, uint32_t, unsignedIntValue, @"%u")
         FIELD_CASE(Fixed32, uint32_t, unsignedIntValue, @"%u")
         FIELD_CASE(Int64, int64_t, longLongValue, @"%lld")
@@ -1963,8 +1890,7 @@ static void AppendTextFormatForMessageExtensionRange(GPBMessage *message,
 #undef FIELD_CASE
 
         case GPBDataTypeBool:
-          [toStr appendString:([(NSNumber *)curValue boolValue] ? @"true"
-                                                                : @"false")];
+          [toStr appendString:([(NSNumber *)curValue boolValue] ? @"true" : @"false")];
           break;
 
         case GPBDataTypeString:
@@ -1995,36 +1921,99 @@ static void AppendTextFormatForMessageExtensionRange(GPBMessage *message,
   }  // for..in(activeExtensions)
 }
 
-static void AppendTextFormatForMessage(GPBMessage *message,
-                                       NSMutableString *toStr,
+static void AppendTextFormatForUnknownFields(GPBUnknownFields *ufs, NSMutableString *toStr,
+                                             NSString *lineIndent) {
+#if defined(DEBUG) && DEBUG
+  NSCAssert(!ufs.empty, @"Internal Error: No unknown fields to format.");
+#endif
+  // Extract the fields and sort them by field number. Use a stable sort and sort just by the field
+  // numbers, that way the output will still show the order the different types were added as well
+  // as maintaining the order within a give number/type pair (i.e. - repeated fields say in order).
+  NSMutableArray *sortedFields = [[NSMutableArray alloc] initWithCapacity:ufs.count];
+  for (GPBUnknownField *field in ufs) {
+    [sortedFields addObject:field];
+  }
+  [sortedFields
+      sortWithOptions:NSSortStable
+      usingComparator:^NSComparisonResult(GPBUnknownField *field1, GPBUnknownField *field2) {
+        int32_t fieldNumber1 = field1->number_;
+        int32_t fieldNumber2 = field2->number_;
+        if (fieldNumber1 < fieldNumber2) {
+          return NSOrderedAscending;
+        } else if (fieldNumber1 > fieldNumber2) {
+          return NSOrderedDescending;
+        } else {
+          return NSOrderedSame;
+        }
+      }];
+
+  NSString *subIndent = nil;
+
+  for (GPBUnknownField *field in sortedFields) {
+    int32_t fieldNumber = field->number_;
+    switch (field->type_) {
+      case GPBUnknownFieldTypeVarint:
+        [toStr appendFormat:@"%@%d: %llu\n", lineIndent, fieldNumber, field->storage_.intValue];
+        break;
+      case GPBUnknownFieldTypeFixed32:
+        [toStr appendFormat:@"%@%d: 0x%X\n", lineIndent, fieldNumber,
+                            (uint32_t)field->storage_.intValue];
+        break;
+      case GPBUnknownFieldTypeFixed64:
+        [toStr appendFormat:@"%@%d: 0x%llX\n", lineIndent, fieldNumber, field->storage_.intValue];
+        break;
+      case GPBUnknownFieldTypeLengthDelimited:
+        [toStr appendFormat:@"%@%d: ", lineIndent, fieldNumber];
+        AppendBufferAsString(field->storage_.lengthDelimited, toStr);
+        [toStr appendString:@"\n"];
+        break;
+      case GPBUnknownFieldTypeGroup: {
+        GPBUnknownFields *group = field->storage_.group;
+        if (group.empty) {
+          [toStr appendFormat:@"%@%d: {}\n", lineIndent, fieldNumber];
+        } else {
+          [toStr appendFormat:@"%@%d: {\n", lineIndent, fieldNumber];
+          if (subIndent == nil) {
+            subIndent = [lineIndent stringByAppendingString:@"  "];
+          }
+          AppendTextFormatForUnknownFields(group, toStr, subIndent);
+          [toStr appendFormat:@"%@}\n", lineIndent];
+        }
+      } break;
+    }
+  }
+  [subIndent release];
+  [sortedFields release];
+}
+
+static void AppendTextFormatForMessage(GPBMessage *message, NSMutableString *toStr,
                                        NSString *lineIndent) {
   GPBDescriptor *descriptor = [message descriptor];
   NSArray *fieldsArray = descriptor->fields_;
   NSUInteger fieldCount = fieldsArray.count;
   const GPBExtensionRange *extensionRanges = descriptor.extensionRanges;
   NSUInteger extensionRangesCount = descriptor.extensionRangesCount;
-  NSArray *activeExtensions = [[message extensionsCurrentlySet]
-      sortedArrayUsingSelector:@selector(compareByFieldNumber:)];
+  NSArray *activeExtensions =
+      [[message extensionsCurrentlySet] sortedArrayUsingSelector:@selector(compareByFieldNumber:)];
   for (NSUInteger i = 0, j = 0; i < fieldCount || j < extensionRangesCount;) {
     if (i == fieldCount) {
-      AppendTextFormatForMessageExtensionRange(
-          message, activeExtensions, extensionRanges[j++], toStr, lineIndent);
+      AppendTextFormatForMessageExtensionRange(message, activeExtensions, extensionRanges[j++],
+                                               toStr, lineIndent);
     } else if (j == extensionRangesCount ||
                GPBFieldNumber(fieldsArray[i]) < extensionRanges[j].start) {
-      AppendTextFormatForMessageField(message, fieldsArray[i++], toStr,
-                                      lineIndent);
+      AppendTextFormatForMessageField(message, fieldsArray[i++], toStr, lineIndent);
     } else {
-      AppendTextFormatForMessageExtensionRange(
-          message, activeExtensions, extensionRanges[j++], toStr, lineIndent);
+      AppendTextFormatForMessageExtensionRange(message, activeExtensions, extensionRanges[j++],
+                                               toStr, lineIndent);
     }
   }
 
-  NSString *unknownFieldsStr =
-      GPBTextFormatForUnknownFieldSet(message.unknownFields, lineIndent);
-  if ([unknownFieldsStr length] > 0) {
+  GPBUnknownFields *ufs = [[GPBUnknownFields alloc] initFromMessage:message];
+  if (ufs.count > 0) {
     [toStr appendFormat:@"%@# --- Unknown fields ---\n", lineIndent];
-    [toStr appendString:unknownFieldsStr];
+    AppendTextFormatForUnknownFields(ufs, toStr, lineIndent);
   }
+  [ufs release];
 }
 
 NSString *GPBTextFormatForMessage(GPBMessage *message, NSString *lineIndent) {
@@ -2034,49 +2023,6 @@ NSString *GPBTextFormatForMessage(GPBMessage *message, NSString *lineIndent) {
   NSMutableString *buildString = [NSMutableString string];
   AppendTextFormatForMessage(message, buildString, lineIndent);
   return buildString;
-}
-
-NSString *GPBTextFormatForUnknownFieldSet(GPBUnknownFieldSet *unknownSet,
-                                          NSString *lineIndent) {
-  if (unknownSet == nil) return @"";
-  if (lineIndent == nil) lineIndent = @"";
-
-  NSMutableString *result = [NSMutableString string];
-  for (GPBUnknownField *field in [unknownSet sortedFields]) {
-    int32_t fieldNumber = [field number];
-
-#define PRINT_LOOP(PROPNAME, CTYPE, FORMAT)                                   \
-  [field.PROPNAME                                                             \
-      enumerateValuesWithBlock:^(CTYPE value, NSUInteger idx, BOOL * stop) {  \
-    _Pragma("unused(idx, stop)");                                             \
-    [result                                                                   \
-        appendFormat:@"%@%d: " #FORMAT "\n", lineIndent, fieldNumber, value]; \
-      }];
-
-    PRINT_LOOP(varintList, uint64_t, %llu);
-    PRINT_LOOP(fixed32List, uint32_t, 0x%X);
-    PRINT_LOOP(fixed64List, uint64_t, 0x%llX);
-
-#undef PRINT_LOOP
-
-    // NOTE: C++ version of TextFormat tries to parse this as a message
-    // and print that if it succeeds.
-    for (NSData *data in field.lengthDelimitedList) {
-      [result appendFormat:@"%@%d: ", lineIndent, fieldNumber];
-      AppendBufferAsString(data, result);
-      [result appendString:@"\n"];
-    }
-
-    for (GPBUnknownFieldSet *subUnknownSet in field.groupList) {
-      [result appendFormat:@"%@%d: {\n", lineIndent, fieldNumber];
-      NSString *subIndent = [lineIndent stringByAppendingString:@"  "];
-      NSString *subUnknownSetStr =
-          GPBTextFormatForUnknownFieldSet(subUnknownSet, subIndent);
-      [result appendString:subUnknownSetStr];
-      [result appendFormat:@"%@}\n", lineIndent];
-    }
-  }
-  return result;
 }
 
 // Helpers to decode a varint. Not using GPBCodedInputStream version because
@@ -2114,8 +2060,7 @@ static int32_t ReadRawVarint32FromData(const uint8_t **data) {
               return result;
             }
           }
-          [NSException raise:NSParseErrorException
-                      format:@"Unable to read varint32"];
+          [NSException raise:NSParseErrorException format:@"Unable to read varint32"];
         }
       }
     }
@@ -2123,8 +2068,7 @@ static int32_t ReadRawVarint32FromData(const uint8_t **data) {
   return result;
 }
 
-NSString *GPBDecodeTextFormatName(const uint8_t *decodeData, int32_t key,
-                                  NSString *inputStr) {
+NSString *GPBDecodeTextFormatName(const uint8_t *decodeData, int32_t key, NSString *inputStr) {
   // decodData form:
   //  varint32: num entries
   //  for each entry:
@@ -2182,23 +2126,22 @@ NSString *GPBDecodeTextFormatName(const uint8_t *decodeData, int32_t key,
     return result;
   }
 
-  NSMutableString *result =
-      [NSMutableString stringWithCapacity:[inputStr length]];
+  NSMutableString *result = [NSMutableString stringWithCapacity:[inputStr length]];
 
-  const uint8_t kAddUnderscore  = 0b10000000;
-  const uint8_t kOpMask         = 0b01100000;
+  const uint8_t kAddUnderscore = 0b10000000;
+  const uint8_t kOpMask = 0b01100000;
   // const uint8_t kOpAsIs        = 0b00000000;
-  const uint8_t kOpFirstUpper     = 0b01000000;
-  const uint8_t kOpFirstLower     = 0b00100000;
-  const uint8_t kOpAllUpper       = 0b01100000;
+  const uint8_t kOpFirstUpper = 0b01000000;
+  const uint8_t kOpFirstLower = 0b00100000;
+  const uint8_t kOpAllUpper = 0b01100000;
   const uint8_t kSegmentLenMask = 0b00011111;
 
-  NSInteger i = 0;
+  NSUInteger i = 0;
   for (; *scan != 0; ++scan) {
     if (*scan & kAddUnderscore) {
       [result appendString:@"_"];
     }
-    int segmentLen = *scan & kSegmentLenMask;
+    NSUInteger segmentLen = *scan & kSegmentLenMask;
     uint8_t decodeOp = *scan & kOpMask;
 
     // Do op specific handling of the first character.
@@ -2216,7 +2159,7 @@ NSString *GPBDecodeTextFormatName(const uint8_t *decodeData, int32_t key,
     // else op == kOpAsIs || op == kOpAllUpper
 
     // Now pull over the rest of the length for this segment.
-    for (int x = 0; x < segmentLen; ++x) {
+    for (NSUInteger x = 0; x < segmentLen; ++x) {
       unichar c = [inputStr characterAtIndex:(i + x)];
       if (decodeOp == kOpAllUpper) {
         [result appendFormat:@"%c", toupper((char)c)];
@@ -2233,26 +2176,21 @@ NSString *GPBDecodeTextFormatName(const uint8_t *decodeData, int32_t key,
 #pragma mark Legacy methods old generated code calls
 
 // Shim from the older generated code into the runtime.
-void GPBSetInt32IvarWithFieldInternal(GPBMessage *self,
-                                      GPBFieldDescriptor *field,
-                                      int32_t value,
-                                      GPBFileSyntax syntax) {
-#pragma unused(syntax)
+void GPBSetInt32IvarWithFieldInternal(GPBMessage *self, GPBFieldDescriptor *field, int32_t value,
+                                      __unused GPBFileSyntax syntax) {
   GPBSetMessageInt32Field(self, field, value);
 }
 
-void GPBMaybeClearOneof(GPBMessage *self, GPBOneofDescriptor *oneof,
-                        int32_t oneofHasIndex, uint32_t fieldNumberNotToClear) {
-#pragma unused(fieldNumberNotToClear)
-  #if defined(DEBUG) && DEBUG
-    NSCAssert([[self descriptor] oneofWithName:oneof.name] == oneof,
-              @"OneofDescriptor %@ doesn't appear to be for %@ messages.",
-              oneof.name, [self class]);
-    GPBFieldDescriptor *firstField = oneof->fields_[0];
-    NSCAssert(firstField->description_->hasIndex == oneofHasIndex,
-              @"Internal error, oneofHasIndex (%d) doesn't match (%d).",
-              firstField->description_->hasIndex, oneofHasIndex);
-  #endif
+void GPBMaybeClearOneof(GPBMessage *self, GPBOneofDescriptor *oneof, int32_t oneofHasIndex,
+                        __unused uint32_t fieldNumberNotToClear) {
+#if defined(DEBUG) && DEBUG
+  NSCAssert([[self descriptor] oneofWithName:oneof.name] == oneof,
+            @"OneofDescriptor %@ doesn't appear to be for %@ messages.", oneof.name, [self class]);
+  GPBFieldDescriptor *firstField __unused = oneof->fields_[0];
+  NSCAssert(firstField->description_->hasIndex == oneofHasIndex,
+            @"Internal error, oneofHasIndex (%d) doesn't match (%d).",
+            firstField->description_->hasIndex, oneofHasIndex);
+#endif
   GPBMaybeClearOneofPrivate(self, oneof, oneofHasIndex, 0);
 }
 

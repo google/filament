@@ -1056,8 +1056,8 @@ void unused_entry_point() {
 }
 
 TEST_F(HlslWriterTest, BuiltinTextureNumSamples) {
-    auto* t = b.FunctionParam(
-        "t", ty.Get<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d));
+    auto* t =
+        b.FunctionParam("t", ty.depth_multisampled_texture(core::type::TextureDimension::k2d));
 
     auto* func = b.Function("foo", ty.void_());
     func->SetParams({t});
@@ -1163,8 +1163,8 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BuiltinTextureLoad_Multisampled2DI32) {
-    auto* t = b.Var(ty.ptr(handle, ty.Get<core::type::MultisampledTexture>(
-                                       core::type::TextureDimension::k2d, ty.i32())));
+    auto* t =
+        b.Var(ty.ptr(handle, ty.multisampled_texture(core::type::TextureDimension::k2d, ty.i32())));
     t->SetBindingPoint(0, 0);
     b.ir.root_block->Append(t);
 
@@ -1189,8 +1189,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BuiltinTextureLoad_Depth2DLevelF32) {
-    auto* t =
-        b.Var(ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+    auto* t = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
     t->SetBindingPoint(0, 0);
     b.ir.root_block->Append(t);
 
@@ -1216,8 +1215,7 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BuiltinTextureLoad_Depth2DArrayLevelF32) {
-    auto* t = b.Var(
-        ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+    auto* t = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
     t->SetBindingPoint(0, 0);
     b.ir.root_block->Append(t);
 
@@ -1244,8 +1242,8 @@ void foo() {
 }
 
 TEST_F(HlslWriterTest, BuiltinTextureLoad_DepthMultisampledF32) {
-    auto* t = b.Var(ty.ptr(
-        handle, ty.Get<core::type::DepthMultisampledTexture>(core::type::TextureDimension::k2d)));
+    auto* t =
+        b.Var(ty.ptr(handle, ty.depth_multisampled_texture(core::type::TextureDimension::k2d)));
     t->SetBindingPoint(0, 0);
     b.ir.root_block->Append(t);
 
@@ -1348,8 +1346,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGatherCompare_Depth2d) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -1385,8 +1382,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGatherCompare_Depth2dOffset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -1424,8 +1420,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGatherCompare_DepthCubeArray) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCubeArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -1463,8 +1458,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGatherCompare_Depth2dArrayOffset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -1650,8 +1644,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGather_Depth) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -1684,8 +1677,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGather_DepthOffset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -1719,8 +1711,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGather_DepthArray) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -1755,8 +1746,7 @@ TEST_F(HlslWriterTest, BuiltinTextureGather_DepthArrayOffset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -2981,8 +2971,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_2d) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3014,8 +3003,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_2d_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3048,8 +3036,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_2d_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3084,8 +3071,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_2d_Array_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3121,8 +3107,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_Cube) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCube)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCube)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3154,8 +3139,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompare_Cube_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCubeArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3190,8 +3174,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_2d) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3223,8 +3206,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_2d_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3258,8 +3240,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_2d_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3294,8 +3275,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_2d_Array_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3331,8 +3311,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_Cube) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCube)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCube)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3364,8 +3343,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleCompareLevel_Cube_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCubeArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.comparison_sampler()));
@@ -3710,8 +3688,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSample_Depth2d) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -3743,8 +3720,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSample_Depth2d_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -3777,8 +3753,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSample_Depth2d_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -3812,8 +3787,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSample_Depth2d_Array_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -3848,8 +3822,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSample_DepthCube_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCubeArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -4161,8 +4134,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleLevel_Depth2d) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -4195,8 +4167,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleLevel_Depth2d_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(
-            ty.ptr(handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2d)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2d)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -4230,8 +4201,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleLevel_Depth2d_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -4266,8 +4236,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleLevel_Depth2d_Array_Offset) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::k2dArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::k2dArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));
@@ -4304,8 +4273,7 @@ TEST_F(HlslWriterTest, BuiltinTextureSampleLevel_DepthCube_Array) {
     core::ir::Var* tex = nullptr;
     core::ir::Var* sampler = nullptr;
     b.Append(b.ir.root_block, [&] {
-        tex = b.Var(ty.ptr(
-            handle, ty.Get<core::type::DepthTexture>(core::type::TextureDimension::kCubeArray)));
+        tex = b.Var(ty.ptr(handle, ty.depth_texture(core::type::TextureDimension::kCubeArray)));
         tex->SetBindingPoint(0, 0);
 
         sampler = b.Var(ty.ptr(handle, ty.sampler()));

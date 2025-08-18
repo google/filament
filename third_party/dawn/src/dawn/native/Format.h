@@ -135,11 +135,14 @@ struct Format {
 
     // TODO(crbug.com/dawn/1332): These members could be stored in a Format capability matrix.
     bool isRenderable = false;
+    bool isBC = false;
+    bool isASTC = false;
     bool isCompressed = false;
     bool isBlendable = false;
     // A format can be known but not supported because it is part of a disabled extension.
     UnsupportedReason unsupportedReason;
-    bool supportsStorageUsage = false;
+    bool supportsReadOnlyStorageUsage = false;
+    bool supportsWriteOnlyStorageUsage = false;
     bool supportsReadWriteStorageUsage = false;
     bool supportsMultisample = false;
     bool supportsResolveTarget = false;

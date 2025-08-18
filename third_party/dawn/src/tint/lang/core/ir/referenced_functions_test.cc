@@ -30,7 +30,6 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/ir/disassembler.h"
 #include "src/tint/lang/core/ir/ir_helper_test.h"
 
 namespace tint::core::ir {
@@ -42,9 +41,6 @@ using namespace tint::core::fluent_types;  // NOLINT
 
 class IR_ReferencedFunctionsTest : public IRTestHelper {
   protected:
-    /// @returns the module as a disassembled string
-    std::string Disassemble() const { return "\n" + ir::Disassembler(mod).Plain(); }
-
     /// @returns a new function called @p name
     Function* Func(const char* name) { return b.Function(name, ty.void_()); }
 };
@@ -58,7 +54,7 @@ TEST_F(IR_ReferencedFunctionsTest, NoReferences) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedFunctions<Module> functions(mod);
     EXPECT_TRUE(functions.TransitiveReferences(foo).IsEmpty());
@@ -99,7 +95,7 @@ TEST_F(IR_ReferencedFunctionsTest, DirectUse) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedFunctions<Module> functions(mod);
     EXPECT_THAT(functions.TransitiveReferences(foo), UnorderedElementsAre(func_a, func_b));
@@ -162,7 +158,7 @@ TEST_F(IR_ReferencedFunctionsTest, DirectUse_MultipleFunctions) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedFunctions<Module> functions(mod);
     EXPECT_THAT(functions.TransitiveReferences(foo), UnorderedElementsAre(func_a, func_b));
@@ -248,7 +244,7 @@ TEST_F(IR_ReferencedFunctionsTest, DirectUse_NestedInControlFlow) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedFunctions<Module> functions(mod);
     EXPECT_THAT(functions.TransitiveReferences(foo),
@@ -315,7 +311,7 @@ TEST_F(IR_ReferencedFunctionsTest, IndirectUse) {
   }
 }
 )";
-    EXPECT_EQ(src, Disassemble());
+    EXPECT_EQ(src, str());
 
     ReferencedFunctions<Module> functions(mod);
     EXPECT_THAT(functions.TransitiveReferences(bar), UnorderedElementsAre(func_b));

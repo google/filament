@@ -44,6 +44,8 @@ TEST_P(GLExplicitExtensionsTests, Features) {
 
     // GL_KHR_texture_compression_astc_ldr
     EXPECT_EQ(device.HasFeature(wgpu::FeatureName::TextureCompressionASTC), false);
+    // GL_KHR_texture_compression_astc_sliced_3d
+    EXPECT_EQ(device.HasFeature(wgpu::FeatureName::TextureCompressionASTCSliced3D), false);
     // GL_AMD_gpu_shader_half_float
     EXPECT_EQ(device.HasFeature(wgpu::FeatureName::ShaderF16), false);
     // GL_EXT_float_blend

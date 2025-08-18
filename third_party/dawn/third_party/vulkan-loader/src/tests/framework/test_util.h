@@ -839,6 +839,8 @@ struct VulkanFunction {
     PFN_vkVoidFunction function = nullptr;
 };
 
+using VulkanUUID = std::array<uint8_t, VK_UUID_SIZE>;
+
 template <typename T, size_t U>
 bool check_permutation(std::initializer_list<const char*> expected, std::array<T, U> const& returned) {
     if (expected.size() != returned.size()) return false;

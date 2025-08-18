@@ -84,6 +84,10 @@ class Access final : public Castable<Access, OperandInstruction<3, 1>> {
         return operands_.Slice().Offset(kIndicesOperandOffset);
     }
 
+    /// Removes the last index from the access indices
+    /// @returns the last index value
+    Value* PopLastIndex() { return PopOperand(); }
+
     /// @returns the friendly name for the instruction
     std::string FriendlyName() const override { return "access"; }
 };

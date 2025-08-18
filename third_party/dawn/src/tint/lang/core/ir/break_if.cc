@@ -62,6 +62,13 @@ BreakIf::BreakIf(Id id,
 
 BreakIf::~BreakIf() = default;
 
+void BreakIf::Destroy() {
+    if (loop_) {
+        loop_->Body()->RemoveInboundSiblingBranch(this);
+    }
+    Instruction::Destroy();
+}
+
 BreakIf* BreakIf::Clone(CloneContext& ctx) {
     auto* loop = ctx.Remap(loop_);
     auto* cond = ctx.Remap(Condition());

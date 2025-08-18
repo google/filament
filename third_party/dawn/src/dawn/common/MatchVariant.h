@@ -30,53 +30,17 @@
 
 #include <variant>
 
+#include "absl/functional/overload.h"
+
 namespace dawn {
 
-// This is the `Overloaded` template in chromium/src/base/functional/Overloaded.h.
-// std::visit() needs to be called with a functor object, such as
-//
-//  struct Visitor {
-//    std::string operator()(const PackageA& source) {
-//      return "PackageA";
-//    }
-//
-//    std::string operator()(const PackageB& source) {
-//      return "PackageB";
-//    }
-//  };
-//
-//  std::variant<PackageA, PackageB> var = PackageA();
-//  return std::visit(Visitor(), var);
-//
-// `Overloaded` enables the above code to be written as:
-//
-//  std::visit(
-//     Overloaded{
-//         [](const PackageA& pack) { return "PackageA"; },
-//         [](const PackageB& pack) { return "PackageB"; },
-//     }, var);
-//
-// Note: Overloads must be implemented for all the variant options. Otherwise, there will be a
-// compilation error.
-//
-// This struct inherits operator() method from all its base classes. Introduces operator() method
-// from all its base classes into its definition.
-template <typename... Callables>
-struct Overloaded : Callables... {
-    using Callables::operator()...;
-};
-
-// Uses template argument deduction so that the `Overloaded` struct can be used without specifying
-// its template argument. This allows anonymous lambdas passed into the `Overloaded` constructor.
-template <typename... Callables>
-Overloaded(Callables...) -> Overloaded<Callables...>;
-
-// With this template we can simplify the call of std::visit(Overloaded{...}, variant).
+// With this template we can simplify the call of
+// std::visit(absl::Overload{...}, variant).
 template <typename Variant, typename... Callables>
 auto MatchVariant(const Variant& v, Callables... args) {
-    return std::visit(Overloaded{args...}, v);
+    return std::visit(absl::Overload{args...}, v);
 }
 
 }  // namespace dawn
 
-#endif
+#endif  // SRC_DAWN_COMMON_MATCHVARIANT_H_

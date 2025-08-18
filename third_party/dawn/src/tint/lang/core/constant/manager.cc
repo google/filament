@@ -31,6 +31,7 @@
 #include "src/tint/lang/core/constant/invalid.h"
 #include "src/tint/lang/core/constant/scalar.h"
 #include "src/tint/lang/core/constant/splat.h"
+#include "src/tint/lang/core/constant/string.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
 #include "src/tint/lang/core/type/array.h"
@@ -134,6 +135,10 @@ const Scalar<AInt>* Manager::Get(AInt value) {
     return Get<Scalar<AInt>>(types.AInt(), value);
 }
 
+const constant::String* Manager::Get(std::string_view value) {
+    return Get<String>(types.String(), value);
+}
+
 const Value* Manager::Zero(const core::type::Type* type) {
     return Switch(
         type,  //
@@ -175,6 +180,8 @@ const Value* Manager::Zero(const core::type::Type* type) {
         [&](const core::type::AbstractFloat*) { return Get(AFloat(0)); },  //
         [&](const core::type::I32*) { return Get(i32(0)); },               //
         [&](const core::type::U32*) { return Get(u32(0)); },               //
+        [&](const core::type::I8*) { return Get(i8(0)); },                 //
+        [&](const core::type::U8*) { return Get(u8(0)); },                 //
         [&](const core::type::U64*) { return Get(u64(0)); },               //
         [&](const core::type::F32*) { return Get(f32(0)); },               //
         [&](const core::type::F16*) { return Get(f16(0)); },               //

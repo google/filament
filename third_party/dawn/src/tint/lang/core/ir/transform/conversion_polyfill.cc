@@ -27,7 +27,7 @@
 
 #include "src/tint/lang/core/ir/transform/conversion_polyfill.h"
 
-#include <cmath>
+#include <cstdint>
 
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/module.h"
@@ -115,34 +115,21 @@ struct State {
             struct {
                 ir::Constant* low_limit_f = nullptr;
                 ir::Constant* high_limit_f = nullptr;
-                ir::Constant* low_limit_i = nullptr;
-                ir::Constant* high_limit_i = nullptr;
             } limits;
 
-            // Integer limits.
-            if (res_ty->IsSignedIntegerScalarOrVector()) {
-                limits.low_limit_i = b.MatchWidth(i32(INT32_MIN), res_ty);
-                limits.high_limit_i = b.MatchWidth(i32(INT32_MAX), res_ty);
-            } else {
-                limits.low_limit_i = b.MatchWidth(u32(0), res_ty);
-                limits.high_limit_i = b.MatchWidth(u32(UINT32_MAX), res_ty);
-            }
 
             // Largest integers representable in the source floating point format.
             if (src_el_ty->Is<type::F32>()) {
+                // These values are chosen specifically to enable f32 clamping.
+                // See https://github.com/gpuweb/gpuweb/issues/5043
                 if (res_ty->IsSignedIntegerScalarOrVector()) {
-                    // INT32_MIN is -(2^31), which is exactly representable as an f32.
-                    // INT32_MAX is (2^31 - 1), which is not exactly representable as an f32, so we
-                    // instead use the next highest integer value in the f32 domain.
-                    const float kMaxI32AsF32 = std::nexttowardf(0x1p+31f, 0.0L);
                     limits.low_limit_f = b.MatchWidth(f32(INT32_MIN), res_ty);
-                    limits.high_limit_f = b.MatchWidth(f32(kMaxI32AsF32), res_ty);
+                    limits.high_limit_f =
+                        b.MatchWidth(f32(tint::core::kMaxI32WhichIsAlsoF32), res_ty);
                 } else {
-                    // UINT32_MAX is (2^32 - 1), which is not exactly representable as an f32, so we
-                    // instead use the next highest integer value in the f32 domain.
-                    const float kMaxU32AsF32 = std::nexttowardf(0x1p+32f, 0.0L);
                     limits.low_limit_f = b.MatchWidth(f32(0), res_ty);
-                    limits.high_limit_f = b.MatchWidth(f32(kMaxU32AsF32), res_ty);
+                    limits.high_limit_f =
+                        b.MatchWidth(f32(tint::core::kMaxU32WhichIsAlsoF32), res_ty);
                 }
             } else if (src_el_ty->Is<type::F16>()) {
                 constexpr float MAX_F16 = 65504;
@@ -162,20 +149,11 @@ struct State {
             auto* value = b.FunctionParam("value", src_ty);
             func->SetParams({value});
             b.Append(func->Block(), [&] {
-                auto* bool_ty = ty.MatchWidth(ty.bool_(), res_ty);
-                auto* converted = b.Convert(res_ty, value);
+                auto* clamped = b.Call(src_ty, core::BuiltinFn::kClamp, value, limits.low_limit_f,
+                                       limits.high_limit_f);
+                auto* converted = b.Convert(res_ty, clamped);
 
-                // low = select(low_limit_i, i32(value), value >= low_limit_f)
-                auto* low_cond = b.GreaterThanEqual(bool_ty, value, limits.low_limit_f);
-                auto* select_low = b.Call(res_ty, core::BuiltinFn::kSelect, limits.low_limit_i,
-                                          converted, low_cond);
-
-                // result = select(high_limit_i, low, value <= high_limit_f)
-                auto* high_cond = b.LessThanEqual(bool_ty, value, limits.high_limit_f);
-                auto* select_high = b.Call(res_ty, core::BuiltinFn::kSelect, limits.high_limit_i,
-                                           select_low, high_cond);
-
-                b.Return(func, select_high->Result());
+                b.Return(func, converted->Result());
             });
             return func;
         });
@@ -189,7 +167,8 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ConversionPolyfill(Module& ir, const ConversionPolyfillConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.ConversionPolyfill");
+    auto result =
+        ValidateAndDumpIfNeeded(ir, "core.ConversionPolyfill", kConversionPolyfillCapabilities);
     if (result != Success) {
         return result;
     }

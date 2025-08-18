@@ -36,12 +36,12 @@ static inline StringRef toStringRef(bool B) {
 /// Interpret the given character \p C as a hexadecimal digit and return its
 /// value.
 ///
-/// If \p C is not a valid hex digit, -1U is returned.
+/// If \p C is not a valid hex digit, ~0U is returned.
 static inline unsigned hexDigitValue(char C) {
   if (C >= '0' && C <= '9') return C-'0';
   if (C >= 'a' && C <= 'f') return C-'a'+10U;
   if (C >= 'A' && C <= 'F') return C-'A'+10U;
-  return -1U;
+  return ~0U;
 }
 
 /// utohex_buffer - Emit the specified number into the buffer specified by
