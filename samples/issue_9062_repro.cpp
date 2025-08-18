@@ -166,6 +166,7 @@ Renderer::~Renderer() {
     this->engine->destroy(this->swap_chain);
     this->engine->destroy(this->filament_renderer);
     this->engine->destroy(&this->engine);
+    std::cout << "Destructed everything successfully." << std::endl;
 }
 
 void Renderer::add_mesh(const std::filesystem::path path_material, int mesh_grid_size_cols, int mesh_grid_size_rows) {
