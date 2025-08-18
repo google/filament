@@ -421,7 +421,6 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     mNativeWindow = nativeWindow;
-    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
     wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
