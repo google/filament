@@ -179,7 +179,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
     // Need to copy the set
     VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (oldLayout != newLayout || oldSet == VK_NULL_HANDLE) {
+    if (set->getHasStreamedTexture() || (oldLayout != newLayout || oldSet == VK_NULL_HANDLE)) {
         // Build a new descriptor set from the new layout
         VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
         auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;

@@ -188,6 +188,8 @@ public:
     void setHasStreamedTexture() { mHasStreamedTexture = true;
     }
 
+    bool getHasStreamedTexture()const { return mHasStreamedTexture; }
+
     void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
         mExternalSamplerVkSet = vkset;
         if (mOnRecycleExternalSamplerFn) {
