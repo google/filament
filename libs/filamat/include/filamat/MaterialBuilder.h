@@ -532,6 +532,9 @@ public:
     //! Enable / disable flipping of the Y coordinate of UV attributes, enabled by default.
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
+    //! Enable / disable the cheapest linear fog, disabled by default.
+    MaterialBuilder& linearFog(bool enabled) noexcept;
+
     //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
@@ -634,6 +637,12 @@ public:
 
     //! specify compute kernel group size
     MaterialBuilder& groupSize(filament::math::uint3 groupSize) noexcept;
+
+    /**
+     * Force Filament to use its default variant for depth passes. Useful if a material provides a
+     * custom vertex shader which can be skipped during depth-only passes.
+     */
+    MaterialBuilder& useDefaultDepthVariant() noexcept;
 
     /**
      * Build the material. If you are using the Filament engine with this library, you should use
@@ -948,6 +957,7 @@ private:
     bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;
+    bool mLinearFog = false;
 
     bool mMultiBounceAO = false;
     bool mMultiBounceAOSet = false;
@@ -968,6 +978,8 @@ private:
     filament::UserVariantFilterMask mVariantFilter = {};
 
     bool mNoSamplerValidation = false;
+
+    bool mUseDefaultDepthVariant = false;
 };
 
 } // namespace filamat

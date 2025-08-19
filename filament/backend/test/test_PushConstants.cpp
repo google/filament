@@ -105,6 +105,7 @@ void initPushConstants() {
 
 TEST_F(BackendTest, PushConstants) {
     SKIP_IF(Backend::OPENGL, "Push constants not supported on OpenGL");
+    SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
 
     initPushConstants();
 
@@ -178,9 +179,8 @@ TEST_F(BackendTest, PushConstants) {
 
         api.endRenderPass();
 
-        EXPECT_IMAGE(renderTarget, getExpectations(),
-                ScreenshotParams(params.viewport.width, params.viewport.height, "pushConstants",
-                        3575588741));
+        EXPECT_IMAGE(renderTarget, ScreenshotParams(params.viewport.width, params.viewport.height,
+                                           "pushConstants", 3575588741));
 
         api.commit(swapChain);
         api.endFrame(0);

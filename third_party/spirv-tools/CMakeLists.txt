@@ -240,6 +240,20 @@ endif()
 # Tests require Python3
 find_host_package(Python3 REQUIRED)
 
+# Check type annotations in Perl code. Assumes mypy.
+add_custom_target(spirv-tools-check-python-types
+	COMMAND mypy Table
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+set_target_properties(spirv-tools-check-python-types
+  PROPERTIES EXCLUDE_FROM_ALL ON)
+
+# Run Python unit tests
+add_custom_target(spirv-tools-check-python-tests
+	COMMAND Python3::Interpreter -m unittest discover -v -p "*test.py"
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
 # It appears they don't have objdump.

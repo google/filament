@@ -32,6 +32,7 @@ struct NumberType {
   // SPV_NUMBER_NONE means the type is unknown and is invalid to be used with
   // ParseAndEncode{|Integer|Floating}Number().
   spv_number_kind_t kind;
+  spv_fp_encoding_t encoding;
 };
 
 // Returns true if the type is a scalar integer type.
@@ -160,6 +161,14 @@ bool CheckRangeAndIfHexThenSignExtend(T value, const NumberType& type,
   return true;
 }
 
+template <typename T>
+struct IsHexFloat {
+  static const bool value = false;
+};
+template <typename T>
+struct IsHexFloat<HexFloat<T>> {
+  static const bool value = true;
+};
 // Parses a numeric value of a given type from the given text.  The number
 // should take up the entire string, and should be within bounds for the target
 // type. On success, returns true and populates the object referenced by
@@ -169,8 +178,10 @@ bool ParseNumber(const char* text, T* value_pointer) {
   // C++11 doesn't define std::istringstream(int8_t&), so calling this method
   // with a single-byte type leads to implementation-defined behaviour.
   // Similarly for uint8_t.
-  static_assert(sizeof(T) > 1,
-                "Single-byte types are not supported in this parse method");
+  // HexFloat<T> overloads the operator
+  static_assert(sizeof(T) > 1 || IsHexFloat<T>::value,
+                "Single-byte types other than HexFloat<> are not supported in "
+                "this parse method");
 
   if (!text) return false;
   std::istringstream text_stream(text);

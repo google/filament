@@ -46,8 +46,7 @@ class RedundancyEliminationPass : public LocalRedundancyEliminationPass {
   //
   // Returns true if at least one instruction is deleted.
   bool EliminateRedundanciesFrom(DominatorTreeNode* bb,
-                                 const ValueNumberTable& vnTable,
-                                 std::map<uint32_t, uint32_t> value_to_ids);
+                                 const ValueNumberTable& vnTable);
 };
 
 }  // namespace opt

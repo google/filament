@@ -17,6 +17,8 @@
 #include <bitset>
 #include <vector>
 
+#include "source/table2.h"
+
 namespace spvtools {
 namespace opt {
 
@@ -207,10 +209,10 @@ uint32_t ReplaceInvalidOpcodePass::GetSpecialConstant(uint32_t type_id) {
 }
 
 std::string ReplaceInvalidOpcodePass::BuildWarningMessage(spv::Op opcode) {
-  spv_opcode_desc opcode_info;
-  context()->grammar().lookupOpcode(opcode, &opcode_info);
+  const spvtools::InstructionDesc* opcode_desc = nullptr;
+  spvtools::LookupOpcode(opcode, &opcode_desc);
   std::string message = "Removing ";
-  message += opcode_info->name;
+  message += opcode_desc->name().data();
   message += " instruction because of incompatible execution model.";
   return message;
 }

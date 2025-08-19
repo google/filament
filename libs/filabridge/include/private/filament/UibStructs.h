@@ -177,6 +177,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float fogOneOverFarMinusNear;
     float fogNearOverFarMinusNear;
     std140::mat33 fogFromWorldMatrix;
+    math::float2 fogLinearParams; // { 1/(end-start), -start/(end-start) }
+    math::float2 fogReserved0;
 
     // --------------------------------------------------------------------------------------------
     // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -202,7 +204,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[40];
+    math::float4 reserved[39];
 };
 
 // 2 KiB == 128 float4s

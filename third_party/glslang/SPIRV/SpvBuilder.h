@@ -209,6 +209,8 @@ public:
     Id makeUintType(int width) { return makeIntegerType(width, false); }
     Id makeFloatType(int width);
     Id makeBFloat16Type();
+    Id makeFloatE5M2Type();
+    Id makeFloatE4M3Type();
     Id makeStructType(const std::vector<Id>& members, const char* name, bool const compilerGenerated = true);
     Id makeStructResultType(Id type0, Id type1);
     Id makeVectorType(Id component, int size);
@@ -223,6 +225,7 @@ public:
     Id makeCooperativeMatrixTypeNV(Id component, Id scope, Id rows, Id cols);
     Id makeCooperativeMatrixTypeWithSameShape(Id component, Id otherType);
     Id makeCooperativeVectorTypeNV(Id componentType, Id components);
+    Id makeTensorTypeARM(Id elementType, Id rank);
     Id makeGenericType(spv::Op opcode, std::vector<spv::IdImmediate>& operands);
 
     // SPIR-V NonSemantic Shader DebugInfo Instructions
@@ -320,6 +323,7 @@ public:
     }
     bool isTensorViewType(Id typeId) const { return getTypeClass(typeId) == Op::OpTypeTensorViewNV; }
     bool isCooperativeVectorType(Id typeId) const { return getTypeClass(typeId) == Op::OpTypeCooperativeVectorNV; }
+    bool isTensorTypeARM(Id typeId)    const { return getTypeClass(typeId) == Op::OpTypeTensorARM; }
     bool isAggregateType(Id typeId)    const
         { return isArrayType(typeId) || isStructType(typeId) || isCooperativeMatrixType(typeId); }
     bool isImageType(Id typeId)        const { return getTypeClass(typeId) == Op::OpTypeImage; }
@@ -414,6 +418,8 @@ public:
     Id makeDoubleConstant(double d, bool specConstant = false);
     Id makeFloat16Constant(float f16, bool specConstant = false);
     Id makeBFloat16Constant(float bf16, bool specConstant = false);
+    Id makeFloatE5M2Constant(float fe5m2, bool specConstant = false);
+    Id makeFloatE4M3Constant(float fe4m3, bool specConstant = false);
     Id makeFpConstant(Id type, double d, bool specConstant = false);
 
     Id importNonSemanticShaderDebugInfoInstructions();

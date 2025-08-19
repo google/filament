@@ -59,7 +59,7 @@ private:
     bool mExitRequested{ false };
     utils::Mutex mQueueLock;
     utils::Condition mQueueCondition;
-    std::array<Queue, 2> mQueues;
+    std::array<Queue, 3> mQueues;
     // lock must be held for methods below
     std::pair<Queue&, Queue::iterator> find(program_token_t const& token);
 };
@@ -67,4 +67,3 @@ private:
 } // namespace filament::backend
 
 #endif  // TNT_FILAMENT_BACKEND_COMPILERTHREADPOOL_H
-

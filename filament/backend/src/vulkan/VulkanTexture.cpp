@@ -117,12 +117,14 @@ inline VulkanLayout getDefaultLayoutImpl(TextureUsage usage) {
     if (any(usage & TextureUsage::DEPTH_ATTACHMENT)) {
         if (any(usage & TextureUsage::SAMPLEABLE)) {
             return VulkanLayout::DEPTH_SAMPLER;
-        } else {
-            return VulkanLayout::DEPTH_ATTACHMENT;
         }
+        return VulkanLayout::DEPTH_ATTACHMENT;
     }
 
     if (any(usage & TextureUsage::COLOR_ATTACHMENT)) {
+        if (any(usage & TextureUsage::SAMPLEABLE)) {
+            return VulkanLayout::FRAG_READ;
+        }
         return VulkanLayout::COLOR_ATTACHMENT;
     }
     // Finally, the layout for an immutable texture is optimal read-only.
@@ -160,6 +162,10 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
     }
     if (any(tusage & TextureUsage::BLIT_DST)) {
         usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (any(tusage & TextureUsage::GEN_MIPMAPPABLE)) {
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     // Determine if we can use the transient usage flag combined with lazily allocated memory.

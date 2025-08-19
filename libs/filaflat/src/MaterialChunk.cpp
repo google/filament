@@ -54,6 +54,10 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
     }
 
     auto [start, end] = mContainer.getChunkRange(materialTag);
+    if (start == end) {
+        return false;
+    }
+
     Unflattener unflattener(start, end);
 
     mUnflattener = unflattener;
@@ -140,10 +144,9 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
         }
         const auto& content = dictionary[lineIndex];
 
-        // Replace null with newline.
+        // remove the terminating null character.
         memcpy(&shaderContent[cursor], content.data(), content.size() - 1);
         cursor += content.size() - 1;
-        shaderContent[cursor++] = '\n';
     }
 
     // Write the terminating null character.

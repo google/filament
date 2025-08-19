@@ -374,7 +374,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        EXPECT_IMAGE(defaultRenderTarget,
                 ScreenshotParams(kTexSize, kTexSize, t.name, expectedHash));
 
         api.commit(swapChain);
@@ -463,7 +463,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     api.draw2(0, 3, 1);
     api.endRenderPass();
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+    EXPECT_IMAGE(defaultRenderTarget,
             ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
 
     api.commit(swapChain);
@@ -539,7 +539,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
         api.endRenderPass();
     }
 
-    EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+    EXPECT_IMAGE(defaultRenderTarget,
             ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
 
     api.commit(swapChain);
@@ -625,7 +625,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         api.draw2(0, 3, 1);
         api.endRenderPass();
 
-        EXPECT_IMAGE(defaultRenderTarget, getExpectations(),
+        EXPECT_IMAGE(defaultRenderTarget,
                 ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
     }
 

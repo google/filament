@@ -998,6 +998,11 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 }
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
+
+    // always add the CanonicalizeIds Pass
+    optimizer->RegisterPass(CreateCanonicalizeIdsPass());
+
+    // run optimizer
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
@@ -1041,12 +1046,6 @@ void GLSLPostProcessor::fixupClipDistance(
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
 
-// CreateInlineExhaustivePass() expects CreateMergeReturnPass() to be run beforehand
-// (Throwing many warnings if this is not the case), but we don't consistently do so for the above
-// reasons. While running it alone may have some value, we will disable it for the new WebGPU backend
-// while minimizing other changes.
-
-
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
@@ -1059,7 +1058,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config c
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1103,8 +1102,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    //  Disable for WebGPU, see comment above registerPerformancePasses()
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));
