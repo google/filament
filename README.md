@@ -18,7 +18,7 @@ Filament release archives contains host-side tools that are required to generate
 Make sure you always use tools from the same release as the runtime library. This is particularly
 important for `matc` (material compiler).
 
-If you'd rather build Filament yourself, please refer to our [build manual](BUILDING.md).
+If you'd rather build Filament yourself, please refer to our [build manual](/BUILDING.md).
 
 ### Android
 
@@ -222,7 +222,7 @@ MaterialInstance* materialInstance = material->createInstance();
 ```
 
 To learn more about materials and `matc`, please refer to the
-[materials documentation](./docs/Materials.md.html).
+[materials documentation](https://google.github.io/filament/Materials.html).
 
 To render, simply pass the `View` to the `Renderer`:
 
@@ -240,7 +240,7 @@ in the `samples/` directory. These samples are all based on `libs/filamentapp/` 
 code that creates a native window with SDL2 and initializes the Filament engine, renderer and views.
 
 For more information on how to prepare environment maps for image-based lighting please refer to
-[BUILDING.md](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples).
+[BUILDING.md](/BUILDING.md#running-the-native-samples).
 
 ### Android
 
@@ -272,7 +272,7 @@ To get started you can use the textures and environment maps found respectively 
 refer to their respective `URL.txt` files to know more about the original authors.
 
 Environments must be pre-processed using
-[`cmgen`](https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples) or
+[`cmgen`](/BUILDING.md#running-the-native-samples) or
 using the `libiblprefilter` library.
 
 ## How to make contributions
