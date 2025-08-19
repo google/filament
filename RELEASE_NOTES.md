@@ -7,6 +7,11 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.64.1
+
+- Update CMake minimum version to 3.22.1
+- material: Add a material parameter to control shadow far attenuation (b/436680157)
+
 ## v1.64.0
 
 - engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
