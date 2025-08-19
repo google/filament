@@ -677,11 +677,11 @@ wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerM
             .texture = {
                 .sampleType = depthSource
                                       ? wgpu::TextureSampleType::Depth
-                                      : wgpu::TextureSampleType::Float, // only F32 scalar sample
-                                                                        // type supported for now
-                                                                        // (aside from depth)
-                                                                        // see assumptions listed
-                                                                        // in blit function
+                                      : (multisampledSource
+                                                ? wgpu::TextureSampleType::UnfilterableFloat
+                                                : wgpu::TextureSampleType::Float), // only F32 scalar sample
+                                                                                   // type supported for now
+                                                                                   // (aside from depth)
                 .viewDimension = sourceDimension,
                 .multisampled = multisampledSource,
             },
@@ -758,7 +758,7 @@ wgpu::ShaderModule WebGPUBlitter::createShaderModule(
         }
     } else {
         if (multisampledSource) {
-            textureType = "texture_multisampled_2d";
+            textureType = "texture_multisampled_2d<f32>";
         } else {
             if (sourceDimension == wgpu::TextureViewDimension::e3D) {
                 textureType = "texture_3d<f32>";

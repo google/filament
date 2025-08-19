@@ -1559,7 +1559,87 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> destinationRenderTargetHandle, const Viewport destinationViewport,
         Handle<HwRenderTarget> sourceRenderTargetHandle, const Viewport sourceViewport,
         const SamplerMagFilter filter) {
-    PANIC_PRECONDITION("WebGPUDriver::blitDEPRECATED not supported");
+
+    auto const sourceTarget{ handleCast<WebGPURenderTarget>(sourceRenderTargetHandle) };
+    auto const destinationTarget{ handleCast<WebGPURenderTarget>(destinationRenderTargetHandle) };
+    assert_invariant(sourceTarget && destinationTarget);
+
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
+
+    FILAMENT_CHECK_PRECONDITION(sourceViewport.left >= 0 && sourceViewport.bottom >= 0 &&
+                                destinationViewport.left >= 0 && destinationViewport.bottom >= 0)
+            << "Source and destination viewports must be positive.";
+
+    // We always blit from/to the COLOR0 attachment.
+    auto sourceAttachment {sourceTarget->getColorAttachmentInfos()[0]};
+    Handle<HwTexture> sourceTextureHandle{ sourceAttachment.handle };
+    auto destinationAttachment {destinationTarget->getColorAttachmentInfos()[0]};
+    Handle<HwTexture> destinationTextureHandle{
+        destinationAttachment.handle
+    };
+
+    if (UTILS_UNLIKELY(!sourceTextureHandle || !destinationTextureHandle)) {
+        FWGPU_LOGE << "blitDEPRECATED could not find a valid color attachment to blit.";
+        return;
+    }
+
+    // WebGPU's texture coordinates are top-left, while Filament's are bottom-left.
+    // We need to flip the y-coordinate for both source and destination.
+    auto const sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    auto const destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+
+    const uint32_t sourceTextureHeight{ sourceTexture->height };
+    const uint32_t flippedSourceY{ sourceTextureHeight - sourceViewport.bottom -
+                                   sourceViewport.height };
+
+    const uint32_t destinationTextureHeight{ destinationTexture->height };
+    const uint32_t flippedDestinationY{ destinationTextureHeight - destinationViewport.bottom -
+                                        destinationViewport.height };
+
+    const wgpu::Origin2D sourceOrigin{ static_cast<uint32_t>(sourceViewport.left), flippedSourceY };
+    const wgpu::Origin2D destinationOrigin{ static_cast<uint32_t>(destinationViewport.left),
+        flippedDestinationY };
+
+    const wgpu::Extent2D sourceSize{ static_cast<uint32_t>(sourceViewport.width),
+        static_cast<uint32_t>(sourceViewport.height) };
+    const wgpu::Extent2D destinationSize{ static_cast<uint32_t>(destinationViewport.width),
+        static_cast<uint32_t>(destinationViewport.height) };
+    
+    bool reusedCommandEncoder{ true };
+    if (mCommandEncoder) {
+        flush();
+    } else {
+        reusedCommandEncoder = false;
+        const wgpu::CommandEncoderDescriptor desc{ .label = "blit_deprecated_command" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&desc);
+    }
+
+    const WebGPUBlitter::BlitArgs blitArgs{
+        .source = { .texture = sourceTexture->getTexture(),
+                    .aspect = sourceTexture->getAspect(),
+                    .origin = sourceOrigin,
+                    .extent = sourceSize,
+                    .mipLevel = sourceAttachment.level,
+                    .layerOrDepth = sourceAttachment.layer,
+        },
+        .destination = { .texture = destinationTexture->getTexture(),
+                         .aspect = destinationTexture->getAspect(),
+                         .origin = destinationOrigin,
+                         .extent = destinationSize,
+                         .mipLevel = destinationAttachment.level,
+                         .layerOrDepth = destinationAttachment.layer,
+        },
+        .filter = filter,
+    };
+    mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
+
+    if (!reusedCommandEncoder) {
+        const wgpu::CommandBufferDescriptor desc{ .label = "blit_deprecated_command_buffer" };
+        const wgpu::CommandBuffer blitCommand{ mCommandEncoder.Finish(&desc) };
+        mQueue.Submit(1, &blitCommand);
+        mCommandEncoder = nullptr;
+    }
 }
 
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
