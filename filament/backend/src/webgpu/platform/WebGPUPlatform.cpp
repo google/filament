@@ -67,9 +67,11 @@ constexpr std::array REQUIRED_FEATURES = {
 };
 
 constexpr std::array OPTIONAL_FEATURES = {
+    wgpu::FeatureName::CoreFeaturesAndLimits,
     wgpu::FeatureName::DepthClipControl,
     wgpu::FeatureName::Depth32FloatStencil8,
-    wgpu::FeatureName::CoreFeaturesAndLimits };
+    wgpu::FeatureName::TextureComponentSwizzle,
+};
 
 enum class LimitToValidate : uint8_t {
     begin = 0,// needs to be first for iterating through all possible values in the enum
