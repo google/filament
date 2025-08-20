@@ -198,81 +198,21 @@ namespace filament::backend {
         case TextureFormat::RGB_BPTC_SIGNED_FLOAT:   return wgpu::TextureFormat::BC6HRGBFloat;
         case TextureFormat::RGBA_BPTC_UNORM:         return wgpu::TextureFormat::BC7RGBAUnorm;
         case TextureFormat::SRGB_ALPHA_BPTC_UNORM:   return wgpu::TextureFormat::BC7RGBAUnormSrgb;
-        case TextureFormat::RGB565:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and discard the alpha and lower precision.
-            FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGB9_E5: return wgpu::TextureFormat::RGB9E5Ufloat;
-        case TextureFormat::RGB5_A1:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and handle the packing/unpacking in shaders.
-            FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGBA4:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and handle the packing/unpacking in shaders.
-            FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGB8:
-            FWGPU_LOGW << "Requested Filament texture format RGB8 but getting "
-                          "wgpu::TextureFormat::RGBA8Unorm (no direct sRGB equivalent in wgpu "
-                          "without alpha)";
-            return wgpu::TextureFormat::RGBA8Unorm;
-        case TextureFormat::SRGB8:
-            FWGPU_LOGW << "Requested Filament texture format SRGB8 but getting "
-                          "wgpu::TextureFormat::RGBA8UnormSrgb (no direct sRGB equivalent in wgpu "
-                          "without alpha)";
-            return wgpu::TextureFormat::RGBA8UnormSrgb;
-        case TextureFormat::RGB8_SNORM:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB8_SNORM but getting "
-                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Snorm;
-        case TextureFormat::RGB8UI:
-            FWGPU_LOGW << "Requested Filament texture format RGB8UI but getting "
-                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Uint;
-        case TextureFormat::RGB8I:
-            FWGPU_LOGW << "Requested Filament texture format RGB8I but getting "
-                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Sint;
+        case TextureFormat::RGB9_E5:                 return wgpu::TextureFormat::RGB9E5Ufloat;
+        case TextureFormat::RGB8:                    return wgpu::TextureFormat::RGBA8Unorm;
+        case TextureFormat::SRGB8:                   return wgpu::TextureFormat::RGBA8UnormSrgb;
+        case TextureFormat::RGB8_SNORM:              return wgpu::TextureFormat::RGBA8Snorm;
+        case TextureFormat::RGB8UI:                  return wgpu::TextureFormat::RGBA8Uint;
+        case TextureFormat::RGB8I:                   return wgpu::TextureFormat::RGBA8Sint;
         case TextureFormat::R11F_G11F_B10F:          return wgpu::TextureFormat::RG11B10Ufloat;
         case TextureFormat::UNUSED:                  return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB10_A2:                return wgpu::TextureFormat::RGB10A2Unorm;
-        case TextureFormat::RGB16F:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16F but getting "
-                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Float;
-        case TextureFormat::RGB16UI:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16UI but getting "
-                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Uint;
-        case TextureFormat::RGB16I:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16I but getting "
-                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Sint;
-        case TextureFormat::RGB32F:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32F but getting "
-                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Float;
-        case TextureFormat::RGB32UI:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32UI but getting "
-                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Uint;
-        case TextureFormat::RGB32I:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32I but getting "
-                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Sint;
+        case TextureFormat::RGB16F:                  return wgpu::TextureFormat::RGBA16Float;
+        case TextureFormat::RGB16UI:                 return wgpu::TextureFormat::RGBA16Uint;
+        case TextureFormat::RGB16I:                  return wgpu::TextureFormat::RGBA16Sint;
+        case TextureFormat::RGB32F:                  return wgpu::TextureFormat::RGBA32Float;
+        case TextureFormat::RGB32UI:                 return wgpu::TextureFormat::RGBA32Uint;
+        case TextureFormat::RGB32I:                  return wgpu::TextureFormat::RGBA32Sint;
         case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT1_RGBA:               return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT3_RGBA:               return wgpu::TextureFormat::BC2RGBAUnorm;
@@ -281,6 +221,20 @@ namespace filament::backend {
         case TextureFormat::DXT1_SRGBA:              return wgpu::TextureFormat::BC1RGBAUnormSrgb;
         case TextureFormat::DXT3_SRGBA:              return wgpu::TextureFormat::BC2RGBAUnormSrgb;
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
+        // No direct mapping in wgpu. Could potentially map to RGBA8Unorm and handle the
+        // packing/unpacking in shaders.
+        case TextureFormat::RGB565:
+            FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
+        case TextureFormat::RGB5_A1:
+            FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
+        case TextureFormat::RGBA4:
+            FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
     }
 }
 
