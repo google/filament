@@ -181,7 +181,7 @@ important for <code>matc</code> (material compiler).</p>
 }
 
 dependencies {
-    implementation 'com.google.android.filament:filament-android:1.63.1'
+    implementation 'com.google.android.filament:filament-android:1.64.0'
 }
 </code></pre>
 <p>Here are all the libraries available in the group <code>com.google.android.filament</code>:</p>
@@ -196,18 +196,18 @@ dependencies {
 </div>
 <h3 id="ios"><a class="header" href="#ios">iOS</a></h3>
 <p>iOS projects can use CocoaPods to install the latest release:</p>
-<pre><code class="language-shell">pod 'Filament', '~&gt; 1.63.1'
+<pre><code class="language-shell">pod 'Filament', '~&gt; 1.64.0'
 </code></pre>
 <h2 id="documentation"><a class="header" href="#documentation">Documentation</a></h2>
 <ul>
-<li><a href="https://google.github.io/filament/Filament.html">Filament</a>, an in-depth explanation of
+<li><a href="../main/filament.html">Filament</a>, an in-depth explanation of
 real-time physically based rendering, the graphics capabilities and implementation of Filament.
 This document explains the math and reasoning behind most of our decisions. This document is a
 good introduction to PBR for graphics programmers.</li>
-<li><a href="https://google.github.io/filament/Materials.html">Materials</a>, the full reference
+<li><a href="../main/materials.html">Materials</a>, the full reference
 documentation for our material system. This document explains our different material models, how
 to use the material compiler <code>matc</code> and how to write custom materials.</li>
-<li><a href="https://google.github.io/filament/notes/material_properties.html">Material Properties</a>, a reference
+<li><a href="../notes/material_properties.html">Material Properties</a>, a reference
 sheet for the standard material model.</li>
 </ul>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
@@ -395,7 +395,7 @@ by <code>matc</code>:</p>
 MaterialInstance* materialInstance = material-&gt;createInstance();
 </code></pre>
 <p>To learn more about materials and <code>matc</code>, please refer to the
-<a href="./docs/Materials.html">materials documentation</a>.</p>
+<a href="../main/materials.html">materials documentation</a>.</p>
 <p>To render, simply pass the <code>View</code> to the <code>Renderer</code>:</p>
 <pre><code class="language-c++">// beginFrame() returns false if we need to skip a frame
 if (renderer-&gt;beginFrame(swapChain)) {
@@ -408,7 +408,7 @@ if (renderer-&gt;beginFrame(swapChain)) {
 in the <code>samples/</code> directory. These samples are all based on <code>libs/filamentapp/</code> which contains the
 code that creates a native window with SDL2 and initializes the Filament engine, renderer and views.</p>
 <p>For more information on how to prepare environment maps for image-based lighting please refer to
-<a href="https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples">BUILDING.md</a>.</p>
+<a href="building.html#running-the-native-samples">BUILDING.md</a>.</p>
 <h3 id="android-1"><a class="header" href="#android-1">Android</a></h3>
 <p>See <code>android/samples</code> for examples of how to use Filament on Android.</p>
 <p>You must always first initialize Filament by calling <code>Filament.init()</code>.</p>
@@ -430,7 +430,7 @@ OpenGL ES.</p>
 <code>third_party/textures</code> and <code>third_party/environments</code>. These assets are under CC0 license. Please
 refer to their respective <code>URL.txt</code> files to know more about the original authors.</p>
 <p>Environments must be pre-processed using
-<a href="https://github.com/google/filament/blob/main/BUILDING.md#running-the-native-samples"><code>cmgen</code></a> or
+<a href="building.html#running-the-native-samples"><code>cmgen</code></a> or
 using the <code>libiblprefilter</code> library.</p>
 <h2 id="how-to-make-contributions"><a class="header" href="#how-to-make-contributions">How to make contributions</a></h2>
 <p>Please read and follow the steps in <a href="contributing.html">CONTRIBUTING.md</a>. Make sure you are
@@ -513,7 +513,7 @@ and tools.</p>
 <li><code>web</code>:                      JavaScript bindings, documentation, and samples</li>
 </ul>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
-<p>Please see <a href="/LICENSE">LICENSE</a>.</p>
+<p>Please see <a href="https://github.com/google/filament/blob/main/LICENSE">LICENSE</a>.</p>
 <h2 id="disclaimer"><a class="header" href="#disclaimer">Disclaimer</a></h2>
 <p>This is not an officially supported Google product.</p>
 
