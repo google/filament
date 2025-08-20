@@ -24,6 +24,10 @@ namespace filament::backend {
 class WebGPUVertexBuffer;
 class WebGPUIndexBuffer;
 
+/**
+ * A WebGPU implementation of the HwRenderPrimitive.
+ * This struct holds the vertex and index buffers that define a renderable primitive.
+ */
 struct WebGPURenderPrimitive : public HwRenderPrimitive {
     WebGPUVertexBuffer* vertexBuffer = nullptr;
     WebGPUIndexBuffer* indexBuffer = nullptr;

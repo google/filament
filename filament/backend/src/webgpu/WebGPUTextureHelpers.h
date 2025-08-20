@@ -534,6 +534,22 @@ namespace filament::backend {
     }
 }
 
+/**
+ * Todo: should this take into account sRGB/linear when determining if conversion is necessary?
+ *       For instance, if the output format is the same as the input, except the output is sRGB
+ *       do we really need to do a conversion? If the answer is no, we should do that check here
+ *       and return conversionNecessary false in that case.
+ *       However, doing a straight-forward comparison is the safest most conservative thing to do
+ *       for functional correctness and NOT doing a conversion in such cases could be considered
+ *       an optimization. Thus, consider the optimization when we have better test coverage to
+ *       experiment with such a refactor.
+ * @return True if theres a format mismatch
+ */
+[[nodiscard]] constexpr bool conversionNecessary(const wgpu::TextureFormat source,
+        const wgpu::TextureFormat destination, const PixelDataType pixelDataType) {
+    return source != destination && pixelDataType != PixelDataType::COMPRESSED;
+}
+
 } // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_WEBGPUTEXTUREHELPERS_H

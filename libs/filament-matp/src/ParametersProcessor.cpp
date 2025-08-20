@@ -1190,6 +1190,11 @@ static bool processLinearFog(MaterialBuilder& builder, const JsonishValue& value
     return true;
 }
 
+static bool processShadowFarAttenuation(MaterialBuilder& builder, const JsonishValue& value) {
+    builder.shadowFarAttenuation(value.toJsonBool()->getBool());
+    return true;
+}
+
 static bool processMultiBounceAO(MaterialBuilder& builder, const JsonishValue& value) {
     builder.multiBounceAmbientOcclusion(value.toJsonBool()->getBool());
     return true;
@@ -1411,6 +1416,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["stereoscopicType"]              = { &processStereoscopicType, Type::STRING };
     mParameters["useDefaultDepthVariant"]        = { &processUseDefaultDepthVariant, Type::BOOL };
     mParameters["linearFog"]                     = { &processLinearFog, Type::BOOL };
+    mParameters["shadowFarAttenuation"]          = { &processShadowFarAttenuation, Type::BOOL };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

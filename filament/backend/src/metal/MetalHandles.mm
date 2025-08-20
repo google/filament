@@ -118,6 +118,10 @@ MetalSwapChain::MetalSwapChain(
       layerDrawableMutex(std::make_shared<std::mutex>()),
       type(SwapChainType::CAMETALLAYER) {
 
+    FILAMENT_CHECK_PRECONDITION([nativeWindow isKindOfClass:[CAMetalLayer class]])
+            << "nativeWindow pointer of class "
+            << [NSStringFromClass([nativeWindow class]) UTF8String] << " is not a CAMetalLayer";
+
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         LOG(WARNING) << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, but the "
                         "CAMetaLayer("

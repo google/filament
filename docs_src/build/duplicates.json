@@ -2,9 +2,14 @@
     "README.md": {
         "dest": "dup/intro.md",
         "link_transforms": {
-            "BUILDING.md": "building.md",
+            "/BUILDING.md#running-the-native-samples": "building.md#running-the-native-samples",
+            "/BUILDING.md": "building.md",
             "/CONTRIBUTING.md": "contributing.md",
             "/CODE_STYLE.md": "code_style.md",
+            "/LICENSE": "https://github.com/google/filament/blob/main/LICENSE",
+            "https://google.github.io/filament/Filament.html": "../main/filament.md",
+            "https://google.github.io/filament/Materials.html": "../main/materials.md",
+            "https://google.github.io/filament/notes/material_properties.html": "../notes/material_properties.md",
             "docs/images/samples": "../images/samples"
         }
     },

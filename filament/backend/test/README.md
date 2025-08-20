@@ -19,6 +19,8 @@ code. When cmake is run it will copy this directory to the build output creating
 The unit tests will then write their resulting images into `images/actual_images` in order to make
 the tests easier to debug.
 
+If an image comparison test fails, it writes a diff image to `images/diff_images` where each pixel of the diff is white (255,255,255) if the comparison for the corresponding pixel succeeds and black (0,0,0) of the comparison for the corresponding pixel fails.
+
 ### Python utility for updating golden images and comparing results
 
 Inside the unit test source code directory there is a python script called

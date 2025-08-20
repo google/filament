@@ -27,6 +27,11 @@
 
 namespace filament::backend {
 
+/**
+ * A WebGPU implementation of the HwDescriptorSetLayout.
+ * This class defines the layout of a descriptor set, which specifies the types and arrangement
+ * of resources that can be bound to a pipeline.
+ */
 class WebGPUDescriptorSetLayout final : public HwDescriptorSetLayout {
 public:
     struct BindGroupEntryInfo final {

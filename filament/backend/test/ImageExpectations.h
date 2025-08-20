@@ -58,6 +58,9 @@ public:
     static std::filesystem::path expectedDirectoryPath();
     std::string expectedFileName() const;
     std::filesystem::path expectedFilePath() const;
+    static std::filesystem::path diffDirectoryPath();
+    std::string diffFileName() const;
+    std::filesystem::path diffFilePath() const;
     const std::string filePrefix() const;
     int allowedPixelDeviations() const;
     int pixelMatchThreshold() const;

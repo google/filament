@@ -24,6 +24,7 @@
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -47,8 +48,12 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+
 /**
- * WebGPU backend (driver) implementation
+ * Implements the private backend driver API for WebGPU specifically (that API is essentially
+ * expressed in private/backend/DriverAPI.inc)
+ *
+ * It manages all the WebGPU resources necessary to accomplish this.
  */
 class WebGPUDriver final : public DriverBase {
 public:
@@ -64,8 +69,8 @@ private:
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
 
-    // the platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
-    // handled in the WebGPUPlatform
+    // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
+    // handled in the WebGPUPlatform.
     WebGPUPlatform& mPlatform;
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
@@ -86,6 +91,7 @@ private:
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
     WebGPUBlitter mBlitter;
+    webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
