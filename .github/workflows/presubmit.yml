@@ -122,9 +122,12 @@ jobs:
         uses: ./.github/actions/get-commit-msg
       - uses: ./.github/actions/mac-prereq
       - uses: ./.github/actions/get-mesa
+      - uses: ./.github/actions/get-vulkan-sdk
       - name: Prerequisites
         run: |
           pip install tifffile numpy
+          # Must have at least clang-16 for a webgpu/dawn build.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
         shell: bash
       - name: Render and compare
         id: render_compare
