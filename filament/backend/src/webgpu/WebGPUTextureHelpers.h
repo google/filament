@@ -560,7 +560,7 @@ namespace filament::backend {
  * @param deviceSupportsTransientAttachments if the device itself supports Render Attachments
  * @return The appropriate texture usage flags for the underlying texture
  */
-[[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
+[[nodiscard]] constexpr wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
         const uint8_t samples, const bool needsComputeStorageSupport,
         const bool needsRenderAttachmentSupport, const bool deviceSupportsTransientAttachments) {
     wgpu::TextureUsage retUsage{ wgpu::TextureUsage::None };
