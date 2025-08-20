@@ -49,12 +49,17 @@ class ImGuiHelper;
 class IBL;
 class MeshAssimp;
 
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 // For customizing the vulkan backend
 namespace filament::backend {
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 class VulkanPlatform;
-}
 #endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+class WebGPUPlatform;
+#endif
+
+}
 
 class FilamentApp {
 public:
@@ -261,6 +266,11 @@ private:
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;
 #endif
+
+#if defined(FILAMENT_SUPPORTS_WEBGPU)
+    filament::backend::WebGPUPlatform* mWebGPUPlatform = nullptr;
+#endif
+
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

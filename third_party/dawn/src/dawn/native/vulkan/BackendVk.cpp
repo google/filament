@@ -545,12 +545,6 @@ std::vector<Ref<PhysicalDeviceBase>> Backend::DiscoverPhysicalDevices(
     std::vector<Ref<PhysicalDeviceBase>> physicalDevices;
     InstanceBase* instance = GetInstance();
     for (ICD icd : kICDs) {
-#if DAWN_PLATFORM_IS(MACOS)
-        // On Mac, we don't expect non-Swiftshader Vulkan to be available.
-        if (icd == ICD::None) {
-            continue;
-        }
-#endif  // DAWN_PLATFORM_IS(MACOS)
         if (options->forceFallbackAdapter && icd != ICD::SwiftShader) {
             continue;
         }
