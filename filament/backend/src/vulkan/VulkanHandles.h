@@ -185,7 +185,7 @@ public:
         return mExternalSamplerVkSet;
     }
 
-    void setHasStreamedTexture() { mHasStreamedTexture = true;
+    void setHasStreamedTexture(bool does) { mHasStreamedTexture = does;
     }
 
     bool getHasStreamedTexture()const { return mHasStreamedTexture; }

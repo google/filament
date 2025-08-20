@@ -455,9 +455,11 @@ void VulkanDriver::updateDescriptorSetTexture(
     if (mExternalImageManager.isExternallySampledTexture(texture)) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
+        set->setHasStreamedTexture(false);
     } else if (mExternalImageManager.isStreamedTexture(texture)) {
         mExternalImageManager.bindStream(set, binding, texture->getStream(), params);
         mAppState.hasBoundExternalImages = true;// still set to true because will be true
+        set->setHasStreamedTexture(true);
     } else {
         VulkanSamplerCache::Params cacheParams = {
             .sampler = params,
@@ -465,6 +467,7 @@ void VulkanDriver::updateDescriptorSetTexture(
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
         mExternalImageManager.clearTextureBinding(set, binding);
+        set->setHasStreamedTexture(false);
     }
 }
 

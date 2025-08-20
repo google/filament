@@ -91,7 +91,7 @@ VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
 void VulkanExternalImageManager::terminate() {
     mSetBindings.clear();
-    mSetSreamBindings.clear();
+    mSetStreamBindings.clear();
     mImages.clear();
 }
 
@@ -268,17 +268,22 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
 void VulkanExternalImageManager::bindStream(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanStream> stream,
         SamplerParams samplerParams) {
-    mSetSreamBindings.push_back({ bindingPoint, stream, set, samplerParams });
-    set->setHasStreamedTexture();
+    mSetStreamBindings.push_back({ bindingPoint, stream, set, samplerParams });
 }
 
 void VulkanExternalImageManager::bindStreamFrame(fvkmemory::resource_ptr<VulkanStream> stream,
         fvkmemory::resource_ptr<VulkanTexture> frame){
-    auto it = std::find_if(mSetSreamBindings.begin(), mSetSreamBindings.end(),
-            [&](const auto& slot) { return slot.stream == stream; });
-    // We should have had this image already bound as a pseudo binding
-    assert(it != mSetSreamBindings.end());
-    bindExternallySampledTexture(it->set, it->binding, frame, it->samplerParams);
+    auto it = std::find_if(mSetStreamBindings.begin(), mSetStreamBindings.end(),
+            [&](auto const& streamData) { return streamData.stream == stream; });
+    // We should have had this stream already through mSetStreamBindings
+    assert(it != mSetStreamBindings.end());
+
+    // If we do not have this image yet, add it
+    if (std::find_if(mSetBindings.begin(), mSetBindings.end(), [&](auto const& imageData) {
+            return imageData.image == frame;
+        }) == mSetBindings.end()) {
+        mSetBindings.push_back({ it->binding, frame, it->set, it->samplerParams });
+    }
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(

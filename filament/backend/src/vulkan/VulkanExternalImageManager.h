@@ -122,12 +122,11 @@ private:
         fvkmemory::resource_ptr<VulkanStream> stream;
         fvkmemory::resource_ptr<VulkanDescriptorSet> set;
         SamplerParams samplerParams;
-        bool bound = false;
     };
 
     // Use vectors instead of hash maps because we only expect small number of entries.
     std::vector<SetBindingInfo> mSetBindings;
-    std::vector<SetStreamBindingInfo> mSetSreamBindings;
+    std::vector<SetStreamBindingInfo> mSetStreamBindings;
     std::vector<ImageData> mImages;
 };
 
