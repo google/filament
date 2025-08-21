@@ -653,7 +653,9 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     FILAMENT_CHECK_PRECONDITION(formatMipmappable)
             << "Texture format " << (unsigned)mFormat << " is not mipmappable.";
 
-    FILAMENT_CHECK_PRECONDITION(any(mUsage & TextureUsage::GEN_MIPMAPPABLE))
+    auto const& featureFlags = downcast(engine).features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(any(mUsage & TextureUsage::GEN_MIPMAPPABLE),
+            featureFlags.assert_texture_can_generate_mipmap)
             << "Texture usage does not have GEN_MIPMAPPABLE set";
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {
