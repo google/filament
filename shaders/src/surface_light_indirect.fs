@@ -506,11 +506,7 @@ vec3 evaluateRefraction(
 
     // compute transmission T
 #if defined(MATERIAL_HAS_ABSORPTION)
-#if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
-#else
-    vec3 T = 1.0 - pixel.absorption;
-#endif
 #endif
 
     // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
