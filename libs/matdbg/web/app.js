@@ -736,7 +736,7 @@ class MaterialSidePanel extends LitElement {
                 };
             });
         }
-        if (props.has('currentMaterial')) {
+        if (props.has('currentMaterial') || props.has('currentBackend')) {
             if (this.currentBackend && this.database && this.currentMaterial) {
                 const material = this.database[this.currentMaterial];
                 const activeVariants =  _validDict(this.activeShaders) ? this.activeShaders[this.currentMaterial].variants : [];
@@ -833,17 +833,15 @@ class MaterialSidePanel extends LitElement {
                         vstring = `[${vstring}]`;
                     }
                     const shaderModelSymbol = {
-                        'desktop': '🄳 ',
-                        'mobile': '🄼 ',
+                        'desktop': '(desktop)',
+                        'mobile': '(mobile)',
                     };
-
                     let languagesDiv = isVariantSelected ? this._buildLanguagesDiv(isActive) : null;
-                    const stage =
-                          (isMatinfo ? shaderModelSymbol[variant.shader.shaderModel] : '') +
-                          (variant.shader.pipelineStage.indexOf('vertex') >=0 ? '𝕍ert' : '𝔽rag');
+                    const stage = (variant.shader.pipelineStage.indexOf('vertex') >=0 ? '𝕍ert' : '𝔽rag');
+                    const shaderModel = (isMatinfo ? shaderModelSymbol[variant.shader.shaderModel] : '');
                     return html`
                         <div class="${divClass}" @click="${onClickVariant}">
-                            <div>${stage}&nbsp ${vstring} </div>
+                            <div>${stage}&nbsp ${vstring} ${shaderModel} </div>
                         </div>
                         ${languagesDiv ?? nothing}
                     `
@@ -1071,6 +1069,11 @@ class MatdbgViewer extends LitElement {
     }
 
     updated(props) {
+        if (props.has('currentShaderModel')) {
+            if (this.currentShaderModel == 'matinfo') {
+                this.hideInactiveVariants = false;
+            }
+        }
         // Set a language if there hasn't been one set.
         if (props.has('currentBackend') && this.currentBackend) {
             if (LANGUAGE_CHOICES[this.currentBackend].indexOf(this.currentLanguage) < 0) {
