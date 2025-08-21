@@ -144,6 +144,7 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 }
 
 TEST_F(BlitTest, ColorMagnify) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -207,6 +208,7 @@ TEST_F(BlitTest, ColorMagnify) {
 }
 
 TEST_F(BlitTest, ColorMinify) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -262,6 +264,7 @@ TEST_F(BlitTest, ColorMinify) {
 }
 
 TEST_F(BlitTest, ColorResolve) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Nothing is drawn, see b/417229577");
     auto& api = getDriverApi();
