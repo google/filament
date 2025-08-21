@@ -244,11 +244,13 @@ void ImGuiHelper::processImGuiCommands(ImDrawData* commands, const ImGuiIO& io) 
                     }
                     materialInstance = mMaterial2dInstances[material2dIndex++];
                 }
-                materialInstance->setScissor(
-                        pcmd.ClipRect.x,
-                        mFlipVertical ? pcmd.ClipRect.y :  (fbheight - pcmd.ClipRect.w),
-                        (uint16_t) (pcmd.ClipRect.z - pcmd.ClipRect.x),
-                        (uint16_t) (pcmd.ClipRect.w - pcmd.ClipRect.y));
+
+                auto scissorLeft = static_cast<uint32_t>(std::max(0.0f, pcmd.ClipRect.x));
+                auto scissorBottom = static_cast<uint32_t>(std::max(0.0f,
+                        mFlipVertical ? pcmd.ClipRect.y : (fbheight - pcmd.ClipRect.w)));
+                auto scissorWidth = static_cast<uint32_t>(pcmd.ClipRect.z - pcmd.ClipRect.x);
+                auto scissorHeight = static_cast<uint32_t>(pcmd.ClipRect.w - pcmd.ClipRect.y);
+                materialInstance->setScissor(scissorLeft, scissorBottom, scissorWidth, scissorHeight);
                 if (texture) {
                     TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
                     materialInstance->setParameter("albedo", texture, sampler);
