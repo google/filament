@@ -283,6 +283,24 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
               toWebGPUTextureViewDimension(src->target)) },
       mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
 
+WebGPUTexture::WebGPUTexture(const WebGPUTexture* src, const wgpu::TextureView view) noexcept
+    : HwTexture{ src->target, src->levels, src->samples, src->width, src->height, src->depth,
+              src->format, src->usage},
+      mViewFormat{ src->mViewFormat },
+      mMipmapGenerationStrategy{ src->mMipmapGenerationStrategy },
+      mWebGPUFormat{ src->mWebGPUFormat },
+      mAspect{ src->mAspect },
+      mWebGPUUsage{ src->mWebGPUUsage },
+      mViewUsage{ src->mViewUsage },
+      mBlockWidth{ src->mBlockWidth },
+      mBlockHeight{ src->mBlockHeight },
+      mArrayLayerCount{ src->mArrayLayerCount },
+      mTexture{ src->mTexture },
+      mDefaultMipLevel{ src->mDefaultMipLevel },
+      mDefaultBaseArrayLayer{ 0 },
+      mDefaultTextureView{ view },
+      mMsaaSidecarTexture{src->mMsaaSidecarTexture}{}
+
 wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
     if (mMsaaSidecarTexture == nullptr) {
         return mMsaaSidecarTexture; // nullptr (no such sidecar)

@@ -295,6 +295,20 @@ namespace filament::backend {
     }
 }
 
+[[nodiscard]] constexpr wgpu::ComponentSwizzle toWGPUComponentSwizzle(const backend::TextureSwizzle swizzle) {
+    switch (swizzle) {
+        case backend::TextureSwizzle::CHANNEL_0:       return wgpu::ComponentSwizzle::R;
+        case backend::TextureSwizzle::CHANNEL_1:       return wgpu::ComponentSwizzle::G;
+        case backend::TextureSwizzle::CHANNEL_2:       return wgpu::ComponentSwizzle::B;
+        case backend::TextureSwizzle::CHANNEL_3:       return wgpu::ComponentSwizzle::A;
+        case backend::TextureSwizzle::SUBSTITUTE_ZERO: return wgpu::ComponentSwizzle::Zero;
+        case backend::TextureSwizzle::SUBSTITUTE_ONE:  return wgpu::ComponentSwizzle::One;
+        default:
+             FWGPU_LOGW << "invalid swizzle component returning wgpu::ComponentSwizzle::Undefined";
+            return wgpu::ComponentSwizzle::Undefined;
+    }
+}
+
 /**
  * @return true if https://www.w3.org/TR/webgpu/#copy-compatible which states:
  *  Two GPUTextureFormats format1 and format2 are copy-compatible if:
