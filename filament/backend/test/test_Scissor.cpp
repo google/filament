@@ -31,6 +31,7 @@ using namespace filament;
 using namespace filament::backend;
 
 TEST_F(BackendTest, ScissorViewportRegion) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Affected area in wrong corner, see b/417229118");
     auto& api = getDriverApi();
