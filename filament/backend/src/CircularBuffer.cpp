@@ -38,6 +38,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(WIN32)
+#    include <windows.h> // for VirtualAlloc, VirtualProtect, VirtualFree
+#    include <utils/unwindows.h>
+#endif
+
 using namespace utils;
 
 namespace filament::backend {
@@ -134,6 +139,21 @@ void* CircularBuffer::alloc(size_t size) {
         mprotect(guard, BLOCK_SIZE, PROT_NONE);
     }
     return data;
+#elif defined(WIN32)
+    size_t const BLOCK_SIZE = getBlockSize();
+    // On Windows, use VirtualAlloc instead of malloc to allocate virtual memory.
+    // This allows us to set page protection by VirtualProtect.
+    void* data = VirtualAlloc(nullptr, size * 2 + BLOCK_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    FILAMENT_CHECK_POSTCONDITION(data != nullptr)
+            << "couldn't allocate " << (size * 2 / 1024)
+            << " KiB of virtual address space for the command buffer";
+
+    // guard page at the end
+    void* guard = (void*)(uintptr_t(data) + size * 2);
+    DWORD oldProtect = 0;
+    BOOL ok = VirtualProtect(guard, BLOCK_SIZE, PAGE_NOACCESS, &oldProtect);
+    FILAMENT_CHECK_POSTCONDITION(ok) << "VirtualProtect failed to set guard page";
+    return data;
 #else
     return ::malloc(2 * size);
 #endif
@@ -149,6 +169,10 @@ void CircularBuffer::dealloc() noexcept {
             close(mAshmemFd);
             mAshmemFd = -1;
         }
+    }
+#elif defined(WIN32)
+    if (mData) {
+        VirtualFree(mData, 0, MEM_RELEASE);
     }
 #else
     ::free(mData);
