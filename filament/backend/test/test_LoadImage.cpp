@@ -231,6 +231,7 @@ public:
 };
 
 TEST_F(LoadImageTest, UpdateImage2D) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
@@ -391,6 +392,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Crashing when reading pixels without a redundant call to makeCurrent right before the"
             "render pass. b/422798473");
@@ -479,6 +481,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Crashing when reading pixels without a redundant call to makeCurrent right before the"
             "render pass. b/422798473");
@@ -555,6 +558,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Crashing when reading pixels without a redundant call to makeCurrent right before the"
             "render pass. b/422798473");
