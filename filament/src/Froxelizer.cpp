@@ -77,10 +77,6 @@ static constexpr size_t FROXEL_SLICE_COUNT = 16;
 static constexpr float FROXEL_FIRST_SLICE_DEPTH_DEFAULT   = 5;      // 5m
 static constexpr float FROXEL_LAST_SLICE_DISTANCE_DEFAULT = 100;    // 100m
 
-// The record buffer is limited by both the UBO size and our use of 16-bits indices.
-constexpr size_t RECORD_BUFFER_ENTRY_COUNT =
-        std::min(size_t(std::numeric_limits<uint16_t>::max()), CONFIG_MINSPEC_UBO_SIZE);
-
 // Buffer needed for Froxelizer internal data structures (~256 KiB)
 constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
                                              (FROXEL_BUFFER_MAX_ENTRY_COUNT +
@@ -97,14 +93,6 @@ static constexpr size_t GROUP_COUNT =
 // This depends on the maximum number of lights (currently 256)
 static_assert(CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<Froxelizer::RecordBufferType>::max(),
         "can't have more than 256 lights");
-
-// Record buffer cannot be larger than 65K entries because froxels use uint16_t to store indices
-// to it.
-static_assert(RECORD_BUFFER_ENTRY_COUNT <= std::numeric_limits<uint16_t>::max(),
-        "RecordBuffer cannot be larger than 65536 entries");
-
-static_assert(RECORD_BUFFER_ENTRY_COUNT <= CONFIG_MINSPEC_UBO_SIZE,
-        "RecordBuffer cannot be larger than the UBO minspec (16KiB)");
 
 struct Froxelizer::FroxelThreadData :
         public std::array<LightGroupType, FROXEL_BUFFER_MAX_ENTRY_COUNT> {
@@ -129,6 +117,13 @@ size_t Froxelizer::getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexc
     // uvec4.
     size_t const targetSize = (driverApi.getMaxUniformBufferSize() / 16) * 16;
     return std::min(FROXEL_BUFFER_MAX_ENTRY_COUNT * sizeof(FroxelEntry), targetSize);
+}
+
+size_t Froxelizer::getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi) noexcept {
+    // Make sure that targetSize is 16-byte aligned so that it'll fit properly into an array of
+    // uvec4. The maximum size is 64K entries, because we're using 16 bits indices.
+    size_t const targetSize = (driverApi.getMaxUniformBufferSize() / 16) * 16;
+    return std::min(size_t(std::numeric_limits<uint16_t>::max()), targetSize);
 }
 
 View::FroxelConfigurationInfo Froxelizer::getFroxelConfigurationInfo() const noexcept {
@@ -162,7 +157,12 @@ Froxelizer::Froxelizer(FEngine& engine)
     size_t const froxelBufferByteCount = getFroxelBufferByteCount(engine.getDriverApi());
     mFroxelBufferEntryCount = froxelBufferByteCount / sizeof(FroxelEntry);
 
-    mRecordsBuffer = driverApi.createBufferObject(RECORD_BUFFER_ENTRY_COUNT,
+    size_t const froxelRecordBufferByteCount = getFroxelRecordBufferByteCount(engine.getDriverApi());
+    mFroxelRecordBufferEntryCount = froxelRecordBufferByteCount / sizeof(uint8_t);
+    assert_invariant(mFroxelRecordBufferEntryCount <= std::numeric_limits<uint16_t>::max());
+
+    mRecordsBuffer = driverApi.createBufferObject(
+            froxelRecordBufferByteCount,
             BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
 
     mFroxelsBuffer = driverApi.createBufferObject(
@@ -237,15 +237,15 @@ bool Froxelizer::prepare(
      * the command stream.
      */
 
-    // froxel buffer (~32 KiB)
+    // froxel buffer
     mFroxelBufferUser = {
-            driverApi.allocatePod<FroxelEntry>(getFroxelBufferEntryCount()),
-            getFroxelBufferEntryCount() };
+            driverApi.allocatePod<FroxelEntry>(mFroxelBufferEntryCount),
+            mFroxelBufferEntryCount };
 
-    // record buffer (~16 KiB)
+    // record buffer
     mRecordBufferUser = {
-            driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT),
-            RECORD_BUFFER_ENTRY_COUNT };
+            driverApi.allocatePod<RecordBufferType>(mFroxelRecordBufferEntryCount),
+            mFroxelRecordBufferEntryCount };
 
     /*
      * Temporary allocations for processing all froxel data
@@ -558,10 +558,10 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 void Froxelizer::commit(DriverApi& driverApi) {
     // send data to GPU
     driverApi.updateBufferObject(mFroxelsBuffer,
-            { mFroxelBufferUser.data(), getFroxelBufferEntryCount() * sizeof(FroxelEntry) }, 0);
+            { mFroxelBufferUser.data(), mFroxelBufferEntryCount * sizeof(FroxelEntry) }, 0);
 
     driverApi.updateBufferObject(mRecordsBuffer,
-            { mRecordBufferUser.data(), RECORD_BUFFER_ENTRY_COUNT }, 0);
+            { mRecordBufferUser.data(), mFroxelRecordBufferEntryCount }, 0);
 
 #ifndef NDEBUG
     mFroxelBufferUser.clear();
@@ -588,7 +588,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
             // go through every light for that froxel
             for (size_t i = 0; i < entry.count(); i++) {
                 // get the light index
-                assert_invariant(entry.offset() + i < RECORD_BUFFER_ENTRY_COUNT);
+                assert_invariant(entry.offset() + i < mFroxelRecordBufferEntryCount);
 
                 size_t const lightIndex = recordBufferUser[entry.offset() + i];
                 assert_invariant(lightIndex <= CONFIG_MAX_LIGHT_INDEX);
@@ -735,7 +735,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         FroxelEntry entry{ offset, uint8_t(std::min(size_t(255), b.lights.count())) };
         const size_t lightCount = entry.count();
 
-        if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
+        if (UTILS_UNLIKELY(offset + lightCount >= mFroxelRecordBufferEntryCount)) {
             // DLOG(INFO) << "out of space: " << i << ", at " << offset;
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.

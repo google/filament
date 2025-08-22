@@ -277,7 +277,8 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
 BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
-            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH }})
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+                    {}, {}, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT"}})
             .build();
     return uib;
 }
