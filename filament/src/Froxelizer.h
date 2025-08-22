@@ -22,26 +22,35 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
+#include "private/filament/EngineEnums.h"
+#include "private/filament/UibStructs.h"
+
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
 #include <backend/Handle.h>
 
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include <utils/compiler.h>
 #include <utils/bitset.h>
 #include <utils/Slice.h>
 
-#include <math/mat4.h>
-#include <math/vec2.h>
-#include <math/vec4.h>
+#include <cstdint>
+#include <cstddef>
+#include <limits>
+#include <utility>
 
 namespace filament {
 
-// The number of froxel buffer entries is determined by max UBO size (see
-// getFroxelBufferByteCount()). We also introduce the limit below because increasing the number of
-// froxels adds more pressure on the "record buffer" which stores the light indices per froxel. The
-// record buffer is limited to min(16K[ubo], 64K[uint16]) entries. In practice some froxels are not
-// used, so we can store more.
+// The number of froxel buffer entries is only limited by the maximum UBO size (see
+// getFroxelBufferByteCount()), each entry consumes 4 bytes, so with a 16KB UBO, we get
+// 4096 froxels.
+// Increasing this value too much adds pressure on the record buffer, which is also limited
+// to min(16K[ubo], 64K[uint16]) entries. In practice not all froxels are used.
 constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
 
 // Froxel buffer UBO is an array of uvec4. Make sure that the buffer is properly aligned.
@@ -89,12 +98,12 @@ public:
 
     void terminate(backend::DriverApi& driverApi) noexcept;
 
-    // gpu buffer containing records. valid after construction.
+    // GPU buffer containing records. Valid after construction.
     backend::Handle<backend::HwBufferObject> getRecordBuffer() const noexcept {
         return mRecordsBuffer;
     }
 
-    // gpu buffer containing froxels. valid after construction.
+    // GPU buffer containing froxels. Valid after construction.
     backend::Handle<backend::HwBufferObject> getFroxelBuffer() const noexcept {
         return mFroxelsBuffer;
     }
@@ -110,10 +119,12 @@ public:
      * projection        camera projection matrix
      * projectionNear    near plane
      * projectionFar     far plane
+     * clipTransform     [debugging] the clipTransform that's already included in the projection
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope, Viewport const& viewport,
+    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope,
+            Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar,
             math::float4 const& clipTransform) noexcept;
 
@@ -125,11 +136,11 @@ public:
 
     float getLightFar() const noexcept { return mZLightFar; }
 
-    // update Records and Froxels texture with lights data. this is thread-safe.
+    // Update Records and Froxels texture with lights data. This is thread-safe.
     void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
             const FScene::LightSoa& lightData) noexcept;
 
-    void updateUniforms(PerViewUib& s) {
+    void updateUniforms(PerViewUib& s) const {
         s.zParams = mParamsZ;
         s.fParams = mParamsF;
         s.froxelCountXY = math::float2{ mViewport.width, mViewport.height } / mFroxelDimension;
@@ -144,21 +155,22 @@ public:
      */
 
     struct FroxelEntry {
-        inline FroxelEntry(uint16_t const offset, uint8_t const count) noexcept
+        FroxelEntry(uint16_t const offset, uint8_t const count) noexcept
             : u32((offset << 16) | count) { }
-        inline uint8_t count() const noexcept { return u32 & 0xFFu; }
-        inline uint16_t offset() const noexcept { return u32 >> 16u; }
+
+        uint8_t count() const noexcept { return u32 & 0xFFu; }
+        uint16_t offset() const noexcept { return u32 >> 16u; }
         uint32_t u32 = 0;
     };
     static_assert(sizeof(FroxelEntry) == 4u);
 
-    // we can't change this easily because the shader expects 16 indices per uint4
+    // We can't change this easily because the shader expects 16 indices per uint4
     using RecordBufferType = uint8_t;
 
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
-    // this is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
+    // This is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
     // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
     using LightGroupType = uint32_t;
 
@@ -205,7 +217,7 @@ private:
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
-            math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept;
+            math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) const noexcept;
 
     void froxelizeAssignRecordsCompress() noexcept;
 
