@@ -49,6 +49,7 @@ public:
         wgpu::VertexBufferLayout const* vertexBufferLayouts;
         wgpu::PipelineLayout const& pipelineLayout;
         const PrimitiveType primitiveType;
+        wgpu::IndexFormat stripIndexFormat;
         RasterState const& rasterState;
         StencilState const& stencilState;
         PolygonOffset const& polygonOffset;
@@ -161,12 +162,12 @@ private:
         // render targets...                                                                //
         uint8_t multisampleCount{ 0 };                                                      // 1    : 313
         uint8_t colorFormatCount{ 0 };                                                      // 1    : 314
-        uint8_t padding[5]{ 0 };                                                            // 5    : 319
-        TargetBufferFlags targetRenderFlags{ TargetBufferFlags::NONE };                     // 4    : 320
-        wgpu::TextureFormat depthStencilFormat { wgpu::TextureFormat::Undefined };          // 4    : 324
+        TargetBufferFlags targetRenderFlags{ TargetBufferFlags::NONE };                     // 4    : 315
+        wgpu::TextureFormat depthStencilFormat { wgpu::TextureFormat::Undefined };          // 4    : 319
         wgpu::TextureFormat colorFormats[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT]{           //
             wgpu::TextureFormat::Undefined                                              //
-        };                                                                                  // 32   : 328
+        };                                                                                  // 32   : 323
+        wgpu::IndexFormat stripIndexFormat{ wgpu::IndexFormat::Undefined };                 // 4    : 355
     };
     static_assert(sizeof(RenderPipelineKey) == 360,
             "RenderPipelineKey must not have implicit padding.");

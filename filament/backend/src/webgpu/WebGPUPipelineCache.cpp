@@ -177,6 +177,12 @@ void WebGPUPipelineCache::populateKey(RenderPipelineRequest const& request,
     outKey.targetRenderFlags = request.targetRenderFlags;
     outKey.multisampleCount = request.multisampleCount;
     outKey.depthStencilFormat = request.depthStencilFormat;
+    if (request.primitiveType == PrimitiveType::TRIANGLE_STRIP ||
+            request.primitiveType == PrimitiveType::LINE_STRIP) {
+        outKey.stripIndexFormat = request.stripIndexFormat;
+    } else {
+        outKey.stripIndexFormat = wgpu::IndexFormat::Undefined;
+    }
     assert_invariant(request.colorFormatCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
     outKey.colorFormatCount = request.colorFormatCount;
     for (size_t colorIndex{ 0 }; colorIndex < request.colorFormatCount; colorIndex++) {
@@ -312,11 +318,11 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         },
         .fragment = nullptr // will add below if fragment module is included
     };
-    // TODO:
     if (pipelineDescriptor.primitive.topology == wgpu::PrimitiveTopology::LineStrip ||
             pipelineDescriptor.primitive.topology == wgpu::PrimitiveTopology::TriangleStrip) {
-        PANIC_POSTCONDITION("stripIndexFormat must be set for strip topologies. "
-                            "This needs to be plumbed through from the RenderPrimitive.");
+        pipelineDescriptor.primitive.stripIndexFormat = request.stripIndexFormat;
+        FILAMENT_CHECK_POSTCONDITION(request.stripIndexFormat != wgpu::IndexFormat::Undefined)
+                << "Invalid format";
     }
 
     wgpu::FragmentState fragmentState = {};

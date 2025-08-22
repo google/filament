@@ -633,7 +633,7 @@ endif()
 # With WebGPU, Tint does not support ClipDistance which is used in Stereo.  Mentioned in comment
 # https://github.com/google/dawn/blob/855d17b08abdf02f9142bf5a8f14d0ea088810a4/src/tint/lang/spirv/reader/ast_parser/function.cc#L4434
 if (FILAMENT_SUPPORTS_WEBGPU)
-    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu --variant-filter=skinning,stereo)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu --variant-filter=stereo)
 endif()
 
 # Disable ESSL 1.0 code generation.
