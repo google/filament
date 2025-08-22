@@ -662,7 +662,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                     cameraInfo.projection, cameraInfo.zn, cameraInfo.zf)) {
                 // TODO: might be more consistent to do this in prepareLighting(), but it's not
                 //       strictly necessary
-                getColorPassDescriptorSet().prepareDynamicLights(mFroxelizer);
+                getColorPassDescriptorSet().prepareDynamicLights(mFroxelizer, mFroxelVizEnabled);
             }
             // We need to pass viewMatrix by value here because it extends the scope of this
             // function.

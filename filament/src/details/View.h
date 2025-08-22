@@ -240,6 +240,10 @@ public:
         return mShadowMapManager->getDirectionalShadowCameras();
     }
 
+    void setFroxelVizEnabled(bool const enabled) noexcept {
+        mFroxelVizEnabled = enabled;
+    }
+
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
         assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
                 !renderTarget->hasSampleableDepth());
@@ -552,6 +556,7 @@ private:
 
     mutable Froxelizer mFroxelizer;
     utils::JobSystem::Job* mFroxelizerSync = nullptr;
+    bool mFroxelVizEnabled = false;
 
     Viewport mViewport;
     bool mCulling = true;
