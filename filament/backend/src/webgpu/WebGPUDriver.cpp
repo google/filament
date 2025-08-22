@@ -496,7 +496,40 @@ void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a) {
-    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
+
+    if (!isTextureSwizzleSupported()) {
+        FWGPU_LOGW << "WebGPUDriver::createTextureViewSwizzleR called while texture swizzling is "
+                      "not supported by the device/driver";
+    }
+
+    auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    assert_invariant(sourceTexture);
+
+    wgpu::TextureComponentSwizzle swizzle
+    {
+        .r = toWGPUComponentSwizzle(r),
+        .g = toWGPUComponentSwizzle(g),
+        .b = toWGPUComponentSwizzle(b),
+        .a = toWGPUComponentSwizzle(a),
+    };
+
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc {};
+    swizzleDesc.swizzle = swizzle;
+
+    const wgpu::TextureViewDescriptor viewDesc {
+        .nextInChain = &swizzleDesc,
+        .label = "swizzled_texture_view",
+        .format = sourceTexture->getTexture().GetFormat(),
+        .dimension = sourceTexture->getViewDimension(),
+        .baseMipLevel = 0,
+        .mipLevelCount = sourceTexture->getTexture().GetMipLevelCount(),
+        .baseArrayLayer = 0,
+        .arrayLayerCount = sourceTexture->getTexture().GetDepthOrArrayLayers(),
+    };
+
+    wgpu::TextureView swizzledView{ sourceTexture->getTexture().CreateView(&viewDesc) };
+    FILAMENT_CHECK_POSTCONDITION(swizzledView) << "Failed to create swizzled Texture view";
+    constructHandle<WebGPUTexture>(textureHandle, sourceTexture, swizzledView);
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
@@ -641,7 +674,7 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
-    return false;
+    return mDevice.HasFeature(wgpu::FeatureName::TextureComponentSwizzle);
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
@@ -923,7 +956,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
                 << "Failed to create staging input texture for blit?";
         const auto copyInfo{ wgpu::TexelCopyTextureInfo{
             .texture = stagingTexture,
-            .mipLevel = level,
+            .mipLevel = 0,
             .origin = { .x = 0, .y = 0, .z = 0 },
             .aspect = texture->getAspect(),
         } };
@@ -978,7 +1011,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
             mQueue.Submit(1, &blitCommand);
             mCommandEncoder = nullptr;
         }
-        stagingTexture.Destroy();
     } else {
         // Direct copy without a blit.
         const auto copyInfo { wgpu::TexelCopyTextureInfo{
