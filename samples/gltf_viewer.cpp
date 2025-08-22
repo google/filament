@@ -217,7 +217,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:dw:";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:y:b:evg:dw:";
     static const struct option OPTIONS[] = {
         { "help",              no_argument,          nullptr, 'h' },
         { "api",               required_argument,    nullptr, 'a' },
