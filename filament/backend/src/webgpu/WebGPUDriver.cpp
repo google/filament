@@ -956,7 +956,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
                 << "Failed to create staging input texture for blit?";
         const auto copyInfo{ wgpu::TexelCopyTextureInfo{
             .texture = stagingTexture,
-            .mipLevel = level,
+            .mipLevel = 0,
             .origin = { .x = 0, .y = 0, .z = 0 },
             .aspect = texture->getAspect(),
         } };
@@ -1011,7 +1011,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
             mQueue.Submit(1, &blitCommand);
             mCommandEncoder = nullptr;
         }
-        stagingTexture.Destroy();
     } else {
         // Direct copy without a blit.
         const auto copyInfo { wgpu::TexelCopyTextureInfo{
