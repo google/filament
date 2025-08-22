@@ -176,6 +176,8 @@ public:
 
     static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
 
+    static size_t getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
+
     View::FroxelConfigurationInfo getFroxelConfigurationInfo() const noexcept;
 
 private:
@@ -257,6 +259,9 @@ private:
 
     // 4096 froxels fits in a 16KiB buffer, the minimum guaranteed in GLES 3.x and Vulkan 1.1
     size_t mFroxelBufferEntryCount = 4096;
+
+    // 16384 entries is our minimum with a 16KiB buffer
+    size_t mFroxelRecordBufferEntryCount = 16384;
 
     // allocations in the private froxel arena
     float* mDistancesZ = nullptr;

@@ -83,7 +83,8 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
     CONFIG_SH_BANDS_COUNT = 9,
-    CONFIG_SHADOW_SAMPLING_METHOD = 10
+    CONFIG_SHADOW_SAMPLING_METHOD = 10,
+    CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 11,
     // check CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 

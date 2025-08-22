@@ -313,6 +313,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
         out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 16384;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -320,6 +321,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // the default of 1024 (16KiB) is needed for 32% of Android devices
         generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+
+        generateSpecializationConstant(out, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 16384);
     }
 
     // directional shadowmap visualization
