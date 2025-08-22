@@ -979,25 +979,22 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
-    if (mMainView->getView()->getStereoscopicOptions().enabled) {
-        mat4 projections[4];
-        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
-        projections[1] = projections[0];
-        // simulate foveated rendering
-        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, 1.0, near, far);
-        projections[3] = projections[2];
-        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
-    } else {
-        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
-    }
-    mDebugCamera->setProjection(45.0, double(mainWidth) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
-
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
         const int ec = mConfig.stereoscopicEyeCount;
         aspectRatio = double(mainWidth) / ec / height;
+
+        mat4 projections[4];
+        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
+        projections[1] = projections[0];
+        // simulate foveated rendering
+        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, aspectRatio, near, far);
+        projections[3] = projections[2];
+        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
+    } else {
+        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
     }
-    mMainCamera->setScaling({1.0 / aspectRatio, 1.0});
+    mDebugCamera->setProjection(45.0, aspectRatio, 0.0625, 4096, Camera::Fov::VERTICAL);
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {
