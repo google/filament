@@ -192,6 +192,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mScene = mEngine->createScene();
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
+    window->mMainView->getView()->setFroxelVizEnabled(true);
 
     if (config.splitView) {
         auto& rcm = mEngine->getRenderableManager();

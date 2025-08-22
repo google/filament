@@ -757,6 +757,8 @@ public:
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
+    //! debugging: enable or disable froxel visualisation for this view.
+    void setFroxelVizEnabled(bool enabled) noexcept;
 
     /** Result of a picking query */
     struct PickingQueryResult {
