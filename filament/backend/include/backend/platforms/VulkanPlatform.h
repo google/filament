@@ -407,12 +407,16 @@ public:
         return {};
     }
 
+    virtual FenceConversionResult getFenceFD(VkFence fence, int32_t* fd) const noexcept;
+
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
     virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
             uint64_t flags) const noexcept;
+
+    virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept;
 
 private:
     // Platform dependent helper methods

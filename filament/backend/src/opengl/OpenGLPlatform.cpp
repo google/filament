@@ -111,6 +111,10 @@ void OpenGLPlatform::destroyFence(
         UTILS_UNUSED Fence* fence) noexcept {
 }
 
+FenceConversionResult OpenGLPlatform::getFenceFD(Fence* fence, int32_t* fd) noexcept {
+    return FenceConversionResult::NOT_SUPPORTED;
+}
+
 FenceStatus OpenGLPlatform::waitFence(
         UTILS_UNUSED Fence* fence,
         UTILS_UNUSED uint64_t timeout) noexcept {
