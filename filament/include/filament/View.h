@@ -543,12 +543,13 @@ public:
      *                   visible -- in this case, using a larger value can improve performance.
      *                   e.g. when standing and looking straight, several meters of the ground
      *                   isn't visible and if lights are expected to shine there, there is no
-     *                   point using a short zLightNear. (Default 5m).
+     *                   point using a short zLightNear. This value is clamped between
+     *                   the camera near and far plane. (Default 5m).
      *
      * @param zLightFar Distance from the camera after which lights are not expected to be visible.
      *                  Similarly to zLightNear, setting this value properly can improve
-     *                  performance. (Default 100m).
-     *
+     *                  performance.  This value is clamped between the camera near and far plane.
+     *                  (Default 100m).
      *
      * Together zLightNear and zLightFar must be chosen so that the visible influence of lights
      * is spread between these two values.
@@ -763,9 +764,9 @@ public:
 
     //! debugging: returns information about the froxel configuration
     struct FroxelConfigurationInfo {
-        uint8_t width;
-        uint8_t height;
-        uint8_t depth;
+        uint16_t width;
+        uint16_t height;
+        uint16_t depth;
         uint32_t viewportWidth;
         uint32_t viewportHeight;
         math::uint2 froxelDimension;

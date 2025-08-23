@@ -46,16 +46,6 @@
 
 namespace filament {
 
-// The number of froxel buffer entries is only limited by the maximum UBO size (see
-// getFroxelBufferByteCount()), each entry consumes 4 bytes, so with a 16KB UBO, we get
-// 4096 froxels.
-// Increasing this value too much adds pressure on the record buffer, which is also limited
-// to min(16K[ubo], 64K[uint16]) entries. In practice not all froxels are used.
-constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
-
-// Froxel buffer UBO is an array of uvec4. Make sure that the buffer is properly aligned.
-static_assert(FROXEL_BUFFER_MAX_ENTRY_COUNT % 4 == 0u);
-
 class FEngine;
 class FCamera;
 class FTexture;
@@ -146,6 +136,10 @@ public:
         s.froxelCountXY = math::float2{ mViewport.width, mViewport.height } / mFroxelDimension;
     }
 
+    static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
+
+    static size_t getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
+
     // send froxel data to GPU
     void commit(backend::DriverApi& driverApi);
 
@@ -173,10 +167,6 @@ public:
     // This is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
     // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
     using LightGroupType = uint32_t;
-
-    static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
-
-    static size_t getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
 
     View::FroxelConfigurationInfo getFroxelConfigurationInfo() const noexcept;
 
@@ -267,15 +257,19 @@ private:
     float* mDistancesZ = nullptr;
     math::float4* mPlanesX = nullptr;
     math::float4* mPlanesY = nullptr;
-    math::float4* mBoundingSpheres = nullptr;           // 128 KiB w/ 8192 froxels
+    math::float4* mBoundingSpheres = nullptr;           // 64 KiB w/ 4096 froxels
 
     // allocations in the per frame arena
-    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights and 8192 froxels
-    utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
-    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/  256 lights
+    //        max |  real | size
+    //       8192 |  4096 | 512 KiB
+    //       8192 |  8192 | 768 KiB
+    //      65536 | 65536 | 6.0 MiB
+    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/  256 lights and 4096 froxels
+    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights and 8192 max froxels
 
     // allocations in the command stream
-    utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB
+    utils::Slice<FroxelEntry> mFroxelBufferUser;        //  16 KiB w/ 4096 froxels
+    utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB to 64 KiB
 
     uint16_t mFroxelCountX = 0;
     uint16_t mFroxelCountY = 0;
@@ -296,15 +290,21 @@ private:
     math::float4 mParamsZ = {};
     math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
+    float mFar = 0.0f;         // culling camera far
     float mZLightNear;
     float mZLightFar;
+    float mUserZLightNear;
+    float mUserZLightFar;
 
     // track if we need to update our internal state before froxelizing
     uint8_t mDirtyFlags = 0;
     enum {
         VIEWPORT_CHANGED = 0x01,
-        PROJECTION_CHANGED = 0x02
+        PROJECTION_CHANGED = 0x02,
+        OPTIONS_CHANGED = 0x04
     };
+
+    View::FroxelConfigurationInfo mFroxelConfigurationInfo{};
 };
 
 } // namespace filament
