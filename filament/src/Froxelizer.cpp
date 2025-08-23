@@ -70,6 +70,16 @@ namespace filament {
 
 using namespace backend;
 
+// The number of froxel buffer entries is only limited by the maximum UBO size (see
+// getFroxelBufferByteCount()), each entry consumes 4 bytes, so with a 16KB UBO, we get
+// 4096 froxels.
+// Increasing this value too much adds pressure on the record buffer, which is also limited
+// to min(16K[ubo], 64K[uint16]) entries. In practice not all froxels are used.
+constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
+
+// Froxel buffer UBO is an array of uvec4. Make sure that the buffer is properly aligned.
+static_assert(FROXEL_BUFFER_MAX_ENTRY_COUNT % 4 == 0u);
+
 // TODO: these should come from a configuration object on View or Camera
 static constexpr size_t FROXEL_SLICE_COUNT = 16;
 
@@ -127,24 +137,17 @@ size_t Froxelizer::getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi)
 }
 
 View::FroxelConfigurationInfo Froxelizer::getFroxelConfigurationInfo() const noexcept {
-    return { uint8_t(getFroxelCountX()),
-             uint8_t(getFroxelCountY()),
-             uint8_t(getFroxelCountZ()),
-             mViewport.width,
-             mViewport.height,
-             mFroxelDimension,
-             mZLightFar,
-             mLinearizer[0],
-             mProjection,
-             mClipTransform
-    };
+    // this must return the configuration during the last update()
+    return mFroxelConfigurationInfo;
 }
 
 Froxelizer::Froxelizer(FEngine& engine)
-        : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
-          mZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
-          mZLightFar(FROXEL_LAST_SLICE_DISTANCE_DEFAULT)
-{
+    : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
+      mZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
+      mZLightFar(FROXEL_LAST_SLICE_DISTANCE_DEFAULT),
+      mUserZLightNear(FROXEL_FIRST_SLICE_DEPTH_DEFAULT),
+      mUserZLightFar(FROXEL_LAST_SLICE_DISTANCE_DEFAULT) {
+
     static_assert(std::is_same_v<RecordBufferType, uint8_t>,
             "Record Buffer must use bytes");
 
@@ -154,10 +157,10 @@ Froxelizer::Froxelizer(FEngine& engine)
         return;
     }
 
-    size_t const froxelBufferByteCount = getFroxelBufferByteCount(engine.getDriverApi());
+    size_t const froxelBufferByteCount = getFroxelBufferByteCount(driverApi);
     mFroxelBufferEntryCount = froxelBufferByteCount / sizeof(FroxelEntry);
 
-    size_t const froxelRecordBufferByteCount = getFroxelRecordBufferByteCount(engine.getDriverApi());
+    size_t const froxelRecordBufferByteCount = getFroxelRecordBufferByteCount(driverApi);
     mFroxelRecordBufferEntryCount = froxelRecordBufferByteCount / sizeof(uint8_t);
     assert_invariant(mFroxelRecordBufferEntryCount <= std::numeric_limits<uint16_t>::max());
 
@@ -192,13 +195,12 @@ void Froxelizer::terminate(DriverApi& driverApi) noexcept {
 }
 
 void Froxelizer::setOptions(float const zLightNear, float const zLightFar) noexcept {
-    if (UTILS_UNLIKELY(mZLightNear != zLightNear || mZLightFar != zLightFar)) {
-        mZLightNear = zLightNear;
-        mZLightFar = zLightFar;
-        mDirtyFlags |= VIEWPORT_CHANGED;
+    if (UTILS_UNLIKELY(mUserZLightNear != zLightNear || mUserZLightFar != zLightFar)) {
+        mUserZLightNear = zLightNear;
+        mUserZLightFar = zLightFar;
+        mDirtyFlags |= OPTIONS_CHANGED;
     }
 }
-
 
 void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
     if (UTILS_UNLIKELY(mViewport != viewport)) {
@@ -208,10 +210,11 @@ void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
 }
 
 void Froxelizer::setProjection(const mat4f& projection,
-        float const near, UTILS_UNUSED float far) noexcept {
-    if (UTILS_UNLIKELY(!fuzzyEqual(mProjection, projection))) {
+        float const near, UTILS_UNUSED float const far) noexcept {
+    if (UTILS_UNLIKELY(!fuzzyEqual(mProjection, projection) || mNear != near || mFar != far)) {
         mProjection = projection;
         mNear = near;
+        mFar = far;
         mDirtyFlags |= PROJECTION_CHANGED;
     }
 }
@@ -237,12 +240,12 @@ bool Froxelizer::prepare(
      * the command stream.
      */
 
-    // froxel buffer
+    // froxel buffer (16 KiB with 4096 froxels)
     mFroxelBufferUser = {
             driverApi.allocatePod<FroxelEntry>(mFroxelBufferEntryCount),
             mFroxelBufferEntryCount };
 
-    // record buffer
+    // record buffer (64 KiB max)
     mRecordBufferUser = {
             driverApi.allocatePod<RecordBufferType>(mFroxelRecordBufferEntryCount),
             mFroxelRecordBufferEntryCount };
@@ -251,12 +254,12 @@ bool Froxelizer::prepare(
      * Temporary allocations for processing all froxel data
      */
 
-    // light records per froxel (~256 KiB)
+    // light records per froxel (~256 KiB with 4096 froxels)
     mLightRecords = {
             rootArenaScope.allocate<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
             getFroxelBufferEntryCount() };
 
-    // froxel thread data (~256 KiB)
+    // froxel thread data (~256KiB with 8192 max froxels and 256 lights)
     mFroxelShardedData = {
             rootArenaScope.allocate<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
             uint32_t(GROUP_COUNT)
@@ -377,6 +380,18 @@ void Froxelizer::updateBoundingSpheres(
 UTILS_NOINLINE
 bool Froxelizer::update() noexcept {
     bool uniformsNeedUpdating = false;
+
+    if (UTILS_UNLIKELY(mDirtyFlags & (OPTIONS_CHANGED|PROJECTION_CHANGED))) {
+        float const zLightFar  = clamp(mUserZLightFar, mNear, mFar);
+        float zLightNear = clamp(mUserZLightNear, mNear, mFar);
+        zLightNear = std::min(zLightNear, zLightFar);
+        if (zLightFar != mZLightFar || zLightNear != mZLightNear) {
+            mDirtyFlags |= VIEWPORT_CHANGED;
+            mZLightNear = zLightNear;
+            mZLightFar = zLightFar;
+        }
+    }
+
     if (UTILS_UNLIKELY(mDirtyFlags & VIEWPORT_CHANGED)) {
         filament::Viewport const& viewport = mViewport;
 
@@ -507,6 +522,19 @@ bool Froxelizer::update() noexcept {
         uniformsNeedUpdating = true;
     }
     assert_invariant(mZLightNear >= mNear);
+
+    if (UTILS_UNLIKELY(mDirtyFlags)) {
+        mFroxelConfigurationInfo = {
+            mFroxelCountX, mFroxelCountY, mFroxelCountZ,
+            mViewport.width, mViewport.height,
+            mFroxelDimension,
+            mZLightFar,
+            mLinearizer[0],
+            mProjection,
+            mClipTransform
+        };
+    }
+
     mDirtyFlags = 0;
     return uniformsNeedUpdating;
 }
@@ -856,6 +884,7 @@ void Froxelizer::froxelizePointAndSpotLight(
     assert_invariant(x0 <= x1);
     assert_invariant(y0 <= y1);
     assert_invariant(z0 <= z1);
+
 #endif
 
     const size_t zcenter = findSliceZ(s.z);
