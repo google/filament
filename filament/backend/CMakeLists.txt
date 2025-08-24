@@ -530,7 +530,7 @@ target_link_libraries(${TARGET} PRIVATE
 if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
     # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
     # WebGPU to build on linux.
-    target_link_libraries(${TARGET} PRIVATE -lxcb)
+    target_link_libraries(${TARGET} PRIVATE -lxcb -lX11)
 endif()
 
 # ==================================================================================================
