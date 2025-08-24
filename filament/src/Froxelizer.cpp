@@ -159,6 +159,8 @@ Froxelizer::Froxelizer(FEngine& engine)
 
     size_t const froxelBufferByteCount = getFroxelBufferByteCount(driverApi);
     mFroxelBufferEntryCount = froxelBufferByteCount / sizeof(FroxelEntry);
+    mFroxelBufferEntryCount &= ~0xF; // make sure it's a multiple of 16 (helps vectorizing)
+    assert_invariant(mFroxelBufferEntryCount >= 16); // that's also needed elsewhere
 
     size_t const froxelRecordBufferByteCount = getFroxelRecordBufferByteCount(driverApi);
     mFroxelRecordBufferEntryCount = froxelRecordBufferByteCount / sizeof(uint8_t);
@@ -710,11 +712,13 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     // this gets very well vectorized...
 
     Slice records(mLightRecords);
-    for (size_t j = 0, jc = getFroxelBufferEntryCount(); j < jc; j++) {
+    for (size_t j = 0, jc = getFroxelBufferEntryCount() ; j < jc; j++) {
+        using container_type = LightRecord::bitset::container_type;
+        constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
+        UTILS_UNROLL
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
-            using container_type = LightRecord::bitset::container_type;
-            constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
             container_type b = froxelThreadData[i * r][j];
+            UTILS_UNROLL
             for (size_t k = 0; k < r; k++) {
                 b |= (container_type(froxelThreadData[i * r + k][j]) << (LIGHT_PER_GROUP * k));
             }
@@ -733,19 +737,21 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     const size_t froxelCountX = mFroxelCountX;
     RecordBufferType* const UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
 
-    // initialize the first record with all lights in the scene -- this will be used only if
+    // Initialize the first record with all lights in the scene -- this will be used only if
     // we run out of record space.
-    const uint8_t allLightsCount = uint8_t(std::min(size_t(255), allLights.count()));
+
+    // Our light count cannot be larger than 255 because it's stored in a uint8_t. This should
+    // be guaranteed by CONFIG_MAX_LIGHT_COUNT
+    assert_invariant(allLights.count() <= std::numeric_limits<uint8_t>::max());
+
+    const uint8_t allLightsCount = allLights.count();
     offset += allLightsCount;
-    allLights.forEachSetBit([point = froxelRecords, froxelRecords](size_t l) mutable {
+    allLights.forEachSetBit([p = froxelRecords](size_t l) mutable {
         // make sure to keep this code branch-less
         const size_t word = l / LIGHT_PER_GROUP;
         const size_t bit  = l % LIGHT_PER_GROUP;
         l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
-        *point = RecordBufferType(l);
-        // we need to "cancel" the write operation if we have more than 255 spot or point lights
-        // (this is a limitation of the data type used to store the light counts per froxel)
-        point += (point - froxelRecords < 255) ? 1 : 0;
+        *p++ = RecordBufferType(l);
     });
 
     // how many froxel record entries were reused (for debugging)
@@ -759,8 +765,10 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         }
 
         // We have a limitation of 255 spot + 255 point lights per froxel.
+        assert_invariant(b.lights.count() <= std::numeric_limits<uint8_t>::max());
+
         // note: initializer list for union cannot have more than one element
-        FroxelEntry entry{ offset, uint8_t(std::min(size_t(255), b.lights.count())) };
+        FroxelEntry entry{ offset, uint8_t(b.lights.count()) };
         const size_t lightCount = entry.count();
 
         if (UTILS_UNLIKELY(offset + lightCount >= mFroxelRecordBufferEntryCount)) {
@@ -778,15 +786,12 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
         // iterate the bitfield
         auto * const beginPoint = froxelRecords + offset;
-        b.lights.forEachSetBit([point = beginPoint, beginPoint](size_t l) mutable {
+        b.lights.forEachSetBit([p = beginPoint](size_t l) mutable {
             // make sure to keep this code branch-less
             const size_t word = l / LIGHT_PER_GROUP;
             const size_t bit  = l % LIGHT_PER_GROUP;
             l = (bit * GROUP_COUNT) | (word % GROUP_COUNT);
-            *point = RecordBufferType(l);
-            // we need to "cancel" the write operation if we have more than 255 spot or point lights
-            // (this is a limitation of the data type used to store the light counts per froxel)
-            point += (point - beginPoint < 255) ? 1 : 0;
+            *p++ = RecordBufferType(l);
         });
 
         offset += lightCount;
