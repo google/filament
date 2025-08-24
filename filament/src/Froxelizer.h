@@ -36,6 +36,7 @@
 #include <math/vec4.h>
 
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/bitset.h>
 #include <utils/Slice.h>
 
@@ -172,6 +173,12 @@ public:
 
 private:
     size_t getFroxelBufferEntryCount() const noexcept {
+        // We guarantee that mFroxelBufferEntryCount is a multiple of 16. With this knowledge
+        // the compiler can do a much better job at vectorizing. For similar reasons, it's
+        // important to keep mFroxelBufferEntryCount an uint32_t (as opposed to a size_t).
+        assert_invariant((mFroxelBufferEntryCount & 0xF) == 0);
+        UTILS_ASSUME((mFroxelBufferEntryCount & 0xF) == 0);
+        UTILS_ASSUME(mFroxelBufferEntryCount >= 16);
         return mFroxelBufferEntryCount;
     }
 
@@ -248,10 +255,10 @@ private:
     LinearAllocatorArena mArena;                        // ~256 KiB
 
     // 4096 froxels fits in a 16KiB buffer, the minimum guaranteed in GLES 3.x and Vulkan 1.1
-    size_t mFroxelBufferEntryCount = 4096;
+    uint32_t mFroxelBufferEntryCount = 4096;
 
     // 16384 entries is our minimum with a 16KiB buffer
-    size_t mFroxelRecordBufferEntryCount = 16384;
+    uint32_t mFroxelRecordBufferEntryCount = 16384;
 
     // allocations in the private froxel arena
     float* mDistancesZ = nullptr;
