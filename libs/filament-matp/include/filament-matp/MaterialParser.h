@@ -39,10 +39,10 @@ public:
     // Parses a string material so that it can be used in MaterialBuilder.
     // Call MaterialBuilder::init before passing in the builder; call MaterialBuilder::build to
     // create filamat::Package after.
+    // When the input shader has #includes, it has to be resolved before calling into parse.
     bool parse(
             filamat::MaterialBuilder& builder,
-            const Config& config,
-            Config::Input* input, ssize_t& size, std::unique_ptr<const char[]>& buffer);
+            const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer);
     // Replaces macro keywords with user specified ones. Must be called before parse.
     bool processTemplateSubstitutions(
             const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer);

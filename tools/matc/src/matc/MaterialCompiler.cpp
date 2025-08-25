@@ -16,6 +16,8 @@
 
 #include "MaterialCompiler.h"
 
+#include "DirIncluder.h"
+
 #include <memory>
 #include <iostream>
 #include <utility>
@@ -52,13 +54,18 @@ bool MaterialCompiler::run(const matp::Config& config) {
 
     mParser.processTemplateSubstitutions(config, size, buffer);
 
+    utils::Path const materialFilePath = utils::Path(input->getName()).getAbsolutePath();
+    assert(materialFilePath.isFile());
+
     if (config.rawShaderMode()) {
-        utils::Path const materialFilePath = utils::Path(config.getInput()->getName()).getAbsolutePath();
-        assert(materialFilePath.isFile());
         const std::string extension = materialFilePath.getExtension();
         glslang::InitializeProcess();
-        bool const success = compileRawShader(buffer.get(), size, config.isDebug(), config.getOutput(),
-                extension.c_str());
+        bool const success =
+                compileRawShader(
+                        buffer.get(), size,
+                        config.isDebug(),
+                        config.getOutput(),
+                        extension.c_str());
         glslang::FinalizeProcess();
         return success;
     }
@@ -66,7 +73,14 @@ bool MaterialCompiler::run(const matp::Config& config) {
     MaterialBuilder::init();
     MaterialBuilder builder;
 
-    if (!mParser.parse(builder, config, input, size, buffer)) {
+    // Set the root include directory to the directory containing the material file.
+    DirIncluder includer;
+    includer.setIncludeDirectory(materialFilePath.getParent());
+
+    builder.includeCallback(includer)
+            .fileName(materialFilePath.getName().c_str());
+
+    if (!mParser.parse(builder, config, size, buffer)) {
         return false;
     }
 
