@@ -19,5 +19,7 @@ runs:
     - name: Install Mac Prerequisites
       shell: bash
       run: |
+        # Install brew prereqs
+        brew install coreutils
         # Install ninja
         source ./build/common/get-ninja.sh

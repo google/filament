@@ -372,12 +372,13 @@ void ColorPassDescriptorSet::prepareAmbientLight(FEngine const& engine, FIndirec
             });
 }
 
-void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer) noexcept {
+void ColorPassDescriptorSet::prepareDynamicLights(Froxelizer& froxelizer, bool const enableFroxelViz) noexcept {
     auto& s = mUniforms.edit();
     froxelizer.updateUniforms(s);
     float const f = froxelizer.getLightFar();
     // TODO: make the falloff rate a parameter
     s.lightFarAttenuationParams = 0.5f * float2{ 10.0f, 10.0f / (f * f) };
+    s.enableFroxelViz = enableFroxelViz;
 }
 
 void ColorPassDescriptorSet::prepareShadowMapping(BufferObjectHandle shadowUniforms) noexcept {

@@ -32,6 +32,7 @@
 #include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBuffer.h"
 #include "WebGPUVertexBufferInfo.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "CommandStreamDispatcher.h"
@@ -199,10 +200,8 @@ void WebGPUDriver::flush(int /* dummy */) {
 // Submits the currently recorded commands and waits for them to complete on the GPU.
 // This is a synchronous operation and should be used sparingly.
 void WebGPUDriver::finish(int /* dummy */) {
-    if (mCommandEncoder == nullptr) {
-        return;
-    }
-
+    mDevice.Tick();
+    mAdapter.GetInstance().ProcessEvents();
     flush();
     // Wait for all previously submitted work to finish.
     std::mutex syncPoint;
@@ -221,6 +220,7 @@ void WebGPUDriver::finish(int /* dummy */) {
             });
     std::unique_lock<std::mutex> lock(syncPoint);
     syncCondition.wait(lock, [&done] { return done; });
+    mReadPixelMapsCounter.waitForAllToFinish();
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -421,7 +421,6 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     mNativeWindow = nativeWindow;
-    assert_invariant(!mSwapChain);
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 
     wgpu::Extent2D extent = mPlatform.getSurfaceExtent(mNativeWindow);
@@ -497,7 +496,40 @@ void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
         Handle<HwTexture> sourceTextureHandle, const backend::TextureSwizzle r,
         const backend::TextureSwizzle g, const backend::TextureSwizzle b,
         const backend::TextureSwizzle a) {
-    PANIC_POSTCONDITION("Swizzle WebGPU Texture is not supported");
+
+    if (!isTextureSwizzleSupported()) {
+        FWGPU_LOGW << "WebGPUDriver::createTextureViewSwizzleR called while texture swizzling is "
+                      "not supported by the device/driver";
+    }
+
+    auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    assert_invariant(sourceTexture);
+
+    wgpu::TextureComponentSwizzle swizzle
+    {
+        .r = toWGPUComponentSwizzle(r),
+        .g = toWGPUComponentSwizzle(g),
+        .b = toWGPUComponentSwizzle(b),
+        .a = toWGPUComponentSwizzle(a),
+    };
+
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc {};
+    swizzleDesc.swizzle = swizzle;
+
+    const wgpu::TextureViewDescriptor viewDesc {
+        .nextInChain = &swizzleDesc,
+        .label = "swizzled_texture_view",
+        .format = sourceTexture->getTexture().GetFormat(),
+        .dimension = sourceTexture->getViewDimension(),
+        .baseMipLevel = 0,
+        .mipLevelCount = sourceTexture->getTexture().GetMipLevelCount(),
+        .baseArrayLayer = 0,
+        .arrayLayerCount = sourceTexture->getTexture().GetDepthOrArrayLayers(),
+    };
+
+    wgpu::TextureView swizzledView{ sourceTexture->getTexture().CreateView(&viewDesc) };
+    FILAMENT_CHECK_POSTCONDITION(swizzledView) << "Failed to create swizzled Texture view";
+    constructHandle<WebGPUTexture>(textureHandle, sourceTexture, swizzledView);
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,
@@ -642,7 +674,7 @@ bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {
 }
 
 bool WebGPUDriver::isTextureSwizzleSupported() {
-    return false;
+    return mDevice.HasFeature(wgpu::FeatureName::TextureComponentSwizzle);
 }
 
 bool WebGPUDriver::isTextureFormatMipmappable(const TextureFormat format) {
@@ -924,7 +956,7 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
                 << "Failed to create staging input texture for blit?";
         const auto copyInfo{ wgpu::TexelCopyTextureInfo{
             .texture = stagingTexture,
-            .mipLevel = level,
+            .mipLevel = 0,
             .origin = { .x = 0, .y = 0, .z = 0 },
             .aspect = texture->getAspect(),
         } };
@@ -979,7 +1011,6 @@ void WebGPUDriver::update3DImage(Handle<HwTexture> textureHandle, const uint32_t
             mQueue.Submit(1, &blitCommand);
             mCommandEncoder = nullptr;
         }
-        stagingTexture.Destroy();
     } else {
         // Direct copy without a blit.
         const auto copyInfo { wgpu::TexelCopyTextureInfo{
@@ -1470,7 +1501,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
         .size = bufferSize,
     };
 
-    const wgpu::Buffer stagingBuffer{ mDevice.CreateBuffer(&bufferDesc) };
+    wgpu::Buffer stagingBuffer{ mDevice.CreateBuffer(&bufferDesc) };
     assert_invariant(stagingBuffer);
 
     // WebGPU's texture coordinates for copies are top-left, but Filament's y-coordinate is
@@ -1521,6 +1552,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
             .driver = this,
     });
 
+    mReadPixelMapsCounter.startTask();
     userData->buffer.MapAsync(
             wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
@@ -1544,6 +1576,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
                     FWGPU_LOGE << "Failed to map staging buffer for readPixels: " << message;
                 }
                 data->driver->scheduleDestroy(std::move(data->pixelBufferDescriptor));
+                data->driver->mReadPixelMapsCounter.finishTask();
             },
             userData.release());
 }
@@ -1558,7 +1591,87 @@ void WebGPUDriver::blitDEPRECATED(TargetBufferFlags buffers,
         Handle<HwRenderTarget> destinationRenderTargetHandle, const Viewport destinationViewport,
         Handle<HwRenderTarget> sourceRenderTargetHandle, const Viewport sourceViewport,
         const SamplerMagFilter filter) {
-    PANIC_PRECONDITION("WebGPUDriver::blitDEPRECATED not supported");
+
+    auto const sourceTarget{ handleCast<WebGPURenderTarget>(sourceRenderTargetHandle) };
+    auto const destinationTarget{ handleCast<WebGPURenderTarget>(destinationRenderTargetHandle) };
+    assert_invariant(sourceTarget && destinationTarget);
+
+    FILAMENT_CHECK_PRECONDITION(buffers == TargetBufferFlags::COLOR0)
+            << "blitDEPRECATED only supports COLOR0";
+
+    FILAMENT_CHECK_PRECONDITION(sourceViewport.left >= 0 && sourceViewport.bottom >= 0 &&
+                                destinationViewport.left >= 0 && destinationViewport.bottom >= 0)
+            << "Source and destination viewports must be positive.";
+
+    // We always blit from/to the COLOR0 attachment.
+    auto sourceAttachment {sourceTarget->getColorAttachmentInfos()[0]};
+    Handle<HwTexture> sourceTextureHandle{ sourceAttachment.handle };
+    auto destinationAttachment {destinationTarget->getColorAttachmentInfos()[0]};
+    Handle<HwTexture> destinationTextureHandle{
+        destinationAttachment.handle
+    };
+
+    if (UTILS_UNLIKELY(!sourceTextureHandle || !destinationTextureHandle)) {
+        FWGPU_LOGE << "blitDEPRECATED could not find a valid color attachment to blit.";
+        return;
+    }
+
+    // WebGPU's texture coordinates are top-left, while Filament's are bottom-left.
+    // We need to flip the y-coordinate for both source and destination.
+    auto const sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
+    auto const destinationTexture{ handleCast<WebGPUTexture>(destinationTextureHandle) };
+
+    const uint32_t sourceTextureHeight{ sourceTexture->height };
+    const uint32_t flippedSourceY{ sourceTextureHeight - sourceViewport.bottom -
+                                   sourceViewport.height };
+
+    const uint32_t destinationTextureHeight{ destinationTexture->height };
+    const uint32_t flippedDestinationY{ destinationTextureHeight - destinationViewport.bottom -
+                                        destinationViewport.height };
+
+    const wgpu::Origin2D sourceOrigin{ static_cast<uint32_t>(sourceViewport.left), flippedSourceY };
+    const wgpu::Origin2D destinationOrigin{ static_cast<uint32_t>(destinationViewport.left),
+        flippedDestinationY };
+
+    const wgpu::Extent2D sourceSize{ static_cast<uint32_t>(sourceViewport.width),
+        static_cast<uint32_t>(sourceViewport.height) };
+    const wgpu::Extent2D destinationSize{ static_cast<uint32_t>(destinationViewport.width),
+        static_cast<uint32_t>(destinationViewport.height) };
+    
+    bool reusedCommandEncoder{ true };
+    if (mCommandEncoder) {
+        flush();
+    } else {
+        reusedCommandEncoder = false;
+        const wgpu::CommandEncoderDescriptor desc{ .label = "blit_deprecated_command" };
+        mCommandEncoder = mDevice.CreateCommandEncoder(&desc);
+    }
+
+    const WebGPUBlitter::BlitArgs blitArgs{
+        .source = { .texture = sourceTexture->getTexture(),
+                    .aspect = sourceTexture->getAspect(),
+                    .origin = sourceOrigin,
+                    .extent = sourceSize,
+                    .mipLevel = sourceAttachment.level,
+                    .layerOrDepth = sourceAttachment.layer,
+        },
+        .destination = { .texture = destinationTexture->getTexture(),
+                         .aspect = destinationTexture->getAspect(),
+                         .origin = destinationOrigin,
+                         .extent = destinationSize,
+                         .mipLevel = destinationAttachment.level,
+                         .layerOrDepth = destinationAttachment.layer,
+        },
+        .filter = filter,
+    };
+    mBlitter.blit(mQueue, mCommandEncoder, blitArgs);
+
+    if (!reusedCommandEncoder) {
+        const wgpu::CommandBufferDescriptor desc{ .label = "blit_deprecated_command_buffer" };
+        const wgpu::CommandBuffer blitCommand{ mCommandEncoder.Finish(&desc) };
+        mQueue.Submit(1, &blitCommand);
+        mCommandEncoder = nullptr;
+    }
 }
 
 void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,

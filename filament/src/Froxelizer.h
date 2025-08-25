@@ -22,6 +22,7 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
+#include <filament/View.h>
 #include <filament/Viewport.h>
 
 #include <backend/Handle.h>
@@ -31,6 +32,7 @@
 #include <utils/Slice.h>
 
 #include <math/mat4.h>
+#include <math/vec2.h>
 #include <math/vec4.h>
 
 namespace filament {
@@ -112,7 +114,8 @@ public:
      * return true if updateUniforms() needs to be called
      */
     bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope, Viewport const& viewport,
-            const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
+            const math::mat4f& projection, float projectionNear, float projectionFar,
+            math::float4 const& clipTransform) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
@@ -160,6 +163,8 @@ public:
     using LightGroupType = uint32_t;
 
     static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
+
+    View::FroxelConfigurationInfo getFroxelConfigurationInfo() const noexcept;
 
 private:
     size_t getFroxelBufferEntryCount() const noexcept {
@@ -260,9 +265,10 @@ private:
     uint16_t mFroxelCountZ = 0;
     uint32_t mFroxelCount = 0;
     math::uint2 mFroxelDimension = {};
+    math::float4 mClipTransform = { 1, 1, 0, 0 };
 
     math::mat4f mProjection;
-    float mLinearizer = 0.0f;
+    math::float2 mLinearizer{};
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
     backend::BufferObjectHandle mRecordsBuffer;

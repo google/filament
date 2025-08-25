@@ -93,9 +93,9 @@ public:
         VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
     };
 
-private:
-    bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed);
+    bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed) const;
 
+private:
     void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout, bool streamed);
 

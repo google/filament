@@ -1,5 +1,6 @@
-name: 'Get Mesa'
-description: 'Caches and installs Mesa'
+name: 'Get and cache Mesa'
+description: 'Get and cache Mesa'
+
 runs:
   using: "composite"
   steps:

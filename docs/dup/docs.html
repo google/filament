@@ -221,6 +221,8 @@ export is an html with the output captured in a <code>&lt;pre&gt;</code> tag).</
 <li>Replace css styling in the exported output as needed (so they don't interfere with the book's css.</li>
 <li>Replace resource urls to refer to locations relative to the mdbook structure.</li>
 </ul>
+<p>Any <code>markdeep</code> doc can be placed in <code>docs_src/src_markdeep/</code> and they will be parsed to html and included
+in the book as above.</p>
 <h3 id="readmes"><a class="header" href="#readmes">READMEs</a></h3>
 <p>Filament depends on a number of libraries, which reside in the directory <code>libs</code>. These individual
 libaries often have README.md in their root to describe itself. We collect these descriptions into our
@@ -229,7 +231,7 @@ located in <code>tools</code>. Some of tools also have README.md as description.
 <p>The process for copying and processing these READMEs is outlined in <a href="#introductory-doc">Introductory docs</a>.</p>
 <h3 id="other-technical-notes"><a class="header" href="#other-technical-notes">Other technical notes</a></h3>
 <p>These are technical documents that do not fit into a library, tool, or directory of the
-Filament source tree. We collect them into the <code>docs_src/src/notes</code> directory. No additional
+Filament source tree. We collect them into the <code>docs_src/src_mdbook/src/notes</code> directory. No additional
 processing is needed for these documents.</p>
 <h3 id="raw-source-files"><a class="header" href="#raw-source-files">Raw source files</a></h3>
 <p>These are files that are not part of the <code>mdbook</code> generation, but should be included output in <code>/docs</code>
@@ -242,7 +244,7 @@ add a link in <code>SUMMARY.md</code>, and perform the steps outlined in
 <a href="#how-to-create">how-to create section</a>.</p>
 <p>For example, if you are adding a general technical note, then you would</p>
 <ul>
-<li>Place the document (file with extension <code>.md</code>) in <code>docs_src/src/notes</code></li>
+<li>Place the document (file with extension <code>.md</code>) in <code>docs_src/src_mdbook/src/notes</code></li>
 <li>Add a link in <a href="https://github.com/google/filament/blob/main/docs_src/src_mdbook/src/SUMMARY.md"><code>docs_src/src_mdbook/src/SUMMARY.md</code></a></li>
 <li>Run the commands in the <a href="#how-to-generate">Generate</a> section</li>
 </ul>

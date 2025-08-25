@@ -27,7 +27,6 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
-#include <mutex>
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -36,6 +35,8 @@
 #include <math/vec3.h>
 
 #include <atomic>
+#include <limits>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <utility>
@@ -117,6 +118,11 @@ public:
         PERFORMANCE
     };
 
+    enum class Workarounds : uint64_t {
+        NONE = 0,
+        ALL = 0xFFFFFFFFFFFFFFFF
+    };
+
     /**
      * Initialize MaterialBuilder.
      *
@@ -140,6 +146,7 @@ protected:
     Platform mPlatform = Platform::DESKTOP;
     TargetApi mTargetApi = (TargetApi) 0;
     Optimization mOptimization = Optimization::PERFORMANCE;
+    Workarounds mWorkarounds = Workarounds::ALL;
     bool mPrintShaders = false;
     bool mSaveRawVariants = false;
     bool mGenerateDebugInfo = false;
@@ -606,6 +613,13 @@ public:
      */
     MaterialBuilder& optimization(Optimization optimization) noexcept;
 
+    /**
+     * Specifies workarounds to enable during code generation. By default, all workaround are
+     * enabled. These workarounds typically disable important optimizations and in some cases
+     * whole features.
+     */
+    MaterialBuilder& workarounds(Workarounds workarounds) noexcept;
+
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside MaterialBuilder.
     //! If true, will output the generated GLSL shader code to stdout.
     MaterialBuilder& printShaders(bool printShaders) noexcept;
@@ -992,7 +1006,15 @@ private:
 
 } // namespace filamat
 
-template<> struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
-        : public std::true_type {};
+template<>
+struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
+        : public std::true_type {
+};
+
+template<>
+struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::Workarounds>
+        : public std::true_type {
+};
+
 
 #endif

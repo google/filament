@@ -34,10 +34,25 @@ public:
         NONE,
     };
 
+    /**
+     * Creates a Filament texture and a texture view
+     */
     WebGPUTexture(SamplerType, uint8_t levels, TextureFormat, uint8_t samples, uint32_t width,
             uint32_t height, uint32_t depth, TextureUsage, wgpu::Device const&) noexcept;
 
+    /**
+     * Creates a "Filament Texture View", where the underlying texture is the same as the source,
+     * but the view elements differ
+     */
     WebGPUTexture(WebGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+
+    /**
+     * @param textureView texture view to use for the respective texture. e.g. it can be a
+     *                    swizzled Texture view for that filament texture
+     *
+     * Associates the underlying texture with the given texture view
+     */
+    WebGPUTexture(WebGPUTexture const* source, wgpu::TextureView textureView) noexcept;
 
     [[nodiscard]] wgpu::TextureAspect getAspect() const { return mAspect; }
 

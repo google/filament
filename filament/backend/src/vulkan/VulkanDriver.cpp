@@ -452,7 +452,7 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    if (mExternalImageManager.isExternallySampledTexture(texture)) {
+    if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
         set->setHasStreamedTexture(false);
@@ -2027,6 +2027,18 @@ void VulkanDriver::bindDescriptorSet(
     if (dsh) {
         auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
         mDescriptorSetCache.bind(setIndex, set, std::move(offsets));
+
+        if (mAppState.hasExternalSamplers()) {
+            auto const& bindInDrawBundle = mPipelineState.bindInDraw.second;
+            // The set index being bound has already been bound or will be bound. If it's already
+            // been bound and this set has external samplers, we do the doBindindraw block in
+            // draw2() again. Because this set might potentially cause a new pipelineLayout
+            // (therefore pipeline) to be bound.
+            if (bindInDrawBundle.descriptorSetMask[setIndex] &&
+                    mExternalImageManager.hasExternalSampler(set)) {
+                mPipelineState.bindInDraw.first = true;
+            }
+        }
     } else {
         mDescriptorSetCache.unbind(setIndex);
     }

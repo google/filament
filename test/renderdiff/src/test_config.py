@@ -44,11 +44,22 @@ class RenderingConfig():
 class PresetConfig(RenderingConfig):
   def __init__(self, data, existing_models):
     RenderingConfig.__init__(self, data)
-    models = data.get('models')
-    if models:
+    self.models = []
+
+    def _check(models):
       assert _is_list_of_strings(models)
       assert all(m in existing_models for m in models)
+
+    models = data.get('models')
+    if models:
+      _check(models)
       self.models = models
+    model_list_file = data.get('model_list_file')
+    if model_list_file and os.path.exists(model_list_file):
+      with open(model_list_file, 'r') as f:
+        models = list(filter(lambda a: len(a) > 0, map(lambda a: a.strip(), f.read().split('\n'))))
+        _check(models)
+        self.models += models
 
 class TestConfig(RenderingConfig):
   def __init__(self, data, existing_models, presets):
@@ -105,7 +116,9 @@ class RenderTestConfig():
     assert all(path.isdir(p) for p in model_search_paths)
 
     model_paths = list(
-        chain(*(glob.glob(f'{d}/**/*.glb', recursive=True) for d in model_search_paths)))
+        chain(*(glob.glob(f'{d}/**/*.glb', recursive=True) for d in model_search_paths))) + \
+        list(
+          chain(*(glob.glob(f'{d}/**/*.gltf', recursive=True) for d in model_search_paths)))
     # This flatten the output for glob.glob
     self.models = {path.splitext(path.basename(model))[0]: model for model in model_paths}
 
