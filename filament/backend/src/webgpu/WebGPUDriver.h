@@ -48,7 +48,7 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
-
+struct WebGPURenderPrimitive;
 /**
  * Implements the private backend driver API for WebGPU specifically (that API is essentially
  * expressed in private/backend/DriverAPI.inc)
@@ -85,6 +85,7 @@ private:
     wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
+    WebGPURenderPrimitive* mCurrentRenderPrimitive = nullptr;
     WebGPUPipelineLayoutCache mPipelineLayoutCache;
     WebGPUPipelineCache mPipelineCache;
     WebGPURenderPassMipmapGenerator mRenderPassMipmapGenerator;

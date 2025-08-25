@@ -569,6 +569,7 @@ void WebGPUDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> renderPrimit
     renderPrimitive->vertexBuffer = vertexBuffer;
     renderPrimitive->indexBuffer = indexBuffer;
     renderPrimitive->type = primitiveType;
+    mCurrentRenderPrimitive = renderPrimitive;
 }
 
 void WebGPUDriver::createProgramR(Handle<HwProgram> programHandle, Program&& program) {
@@ -1845,6 +1846,7 @@ void WebGPUDriver::bindPipeline(PipelineState const& pipelineState) {
         .vertexBufferLayouts = vertexBufferInfo->getVertexBufferLayouts(),
         .pipelineLayout = layout,
         .primitiveType = pipelineState.primitiveType,
+        .stripIndexFormat = mCurrentRenderPrimitive->indexBuffer->getIndexFormat(),
         .rasterState = pipelineState.rasterState,
         .stencilState = pipelineState.stencilState,
         .polygonOffset = pipelineState.polygonOffset,
