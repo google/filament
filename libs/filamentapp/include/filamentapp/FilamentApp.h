@@ -111,6 +111,15 @@ public:
 
     void loadIBL(std::string_view path);
 
+
+    // debugging: enable/disable the froxel grid
+    void setCameraFrustumEnabled(bool enabled) noexcept;
+    void setDirectionalShadowFrustumEnabled(bool enabled) noexcept;
+    void setFroxelGridEnabled(bool enabled) noexcept;
+    bool isCameraFrustumEnabled() const noexcept;
+    bool isDirectionalShadowFrustumEnabled() const noexcept;
+    bool isFroxelGridEnabled() const noexcept;
+
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
@@ -262,6 +271,10 @@ private:
     float mCameraNear = 0.1f;
     float mCameraFar = 100.0f;
     bool mReconfigureCameras = false;
+    uint8_t mFroxelInfoAge = 0x42;
+    uint8_t mFroxelGridEnabled = 0;
+    uint8_t mDirectionalShadowFrustumEnabled = 0x2;
+    uint8_t mCameraFrustumEnabled = 0x2;
 
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     filament::backend::VulkanPlatform* mVulkanPlatform = nullptr;

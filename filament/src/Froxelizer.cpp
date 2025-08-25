@@ -124,6 +124,20 @@ size_t Froxelizer::getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexc
     return std::min(FROXEL_BUFFER_MAX_ENTRY_COUNT * sizeof(FroxelEntry), targetSize);
 }
 
+View::FroxelConfigurationInfo Froxelizer::getFroxelConfigurationInfo() const noexcept {
+    return { uint8_t(getFroxelCountX()),
+             uint8_t(getFroxelCountY()),
+             uint8_t(getFroxelCountZ()),
+             mViewport.width,
+             mViewport.height,
+             mFroxelDimension,
+             mZLightFar,
+             mLinearizer[0],
+             mProjection,
+             mClipTransform
+    };
+}
+
 Froxelizer::Froxelizer(FEngine& engine)
         : mArena("froxel", PER_FROXELDATA_ARENA_SIZE),
           mZLightNear(FROXEL_FIRST_SLICE_DEPTH),
@@ -198,9 +212,13 @@ void Froxelizer::setProjection(const mat4f& projection,
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, RootArenaScope& rootArenaScope,
         filament::Viewport const& viewport,
-        const mat4f& projection, float const projectionNear, float const projectionFar) noexcept {
+        const mat4f& projection, float const projectionNear, float const projectionFar,
+        float4 const& clipTransform) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
+
+    // Only for debugging
+    mClipTransform = clipTransform;
 
     bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags)) {
@@ -361,8 +379,10 @@ bool Froxelizer::update() noexcept {
                 getFroxelBufferEntryCount(), viewport);
 
         mFroxelDimension = froxelDimension;
-        mClipToFroxelX = (0.5f * float(viewport.width))  / float(froxelDimension.x);
-        mClipToFroxelY = (0.5f * float(viewport.height)) / float(froxelDimension.y);
+        // note: because froxelDimension is a power-of-two and viewport is an integer, mClipFroxel
+        // is an exact value (which is not true for 1/mClipToFroxelX, btw)
+        mClipToFroxelX = float(viewport.width)  / float(2 * froxelDimension.x);
+        mClipToFroxelY = float(viewport.height) / float(2 * froxelDimension.y);
 
         uniformsNeedUpdating = true;
 
@@ -408,8 +428,7 @@ bool Froxelizer::update() noexcept {
         }
 
         // for the inverse-transformation (view-space z to z-slice)
-        mLinearizer = 1.0f / linearizer;
-        mZLightFar = zLightFar;
+        mLinearizer = { linearizer, 1.0f / linearizer };
 
         mParamsZ[0] = 0; // updated when camera changes
         mParamsZ[1] = 0; // updated when camera changes
@@ -466,7 +485,7 @@ bool Froxelizer::update() noexcept {
             // ==> i = log2(z_screen * (far/near)) * (-1/linearizer) + zcount
             mParamsZ[0] = mZLightFar / Pw;
             mParamsZ[1] = 0.0f;
-            mParamsZ[2] = -mLinearizer;
+            mParamsZ[2] = -mLinearizer[1];
         } else {
             // orthographic projection
             // z_view = (1 - z_screen) * (near - far) - near
@@ -476,7 +495,7 @@ bool Froxelizer::update() noexcept {
             //   Pw = far / (far - near)
             mParamsZ[0] = -1.0f / (Pz * mZLightFar);  // -(far-near) / mZLightFar
             mParamsZ[1] =    Pw / (Pz * mZLightFar);  //         far / mZLightFar
-            mParamsZ[2] = mLinearizer;
+            mParamsZ[2] = mLinearizer[1];
         }
         uniformsNeedUpdating = true;
     }
@@ -507,7 +526,7 @@ size_t Froxelizer::findSliceZ(float const z) const noexcept {
 
     // This whole function is now branch-less.
 
-    int s = int( fast::log2(-z / mZLightFar) * mLinearizer + float(mFroxelCountZ) );
+    int s = int( fast::log2(-z / mZLightFar) * mLinearizer[1] + float(mFroxelCountZ) );
 
     // there are cases where z can be negative here, e.g.:
     // - the light is visible, but its center is behind the camera

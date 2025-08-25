@@ -217,7 +217,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:dw:";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:y:b:evg:dw:";
     static const struct option OPTIONS[] = {
         { "help",              no_argument,          nullptr, 'h' },
         { "api",               required_argument,    nullptr, 'a' },
@@ -949,12 +949,22 @@ int main(int argc, char** argv) {
                                     "d.shadowmap.display_shadow_texture_channel"), 0, 3);
                     ImGui::Unindent();
                 }
+
+                bool cameraFrustum = FilamentApp::get().isCameraFrustumEnabled();
+                ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
+                FilamentApp::get().setCameraFrustumEnabled(cameraFrustum);
+
+                bool shadowFrustum = FilamentApp::get().isDirectionalShadowFrustumEnabled();
+                ImGui::Checkbox("Show Shadow Frustum", &shadowFrustum);
+                FilamentApp::get().setDirectionalShadowFrustumEnabled(shadowFrustum);
+
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
                         &debugFroxelVisualization)) {
                     ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
                     debug.setProperty("d.lighting.debug_froxel_visualization",
                             debugFroxelVisualization);
+                    FilamentApp::get().setFroxelGridEnabled(debugFroxelVisualization);
                 }
 
                 auto dataSource = debug.getDataSource("d.view.frame_info");

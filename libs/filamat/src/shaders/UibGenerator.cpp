@@ -140,6 +140,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fParams",                0, Type::UINT3                   },
             { "lightChannels",          0, Type::INT                     },
             { "froxelCountXY",          0, Type::FLOAT2                  },
+            { "enableFroxelViz",        0, Type::INT                     },
+            { "dynReserved0",           0, Type::INT                     },
+            { "dynReserved1",           0, Type::INT                     },
+            { "dynReserved2",           0, Type::INT                     },
 
             { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
