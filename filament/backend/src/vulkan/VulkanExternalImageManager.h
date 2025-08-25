@@ -94,10 +94,10 @@ public:
     };
 
 private:
-    bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
+    bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed);
 
     void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout, bool streamed);
 
     void updateImage(ImageData* imageData);
 

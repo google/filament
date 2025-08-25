@@ -113,8 +113,9 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
         if (!set || !layout) {
             continue;
         }
-        if (hasExternalSampler(set)) {
-            updateSetAndLayout(set, layout);
+        bool streamed = false;
+        if (hasExternalSampler(set, streamed)) {
+            updateSetAndLayout(set, layout, streamed);
             shouldUseExternalSampler.set(i);
         }
     }
@@ -122,15 +123,20 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
 }
 
 bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed) {
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& info) { return info.set == set; });
-    return itr != mSetBindings.end();
+    bool doesIt = false;
+    if (itr != mSetBindings.end()) {
+        streamed = bool(itr->image->getStream());
+        doesIt = true;
+    }
+    return doesIt;
 }
 
 void VulkanExternalImageManager::updateSetAndLayout(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
+        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout, bool streamed) {
     utils::FixedCapacityVector<
             std::tuple<uint8_t, VkSampler, fvkmemory::resource_ptr<VulkanTexture>>>
             samplerAndBindings;
@@ -179,7 +185,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
     // Need to copy the set
     VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (set->getHasStreamedTexture() || (oldLayout != newLayout || oldSet == VK_NULL_HANDLE)) {
+    if (streamed || (oldLayout != newLayout || oldSet == VK_NULL_HANDLE)) {
         // Build a new descriptor set from the new layout
         VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
         auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
