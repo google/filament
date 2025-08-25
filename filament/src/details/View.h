@@ -519,9 +519,8 @@ private:
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
 
     void updateUBOs(backend::DriverApi& driver,
-        FScene::RenderableSoa& renderableData,
-        utils::Range<uint32_t> visibleRenderables,
-        backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
+            FScene::RenderableSoa& renderableData,
+            utils::Range<uint32_t> visibleRenderables) noexcept;
 
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
@@ -613,7 +612,7 @@ private:
     Range mVisibleRenderables;
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
-    uint32_t mRenderableUBOSize = 0;
+    uint32_t mRenderableUBOElementCount = 0;
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
