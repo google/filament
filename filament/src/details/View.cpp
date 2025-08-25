@@ -17,6 +17,7 @@
 #include "details/View.h"
 
 #include "Allocators.h"
+#include "BufferPoolAllocator.h"
 #include "Culler.h"
 #include "DebugRegistry.h"
 #include "FrameHistory.h"
@@ -27,8 +28,11 @@
 #include "ShadowMap.h"
 #include "ShadowMapManager.h"
 
+#include "components/TransformManager.h"
+
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
+#include "details/InstanceBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/Renderer.h"
 #include "details/Scene.h"
@@ -54,6 +58,7 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/Panic.h>
+#include <utils/Range.h>
 #include <utils/Slice.h>
 #include <utils/Zip2Iterator.h>
 
@@ -71,6 +76,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <new>
 #include <ratio>
 #include <utility>
 
@@ -93,7 +99,8 @@ FView::FView(FEngine& engine)
           mUniforms(engine.getDriverApi()),
           mColorPassDescriptorSet{
                 { engine, false, mUniforms },
-                { engine, true, mUniforms } }
+                { engine, true, mUniforms } },
+          mSharedState(std::make_shared<SharedState>())
 {
     DriverApi& driver = engine.getDriverApi();
 
@@ -766,7 +773,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 // TODO: should we shrink the underlying UBO at some point?
             }
             assert_invariant(mRenderableUbh);
-            scene->updateUBOs(merged, mRenderableUbh);
+            updateUBOs(driver, renderableData, merged, mRenderableUbh);
 
             mCommonRenderableDescriptorSet.setBuffer(
                 engine.getPerRenderableDescriptorSetLayout(),
@@ -883,6 +890,65 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     colorPassDescriptorSet.prepareTemporalNoise(engine, mTemporalAntiAliasingOptions);
     colorPassDescriptorSet.prepareBlending(needsAlphaChannel);
     colorPassDescriptorSet.prepareMaterialGlobals(mMaterialGlobals);
+}
+
+void FView::updateUBOs(
+        FEngine::DriverApi& driver,
+        FScene::RenderableSoa& renderableData,
+        utils::Range<uint32_t> visibleRenderables,
+        Handle<HwBufferObject> renderableUbh) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    // don't allocate more than 16 KiB directly into the render stream
+    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
+    const size_t count = visibleRenderables.size();
+    PerRenderableData* buffer = [&]{
+        if (count >= MAX_STREAM_ALLOCATION_COUNT) {
+            // use the heap allocator
+            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
+            return static_cast<PerRenderableData*>(bufferPoolAllocator.get(count * sizeof(PerRenderableData)));
+        }
+        // allocate space into the command stream directly
+        return driver.allocatePod<PerRenderableData>(count);
+    }();
+
+    PerRenderableData const* const uboData = renderableData.data<FScene::UBO>();
+    mat4f const* const worldTransformData = renderableData.data<FScene::WORLD_TRANSFORM>();
+
+    // prepare each InstanceBuffer.
+    FRenderableManager::InstancesInfo const* instancesData = renderableData.data<FScene::INSTANCES>();
+    for (uint32_t const i : visibleRenderables) {
+        auto& instancesInfo = instancesData[i];
+        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
+            instancesInfo.buffer->prepare(driver, worldTransformData[i], uboData[i]);
+        }
+    }
+
+    // copy our data into the UBO for each visible renderable
+    for (uint32_t const i : visibleRenderables) {
+        buffer[i] = uboData[i];
+    }
+
+    // We capture state shared between Scene and the update buffer callback, because the Scene could
+    // be destroyed before the callback executes.
+    std::weak_ptr<SharedState>* const weakShared =
+            new (std::nothrow) std::weak_ptr(mSharedState);
+
+    // update the UBO
+    driver.resetBufferObject(renderableUbh);
+    driver.updateBufferObjectUnsynchronized(renderableUbh, {
+            buffer, count * sizeof(PerRenderableData),
+            +[](void* p, size_t const s, void* user) {
+                std::weak_ptr<SharedState> const* const weakShared =
+                        static_cast<std::weak_ptr<SharedState>*>(user);
+                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
+                    if (auto state = weakShared->lock()) {
+                        state->mBufferPoolAllocator.put(p);
+                    }
+                }
+                delete weakShared;
+            }, weakShared
+    }, 0);
 }
 
 void FView::computeVisibilityMasks(
