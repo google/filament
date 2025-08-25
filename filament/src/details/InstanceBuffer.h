@@ -21,6 +21,7 @@
 
 #include <filament/InstanceBuffer.h>
 
+#include <backend/DriverApiForward.h>
 #include <backend/Handle.h>
 
 #include <math/mat4.h>
@@ -48,7 +49,7 @@ public:
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
-    void prepare(FEngine& engine, math::mat4f const& rootTransform, const PerRenderableData& ubo);
+    void prepare(backend::DriverApi& driver, math::mat4f const& rootTransform, const PerRenderableData& ubo);
 
     utils::CString const& getName() const noexcept { return mName; }
 
