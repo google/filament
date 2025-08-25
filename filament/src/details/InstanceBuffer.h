@@ -30,6 +30,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
@@ -54,6 +55,7 @@ public:
     utils::CString const& getName() const noexcept { return mName; }
 
     backend::BufferObjectHandle getHandle() const noexcept { return mHandle; }
+    uint32_t getOffset() const noexcept { return mOffset; }
 
 private:
     friend class RenderableManager;
@@ -62,6 +64,7 @@ private:
     utils::CString mName;
     size_t mInstanceCount;
     backend::BufferObjectHandle mHandle;
+    uint32_t mOffset = 0;
 };
 
 FILAMENT_DOWNCAST(InstanceBuffer)
