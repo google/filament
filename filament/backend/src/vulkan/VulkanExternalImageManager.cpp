@@ -123,12 +123,16 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
 }
 
 bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed) {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed) const {
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& info) { return info.set == set; });
     bool doesIt = false;
+    streamed = false;
+
     if (itr != mSetBindings.end()) {
-        streamed = bool(itr->image->getStream());
+        auto itrStream = std::find_if(mSetStreamBindings.begin(), mSetStreamBindings.end(),
+                [&](SetStreamBindingInfo const& info) { return info.set == set; });
+        streamed = (itrStream != mSetStreamBindings.end());
         doesIt = true;
     }
     return doesIt;

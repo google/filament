@@ -458,7 +458,7 @@ void VulkanDriver::updateDescriptorSetTexture(
         set->setHasStreamedTexture(false);
     } else if (mExternalImageManager.isStreamedTexture(texture)) {
         mExternalImageManager.bindStream(set, binding, texture->getStream(), params);
-        mAppState.hasBoundExternalImages = true;// still set to true because will be true
+        mAppState.hasBoundExternalImages = true;// because there will always be external images
         set->setHasStreamedTexture(true);
     } else {
         VulkanSamplerCache::Params cacheParams = {
@@ -2034,8 +2034,9 @@ void VulkanDriver::bindDescriptorSet(
             // been bound and this set has external samplers, we do the doBindindraw block in
             // draw2() again. Because this set might potentially cause a new pipelineLayout
             // (therefore pipeline) to be bound.
+            bool streamed;
             if (bindInDrawBundle.descriptorSetMask[setIndex] &&
-                    mExternalImageManager.hasExternalSampler(set)) {
+                    mExternalImageManager.hasExternalSampler(set, streamed)) {
                 mPipelineState.bindInDraw.first = true;
             }
         }
