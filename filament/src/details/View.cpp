@@ -810,7 +810,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::OBJECT_UNIFORMS,
                         instance.buffer ? instance.buffer->getHandle() : mRenderableUbh,
-                        0, sizeof(PerRenderableUib));
+                        instance.buffer ? instance.buffer->getOffset() : 0,
+                        sizeof(PerRenderableUib));
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::BONES_UNIFORMS,
