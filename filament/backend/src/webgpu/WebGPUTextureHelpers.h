@@ -198,81 +198,21 @@ namespace filament::backend {
         case TextureFormat::RGB_BPTC_SIGNED_FLOAT:   return wgpu::TextureFormat::BC6HRGBFloat;
         case TextureFormat::RGBA_BPTC_UNORM:         return wgpu::TextureFormat::BC7RGBAUnorm;
         case TextureFormat::SRGB_ALPHA_BPTC_UNORM:   return wgpu::TextureFormat::BC7RGBAUnormSrgb;
-        case TextureFormat::RGB565:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and discard the alpha and lower precision.
-            FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGB9_E5: return wgpu::TextureFormat::RGB9E5Ufloat;
-        case TextureFormat::RGB5_A1:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and handle the packing/unpacking in shaders.
-            FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGBA4:
-            // No direct mapping in wgpu. Could potentially map to RGBA8Unorm
-            // and handle the packing/unpacking in shaders.
-            FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
-                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
-            return wgpu::TextureFormat::Undefined;
-        case TextureFormat::RGB8:
-            FWGPU_LOGW << "Requested Filament texture format RGB8 but getting "
-                          "wgpu::TextureFormat::RGBA8Unorm (no direct sRGB equivalent in wgpu "
-                          "without alpha)";
-            return wgpu::TextureFormat::RGBA8Unorm;
-        case TextureFormat::SRGB8:
-            FWGPU_LOGW << "Requested Filament texture format SRGB8 but getting "
-                          "wgpu::TextureFormat::RGBA8UnormSrgb (no direct sRGB equivalent in wgpu "
-                          "without alpha)";
-            return wgpu::TextureFormat::RGBA8UnormSrgb;
-        case TextureFormat::RGB8_SNORM:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB8_SNORM but getting "
-                       "wgpu::TextureFormat::RGBA8Snorm (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Snorm;
-        case TextureFormat::RGB8UI:
-            FWGPU_LOGW << "Requested Filament texture format RGB8UI but getting "
-                          "wgpu::TextureFormat::RGBA8Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Uint;
-        case TextureFormat::RGB8I:
-            FWGPU_LOGW << "Requested Filament texture format RGB8I but getting "
-                          "wgpu::TextureFormat::RGBA8Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA8Sint;
+        case TextureFormat::RGB9_E5:                 return wgpu::TextureFormat::RGB9E5Ufloat;
+        case TextureFormat::RGB8:                    return wgpu::TextureFormat::RGBA8Unorm;
+        case TextureFormat::SRGB8:                   return wgpu::TextureFormat::RGBA8UnormSrgb;
+        case TextureFormat::RGB8_SNORM:              return wgpu::TextureFormat::RGBA8Snorm;
+        case TextureFormat::RGB8UI:                  return wgpu::TextureFormat::RGBA8Uint;
+        case TextureFormat::RGB8I:                   return wgpu::TextureFormat::RGBA8Sint;
         case TextureFormat::R11F_G11F_B10F:          return wgpu::TextureFormat::RG11B10Ufloat;
         case TextureFormat::UNUSED:                  return wgpu::TextureFormat::Undefined;
         case TextureFormat::RGB10_A2:                return wgpu::TextureFormat::RGB10A2Unorm;
-        case TextureFormat::RGB16F:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16F but getting "
-                       "wgpu::TextureFormat::RGBA16Float (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Float;
-        case TextureFormat::RGB16UI:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16UI but getting "
-                       "wgpu::TextureFormat::RGBA16Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Uint;
-        case TextureFormat::RGB16I:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB16I but getting "
-                       "wgpu::TextureFormat::RGBA16Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA16Sint;
-        case TextureFormat::RGB32F:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32F but getting "
-                       "wgpu::TextureFormat::RGBA32Float (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Float;
-        case TextureFormat::RGB32UI:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32UI but getting "
-                       "wgpu::TextureFormat::RGBA32Uint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Uint;
-        case TextureFormat::RGB32I:
-            FWGPU_LOGW
-                    << "Requested Filament texture format RGB32I but getting "
-                       "wgpu::TextureFormat::RGBA32Sint (no direct mapping in wgpu without alpha)";
-            return wgpu::TextureFormat::RGBA32Sint;
+        case TextureFormat::RGB16F:                  return wgpu::TextureFormat::RGBA16Float;
+        case TextureFormat::RGB16UI:                 return wgpu::TextureFormat::RGBA16Uint;
+        case TextureFormat::RGB16I:                  return wgpu::TextureFormat::RGBA16Sint;
+        case TextureFormat::RGB32F:                  return wgpu::TextureFormat::RGBA32Float;
+        case TextureFormat::RGB32UI:                 return wgpu::TextureFormat::RGBA32Uint;
+        case TextureFormat::RGB32I:                  return wgpu::TextureFormat::RGBA32Sint;
         case TextureFormat::DXT1_RGB:                return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT1_RGBA:               return wgpu::TextureFormat::BC1RGBAUnorm;
         case TextureFormat::DXT3_RGBA:               return wgpu::TextureFormat::BC2RGBAUnorm;
@@ -281,6 +221,20 @@ namespace filament::backend {
         case TextureFormat::DXT1_SRGBA:              return wgpu::TextureFormat::BC1RGBAUnormSrgb;
         case TextureFormat::DXT3_SRGBA:              return wgpu::TextureFormat::BC2RGBAUnormSrgb;
         case TextureFormat::DXT5_SRGBA:              return wgpu::TextureFormat::BC3RGBAUnormSrgb;
+        // No direct mapping in wgpu. Could potentially map to RGBA8Unorm and handle the
+        // packing/unpacking in shaders.
+        case TextureFormat::RGB565:
+            FWGPU_LOGW << "Requested Filament texture format RGB565 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
+        case TextureFormat::RGB5_A1:
+            FWGPU_LOGW << "Requested Filament texture format RGB5_A1 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
+        case TextureFormat::RGBA4:
+            FWGPU_LOGW << "Requested Filament texture format RGBA4 but getting "
+                          "wgpu::TextureFormat::Undefined (no direct mapping in wgpu)";
+            return wgpu::TextureFormat::Undefined;
     }
 }
 
@@ -338,6 +292,20 @@ namespace filament::backend {
         case wgpu::TextureFormat::ETC2RGB8A1UnormSrgb: return wgpu::TextureFormat::ETC2RGB8A1Unorm;
         case wgpu::TextureFormat::ETC2RGBA8UnormSrgb:  return wgpu::TextureFormat::ETC2RGBA8Unorm;
         default:                                       return format;
+    }
+}
+
+[[nodiscard]] constexpr wgpu::ComponentSwizzle toWGPUComponentSwizzle(const backend::TextureSwizzle swizzle) {
+    switch (swizzle) {
+        case backend::TextureSwizzle::CHANNEL_0:       return wgpu::ComponentSwizzle::R;
+        case backend::TextureSwizzle::CHANNEL_1:       return wgpu::ComponentSwizzle::G;
+        case backend::TextureSwizzle::CHANNEL_2:       return wgpu::ComponentSwizzle::B;
+        case backend::TextureSwizzle::CHANNEL_3:       return wgpu::ComponentSwizzle::A;
+        case backend::TextureSwizzle::SUBSTITUTE_ZERO: return wgpu::ComponentSwizzle::Zero;
+        case backend::TextureSwizzle::SUBSTITUTE_ONE:  return wgpu::ComponentSwizzle::One;
+        default:
+             FWGPU_LOGW << "invalid swizzle component returning wgpu::ComponentSwizzle::Undefined";
+            return wgpu::ComponentSwizzle::Undefined;
     }
 }
 
@@ -548,6 +516,93 @@ namespace filament::backend {
 [[nodiscard]] constexpr bool conversionNecessary(const wgpu::TextureFormat source,
         const wgpu::TextureFormat destination, const PixelDataType pixelDataType) {
     return source != destination && pixelDataType != PixelDataType::COMPRESSED;
+}
+
+/**
+ * @param fUsage Filament's requested texture usage
+ * @param samples How many samples to use for MSAA
+ * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
+ *                                   like a compute shader
+ * @param needsRenderAttachmentSupport if we need to use this texture as a render pass attachment
+ *                                     in something like a render pass blit (e.g. mipmap generation)
+ * @param deviceSupportsTransientAttachments if the device itself supports Render Attachments
+ * @return The appropriate texture usage flags for the underlying texture
+ */
+[[nodiscard]] constexpr wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
+        const uint8_t samples, const bool needsComputeStorageSupport,
+        const bool needsRenderAttachmentSupport, const bool deviceSupportsTransientAttachments) {
+    wgpu::TextureUsage retUsage{ wgpu::TextureUsage::None };
+
+    if (any(TextureUsage::BLIT_SRC & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::TextureBinding);
+    }
+    if (any(TextureUsage::BLIT_DST & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::CopyDst | wgpu::TextureUsage::RenderAttachment);
+    }
+    if (any(TextureUsage::UPLOADABLE & fUsage)) {
+        retUsage |= wgpu::TextureUsage::CopyDst;
+    }
+    if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
+        retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);
+    }
+    if (any(TextureUsage::SAMPLEABLE & fUsage)) {
+        retUsage |= wgpu::TextureUsage::TextureBinding;
+    }
+    // if needsComputeStorageSupport we need to read and write to the texture in a shader and thus
+    // require CopySrc, CopyDst, TextureBinding, & StorageBinding
+    if (needsComputeStorageSupport) {
+        retUsage |= (wgpu::TextureUsage::StorageBinding |
+                     wgpu::TextureUsage::CopySrc |
+                     wgpu::TextureUsage::CopyDst |
+                     wgpu::TextureUsage::TextureBinding);
+    }
+
+    wgpu::TextureUsage transientAttachmentNeeded{ wgpu::TextureUsage::None };
+    const bool useTransientAttachment {
+            deviceSupportsTransientAttachments &&
+            // Usage consists of attachment flags only.
+            none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
+            // Usage contains at least one attachment flag.
+            any(fUsage & TextureUsage::ALL_ATTACHMENTS) &&
+            // Depth resolve cannot use transient attachment because it uses a custom shader.
+            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
+            // restriction.
+            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
+            // and above to be able to support stencil resolve (along with depth).
+            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1)};
+    if (useTransientAttachment) {
+        transientAttachmentNeeded |= wgpu::TextureUsage::TransientAttachment;
+    }
+
+    // A texture that is a blit destination or render attachment will often need to be
+    // a copy source for subsequent operations (e.g., mipmap generation, readbacks).
+    // However, we dont need to add the CopySrc IF its a transientAttachment
+    if (any((TextureUsage::BLIT_DST | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::DEPTH_ATTACHMENT) &
+                fUsage)) {
+        if (!useTransientAttachment) {
+            retUsage |= wgpu::TextureUsage::CopySrc;
+        }
+    }
+
+    if (needsRenderAttachmentSupport) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+    }
+    // WGPU Render attachment covers either color or stencil situation dependant
+    if (any((TextureUsage::COLOR_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT |
+                    TextureUsage::DEPTH_ATTACHMENT) &
+                fUsage)) {
+        retUsage |= wgpu::TextureUsage::RenderAttachment;
+        retUsage |= transientAttachmentNeeded;
+    }
+
+    // NOTE: Unused wgpu flags:
+    //  StorageAttachment
+
+    // NOTE: Unused Filament flags:
+    //  SUBPASS_INPUT: VK goes to input attachment which we don't support right now
+    //  PROTECTED
+    return retUsage;
 }
 
 } // namespace filament::backend

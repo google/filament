@@ -247,7 +247,7 @@ void evaluatePunctualLights(const MaterialInputs material,
     }
 
     if (CONFIG_DEBUG_FROXEL_VISUALIZATION) {
-        if (froxel.count > 0u) {
+        if (froxel.count > 0u && frameUniforms.enableFroxelViz != 0) {
             const vec3 debugColors[17] = vec3[](
                 vec3(0.0,     0.0,     0.0),         // black
                 vec3(0.0,     0.0,     0.1647),      // darkest blue

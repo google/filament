@@ -6,13 +6,34 @@ import json
 
 from utils import execute, ArgParseImpl, important_print, mkdir_p
 from image_diff import same_image, output_image_diff
-from results import RESULT_OK, RESULT_FAILED, RESULT_MISSING
+from results import RESULT_OK, RESULT_FAILED, RESULT_MISSING, GOLDEN_MISSING
 
 def _compare_goldens(base_dir, comparison_dir, out_dir=None):
   all_files = glob.glob(os.path.join(base_dir, "./**/*.tif"), recursive=True)
   test_dirs = set(os.path.abspath(os.path.dirname(f)).replace(os.path.abspath(base_dir) + '/', '') \
                   for f in all_files)
   all_results = []
+
+  def single_test(src_dir, dest_dir, src_fname):
+    src_fname = os.path.abspath(src_fname)
+    test_case = src_fname.replace(f'{src_dir}/', '')
+    dest_fname = os.path.join(dest_dir, test_case)
+    result = {
+      'name': test_case,
+    }
+    if not os.path.exists(dest_fname):
+      result['result'] = RESULT_MISSING
+    elif not same_image(src_fname, dest_fname):
+      result['result'] = RESULT_FAILED
+      if output_test_dir:
+        # just the file name
+        diff_fname = f"{test_case.replace('.tif', '_diff.tif')}"
+        output_image_diff(src_fname, dest_fname, os.path.join(output_test_dir, diff_fname))
+        result['diff'] = diff_fname
+    else:
+      result['result'] = RESULT_OK
+    return result
+
   for test_dir in test_dirs:
     results = []
     output_test_dir = None if not out_dir else os.path.abspath(os.path.join(out_dir, test_dir))
@@ -20,27 +41,23 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None):
       mkdir_p(output_test_dir)
     base_test_dir = os.path.abspath(os.path.join(base_dir, test_dir))
     comp_test_dir = os.path.abspath(os.path.join(comparison_dir, test_dir))
-    for golden_file in \
-        glob.glob(os.path.join(base_test_dir, "*.tif")):
-      base_fname = os.path.abspath(golden_file)
-      test_case = base_fname.replace(f'{base_test_dir}/', '')
-      comp_fname = os.path.join(comp_test_dir, test_case)
-      result = {
-        'name': test_case,
-      }
-      if not os.path.exists(comp_fname):
-        print(f'file name not found: {comp_fname}')
-        result['result'] = RESULT_MISSING
-      elif not same_image(base_fname, comp_fname):
-        result['result'] = RESULT_FAILED
-        if output_test_dir:
-          # just the file name
-          diff_fname = f"{test_case.replace('.tif', '_diff.tif')}"
-          output_image_diff(base_fname, comp_fname, os.path.join(output_test_dir, diff_fname))
-          result['diff'] = diff_fname
-      else:
-        result['result'] = RESULT_OK
-      results.append(result)
+    results = [
+      single_test(base_test_dir, comp_test_dir, golden_file) \
+      for golden_file in glob.glob(os.path.join(base_test_dir, "*.tif"))
+    ]
+    seen_test_cases = set([r['name'] for r in results])
+
+    # For files that are rendered but not in the golden directory
+    for base_file in \
+        glob.glob(os.path.join(comp_test_dir, "*.tif")):
+      src_fname = os.path.abspath(base_file)
+      test_case = base_file.replace(f'{comp_test_dir}/', '')
+      if test_case not in seen_test_cases:
+        results.append({
+          'name': test_case,
+          'result': GOLDEN_MISSING,
+        })
+
     if output_test_dir:
       output_fname = os.path.join(output_test_dir, "compare_results.json")
       results_meta = {
@@ -70,7 +87,7 @@ if __name__ == '__main__':
 
   results = _compare_goldens(args.src, dest, out_dir=args.out)
 
-  failed = [f"   {k['name']}" for k in results if k['result'] != RESULT_OK]
+  failed = [f"   {k['name']} ({k['result']})" for k in results if k['result'] != RESULT_OK]
   success_count = len(results) - len(failed)
   important_print(f'Successfully compared {success_count} / {len(results)} images' +
                     ('\nFailed:\n' + ('\n'.join(failed)) if len(failed) > 0 else ''))

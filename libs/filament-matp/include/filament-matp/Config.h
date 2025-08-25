@@ -17,16 +17,20 @@
 #ifndef TNT_CONFIG_H
 #define TNT_CONFIG_H
 
-#include <filament/MaterialEnums.h>
-#include <backend/DriverEnums.h>
-
 #include <filamat/MaterialBuilder.h>
 
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <ostream>
-
-#include <utils/compiler.h>
+#include <string>
 
 namespace matp {
 
@@ -40,6 +44,7 @@ public:
     using Platform = filamat::MaterialBuilder::Platform;
     using TargetApi = filamat::MaterialBuilder::TargetApi;
     using Optimization = filamat::MaterialBuilder::Optimization;
+    using Workarounds = filamat::MaterialBuilder::Workarounds;
 
     // For defines, template, and material parameters, we use an ordered map with a transparent comparator.
     // Even though the key is stored using std::string, this allows you to make lookups using
@@ -97,10 +102,6 @@ public:
         return mOptimizationLevel;
     }
 
-    void setOptimizationLevel(Optimization level) noexcept {
-        mOptimizationLevel = level;
-    }
-
     Metadata getReflectionTarget() const noexcept {
         return mReflectionTarget;
     }
@@ -149,6 +150,10 @@ public:
         return mFeatureLevel;
     }
 
+    Workarounds getWorkarounds() const noexcept {
+        return mWorkarounds;
+    }
+
 protected:
     bool mDebug = false;
     bool mIsValid = true;
@@ -166,6 +171,7 @@ protected:
     StringReplacementMap mTemplateMap;
     StringReplacementMap mMaterialParameters;
     filament::UserVariantFilterMask mVariantFilter = 0;
+    Workarounds mWorkarounds = Workarounds::ALL;
     bool mIncludeEssl1 = true;
 };
 

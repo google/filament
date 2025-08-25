@@ -258,6 +258,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
             src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
+            src/webgpu/utils/AsyncTaskCounter.cpp
+            src/webgpu/utils/AsyncTaskCounter.h
             src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
             src/webgpu/utils/StringPlaceholderTemplateProcessor.h
             src/webgpu/WebGPUBlitter.cpp
@@ -412,6 +414,7 @@ endif()
 
 if (APPLE AND NOT IOS)
     target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+    target_link_libraries(${TARGET} PRIVATE "-framework QuartzCore")
 endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
@@ -576,6 +579,9 @@ if (APPLE OR LINUX)
         test/test_CommandBufferQueue.cpp
         test/test_Template.cpp
     )
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND BACKEND_TEST_SRC test/test_WebGPUAsyncTaskCounter.cpp)
+    endif()
     if (APPLE)
         # Metal-specific tests
         list(APPEND BACKEND_TEST_SRC
@@ -593,6 +599,7 @@ if (APPLE OR LINUX)
         spirv-cross-glsl)
     # Create input/output directories for test result images.
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
     file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
 endif()
 

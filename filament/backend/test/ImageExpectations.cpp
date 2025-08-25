@@ -85,6 +85,18 @@ std::filesystem::path ScreenshotParams::expectedFilePath() const {
     return expectedDirectoryPath().append(expectedFileName());
 }
 
+std::filesystem::path ScreenshotParams::diffFilePath() const {
+    return diffDirectoryPath().append(diffFileName());
+}
+
+std::filesystem::path ScreenshotParams::diffDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/diff_images");
+}
+
+std::string ScreenshotParams::diffFileName() const {
+    return absl::StrFormat("%s_diff.png", mFileName);
+}
+
 const std::string ScreenshotParams::filePrefix() const {
     // TODO(b/422804941): If there are platform specific goldens, when on those platforms append a
     //  unique platform identifying string to this.
@@ -128,8 +140,6 @@ void ImageExpectation::compareImage() const {
     if (bytesFilled) {
 #ifndef FILAMENT_IOS
         LoadedPng loadedImage(mParams.expectedFilePath());
-        // Bytewise compare.
-        EXPECT_EQ(loadedImage.bytes().size(), mResult.bytes().size());
         if (loadedImage.bytes().size() != mResult.bytes().size()) {
             // Something is wrong with the size of the expected result, which usually means the file
             // is missing. Fail the test and early return so later steps can assume the image is
@@ -137,18 +147,41 @@ void ImageExpectation::compareImage() const {
             BackendTest::markImageAsFailure(mParams.filePrefix());
             return;
         }
+
+        // Initialize the vector to full saturation on all channels, bad pixels will have
+        // color channels but not alpha set to 0 to produce highly contrasting black pixels.
+        std::vector<unsigned char> imageDiff( loadedImage.bytes().size(), 255 );
         int pixelDeviations = 0;
-        for (int i = 0; i < mResult.bytes().size(); ++i) {
-            if (std::abs( mResult.bytes()[i] - loadedImage.bytes()[i] ) >
-                mParams.pixelMatchThreshold()) {
-                pixelDeviations++;
+        for (int i = 0; i < mResult.bytes().size(); i += 4) {
+            // In order to handle color channels propoerly for the output, stride 4 bytes at a time.
+            // A failure of any byte in a pixel counts as a failure of the whole pixel.
+            for (int j = 0; j < 4; ++j) {
+                if( std::abs( mResult.bytes()[i+j] - loadedImage.bytes()[i+j] ) >
+                    mParams.pixelMatchThreshold() ) {
+                    pixelDeviations++;
+                    imageDiff[i] = 0;
+                    imageDiff[i+1] = 0;
+                    imageDiff[i+2] = 0;
+                    break;
+                }
             }
         }
         EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
         if (pixelDeviations > mParams.allowedPixelDeviations()) {
             BackendTest::markImageAsFailure(mParams.filePrefix());
+            image::LinearImage image;
+            image = image::toLinearWithAlpha<uint8_t>(
+                    mParams.width(), mParams.height(),
+                    mParams.width() * 4, (uint8_t *)imageDiff.data(),
+                    [](uint8_t value) -> float { return value; },
+                    [](filament::math::float4 rgba) -> filament::math::float4 { return rgba; });
+            std::string filePath = mParams.diffFilePath();
+            std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
+            // To avoid going from linear -> sRGB -> linear save the PNG as linear.
+            image::ImageEncoder::encode(pngStream, image::ImageEncoder::Format::PNG_LINEAR, image, "",
+                    filePath);
         }
-        // TODO: Add better debug output, such as generating a diff image.
+        EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
 #else
         // For builds that can't load PNGs (currently iOS only) use the expected hash.
         uint32_t actualHash = mResult.hash();

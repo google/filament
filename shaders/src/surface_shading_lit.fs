@@ -117,15 +117,11 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.transmission = 1.0;
 #endif
 #if defined(MATERIAL_HAS_ABSORPTION)
-#if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     pixel.absorption = max(vec3(0.0), material.absorption);
-#else
-    pixel.absorption = saturate(material.absorption);
-#endif
 #else
     pixel.absorption = vec3(0.0);
 #endif
-#if defined(MATERIAL_HAS_THICKNESS)
+#if defined(SHADING_MODEL_SUBSURFACE) || defined(MATERIAL_HAS_REFRACTION)
     pixel.thickness = max(0.0, material.thickness);
 #endif
 #if defined(MATERIAL_HAS_MICRO_THICKNESS) && (REFRACTION_TYPE == REFRACTION_TYPE_THIN)

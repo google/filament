@@ -24,6 +24,7 @@
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
 #include "DriverBase.h"
@@ -90,6 +91,7 @@ private:
     spd::MipmapGenerator mSpdComputePassMipmapGenerator;
     WebGPUMsaaTextureResolver mMsaaTextureResolver{};
     WebGPUBlitter mBlitter;
+    webgpuutils::AsyncTaskCounter mReadPixelMapsCounter{};
 
     struct DescriptorSetBindingInfo{
         wgpu::BindGroup bindGroup;
