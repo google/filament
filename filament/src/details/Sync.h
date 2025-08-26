@@ -21,7 +21,9 @@
 
 #include <filament/Sync.h>
 
+#include <backend/CallbackHandler.h>
 #include <backend/Handle.h>
+#include <backend/Platform.h>
 
 #include <functional>
 #include <mutex>
@@ -37,29 +39,20 @@ public:
 
     void terminate(FEngine& engine) noexcept;
 
-    backend::FenceHandle getHwHandle() const noexcept { return mHwFence; }
+    backend::SyncHandle getHwHandle() const noexcept { return mHwSync; }
 
     /**
-     * Converts a sync object to one that can be used externally to
-     * wait for some GPU work to be completed within Filament before proceeding
+     * Fetches a handle to the external, platform-specific representation of
+     * this sync object.
      *
-     * @param callback A function that will receive the external sync handle, if
-     *                 conversion was successful, along with a conversion result
-     *                 code (e.g. SUCCESS, ERROR, NOT_SUPPORTED).
+     * @return The external handle for the Sync. This is valid destroy() is
+     *         called on this Sync object.
      */
-    void convertToExternalSync(SyncConversionCallback callback) noexcept;
+    void getExternalHandle(Sync::CallbackHandler* handler, Sync::Callback callback) noexcept;
 
 private:
     FEngine& mEngine;
-    backend::FenceHandle mHwFence;
-
-    std::mutex mMutex;
-    bool mHasHandle = false;
-    std::vector<SyncConversionCallback> mConversionCallbacks;
-
-    void processAllCallbacks();
-
-    void processCallback(SyncConversionCallback callback);
+    backend::SyncHandle mHwSync;
 };
 
 FILAMENT_DOWNCAST(Sync)

@@ -149,6 +149,21 @@ using namespace utils;
 
 namespace filament::backend {
 
+namespace {
+
+static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
+    std::unique_ptr<Platform::SyncCallbackData> cbData(
+            static_cast<Platform::SyncCallbackData*>(userData));
+    // Dereference the weak pointer if possible.
+    Platform::Sync* sync = nullptr;
+    if (auto sharedSync = cbData->sync.lock()) {
+        sync = sharedSync.get();
+    }
+    cbData->cb(sync);
+};
+
+} // namespace
+
 Driver* OpenGLDriverFactory::create(
         OpenGLPlatform* platform,
         void* sharedGLContext,
@@ -613,6 +628,10 @@ Handle<HwRenderTarget> OpenGLDriver::createRenderTargetS() noexcept {
 
 Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
     return initHandle<GLFence>();
+}
+
+Handle<HwSync> OpenGLDriver::createSyncS() noexcept {
+    return initHandle<GLSyncFence>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
@@ -1786,6 +1805,21 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
 #endif
 }
 
+void OpenGLDriver::createSyncR(Handle<HwSync> sh, int) {
+    DEBUG_MARKER()
+
+    GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+    {
+        std::lock_guard<std::mutex> guard(s->lock);
+        s->sync = mPlatform.createSync();
+    }
+
+    for (auto& cbData : s->conversionCallbacks) {
+        cbData->sync = s->sync;
+        scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
+    }
+}
+
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
@@ -2051,6 +2085,15 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
     }
 }
 
+void OpenGLDriver::destroySync(Handle<HwSync> sh) {
+    DEBUG_MARKER()
+
+    if (sh) {
+        GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+        destruct(sh, s);
+    }
+}
+
 void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
 
@@ -2235,20 +2278,30 @@ FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::ERROR;
 }
 
-FenceConversionResult OpenGLDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
-    if (!fh) {
-        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+void OpenGLDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb) {
+    if (!sh) {
+        return;
     }
 
-    GLFence* f = handle_cast<GLFence*>(fh);
-    if (f->fence == nullptr) {
-        if (!mPlatform.canCreateFence()) {
-            return FenceConversionResult::NOT_SUPPORTED;
+    GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+    auto cbData = std::make_unique<Platform::SyncCallbackData>();
+    cbData->handler = handler;
+    cbData->cb = cb;
+
+    // If we haven't already set the handle, toss the conversion callback in the
+    // back of the list.
+    {
+        std::lock_guard guard(s->lock);
+        if (s->sync == nullptr) {
+            s->conversionCallbacks.push_back(std::move(cbData));
         }
-        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+        return;
     }
 
-    return mPlatform.getFenceFD(f->fence, fd);
+    // Otherwise, go ahead and schedule the callback now.
+    cbData->sync = s->sync;
+    scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
 }
 
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {

@@ -17,8 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 
-#include <backend/Platform.h>
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 #include <bluevk/BlueVK.h>
 
@@ -29,9 +30,10 @@
 
 #include <cstddef>
 #include <functional>
+#include <mutex>
+#include <string>
 #include <tuple>
 #include <unordered_set>
-#include <string>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -44,6 +46,10 @@ using SwapChain = Platform::SwapChain;
  * Private implementation details for the provided vulkan platform.
  */
 struct VulkanPlatformPrivate;
+
+// Forward declare the fence status that will be maintained by the command
+// buffer manager.
+struct VulkanCmdFence;
 
 /**
  * A Platform interface that creates a Vulkan backend.
@@ -230,6 +236,27 @@ public:
             VkExtent2D extent = {0, 0});
 
     /**
+     * Creates a Platform::Sync object, which tracks a fence and its status,
+     * and allows conversion to an external sync.
+     * @param fence         The underlying VkFence to use for synchronization.
+     * @param fenceStatus   An object tracking the fence's state
+     * @return              A Platform::Sync object tracking the provided fence.
+     */
+    virtual std::shared_ptr<Platform::Sync> createSync(VkFence fence,
+            std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
+
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    virtual bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept;
+
+    /**
      * Allows implementers to provide instance extensions that they'd like to include in the
      * instance creation.
      * @return          A set of extensions to enable for the instance.
@@ -407,9 +434,28 @@ public:
         return {};
     }
 
-    virtual FenceConversionResult getFenceFD(VkFence fence, int32_t* fd) const noexcept;
-
 protected:
+    class Sync : public Platform::Sync {
+    public:
+        inline Sync(VkFence fence, std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept
+            : mFence(fence),
+              mFenceStatus(fenceStatus) {}
+
+        virtual ~Sync() noexcept;
+
+        inline VkFence getFence() const noexcept {
+            return mFence;
+        }
+
+        inline const std::shared_ptr<VulkanCmdFence> getFenceStatus() const noexcept {
+            return mFenceStatus;
+        }
+
+    private:
+        VkFence mFence;
+        std::shared_ptr<VulkanCmdFence> mFenceStatus;
+    };
+
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;

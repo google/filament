@@ -136,6 +136,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 }
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
+static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
+    std::unique_ptr<Platform::SyncCallbackData> cbData(
+            static_cast<Platform::SyncCallbackData*>(userData));
+    // Dereference the weak pointer if possible.
+    Platform::Sync* sync = nullptr;
+    if (auto sharedSync = cbData->sync.lock()) {
+        sync = sharedSync.get();
+    }
+    cbData->cb(sync);
+};
 
 }// anonymous namespace
 
@@ -795,6 +805,33 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
     fence->fence = cmdbuf->getFenceStatus();
 }
 
+void VulkanDriver::createSyncR(Handle<HwSync> sh, int) {
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    VkFence fence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> fenceStatus;
+    if (mCurrentRenderPass.commandBuffer) {
+        VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
+        fence = cmdBuff->getVkFence();
+        fenceStatus = cmdBuff->getFenceStatus();
+        // If we're currently recording, flush so that the fence only applies
+        // to commands already issued.
+        mCommands.flush();
+    } else {
+        fence = mCommands.getMostRecentFence();
+        fenceStatus = mCommands.getMostRecentFenceStatus();
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(sync->lock);
+        sync->sync = mPlatform->createSync(fence, fenceStatus);
+    }
+
+    for (auto& cbData : sync->conversionCallbacks) {
+        cbData->sync = sync->sync;
+        scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
+    }
+}
+
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     FVK_SYSTRACE_SCOPE();
     // Running gc() to guard against an edge case where the old swapchains need to have been
@@ -920,6 +957,13 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
     return handle;
 }
 
+Handle<HwSync> VulkanDriver::createSyncS() noexcept {
+    auto handle = mResourceManager.allocHandle<VulkanSync>();
+    auto sync = resource_ptr<VulkanSync>::make(&mResourceManager, handle);
+    sync.inc();
+    return handle;
+}
+
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
     return mResourceManager.allocHandle<VulkanSwapChain>();
 }
@@ -956,6 +1000,16 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+}
+
+void VulkanDriver::destroySync(Handle<HwSync> sh) {
+    if (!sh) {
+        return;
+    }
+    FVK_SYSTRACE_SCOPE();
+
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    sync.dec();
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1033,17 +1087,26 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::TIMEOUT_EXPIRED;
 }
 
-FenceConversionResult VulkanDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
-    if (!fh) {
-        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
+void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb) {
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    auto cbData = std::make_unique<Platform::SyncCallbackData>();
+    cbData->handler = handler;
+    cbData->cb = cb;
+
+    // If we haven't already set the handle, toss the conversion callback in the
+    // back of the list.
+    {
+        std::lock_guard guard(sync->lock);
+        if (sync->sync == nullptr) {
+            sync->conversionCallbacks.push_back(std::move(cbData));
+        }
+        return;
     }
 
-    VkFence fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh)->getVkFence();
-    if (fence == VK_NULL_HANDLE) {
-        return FenceConversionResult::HANDLE_NOT_AVAILABLE;
-    }
-
-    return mPlatform->getFenceFD(fence, fd);
+    // Otherwise, go ahead and schedule the callback now.
+    cbData->sync = sync->sync;
+    scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
