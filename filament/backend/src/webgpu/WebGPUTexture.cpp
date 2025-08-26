@@ -41,6 +41,38 @@ namespace filament::backend {
 
 namespace {
 
+wgpu::TextureComponentSwizzle composeSwizzle(wgpu::TextureComponentSwizzle const& prev,
+        wgpu::TextureComponentSwizzle const& next) {
+    auto const compose =
+            [](wgpu::TextureComponentSwizzle const& p,
+                    wgpu::TextureComponentSwizzle const& n) -> wgpu::TextureComponentSwizzle {
+        wgpu::ComponentSwizzle vals[4] = { n.r, n.g, n.b, n.a };
+        for (auto& out: vals) {
+            switch (out) {
+                case wgpu::ComponentSwizzle::R:
+                    out = p.r;
+                    break;
+                case wgpu::ComponentSwizzle::G:
+                    out = p.g;
+                    break;
+                case wgpu::ComponentSwizzle::B:
+                    out = p.b;
+                    break;
+                case wgpu::ComponentSwizzle::A:
+                    out = p.a;
+                    break;
+                // Do not modify the value
+                case wgpu::ComponentSwizzle::Zero:
+                case wgpu::ComponentSwizzle::One:
+                case wgpu::ComponentSwizzle::Undefined:
+                    break;
+            }
+        }
+        return { .r = vals[0], .g = vals[1], .b = vals[2], .a = vals[3] };
+    };
+    return compose(prev, next);
+}
+
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
     // TODO will be helpful to get more useful info than this
     switch (target) {
@@ -216,7 +248,9 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
       mDefaultMipLevel{ 0 },
-      mDefaultBaseArrayLayer{ 0 } {
+      mDefaultBaseArrayLayer{ 0 },
+      // an undefined mSwizzle means that is not a swizzle view
+      mSwizzle{} {
     assert_invariant(
             samples == 1 ||
             samples == 4 &&
@@ -281,9 +315,11 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
       mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
               toWebGPUTextureViewDimension(src->target)) },
-      mMsaaSidecarTexture{ src->mMsaaSidecarTexture } {}
+      mMsaaSidecarTexture{ src->mMsaaSidecarTexture },
+      mSwizzle{src->mSwizzle}{}
 
-WebGPUTexture::WebGPUTexture(const WebGPUTexture* src, const wgpu::TextureView view) noexcept
+WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
+        const wgpu::TextureComponentSwizzle nextSwizzle) noexcept
     : HwTexture{ src->target, src->levels, src->samples, src->width, src->height, src->depth,
               src->format, src->usage},
       mViewFormat{ src->mViewFormat },
@@ -298,8 +334,20 @@ WebGPUTexture::WebGPUTexture(const WebGPUTexture* src, const wgpu::TextureView v
       mTexture{ src->mTexture },
       mDefaultMipLevel{ src->mDefaultMipLevel },
       mDefaultBaseArrayLayer{ 0 },
-      mDefaultTextureView{ view },
-      mMsaaSidecarTexture{src->mMsaaSidecarTexture}{}
+      mMsaaSidecarTexture{src->mMsaaSidecarTexture},
+      mSwizzle{ composeSwizzle(src->getSwizzle(), nextSwizzle) } {
+    wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
+    swizzleDesc.swizzle = mSwizzle;
+
+    const wgpu::TextureViewDescriptor viewDesc{
+        .nextInChain = &swizzleDesc,
+        .label = "swizzled_texture_view",
+        .format = mTexture.GetFormat(),
+        .dimension = src->getViewDimension(),
+    };
+    mDefaultTextureView = mTexture.CreateView(&viewDesc);
+    FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView) << "Failed to create swizzled Texture view";
+}
 
 wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
     if (mMsaaSidecarTexture == nullptr) {
