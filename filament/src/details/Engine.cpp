@@ -1296,7 +1296,9 @@ bool FEngine::isValid(const FFence* p) const {
     return isValid(p, mFences);
 }
 
-bool FEngine::isValid(const FSync* p) const { return isValid(p, mSyncs); }
+bool FEngine::isValid(const FSync* p) const {
+    return isValid(p, mSyncs);
+}
 
 bool FEngine::isValid(const FIndexBuffer* p) const {
     return isValid(p, mIndexBuffers);

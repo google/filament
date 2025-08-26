@@ -44,7 +44,7 @@ public:
 
     virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
 
-    virtual FenceConversionResult getFenceFD(VkFence fence, int32_t* fd) const noexcept override;
+    bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept override;
 
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const override;

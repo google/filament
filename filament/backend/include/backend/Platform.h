@@ -29,6 +29,7 @@
 
 namespace filament::backend {
 
+class CallbackHandler;
 class Driver;
 
 /**
@@ -42,6 +43,24 @@ public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
+
+    class Sync {
+    public:
+        virtual ~Sync();
+
+    protected:
+        // Avoid direct instantiation.
+        Sync() = default;
+    };
+
+    using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
+
+    struct SyncCallbackData {
+        CallbackHandler* UTILS_NULLABLE handler;
+        SyncCallback UTILS_NULLABLE cb;
+        Sync* UTILS_NULLABLE sync;
+        void* UTILS_NULLABLE userData;
+    };
 
     class ExternalImageHandle;
 

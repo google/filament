@@ -109,13 +109,12 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
     };
     fenceCreateInfo.pNext = &exportFenceCreateInfo;
 
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFenceStatus->getVkFence());
+    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
     vkDestroySemaphore(mDevice, mSubmission, VKALLOC);
-    vkDestroyFence(mDevice, mFenceStatus->getVkFence(), VKALLOC);
-    mFenceStatus->getVkFence() = VK_NULL_HANDLE;
+    vkDestroyFence(mDevice, mFence, VKALLOC);
 }
 
 void VulkanCommandBuffer::reset() noexcept {
@@ -129,7 +128,7 @@ void VulkanCommandBuffer::reset() noexcept {
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
     mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE);
-    vkResetFences(mDevice, 1, &mFenceStatus->getVkFence());
+    vkResetFences(mDevice, 1, &mFence);
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
@@ -230,7 +229,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
 
     mFenceStatus->setStatus(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result =
-            vkQueueSubmit(mQueue, 1, &submitInfo, mFenceStatus->getVkFence());
+        vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -432,6 +431,9 @@ bool VulkanCommands::flush() {
     VkSemaphore lastSubmit = mLastSubmit;
     bool hasFlushed = false;
 
+    VkFence flushedFence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> flushedFenceStatus;
+
     // Note that we've ordered it so that the non-protected commands are followed by the protected
     // commands.  This assumes that the protected commands will be that one doing the rendering into
     // the protected memory (i.e. protected render target).
@@ -453,6 +455,8 @@ bool VulkanCommands::flush() {
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
             lastSubmit = VK_NULL_HANDLE;
         }
+        flushedFence = pool->getRecording().getVkFence();
+        flushedFenceStatus = pool->getRecording().getFenceStatus();
         dependency = pool->flush();
         hasFlushed = true;
     }
@@ -460,6 +464,8 @@ bool VulkanCommands::flush() {
     if (hasFlushed) {
         mInjectedDependency = VK_NULL_HANDLE;
         mLastSubmit = dependency;
+        mLastFence = flushedFence;
+        mLastFenceStatus = flushedFenceStatus;
     }
 
     return true;

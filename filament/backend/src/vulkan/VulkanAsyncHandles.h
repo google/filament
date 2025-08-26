@@ -43,26 +43,19 @@ struct VulkanCmdFence {
 
     VkResult getStatus() { return status.load(std::memory_order_acquire); }
 
-    // Gets a reference to the underlying fence, so that it can be updated
-    // (as in for vkCreateFence), or fetched (for example, conversion to an
-    // external fence, where applicable).
-    VkFence& getVkFence() { return fence; }
-
 private:
-    VkFence fence;
     std::atomic<VkResult> status;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
     std::shared_ptr<VulkanCmdFence> fence;
+};
 
-    inline VkFence getVkFence() const noexcept {
-        if (fence == nullptr) {
-            return VK_NULL_HANDLE;
-        }
-        return fence->getVkFence();
-    }
+struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+    VulkanSync() {}
+    std::mutex lock;
+    std::vector<std::unique_ptr<Platform::SyncCallbackData>> conversionCallbacks;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {

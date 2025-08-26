@@ -16,11 +16,13 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/Platform.h>
 
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
 #include <backend/Handle.h>
+#include <backend/Platform.h>
 
 #include <stdint.h>
 
@@ -116,6 +118,9 @@ void NoopDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 void NoopDriver::destroyStream(Handle<HwStream> sh) {
 }
 
+void NoopDriver::destroySync(Handle<HwSync> sh) {
+}
+
 void NoopDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
@@ -147,8 +152,8 @@ int64_t NoopDriver::getStreamTimestamp(Handle<HwStream> sh) {
 void NoopDriver::updateStreams(CommandStream* driver) {
 }
 
-FenceConversionResult NoopDriver::getFenceFD(Handle<HwFence> fh, int32_t* fd) {
-    return FenceConversionResult::NOT_SUPPORTED;
+void NoopDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
 }
 
 void NoopDriver::destroyFence(Handle<HwFence> fh) {

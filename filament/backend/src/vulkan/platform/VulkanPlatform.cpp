@@ -932,6 +932,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     return VulkanDriver::create(this, context, driverConfig);
 }
 
+// This is required to be explicitly written to avoid the weak vtables warning
+// for the Sync class.
+VulkanPlatform::Sync::~Sync() noexcept = default;
+
 // This needs to be explictly written for
 // utils::PrivateImplementation<VulkanPlatformPrivate>::PrivateImplementation() to be properly
 // defined.
@@ -1004,6 +1008,19 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     return swapchain;
 }
 
+Platform::Sync* VulkanPlatform::createSync(VkFence fence,
+        std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
+    return new VulkanPlatform::Sync(fence, fenceStatus);
+}
+
+bool VulkanPlatform::convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept {
+    return false;
+}
+
+void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
+    delete sync;
+}
+
 VkInstance VulkanPlatform::getInstance() const noexcept {
     return mImpl->mInstance;
 }
@@ -1043,10 +1060,6 @@ VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
 VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const noexcept {
     // By default, fences should not be exportable.
     return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
-}
-
-FenceConversionResult VulkanPlatform::getFenceFD(VkFence fence, int32_t* fd) const noexcept {
-    return FenceConversionResult::NOT_SUPPORTED;
 }
 
 ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {

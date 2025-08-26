@@ -18,6 +18,7 @@
 
 #include "details/Engine.h"
 
+#include <backend/Platform.h>
 #include <filament/Sync.h>
 
 namespace filament {
@@ -27,41 +28,16 @@ using DriverApi = backend::DriverApi;
 FSync::FSync(FEngine& engine)
     : mEngine(engine) {
     DriverApi& driverApi = engine.getDriverApi();
-    mHwFence = driverApi.createFence();
-    driverApi.queueCommand([this]() {
-        {
-            std::lock_guard lock(mMutex);
-            mHasHandle = true;
-        }
-        processAllCallbacks();
-    });
+    mHwSync = driverApi.createSync();
 }
 
-void FSync::terminate(FEngine& engine) noexcept { engine.getDriverApi().destroyFence(mHwFence); }
-
-void FSync::convertToExternalSync(SyncConversionCallback callback) noexcept {
-    {
-        std::lock_guard lock(mMutex);
-        if (!mHasHandle) {
-            mConversionCallbacks.push_back(callback);
-            return;
-        }
-    }
-
-    processCallback(callback);
+void FSync::terminate(FEngine& engine) noexcept {
+    engine.getDriverApi().destroySync(mHwSync);
 }
 
-void FSync::processAllCallbacks() {
-    for (const auto& callback: mConversionCallbacks) {
-        processCallback(callback);
-    }
-}
-
-void FSync::processCallback(SyncConversionCallback callback) {
-    DriverApi& driverApi = mEngine.getDriverApi();
-    int32_t externalHandle;
-    SyncConversionResult result = driverApi.getFenceFD(mHwFence, &externalHandle);
-    callback(result, externalHandle);
+void FSync::getExternalHandle(Sync::CallbackHandler* handler, Sync::Callback callback,
+        void* userData) noexcept {
+    mEngine.getDriverApi().getPlatformSync(mHwSync, handler, callback, userData);
 }
 
 } // namespace filament

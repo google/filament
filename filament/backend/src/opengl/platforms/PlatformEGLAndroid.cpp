@@ -398,18 +398,31 @@ void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
 }
 
-// For PlatformEGL on Android, create a fence that is exportable to an fd.
-Platform::Fence* PlatformEGLAndroid::createFence() noexcept {
-    return (Fence*) eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+PlatformEGLAndroid::Sync::Sync(EGLDisplay eglDisplay) noexcept
+    : mEGLDisplay(eglDisplay)
+{
+    mSync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
 }
 
-FenceConversionResult PlatformEGLAndroid::getFenceFD(Platform::Fence* fence, int32_t* fd) noexcept {
-    EGLint tmpFd = eglDupNativeFenceFDANDROID(mEGLDisplay, (EGLSyncKHR) fence);
-    if (tmpFd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
-        return FenceConversionResult::ERROR;
-    }
-    *fd = tmpFd;
-    return FenceConversionResult::SUCCESS;
+PlatformEGLAndroid::Sync::~Sync() noexcept {
+    eglDestroySyncKHR(mEGLDisplay, mSync);
+}
+
+Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
+    return new PlatformEGLAndroid::Sync(mEGLDisplay);
+}
+
+bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
+    assert_invariant(sync != nullptr && fd != nullptr);
+    PlatformEGLAndroid::Sync& eglSync = static_cast<PlatformEGLAndroid::Sync&>(*sync);
+    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.getSync());
+    // In the case where there was no native FD, -1 is returned. Return false
+    // to indicate there was an error in this case.
+    return *fd != -1;
+}
+
+void PlatformEGLAndroid::destroySync(Platform::Sync* sync) noexcept {
+    delete sync;
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t tname) noexcept {
