@@ -101,7 +101,9 @@ struct VulkanCommandBuffer {
         return mFenceStatus;
     }
 
-    VkFence getVkFence() const { return mFenceStatus->getVkFence(); }
+    VkFence getVkFence() const {
+        return mFence;
+    }
 
     VkCommandBuffer buffer() const {
         return mBuffer;
@@ -123,6 +125,7 @@ private:
     fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
+    VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
     uint32_t mAge;
@@ -220,9 +223,17 @@ public:
     // it from the existing dependency chain. This is especially useful for setting up
     // vkQueuePresentKHR.
     VkSemaphore acquireFinishedSignal() {
-        VkSemaphore ret= mLastSubmit;
+        VkSemaphore ret = mLastSubmit;
         mLastSubmit = VK_NULL_HANDLE;
         return ret;
+    }
+
+    VkFence getMostRecentFence() {
+        return mLastFence;
+    }
+
+    std::shared_ptr<VulkanCmdFence> getMostRecentFenceStatus() {
+        return mLastFenceStatus;
     }
 
     // Takes a semaphore that signals when the next flush can occur. Only one injected
@@ -261,6 +272,9 @@ private:
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     VkSemaphore mLastSubmit = VK_NULL_HANDLE;
+
+    VkFence mLastFence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> mLastFenceStatus;
 
     VkPipelineStageFlags mInjectedDependencyWaitStage = 0;
 };

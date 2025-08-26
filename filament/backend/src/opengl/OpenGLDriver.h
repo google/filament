@@ -198,6 +198,13 @@ public:
         std::shared_ptr<State> state{ std::make_shared<State>() };
     };
 
+    // Note: named "GLSyncFence" to avoid confusion with the GL handle,
+    // "GLsync" (lowercase S)
+    struct GLSyncFence : public HwSync {
+        std::mutex lock;
+        std::vector<std::unique_ptr<Platform::SyncCallbackData>> conversionCallbacks;
+    };
+
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
 

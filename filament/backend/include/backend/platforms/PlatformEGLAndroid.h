@@ -26,6 +26,7 @@
 #include <utils/compiler.h>
 
 #include <chrono>
+#include <vector>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -58,6 +59,8 @@ public:
 
     ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
 
+    bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept override;
+
 protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface
@@ -74,6 +77,20 @@ protected:
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
+    class Sync : public Platform::Sync {
+    public:
+        Sync(EGLDisplay eglDisplay) noexcept;
+        virtual ~Sync() noexcept;
+
+        inline EGLSyncKHR getSync() {
+            return mSync;
+        }
+
+    private:
+        EGLDisplay mEGLDisplay;
+        EGLSyncKHR mSync;
+    };
+
     void terminate() noexcept override;
 
     void beginFrame(
@@ -89,11 +106,10 @@ protected:
      */
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept override;
 
-
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
-    Fence* createFence() noexcept override;
-    FenceConversionResult getFenceFD(Fence* fence, int32_t* fd) noexcept override;
+    Platform::Sync* createSync() noexcept override;
+    void destroySync(Platform::Sync* sync) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;

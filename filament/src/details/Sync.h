@@ -21,11 +21,9 @@
 
 #include <filament/Sync.h>
 
+#include <backend/CallbackHandler.h>
 #include <backend/Handle.h>
-
-#include <functional>
-#include <mutex>
-#include <vector>
+#include <backend/Platform.h>
 
 namespace filament {
 
@@ -37,29 +35,25 @@ public:
 
     void terminate(FEngine& engine) noexcept;
 
-    backend::FenceHandle getHwHandle() const noexcept { return mHwFence; }
+    backend::SyncHandle getHwHandle() const noexcept { return mHwSync; }
 
     /**
-     * Converts a sync object to one that can be used externally to
-     * wait for some GPU work to be completed within Filament before proceeding
+     * Fetches a handle to the external, platform-specific representation of
+     * this sync object.
      *
-     * @param callback A function that will receive the external sync handle, if
-     *                 conversion was successful, along with a conversion result
-     *                 code (e.g. SUCCESS, ERROR, NOT_SUPPORTED).
+     * @param handler A handler for the callback that will receive the handle
+     * @param callback A callback that will receive the handle when ready
+     * @param userData Data to be passed to the callback so that the application
+     *                 can identify what frame the sync is relevant to.
+     * @return The external handle for the Sync. This is valid destroy() is
+     *         called on this Sync object.
      */
-    void convertToExternalSync(SyncConversionCallback callback) noexcept;
+    void getExternalHandle(Sync::CallbackHandler* handler, Sync::Callback callback,
+            void* userData) noexcept;
 
 private:
     FEngine& mEngine;
-    backend::FenceHandle mHwFence;
-
-    std::mutex mMutex;
-    bool mHasHandle = false;
-    std::vector<SyncConversionCallback> mConversionCallbacks;
-
-    void processAllCallbacks();
-
-    void processCallback(SyncConversionCallback callback);
+    backend::SyncHandle mHwSync;
 };
 
 FILAMENT_DOWNCAST(Sync)

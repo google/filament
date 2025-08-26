@@ -389,25 +389,24 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     };
 }
 
-FenceConversionResult VulkanPlatformAndroid::getFenceFD(VkFence fence, int32_t* fd) const noexcept {
-    VkFenceGetFdInfoKHR info{
+bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept {
+    assert_invariant(sync != nullptr && fd != nullptr);
+    VulkanPlatform::Sync& vulkanSync = static_cast<VulkanPlatform::Sync&>(*sync);
+    assert_invariant(vulkanSync.getFenceStatus() != nullptr);
+    if (vulkanSync.getFenceStatus()->getStatus() == VK_SUCCESS) {
+        // We've already signaled; return -1 so that operations will proceed
+        // immediately. Also, signal that fence conversion was successful.
+        *fd = -1;
+        return true;
+    }
+
+    VkFenceGetFdInfoKHR getFdInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
-        .fence = fence,
+        .fence = vulkanSync.getFence(),
         .handleType = getFenceExportFlags(),
     };
-
-    int32_t tmpFd;
-    VkResult result = vkGetFenceFdKHR(getDevice(), &info, &tmpFd);
-    if (result != VK_SUCCESS) {
-        return FenceConversionResult::ERROR;
-    }
-
-    if (tmpFd == -1) {
-        return FenceConversionResult::PREVIOUSLY_SIGNALED;
-    }
-
-    *fd = tmpFd;
-    return FenceConversionResult::SUCCESS;
+    VkResult res = vkGetFenceFdKHR(getDevice(), &getFdInfo, fd);
+    return res == VK_SUCCESS;
 }
 
 VkExternalFenceHandleTypeFlagBits VulkanPlatformAndroid::getFenceExportFlags() const noexcept {

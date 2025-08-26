@@ -272,6 +272,8 @@ DECL_DRIVER_API_TAGGED_R_N(backend::RenderTargetHandle, createRenderTarget,
 
 DECL_DRIVER_API_TAGGED_R_N(backend::FenceHandle, createFence)
 
+DECL_DRIVER_API_TAGGED_R_N(backend::SyncHandle, createSync)
+
 DECL_DRIVER_API_TAGGED_R_N(backend::SwapChainHandle, createSwapChain,
         void*, nativeWindow,
         uint64_t, flags)
@@ -328,6 +330,7 @@ DECL_DRIVER_API_N(destroySwapChain,             backend::SwapChainHandle, sch)
 DECL_DRIVER_API_N(destroyStream,                backend::StreamHandle, sh)
 DECL_DRIVER_API_N(destroyTimerQuery,            backend::TimerQueryHandle, sh)
 DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
+DECL_DRIVER_API_N(destroySync,                  backend::SyncHandle, sh)
 DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
 DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
 
@@ -344,8 +347,8 @@ DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, 
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceConversionResult, getFenceFD, backend::FenceHandle, fh,
-        int32_t*, fd)
+DECL_DRIVER_API_SYNCHRONOUS_N(void, getPlatformSync, backend::SyncHandle, sh,
+        backend::CallbackHandler*, handler, backend::Platform::SyncCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isTextureSwizzleSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatMipmappable, backend::TextureFormat, format)

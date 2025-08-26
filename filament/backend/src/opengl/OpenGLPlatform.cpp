@@ -45,6 +45,8 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
+OpenGLPlatform::Sync::~Sync() noexcept = default;
+
 utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
     auto const p = static_cast<OpenGLDriverBase const*>(driver);
 #if UTILS_HAS_RTTI
@@ -111,16 +113,23 @@ void OpenGLPlatform::destroyFence(
         UTILS_UNUSED Fence* fence) noexcept {
 }
 
-FenceConversionResult OpenGLPlatform::getFenceFD(Fence* fence, int32_t* fd) noexcept {
-    return FenceConversionResult::NOT_SUPPORTED;
-}
-
 FenceStatus OpenGLPlatform::waitFence(
         UTILS_UNUSED Fence* fence,
         UTILS_UNUSED uint64_t timeout) noexcept {
     return FenceStatus::ERROR;
 }
 
+Platform::Sync* OpenGLPlatform::createSync() noexcept {
+    return new OpenGLPlatform::Sync();
+}
+
+bool OpenGLPlatform::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
+    return false;
+}
+
+void OpenGLPlatform::destroySync(Platform::Sync* sync) noexcept {
+    delete sync;
+}
 
 Platform::Stream* OpenGLPlatform::createStream(
         UTILS_UNUSED void* nativeStream) noexcept {

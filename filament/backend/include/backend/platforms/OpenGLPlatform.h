@@ -52,6 +52,12 @@ protected:
 
     ~OpenGLPlatform() noexcept override;
 
+    class Sync : public Platform::Sync {
+    public:
+        Sync() noexcept = default;
+        virtual ~Sync() noexcept;
+    };
+
 public:
     struct ExternalTexture {
         unsigned int target; // GLenum target
@@ -260,18 +266,6 @@ public:
     virtual Fence* UTILS_NULLABLE createFence() noexcept;
 
     /**
-     * Called by the driver to convert a fence to an external handle, if
-     * supported. Requires the fence to have been created with the appropriate
-     * flags, indicating that it can be exported. Will fail otherwise.
-     *
-     * @param fence The fence to convert to an external handle.
-     * @param fd A pointer that will be supplied with the external handle.
-     * @return A status code indicating if the conversion was successful.
-     */
-    virtual FenceConversionResult getFenceFD(Fence* UTILS_NONNULL fence,
-            int32_t* UTILS_NONNULL fd) noexcept;
-
-    /**
      * Destroys a Fence object. The default implementation does nothing.
      *
      * @param fence Fence to destroy.
@@ -288,6 +282,38 @@ public:
      */
     virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Sync support
+
+    /**
+     * Creates a Sync. These can be used for frame synchronization externally
+     * (certain platform implementations can be exported to handles that can
+     * be used in other processes).
+     *
+     * @return A Sync object.
+     */
+    virtual Platform::Sync* UTILS_NONNULL createSync() noexcept;
+
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    virtual bool convertSyncToFd(Platform::Sync* UTILS_NONNULL sync,
+            int32_t* UTILS_NONNULL fd) noexcept;
+
+    /**
+     * Destroys a sync. If called with a sync not created by this platform
+     * object, this will lead to undefined behavior.
+     *
+     * @param sync The sync to destroy, that was created by this platform
+     *             instance.
+     */
+    virtual void destroySync(Platform::Sync* UTILS_NONNULL sync) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Streaming support
