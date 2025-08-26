@@ -1138,15 +1138,15 @@ void ViewerGui::updateUserInterface() {
                 debug.getPropertyAddress<bool>("d.stereo.combine_multiview_images"));
         ImGui::Unindent();
 #endif
-#endif
-        ImGui::SliderFloat("Ocular distance", &mSettings.viewer.cameraEyeOcularDistance, 0.0f,
-                1.0f);
+        ImGui::SliderFloat("Ocular distance",
+            &mSettings.viewer.cameraEyeOcularDistance, 0.0f, 1.0f);
 
         float toeInDegrees = mSettings.viewer.cameraEyeToeIn / f::PI * 180.0f;
         ImGui::SliderFloat("Toe in", &toeInDegrees, 0.0f, 30.0, "%.3f°");
         mSettings.viewer.cameraEyeToeIn = toeInDegrees / 180.0f * f::PI;
 
         ImGui::Unindent();
+#endif
     }
 
     colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);

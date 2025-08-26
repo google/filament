@@ -89,7 +89,7 @@ namespace {
                 std::string_view(sourceData + posAfterId, posEndOfStatement - posAfterId);
         size_t posOfEqual = statementSegment.find('=');
         if (posOfEqual == std::string::npos) {
-            // not an assignment statement, so stream to the end of the statement and continue...
+            // Not an assignment, so we don't need to replace it.
             processedShaderSource << std::string_view(sourceData + pos,
                     posEndOfStatement + 1 - pos);
             pos = posEndOfStatement + 1;
@@ -122,10 +122,7 @@ namespace {
         }
         const auto newValueItr = specConstants.find(static_cast<uint32_t>(constantId));
         if (newValueItr == specConstants.end()) {
-            // not going to override the constant,
-            // as the specConstants parameter doesn't specify it. So, we will keep the default
-            // already in the source text
-            // (stream to the end of the statement)...
+            // The constant is not being overridden, so keep the default value.
             processedShaderSource << std::string_view(sourceData + pos,
                     posEndOfStatement + 1 - pos);
             pos = posEndOfStatement + 1;
@@ -174,7 +171,7 @@ namespace {
     utils::FixedCapacityVector<uint8_t> const& sourceBytes =
             shaderSource[static_cast<size_t>(stage)];
     if (sourceBytes.empty()) {
-        return nullptr;// nothing to compile/create, the shader was not provided
+        return nullptr; // No shader source to compile.
     }
     std::stringstream labelStream;
     labelStream << programName << " " << filamentShaderStageToString(stage) << " shader";
@@ -192,7 +189,8 @@ namespace {
     };
     const wgpu::ShaderModule shaderModule = device.CreateShaderModule(&descriptor);
     const wgpu::Instance instance = device.GetAdapter().GetInstance();
-    // synchronously creates the shader module...
+
+    // Synchronously compile the shader module.
     const wgpu::WaitStatus waitResult = instance.WaitAny(
             shaderModule.GetCompilationInfo(wgpu::CallbackMode::WaitAnyOnly,
                     [&descriptor](auto const& status,
@@ -282,7 +280,7 @@ WebGPUProgram::WebGPUProgram(wgpu::Device const& device, Program const& program)
     : HwProgram{ program.getName() } {
     std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> specConstants;
     toMap(program.getSpecializationConstants(), specConstants);
-    // TODO consider creating/compiling these shaders in parallel
+    // TODO: Consider creating/compiling these shaders in parallel.
     vertexShaderModule = createShaderModule(device, program, ShaderStage::VERTEX, specConstants);
     fragmentShaderModule =
             createShaderModule(device, program, ShaderStage::FRAGMENT, specConstants);

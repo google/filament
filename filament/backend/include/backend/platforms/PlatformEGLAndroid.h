@@ -134,6 +134,10 @@ private:
         InitializeJvmForPerformanceManagerIfNeeded();
     };
 
+    struct ExternalTextureAndroid : public ExternalTexture {
+        EGLImageKHR eglImage = EGL_NO_IMAGE;
+    };
+
     int mOSVersion;
     ExternalStreamManagerAndroid& mExternalStreamManager;
     InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;

@@ -80,6 +80,7 @@ public:
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Two cases fail, see b/417255941 and b/417255943");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,

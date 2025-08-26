@@ -49,7 +49,7 @@ Backend parseArgumentsForBackend(int argc, char* argv[]) {
                 } else if (arg == "webgpu") {
                     backend = Backend::WEBGPU;
                 } else {
-                    std::cerr << "Unrecognized target API. Must be 'opengl'|'vulkan'|'metal'."
+                    std::cerr << "Unrecognized target API. Must be 'opengl'|'vulkan'|'metal'|'webgpu'."
                               << std::endl
                               << "Defaulting to OpenGL."
                               << std::endl;

@@ -283,10 +283,13 @@ static void collectDescriptorSets(const GLSLPostProcessor::Config& config, Descr
 
 } // namespace msl
 
-GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
-        : mOptimization(optimization),
-          mPrintShaders(flags & PRINT_SHADERS),
-          mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
+GLSLPostProcessor::GLSLPostProcessor(
+        MaterialBuilder::Optimization optimization,
+        MaterialBuilder::Workarounds workarounds,
+        uint32_t flags)
+    : mOptimization(optimization), mWorkarounds(workarounds),
+      mPrintShaders(flags & PRINT_SHADERS),
+      mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
     // This should occur only once, to avoid races.
     SpirvRemapWrapperSetUp();
 }
@@ -1048,9 +1051,15 @@ void GLSLPostProcessor::fixupClipDistance(
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
-        if (!(config.targetApi & apiFilter)) {
-            return;
+
+        // Workaround management is currently very simple, only two values are possible
+        // ALL and NONE. If the value is anything but NONE, we apply all workarounds.
+        if (config.workarounds != MaterialBuilderBase::Workarounds::NONE) {
+            if (!(config.targetApi & apiFilter)) {
+                return;
+            }
         }
+
         optimizer.RegisterPass(std::move(pass));
     };
 

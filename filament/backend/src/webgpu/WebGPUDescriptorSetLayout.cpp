@@ -40,7 +40,9 @@ namespace filament::backend {
 
 namespace {
 
-// Convert Filament Shader Stage Flags bitmask to webgpu equivalent
+/**
+ * Converts Filament shader stage flags to the corresponding WebGPU shader stage bitmask.
+ */
 [[nodiscard]] wgpu::ShaderStage filamentStageToWGPUStage(const ShaderStageFlags fFlags) {
     wgpu::ShaderStage retStages = wgpu::ShaderStage::None;
     if (any(ShaderStageFlags::VERTEX & fFlags)) {
@@ -70,10 +72,6 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         baseLabel = temp->c_str();
     }
 
-    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
-    // debugging. For now, hack an incrementing value.
-    static int layoutNum = 0;
-
     const unsigned int samplerCount =
             std::count_if(layout.bindings.begin(), layout.bindings.end(), [](auto& fEntry) {
                 return DescriptorSetLayoutBinding::isSampler(fEntry.type);
@@ -87,6 +85,11 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         auto& wEntry = wEntries.emplace_back();
         auto& entryInfo = mBindGroupEntries.emplace_back();
         wEntry.visibility = filamentStageToWGPUStage(fEntry.stageFlags);
+
+        // In WebGPU, textures and samplers are separate bindings.
+        // We map the Filament binding index to two WebGPU binding indices:
+        // - texture: binding * 2
+        // - sampler: binding * 2 + 1
         wEntry.binding = fEntry.binding * 2;
         entryInfo.binding = wEntry.binding;
 
@@ -178,11 +181,13 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const& 
         } else if (isCubeArrayTypeDescriptor(fEntry.type)) {
             wEntry.texture.viewDimension = wgpu::TextureViewDimension::CubeArray;
         }
-        // fEntry.count is unused currently
     }
-    std::string label =  "layout_" + baseLabel + std::to_string(++layoutNum) ;
+    // TODO: layoutDescriptor has a "Label". Ideally we can get info on what this layout is for
+    // debugging. For now, hack an incrementing value.
+    static int layoutNum = 0;
+    std::string label =  "layout_" + baseLabel + "_" + std::to_string(++layoutNum) ;
     const wgpu::BindGroupLayoutDescriptor layoutDescriptor{
-        .label{label.c_str()}, // Use .c_str() if label needs to be const char*
+        .label{label.c_str()},
         .entryCount = wEntries.size(),
         .entries = wEntries.data()
     };

@@ -544,7 +544,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
-    message(AUTHOR_WARNING "WebGPU is in development stage and broken at this stage. Its support is very limited.")
     add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
 endif()
 

@@ -25,6 +25,10 @@ namespace filament::backend {
 
 class Program;
 
+/**
+ * A WebGPU implementation of the HwProgram.
+ * This class holds the compiled shader modules for a given program.
+ */
 class WebGPUProgram final : public HwProgram {
 public:
     WebGPUProgram(wgpu::Device const&, Program const&);
