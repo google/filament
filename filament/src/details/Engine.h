@@ -748,7 +748,7 @@ public:
                 bool enable_staging_buffer_bypass = false;
             } vulkan;
             bool disable_parallel_shader_compile = false;
-            bool disable_amortized_shader_compile = false;
+            bool disable_amortized_shader_compile = true;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
