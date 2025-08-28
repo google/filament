@@ -207,7 +207,17 @@ void WebGPUDriver::finish(int /* dummy */) {
     FWGPU_SYSTRACE_SCOPE();
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
+    mReadPixelMapsCounter.waitForAllToFinish();
     flush();
+
+    // Some applications/samples might call finish in the very beginning of an application before
+    // creating any resources/tasks to flush out the system on any pending work from previous runs.
+    // Currently, gltf_viewer sample on android exhibit this behavior.
+    // Bail out early to safeguard against those cases. Otherwise, OnSubmittedWorkDone will
+    // hang on work that was never submitted.
+    if (mCommandEncoder == nullptr) {
+        return;
+    }
     // Wait for all previously submitted work to finish.
     std::mutex syncPoint;
     std::condition_variable syncCondition;
@@ -225,7 +235,6 @@ void WebGPUDriver::finish(int /* dummy */) {
             });
     std::unique_lock<std::mutex> lock(syncPoint);
     syncCondition.wait(lock, [&done] { return done; });
-    mReadPixelMapsCounter.waitForAllToFinish();
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
