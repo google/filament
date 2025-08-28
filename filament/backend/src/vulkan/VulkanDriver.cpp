@@ -386,9 +386,11 @@ void VulkanDriver::bindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorS
 
 void VulkanDriver::unbindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t bindingPoint) {
-    std::erase_if(mStreamedTexturesBindings, [&](streamedTextureBinding& binding) {
-        return ((binding.set == set) && (binding.binding == bindingPoint));
-    });
+    auto iter = std::remove_if(mStreamedTexturesBindings.begin(), mStreamedTexturesBindings.end(),
+            [&](streamedTextureBinding& binding) {
+                return ((binding.set == set) && (binding.binding == bindingPoint));
+            });
+    mStreamedTexturesBindings.erase(iter, mStreamedTexturesBindings.end());
 }
 
 void VulkanDriver::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
@@ -399,9 +401,19 @@ void VulkanDriver::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> i
                 mExternalImageManager.bindExternallySampledTexture(data.set, data.binding, image,
                         data.samplerParams);
             } else {
-                // just update the sampler set
-                mDescriptorSetCache.updateSamplerForExternalSamplerSet(data.set, data.binding,
-                        image);
+                // For some reason, some of the frames coming to us, are on streams where the 
+                // descriptor set isn't external...
+                if (data.set->getExternalSamplerVkSet()) {
+                    mDescriptorSetCache.updateSamplerForExternalSamplerSet(data.set, data.binding,
+                            image);
+                } else {
+                    //... In this case we just default to using the normal path and update the sampler.
+                    VulkanSamplerCache::Params cacheParams = {
+                        .sampler = data.samplerParams,
+                    };
+                    VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
+                    mDescriptorSetCache.updateSampler(data.set, data.binding, image, vksampler);
+                }
             }
         }
     }
