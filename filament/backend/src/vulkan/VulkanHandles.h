@@ -185,11 +185,6 @@ public:
         return mExternalSamplerVkSet;
     }
 
-    void setHasStreamedTexture(bool does) { mHasStreamedTexture = does;
-    }
-
-    bool getHasStreamedTexture()const { return mHasStreamedTexture; }
-
     void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
         mExternalSamplerVkSet = vkset;
         if (mOnRecycleExternalSamplerFn) {
@@ -222,7 +217,6 @@ public:
 private:
     VkDescriptorSet const mVkSet;
     VkDescriptorSet mExternalSamplerVkSet = VK_NULL_HANDLE;
-    bool mHasStreamedTexture = false;
 
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;

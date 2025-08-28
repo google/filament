@@ -121,6 +121,13 @@ private:
     VulkanDriver& operator=(VulkanDriver const&) = delete;
 
 private:
+    void bindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint,
+            fvkmemory::resource_ptr<VulkanTexture> image, SamplerParams samplerParams);
+    void unbindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+            uint8_t bindingPoint);
+    void onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
+            fvkmemory::resource_ptr<VulkanStream> stream, bool newImage);
+
     void collectGarbage();
     void bindPipelineImpl(PipelineState const& pipelineState, VkPipelineLayout pipelineLayout,
             fvkutils::DescriptorSetMask descriptorSetMask);
@@ -192,6 +199,15 @@ private:
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
     // data to process it at call time. So we store it and process it during updateStreams.
     std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
+
+    struct streamedTextureBinding {
+        uint8_t binding = 0;
+        fvkmemory::resource_ptr<VulkanTexture> image;
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set;
+        SamplerParams samplerParams;
+    };
+    // keep track of all the stream bindings
+    std::vector<streamedTextureBinding> mStreamedTexturesBindings;
 };
 
 } // namespace filament::backend

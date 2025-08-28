@@ -378,6 +378,35 @@ void VulkanDriver::tick(int) {
     mCommands.updateFences();
 }
 
+void VulkanDriver::bindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+        uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanTexture> image,
+        SamplerParams samplerParams) {
+    mStreamedTexturesBindings.push_back({ bindingPoint, image, set, samplerParams });
+}
+
+void VulkanDriver::unbindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+        uint8_t bindingPoint) {
+    std::erase_if(mStreamedTexturesBindings, [&](streamedTextureBinding& binding) {
+        return ((binding.set == set) && (binding.binding == bindingPoint));
+    });
+}
+
+void VulkanDriver::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
+        fvkmemory::resource_ptr<VulkanStream> stream, bool newImage) {
+    for (streamedTextureBinding const& data: mStreamedTexturesBindings) {
+        if (data.image->getStream() == stream) {
+            if (newImage) {
+                mExternalImageManager.bindExternallySampledTexture(data.set, data.binding, image,
+                        data.samplerParams);
+            } else {
+                // just update the sampler set
+                mDescriptorSetCache.updateSamplerForExternalSamplerSet(data.set, data.binding,
+                        image);
+            }
+        }
+    }
+}
+
 // Garbage collection should not occur too frequently, only about once per frame. Internally, the
 // eviction time of various resources is often measured in terms of an approximate frame number
 // rather than the wall clock, because we must wait 3 frames after a DriverAPI-level resource has
@@ -455,19 +484,18 @@ void VulkanDriver::updateDescriptorSetTexture(
     if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
-        set->setHasStreamedTexture(false);
-    } else if (mExternalImageManager.isStreamedTexture(texture)) {
-        mExternalImageManager.bindStream(set, binding, texture->getStream(), params);
-        mAppState.hasBoundExternalImages = true;// because there will always be external images
-        set->setHasStreamedTexture(true);
-    } else {
+    } else if (bool(texture->getStream())) {
+        bindStreamedTexture(set, binding, texture, params);
+        mAppState.hasBoundExternalImages = true;
+    }
+    else {
         VulkanSamplerCache::Params cacheParams = {
             .sampler = params,
         };
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
         mExternalImageManager.clearTextureBinding(set, binding);
-        set->setHasStreamedTexture(false);
+        unbindStreamedTexture(set, binding);
     }
 }
 
@@ -1041,6 +1069,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
             }
 
             auto texture = stream->getTexture(stream->getAcquired().image);
+            bool newImage = false;
             if (!texture) {
                 auto externalImage =
                         mPlatform->createExternalImageFromRaw(stream->getAcquired().image, false);
@@ -1083,13 +1112,14 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                     mExternalImageManager.addExternallySampledTexture(newTexture, externalImage);
                     // Cache the AHB backed image.
                     stream->pushImage(stream->getAcquired().image, newTexture);
+                    newImage = true;
                 }
 
                 newTexture.inc();
                 texture = newTexture;
             }
 
-            mExternalImageManager.bindStreamFrame(stream, texture);
+            onStreamAcquireImage(texture, stream, newImage);
         }
         mStreamsWithPendingAcquiredImage.clear();
     }
@@ -2034,9 +2064,8 @@ void VulkanDriver::bindDescriptorSet(
             // been bound and this set has external samplers, we do the doBindindraw block in
             // draw2() again. Because this set might potentially cause a new pipelineLayout
             // (therefore pipeline) to be bound.
-            bool streamed;
             if (bindInDrawBundle.descriptorSetMask[setIndex] &&
-                    mExternalImageManager.hasExternalSampler(set, streamed)) {
+                    mExternalImageManager.hasExternalSampler(set)) {
                 mPipelineState.bindInDraw.first = true;
             }
         }

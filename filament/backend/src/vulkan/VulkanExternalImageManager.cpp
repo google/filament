@@ -91,7 +91,6 @@ VulkanExternalImageManager::~VulkanExternalImageManager() = default;
 
 void VulkanExternalImageManager::terminate() {
     mSetBindings.clear();
-    mSetStreamBindings.clear();
     mImages.clear();
 }
 
@@ -113,9 +112,8 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
         if (!set || !layout) {
             continue;
         }
-        bool streamed = false;
-        if (hasExternalSampler(set, streamed)) {
-            updateSetAndLayout(set, layout, streamed);
+        if (hasExternalSampler(set)) {
+            updateSetAndLayout(set, layout);
             shouldUseExternalSampler.set(i);
         }
     }
@@ -123,24 +121,15 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
 }
 
 bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set, bool& streamed) const {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set)const {
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& info) { return info.set == set; });
-    bool doesIt = false;
-    streamed = false;
-
-    if (itr != mSetBindings.end()) {
-        auto itrStream = std::find_if(mSetStreamBindings.begin(), mSetStreamBindings.end(),
-                [&](SetStreamBindingInfo const& info) { return info.set == set; });
-        streamed = (itrStream != mSetStreamBindings.end());
-        doesIt = true;
-    }
-    return doesIt;
+    return itr != mSetBindings.end();
 }
 
 void VulkanExternalImageManager::updateSetAndLayout(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout, bool streamed) {
+        fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
     utils::FixedCapacityVector<
             std::tuple<uint8_t, VkSampler, fvkmemory::resource_ptr<VulkanTexture>>>
             samplerAndBindings;
@@ -189,7 +178,7 @@ void VulkanExternalImageManager::updateSetAndLayout(
 
     // Need to copy the set
     VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (streamed || (oldLayout != newLayout || oldSet == VK_NULL_HANDLE)) {
+    if (oldLayout != newLayout || oldSet == VK_NULL_HANDLE) {
         // Build a new descriptor set from the new layout
         VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
         auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
@@ -275,27 +264,6 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
     mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
 }
 
-void VulkanExternalImageManager::bindStream(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanStream> stream,
-        SamplerParams samplerParams) {
-    mSetStreamBindings.push_back({ bindingPoint, stream, set, samplerParams });
-}
-
-void VulkanExternalImageManager::bindStreamFrame(fvkmemory::resource_ptr<VulkanStream> stream,
-        fvkmemory::resource_ptr<VulkanTexture> frame){
-    auto it = std::find_if(mSetStreamBindings.begin(), mSetStreamBindings.end(),
-            [&](auto const& streamData) { return streamData.stream == stream; });
-    // We should have had this stream already through mSetStreamBindings
-    assert(it != mSetStreamBindings.end());
-
-    // If we do not have this image yet, add it
-    if (std::find_if(mSetBindings.begin(), mSetBindings.end(), [&](auto const& imageData) {
-            return imageData.image == frame;
-        }) == mSetBindings.end()) {
-        mSetBindings.push_back({ it->binding, frame, it->set, it->samplerParams });
-    }
-}
-
 void VulkanExternalImageManager::addExternallySampledTexture(
        fvkmemory::resource_ptr<VulkanTexture> image,
         Platform::ExternalImageHandleRef platformHandleRef) {
@@ -309,11 +277,6 @@ void VulkanExternalImageManager::removeExternallySampledTexture(
     erasep<ImageData>(mImages, [&](auto const& imageData) {
         return imageData.image == image;
     });
-}
-
-bool VulkanExternalImageManager::isStreamedTexture(
-        fvkmemory::resource_ptr<VulkanTexture> image) const {
-    return bool(image->getStream());
 }
 
 bool VulkanExternalImageManager::isExternallySampledTexture(
