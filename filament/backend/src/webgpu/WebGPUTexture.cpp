@@ -281,10 +281,33 @@ WebGPUTexture::WebGPUTexture(WebGPUTexture const* src, const uint8_t baseLevel,
       mTexture{ src->mTexture },
       mDefaultMipLevel{ baseLevel },
       mDefaultBaseArrayLayer{ src->mArrayLayerCount },
-      mDefaultTextureView{ makeTextureView(mDefaultMipLevel, levelCount, 0, mDefaultBaseArrayLayer,
-              toWebGPUTextureViewDimension(src->target)) },
       mMsaaSidecarTexture{ src->mMsaaSidecarTexture },
-      mSwizzle{src->mSwizzle}{}
+      mSwizzle{ src->mSwizzle } {
+    const bool swizzleUndefined{ (src->mSwizzle.r == wgpu::ComponentSwizzle::Undefined) &&
+                                 (src->mSwizzle.g == wgpu::ComponentSwizzle::Undefined) &&
+                                 (src->mSwizzle.b == wgpu::ComponentSwizzle::Undefined) &&
+                                 (src->mSwizzle.a == wgpu::ComponentSwizzle::Undefined) };
+    if (swizzleUndefined) {
+        mDefaultTextureView = makeTextureView(mDefaultMipLevel, levelCount, 0,
+                mDefaultBaseArrayLayer, src->getViewDimension());
+    } else {
+        wgpu::TextureComponentSwizzleDescriptor swizzleDesc{};
+        swizzleDesc.swizzle = mSwizzle;
+        const wgpu::TextureViewDescriptor viewDesc{
+            .nextInChain = &swizzleDesc,
+            .label = "swizzled_texture_view",
+            .format = mTexture.GetFormat(),
+            .dimension = src->getViewDimension(),
+            .baseMipLevel = mDefaultMipLevel,
+            .mipLevelCount = levelCount,
+            .baseArrayLayer = 0,
+            .arrayLayerCount = mDefaultBaseArrayLayer,
+        };
+        mDefaultTextureView = mTexture.CreateView(&viewDesc);
+        FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView)
+                << "Failed to create swizzled Texture view";
+    }
+}
 
 WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
         const wgpu::TextureComponentSwizzle nextSwizzle) noexcept
@@ -315,19 +338,6 @@ WebGPUTexture::WebGPUTexture(const WebGPUTexture* src,
     };
     mDefaultTextureView = mTexture.CreateView(&viewDesc);
     FILAMENT_CHECK_POSTCONDITION(mDefaultTextureView) << "Failed to create swizzled Texture view";
-}
-
-wgpu::Texture const& WebGPUTexture::getMsaaSidecarTexture(const uint8_t sampleCount) const {
-    if (mMsaaSidecarTexture == nullptr) {
-        return mMsaaSidecarTexture; // nullptr (no such sidecar)
-    }
-    FILAMENT_CHECK_PRECONDITION(sampleCount == mMsaaSidecarTexture.GetSampleCount())
-            << "The MSAA sidecar texture has a different sample count ("
-            << mMsaaSidecarTexture.GetSampleCount() << ") than requested (" << +sampleCount
-            << "). Note that this restriction was written when WebGPU only supported msaa "
-               "textures with 4 samples. If that has changed, this implementation should be "
-               "updated (e.g. map of sidecar textures by sampleCount or something).";
-    return mMsaaSidecarTexture;
 }
 
 bool WebGPUTexture::supportsMultipleMipLevelsViaStorageBinding(const wgpu::TextureFormat format) {

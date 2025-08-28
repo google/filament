@@ -61,8 +61,6 @@ public:
 
     [[nodiscard]] wgpu::Texture const& getTexture() const { return mTexture; }
 
-    [[nodiscard]] wgpu::Texture const& getMsaaSidecarTexture(uint8_t sampleCount) const;
-
     [[nodiscard]] wgpu::TextureView const& getDefaultTextureView() const {
         return mDefaultTextureView;
     }
