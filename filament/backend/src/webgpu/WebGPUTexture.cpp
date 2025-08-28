@@ -41,38 +41,6 @@ namespace filament::backend {
 
 namespace {
 
-wgpu::TextureComponentSwizzle composeSwizzle(wgpu::TextureComponentSwizzle const& prev,
-        wgpu::TextureComponentSwizzle const& next) {
-    auto const compose =
-            [](wgpu::TextureComponentSwizzle const& p,
-                    wgpu::TextureComponentSwizzle const& n) -> wgpu::TextureComponentSwizzle {
-        wgpu::ComponentSwizzle vals[4] = { n.r, n.g, n.b, n.a };
-        for (auto& out: vals) {
-            switch (out) {
-                case wgpu::ComponentSwizzle::R:
-                    out = p.r;
-                    break;
-                case wgpu::ComponentSwizzle::G:
-                    out = p.g;
-                    break;
-                case wgpu::ComponentSwizzle::B:
-                    out = p.b;
-                    break;
-                case wgpu::ComponentSwizzle::A:
-                    out = p.a;
-                    break;
-                // Do not modify the value
-                case wgpu::ComponentSwizzle::Zero:
-                case wgpu::ComponentSwizzle::One:
-                case wgpu::ComponentSwizzle::Undefined:
-                    break;
-            }
-        }
-        return { .r = vals[0], .g = vals[1], .b = vals[2], .a = vals[3] };
-    };
-    return compose(prev, next);
-}
-
 [[nodiscard]] constexpr wgpu::StringView getUserTextureLabel(const SamplerType target) {
     // TODO will be helpful to get more useful info than this
     switch (target) {
