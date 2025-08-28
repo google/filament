@@ -605,6 +605,85 @@ namespace filament::backend {
     return retUsage;
 }
 
+/**
+ * "Updates" the previous swizzle parameters with the next/new parameters, essentially stacking
+ * swizzle parameters. Essentially this combines the parameters such that the result is
+ * the same mapping of channels you would get if you first applied the "previous" mapping
+ * followed by the "next" mapping.
+ */
+[[nodiscard]] constexpr wgpu::TextureComponentSwizzle composeSwizzle(
+        wgpu::TextureComponentSwizzle const& previous, wgpu::TextureComponentSwizzle const& next) {
+    // start with the "next" values...
+    wgpu::ComponentSwizzle result[] { next.r, next.g, next.b, next.a };
+    // track the current channel as we go through values to know what to assign in the undefined
+    // case...
+    wgpu::ComponentSwizzle channel{wgpu::ComponentSwizzle::R};
+    for (auto& out: result) {
+        switch (out) {
+            case wgpu::ComponentSwizzle::R:
+                if (previous.r != wgpu::ComponentSwizzle::Undefined) {
+                    out = previous.r;
+                }
+                break;
+            case wgpu::ComponentSwizzle::G:
+                if (previous.g != wgpu::ComponentSwizzle::Undefined) {
+                    out = previous.g;
+                }
+                break;
+            case wgpu::ComponentSwizzle::B:
+                if (previous.b != wgpu::ComponentSwizzle::Undefined) {
+                    out = previous.b;
+                }
+                break;
+            case wgpu::ComponentSwizzle::A:
+                if (previous.a != wgpu::ComponentSwizzle::Undefined) {
+                    out = previous.a;
+                }
+                break;
+            // Do not modify the (next) value for explicit One or Zero...
+            case wgpu::ComponentSwizzle::Zero:
+            case wgpu::ComponentSwizzle::One:
+                break;
+            case wgpu::ComponentSwizzle::Undefined:
+                // fallback to the previous value if the next value is undefined...
+                switch (channel) {
+                    case wgpu::ComponentSwizzle::R:
+                        out = previous.r;
+                        break;
+                    case wgpu::ComponentSwizzle::G:
+                        out = previous.g;
+                        break;
+                    case wgpu::ComponentSwizzle::B:
+                        out = previous.b;
+                        break;
+                    case wgpu::ComponentSwizzle::A:
+                        out = previous.a;
+                        break;
+                    default:
+                        // should not be possible...
+                        out = wgpu::ComponentSwizzle::Undefined;
+                        break;
+                }
+                break;
+        }
+        switch (channel) {
+            case wgpu::ComponentSwizzle::R:
+                channel = wgpu::ComponentSwizzle::G;
+                break;
+            case wgpu::ComponentSwizzle::G:
+                channel = wgpu::ComponentSwizzle::B;
+                break;
+            case wgpu::ComponentSwizzle::B:
+                channel = wgpu::ComponentSwizzle::A;
+                break;
+            default:
+                channel = wgpu::ComponentSwizzle::Undefined;
+                break;
+        }
+    }
+    return { .r = result[0], .g = result[1], .b = result[2], .a = result[3] };
+}
+
 } // namespace filament::backend
 
 #endif // TNT_FILAMENT_BACKEND_WEBGPUTEXTUREHELPERS_H

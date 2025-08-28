@@ -47,12 +47,11 @@ public:
     WebGPUTexture(WebGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
 
     /**
-     * @param textureView texture view to use for the respective texture. e.g. it can be a
-     *                    swizzled Texture view for that filament texture
-     *
-     * Associates the underlying texture with the given texture view
+     * @param nextSwizzle the swizzle to apply to the source texture.
+     * Creates a new texture view by composing the nextSwizzle with the source which itself it
+     * could be a swizzled view
      */
-    WebGPUTexture(WebGPUTexture const* source, wgpu::TextureView textureView) noexcept;
+    WebGPUTexture(WebGPUTexture const* source, wgpu::TextureComponentSwizzle nextSwizzle) noexcept;
 
     [[nodiscard]] wgpu::TextureAspect getAspect() const { return mAspect; }
 
@@ -61,8 +60,6 @@ public:
     [[nodiscard]] size_t getBlockHeight() const { return mBlockHeight; }
 
     [[nodiscard]] wgpu::Texture const& getTexture() const { return mTexture; }
-
-    [[nodiscard]] wgpu::Texture const& getMsaaSidecarTexture(uint8_t sampleCount) const;
 
     [[nodiscard]] wgpu::TextureView const& getDefaultTextureView() const {
         return mDefaultTextureView;
@@ -73,6 +70,8 @@ public:
 
     [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
+
+    [[nodiscard]] wgpu::TextureComponentSwizzle getSwizzle() const { return mSwizzle; }
 
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
 
@@ -100,12 +99,6 @@ public:
      * @return A texture view for the MSAA sidecar texture
      */
     wgpu::TextureView makeMsaaSidecarTextureViewIfTextureSidecarExists(uint8_t samples,
-            uint8_t mipLevel, uint32_t arrayLayer) const;
-
-    /**
-     * @return nullptr if a MSAA sidecar texture is not appliable, otherwise a view to one
-     */
-    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&,
             uint8_t mipLevel, uint32_t arrayLayer) const;
 
     /**
@@ -144,6 +137,8 @@ private:
     // by sampleCount or something like that.
     // For now that complexity and cost is not warranted due to WebGPU's restrictions.
     wgpu::Texture mMsaaSidecarTexture = nullptr;
+    // an undefined mSwizzle means that is not a swizzle view
+    wgpu::TextureComponentSwizzle mSwizzle{};
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,

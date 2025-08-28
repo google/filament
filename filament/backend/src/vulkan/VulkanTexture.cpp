@@ -106,7 +106,7 @@ VkComponentMapping composeSwizzle(VkComponentMapping const& prev, VkComponentMap
         return { vals[0], vals[1], vals[2], vals[3] };
     };
 
-    // We make sure all all identities are mapped into respective channels so that actual channel
+    // We make sure all identities are mapped into respective channels so that actual channel
     // mapping will be passed onto the output.
     VkComponentMapping const prevExplicit = identityToChannel(prev);
     VkComponentMapping const nextExplicit = identityToChannel(next);
