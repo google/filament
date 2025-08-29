@@ -83,6 +83,7 @@ UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID
 UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
+UTILS_PRIVATE PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID = {};
 }
 using namespace glext;
 
@@ -226,6 +227,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
                 "eglGetFrameTimestampSupportedANDROID");
         eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
                 "eglGetFrameTimestampsANDROID");
+        eglDupNativeFenceFDANDROID =
+                (PFNEGLDUPNATIVEFENCEFDANDROIDPROC) eglGetProcAddress("eglDupNativeFenceFDANDROID");
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -393,6 +396,29 @@ Platform::Stream* PlatformEGLAndroid::createStream(void* nativeStream) noexcept 
 
 void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
+}
+
+PlatformEGLAndroid::Sync::Sync(EGLDisplay eglDisplay) noexcept
+    : mEGLDisplay(eglDisplay)
+{
+    mSync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+}
+
+PlatformEGLAndroid::Sync::~Sync() noexcept {
+    eglDestroySyncKHR(mEGLDisplay, mSync);
+}
+
+std::shared_ptr<Platform::Sync> PlatformEGLAndroid::createSync() noexcept {
+    return std::make_shared<PlatformEGLAndroid::Sync>(mEGLDisplay);
+}
+
+bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
+    assert_invariant(sync != nullptr && fd != nullptr);
+    PlatformEGLAndroid::Sync& eglSync = static_cast<PlatformEGLAndroid::Sync&>(*sync);
+    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.getSync());
+    // In the case where there was no native FD, -1 is returned. Return false
+    // to indicate there was an error in this case.
+    return *fd != -1;
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t tname) noexcept {

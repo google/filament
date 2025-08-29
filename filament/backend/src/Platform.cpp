@@ -16,16 +16,23 @@
 
 #include <backend/Platform.h>
 
+#include <backend/CallbackHandler.h>
+
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 
 #include <atomic>
+#include <memory>
 #include <utility>
 
 #include <stddef.h>
 #include <stdint.h>
 
 namespace filament::backend {
+
+// This needs to be explicitly written to avoid the weak vtables warning for the
+// Sync class.
+Platform::Sync::~Sync() = default;
 
 void Platform::ExternalImageHandle::incref(ExternalImage* p) noexcept {
     if (p) {

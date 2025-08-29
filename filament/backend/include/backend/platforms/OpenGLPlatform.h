@@ -52,6 +52,12 @@ protected:
 
     ~OpenGLPlatform() noexcept override;
 
+    class Sync : public Platform::Sync {
+    public:
+        Sync() noexcept = default;
+        virtual ~Sync() noexcept;
+    };
+
 public:
     struct ExternalTexture {
         unsigned int target; // GLenum target
@@ -276,6 +282,29 @@ public:
      */
     virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Sync support
+
+    /**
+     * Creates a Sync. These can be used for frame synchronization externally
+     * (certain platform implementations can be exported to handles that can
+     * be used in other processes).
+     *
+     * @return A Sync object.
+     */
+    virtual std::shared_ptr<Platform::Sync> createSync() noexcept;
+
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    virtual bool convertSyncToFd(Platform::Sync* UTILS_NONNULL sync,
+            int32_t* UTILS_NONNULL fd) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Streaming support

@@ -45,6 +45,8 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
+OpenGLPlatform::Sync::~Sync() noexcept = default;
+
 utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
     auto const p = static_cast<OpenGLDriverBase const*>(driver);
 #if UTILS_HAS_RTTI
@@ -117,6 +119,13 @@ FenceStatus OpenGLPlatform::waitFence(
     return FenceStatus::ERROR;
 }
 
+std::shared_ptr<Platform::Sync> OpenGLPlatform::createSync() noexcept {
+    return std::make_shared<OpenGLPlatform::Sync>();
+}
+
+bool OpenGLPlatform::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
+    return false;
+}
 
 Platform::Stream* OpenGLPlatform::createStream(
         UTILS_UNUSED void* nativeStream) noexcept {

@@ -26,9 +26,12 @@
 #include <stdint.h>
 
 #include <atomic>
+#include <functional>
+#include <memory>
 
 namespace filament::backend {
 
+class CallbackHandler;
 class Driver;
 
 /**
@@ -42,6 +45,23 @@ public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
+
+    class Sync {
+    public:
+        virtual ~Sync();
+
+    protected:
+        // Avoid direct instantiation.
+        Sync() = default;
+    };
+
+    using SyncCallback = std::function<void(Sync* UTILS_NULLABLE)>;
+
+    struct SyncCallbackData {
+        CallbackHandler* UTILS_NULLABLE handler;
+        SyncCallback cb;
+        std::weak_ptr<Sync> sync;
+    };
 
     class ExternalImageHandle;
 

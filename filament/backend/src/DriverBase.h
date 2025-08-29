@@ -140,6 +140,10 @@ struct HwFence : public HwBase {
     Platform::Fence* fence = nullptr;
 };
 
+struct HwSync : public HwBase {
+    std::shared_ptr<Platform::Sync> sync;
+};
+
 struct HwSwapChain : public HwBase {
     Platform::SwapChain* swapChain = nullptr;
 };
