@@ -24,6 +24,7 @@
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 
+#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
@@ -57,26 +58,26 @@ VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
 } // anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
+void VulkanGroupMarkers::push(CString const& marker, Timestamp start) noexcept {
     mMarkers.push_back({marker,
         start.time_since_epoch().count() > 0.0
         ? start
         : std::chrono::high_resolution_clock::now()});
 }
 
-std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
+std::pair<CString, Timestamp> VulkanGroupMarkers::pop() noexcept {
     auto ret = mMarkers.back();
     mMarkers.pop_back();
     return ret;
 }
 
-std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
+std::pair<CString, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
     auto ret = mMarkers.front();
     mMarkers.pop_front();
     return ret;
 }
 
-std::pair<std::string, Timestamp> const& VulkanGroupMarkers::top() const {
+std::pair<CString, Timestamp> const& VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
     return mMarkers.back();
 }
@@ -351,7 +352,7 @@ void CommandBufferPool::waitFor(VkSemaphore previousAction, VkPipelineStageFlags
 }
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-std::string CommandBufferPool::topMarker() const {
+CString CommandBufferPool::topMarker() const {
     if (!mGroupMarkers || mGroupMarkers->empty()) {
         return "";
     }
@@ -362,11 +363,11 @@ void CommandBufferPool::pushMarker(char const* marker, VulkanGroupMarkers::Times
     if (!mGroupMarkers) {
         mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
     }
-    mGroupMarkers->push(marker, timestamp);
+    mGroupMarkers->push(CString{ marker }, timestamp);
     getRecording().pushMarker(marker);
 }
 
-std::pair<std::string, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker() {
+std::pair<CString, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker() {
     assert_invariant(mGroupMarkers && !mGroupMarkers->empty());
     auto ret = mGroupMarkers->pop();
 
@@ -523,7 +524,7 @@ void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
     }
 }
 
-std::string VulkanCommands::getTopGroupMarker() const {
+CString VulkanCommands::getTopGroupMarker() const {
     if (mProtectedPool) {
         return mProtectedPool->topMarker();
     }
