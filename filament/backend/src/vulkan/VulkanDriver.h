@@ -33,6 +33,7 @@
 #include "vulkan/VulkanDescriptorSetCache.h"
 #include "vulkan/VulkanDescriptorSetLayoutCache.h"
 #include "vulkan/VulkanExternalImageManager.h"
+#include "vulkan/VulkanStreamedImageManager.h"
 #include "vulkan/VulkanPipelineLayoutCache.h"
 #include "vulkan/memory/ResourceManager.h"
 #include "vulkan/memory/ResourcePointer.h"
@@ -153,6 +154,7 @@ private:
     VulkanDescriptorSetCache mDescriptorSetCache;
     VulkanQueryManager mQueryManager;
     VulkanExternalImageManager mExternalImageManager;
+    VulkanStreamedImageManager mStreamedImageManager;
 
     // This is necessary for us to write to push constants after binding a pipeline.
     using DescriptorSetLayoutHandleList = std::array<resource_ptr<VulkanDescriptorSetLayout>,
@@ -188,6 +190,10 @@ private:
 
     bool const mIsSRGBSwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+
+    // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
+    // data to process it at call time. So we store it and process it during updateStreams.
+    std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
 };
 
 } // namespace filament::backend

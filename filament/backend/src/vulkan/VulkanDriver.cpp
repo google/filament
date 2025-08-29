@@ -231,6 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
               &mDescriptorSetLayoutCache),
+      mStreamedImageManager(&mExternalImageManager, &mDescriptorSetCache, &mSamplerCache),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -455,13 +456,18 @@ void VulkanDriver::updateDescriptorSetTexture(
     if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
-    } else {
+    } else if (bool(texture->getStream())) {
+        mStreamedImageManager.bindStreamedTexture(set, binding, texture, params);
+        mAppState.hasBoundExternalImages = true;
+    }
+    else {
         VulkanSamplerCache::Params cacheParams = {
             .sampler = params,
         };
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
         mExternalImageManager.clearTextureBinding(set, binding);
+        mStreamedImageManager.unbindStreamedTexture(set, binding);
     }
 }
 
@@ -965,6 +971,11 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+    if (!sh) {
+        return;
+    }
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream.dec();
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -991,18 +1002,31 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
-    return {};
+    auto handle = mResourceManager.allocHandle<VulkanStream>();
+    auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
+    stream.inc();
+    return handle;
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired() {
-    return {};
+    auto handle = mResourceManager.allocHandle<VulkanStream>();
+    auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
+    stream.inc();
+    return handle;
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
+    FVK_SYSTRACE_SCOPE();
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream->acquire({ image, cb, userData, handler });
+    mStreamsWithPendingAcquiredImage.push_back(stream);
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream->width = width;
+    stream->height = height;
 }
 
 int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
@@ -1010,6 +1034,67 @@ int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
 }
 
 void VulkanDriver::updateStreams(CommandStream* driver) {
+    if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
+        for (auto& stream: mStreamsWithPendingAcquiredImage) {
+            if (stream->previousNeedsRelease()) {
+                scheduleRelease(stream->takePrevious());
+            }
+
+            auto texture = stream->getTexture(stream->getAcquired().image);
+            bool newImage = false;
+            if (!texture) {
+                auto externalImage =
+                        mPlatform->createExternalImageFromRaw(stream->getAcquired().image, false);
+                auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
+                auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+
+                assert_invariant(imgData.internal.valid() || imgData.external.valid());
+
+                VkFormat vkformat = metadata.format;
+                VkImage vkimage = VK_NULL_HANDLE;
+                VkDeviceMemory memory = VK_NULL_HANDLE;
+                if (imgData.internal.valid()) {
+                    metadata.externalFormat = 0;
+                    vkimage = imgData.internal.image;
+                    memory = imgData.internal.memory;
+                } else {
+                    vkformat = VK_FORMAT_UNDEFINED;
+                    vkimage = imgData.external.image;
+                    memory = imgData.external.memory;
+                }
+
+                VkSamplerYcbcrConversion const conversion =
+                        mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
+
+                auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager, mContext,
+                        mPlatform->getDevice(), mAllocator, &mResourceManager, &mCommands, vkimage,
+                        memory, vkformat, conversion, metadata.samples, metadata.width,
+                        metadata.height, metadata.layers, metadata.filamentUsage, mStagePool);
+
+                // We shouldn't need to do this when we allocate the texture
+                if (true) {
+                    auto& commands = mCommands.get();
+                    // Unlike uploaded textures or swapchains, we need to explicit transition this
+                    // texture into the read layout.
+                    newTexture->transitionLayout(&commands, newTexture->getPrimaryViewRange(),
+                            VulkanLayout::FRAG_READ);
+                }
+
+                if (imgData.external.valid()) {
+                    mExternalImageManager.addExternallySampledTexture(newTexture, externalImage);
+                    // Cache the AHB backed image.
+                    stream->pushImage(stream->getAcquired().image, newTexture);
+                    newImage = true;
+                }
+
+                newTexture.inc();
+                texture = newTexture;
+            }
+
+            mStreamedImageManager.onStreamAcquireImage(texture, stream, newImage);
+        }
+        mStreamsWithPendingAcquiredImage.clear();
+    }
 }
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
@@ -1331,6 +1416,11 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+    auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    assert_invariant(t);
+    auto s = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    assert_invariant(s);
+    t->setStream(s);
 }
 
 void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {

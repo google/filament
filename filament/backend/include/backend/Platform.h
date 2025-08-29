@@ -66,6 +66,9 @@ public:
         ExternalImageHandle& operator=(ExternalImageHandle const& rhs) noexcept;
         ExternalImageHandle& operator=(ExternalImageHandle&& rhs) noexcept;
 
+        bool operator==(const ExternalImageHandle& rhs) const noexcept {
+            return mTarget == rhs.mTarget;
+        }
         explicit operator bool() const noexcept { return mTarget != nullptr; }
 
         ExternalImage* UTILS_NULLABLE get() noexcept { return mTarget; }
