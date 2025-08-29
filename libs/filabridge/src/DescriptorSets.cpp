@@ -98,7 +98,7 @@ static constexpr std::initializer_list<DescriptorSetLayoutBinding> perRenderable
     { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerRenderableBindingPoints::MORPHING_UNIFORMS         },
     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS, DescriptorFlags::UNFILTERABLE },
     { DescriptorType::SAMPLER_2D_ARRAY_INT,     ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
-    { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS },
+    { DescriptorType::SAMPLER_2D_FLOAT,   ShaderStageFlags::VERTEX                                   ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, DescriptorFlags::UNFILTERABLE },
 };
 
 struct PairSamplerTypeFormatHasher {

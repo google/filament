@@ -19,6 +19,16 @@
 
 #include <backend/Platform.h>
 
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+// Resolve the conflicts between webgpu_cpp.h and X11 defines
+#undef Always
+#undef Success
+#undef None
+#undef True
+#undef False
+#undef Status
+#undef Bool
+#endif
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>

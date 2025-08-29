@@ -344,7 +344,7 @@ void PostProcessManager::init() noexcept {
             engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
 
     driver.updateDescriptorSetTexture(mDummyPerRenderableDsh,
-            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, engine.getZeroTextureArray(),
+            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, engine.getZeroTexture(),
             {});
 
     mSsrPassDescriptorSet.init(engine);

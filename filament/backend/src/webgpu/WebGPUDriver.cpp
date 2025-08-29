@@ -207,7 +207,17 @@ void WebGPUDriver::finish(int /* dummy */) {
     FWGPU_SYSTRACE_SCOPE();
     mDevice.Tick();
     mAdapter.GetInstance().ProcessEvents();
+    mReadPixelMapsCounter.waitForAllToFinish();
     flush();
+
+    // Some applications/samples might call finish in the very beginning of an application before
+    // creating any resources/tasks to flush out the system on any pending work from previous runs.
+    // Currently, gltf_viewer sample on android exhibit this behavior.
+    // Bail out early to safeguard against those cases. Otherwise, OnSubmittedWorkDone will
+    // hang on work that was never submitted.
+    if (mCommandEncoder == nullptr) {
+        return;
+    }
     // Wait for all previously submitted work to finish.
     std::mutex syncPoint;
     std::condition_variable syncCondition;
@@ -225,7 +235,6 @@ void WebGPUDriver::finish(int /* dummy */) {
             });
     std::unique_lock<std::mutex> lock(syncPoint);
     syncCondition.wait(lock, [&done] { return done; });
-    mReadPixelMapsCounter.waitForAllToFinish();
 }
 
 void WebGPUDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
@@ -527,31 +536,16 @@ void WebGPUDriver::createTextureViewSwizzleR(Handle<HwTexture> textureHandle,
     auto sourceTexture{ handleCast<WebGPUTexture>(sourceTextureHandle) };
     assert_invariant(sourceTexture);
 
-    wgpu::TextureComponentSwizzle swizzle
-    {
+    wgpu::TextureComponentSwizzle const nextSwizzle{
         .r = toWGPUComponentSwizzle(r),
         .g = toWGPUComponentSwizzle(g),
         .b = toWGPUComponentSwizzle(b),
         .a = toWGPUComponentSwizzle(a),
     };
 
-    wgpu::TextureComponentSwizzleDescriptor swizzleDesc {};
-    swizzleDesc.swizzle = swizzle;
-
-    const wgpu::TextureViewDescriptor viewDesc {
-        .nextInChain = &swizzleDesc,
-        .label = "swizzled_texture_view",
-        .format = sourceTexture->getTexture().GetFormat(),
-        .dimension = sourceTexture->getViewDimension(),
-        .baseMipLevel = 0,
-        .mipLevelCount = sourceTexture->getTexture().GetMipLevelCount(),
-        .baseArrayLayer = 0,
-        .arrayLayerCount = sourceTexture->getTexture().GetDepthOrArrayLayers(),
-    };
-
-    wgpu::TextureView swizzledView{ sourceTexture->getTexture().CreateView(&viewDesc) };
-    FILAMENT_CHECK_POSTCONDITION(swizzledView) << "Failed to create swizzled Texture view";
-    constructHandle<WebGPUTexture>(textureHandle, sourceTexture, swizzledView);
+    // The WebGPUTexture constructor for swizzled views will handle composing the swizzle and
+    // creating the new texture view.
+    constructHandle<WebGPUTexture>(textureHandle, sourceTexture, nextSwizzle);
 }
 
 void WebGPUDriver::createTextureExternalImage2R(Handle<HwTexture> textureHandle,

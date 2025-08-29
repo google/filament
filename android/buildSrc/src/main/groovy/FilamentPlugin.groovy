@@ -146,7 +146,7 @@ abstract class MaterialCompiler extends TaskWithBinary {
                         .gradleProperty("com.google.android.filament.include-webgpu")
                         .forUseAtConfigurationTime().present
                 if (include_webgpu) {
-                    matcArgs += ['-a', 'webgpu', '--variant-filter=skinning,stereo']
+                    matcArgs += ['-a', 'webgpu', '--variant-filter=stereo']
                 }
 
                 def mat_no_opt = providers
