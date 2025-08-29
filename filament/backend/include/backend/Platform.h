@@ -159,7 +159,7 @@ public:
          * Set to `true` to forcibly disable amortized shader compilation in the backend.
          * Currently only honored by the GL backend.
          */
-        bool disableAmortizedShaderCompile = false;
+        bool disableAmortizedShaderCompile = true;
 
         /**
          * Disable backend handles use-after-free checks.

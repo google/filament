@@ -118,7 +118,7 @@ FView::FView(FEngine& engine)
 
     mCommonRenderableDescriptorSet.setSampler(layout,
             +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-            engine.getZeroTextureArray(), {});
+            engine.getZeroTexture(), {});
 
 
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
@@ -823,7 +823,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
 
                 descriptorSet.setSampler(layout,
                         +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,
-                        engine.getZeroTextureArray(), {});
+                        engine.getZeroTexture(), {});
 
                 if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                     descriptorSet.setBuffer(layout,

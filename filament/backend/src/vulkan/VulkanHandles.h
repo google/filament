@@ -308,7 +308,10 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget();
 
-    VulkanRenderTarget(VulkanRenderTarget&& target) {
+    VulkanRenderTarget(VulkanRenderTarget&& target)
+        : HwRenderTarget(0, 0),
+          mOffscreen(false),
+          mProtected(false) {
         swap(std::move(target));
     }
 
@@ -365,6 +368,8 @@ struct VulkanRenderTarget : private HwRenderTarget, fvkmemory::Resource {
 
 private:
     void swap(VulkanRenderTarget&& target) {
+        std::swap(width, target.width);
+        std::swap(height, target.height);
         std::swap(mOffscreen, target.mOffscreen);
         std::swap(mProtected, target.mProtected);
         std::swap(mInfo, target.mInfo);

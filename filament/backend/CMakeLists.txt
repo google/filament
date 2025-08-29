@@ -532,7 +532,7 @@ target_link_libraries(${TARGET} PRIVATE
 if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
     # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
     # WebGPU to build on linux.
-    target_link_libraries(${TARGET} PRIVATE -lxcb)
+    target_link_libraries(${TARGET} PRIVATE -lxcb -lX11)
 endif()
 
 # ==================================================================================================
@@ -582,7 +582,9 @@ if (APPLE OR LINUX)
         test/test_Template.cpp
     )
     if (FILAMENT_SUPPORTS_WEBGPU)
-        list(APPEND BACKEND_TEST_SRC test/test_WebGPUAsyncTaskCounter.cpp)
+        list(APPEND BACKEND_TEST_SRC
+                test/test_WebGPUAsyncTaskCounter.cpp
+                test/test_WebGPUComposeSwizzle.cpp)
     endif()
     if (APPLE)
         # Metal-specific tests
@@ -630,6 +632,10 @@ if (APPLE AND NOT IOS)
     if (NOT IOS)
         target_link_libraries(backend_test PRIVATE image imageio)
         list(APPEND BACKEND_TEST_DEPS image)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test PRIVATE webgpu_dawn dawncpp_headers)
+        list(APPEND BACKEND_TEST_DEPS webgpu_dawn dawncpp_headers)
     endif()
 
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")

@@ -49,8 +49,16 @@ constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 // textures, samplers, and buffers,...), which would otherwise spam the logs.
 #define FWGPU_DEBUG_BIND_GROUPS 0x00000020
 
+// Enables Android systrace
+#define FWGPU_DEBUG_SYSTRACE 0x00000040
+
+// Enable a minimal set of traces to assess the performance of the backend.
+// All other debug features must be disabled.
+#define FWGPU_DEBUG_PROFILING 0x00000080
+
 // Useful default combinations
-#define FWGPU_DEBUG_EVERYTHING     0xFFFFFFFF
+#define FWGPU_DEBUG_EVERYTHING (0xFFFFFFFF & ~FWGPU_DEBUG_PROFILING)
+#define FWGPU_DEBUG_PERFORMANCE FWGPU_DEBUG_SYSTRACE
 
 #if defined(FILAMENT_BACKEND_DEBUG_FLAG)
     #define FWGPU_DEBUG_FORWARDED_FLAG (FILAMENT_BACKEND_DEBUG_FLAG & FWGPU_DEBUG_EVERYTHING)
@@ -59,12 +67,52 @@ constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 #endif
 
 #ifndef NDEBUG
-    #define FWGPU_DEBUG_FLAGS FWGPU_DEBUG_FORWARDED_FLAG
+    #define FWGPU_DEBUG_FLAGS (FWGPU_DEBUG_PERFORMANCE | FWGPU_DEBUG_FORWARDED_FLAG)
 #else
-    #define FWGPU_DEBUG_FLAGS 0
+    #define FWGPU_DEBUG_FLAGS FWGPU_DEBUG_SYSTRACE
+#endif
+
+// Override the debug flags if we are forcing profiling mode
+#if defined(FILAMENT_FORCE_PROFILING_MODE)
+#undef FWGPU_DEBUG_FLAGS
+#define FWGPU_DEBUG_FLAGS (FWGPU_DEBUG_PROFILING)
 #endif
 
 #define FWGPU_ENABLED(flags) (((FWGPU_DEBUG_FLAGS) & (flags)) == (flags))
+
+#if FWGPU_ENABLED(FWGPU_DEBUG_PROFILING) && FWGPU_DEBUG_FLAGS != FWGPU_DEBUG_PROFILING
+#error PROFILING is exclusive; all other debug features must be disabled.
+#endif
+
+#if FWGPU_DEBUG_FLAGS == FWGPU_DEBUG_PROFILING
+
+    #ifndef NDEBUG
+        #error PROFILING is meaningless in DEBUG mode.
+    #endif
+
+    #define FWGPU_SYSTRACE_CONTEXT()
+    #define FWGPU_SYSTRACE_START(marker)
+    #define FWGPU_SYSTRACE_END()
+    #define FWGPU_SYSTRACE_SCOPE()
+    #define FWGPU_PROFILE_MARKER(marker)  PROFILE_SCOPE(marker)
+
+#elif FWGPU_ENABLED(FWGPU_DEBUG_SYSTRACE)
+
+    #include <private/utils/Tracing.h>
+
+    #define FWGPU_SYSTRACE_CONTEXT()      FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT)
+    #define FWGPU_SYSTRACE_START(marker)  FILAMENT_TRACING_NAME_BEGIN(FILAMENT_TRACING_CATEGORY_FILAMENT, marker)
+    #define FWGPU_SYSTRACE_END()          FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT)
+    #define FWGPU_SYSTRACE_SCOPE()        FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT)
+    #define FWGPU_PROFILE_MARKER(marker)  FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT)
+
+#else
+    #define FWGPU_SYSTRACE_CONTEXT()
+    #define FWGPU_SYSTRACE_START(marker)
+    #define FWGPU_SYSTRACE_END()
+    #define FWGPU_SYSTRACE_SCOPE()
+    #define FWGPU_PROFILE_MARKER(marker)
+#endif
 
 #if FWGPU_ENABLED(FWGPU_DEBUG_FORCE_LOG_TO_I)
     #define FWGPU_LOGI LOG(INFO)
