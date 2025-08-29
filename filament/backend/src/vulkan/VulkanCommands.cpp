@@ -211,7 +211,9 @@ VkSemaphore VulkanCommandBuffer::submit() {
     FVK_LOGI << "Submitting cmdbuffer=" << mBuffer
              << " wait=(";
     for (size_t s = 0, count = mWaitSemaphores.size(); s < count; ++s) {
-        FVK_LOGI << mWaitSemaphores[s] << " ";
+        FVK_LOGI << "\tsemaphore=" << mWaitSemaphores[s] << "|stage="
+                 << mWaitSemaphoreStages[s]
+                 << (s <  mWaitSemaphores.size() - 1 ? "\n" : "");
     }
     FVK_LOGI << ") "
              << " signal=" << mSubmission
@@ -434,10 +436,13 @@ bool VulkanCommands::flush() {
         }
         if (lastSubmit != VK_NULL_HANDLE) {
             // Note that the stage we're waiting on is the fragment shader stage.  This assumes
-            // that the subsequent command buffer will only dependent on the fragment output of the
-            // previous buffer, allowing for vertex work to proceed (more overlapping
+            // that the subsequent command buffer will only depend on
+            //    1) fragment output of the previous command buffer
+            //    2) reading/writing of buffers (i.e. UBO) of the previous command buffer
+            // Restricting the wait stages will allow for vertex work to proceed (more overlapping
             // vertex/fragment work).
-            pool->waitFor(lastSubmit, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            pool->waitFor(lastSubmit,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
             lastSubmit = VK_NULL_HANDLE;
         }
         dependency = pool->flush();
