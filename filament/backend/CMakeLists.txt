@@ -666,6 +666,9 @@ if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
+    endif()
 endif()
 
 # ==================================================================================================
