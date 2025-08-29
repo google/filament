@@ -231,6 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
               &mDescriptorSetLayoutCache),
+      mStreamedImageManager(&mExternalImageManager, &mDescriptorSetCache, &mSamplerCache),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -378,47 +379,6 @@ void VulkanDriver::tick(int) {
     mCommands.updateFences();
 }
 
-void VulkanDriver::bindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        uint8_t bindingPoint, fvkmemory::resource_ptr<VulkanTexture> image,
-        SamplerParams samplerParams) {
-    mStreamedTexturesBindings.push_back({ bindingPoint, image, set, samplerParams });
-}
-
-void VulkanDriver::unbindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
-        uint8_t bindingPoint) {
-    auto iter = std::remove_if(mStreamedTexturesBindings.begin(), mStreamedTexturesBindings.end(),
-            [&](streamedTextureBinding& binding) {
-                return ((binding.set == set) && (binding.binding == bindingPoint));
-            });
-    mStreamedTexturesBindings.erase(iter, mStreamedTexturesBindings.end());
-}
-
-void VulkanDriver::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
-        fvkmemory::resource_ptr<VulkanStream> stream, bool newImage) {
-    for (streamedTextureBinding const& data: mStreamedTexturesBindings) {
-        if (data.image->getStream() == stream) {
-            if (newImage) {
-                mExternalImageManager.bindExternallySampledTexture(data.set, data.binding, image,
-                        data.samplerParams);
-            } else {
-                // For some reason, some of the frames coming to us, are on streams where the 
-                // descriptor set isn't external...
-                if (data.set->getExternalSamplerVkSet()) {
-                    mDescriptorSetCache.updateSamplerForExternalSamplerSet(data.set, data.binding,
-                            image);
-                } else {
-                    //... In this case we just default to using the normal path and update the sampler.
-                    VulkanSamplerCache::Params cacheParams = {
-                        .sampler = data.samplerParams,
-                    };
-                    VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
-                    mDescriptorSetCache.updateSampler(data.set, data.binding, image, vksampler);
-                }
-            }
-        }
-    }
-}
-
 // Garbage collection should not occur too frequently, only about once per frame. Internally, the
 // eviction time of various resources is often measured in terms of an approximate frame number
 // rather than the wall clock, because we must wait 3 frames after a DriverAPI-level resource has
@@ -497,7 +457,7 @@ void VulkanDriver::updateDescriptorSetTexture(
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
     } else if (bool(texture->getStream())) {
-        bindStreamedTexture(set, binding, texture, params);
+        mStreamedImageManager.bindStreamedTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
     }
     else {
@@ -507,7 +467,7 @@ void VulkanDriver::updateDescriptorSetTexture(
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
         mExternalImageManager.clearTextureBinding(set, binding);
-        unbindStreamedTexture(set, binding);
+        mStreamedImageManager.unbindStreamedTexture(set, binding);
     }
 }
 
@@ -1131,7 +1091,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 texture = newTexture;
             }
 
-            onStreamAcquireImage(texture, stream, newImage);
+            mStreamedImageManager.onStreamAcquireImage(texture, stream, newImage);
         }
         mStreamsWithPendingAcquiredImage.clear();
     }

@@ -199,6 +199,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanDriverFactory.h
             src/vulkan/VulkanExternalImageManager.cpp
             src/vulkan/VulkanExternalImageManager.h
+            src/vulkan/VulkanStreamedImageManager.cpp
+            src/vulkan/VulkanStreamedImageManager.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
