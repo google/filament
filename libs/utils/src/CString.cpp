@@ -20,7 +20,11 @@
 #include <utils/ostream.h>
 
 #include <algorithm>
+#include <cassert>
+#include <cstdarg>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 
@@ -113,5 +117,73 @@ io::ostream& operator<<(io::ostream& out, const CString& rhs) {
 }
 #endif
 
-} // namespace utils
+namespace {
 
+// use a C-style variadic function to avoid code bloat from templates
+UTILS_NOINLINE
+CString to_string_impl(const char* format, ...) noexcept {
+    va_list args1;
+    va_start(args1, format);
+    va_list args2;
+    va_copy(args2, args1);
+    int const len = vsnprintf(nullptr, 0, format, args1);
+    va_end(args1);
+    if (len >= 0) {
+        CString s(len);
+        vsnprintf(s.data(), len + 1, format, args2);
+        va_end(args2);
+        return s;
+    }
+    va_end(args2);
+    return {};
+}
+
+} // anonymous namespace
+
+template<>
+CString to_string<int>(int const value) noexcept {
+    return to_string_impl("%d", value);
+}
+
+template<>
+CString to_string<unsigned int>(unsigned int const value) noexcept {
+    return to_string_impl("%u", value);
+}
+
+template<>
+CString to_string<short>(short const value) noexcept {
+    return to_string_impl("%hd", value);
+}
+
+template<>
+CString to_string<unsigned short>(unsigned short const value) noexcept {
+    return to_string_impl("%hu", value);
+}
+
+template<>
+CString to_string<long>(long const value) noexcept {
+    return to_string_impl("%ld", value);
+}
+
+template<>
+CString to_string<unsigned long>(unsigned long const value) noexcept {
+    return to_string_impl("%lu", value);
+}
+
+template<>
+CString to_string<long long>(long long const value) noexcept {
+    return to_string_impl("%lld", value);
+}
+
+template<>
+CString to_string<unsigned long long>(unsigned long long const value) noexcept {
+    return to_string_impl("%llu", value);
+}
+
+
+template<>
+CString to_string<float>(float const value) noexcept {
+    return to_string_impl("%f", value);
+}
+
+} // namespace utils

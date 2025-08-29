@@ -86,9 +86,9 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
-        std::string languageNames;
+        CString languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
-            languageNames.append(shaderLanguageToString(*it));
+            languageNames.append(CString{shaderLanguageToString(*it)});
             if (std::next(it) != languages.end()) {
                 languageNames.append(", ");
             }
