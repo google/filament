@@ -69,7 +69,7 @@ void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& dr
     }
 
     mPassBase->execute(resources, driver);
-    
+
     // destroy the render targets
     for (auto& rt : mRenderTargetData) {
         rt.destroy(resourceAllocator);
