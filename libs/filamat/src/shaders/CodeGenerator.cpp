@@ -173,9 +173,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         case TargetApi::METAL:
             out << "#define TARGET_METAL_ENVIRONMENT\n";
             break;
-        // TODO: Handle webgpu here
         case TargetApi::WEBGPU:
-            //For now, no differences so inherit the same changes.
             out << "#define TARGET_WEBGPU_ENVIRONMENT\n";
             break;
         case TargetApi::ALL:
@@ -732,7 +730,6 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
                 out << "binding = " << +binding << ", ";
                 break;
-            // TODO: Handle webgpu here
             case TargetApi::WEBGPU:
                 out << "set = " << +set << ", binding = " << +binding << ", ";
             break;
@@ -822,7 +819,6 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                     // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
                     out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
                     break;
-                // TODO: Handle webgpu here
                 case TargetApi::WEBGPU:
                     out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
                 break;
@@ -942,7 +938,7 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     static const char* types[] = { "int", "float", "bool" };
 
     // Spec constants aren't fully supported in Tint,
-    //  workaround until https://issues.chromium.org/issues/42250586 is resolved
+    // workaround until https://issues.chromium.org/issues/42250586 is resolved
     if (mTargetApi == TargetApi::WEBGPU) {
         std::string const variableName = "FILAMENT_SPEC_CONST_" + std::to_string(id) + "_" + name;
         out << " const " << types[value.index()] << " " << variableName << " = " << constantString << ";\n";
@@ -964,10 +960,11 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
 
 utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
         MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+    if (UTILS_UNLIKELY(pushConstants.empty())) {
+        return out;
+    }
     static constexpr char const* STRUCT_NAME = "Constants";
 
-    bool const outputSpirv =
-            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     auto const getType = [](ConstantType const& type) {
         switch (type) {
             case ConstantType::BOOL:
@@ -978,6 +975,30 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
                 return "float";
         }
     };
+    // This is a workaround for WebGPU not supporting push constants for skinning.
+    // We replace the push constant with a regular constant struct initialized to 0.
+    if (mTargetApi == TargetApi::WEBGPU) {
+        assert_invariant(
+                pushConstants.size() == 1 &&
+                "The current workaround for WebGPU push constants assumes for now that only 1");
+        assert_invariant(pushConstants[0].name == CString("morphingBufferOffset") &&
+                         "The current workaround for WebGPU push constants assumes only the "
+                         "morphingBufferOffset constant is present.");
+        assert_invariant(pushConstants[0].type == ConstantType::INT &&
+                         "The current workaround for WebGPU push constants assumes "
+                         "morphingBufferOffset is an integer type.");
+        out << "struct " << STRUCT_NAME << " {\n";
+        for (auto const& constant: pushConstants) {
+            out << "    " << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+        }
+        out << "};\n";
+        out << "const " << STRUCT_NAME << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << " = "
+            << STRUCT_NAME << "(0);\n";
+        return out;
+    }
+
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {
         out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
     } else {

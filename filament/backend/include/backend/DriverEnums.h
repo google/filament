@@ -629,6 +629,18 @@ enum class PrimitiveType : uint8_t {
     TRIANGLE_STRIP = 5     //!< triangle strip
 };
 
+[[nodiscard]] constexpr bool isStripPrimitiveType(const PrimitiveType type) {
+    switch (type) {
+        case PrimitiveType::POINTS:
+        case PrimitiveType::LINES:
+        case PrimitiveType::TRIANGLES:
+            return false;
+        case PrimitiveType::LINE_STRIP:
+        case PrimitiveType::TRIANGLE_STRIP:
+            return true;
+    }
+}
+
 /**
  * Supported uniform types
  */
