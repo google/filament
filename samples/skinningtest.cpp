@@ -242,6 +242,7 @@ int main(int argc, char** argv) {
             .attribute(VertexAttribute::COLOR, 0,
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
+            .advancedSkinning(true)
             .build(*engine);
         app.vbs[app.vbCount]->setBufferAt(*engine, 0,
             VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES_1, 36,
@@ -258,6 +259,7 @@ int main(int argc, char** argv) {
                        VertexBuffer::AttributeType::UBYTE4, 8, 12)
             .normalized(VertexAttribute::COLOR)
             .enableBufferObjects()
+            .advancedSkinning(true)
             .build(*engine);
         app.bos[app.boCount] = BufferObject::Builder()
             .size(3 * sizeof(Vertex))
