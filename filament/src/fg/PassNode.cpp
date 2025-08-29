@@ -23,6 +23,10 @@
 
 #include <details/Texture.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/CString.h>
+
 #include <string>
 
 using namespace filament::backend;
@@ -294,7 +298,7 @@ RenderPassNode::RenderPassData const* RenderPassNode::getRenderPassData(uint32_t
 
 utils::CString RenderPassNode::graphvizify() const noexcept {
 #ifndef NDEBUG
-    std::string s;
+    utils::CString s;
 
     uint32_t const id = getId();
     const char* const nodeName = getName();
@@ -303,17 +307,17 @@ utils::CString RenderPassNode::graphvizify() const noexcept {
     s.append("[label=\"");
     s.append(nodeName);
     s.append("\\nrefs: ");
-    s.append(std::to_string(refCount));
+    s.append(utils::to_string(refCount));
     s.append(", id: ");
-    s.append(std::to_string(id));
+    s.append(utils::to_string(id));
 
     for (auto const& rt :mRenderTargetData) {
         s.append("\\nS:");
-        s.append(utils::to_string(rt.backend.params.flags.discardStart).c_str());
+        s.append(utils::to_string(rt.backend.params.flags.discardStart));
         s.append(", E:");
-        s.append(utils::to_string(rt.backend.params.flags.discardEnd).c_str());
+        s.append(utils::to_string(rt.backend.params.flags.discardEnd));
         s.append(", C:");
-        s.append(utils::to_string(rt.backend.params.flags.clear).c_str());
+        s.append(utils::to_string(rt.backend.params.flags.clear));
     }
 
     s.append("\", ");
@@ -322,7 +326,7 @@ utils::CString RenderPassNode::graphvizify() const noexcept {
     s.append(refCount ? "darkorange" : "darkorange4");
     s.append("]");
 
-    return utils::CString{ s.c_str() };
+    return s;
 #else
     return {};
 #endif
@@ -342,14 +346,12 @@ char const* PresentPassNode::getName() const noexcept {
 
 utils::CString PresentPassNode::graphvizify() const noexcept {
 #ifndef NDEBUG
-    std::string s;
-    s.reserve(128);
+    utils::CString s;
     uint32_t const id = getId();
     s.append("[label=\"Present , id: ");
-    s.append(std::to_string(id));
+    s.append(utils::to_string(id));
     s.append("\", style=filled, fillcolor=red3]");
-    s.shrink_to_fit();
-    return utils::CString{ s.c_str() };
+    return s;
 #else
     return {};
 #endif
