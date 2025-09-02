@@ -95,7 +95,7 @@ ResourceType getTypeEnum() noexcept {
     return ResourceType::UNDEFINED_TYPE;
 }
 
-std::string getTypeStr(ResourceType type) {
+std::string_view getTypeStr(ResourceType type) {
     switch (type) {
         case ResourceType::BUFFER_OBJECT:
             return "BufferObject";

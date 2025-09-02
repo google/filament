@@ -318,7 +318,7 @@ const float kToastDelayDuration = 2.0f;
 
 - (void)issuePickingQuery {
     CGPoint tapLocation = [_singleTapRecognizer locationInView:self.modelView];
-    __weak typeof(self) weakSelf = self;
+    __weak decltype(self) weakSelf = self;
     [self.modelView issuePickQuery:tapLocation
                           callback:^(utils::Entity entity) {
                               NSString* name = [self.modelView getEntityName:entity];
