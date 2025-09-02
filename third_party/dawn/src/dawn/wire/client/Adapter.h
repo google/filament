@@ -39,27 +39,34 @@
 
 namespace dawn::wire::client {
 
+void APIFreeMembers(WGPUAdapterInfo info);
+void APIFreeMembers(WGPUAdapterPropertiesMemoryHeaps memoryHeapProperties);
+void APIFreeMembers(WGPUDawnDrmFormatCapabilities capabilities);
+void APIFreeMembers(WGPUSupportedFeatures supportedFeatures);
+void APIFreeMembers(WGPUAdapterPropertiesSubgroupMatrixConfigs subgroupMatrixConfigs);
+
 class Adapter final : public ObjectWithEventsBase {
   public:
     using ObjectWithEventsBase::ObjectWithEventsBase;
 
     ObjectType GetObjectType() const override;
 
-    WGPUStatus GetLimits(WGPULimits* limits) const;
-    bool HasFeature(WGPUFeatureName feature) const;
     void SetLimits(const WGPULimits* limits);
     void SetFeatures(const WGPUFeatureName* features, uint32_t featuresCount);
     void SetInfo(const WGPUAdapterInfo* info);
-    WGPUStatus GetInfo(WGPUAdapterInfo* info) const;
-    void GetFeatures(WGPUSupportedFeatures* features) const;
-    WGPUFuture RequestDevice(const WGPUDeviceDescriptor* descriptor,
-                             const WGPURequestDeviceCallbackInfo& callbackInfo);
+
+    WGPUStatus APIGetLimits(WGPULimits* limits) const;
+    bool APIHasFeature(WGPUFeatureName feature) const;
+    WGPUStatus APIGetInfo(WGPUAdapterInfo* info) const;
+    void APIGetFeatures(WGPUSupportedFeatures* features) const;
+    WGPUFuture APIRequestDevice(const WGPUDeviceDescriptor* descriptor,
+                                const WGPURequestDeviceCallbackInfo& callbackInfo);
 
     // Unimplementable. Only availale in dawn_native.
-    WGPUInstance GetInstance() const;
-    WGPUDevice CreateDevice(const WGPUDeviceDescriptor*);
-    WGPUStatus GetFormatCapabilities(WGPUTextureFormat format,
-                                     WGPUDawnFormatCapabilities* capabilities);
+    WGPUInstance APIGetInstance() const;
+    WGPUDevice APICreateDevice(const WGPUDeviceDescriptor*);
+    WGPUStatus APIGetFormatCapabilities(WGPUTextureFormat format,
+                                        WGPUDawnFormatCapabilities* capabilities);
 
   private:
     LimitsAndFeatures mLimitsAndFeatures;
@@ -71,14 +78,8 @@ class Adapter final : public ObjectWithEventsBase {
     std::vector<WGPUMemoryHeapInfo> mMemoryHeapInfo;
     WGPUAdapterPropertiesD3D mD3DProperties;
     WGPUAdapterPropertiesVk mVkProperties;
-    // Initialize subgroup properties so they can be read even if adapter
-    // acquisition fails.
-    WGPUAdapterPropertiesSubgroups mSubgroupsProperties = {
-        {nullptr, WGPUSType_AdapterPropertiesSubgroups},
-        4u,   // subgroupMinSize
-        128u  // subgroupMaxSize
-    };
     std::vector<WGPUSubgroupMatrixConfig> mSubgroupMatrixConfigs;
+    WGPUDawnAdapterPropertiesPowerPreference mPowerProperties;
 };
 
 }  // namespace dawn::wire::client

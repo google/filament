@@ -154,10 +154,6 @@ function print_fgviewer_help {
 # Unless explicitly specified, NDK version will be selected as highest available version within same major release chain
 FILAMENT_NDK_VERSION=${FILAMENT_NDK_VERSION:-$(cat `dirname $0`/build/common/versions | grep GITHUB_NDK_VERSION | sed s/GITHUB_NDK_VERSION=//g | cut -f 1 -d ".")}
 
-# Requirements
-CMAKE_MAJOR=3
-CMAKE_MINOR=19
-
 # Internal variables
 ISSUE_CLEAN=false
 ISSUE_CLEAN_AGGRESSIVE=false

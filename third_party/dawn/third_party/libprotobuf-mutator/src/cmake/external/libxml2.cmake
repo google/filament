@@ -36,14 +36,13 @@ ExternalProject_Add(${LIBXML2_TARGET}
     GIT_REPOSITORY GIT_REPOSITORY https://gitlab.gnome.org/GNOME/libxml2
     GIT_TAG master
     UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ${LIBXML2_SRC_DIR}/autogen.sh --without-python
-                                                    --prefix=${LIBXML2_INSTALL_DIR}
-                                                    --enable-static
-                                                    CC=${CMAKE_C_COMPILER}
-                                                    CXX=${CMAKE_CXX_COMPILER}
-                                                    CFLAGS=${LIBXML2_CFLAGS}
-                                                    CXXFLAGS=${LIBXML2_CXXFLAGS}
-    BUILD_COMMAND make -j ${CPU_COUNT} all
-    INSTALL_COMMAND make install
+    CMAKE_CACHE_ARGS -DCMAKE_C_COMPILER:FILEPATH=${CMAKE_C_COMPILER}
+                     -DCMAKE_CXX_COMPILER:FILEPATH=${CMAKE_CXX_COMPILER}
+                     -DCMAKE_C_COMPILER_LAUNCHER:FILEPATH=${CMAKE_C_COMPILER_LAUNCHER}
+                     -DCMAKE_CXX_COMPILER_LAUNCHER:FILEPATH=${CMAKE_CXX_COMPILER_LAUNCHER}
+    CMAKE_ARGS -DCMAKE_C_FLAGS=${LIBXML2_CFLAGS} -DCMAKE_CXX_FLAGS=${LIBXML2_CXXFLAGS}
+               -DCMAKE_INSTALL_PREFIX=${LIBXML2_INSTALL_DIR}
+               -DCMAKE_INSTALL_LIBDIR=lib
+               -DBUILD_SHARED_LIBS=OFF
     BUILD_BYPRODUCTS ${LIBXML2_BUILD_BYPRODUCTS}
 )

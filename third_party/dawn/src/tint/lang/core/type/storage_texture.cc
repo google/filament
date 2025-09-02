@@ -62,42 +62,6 @@ std::string StorageTexture::FriendlyName() const {
     return out.str();
 }
 
-Type* StorageTexture::SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
-    switch (format) {
-        case core::TexelFormat::kR32Uint:
-        case core::TexelFormat::kRgba8Uint:
-        case core::TexelFormat::kRg32Uint:
-        case core::TexelFormat::kRgba16Uint:
-        case core::TexelFormat::kRgba32Uint: {
-            return type_mgr.Get<U32>();
-        }
-
-        case core::TexelFormat::kR32Sint:
-        case core::TexelFormat::kRgba8Sint:
-        case core::TexelFormat::kRg32Sint:
-        case core::TexelFormat::kRgba16Sint:
-        case core::TexelFormat::kRgba32Sint: {
-            return type_mgr.Get<I32>();
-        }
-
-        case core::TexelFormat::kR8Unorm:
-        case core::TexelFormat::kBgra8Unorm:
-        case core::TexelFormat::kRgba8Unorm:
-        case core::TexelFormat::kRgba8Snorm:
-        case core::TexelFormat::kR32Float:
-        case core::TexelFormat::kRg32Float:
-        case core::TexelFormat::kRgba16Float:
-        case core::TexelFormat::kRgba32Float: {
-            return type_mgr.Get<F32>();
-        }
-
-        case core::TexelFormat::kUndefined:
-            break;
-    }
-
-    return nullptr;
-}
-
 StorageTexture* StorageTexture::Clone(CloneContext& ctx) const {
     auto* ty = subtype_->Clone(ctx);
     return ctx.dst.mgr->Get<StorageTexture>(Dim(), texel_format_, access_, ty);

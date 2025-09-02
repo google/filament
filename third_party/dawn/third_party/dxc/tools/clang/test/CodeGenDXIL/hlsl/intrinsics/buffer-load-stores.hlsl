@@ -87,12 +87,36 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE babElt2 = RoByBuf.Load< TYPE >(ix0);
 
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLRWBY]], i32 [[IX1]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY]] [[RESRET]], 4
+  // CHECK: [[CHK1:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  uint status1 = 0;
+  TYPE babElt3 = RwByBuf.Load< TYPE >(ix1, status1);
+
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLROBY]], i32 [[IX1]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY]] [[RESRET]], 4
+  // CHECK: [[CHK2:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  uint status2 = 0;
+  TYPE babElt4 = RoByBuf.Load< TYPE >(ix1, status2);
+
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // CHECK: all void @dx.op.rawBufferStore.[[TY]](i32 140, %dx.types.Handle [[ANHDLRWBY]], i32 [[IX0]]
-  RwByBuf.Store< TYPE >(ix0, babElt1 + babElt2);
+  // CHECK: and i1 [[CHK1]], [[CHK2]]
+  // CHECK: [[ANHDLRWBY:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWBY]]
+  // CHECK: call void @dx.op.rawBufferStore.i32(i32 140, %dx.types.Handle [[ANHDLRWBY]], i32 100
+  RwByBuf.Store< TYPE >(ix0, babElt1 + babElt2 + babElt3 + babElt4);
+  RwByBuf.Store< uint > (100, status1 && status2);
 
   // StructuredBuffer Tests
   // CHECK: [[ANHDLRWST:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWST]]
@@ -102,6 +126,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE stbElt1 = RwStBuf.Load(ix0);
+
   // CHECK: call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLRWST]], i32 [[IX1]]
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
@@ -116,6 +141,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE stbElt3 = RoStBuf.Load(ix0);
+
   // CHECK: call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLROST]], i32 [[IX1]]
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
@@ -123,12 +149,34 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE stbElt4 = RoStBuf[ix1];
 
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLRWST]], i32 [[IX20]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY]] [[RESRET]], 4
+  // CHECK: [[CHK1:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  TYPE stbElt5 = RwStBuf.Load(ix2[0], status1);
+
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY]] @dx.op.rawBufferLoad.[[TY]](i32 139, %dx.types.Handle [[ANHDLROST]], i32 [[IX20]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY]] [[RESRET]], 4
+  // CHECK: [[CHK2:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  TYPE stbElt6 = RoStBuf.Load(ix2[0], status2);
+
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // CHECK: all void @dx.op.rawBufferStore.[[TY]](i32 140, %dx.types.Handle [[ANHDLRWST]], i32 [[IX0]]
-  RwStBuf[ix0] = stbElt1 + stbElt2 + stbElt3 + stbElt4;
+  // CHECK: and i1 [[CHK1]], [[CHK2]]
+  // CHECK: [[ANHDLRWBY:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWBY]]
+  // CHECK: call void @dx.op.rawBufferStore.i32(i32 140, %dx.types.Handle [[ANHDLRWBY]], i32 200
+  RwStBuf[ix0] = stbElt1 + stbElt2 + stbElt3 + stbElt4 + stbElt5 + stbElt6;
+  RwByBuf.Store< uint > (200, status1 && status2);
 
   // {Append/Consume}StructuredBuffer Tests
   // CHECK: [[ANHDLCON:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLCON]]
@@ -167,6 +215,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE typElt1 = RwTyBuf.Load(ix0);
+
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.bufferLoad.[[TY32]](i32 68, %dx.types.Handle [[ANHDLRWTY]], i32 [[IX1]]
   // F64: call double @dx.op.makeDouble.f64(i32 101
   // F64: call double @dx.op.makeDouble.f64(i32 101
@@ -183,6 +232,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE typElt2 = RwTyBuf[ix1];
+
   // CHECK: [[ANHDLROTY:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLROTY]]
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.bufferLoad.[[TY32]](i32 68, %dx.types.Handle [[ANHDLROTY]], i32 [[IX0]]
   // F64: call double @dx.op.makeDouble.f64(i32 101
@@ -200,6 +250,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE typElt3 = RoTyBuf.Load(ix0);
+
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.bufferLoad.[[TY32]](i32 68, %dx.types.Handle [[ANHDLROTY]], i32 [[IX1]]
   // F64: call double @dx.op.makeDouble.f64(i32 101
   // F64: call double @dx.op.makeDouble.f64(i32 101
@@ -217,6 +268,44 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE typElt4 = RoTyBuf[ix1];
 
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY32]] @dx.op.bufferLoad.[[TY32]](i32 68, %dx.types.Handle [[ANHDLRWTY]], i32 [[IX20]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY32]] [[RESRET]], 4
+  // CHECK: [[CHK1:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // F64: call double @dx.op.makeDouble.f64(i32 101
+  // F64: call double @dx.op.makeDouble.f64(i32 101
+  // I64: zext i32 %{{.*}} to i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: shl nuw i64
+  // I64: or i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: shl nuw i64
+  // I64: or i64
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  TYPE typElt5 = RwTyBuf.Load(ix2[0], status1);
+
+  // CHECK: [[RESRET:%.*]] = call %dx.types.ResRet.[[TY32]] @dx.op.bufferLoad.[[TY32]](i32 68, %dx.types.Handle [[ANHDLROTY]], i32 [[IX20]]
+  // CHECK: [[STATUS:%.*]] = extractvalue %dx.types.ResRet.[[TY32]] [[RESRET]], 4
+  // CHECK: [[CHK2:%.*]] = call i1 @dx.op.checkAccessFullyMapped.i32(i32 71, i32 [[STATUS]])
+  // F64: call double @dx.op.makeDouble.f64(i32 101
+  // F64: call double @dx.op.makeDouble.f64(i32 101
+  // I64: zext i32 %{{.*}} to i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: shl nuw i64
+  // I64: or i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: zext i32 %{{.*}} to i64
+  // I64: shl nuw i64
+  // I64: or i64
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  // I1: icmp ne i32 %{{.*}}, 0
+  TYPE typElt6 = RoTyBuf.Load(ix2[0], status2);
+
   // F64: call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102
   // F64: call %dx.types.splitdouble @dx.op.splitDouble.f64(i32 102
   // I64: trunc i64 %{{.*}} to i32
@@ -229,8 +318,12 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
   // I1: zext i1 %{{.*}} to i32
-  // CHECK: all void @dx.op.bufferStore.[[TY32]](i32 69, %dx.types.Handle [[ANHDLRWTY]], i32 [[IX0]]
-  RwTyBuf[ix0] = typElt1 + typElt2 + typElt3 + typElt4;
+  // CHECK: call void @dx.op.bufferStore.[[TY32]](i32 69, %dx.types.Handle [[ANHDLRWTY]], i32 [[IX0]]
+  // CHECK: and i1 [[CHK1]], [[CHK2]]
+  // CHECK: [[ANHDLRWBY:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWBY]]
+  // CHECK: call void @dx.op.rawBufferStore.i32(i32 140, %dx.types.Handle [[ANHDLRWBY]], i32 300
+  RwTyBuf[ix0] = typElt1 + typElt2 + typElt3 + typElt4 + typElt5 + typElt6;
+  RwByBuf.Store< uint > (300, status1 && status2);
 
   // Texture Tests
   // CHECK: [[ANHDLROTX1:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLROTX1]]
@@ -250,6 +343,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE texElt1 = RoTex1d[ix0];
+
   // CHECK: [[ANHDLRWTX1:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWTX1]]
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.textureLoad.[[TY32]](i32 66, %dx.types.Handle [[ANHDLRWTX1]], i32 undef, i32 [[IX0]], i32 undef, i32 undef
   // F64: call double @dx.op.makeDouble.f64(i32 101
@@ -285,6 +379,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE texElt3 = RoTex2d[ix2];
+
   // CHECK: [[ANHDLRWTX2:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWTX2]]
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.textureLoad.[[TY32]](i32 66, %dx.types.Handle [[ANHDLRWTX2]], i32 undef, i32 [[IX20]], i32 [[IX21]], i32 undef
   // F64: call double @dx.op.makeDouble.f64(i32 101
@@ -320,6 +415,7 @@ void main(uint ix0 : IX0, uint ix1 : IX1, uint2 ix2 : IX2, uint3 ix3 : IX3) {
   // I1: icmp ne i32 %{{.*}}, 0
   // I1: icmp ne i32 %{{.*}}, 0
   TYPE texElt5 = RoTex3d[ix3];
+
   // CHECK: [[ANHDLRWTX3:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[HDLRWTX3]]
   // CHECK: call %dx.types.ResRet.[[TY32]] @dx.op.textureLoad.[[TY32]](i32 66, %dx.types.Handle [[ANHDLRWTX3]], i32 undef, i32 [[IX30]], i32 [[IX31]], i32 [[IX32]]
   // F64: call double @dx.op.makeDouble.f64(i32 101

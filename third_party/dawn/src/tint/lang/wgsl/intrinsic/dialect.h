@@ -29,7 +29,7 @@
 #define SRC_TINT_LANG_WGSL_INTRINSIC_DIALECT_H_
 
 #include "src/tint/lang/core/intrinsic/table_data.h"
-#include "src/tint/lang/wgsl/builtin_fn.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/intrinsic/ctor_conv.h"
 
 namespace tint::wgsl::intrinsic {

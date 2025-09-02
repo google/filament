@@ -28,6 +28,7 @@
 #ifndef SRC_DAWN_COMMON_SYSTEMUTILS_H_
 #define SRC_DAWN_COMMON_SYSTEMUTILS_H_
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>

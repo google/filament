@@ -232,6 +232,11 @@ MaterialBuilder& MaterialBuilder::fileName(const char* name) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::compilationParameters(const char* params) noexcept {
+    mCompilationParameters = CString(params);
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t const line) noexcept {
     mMaterialFragmentCode.setUnresolved(CString(code));
     mMaterialFragmentCode.setLineOffset(line);
@@ -404,6 +409,11 @@ MaterialBuilder& MaterialBuilder::groupSize(math::uint3 const groupSize) noexcep
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::useDefaultDepthVariant() noexcept {
+    mUseDefaultDepthVariant = true;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::materialDomain(
         MaterialDomain const materialDomain) noexcept {
     mMaterialDomain = materialDomain;
@@ -539,6 +549,16 @@ MaterialBuilder& MaterialBuilder::flipUV(bool const flipUV) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::linearFog(bool const enabled) noexcept {
+    mLinearFog = enabled;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::shadowFarAttenuation(bool const enabled) noexcept {
+    mShadowFarAttenuation = enabled;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::customSurfaceShading(bool const customSurfaceShading) noexcept {
     mCustomSurfaceShading = customSurfaceShading;
     return *this;
@@ -565,7 +585,6 @@ MaterialBuilder& MaterialBuilder::stereoscopicType(StereoscopicType const stereo
     mStereoscopicType = stereoscopicType;
     return *this;
 }
-
 MaterialBuilder& MaterialBuilder::stereoscopicEyeCount(uint8_t const eyeCount) noexcept {
     mStereoscopicEyeCount = eyeCount;
     return *this;
@@ -588,6 +607,11 @@ MaterialBuilder& MaterialBuilder::targetApi(TargetApi const targetApi) noexcept 
 
 MaterialBuilder& MaterialBuilder::optimization(Optimization const optimization) noexcept {
     mOptimization = optimization;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::workarounds(Workarounds const workarounds) noexcept {
+    mWorkarounds = workarounds;
     return *this;
 }
 
@@ -708,6 +732,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAntiAliasing = mSpecularAntiAliasing;
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
+    info.linearFog = mLinearFog;
+    info.shadowFarAttenuation = mShadowFarAttenuation;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.postLightingBlendingMode = mPostLightingBlendingMode;
@@ -907,7 +933,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     uint32_t flags = 0;
     flags |= mPrintShaders ? GLSLPostProcessor::PRINT_SHADERS : 0;
     flags |= mGenerateDebugInfo ? GLSLPostProcessor::GENERATE_DEBUG_INFO : 0;
-    GLSLPostProcessor postProcessor(mOptimization, flags);
+    GLSLPostProcessor postProcessor(mOptimization, mWorkarounds, flags);
 
     // Start: must be protected by lock
     Mutex entriesLock;
@@ -925,7 +951,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
             mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
-    container.emplace<bool>(MaterialHasCustomDepthShader, needsStandardDepthProgram());
+    container.emplace<bool>(MaterialHasCustomDepthShader,
+            needsStandardDepthProgram() && !mUseDefaultDepthVariant);
 
     std::atomic_bool cancelJobs(false);
     bool firstJob = true;
@@ -1036,6 +1063,7 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
                         .variantFilter = mVariantFilter,
                         .targetApi = targetApi,
                         .targetLanguage = targetLanguage,
+                        .workarounds = mWorkarounds,
                         .shaderType = v.stage,
                         .shaderModel = shaderModel,
                         .featureLevel = featureLevel,
@@ -1374,10 +1402,25 @@ error:
         goto error;
     }
 
-    // Flatten all chunks in the container into a Package.
-    Package package(container.getSize());
+    // Flatten all container chunks into a single package and compute its CRC32 value, storing it as
+    // a separate chunk.
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    const size_t originalContainerSize = container.getSize();
+    const size_t signedContainerSize = originalContainerSize + crc32ChunkSize;
+
+    Package package(signedContainerSize);
     Flattener f{ package.getData() };
-    container.flatten(f);
+    size_t flattenSize = container.flatten(f);
+
+    std::vector<uint32_t> crc32Table;
+    hash::crc32GenerateTable(crc32Table);
+    uint32_t crc = hash::crc32Update(0, f.getStartPtr(), flattenSize, crc32Table);
+    f.writeUint64(static_cast<uint64_t>(MaterialCrc32));
+    f.writeUint32(static_cast<uint32_t>(sizeof(crc)));
+    f.writeUint32(static_cast<uint32_t>(crc));
+
+    assert_invariant(flattenSize == originalContainerSize);
+    assert_invariant(signedContainerSize == f.getBytesWritten());
 
     return package;
 }
@@ -1561,6 +1604,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     container.emplace<uint32_t>(MaterialVersion, MATERIAL_VERSION);
     container.emplace<uint8_t>(MaterialFeatureLevel, (uint8_t)info.featureLevel);
     container.emplace<const char*>(MaterialName, mMaterialName.c_str_safe());
+    container.emplace<const char*>(MaterialCompilationParameters,
+            mCompilationParameters.c_str_safe());
     container.emplace<uint32_t>(MaterialShaderModels, mShaderModels.getValue());
     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 

@@ -27,9 +27,8 @@ namespace filament::backend {
 
 namespace {
 
-// The shaders expect a single-sampled 2D texture
-// with a format compatible with scalar sample format f32
-// (this is checked with the getCompatibilityFor function)
+// The shaders expect a single-sampled 2D texture with a format compatible with a scalar sample format of f32.
+// This is checked with the getCompatibilityFor function.
 constexpr uint32_t TEXTURE_BIND_GROUP_INDEX{ 0 };
 constexpr size_t TEXTURE_BIND_GROUP_ENTRY_SIZE{ 2 }; // sampler and texture
 constexpr uint32_t SAMPLER_BINDING_INDEX{ 0 };
@@ -85,7 +84,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
         .maxAnisotropy = 1, // should not matter, just being consistently defined
     };
     const wgpu::Sampler sampler{ device.CreateSampler(&descriptor) };
-    FILAMENT_CHECK_POSTCONDITION(sampler) << "Failed to create previous mip level sampler?";
+    FILAMENT_CHECK_POSTCONDITION(sampler) << "Failed to create previous mip level sampler.";
     return sampler;
 }
 
@@ -98,7 +97,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
     };
     const wgpu::ShaderModule shaderModule{ device.CreateShaderModule(&shaderModuleDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(shaderModule)
-            << "Failed to create shader module for render pass mipmap generation?";
+            << "Failed to create shader module for render pass mipmap generation.";
     return shaderModule;
 }
 
@@ -131,7 +130,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
     const wgpu::BindGroupLayout textureBindGroupLayout{ device.CreateBindGroupLayout(
             &textureBindGroupLayoutDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(textureBindGroupLayout)
-            << "Failed to create texture bind group layout for render pass mipmap generation?";
+            << "Failed to create texture bind group layout for render pass mipmap generation.";
     return textureBindGroupLayout;
 }
 
@@ -145,7 +144,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
     const wgpu::PipelineLayout pipelineLayout{ device.CreatePipelineLayout(
             &pipelineLayoutDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(pipelineLayout)
-            << "Failed to create pipeline layout for render pass mipmap generation?";
+            << "Failed to create pipeline layout for render pass mipmap generation.";
     return pipelineLayout;
 }
 
@@ -194,7 +193,7 @@ constexpr std::string_view SHADER_SOURCE{ R"(
     };
     const wgpu::RenderPipeline pipeline{ device.CreateRenderPipeline(&pipelineDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(pipeline)
-            << "Failed to create pipeline for render pass mipmap generation?";
+            << "Failed to create pipeline for render pass mipmap generation.";
     return pipeline;
 }
 
@@ -210,8 +209,7 @@ WebGPURenderPassMipmapGenerator::WebGPURenderPassMipmapGenerator(wgpu::Device co
 WebGPURenderPassMipmapGenerator::FormatCompatibility
 WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat format,
         const wgpu::TextureDimension dimension, const uint32_t sampleCount) {
-    // check that the format is compatible (currently expects that the scalar sample type is
-    // f32)...
+    // Check that the format is compatible (currently expects that the scalar sample type is f32).
     switch (format) {
         case wgpu::TextureFormat::Depth16Unorm:
         case wgpu::TextureFormat::Depth24Plus:
@@ -220,20 +218,16 @@ WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat f
         case wgpu::TextureFormat::Depth32FloatStencil8:
             return {
                 .compatible = false,
-                .reason = "A depth texture format requires special sampler treatment and does "
-                          "not "
-                          "generally support linear filtering needed for render pass based "
-                          "mipmap "
-                          "generation, thus this texture is not supported, as it is a kind of "
-                          "depth texture.",
+                .reason = "A depth texture format requires special sampler treatment and does not "
+                          "generally support linear filtering needed for render pass based mipmap "
+                          "generation.",
             };
         case wgpu::TextureFormat::Undefined:
         case wgpu::TextureFormat::External:
             return {
                 .compatible = false,
-                .reason = "Undefined or External textures are not supported for render pass "
-                          "based "
-                          "mipmap generation",
+                .reason = "Undefined or External textures are not supported for render pass based "
+                          "mipmap generation.",
             };
         default:
             const ScalarSampleType scalarSampleType{ getScalarSampleTypeFrom(format) };
@@ -242,21 +236,19 @@ WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat f
                     return {
                         .compatible = false,
                         .reason = "The provided texture format requires an unsigned integer "
-                                  "sampler, which does not natively support linear filtering, "
-                                  "which is needed for render pass based mipmap generation.",
+                                  "sampler, which does not natively support linear filtering.",
                     };
                 case ScalarSampleType::I32:
                     return {
                         .compatible = false,
                         .reason = "The provided texture format requires a signed integer "
-                                  "sampler, which does not natively support linear filtering, "
-                                  "which is needed for render pass based mipmap generation.",
+                                  "sampler, which does not natively support linear filtering.",
                     };
                 case ScalarSampleType::F32:
                     break;
             }
     }
-    // check that the dimensionality is compatible (currently expects 2D textures)...
+    // Check that the dimensionality is compatible (currently expects 2D textures).
     switch (dimension) {
         case wgpu::TextureDimension::Undefined:
             return {
@@ -282,7 +274,7 @@ WebGPURenderPassMipmapGenerator::getCompatibilityFor(const wgpu::TextureFormat f
         case wgpu::TextureDimension::e2D:
             break;
     }
-    // check that the texture is single-sampled (for now)...
+    // Check that the texture is single-sampled.
     if (sampleCount > 1) {
         return {
             .compatible = false,
@@ -427,7 +419,7 @@ void WebGPURenderPassMipmapGenerator::generateMipmaps(wgpu::Queue const& queue,
         wgpu::Texture const& texture) {
     const uint32_t mipLevelCount{ texture.GetMipLevelCount() };
     if (mipLevelCount < 2) {
-        return; // nothing to do
+        return; // Nothing to do.
     }
     wgpu::RenderPipeline const& pipeline{ getOrCreatePipelineFor(texture.GetFormat()) };
     const wgpu::CommandEncoderDescriptor commandEncoderDescriptor{
@@ -436,20 +428,19 @@ void WebGPURenderPassMipmapGenerator::generateMipmaps(wgpu::Queue const& queue,
     const wgpu::CommandEncoder commandEncoder{ mDevice.CreateCommandEncoder(
             &commandEncoderDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(commandEncoder)
-            << "Failed to create command encoder for layer  for render pass mipmap generation?";
+            << "Failed to create command encoder for render pass mipmap generation.";
     const uint32_t layerCount{ texture.GetDepthOrArrayLayers() };
     for (uint32_t layer = 0; layer < layerCount; layer++) {
         for (uint32_t mipLevel = 1; mipLevel < mipLevelCount; mipLevel++) {
             generateMipmap(commandEncoder, texture, pipeline, layer, mipLevel);
         }
     }
-    // submit the command buffer...
     const wgpu::CommandBufferDescriptor commandBufferDescriptor{
         .label = "mipmap_generation_render_pass_cmd_buffer",
     };
     const wgpu::CommandBuffer commandBuffer{ commandEncoder.Finish(&commandBufferDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(commandBuffer)
-            << "Failed to create command buffer for layer  for render pass mipmap generation?";
+            << "Failed to create command buffer for render pass mipmap generation.";
     queue.Submit(1, &commandBuffer);
 }
 
@@ -472,7 +463,7 @@ void WebGPURenderPassMipmapGenerator::generateMipmap(wgpu::CommandEncoder const&
         .usage = wgpu::TextureUsage::TextureBinding,
     };
     const wgpu::TextureView sourceView{ texture.CreateView(&sourceViewDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(pipeline)
+    FILAMENT_CHECK_POSTCONDITION(sourceView)
             << "Failed to create source texture view for layer " << layer << " and mip level "
             << mipLevel << " for render pass mipmap generation?";
     const wgpu::TextureViewDescriptor destinationViewDescriptor{
@@ -487,7 +478,7 @@ void WebGPURenderPassMipmapGenerator::generateMipmap(wgpu::CommandEncoder const&
         .usage = wgpu::TextureUsage::RenderAttachment,
     };
     const wgpu::TextureView destinationView{ texture.CreateView(&destinationViewDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(pipeline)
+    FILAMENT_CHECK_POSTCONDITION(destinationView)
             << "Failed to create destination texture view for layer " << layer << " and mip level "
             << mipLevel << " for render pass mipmap generation?";
     // create the render pass...
@@ -508,7 +499,7 @@ void WebGPURenderPassMipmapGenerator::generateMipmap(wgpu::CommandEncoder const&
         .entries = textureBindGroupEntries,
     };
     const wgpu::BindGroup textureBindGroup{ mDevice.CreateBindGroup(&textureBindGroupDescriptor) };
-    FILAMENT_CHECK_POSTCONDITION(pipeline)
+    FILAMENT_CHECK_POSTCONDITION(textureBindGroup)
             << "Failed to create texture bind group for layer " << layer << " and mip level "
             << mipLevel << " for render pass mipmap generation?";
     const wgpu::RenderPassColorAttachment colorAttachment{
@@ -534,8 +525,7 @@ void WebGPURenderPassMipmapGenerator::generateMipmap(wgpu::CommandEncoder const&
             << mipLevel << " for render pass mipmap generation?";
     renderPassEncoder.SetPipeline(pipeline);
     renderPassEncoder.SetBindGroup(TEXTURE_BIND_GROUP_INDEX, textureBindGroup);
-    renderPassEncoder.Draw(3); // draw the full-screen triangle
-                                          // with hard-coded vertices in the shader
+    renderPassEncoder.Draw(3); // Draw a full-screen triangle.
     renderPassEncoder.End();
 }
 

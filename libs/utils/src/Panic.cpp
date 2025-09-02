@@ -21,6 +21,7 @@
 #include <utils/CallStack.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <stdarg.h>
@@ -351,6 +352,17 @@ PanicStream& PanicStream::operator<<(std::string_view const& value) noexcept {
     mStream << value;
     return *this;
 }
+
+template<typename PanicType>
+void FlagGuardedStream<PanicType>::logWarning() noexcept {
+    LOG(WARNING) << "Failed [" << mLiteral << "]" << "\n  file=" << mFile
+                 << "\n  function=" << mFunction << "\n  line=" << mLine << "\n  info=\""
+                 << mStream.c_str() << "\"";
+
+}
+
+template void FlagGuardedStream<PreconditionPanic>::logWarning() noexcept;
+template void FlagGuardedStream<PostconditionPanic>::logWarning() noexcept;
 
 } // namespace details
 

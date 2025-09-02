@@ -80,6 +80,8 @@ Usage:
 	os.Exit(1)
 }
 
+// TODO(crbug.com/416755658): Add unittest coverage once exec is handled via
+// dependency injection.
 func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	flag.Parse()
 	args := flag.Args()
@@ -112,7 +114,7 @@ func run(fsReaderWriter oswrapper.FilesystemReaderWriter) error {
 	}
 
 	fmt.Println("Scanning for files...")
-	paths, err := glob.Scan(fileutils.DawnRoot(), cfg, fsReaderWriter)
+	paths, err := glob.Scan(fileutils.DawnRoot(fsReaderWriter), cfg, fsReaderWriter)
 	if err != nil {
 		return err
 	}
@@ -181,8 +183,9 @@ func tryBuild() (bool, error) {
 }
 
 type file struct {
-	path  string
-	lines []string
+	path     string
+	lines    []string
+	fsReader oswrapper.FilesystemReader
 }
 
 var includeRE = regexp.MustCompile(`^\s*#include (?:\"([^"]*)\"|:?\<([^"]*)\>)`)
@@ -243,15 +246,14 @@ func (f *file) format() error {
 
 // Runs git add on the file
 func (f *file) stage() error {
-	err := exec.Command("git", "-C", fileutils.DawnRoot(), "add", f.path).Run()
+	err := exec.Command("git", "-C", fileutils.DawnRoot(f.fsReader), "add", f.path).Run()
 	if err != nil {
 		return fmt.Errorf("Couldn't stage file '%v': %w", f.path, err)
 	}
 	return nil
 }
 
-// TODO(crbug.com/344014313): Add unittests once fileutils.DawnRoot() supports
-// dependency injection.
+// TODO(crbug.com/344014313): Add unittest coverage.
 // Loads all the files with the given file paths, splitting their content into
 // into lines.
 func loadFiles(paths []string, fsReader oswrapper.FilesystemReader) ([]file, error) {
@@ -260,7 +262,7 @@ func loadFiles(paths []string, fsReader oswrapper.FilesystemReader) ([]file, err
 	files := make([]file, len(paths))
 	errs := make([]error, len(paths))
 	for i, path := range paths {
-		i, path := i, filepath.Join(fileutils.DawnRoot(), path)
+		i, path := i, filepath.Join(fileutils.DawnRoot(fsReader), path)
 		go func() {
 			defer wg.Done()
 			body, err := fsReader.ReadFile(path)
@@ -269,7 +271,7 @@ func loadFiles(paths []string, fsReader oswrapper.FilesystemReader) ([]file, err
 			} else {
 				content := string(body)
 				lines := strings.Split(content, "\n")
-				files[i] = file{path: path, lines: lines}
+				files[i] = file{path: path, lines: lines, fsReader: fsReader}
 			}
 		}()
 	}

@@ -30,6 +30,7 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/container/inlined_vector.h"
+#include "dawn/common/Constants.h"
 #include "dawn/common/MutexProtected.h"
 #include "dawn/common/NonCopyable.h"
 #include "dawn/common/Ref.h"
@@ -59,7 +60,10 @@ class CommandRecordingContextGuard : public ::dawn::detail::Guard<Ctx, Traits> {
     using Base = ::dawn::detail::Guard<Ctx, Traits>;
 
     CommandRecordingContextGuard(CommandRecordingContextGuard&& rhs) = default;
-    CommandRecordingContextGuard(Ctx* ctx, typename Traits::MutexType& mutex) : Base(ctx, mutex) {
+    CommandRecordingContextGuard(Ctx* ctx,
+                                 typename Traits::MutexType& mutex,
+                                 Defer* defer = nullptr)
+        : Base(ctx, mutex, defer) {
         if (this->Get() && this->Get()->mD3D11Multithread) {
             this->Get()->mD3D11Multithread->Enter();
         }
@@ -87,7 +91,6 @@ class CommandRecordingContext {
     bool IsValid() const;
 
     static ResultOrError<Ref<BufferBase>> CreateInternalUniformBuffer(DeviceBase* device);
-    MaybeError SetInternalUniformBuffer(Ref<BufferBase> uniformBuffer);
 
     void ReleaseKeyedMutexes();
 
@@ -108,11 +111,9 @@ class CommandRecordingContext {
     ComPtr<ID3D11Multithread> mD3D11Multithread;
     ComPtr<ID3DUserDefinedAnnotation> mD3DUserDefinedAnnotation;
 
-    // The maximum number of builtin elements is 4 (vec4). It must be multiple of 4.
-    static constexpr size_t kMaxNumBuiltinElements = 4;
     // The uniform buffer for built-in variables.
     Ref<GPUUsableBuffer> mUniformBuffer;
-    std::array<uint32_t, kMaxNumBuiltinElements> mUniformBufferData;
+    std::array<uint32_t, kMaxImmediateConstantsPerPipeline> mUniformBufferData{};
     bool mUniformBufferDirty = true;
 
     absl::flat_hash_set<Ref<d3d::KeyedMutex>> mAcquiredKeyedMutexes;
@@ -164,10 +165,13 @@ class ScopedCommandRecordingContext : public CommandRecordingContext::Guard {
     void Unmap(ID3D11Resource* pResource, UINT Subresource) const;
     HRESULT Signal(ID3D11Fence* pFence, UINT64 Value) const;
     HRESULT Wait(ID3D11Fence* pFence, UINT64 Value) const;
+    HRESULT GetData(ID3D11Query* pQuery, void* pResult, UINT size, UINT flags) const;
+    void End(ID3D11Query* pQuery) const;
+    void Flush() const;
     void Flush1(D3D11_CONTEXT_TYPE ContextType, HANDLE hEvent) const;
 
-    // Write the built-in variable value to the uniform buffer.
-    void WriteUniformBuffer(uint32_t offset, uint32_t element) const;
+    // Write immediate data to the uniform buffer.
+    void WriteUniformBufferRange(uint32_t offset, const void* data, size_t size) const;
     MaybeError FlushUniformBuffer() const;
 
     MaybeError AcquireKeyedMutex(Ref<d3d::KeyedMutex> keyedMutex) const;
@@ -190,10 +194,10 @@ class ScopedSwapStateCommandRecordingContext : public ScopedCommandRecordingCont
     ID3D11Device* GetD3D11Device() const;
     ID3D11DeviceContext3* GetD3D11DeviceContext3() const;
     ID3DUserDefinedAnnotation* GetD3DUserDefinedAnnotation() const;
-    Buffer* GetUniformBuffer() const;
+    Buffer* GetInternalUniformBuffer() const;
+    MaybeError SetInternalUniformBuffer(Ref<BufferBase> uniformBuffer);
 
   private:
-    const bool mSwapContextState;
     ComPtr<ID3DDeviceContextState> mPreviousState;
 };
 

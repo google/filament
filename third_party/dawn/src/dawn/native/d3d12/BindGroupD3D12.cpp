@@ -29,7 +29,6 @@
 
 #include <utility>
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/common/Range.h"
 #include "dawn/native/ExternalTexture.h"
@@ -110,7 +109,7 @@ MaybeError BindGroup::InitializeImpl() {
                         // byte aligned. Since binding.size and binding.offset are in bytes,
                         // we need to divide by 4 to obtain the element size.
                         D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-                        desc.Buffer.NumElements = binding.size / 4;
+                        desc.Buffer.NumElements = static_cast<uint32_t>(binding.size / 4);
                         desc.Format = DXGI_FORMAT_R32_TYPELESS;
                         desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
                         desc.Buffer.FirstElement = binding.offset / 4;
@@ -135,7 +134,7 @@ MaybeError BindGroup::InitializeImpl() {
                         desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
                         desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
                         desc.Buffer.FirstElement = binding.offset / 4;
-                        desc.Buffer.NumElements = binding.size / 4;
+                        desc.Buffer.NumElements = static_cast<uint32_t>(binding.size / 4);
                         desc.Buffer.StructureByteStride = 0;
                         desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
                         d3d12Device->CreateShaderResourceView(
@@ -212,13 +211,13 @@ MaybeError BindGroup::InitializeImpl() {
     // dynamic storage buffer to its binding size. The index |dynamicStorageBufferIndex|
     // means that it is the i'th buffer that is both dynamic and storage, in increasing order
     // of BindingNumber.
-    mDynamicStorageBufferLengths.resize(bgl->GetBindingCountInfo().dynamicStorageBufferCount);
+    mDynamicStorageBufferLengths.resize(bgl->GetDynamicStorageBufferCount());
     uint32_t dynamicStorageBufferIndex = 0;
     for (BindingIndex bindingIndex(0); bindingIndex < bgl->GetDynamicBufferCount();
          ++bindingIndex) {
         if (bgl->IsStorageBufferBinding(bindingIndex)) {
             mDynamicStorageBufferLengths[dynamicStorageBufferIndex++] =
-                GetBindingAsBufferBinding(bindingIndex).size;
+                static_cast<uint32_t>(GetBindingAsBufferBinding(bindingIndex).size);
         }
     }
 

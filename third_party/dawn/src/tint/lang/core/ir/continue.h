@@ -61,6 +61,9 @@ class Continue final : public Castable<Continue, Terminator> {
     /// @copydoc Instruction::Clone()
     Continue* Clone(CloneContext& ctx) override;
 
+    /// @copydoc Instruction::Destroy()
+    void Destroy() override;
+
     /// @returns the loop owning the continue block
     ir::Loop* Loop() { return loop_; }
 

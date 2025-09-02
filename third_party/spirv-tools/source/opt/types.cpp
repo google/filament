@@ -135,6 +135,7 @@ std::unique_ptr<Type> Type::Clone() const {
     DeclareKindCase(CooperativeVectorNV);
     DeclareKindCase(RayQueryKHR);
     DeclareKindCase(HitObjectNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -187,6 +188,7 @@ bool Type::operator==(const Type& other) const {
     DeclareKindCase(HitObjectNV);
     DeclareKindCase(TensorLayoutNV);
     DeclareKindCase(TensorViewNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -247,6 +249,7 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
     DeclareKindCase(HitObjectNV);
     DeclareKindCase(TensorLayoutNV);
     DeclareKindCase(TensorViewNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -309,17 +312,34 @@ size_t Integer::ComputeExtraStateHash(size_t hash, SeenTypes*) const {
 
 bool Float::IsSameImpl(const Type* that, IsSameCache*) const {
   const Float* ft = that->AsFloat();
-  return ft && width_ == ft->width_ && HasSameDecorations(that);
+  return ft && width_ == ft->width_ && encoding_ == ft->encoding_ &&
+         HasSameDecorations(that);
 }
 
 std::string Float::str() const {
   std::ostringstream oss;
-  oss << "float" << width_;
+  switch (encoding_) {
+    case spv::FPEncoding::BFloat16KHR:
+      assert(width_ == 16);
+      oss << "bfloat16";
+      break;
+    case spv::FPEncoding::Float8E4M3EXT:
+      assert(width_ == 8);
+      oss << "fp8e4m3";
+      break;
+    case spv::FPEncoding::Float8E5M2EXT:
+      assert(width_ == 8);
+      oss << "fp8e5m2";
+      break;
+    default:
+      oss << "float" << width_;
+      break;
+  }
   return oss.str();
 }
 
 size_t Float::ComputeExtraStateHash(size_t hash, SeenTypes*) const {
-  return hash_combine(hash, width_);
+  return hash_combine(hash, width_, encoding_);
 }
 
 Vector::Vector(const Type* type, uint32_t count)
@@ -612,24 +632,39 @@ bool Pointer::IsSameImpl(const Type* that, IsSameCache* seen) const {
   if (!p.second) {
     return true;
   }
-  bool same_pointee = pointee_type_->IsSameImpl(pt->pointee_type_, seen);
-  seen->erase(p.first);
-  if (!same_pointee) {
-    return false;
+  if (pointee_type_ != nullptr && pt->pointee_type_ != nullptr) {
+    bool same_pointee = pointee_type_->IsSameImpl(pt->pointee_type_, seen);
+    seen->erase(p.first);
+    if (!same_pointee) {
+      return false;
+    }
+  } else {
+    seen->erase(p.first);
+    // Either both are untyped or it is mixed typed and untyped.
+    if (pointee_type_ != pt->pointee_type_) {
+      return false;
+    }
   }
   return HasSameDecorations(that);
 }
 
 std::string Pointer::str() const {
   std::ostringstream os;
-  os << pointee_type_->str() << " " << static_cast<uint32_t>(storage_class_)
-     << "*";
+  if (pointee_type_) {
+    os << pointee_type_->str();
+  } else {
+    os << "untyped_ptr";
+  }
+  os << " " << static_cast<uint32_t>(storage_class_) << "*";
   return os.str();
 }
 
 size_t Pointer::ComputeExtraStateHash(size_t hash, SeenTypes* seen) const {
   hash = hash_combine(hash, uint32_t(storage_class_));
-  return pointee_type_->ComputeHashValue(hash, seen);
+  if (pointee_type_) {
+    hash = pointee_type_->ComputeHashValue(hash, seen);
+  }
+  return hash;
 }
 
 void Pointer::SetPointeeType(const Type* type) { pointee_type_ = type; }
@@ -865,6 +900,36 @@ bool CooperativeVectorNV::IsSameImpl(const Type* that,
   if (!mt) return false;
   return component_type_->IsSameImpl(mt->component_type_, seen) &&
          components_ == mt->components_ && HasSameDecorations(that);
+}
+
+TensorARM::TensorARM(const Type* elty, const uint32_t rank,
+                     const uint32_t shape)
+    : Type(kTensorARM), element_type_(elty), rank_id_(rank), shape_id_(shape) {
+  assert(elty != nullptr);
+  if (shape != 0) {
+    assert(rank != 0);
+  }
+}
+
+std::string TensorARM::str() const {
+  std::ostringstream oss;
+  oss << "tensor<" << element_type_->str() << ", id(" << rank_id_ << "), id("
+      << shape_id_ << ")>";
+  return oss.str();
+}
+
+size_t TensorARM::ComputeExtraStateHash(size_t hash, SeenTypes* seen) const {
+  hash = hash_combine(hash, rank_id_);
+  hash = hash_combine(hash, shape_id_);
+  return element_type_->ComputeHashValue(hash, seen);
+}
+
+bool TensorARM::IsSameImpl(const Type* that, IsSameCache* seen) const {
+  const TensorARM* tt = that->AsTensorARM();
+  if (!tt) return false;
+  return element_type_->IsSameImpl(tt->element_type_, seen) &&
+         rank_id_ == tt->rank_id_ && shape_id_ == tt->shape_id_ &&
+         HasSameDecorations(that);
 }
 
 }  // namespace analysis

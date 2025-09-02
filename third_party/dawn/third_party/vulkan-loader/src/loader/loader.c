@@ -305,14 +305,13 @@ VkResult create_string_list(const struct loader_instance *inst, uint32_t allocat
     return VK_SUCCESS;
 }
 
-VkResult append_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str) {
-    assert(string_list && str);
+VkResult incrase_str_capacity_by_at_least_one(const struct loader_instance *inst, struct loader_string_list *string_list) {
+    assert(string_list);
     if (string_list->allocated_count == 0) {
         string_list->allocated_count = 32;
         string_list->list =
             loader_instance_heap_calloc(inst, sizeof(char *) * string_list->allocated_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (NULL == string_list->list) {
-            loader_instance_heap_free(inst, str);  // Must clean up in case of failure
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
     } else if (string_list->count + 1 > string_list->allocated_count) {
@@ -320,12 +319,35 @@ VkResult append_str_to_string_list(const struct loader_instance *inst, struct lo
         string_list->list = loader_instance_heap_realloc(inst, string_list->list, sizeof(char *) * string_list->allocated_count,
                                                          sizeof(char *) * new_allocated_count, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
         if (NULL == string_list->list) {
-            loader_instance_heap_free(inst, str);  // Must clean up in case of failure
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         string_list->allocated_count *= 2;
     }
+    return VK_SUCCESS;
+}
+
+VkResult append_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str) {
+    assert(string_list && str);
+    VkResult res = incrase_str_capacity_by_at_least_one(inst, string_list);
+    if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
+        loader_instance_heap_free(inst, str);  // Must clean up in case of failure
+        return res;
+    }
     string_list->list[string_list->count++] = str;
+    return VK_SUCCESS;
+}
+
+VkResult prepend_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str) {
+    assert(string_list && str);
+    VkResult res = incrase_str_capacity_by_at_least_one(inst, string_list);
+    if (res == VK_ERROR_OUT_OF_HOST_MEMORY) {
+        loader_instance_heap_free(inst, str);  // Must clean up in case of failure
+        return res;
+    }
+    // Shift everything down one
+    void *ptr_to_list = memmove(string_list->list + 1, string_list->list, sizeof(char *) * string_list->count);
+    if (ptr_to_list) string_list->list[0] = str;  // Write new string to start of list
+    string_list->count++;
     return VK_SUCCESS;
 }
 
@@ -339,6 +361,18 @@ VkResult copy_str_to_string_list(const struct loader_instance *inst, struct load
     loader_strncpy(new_str, sizeof(char *) * str_len + 1, str, str_len);
     new_str[str_len] = '\0';
     return append_str_to_string_list(inst, string_list, new_str);
+}
+
+VkResult copy_str_to_start_of_string_list(const struct loader_instance *inst, struct loader_string_list *string_list,
+                                          const char *str, size_t str_len) {
+    assert(string_list && str);
+    char *new_str = loader_instance_heap_calloc(inst, sizeof(char *) * str_len + 1, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+    if (NULL == new_str) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    loader_strncpy(new_str, sizeof(char *) * str_len + 1, str, str_len);
+    new_str[str_len] = '\0';
+    return prepend_str_to_string_list(inst, string_list, new_str);
 }
 
 void free_string_list(const struct loader_instance *inst, struct loader_string_list *string_list) {
@@ -3002,10 +3036,8 @@ void copy_data_file_info(const char *cur_path, const char *relative_path, size_t
     }
 }
 
-// If the file found is a manifest file name, add it to the out_files manifest list.
+// If the file found is a manifest file name, add it to the end of out_files manifest list.
 VkResult add_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files) {
-    VkResult vk_result = VK_SUCCESS;
-
     assert(NULL != file_name && "add_if_manifest_file: Received NULL pointer for file_name");
     assert(NULL != out_files && "add_if_manifest_file: Received NULL pointer for out_files");
 
@@ -3014,15 +3046,26 @@ VkResult add_if_manifest_file(const struct loader_instance *inst, const char *fi
     const char *name_suffix = file_name + name_len - 5;
     if (!is_json(name_suffix, name_len)) {
         // Use incomplete to indicate invalid name, but to keep going.
-        vk_result = VK_INCOMPLETE;
-        goto out;
+        return VK_INCOMPLETE;
     }
 
-    vk_result = copy_str_to_string_list(inst, out_files, file_name, name_len);
+    return copy_str_to_string_list(inst, out_files, file_name, name_len);
+}
 
-out:
+// If the file found is a manifest file name, add it to the start of the out_files manifest list.
+VkResult prepend_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files) {
+    assert(NULL != file_name && "prepend_if_manifest_file: Received NULL pointer for file_name");
+    assert(NULL != out_files && "prepend_if_manifest_file: Received NULL pointer for out_files");
 
-    return vk_result;
+    // Look for files ending with ".json" suffix
+    size_t name_len = strlen(file_name);
+    const char *name_suffix = file_name + name_len - 5;
+    if (!is_json(name_suffix, name_len)) {
+        // Use incomplete to indicate invalid name, but to keep going.
+        return VK_INCOMPLETE;
+    }
+
+    return copy_str_to_start_of_string_list(inst, out_files, file_name, name_len);
 }
 
 // Add any files found in the search_path.  If any path in the search path points to a specific JSON, attempt to
@@ -3214,12 +3257,14 @@ VkResult read_data_files_in_search_paths(const struct loader_instance *inst, enu
 
     switch (manifest_type) {
         case LOADER_DATA_FILE_MANIFEST_DRIVER:
-            override_env = loader_secure_getenv(VK_DRIVER_FILES_ENV_VAR, inst);
-            if (NULL == override_env) {
-                // Not there, so fall back to the old name
-                override_env = loader_secure_getenv(VK_ICD_FILENAMES_ENV_VAR, inst);
+            if (loader_settings_should_use_driver_environment_variables(inst)) {
+                override_env = loader_secure_getenv(VK_DRIVER_FILES_ENV_VAR, inst);
+                if (NULL == override_env) {
+                    // Not there, so fall back to the old name
+                    override_env = loader_secure_getenv(VK_ICD_FILENAMES_ENV_VAR, inst);
+                }
+                additional_env = loader_secure_getenv(VK_ADDITIONAL_DRIVER_FILES_ENV_VAR, inst);
             }
-            additional_env = loader_secure_getenv(VK_ADDITIONAL_DRIVER_FILES_ENV_VAR, inst);
 #if COMMON_UNIX_PLATFORMS
             relative_location = VK_DRIVERS_INFO_RELATIVE_DIR;
 #endif
@@ -3705,9 +3750,8 @@ VkResult loader_parse_icd_manifest(const struct loader_instance *inst, char *fil
 
     char *library_arch_str = loader_cJSON_GetStringValue(loader_cJSON_GetObjectItem(itemICD, "library_arch"));
     if (library_arch_str != NULL) {
-        // cJSON includes the quotes by default, so we need to look for those here
-        if ((strncmp(library_arch_str, "32", 4) == 0 && sizeof(void *) != 4) ||
-            (strncmp(library_arch_str, "64", 4) == 0 && sizeof(void *) != 8)) {
+        if ((strncmp(library_arch_str, "32", 2) == 0 && sizeof(void *) != 4) ||
+            (strncmp(library_arch_str, "64", 2) == 0 && sizeof(void *) != 8)) {
             loader_log(inst, VULKAN_LOADER_INFO_BIT, 0,
                        "loader_parse_icd_manifest: Driver library architecture doesn't match the current running "
                        "architecture, skipping this driver");
@@ -3759,18 +3803,26 @@ VkResult loader_icd_scan(const struct loader_instance *inst, struct loader_icd_t
         goto out;
     }
 
-    // Parse the filter environment variables to determine if we have any special behavior
-    res = parse_generic_filter_environment_var(inst, VK_DRIVERS_SELECT_ENV_VAR, &select_filter);
-    if (VK_SUCCESS != res) {
-        goto out;
-    }
-    res = parse_generic_filter_environment_var(inst, VK_DRIVERS_DISABLE_ENV_VAR, &disable_filter);
-    if (VK_SUCCESS != res) {
-        goto out;
+    if (loader_settings_should_use_driver_environment_variables(inst)) {
+        // Parse the filter environment variables to determine if we have any special behavior
+        res = parse_generic_filter_environment_var(inst, VK_DRIVERS_SELECT_ENV_VAR, &select_filter);
+        if (VK_SUCCESS != res) {
+            goto out;
+        }
+        res = parse_generic_filter_environment_var(inst, VK_DRIVERS_DISABLE_ENV_VAR, &disable_filter);
+        if (VK_SUCCESS != res) {
+            goto out;
+        }
     }
 
     // Get a list of manifest files for ICDs
     res = loader_get_data_files(inst, LOADER_DATA_FILE_MANIFEST_DRIVER, NULL, &manifest_files);
+    if (VK_SUCCESS != res) {
+        goto out;
+    }
+
+    // Add any drivers provided by the loader settings file
+    res = loader_settings_get_additional_driver_files(inst, &manifest_files);
     if (VK_SUCCESS != res) {
         goto out;
     }
@@ -4198,36 +4250,29 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_instance_terminator(VkInstan
     // These functions need a terminator to handle the case of a driver not supporting VK_EXT_debug_utils when there are layers
     // present which not check for NULL before calling the function.
     if (!strcmp(pName, "vkSetDebugUtilsObjectNameEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_SetDebugUtilsObjectNameEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_SetDebugUtilsObjectNameEXT : NULL;
     }
     if (!strcmp(pName, "vkSetDebugUtilsObjectTagEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_SetDebugUtilsObjectTagEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_SetDebugUtilsObjectTagEXT : NULL;
     }
     if (!strcmp(pName, "vkQueueBeginDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueBeginDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueBeginDebugUtilsLabelEXT : NULL;
     }
     if (!strcmp(pName, "vkQueueEndDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueEndDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueEndDebugUtilsLabelEXT : NULL;
     }
     if (!strcmp(pName, "vkQueueInsertDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueInsertDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_QueueInsertDebugUtilsLabelEXT
+                                                               : NULL;
     }
     if (!strcmp(pName, "vkCmdBeginDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdBeginDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdBeginDebugUtilsLabelEXT : NULL;
     }
     if (!strcmp(pName, "vkCmdEndDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdEndDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdEndDebugUtilsLabelEXT : NULL;
     }
     if (!strcmp(pName, "vkCmdInsertDebugUtilsLabelEXT")) {
-        return loader_inst->enabled_known_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdInsertDebugUtilsLabelEXT
-                                                                     : NULL;
+        return loader_inst->enabled_extensions.ext_debug_utils ? (PFN_vkVoidFunction)terminator_CmdInsertDebugUtilsLabelEXT : NULL;
     }
 
     if (loader_inst->instance_finished_creation) {
@@ -5424,10 +5469,10 @@ VkResult loader_validate_device_extensions(struct loader_instance *this_instance
 // All named terminator_<Vulkan API name>
 VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
                                                          const VkAllocationCallbacks *pAllocator, VkInstance *pInstance) {
-    struct loader_icd_term *icd_term;
-    VkExtensionProperties *prop;
+    struct loader_icd_term *icd_term = NULL;
+    VkExtensionProperties *prop = NULL;
     char **filtered_extension_names = NULL;
-    VkInstanceCreateInfo icd_create_info;
+    VkInstanceCreateInfo icd_create_info = {0};
     VkResult res = VK_SUCCESS;
     bool one_icd_successful = false;
 
@@ -5564,18 +5609,10 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
         // Determine if vkGetPhysicalDeviceProperties2 is available to this Instance
         // Also determine if VK_EXT_surface_maintenance1 is available on the ICD
         if (icd_term->scanned_icd->api_version >= VK_API_VERSION_1_1) {
-            icd_term->supports_get_dev_prop_2 = true;
+            icd_term->enabled_instance_extensions.khr_get_physical_device_properties2 = true;
         }
-        for (uint32_t j = 0; j < icd_create_info.enabledExtensionCount; j++) {
-            if (!strcmp(filtered_extension_names[j], VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
-                icd_term->supports_get_dev_prop_2 = true;
-                continue;
-            }
-            if (!strcmp(filtered_extension_names[j], VK_EXT_SURFACE_MAINTENANCE_1_EXTENSION_NAME)) {
-                icd_term->supports_ext_surface_maintenance_1 = true;
-                continue;
-            }
-        }
+        fill_out_enabled_instance_extensions(icd_create_info.enabledExtensionCount, (const char *const *)filtered_extension_names,
+                                             &icd_term->enabled_instance_extensions);
 
         loader_destroy_generic_list(ptr_instance, (struct loader_generic_list *)&icd_exts);
 
@@ -5623,7 +5660,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
         }
 
         // Create an instance, substituting the version to 1.0 if necessary
-        VkApplicationInfo icd_app_info;
+        VkApplicationInfo icd_app_info = {0};
         const uint32_t api_variant = 0;
         const uint32_t api_version_1_0 = VK_API_VERSION_1_0;
         uint32_t icd_version_nopatch =
@@ -5640,6 +5677,25 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
             icd_app_info.apiVersion = icd_version;
             icd_create_info.pApplicationInfo = &icd_app_info;
         }
+
+        // If the settings file has device_configurations, we need to raise the ApiVersion drivers use to 1.1 if the driver
+        // supports 1.1 or higher. This allows 1.0 apps to use the device_configurations without the app having to set its own
+        // ApiVersion to 1.1 on its own.
+        if (ptr_instance->settings.settings_active && ptr_instance->settings.device_configuration_count > 0 &&
+            icd_version >= VK_API_VERSION_1_1 && requested_version < VK_API_VERSION_1_1) {
+            if (NULL != pCreateInfo->pApplicationInfo) {
+                memcpy(&icd_app_info, pCreateInfo->pApplicationInfo, sizeof(VkApplicationInfo));
+            }
+            icd_app_info.apiVersion = VK_API_VERSION_1_1;
+            icd_create_info.pApplicationInfo = &icd_app_info;
+
+            loader_log(
+                ptr_instance, VULKAN_LOADER_INFO_BIT, 0,
+                "terminator_CreateInstance: Raising the VkApplicationInfo::apiVersion from 1.0 to 1.1 on driver \"%s\" so that "
+                "the loader settings file is able to use this driver in the device_configuration selection logic.",
+                icd_term->scanned_icd->lib_name);
+        }
+
         icd_result =
             ptr_instance->icd_tramp_list.scanned_list[i].CreateInstance(&icd_create_info, pAllocator, &(icd_term->instance));
         if (VK_ERROR_OUT_OF_HOST_MEMORY == icd_result) {
@@ -5698,18 +5754,18 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateInstance(const VkInstanceCreateI
 
     // For vkGetPhysicalDeviceProperties2, at least one ICD needs to support the extension for the
     // instance to have it
-    if (ptr_instance->supports_get_dev_prop_2) {
+    if (ptr_instance->enabled_extensions.khr_get_physical_device_properties2) {
         bool at_least_one_supports = false;
         icd_term = ptr_instance->icd_terms;
         while (icd_term != NULL) {
-            if (icd_term->supports_get_dev_prop_2) {
+            if (icd_term->enabled_instance_extensions.khr_get_physical_device_properties2) {
                 at_least_one_supports = true;
                 break;
             }
             icd_term = icd_term->next;
         }
         if (!at_least_one_supports) {
-            ptr_instance->supports_get_dev_prop_2 = false;
+            ptr_instance->enabled_extensions.khr_get_physical_device_properties2 = false;
         }
     }
 
@@ -5747,9 +5803,8 @@ out:
         // This is why we don't clear inside of these function calls.
         // The clearing should actually be handled by the overall memset of the pInstance structure in the
         // trampoline.
-        wsi_create_instance(ptr_instance, pCreateInfo);
-        check_for_enabled_debug_extensions(ptr_instance, pCreateInfo);
-        extensions_create_instance(ptr_instance, pCreateInfo);
+        fill_out_enabled_instance_extensions(pCreateInfo->enabledExtensionCount, pCreateInfo->ppEnabledExtensionNames,
+                                             &ptr_instance->enabled_extensions);
     }
 
     return res;
@@ -5914,7 +5969,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
     // Before we continue, If KHX_device_group is the list of enabled and viable extensions, then we then need to look for the
     // corresponding VkDeviceGroupDeviceCreateInfo struct in the device list and replace all the physical device values (which
     // are really loader physical device terminator values) with the ICD versions.
-    // if (icd_term->this_instance->enabled_known_extensions.khr_device_group_creation == 1) {
+    // if (icd_term->this_instance->enabled_extensions.khr_device_group_creation == 1) {
     {
         VkBaseOutStructure *pNext = (VkBaseOutStructure *)localCreateInfo.pNext;
         VkBaseOutStructure *pPrev = (VkBaseOutStructure *)&localCreateInfo;
@@ -5979,7 +6034,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
                                    icd_term->scanned_icd->lib_name);
 
                         // Verify that VK_KHR_get_physical_device_properties2 is enabled
-                        if (icd_term->this_instance->enabled_known_extensions.khr_get_physical_device_properties2) {
+                        if (icd_term->this_instance->enabled_extensions.khr_get_physical_device_properties2) {
                             localCreateInfo.pEnabledFeatures = &features->features;
                         }
                     }
@@ -6072,8 +6127,8 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_CreateDevice(VkPhysicalDevice physical
             dev->should_ignore_device_commands_from_newer_version = true;
         }
     }
-    dev->layer_extensions.ext_debug_utils_enabled = icd_term->this_instance->enabled_known_extensions.ext_debug_utils;
-    dev->driver_extensions.ext_debug_utils_enabled = icd_term->this_instance->enabled_known_extensions.ext_debug_utils;
+    dev->layer_extensions.ext_debug_utils_enabled = icd_term->this_instance->enabled_extensions.ext_debug_utils;
+    dev->driver_extensions.ext_debug_utils_enabled = icd_term->this_instance->enabled_extensions.ext_debug_utils;
 
     VkPhysicalDeviceProperties properties;
     icd_term->dispatch.GetPhysicalDeviceProperties(phys_dev_term->phys_dev, &properties);
@@ -6754,26 +6809,131 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDevices(VkInstance in
         goto out;
     }
 
-    uint32_t copy_count = inst->phys_dev_count_term;
-    if (NULL != pPhysicalDevices) {
-        if (copy_count > *pPhysicalDeviceCount) {
-            copy_count = *pPhysicalDeviceCount;
-            loader_log(inst, VULKAN_LOADER_INFO_BIT, 0,
-                       "terminator_EnumeratePhysicalDevices : Trimming device count from %d to %d.", inst->phys_dev_count_term,
-                       copy_count);
-            res = VK_INCOMPLETE;
+    if (inst->settings.settings_active && inst->settings.device_configuration_count > 0) {
+        // Use settings file device_configurations if present
+        if (NULL == pPhysicalDevices) {
+            // take the minimum of the settings configurations count and number of terminators
+            *pPhysicalDeviceCount = (inst->settings.device_configuration_count < inst->phys_dev_count_term)
+                                        ? inst->settings.device_configuration_count
+                                        : inst->phys_dev_count_term;
+        } else {
+            res = loader_apply_settings_device_configurations(inst, pPhysicalDeviceCount, pPhysicalDevices);
+        }
+    } else {
+        // Otherwise just copy the physical devices up normally and pass it up the chain
+        uint32_t copy_count = inst->phys_dev_count_term;
+        if (NULL != pPhysicalDevices) {
+            if (copy_count > *pPhysicalDeviceCount) {
+                copy_count = *pPhysicalDeviceCount;
+                loader_log(inst, VULKAN_LOADER_INFO_BIT, 0,
+                           "terminator_EnumeratePhysicalDevices : Trimming device count from %d to %d.", inst->phys_dev_count_term,
+                           copy_count);
+                res = VK_INCOMPLETE;
+            }
+
+            for (uint32_t i = 0; i < copy_count; i++) {
+                pPhysicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_term[i];
+            }
         }
 
-        for (uint32_t i = 0; i < copy_count; i++) {
-            pPhysicalDevices[i] = (VkPhysicalDevice)inst->phys_devs_term[i];
-        }
+        *pPhysicalDeviceCount = copy_count;
     }
-
-    *pPhysicalDeviceCount = copy_count;
 
 out:
 
     return res;
+}
+
+// Apply the device_configurations in the settings file to the output VkPhysicalDeviceList.
+// That means looking up each VkPhysicalDevice's deviceUUID, filtering using that, and putting them in the order of
+// device_configurations in the settings file.
+VkResult loader_apply_settings_device_configurations(struct loader_instance *inst, uint32_t *pPhysicalDeviceCount,
+                                                     VkPhysicalDevice *pPhysicalDevices) {
+    bool *pd_supports_11 = loader_stack_alloc(inst->phys_dev_count_term * sizeof(bool));
+    if (NULL == pd_supports_11) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    memset(pd_supports_11, 0, inst->phys_dev_count_term * sizeof(bool));
+
+    VkPhysicalDeviceProperties *pd_props = loader_stack_alloc(inst->phys_dev_count_term * sizeof(VkPhysicalDeviceProperties));
+    if (NULL == pd_props) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    memset(pd_props, 0, inst->phys_dev_count_term * sizeof(VkPhysicalDeviceProperties));
+
+    VkPhysicalDeviceVulkan11Properties *pd_vulkan_11_props =
+        loader_stack_alloc(inst->phys_dev_count_term * sizeof(VkPhysicalDeviceVulkan11Properties));
+    if (NULL == pd_vulkan_11_props) {
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+    memset(pd_vulkan_11_props, 0, inst->phys_dev_count_term * sizeof(VkPhysicalDeviceVulkan11Properties));
+
+    for (uint32_t i = 0; i < inst->phys_dev_count_term; i++) {
+        pd_vulkan_11_props[i].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+
+        inst->phys_devs_term[i]->this_icd_term->dispatch.GetPhysicalDeviceProperties(inst->phys_devs_term[i]->phys_dev,
+                                                                                     &pd_props[i]);
+        if (pd_props[i].apiVersion >= VK_API_VERSION_1_1) {
+            pd_supports_11[i] = true;
+            VkPhysicalDeviceProperties2 props2 = {0};
+            props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            props2.pNext = (void *)&pd_vulkan_11_props[i];
+            if (inst->phys_devs_term[i]->this_icd_term->dispatch.GetPhysicalDeviceProperties2) {
+                inst->phys_devs_term[i]->this_icd_term->dispatch.GetPhysicalDeviceProperties2(inst->phys_devs_term[i]->phys_dev,
+                                                                                              &props2);
+            }
+        }
+    }
+
+    // Loop over the setting's device configurations, find each VkPhysicalDevice which matches the deviceUUID given, add to the
+    // pPhysicalDevices output list.
+    uint32_t written_output_index = 0;
+
+    for (uint32_t i = 0; i < inst->settings.device_configuration_count; i++) {
+        uint8_t *current_deviceUUID = inst->settings.device_configurations[i].deviceUUID;
+        bool configuration_found = false;
+        for (uint32_t j = 0; j < inst->phys_dev_count_term; j++) {
+            // Don't compare deviceUUID's if they have nothing, since we require deviceUUID's to effectively sort them.
+            if (!pd_supports_11[j]) {
+                continue;
+            }
+            if (memcmp(current_deviceUUID, pd_vulkan_11_props[j].deviceUUID, sizeof(uint8_t) * VK_UUID_SIZE) == 0) {
+                configuration_found = true;
+                // Catch when there are more device_configurations than space available in the output
+                if (written_output_index >= *pPhysicalDeviceCount) {
+                    *pPhysicalDeviceCount = written_output_index;  // write out how many were written
+                    return VK_INCOMPLETE;
+                }
+                pPhysicalDevices[written_output_index++] = (VkPhysicalDevice)inst->phys_devs_term[j];
+                loader_log(inst, VULKAN_LOADER_INFO_BIT, 0, "Insert VkPhysicalDevice \"%s\" to the pPhysicalDevices list",
+                           pd_props[j].deviceName);
+                break;
+            }
+        }
+        if (!configuration_found) {
+            uint8_t *id = current_deviceUUID;
+            // Log that this configuration was missing.
+            if (inst->settings.device_configurations[i].deviceName[0] != '\0') {
+                loader_log(
+                    inst, VULKAN_LOADER_WARN_BIT, 0,
+                    "loader_apply_settings_device_configurations: settings file contained device_configuration which does not "
+                    "appear in the enumerated VkPhysicalDevices. Missing VkPhysicalDevice with deviceName: \"%s\" and deviceUUID: "
+                    "%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x",
+                    inst->settings.device_configurations[i].deviceName, id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7],
+                    id[8], id[9], id[10], id[11], id[12], id[13], id[14], id[15]);
+            } else {
+                loader_log(
+                    inst, VULKAN_LOADER_WARN_BIT, 0,
+                    "loader_apply_settings_device_configurations: settings file contained device_configuration which does not "
+                    "appear in the enumerated VkPhysicalDevices. Missing VkPhysicalDevice with deviceUUID: "
+                    "%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x",
+                    id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12], id[13], id[14],
+                    id[15]);
+            }
+        }
+    }
+    *pPhysicalDeviceCount = written_output_index;  // update with how many were written
+    return VK_SUCCESS;
 }
 
 VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice,
@@ -7161,7 +7321,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDeviceGroups(
         cur_icd_group_count = 0;
 
         // Get the function pointer to use to call into the ICD. This could be the core or KHR version
-        if (inst->enabled_known_extensions.khr_device_group_creation) {
+        if (inst->enabled_extensions.khr_device_group_creation) {
             fpEnumeratePhysicalDeviceGroups = icd_term->dispatch.EnumeratePhysicalDeviceGroupsKHR;
         } else {
             fpEnumeratePhysicalDeviceGroups = icd_term->dispatch.EnumeratePhysicalDeviceGroups;
@@ -7233,7 +7393,7 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_EnumeratePhysicalDeviceGroups(
             uint32_t count_this_time = total_count - cur_icd_group_count;
 
             // Get the function pointer to use to call into the ICD. This could be the core or KHR version
-            if (inst->enabled_known_extensions.khr_device_group_creation) {
+            if (inst->enabled_extensions.khr_device_group_creation) {
                 fpEnumeratePhysicalDeviceGroups = icd_term->dispatch.EnumeratePhysicalDeviceGroupsKHR;
             } else {
                 fpEnumeratePhysicalDeviceGroups = icd_term->dispatch.EnumeratePhysicalDeviceGroups;

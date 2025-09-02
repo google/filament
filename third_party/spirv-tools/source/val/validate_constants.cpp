@@ -33,12 +33,19 @@ spv_result_t ValidateConstantBool(ValidationState_t& _,
   return SPV_SUCCESS;
 }
 
+bool isCompositeType(const Instruction* inst) {
+  bool is_tensor = inst->opcode() == spv::Op::OpTypeTensorARM;
+  bool tensor_is_shaped = inst->words().size() == 5;
+  return spvOpcodeIsComposite(inst->opcode()) ||
+         (is_tensor && tensor_is_shaped);
+}
+
 spv_result_t ValidateConstantComposite(ValidationState_t& _,
                                        const Instruction* inst) {
   std::string opcode_name = std::string("Op") + spvOpcodeString(inst->opcode());
 
   const auto result_type = _.FindDef(inst->type_id());
-  if (!result_type || !spvOpcodeIsComposite(result_type->opcode())) {
+  if (!result_type || !isCompositeType(result_type)) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
            << opcode_name << " Result Type <id> "
            << _.getIdName(inst->type_id()) << " is not a composite type.";
@@ -282,6 +289,141 @@ spv_result_t ValidateConstantComposite(ValidationState_t& _,
                << _.getIdName(result_type->id()) << "s component type.";
       }
     } break;
+    case spv::Op::OpTypeTensorARM: {
+      auto inst_element_type =
+          _.FindDef(result_type->GetOperandAs<uint32_t>(1));
+      if (!inst_element_type) {
+        return _.diag(SPV_ERROR_INVALID_ID, result_type)
+               << "Element type is not defined.";
+      }
+      const auto inst_rank = _.FindDef(result_type->GetOperandAs<uint32_t>(2));
+      if (!inst_rank) {
+        return _.diag(SPV_ERROR_INVALID_ID, result_type)
+               << "Rank is not defined.";
+      }
+      const auto inst_shape = _.FindDef(result_type->GetOperandAs<uint32_t>(3));
+      if (!inst_shape) {
+        return _.diag(SPV_ERROR_INVALID_ID, result_type)
+               << "Shape is not defined.";
+      }
+
+      uint64_t rank = 0;
+      _.EvalConstantValUint64(inst_rank->id(), &rank);
+
+      uint64_t outermost_shape = 0;
+      if (_.EvalConstantValUint64(inst_shape->GetOperandAs<uint32_t>(2),
+                                  &outermost_shape) &&
+          (outermost_shape != constituent_count)) {
+        return _.diag(SPV_ERROR_INVALID_ID, inst)
+               << opcode_name
+               << " Constituent count does not match "
+                  "the shape of Result Type <id> "
+               << _.getIdName(result_type->id())
+               << " along its outermost dimension, " << "expected "
+               << outermost_shape << " but got " << constituent_count << ".";
+      }
+
+      for (size_t constituent_index = 2;
+           constituent_index < inst->operands().size(); constituent_index++) {
+        const auto constituent_id =
+            inst->GetOperandAs<uint32_t>(constituent_index);
+        const auto constituent = _.FindDef(constituent_id);
+        if (!constituent ||
+            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
+          return _.diag(SPV_ERROR_INVALID_ID, inst)
+                 << opcode_name << " Constituent <id> "
+                 << _.getIdName(constituent_id)
+                 << " is not a constant or undef.";
+        }
+        const auto constituent_type = _.FindDef(constituent->type_id());
+        if (!constituent_type) {
+          return _.diag(SPV_ERROR_INVALID_ID, constituent)
+                 << "Type of Constituent " << constituent_index - 2
+                 << " is not defined.";
+        }
+
+        if (rank == 0) {
+          // The rank of the returned tensor constant is not known.
+          // Skip rank-dependent validation.
+          continue;
+        }
+
+        if (rank == 1) {
+          if (inst_element_type->id() != constituent_type->id()) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << opcode_name << " Constituent <id> "
+                   << _.getIdName(constituent_id)
+                   << " type does not match the element type of the tensor ("
+                   << _.getIdName(result_type->id()) << ").";
+          }
+        } else {
+          if (constituent_type->opcode() != spv::Op::OpTypeTensorARM) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << opcode_name << " Constituent <id> "
+                   << _.getIdName(constituent_id)
+                   << " must be an OpTypeTensorARM.";
+          }
+          auto inst_constituent_element_type =
+              _.FindDef(constituent_type->GetOperandAs<uint32_t>(1));
+          if (!inst_constituent_element_type ||
+              inst_constituent_element_type->id() != inst_element_type->id()) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << opcode_name << " Constituent <id> "
+                   << _.getIdName(constituent_id)
+                   << " must have the same Element Type as Result Type <id> "
+                   << _.getIdName(result_type->id()) << ".";
+          }
+          auto inst_constituent_rank =
+              _.FindDef(constituent_type->GetOperandAs<uint32_t>(2));
+          uint64_t constituent_rank;
+          if (inst_constituent_rank &&
+              _.EvalConstantValUint64(inst_constituent_rank->id(),
+                                      &constituent_rank) &&
+              (constituent_rank != rank - 1)) {
+            return _.diag(SPV_ERROR_INVALID_ID, inst)
+                   << opcode_name << " Constituent <id> "
+                   << _.getIdName(constituent_id)
+                   << " must have a Rank that is 1 less than the Rank of "
+                      "Result Type <id> "
+                   << _.getIdName(result_type->id()) << ", expected "
+                   << rank - 1 << " but got " << constituent_rank << ".";
+          }
+
+          auto inst_constituent_shape =
+              _.FindDef(constituent_type->GetOperandAs<uint32_t>(3));
+          if (!inst_constituent_shape) {
+            return _.diag(SPV_ERROR_INVALID_ID, result_type)
+                   << "Shape of Constituent " << constituent_index - 2
+                   << " is not defined.";
+          }
+          for (size_t constituent_shape_index = 2;
+               constituent_shape_index <
+               inst_constituent_shape->operands().size();
+               constituent_shape_index++) {
+            size_t shape_index = constituent_shape_index + 1;
+            uint64_t constituent_shape = 0, shape = 1;
+            if (_.EvalConstantValUint64(
+                    inst_constituent_shape->GetOperandAs<uint32_t>(
+                        constituent_shape_index),
+                    &constituent_shape) &&
+                _.EvalConstantValUint64(
+                    inst_shape->GetOperandAs<uint32_t>(shape_index), &shape) &&
+                (constituent_shape != shape)) {
+              return _.diag(SPV_ERROR_INVALID_ID, inst)
+                     << opcode_name << " Constituent <id> "
+                     << _.getIdName(constituent_id)
+                     << " must have a Shape that matches that of Result Type "
+                        "<id> "
+                     << _.getIdName(result_type->id())
+                     << " along all inner dimensions of Result Type, expected "
+                     << shape << " for dimension "
+                     << constituent_shape_index - 2
+                     << " of Constituent but got " << constituent_shape << ".";
+            }
+          }
+        }
+      }
+    } break;
     default:
       break;
   }
@@ -341,6 +483,11 @@ bool IsTypeNullable(const std::vector<uint32_t>& instruction,
         return false;
       }
       return true;
+    case spv::Op::OpTypeTensorARM: {
+      auto elem_type = _.FindDef(instruction[2]);
+      return (instruction.size() > 4) && elem_type &&
+             IsTypeNullable(elem_type->words(), _);
+    }
     default:
       return false;
   }

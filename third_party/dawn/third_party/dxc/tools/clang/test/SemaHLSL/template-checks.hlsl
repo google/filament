@@ -1,8 +1,8 @@
 // RUN: %dxc -Tlib_6_3 -verify %s
 
 Texture2D<float4> t_float4;
-Texture2D<SamplerState> t_obj_sampler;          /* expected-error {{'SamplerState' is an object and cannot be used as a type parameter}} fxc-error {{X3124: object element type cannot be an object type}} */
-Texture2D<Texture2D<float4> > t_obj_tex;        /* expected-error {{'Texture2D<float4>' is an object and cannot be used as a type parameter}} fxc-error {{X3124: object element type cannot be an object type}} */
+Texture2D<SamplerState> t_obj_sampler;          /* expected-error {{object 'SamplerState' is not allowed in builtin template parameters}} fxc-error {{X3124: object element type cannot be an object type}} */
+Texture2D<Texture2D<float4> > t_obj_tex;        /* expected-error {{object 'Texture2D<float4>' is not allowed in builtin template parameters}} fxc-error {{X3124: object element type cannot be an object type}} */
 
 matrix<SamplerState, 1, 2> m_obj_sampler;       /* expected-error {{'SamplerState' cannot be used as a type parameter where a scalar is required}} fxc-error {{X3123: matrix element type must be a scalar type}} */
 matrix<bool, 1, 2> m_bool;
@@ -15,7 +15,7 @@ matrix<bool, 1, 2> m_bool;
 
 RWBuffer<double3> rwb_struct;    /* expected-error {{elements of typed buffers and textures must fit in four 32-bit quantities}} fxc-error {{X3037: elements of typed buffers and textures must fit in four 32-bit quantities}} */
 
-RWBuffer<SamplerState> rwb_struct_objs; /* expected-error {{'SamplerState' is an object and cannot be used as a type parameter}} */
+RWBuffer<SamplerState> rwb_struct_objs; /* expected-error {{object 'SamplerState' is not allowed in builtin template parameters}} */
 
 void vain() {
   // Nothing to do here.

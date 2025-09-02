@@ -32,6 +32,8 @@
 #include <webgpu/webgpu_cpp.h>
 #include <wrl/client.h>
 
+#include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -51,32 +53,55 @@ enum class Mode {
     D3D11Texture2D,
 };
 
+struct BeginState : public SharedTextureMemoryTestBackend::BackendBeginState {
+    wgpu::SharedTextureMemoryD3D11BeginState beginState{};
+};
+
 class Backend : public SharedTextureMemoryTestBackend {
   public:
     template <Mode kMode>
     static Backend* GetInstance() {
-        static Backend b(kMode, false);
+        static Backend b(kMode, /*useKeyedMutex=*/false, /*requiresEndAccessFence=*/true);
         return &b;
     }
 
     template <Mode kMode>
     static Backend* GetKeyedMutexInstance() {
-        static Backend b(kMode, true);
+        static Backend b(kMode, /*useKeyedMutex=*/true, /*requiresEndAccessFence=*/true);
+        return &b;
+    }
+
+    template <Mode kMode>
+    static Backend* GetInstanceWithoutEndAccessFence() {
+        static Backend b(kMode, /*useKeyedMutex=*/false,
+                         /*requiresEndAccessFence=*/false);
         return &b;
     }
 
     std::string Name() const override {
+        std::ostringstream ss;
         switch (mMode) {
             case Mode::D3D11Texture2D: {
-                return mUseKeyedMutex ? "D3D11Texture2D KeyedMutex" : "D3D11Texture2D";
-            }
+                ss << "D3D11Texture2D";
+            } break;
             case Mode::DXGISharedHandle: {
-                return mUseKeyedMutex ? "DXGISharedHandle KeyedMutex" : "DXGISharedHandle";
-            }
+                ss << "DXGISharedHandle";
+            } break;
         }
+        if (mUseKeyedMutex) {
+            ss << " KeyedMutex";
+        }
+
+        if (!mRequiresEndAccessFence) {
+            ss << " NoEndAccessFence";
+        }
+
+        return ss.str();
     }
 
-    bool UseSameDevice() const override { return mMode == Mode::D3D11Texture2D; }
+    bool UseSameDevice() const override {
+        return mMode == Mode::D3D11Texture2D || !mRequiresEndAccessFence;
+    }
     bool SupportsConcurrentRead() const override { return true; }
 
     void SetUp(const wgpu::Device& device) override {
@@ -337,11 +362,29 @@ class Backend : public SharedTextureMemoryTestBackend {
         return memories;
     }
 
+    std::unique_ptr<BackendBeginState> ChainInitialBeginState(
+        wgpu::SharedTextureMemoryBeginAccessDescriptor* beginDesc) override {
+        auto state = std::make_unique<BeginState>();
+        state->beginState.requiresEndAccessFence = mRequiresEndAccessFence;
+        beginDesc->nextInChain = &state->beginState;
+        return state;
+    }
+
+    std::unique_ptr<BackendBeginState> ChainBeginState(
+        wgpu::SharedTextureMemoryBeginAccessDescriptor* beginDesc,
+        const wgpu::SharedTextureMemoryEndAccessState& endState) override {
+        return ChainInitialBeginState(beginDesc);
+    }
+
   private:
-    Backend(Mode mode, bool useKeyedMutex) : mMode(mode), mUseKeyedMutex(useKeyedMutex) {}
+    Backend(Mode mode, bool useKeyedMutex, bool requiresEndAccessFence)
+        : mMode(mode),
+          mUseKeyedMutex(useKeyedMutex),
+          mRequiresEndAccessFence(requiresEndAccessFence) {}
 
     const Mode mMode;
     const bool mUseKeyedMutex;
+    const bool mRequiresEndAccessFence;
 };
 
 // Test that it is an error to import a shared fence without enabling the feature.
@@ -558,29 +601,36 @@ DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D,
 
 DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D,
                                  SharedTextureMemoryTests,
-                                 {D3D11Backend(), D3D11Backend({"d3d11_disable_fence"}),
-                                  D3D12Backend()},
+                                 {D3D11Backend(), D3D11Backend({"d3d11_delay_flush_to_gpu"}),
+                                  D3D11Backend({"d3d11_disable_fence"}), D3D12Backend()},
                                  {Backend::GetInstance<Mode::DXGISharedHandle>(),
                                   Backend::GetKeyedMutexInstance<Mode::DXGISharedHandle>()},
                                  {1});
 
-DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D11,
-                                 SharedTextureMemoryNoFeatureTests,
-                                 {D3D11Backend(), D3D11Backend({"d3d11_disable_fence"})},
-                                 {Backend::GetInstance<Mode::D3D11Texture2D>(),
-                                  Backend::GetKeyedMutexInstance<Mode::D3D11Texture2D>()},
-                                 {1, 2});
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    D3D11,
+    SharedTextureMemoryNoFeatureTests,
+    {D3D11Backend(), D3D11Backend({"d3d11_disable_fence"})},
+    {Backend::GetInstance<Mode::D3D11Texture2D>(),
+     Backend::GetKeyedMutexInstance<Mode::D3D11Texture2D>(),
+     Backend::GetInstanceWithoutEndAccessFence<Mode::D3D11Texture2D>()},
+    {1, 2});
 
-DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D11,
-                                 SharedTextureMemoryTests,
-                                 {D3D11Backend(), D3D11Backend({"d3d11_disable_fence"})},
-                                 {Backend::GetInstance<Mode::D3D11Texture2D>(),
-                                  Backend::GetKeyedMutexInstance<Mode::D3D11Texture2D>()},
-                                 {1, 2});
+DAWN_INSTANTIATE_PREFIXED_TEST_P(
+    D3D11,
+    SharedTextureMemoryTests,
+    {D3D11Backend(), D3D11Backend({"d3d11_delay_flush_to_gpu"}),
+     D3D11Backend({"d3d11_disable_fence"})},
+    {Backend::GetInstance<Mode::D3D11Texture2D>(),
+     Backend::GetKeyedMutexInstance<Mode::D3D11Texture2D>(),
+     Backend::GetInstanceWithoutEndAccessFence<Mode::D3D11Texture2D>()},
+    {1, 2});
 
 DAWN_INSTANTIATE_PREFIXED_TEST_P(D3D11,
                                  SharedTextureMemoryWithFenceDisabledTests,
-                                 {D3D11Backend({"d3d11_disable_fence"})},
+                                 {D3D11Backend({"d3d11_disable_fence"}),
+                                  D3D11Backend({"d3d11_disable_fence",
+                                                "d3d11_delay_flush_to_gpu"})},
                                  {Backend::GetKeyedMutexInstance<Mode::DXGISharedHandle>()},
                                  {1});
 

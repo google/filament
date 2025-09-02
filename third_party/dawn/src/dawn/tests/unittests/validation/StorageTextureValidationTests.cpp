@@ -1264,5 +1264,92 @@ TEST_F(R8UnormStorageValidationTests, End2endUsage) {
     device.GetQueue().Submit(1, &commands);
 }
 
+// Check that it is not allowed to create a kTier1AdditionalStorageFormats format
+// texture with the storage usage.
+TEST_F(StorageTextureValidationTests, TextureCreationWithoutFeature) {
+    for (const auto format : utils::kTier1AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        wgpu::TextureDescriptor desc;
+        desc.format = format;
+        desc.usage = wgpu::TextureUsage::StorageBinding;
+        desc.size = {1, 1};
+        ASSERT_DEVICE_ERROR(device.CreateTexture(&desc));
+    }
+}
+
+// Check that it is not allowed to create a BGL with a read-only or write-only
+// kTier1AdditionalStorageFormat format storage texture entry.
+TEST_F(StorageTextureValidationTests, BGLEntryWithoutFeature) {
+    for (const auto format : utils::kTier1AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroupLayout(
+            device,
+            {{0, wgpu::ShaderStage::Fragment, wgpu::StorageTextureAccess::ReadOnly, format}}));
+        ASSERT_DEVICE_ERROR(utils::MakeBindGroupLayout(
+            device,
+            {{0, wgpu::ShaderStage::Fragment, wgpu::StorageTextureAccess::WriteOnly, format}}));
+    }
+}
+
+class TextureFormatsTier1StorageValidationTests : public StorageTextureValidationTests {
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::TextureFormatsTier1};
+    }
+};
+
+// Check that it is allowed to create a kTier1AdditionalStorageFormats format
+// texture with the storage usage with TextureFormatsTier1.
+TEST_F(TextureFormatsTier1StorageValidationTests, TextureCreation) {
+    for (const auto format : utils::kTier1AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        wgpu::TextureDescriptor desc;
+        desc.format = format;
+        desc.usage = wgpu::TextureUsage::StorageBinding;
+        desc.size = {1, 1};
+        device.CreateTexture(&desc);
+    }
+}
+
+// Check that it is allowed to create a BGL with a read-only or write-only
+// kTier1AdditionalStorageFormat format storage texture entry with TextureFormatsTier1.
+TEST_F(TextureFormatsTier1StorageValidationTests, BGLEntry) {
+    for (const auto format : utils::kTier1AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::MakeBindGroupLayout(device, {{0, wgpu::ShaderStage::Fragment,
+                                             wgpu::StorageTextureAccess::ReadOnly, format}});
+        utils::MakeBindGroupLayout(device, {{0, wgpu::ShaderStage::Fragment,
+                                             wgpu::StorageTextureAccess::WriteOnly, format}});
+    }
+}
+
+class TextureFormatsTier2StorageValidationTests : public StorageTextureValidationTests {
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::TextureFormatsTier2};
+    }
+};
+
+// Check that it is allowed to create a kTier2AdditionalStorageFormats format
+// texture with the storage usage with TextureFormatsTier2.
+TEST_F(TextureFormatsTier2StorageValidationTests, TextureCreation) {
+    for (const auto format : utils::kTier2AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        wgpu::TextureDescriptor desc;
+        desc.format = format;
+        desc.usage = wgpu::TextureUsage::StorageBinding;
+        desc.size = {1, 1};
+        device.CreateTexture(&desc);
+    }
+}
+
+// Check that it is allowed to create a BGL with a read-write
+// kTier2AdditionalStorageFormat format storage texture entry with TextureFormatsTier2.
+TEST_F(TextureFormatsTier2StorageValidationTests, BGLEntry) {
+    for (const auto format : utils::kTier2AdditionalStorageFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::MakeBindGroupLayout(device, {{0, wgpu::ShaderStage::Fragment,
+                                             wgpu::StorageTextureAccess::ReadWrite, format}});
+    }
+}
+
 }  // anonymous namespace
 }  // namespace dawn

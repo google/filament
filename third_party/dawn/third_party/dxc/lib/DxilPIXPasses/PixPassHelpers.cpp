@@ -324,6 +324,7 @@ hlsl::DxilResource *CreateGlobalUAVResource(hlsl::DxilModule &DM,
       (unsigned int)-2);   // This is the reserved-for-tools register space
   pUAV->SetSampleCount(0); // This is what compiler generates for a raw UAV
   pUAV->SetGloballyCoherent(false);
+  pUAV->SetReorderCoherent(false);
   pUAV->SetHasCounter(false);
   pUAV->SetCompType(
       CompType::getInvalid()); // This is what compiler generates for a raw UAV
@@ -509,6 +510,90 @@ unsigned int FindOrAddSV_Position(hlsl::DxilModule &DM,
     return InputElements[index]->GetID();
   } else {
     return Existing_SV_Position->get()->GetID();
+  }
+}
+
+void ForEachDynamicallyIndexedResource(
+    hlsl::DxilModule &DM,
+    const std::function<bool(bool, Instruction *, Value *)> &Visitor) {
+  OP *HlslOP = DM.GetOP();
+  LLVMContext &Ctx = DM.GetModule()->getContext();
+
+  for (llvm::Function &F : DM.GetModule()->functions()) {
+    if (F.isDeclaration() && !F.use_empty() && OP::IsDxilOpFunc(&F)) {
+      if (F.hasName()) {
+        if (F.getName().find("createHandleForLib") != StringRef::npos) {
+          auto FunctionUses = F.uses();
+          for (auto FI = FunctionUses.begin(); FI != FunctionUses.end();) {
+            auto &FunctionUse = *FI++;
+            auto FunctionUser = FunctionUse.getUser();
+            auto instruction = cast<Instruction>(FunctionUser);
+            Value *resourceLoad = instruction->getOperand(
+                DXIL::OperandIndex::kCreateHandleForLibResOpIdx);
+            if (auto *load = cast<LoadInst>(resourceLoad)) {
+              auto *resOrGep = load->getOperand(0);
+              if (auto *gep = dyn_cast<GetElementPtrInst>(resOrGep)) {
+                if (!Visitor(DxilMDHelper::IsMarkedNonUniform(gep), load,
+                             gep->getOperand(2))) {
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  auto CreateHandleFn =
+      HlslOP->GetOpFunc(DXIL::OpCode::CreateHandle, Type::getVoidTy(Ctx));
+  for (auto FI = CreateHandleFn->user_begin();
+       FI != CreateHandleFn->user_end();) {
+    auto *FunctionUser = *FI++;
+    auto instruction = cast<Instruction>(FunctionUser);
+    Value *index =
+        instruction->getOperand(DXIL::OperandIndex::kCreateHandleResIndexOpIdx);
+    if (!isa<Constant>(index)) {
+      const DxilInst_CreateHandle createHandle(instruction);
+      if (!Visitor(createHandle.get_nonUniformIndex_val(), instruction,
+                   index)) {
+        return;
+      }
+    }
+  }
+
+  auto CreateHandleFromBindingFn = HlslOP->GetOpFunc(
+      DXIL::OpCode::CreateHandleFromBinding, Type::getVoidTy(Ctx));
+  for (auto FI = CreateHandleFromBindingFn->user_begin();
+       FI != CreateHandleFromBindingFn->user_end();) {
+    auto *FunctionUser = *FI++;
+    auto instruction = cast<Instruction>(FunctionUser);
+    Value *index = instruction->getOperand(
+        DXIL::OperandIndex::kCreateHandleFromBindingResIndexOpIdx);
+    if (!isa<Constant>(index)) {
+      const DxilInst_CreateHandleFromBinding createHandle(instruction);
+      if (!Visitor(createHandle.get_nonUniformIndex_val(), instruction,
+                   index)) {
+        return;
+      }
+    }
+  }
+
+  auto CreateHandleFromHeapFn = HlslOP->GetOpFunc(
+      DXIL::OpCode::CreateHandleFromHeap, Type::getVoidTy(Ctx));
+  for (auto FI = CreateHandleFromHeapFn->user_begin();
+       FI != CreateHandleFromHeapFn->user_end();) {
+    auto *FunctionUser = *FI++;
+    auto instruction = cast<Instruction>(FunctionUser);
+    Value *index = instruction->getOperand(
+        DXIL::OperandIndex::kCreateHandleFromHeapHeapIndexOpIdx);
+    if (!isa<Constant>(index)) {
+      const DxilInst_CreateHandleFromHeap createHandle(instruction);
+      if (!Visitor(createHandle.get_nonUniformIndex_val(), instruction,
+                   index)) {
+        return;
+      }
+    }
   }
 }
 

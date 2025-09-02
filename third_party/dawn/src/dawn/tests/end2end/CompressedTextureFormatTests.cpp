@@ -757,8 +757,8 @@ TEST_P(CompressedTextureFormatTest, Cube) {
     const wgpu::TextureFormat format = GetParam().mTextureFormat;
 
     // TODO(crbug.com/362762192): diagnose this failure on GLES with ASTC and ETC2 texture formats
-    DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && (utils::IsASTCTextureFormat(format)) ||
-                          utils::IsETC2TextureFormat(format));
+    DAWN_SUPPRESS_TEST_IF(
+        IsOpenGLES() && (utils::IsASTCTextureFormat(format) || utils::IsETC2TextureFormat(format)));
 
     constexpr uint32_t kLayers = 6;
     CopyConfig config = GetDefaultSmallConfig(kLayers);
@@ -1444,6 +1444,8 @@ TEST_P(CompressedTextureWriteTextureTest, WriteMultiple2DArrayLayers) {
 // its virtual size.
 TEST_P(CompressedTextureWriteTextureTest,
        WriteIntoSubresourceWithPhysicalSizeNotEqualToVirtualSize) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
     // TODO(crbug.com/dawn/976): Failing on Linux Intel OpenGL drivers.
     DAWN_SUPPRESS_TEST_IF(IsIntel() && IsOpenGL() && IsLinux());
 

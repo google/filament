@@ -19,9 +19,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "source/latest_version_spirv_header.h"
 #include "source/opt/log.h"
 #include "spirv-tools/libspirv.hpp"
-#include "spirv/unified1/spirv.hpp"
 #include "tools/util/cli_consumer.h"
 
 namespace {
@@ -66,7 +66,7 @@ spv_result_t extractOpString(const spv_position_t& loc,
                              const spv_parsed_instruction_t& instruction,
                              std::string* output) {
   assert(output != nullptr);
-  assert(instruction.opcode == spv::Op::OpString);
+  assert(instruction.opcode == static_cast<unsigned>(spv::Op::OpString));
   if (instruction.num_operands != 2) {
     spvtools::Error(spvtools::utils::CLIMessageConsumer, "", loc,
                     "Missing operands for OpString.");
@@ -85,7 +85,8 @@ spv_result_t extractOpSourceContinued(
     const spv_position_t& loc, const spv_parsed_instruction_t& instruction,
     std::string* output) {
   assert(output != nullptr);
-  assert(instruction.opcode == spv::Op::OpSourceContinued);
+  assert(instruction.opcode ==
+         static_cast<unsigned>(spv::Op::OpSourceContinued));
   if (instruction.num_operands != 1) {
     spvtools::Error(spvtools::utils::CLIMessageConsumer, "", loc,
                     "Missing operands for OpSourceContinued.");
@@ -104,7 +105,7 @@ spv_result_t extractOpSource(const spv_position_t& loc,
                              const spv_parsed_instruction_t& instruction,
                              spv::Id* filename, std::string* code) {
   assert(filename != nullptr && code != nullptr);
-  assert(instruction.opcode == spv::Op::OpSource);
+  assert(instruction.opcode == static_cast<unsigned>(spv::Op::OpSource));
   // OpCode [ Source Language | Version | File (optional) | Source (optional) ]
   if (instruction.num_words < 3) {
     spvtools::Error(spvtools::utils::CLIMessageConsumer, "", loc,
@@ -146,7 +147,7 @@ bool ExtractSourceFromModule(
 
   std::unordered_map<uint32_t, std::string> stringMap;
   std::vector<std::pair<spv::Id, std::string>> sources;
-  spv::Op lastOpcode = spv::Op::OpMax;
+  spv::Op lastOpcode = spv::Op::Max;
   size_t instructionIndex = 0;
 
   spvtools::InstructionParser instructionParser =
@@ -155,20 +156,22 @@ bool ExtractSourceFromModule(
         const spv_position_t loc = {0, 0, instructionIndex + 1};
         spv_result_t result = SPV_SUCCESS;
 
-        if (instruction.opcode == spv::Op::OpString) {
+        if (instruction.opcode == static_cast<unsigned>(spv::Op::OpString)) {
           std::string content;
           result = extractOpString(loc, instruction, &content);
           if (result == SPV_SUCCESS) {
             stringMap.emplace(instruction.result_id, std::move(content));
           }
-        } else if (instruction.opcode == spv::Op::OpSource) {
+        } else if (instruction.opcode ==
+                   static_cast<unsigned>(spv::Op::OpSource)) {
           spv::Id filenameId;
           std::string code;
           result = extractOpSource(loc, instruction, &filenameId, &code);
           if (result == SPV_SUCCESS) {
             sources.emplace_back(std::make_pair(filenameId, std::move(code)));
           }
-        } else if (instruction.opcode == spv::Op::OpSourceContinued) {
+        } else if (instruction.opcode ==
+                   static_cast<unsigned>(spv::Op::OpSourceContinued)) {
           if (lastOpcode != spv::Op::OpSource) {
             spvtools::Error(spvtools::utils::CLIMessageConsumer, "", loc,
                             "OpSourceContinued MUST follow an OpSource.");

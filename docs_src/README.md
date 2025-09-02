@@ -65,6 +65,9 @@ We describe step 1 in detail for the sake of record:
  - Replace css styling in the exported output as needed (so they don't interfere with the book's css.
  - Replace resource urls to refer to locations relative to the mdbook structure.
 
+Any `markdeep` doc can be placed in `docs_src/src_markdeep/` and they will be parsed to html and included
+in the book as above.
+
 ### READMEs
 Filament depends on a number of libraries, which reside in the directory `libs`. These individual
 libaries often have README.md in their root to describe itself. We collect these descriptions into our
@@ -75,7 +78,7 @@ The process for copying and processing these READMEs is outlined in [Introductor
 
 ### Other technical notes
 These are technical documents that do not fit into a library, tool, or directory of the
-Filament source tree. We collect them into the `docs_src/src/notes` directory. No additional
+Filament source tree. We collect them into the `docs_src/src_mdbook/src/notes` directory. No additional
 processing is needed for these documents.
 
 ### Raw source files
@@ -90,7 +93,7 @@ add a link in `SUMMARY.md`, and perform the steps outlined in
 [how-to create section](#how-to-create).
 
 For example, if you are adding a general technical note, then you would
- - Place the document (file with extension `.md`) in `docs_src/src/notes`
+ - Place the document (file with extension `.md`) in `docs_src/src_mdbook/src/notes`
  - Add a link in [`docs_src/src_mdbook/src/SUMMARY.md`]
  - Run the commands in the [Generate](#how-to-generate) section
 

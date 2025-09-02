@@ -146,7 +146,7 @@ void Miss(inout RTTYPE payload){ // expected-error{{vectors of over 4 elements i
 void Intersection() {
   float hitT = RayTCurrent();
   RTTYPE attr = (RTTYPE)0;
-  bool bReported = ReportHit(hitT, 0, attr); // expected-error{{vectors of over 4 elements in user-defined struct parameter are not supported}}
+  bool bReported = ReportHit(hitT, 0, attr); // expected-error{{vectors of over 4 elements in attributes are not supported}}
 }
 
 [shader("callable")]

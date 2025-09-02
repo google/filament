@@ -64,8 +64,6 @@ struct ObjectHandle : public Handle {
     ObjectHandle& AssignFrom(const ObjectHandle& rhs);
     ObjectHandle& AssignFrom(const volatile ObjectHandle& rhs);
 
-    bool operator==(const ObjectHandle& other) const;
-
     bool IsValid() const;
 };
 

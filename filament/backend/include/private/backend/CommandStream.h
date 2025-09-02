@@ -197,7 +197,10 @@ public:
     #define DEBUG_COMMAND_END(methodName, sync) mDriver.debugCommandEnd(this, sync, #methodName)
 #else
     #define DEBUG_COMMAND_BEGIN(methodName, sync, ...)
-    #define DEBUG_COMMAND_END(methodName, sync)
+    // For the line "AutoExecute callOnExit([=, this](){",
+    // "this" will be unused for release build since DEBUG_COMMAND_END is a no-op. So we add the
+    // following workaround.
+    #define DEBUG_COMMAND_END(methodName, sync) ((void)(this));
 #endif
 
 class CommandStream {
@@ -229,7 +232,7 @@ public:
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)                    \
     inline RetType methodName(paramsDecl) {                                                     \
         DEBUG_COMMAND_BEGIN(methodName, true, params);                                          \
-        AutoExecute callOnExit([=](){                                                           \
+        AutoExecute callOnExit([=, this](){                                                     \
             DEBUG_COMMAND_END(methodName, true);                                                \
         });                                                                                     \
         return apply(&Driver::methodName, mDriver, std::forward_as_tuple(params));              \

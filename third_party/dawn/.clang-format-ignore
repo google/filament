@@ -1,0 +1,2 @@
+# We need this file here to prevent clang-format from scanning parent
+# directories for .clang-format-ignore files that shouldn't affect Dawn.

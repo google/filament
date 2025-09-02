@@ -1,5 +1,7 @@
 package android.dawn
 
+import android.dawn.helper.createWebGpu
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -9,7 +11,9 @@ class BufferTest {
      * Test that calling getMappedRange() on a mapped buffer does not raise an exception.
      */
     fun bufferMapTest() {
-        dawnTestLauncher() { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             device.createBuffer(
                 BufferDescriptor(
                     usage = BufferUsage.Vertex,
@@ -27,7 +31,9 @@ class BufferTest {
      * Test that calling getMappedRange() on a non-mapped buffer raises an exception.
      */
     fun bufferMapFailureTest() {
-        dawnTestLauncher() { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             assertThrows(Error::class.java) {
                 device.createBuffer(
                     BufferDescriptor(

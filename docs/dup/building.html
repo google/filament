@@ -162,8 +162,8 @@
 <h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
 <p>To build Filament, you must first install the following tools:</p>
 <ul>
-<li>CMake 3.19 (or more recent)</li>
-<li>clang 14.0 (or more recent)</li>
+<li>CMake 3.22.1 (or more recent)</li>
+<li>clang 16.0 (or more recent)</li>
 <li><a href="https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages">ninja 1.10</a> (or more recent)</li>
 </ul>
 <p>Additional dependencies may be required for your operating system. Please refer to the appropriate
@@ -220,16 +220,16 @@ cmake . -DOPTION=ON       # Replace OPTION with the option name, set to ON / OFF
 <h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
 <p>Make sure you've installed the following dependencies:</p>
 <ul>
-<li><code>clang-14</code> or higher</li>
+<li><code>clang-16</code> or higher</li>
 <li><code>libglu1-mesa-dev</code></li>
-<li><code>libc++-14-dev</code> (<code>libcxx-devel</code> and <code>libcxx-static</code> on Fedora) or higher</li>
-<li><code>libc++abi-14-dev</code> (<code>libcxxabi-static</code> on Fedora) or higher</li>
+<li><code>libc++-16-dev</code> (<code>libcxx-devel</code> and <code>libcxx-static</code> on Fedora) or higher</li>
+<li><code>libc++abi-16-dev</code> (<code>libcxxabi-static</code> on Fedora) or higher</li>
 <li><code>ninja-build</code></li>
 <li><code>libxi-dev</code></li>
 <li><code>libxcomposite-dev</code> (<code>libXcomposite-devel</code> on Fedora)</li>
 <li><code>libxxf86vm-dev</code> (<code>libXxf86vm-devel</code> on Fedora)</li>
 </ul>
-<pre><code class="language-shell">sudo apt install clang-14 libglu1-mesa-dev libc++-14-dev libc++abi-14-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
+<pre><code class="language-shell">sudo apt install clang-16 libglu1-mesa-dev libc++-16-dev libc++abi-16-dev ninja-build libxi-dev libxcomposite-dev libxxf86vm-dev -y
 </code></pre>
 <p>After dependencies have been installed, we highly recommend using the <a href="#easy-build">easy build</a>
 script.</p>
@@ -243,15 +243,15 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/fila
 <code>cmake</code> with the following command:</p>
 <pre><code class="language-shell">mkdir out/cmake-release
 cd out/cmake-release
-# Or use a specific version of clang, for instance /usr/bin/clang-14
+# Or use a specific version of clang, for instance /usr/bin/clang-16
 CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
   cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 </code></pre>
 <p>You can also export the <code>CC</code> and <code>CXX</code> environment variables to always point to <code>clang</code>. Another
 solution is to use <code>update-alternatives</code> to both change the default compiler, and point to a
 specific version of clang:</p>
-<pre><code class="language-shell">update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 100
-update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 100
+<pre><code class="language-shell">update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
 update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
 update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 </code></pre>

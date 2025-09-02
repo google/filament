@@ -39,6 +39,7 @@
 
 namespace tint::core::constant {
 class Splat;
+class String;
 
 template <typename T>
 class Scalar;
@@ -151,6 +152,10 @@ class Manager final {
     /// @param value the constant value
     /// @return a Scalar holding the AInt value @p value
     const Scalar<AInt>* Get(AInt value);
+
+    /// @param value the string value
+    /// @return a String holding the value @p value
+    const String* Get(std::string_view value);
 
     /// Constructs a constant zero-value of the type @p type.
     /// @param type the constant type

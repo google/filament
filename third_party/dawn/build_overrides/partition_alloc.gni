@@ -64,7 +64,5 @@ raw_ptr_zero_on_construct_default = true
 raw_ptr_zero_on_move_default = true
 raw_ptr_zero_on_destruct_default = false
 
-# Allow embedders to opt-out of C++20 build which is set as default.
-#
-# Dawn still uses C++17 only, because of Skia.
-assert_cpp20_default = false
+# Dawn requires C++20.
+assert_cpp20_default = true

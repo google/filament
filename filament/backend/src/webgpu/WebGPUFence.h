@@ -28,6 +28,11 @@ class Queue;
 
 namespace filament::backend {
 
+/**
+  * A WebGPU-specific implementation of the HwFence.
+  * This class is used to synchronize the CPU and GPU. It allows the CPU to know when the GPU has
+  * finished a set of commands.
+  */
 class WebGPUFence final : public HwFence {
 public:
     [[nodiscard]] FenceStatus getStatus();
@@ -35,6 +40,9 @@ public:
     void addMarkerToQueueState(wgpu::Queue const&);
 
 private:
+    // The current status of the fence.
+    // This is atomic because it can be updated by a WebGPU callback thread and read from the main
+    // thread.
     std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
 };
 

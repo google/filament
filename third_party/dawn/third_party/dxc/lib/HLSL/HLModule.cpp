@@ -700,6 +700,7 @@ HLModule::AddResourceWithGlobalVariableAndProps(llvm::Constant *GV,
     Res->SetRW(true);
     Res->SetROV(RP.Basic.IsROV);
     Res->SetGloballyCoherent(RP.Basic.IsGloballyCoherent);
+    Res->SetReorderCoherent(RP.Basic.IsReorderCoherent);
     Res->SetHasCounter(RP.Basic.SamplerCmpOrHasCounter);
     Res->SetKind(RK);
     Res->SetGlobalSymbol(GV);

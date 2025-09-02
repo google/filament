@@ -133,6 +133,7 @@ class SPIRV_TOOLS_EXPORT ValidatorOptions {
   }
 
   // Allow base operands of some bit operations to be non-32-bit wide.
+  // Was added for VK_KHR_maintenance9
   void SetAllowVulkan32BitBitwise(bool val) {
     spvValidatorOptionsSetAllowVulkan32BitBitwise(options_, val);
   }

@@ -1,0 +1,36 @@
+static uint gl_LocalInvocationIndex;
+struct SPIRV_Cross_Input
+{
+    uint gl_LocalInvocationIndex : SV_GroupIndex;
+};
+
+struct gl_MeshPerVertexEXT
+{
+    float gl_ClipDistance[1] : SV_ClipDistance;
+};
+
+struct gl_MeshPerPrimitiveEXT
+{
+};
+
+void write_clip_distance(inout float v[1])
+{
+    v[0] += 1.0f;
+}
+
+void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[3])
+{
+    SetMeshOutputCounts(3u, 1u);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance[0] = 4.0f;
+    float param[1] = gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance;
+    write_clip_distance(param);
+    gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_ClipDistance = param;
+}
+
+[outputtopology("triangle")]
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input, out vertices gl_MeshPerVertexEXT gl_MeshVerticesEXT[3])
+{
+    gl_LocalInvocationIndex = stage_input.gl_LocalInvocationIndex;
+    mesh_main(gl_MeshVerticesEXT);
+}

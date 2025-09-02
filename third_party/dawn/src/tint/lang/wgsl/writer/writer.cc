@@ -34,34 +34,17 @@
 #include "src/tint/lang/wgsl/writer/ir_to_program/ir_to_program.h"
 #include "src/tint/lang/wgsl/writer/raise/raise.h"
 
-#if TINT_BUILD_SYNTAX_TREE_WRITER
-#include "src/tint/lang/wgsl/writer/syntax_tree_printer/syntax_tree_printer.h"
-#endif  // TINT_BUILD_SYNTAX_TREE_WRITER
-
 namespace tint::wgsl::writer {
 
-Result<Output> Generate(const Program& program, const Options& options) {
-    (void)options;
-
+Result<Output> Generate(const Program& program) {
     Output output;
-#if TINT_BUILD_SYNTAX_TREE_WRITER
-    if (options.use_syntax_tree_writer) {
-        // Generate the WGSL code.
-        auto impl = std::make_unique<SyntaxTreePrinter>(program);
-        if (!impl->Generate()) {
-            return Failure{impl->Diagnostics().Str()};
-        }
-        output.wgsl = impl->Result();
-    } else  // NOLINT(readability/braces)
-#endif
-    {
-        // Generate the WGSL code.
-        auto impl = std::make_unique<ASTPrinter>(program);
-        if (!impl->Generate()) {
-            return Failure{impl->Diagnostics().Str()};
-        }
-        output.wgsl = impl->Result();
+
+    // Generate the WGSL code.
+    auto impl = std::make_unique<ASTPrinter>(program);
+    if (!impl->Generate()) {
+        return Failure{impl->Diagnostics().Str()};
     }
+    output.wgsl = impl->Result();
 
     return output;
 }
@@ -71,7 +54,7 @@ Result<Output> WgslFromIR(core::ir::Module& module, const ProgramOptions& option
     if (res != Success) {
         return res.Failure();
     }
-    return Generate(res.Move(), Options{});
+    return Generate(res.Move());
 }
 
 Result<Program> ProgramFromIR(core::ir::Module& module, const ProgramOptions& options) {

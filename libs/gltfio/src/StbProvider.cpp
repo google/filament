@@ -101,6 +101,7 @@ Texture* StbProvider::pushTexture(const uint8_t* data, size_t byteCount,
             .height(height)
             .levels(0xff)
             .format(any(flags & TextureFlags::sRGB) ? InternalFormat::SRGB8_A8 : InternalFormat::RGBA8)
+            .usage(Texture::Usage::DEFAULT | Texture::Usage::GEN_MIPMAPPABLE)
             .build(*mEngine);
 
     if (texture == nullptr) {

@@ -158,12 +158,11 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
 
     static_assert(DOCUMENTED_MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_BUFFER_COUNT);
 
-    if (downcast(engine).features.engine.debug.assert_vertex_buffer_count_exceeds_8) {
-        FILAMENT_CHECK_PRECONDITION(mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT)
-                << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
-    } else if (mImpl->mBufferCount > DOCUMENTED_MAX_VERTEX_BUFFER_COUNT) {
-        LOG(WARNING) << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
-    }
+    auto const& featureFlags = static_cast<FEngine*>(&engine)->features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+            mImpl->mBufferCount <= DOCUMENTED_MAX_VERTEX_BUFFER_COUNT,
+            featureFlags.assert_vertex_buffer_count_exceeds_8)
+            << "bufferCount cannot be more than " << DOCUMENTED_MAX_VERTEX_BUFFER_COUNT;
 
     // Next we check if any unused buffer slots have been allocated. This helps prevent errors
     // because uploading to an unused slot can trigger undefined behavior in the backend.
@@ -177,15 +176,10 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
                 << "attribute " << j << " offset=" << attributes[j].offset
                 << " is not multiple of 4";
 
-        FEngine* fengine = static_cast<FEngine*>(&engine);
-        if (fengine->features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4) {
-            FILAMENT_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0)
-                    << "attribute " << j << " stride=" << attributes[j].stride
-                    << " is not multiple of 4";
-        } else if ((attributes[j].stride & 0x3u) != 0) {
-            LOG(WARNING) << "attribute " << j << " stride=" << attributes[j].stride
-                         << " is not multiple of 4";
-        }
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION((attributes[j].stride & 0x3u) == 0,
+                featureFlags.assert_vertex_buffer_attribute_stride_mult_of_4)
+                << "attribute " << j << " stride=" << +attributes[j].stride
+                << " is not multiple of 4";
 
         if (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0) {
             FILAMENT_CHECK_PRECONDITION(!(attributes[j].flags & Attribute::FLAG_INTEGER_TARGET))

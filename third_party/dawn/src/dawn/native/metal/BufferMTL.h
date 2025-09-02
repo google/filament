@@ -69,7 +69,7 @@ class Buffer final : public BufferBase {
     void UnmapImpl() override;
     void DestroyImpl() override;
     void SetLabelImpl() override;
-    void* GetMappedPointer() override;
+    void* GetMappedPointerImpl() override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
 

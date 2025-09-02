@@ -1,6 +1,9 @@
 package android.dawn
 
+import android.dawn.helper.UncapturedErrorException
+import android.dawn.helper.createWebGpu
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,13 +16,14 @@ class ErrorTest {
      * the adapter in DawnTestLauncher.
      */
     fun errorTest() {
-        dawnTestLauncher { device ->
+        runBlocking {
+            val webGpu = createWebGpu()
+            val device = webGpu.device
             assertThrows(UncapturedErrorException::class.java) {
                 device.createTexture(
                     TextureDescriptor(
                         usage = TextureUsage.None,
-                        size = Extent3D(0),
-                        format = TextureFormat.Undefined  // Invalid parameter for createTexture().
+                        size = Extent3D(0)
                     )
                 )
             }

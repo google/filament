@@ -110,14 +110,23 @@ VkResult loader_copy_to_new_str(const struct loader_instance *inst, const char *
 // Allocate a loader_string_list with enough space for allocated_count strings inside of it
 VkResult create_string_list(const struct loader_instance *inst, uint32_t allocated_count, struct loader_string_list *string_list);
 // Resize if there isn't enough space, then add the string str to the end of the loader_string_list
-// This function takes ownership of the str passed in - but only when it succeeds
+// This function takes ownership of the str passed in
 VkResult append_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str);
-// Resize if there isn't enough space, then copy the string str to a new string the end of the loader_string_list
+// Resize if there isn't enough space, then add the string str to the start of the loader_string_list
+// This function takes ownership of the str passed in
+VkResult prepend_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, char *str);
+// Copy the string str to a new string and append it to string_list, resizing string_list if there isn't enough space.
 // This function does not take ownership of the string, it merely copies it.
-// This function appends a null terminator to the string automatically
+// This function automatically appends a null terminator to the string being copied
 // The str_len parameter does not include the null terminator
 VkResult copy_str_to_string_list(const struct loader_instance *inst, struct loader_string_list *string_list, const char *str,
                                  size_t str_len);
+// Copy the string str to a new string and prepend it to string_list, resizing string_list if there isn't enough space.
+// This function does not take ownership of the string, it merely copies it.
+// This function automatically appends a null terminator to the string being copied
+// The str_len parameter does not include the null terminator
+VkResult copy_str_to_start_of_string_list(const struct loader_instance *inst, struct loader_string_list *string_list,
+                                          const char *str, size_t str_len);
 
 // Free any string inside of loader_string_list and then free the list itself
 void free_string_list(const struct loader_instance *inst, struct loader_string_list *string_list);
@@ -212,8 +221,13 @@ VkResult setup_loader_tramp_phys_dev_groups(struct loader_instance *inst, uint32
                                             VkPhysicalDeviceGroupProperties *groups);
 void unload_drivers_without_physical_devices(struct loader_instance *inst);
 
+VkResult loader_apply_settings_device_configurations(struct loader_instance *inst, uint32_t *pPhysicalDeviceCount,
+                                                     VkPhysicalDevice *pPhysicalDevices);
+
 VkStringErrorFlags vk_string_validate(const int max_length, const char *char_array);
 char *loader_get_next_path(char *path);
+VkResult add_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
+VkResult prepend_if_manifest_file(const struct loader_instance *inst, const char *file_name, struct loader_string_list *out_files);
 VkResult add_data_files(const struct loader_instance *inst, char *search_path, struct loader_string_list *out_files,
                         bool use_first_found_manifest);
 

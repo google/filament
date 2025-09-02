@@ -198,7 +198,8 @@ FMaterial* PostProcessManager::PostProcessMaterial::getMaterial(FEngine& engine,
     if (UTILS_UNLIKELY(mSize)) {
         loadMaterial(engine);
     }
-    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) });
+    mMaterial->prepareProgram(Variant{ Variant::type_t(variant) },
+            CompilerPriorityQueue::CRITICAL);
     return mMaterial;
 }
 
@@ -343,7 +344,7 @@ void PostProcessManager::init() noexcept {
             engine.getDummyMorphTargetBuffer()->getTangentsHandle(), {});
 
     driver.updateDescriptorSetTexture(mDummyPerRenderableDsh,
-            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, engine.getZeroTextureArray(),
+            +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, engine.getZeroTexture(),
             {});
 
     mSsrPassDescriptorSet.init(engine);
@@ -579,7 +580,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
                 });
             },
-            [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+            [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
                     auto const&, DriverApi& driver) mutable {
                 Variant structureVariant(Variant::DEPTH_VARIANT);
                 structureVariant.setPicking(config.picking);
@@ -623,7 +624,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                     });
                 }
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 getStructureDescriptorSet().bind(driver);
                 bindPerRenderableDescriptorSet(driver);
 
@@ -689,7 +690,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                             .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
                         });
                 },
-                [=, passBuilder = passBuilder](FrameGraphResources const& resources,
+                [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
                     auto const&, DriverApi& driver) mutable {
                         Variant pickingVariant(Variant::DEPTH_VARIANT);
                         pickingVariant.setPicking(true);
@@ -953,7 +954,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 // bind the per-view descriptorSet that is used for the structure pass
                 getStructureDescriptorSet().bind(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -992,7 +993,17 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
 #endif
                 auto& material = getPostProcessMaterial(materialName);
 
-                FMaterial const * const ma = material.getMaterial(mEngine);
+                FMaterial* ma = material.getMaterial(mEngine);
+                bool dirty = false;
+                setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks, dirty);
+                setConstantParameter(ma, "linearThickness", options.gtao.linearThickness, dirty);
+                if (dirty) {
+                   ma->invalidate();
+                   // TODO: call Material::compile(), we can't do that now because it works only
+                   //       with surface materials
+                }
+
+                ma = material.getMaterial(mEngine);
                 FMaterialInstance* const mi = getMaterialInstance(ma);
 
                 // Set AO type specific material parameters
@@ -1027,6 +1038,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                         mi->setParameter("radius", options.radius);
                         mi->setParameter("intensity", options.intensity);
                         mi->setParameter("thicknessHeuristic", options.gtao.thicknessHeuristic);
+                        mi->setParameter("constThickness", options.gtao.constThickness);
 
                         break;
                     }
@@ -1147,7 +1159,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::bilateralBlurPass(FrameGraph
                         .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1
                 });
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 // TODO: the structure descriptor set might not be the best fit.
                 getStructureDescriptorSet().bind(driver);
@@ -1315,7 +1327,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::gaussianBlurPass(FrameGraph&
                 data.temp = builder.declareRenderPass(data.temp);
                 data.out = builder.declareRenderPass(output);
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -1793,7 +1805,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         }
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
 
@@ -1853,7 +1865,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     });
                 }
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -1931,7 +1943,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     });
                     data.outTilesCocMinMax = builder.declareRenderPass(data.outTilesCocMinMax);
                 },
-                [=](FrameGraphResources const& resources,
+                [=, this](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
                     bindPostProcessDescriptorSet(driver);
                     bindPerRenderableDescriptorSet(driver);
@@ -1969,7 +1981,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                     data.outTilesCocMinMax = builder.createTexture("dof dilated tiles output", inputDesc);
                     data.outTilesCocMinMax = builder.declareRenderPass(data.outTilesCocMinMax );
                 },
-                [=](FrameGraphResources const& resources,
+                [=, this](FrameGraphResources const& resources,
                         auto const& data, DriverApi& driver) {
                     bindPostProcessDescriptorSet(driver);
                     bindPerRenderableDescriptorSet(driver);
@@ -2026,7 +2038,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         .attachments = { .color = { data.outColor, data.outAlpha }}
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
 
@@ -2092,7 +2104,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                         .attachments = { .color = { data.outColor, data.outAlpha }}
                 });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
 
@@ -2141,7 +2153,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dof(FrameGraph& fg,
                 data.output = builder.createTexture("DoF output", inputDesc);
                 data.output = builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -2180,7 +2192,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::downscalePass(FrameGraph& fg
                 data.output = builder.createTexture("Downsample-output", outDesc);
                 builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -2315,7 +2327,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     builder.declareRenderPass(out, &data.outRT[i]);
                 }
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -2372,7 +2384,7 @@ PostProcessManager::BloomPassOutput PostProcessManager::bloom(FrameGraph& fg,
                     builder.declareRenderPass(out, &data.outRT[i]);
                 }
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto hwOut = resources.getTexture(data.out);
@@ -2433,7 +2445,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::flarePass(FrameGraph& fg,
                 });
                 data.out = builder.declareRenderPass(data.out);
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -2577,7 +2589,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
                         .attachments = { .color = { data.inout }}
                 });
             },
-            [=](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
                 customResolvePrepareSubpass(driver, CustomResolveOp::UNCOMPRESS);
                 auto out = resources.getRenderPassInfo();
                 out.params.subpassMask = 1;
@@ -2655,7 +2667,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
                     }
                 }
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto colorTexture = resources.getTexture(data.input);
@@ -2751,7 +2763,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::fxaa(FrameGraph& fg,
                 });
                 data.output = builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto const& inDesc = resources.getDescriptor(data.input);
@@ -2970,7 +2982,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                         .attachments = { .color = { data.output, data.tonemappedOutput }}
                 });
             },
-            [=, &current](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this, &current](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
 
@@ -3074,7 +3086,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
     // optional sharpen pass from FSR1
     if (taaOptions.sharpness > 0.0f) {
         input = rcas(fg, taaOptions.sharpness,
-                input, fg.getDescriptor(input), colorGradingConfig.translucent);
+                input, fg.getDescriptor(input),
+                colorGradingConfig.translucent ? RcasMode::ALPHA_PASSTHROUGH : RcasMode::OPAQUE);
     }
 
     struct ExportColorHistoryData {
@@ -3099,7 +3112,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
         float const sharpness,
         FrameGraphId<FrameGraphTexture> const input,
         FrameGraphTexture::Descriptor const& outDesc,
-        bool const translucent) {
+        RcasMode const mode) {
 
     struct QuadBlitData {
         FrameGraphId<FrameGraphTexture> input;
@@ -3112,7 +3125,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 data.output = builder.createTexture("FFX FSR1 Rcas output", outDesc);
                 data.output = builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -3121,8 +3134,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 auto const out = resources.getRenderPassInfo();
                 auto const& outputDesc = resources.getDescriptor(data.input);
 
-                PostProcessVariant const variant = translucent ?
-                        PostProcessVariant::TRANSLUCENT : PostProcessVariant::OPAQUE;
+                PostProcessVariant const variant = mode == RcasMode::OPAQUE ?
+                        PostProcessVariant::OPAQUE : PostProcessVariant::TRANSLUCENT;
 
                 auto const& material = getPostProcessMaterial("fsr_rcas");
                 FMaterialInstance* const mi =
@@ -3135,14 +3148,24 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
                 mi->setParameter("resolution", float4{
                         outputDesc.width, outputDesc.height,
                         1.0f / outputDesc.width, 1.0f / outputDesc.height });
-                commitAndRenderFullScreenQuad(driver, out, mi, variant);
+                mi->commit(driver);
+                mi->use(driver);
+
+                auto pipeline = getPipelineState(material.getMaterial(mEngine), variant);
+                if (mode == RcasMode::BLENDED) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+                renderFullScreenQuad(out, pipeline, driver);
                 unbindAllDescriptorSets(driver);
             });
 
     return ppFsrRcas->output;
 }
 
-FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool translucent,
+FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool const translucent,
     bool sourceHasLuminance, DynamicResolutionOptions dsrOptions,
     FrameGraphId<FrameGraphTexture> const input, filament::Viewport const& vp,
     FrameGraphTexture::Descriptor const& outDesc, SamplerMagFilter filter) noexcept {
@@ -3150,14 +3173,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
     assert_invariant(fg.getSubResourceDescriptor(input).layer == 0);
     assert_invariant(fg.getSubResourceDescriptor(input).level == 0);
 
-    const bool lowQualityFallback = translucent;
-    if (lowQualityFallback) {
+    if (const bool lowQualityFallback = translucent; lowQualityFallback) {
         // FidelityFX-FSR nor SGSR support the source alpha channel currently
         dsrOptions.quality = QualityLevel::LOW;
     }
 
     if (dsrOptions.quality == QualityLevel::LOW) {
-        return upscaleBilinear(fg, dsrOptions, input, vp, outDesc, filter);
+        return upscaleBilinear(fg, translucent, dsrOptions, input, vp, outDesc, filter);
     }
     if (dsrOptions.quality == QualityLevel::MEDIUM) {
         return upscaleSGSR1(fg, sourceHasLuminance, dsrOptions, input, vp, outDesc);
@@ -3166,6 +3188,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg,
+        bool const translucent,
         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
         filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
         SamplerMagFilter filter) noexcept {
@@ -3174,6 +3197,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
         FrameGraphId<FrameGraphTexture> input;
         FrameGraphId<FrameGraphTexture> output;
     };
+
+    // upscaleBilinear is responsible for upscaling AND blending the result (so we don't
+    // have to do it with an extra pass). Blending must then happen either during the upsacling
+    // or during the RCAS pass, whichever is last
+
+    bool const blended = translucent && (dsrOptions.sharpness == 0.0f);
 
     auto const& ppQuadBlit = fg.addPass<QuadBlitData>(dsrOptions.enabled ? "upscaling" : "compositing",
             [&](FrameGraph::Builder& builder, auto& data) {
@@ -3184,7 +3213,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                         .attachments = { .color = { data.output } },
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [this, vp, filter](FrameGraphResources const& resources,
+            [this, blended, vp, filter](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -3216,6 +3245,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
                 auto out = resources.getRenderPassInfo();
 
                 auto pipeline = getPipelineState(material.getMaterial(mEngine));
+                if (blended) {
+                    pipeline.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+                    pipeline.rasterState.blendFunctionDstRGB = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                    pipeline.rasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_ALPHA;
+                }
+
                 renderFullScreenQuad(out, pipeline, driver);
                 unbindAllDescriptorSets(driver);
             });
@@ -3225,7 +3261,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& 
     // if we had to take the low quality fallback, we still do the "sharpen pass"
     if (dsrOptions.sharpness > 0.0f) {
         output = rcas(fg, dsrOptions.sharpness, output, outDesc,
-                false /* translucent=false, because dst buffer is allocated */);
+                translucent ? RcasMode::BLENDED : RcasMode::OPAQUE);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3438,7 +3474,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
 
     auto output = ppQuadBlit->output;
     if (dsrOptions.sharpness > 0.0f) {
-        output = rcas(fg, dsrOptions.sharpness, output, outDesc, false);
+        output = rcas(fg, dsrOptions.sharpness, output, outDesc, RcasMode::OPAQUE);
     }
 
     // we rely on automatic culling of unused render passes
@@ -3469,7 +3505,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blit(FrameGraph& fg, bool co
                         .attachments = { .color = { data.output }},
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -3572,7 +3608,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::blitDepth(FrameGraph& fg,
                 builder.declareRenderPass(builder.getName(data.output),
                         {.attachments = {.depth = {data.output}}});
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 getStructureDescriptorSet().bind(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto depth = resources.getTexture(data.input);
@@ -3691,7 +3727,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::resolveDepth(FrameGraph& fg,
                         .attachments = { .depth = { data.output }},
                         .clearFlags = TargetBufferFlags::DEPTH });
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto const& input = resources.getTexture(data.input);
@@ -3729,7 +3765,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::vsmMipmapPass(FrameGraph& fg
                     .clearFlags = TargetBufferFlags::COLOR
                 });
             },
-            [=](FrameGraphResources const& resources,
+            [=, this](FrameGraphResources const& resources,
                     auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
@@ -3787,7 +3823,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugShadowCascades(FrameGra
                 data.output = builder.createTexture("Shadow Cascade Debug", desc);
                 builder.declareRenderPass(data.output);
             },
-            [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto color = resources.getTexture(data.color);
@@ -3834,7 +3870,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugCombineArrayTexture(Fra
                     .attachments = {.color = { data.output }},
                     .clearFlags = TargetBufferFlags::DEPTH });
         },
-        [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+        [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                 bindPostProcessDescriptorSet(driver);
                 bindPerRenderableDescriptorSet(driver);
                 auto color = resources.getTexture(data.input);
@@ -3917,7 +3953,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayShadowTexture(
                             .attachments = { .color = { data.color }}
                     });
                 },
-                [=](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
+                [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
                     bindPostProcessDescriptorSet(driver);
                     bindPerRenderableDescriptorSet(driver);
                     auto const out = resources.getRenderPassInfo();

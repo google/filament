@@ -51,6 +51,7 @@ cc_library(
     "uint8_t4_packed.h",
   ],
   deps = [
+    "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/type",
     "//src/tint/utils",

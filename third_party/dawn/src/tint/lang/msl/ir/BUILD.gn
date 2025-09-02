@@ -45,8 +45,6 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("ir") {
   sources = [
-    "binary.cc",
-    "binary.h",
     "builtin_call.cc",
     "builtin_call.h",
     "component.cc",
@@ -81,7 +79,6 @@ libtint_source_set("ir") {
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
-      "binary_test.cc",
       "builtin_call_test.cc",
       "member_builtin_call_test.cc",
     ]

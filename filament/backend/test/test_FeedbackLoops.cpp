@@ -126,7 +126,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         TrianglePrimitive const triangle(getDriverApi());
 
         // Create a texture.
-        auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+        auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
         Handle<HwTexture> const texture = cleanup.add(api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage));
 
@@ -246,7 +246,7 @@ TEST_F(BackendTest, FeedbackLoops) {
             // NOTE: Calling glReadPixels on any miplevel other than the base level
             // seems to be un-reliable on some GPU's.
             if (frame == kNumFrames - 1) {
-                EXPECT_IMAGE(renderTargets[0], getExpectations(),
+                EXPECT_IMAGE(renderTargets[0],
                         ScreenshotParams(kTexWidth, kTexHeight, "FeedbackLoops", 4192780705));
             }
 

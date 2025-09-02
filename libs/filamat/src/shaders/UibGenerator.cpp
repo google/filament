@@ -140,6 +140,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fParams",                0, Type::UINT3                   },
             { "lightChannels",          0, Type::INT                     },
             { "froxelCountXY",          0, Type::FLOAT2                  },
+            { "enableFroxelViz",        0, Type::INT                     },
+            { "dynReserved0",           0, Type::INT                     },
+            { "dynReserved1",           0, Type::INT                     },
+            { "dynReserved2",           0, Type::INT                     },
 
             { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
@@ -189,6 +193,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fogOneOverFarMinusNear",  0, Type::FLOAT, Precision::HIGH },
             { "fogNearOverFarMinusNear", 0, Type::FLOAT, Precision::HIGH },
             { "fogFromWorldMatrix",      0, Type::MAT3, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogLinearParams",         0, Type::FLOAT2, Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "fogReserved0",            0, Type::FLOAT2, Precision::HIGH },
 
             // ------------------------------------------------------------------------------------
             // Screen-space reflections [variant: SSR (i.e.: VSM | SRE)]
@@ -271,7 +277,8 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
 BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
-            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH }})
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+                    {}, {}, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT"}})
             .build();
     return uib;
 }

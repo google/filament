@@ -205,60 +205,6 @@ TEST_F(SpirvWriterTest, Function_EntryPoint_Vertex) {
     EXPECT_EQ(workgroup_info.z, 0u);
 }
 
-TEST_F(SpirvWriterTest, Function_EntryPoint_Multiple) {
-    auto* f1 = b.ComputeFunction("main1", 32_u, 4_u, 1_u);
-    b.Append(f1->Block(), [&] {  //
-        b.Return(f1);
-    });
-
-    auto* f2 = b.ComputeFunction("main2", 8_u, 2_u, 16_u);
-    b.Append(f2->Block(), [&] {  //
-        b.Return(f2);
-    });
-
-    auto* f3 = b.Function("main3", ty.void_(), core::ir::Function::PipelineStage::kFragment);
-    b.Append(f3->Block(), [&] {  //
-        b.Return(f3);
-    });
-
-    ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST(R"(
-               OpEntryPoint GLCompute %main1 "main1"
-               OpEntryPoint GLCompute %main2 "main2"
-               OpEntryPoint Fragment %main3 "main3"
-               OpExecutionMode %main1 LocalSize 32 4 1
-               OpExecutionMode %main2 LocalSize 8 2 16
-               OpExecutionMode %main3 OriginUpperLeft
-
-               ; Debug Information
-               OpName %main1 "main1"                ; id %1
-               OpName %main2 "main2"                ; id %5
-               OpName %main3 "main3"                ; id %7
-
-               ; Types, variables and constants
-       %void = OpTypeVoid
-          %3 = OpTypeFunction %void
-
-               ; Function main1
-      %main1 = OpFunction %void None %3
-          %4 = OpLabel
-               OpReturn
-               OpFunctionEnd
-
-               ; Function main2
-      %main2 = OpFunction %void None %3
-          %6 = OpLabel
-               OpReturn
-               OpFunctionEnd
-
-               ; Function main3
-      %main3 = OpFunction %void None %3
-          %8 = OpLabel
-               OpReturn
-               OpFunctionEnd
-)");
-}
-
 TEST_F(SpirvWriterTest, Function_ReturnValue) {
     auto* func = b.Function("foo", ty.i32());
     b.Append(func->Block(), [&] {  //
@@ -295,16 +241,26 @@ TEST_F(SpirvWriterTest, Function_Parameters) {
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
           %5 = OpTypeFunction %int %int %int
+       %uint = OpTypeInt 32 0
        %void = OpTypeVoid
-         %10 = OpTypeFunction %void
+         %14 = OpTypeFunction %void
 
                ; Function foo
         %foo = OpFunction %int None %5
           %x = OpFunctionParameter %int
           %y = OpFunctionParameter %int
           %6 = OpLabel
-          %7 = OpIAdd %int %x %y
-               OpReturnValue %7
+          %8 = OpBitcast %uint %x
+          %9 = OpBitcast %uint %y
+         %10 = OpIAdd %uint %8 %9
+         %11 = OpBitcast %int %10
+               OpReturnValue %11
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %14
+         %15 = OpLabel
+               OpReturn
                OpFunctionEnd
 )");
 }
@@ -495,33 +451,24 @@ TEST_F(SpirvWriterTest, Function_ShaderIO_F16_Output_WithoutCapability) {
 }
 
 TEST_F(SpirvWriterTest, Function_ShaderIO_DualSourceBlend) {
-    auto* outputs =
-        ty.Struct(mod.symbols.New("Outputs"), {
-                                                  {
-                                                      mod.symbols.Register("a"),
-                                                      ty.f32(),
-                                                      core::IOAttributes{
-                                                          /* location */ 0u,
-                                                          /* index */ 0u,
-                                                          /* color */ std::nullopt,
-                                                          /* builtin */ std::nullopt,
-                                                          /* interpolation */ std::nullopt,
-                                                          /* invariant */ false,
-                                                      },
-                                                  },
-                                                  {
-                                                      mod.symbols.Register("b"),
-                                                      ty.f32(),
-                                                      core::IOAttributes{
-                                                          /* location */ 0u,
-                                                          /* index */ 1u,
-                                                          /* color */ std::nullopt,
-                                                          /* builtin */ std::nullopt,
-                                                          /* interpolation */ std::nullopt,
-                                                          /* invariant */ false,
-                                                      },
-                                                  },
-                                              });
+    auto* outputs = ty.Struct(mod.symbols.New("Outputs"), {
+                                                              {
+                                                                  mod.symbols.Register("a"),
+                                                                  ty.f32(),
+                                                                  core::IOAttributes{
+                                                                      .location = 0u,
+                                                                      .blend_src = 0u,
+                                                                  },
+                                                              },
+                                                              {
+                                                                  mod.symbols.Register("b"),
+                                                                  ty.f32(),
+                                                                  core::IOAttributes{
+                                                                      .location = 0u,
+                                                                      .blend_src = 1u,
+                                                                  },
+                                                              },
+                                                          });
 
     auto* func = b.Function("main", outputs, core::ir::Function::PipelineStage::kFragment);
     b.Append(func->Block(), [&] {  //

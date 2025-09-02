@@ -191,6 +191,11 @@ ResultOrError<VkSamplerYcbcrConversion> CreateSamplerYCbCrConversionCreateInfo(
     YCbCrVkDescriptor yCbCrDescriptor,
     Device* device);
 
+// TODO(42240963): properly surface the limit.
+// Linux nearly always exposes 4096.
+// https://vulkan.gpuinfo.org/displayextensionproperty.php?platform=linux&extensionname=VK_EXT_external_memory_host&extensionproperty=minImportedHostPointerAlignment
+constexpr uint32_t kMinimumHostMappedPointerAlignment = 4096u;
+
 }  // namespace dawn::native::vulkan
 
 #endif  // SRC_DAWN_NATIVE_VULKAN_UTILSVULKAN_H_

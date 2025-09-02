@@ -28,6 +28,7 @@
 #include "gmock/gmock.h"
 
 #include "src/tint/lang/core/type/array.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/matrix.h"
@@ -92,15 +93,16 @@ void foo() {
 
 TEST_F(MslWriterTest, EmitType_RuntimeArray) {
     auto* func = b.Function("foo", ty.void_());
+    auto* param =
+        b.FunctionParam("param", ty.ptr(core::AddressSpace::kStorage, ty.array<bool, 0>()));
+    func->SetParams({param});
     b.Append(func->Block(), [&] {
-        b.Var("a", ty.ptr(core::AddressSpace::kFunction, ty.array<bool, 0>()));
         b.Return(func);
     });
 
     ASSERT_TRUE(Generate()) << err_ << output_.msl;
     EXPECT_EQ(output_.msl, MetalHeader() + MetalArray() + R"(
-void foo() {
-  tint_array<bool, 1> a = {};
+void foo(device tint_array<bool, 1>* const param) {
 }
 )");
 }
@@ -991,6 +993,22 @@ void foo(sampler a) {
 )");
 }
 
+TEST_F(MslWriterTest, EmitType_BindingArraySampledTexture) {
+    auto* func = b.Function("foo", ty.void_());
+    auto* sampled_texture = ty.sampled_texture(core::type::TextureDimension::k2d, ty.f32());
+    auto* param = b.FunctionParam("a", ty.binding_array(sampled_texture, 4_u));
+    func->SetParams({param});
+    b.Append(func->Block(), [&] {  //
+        b.Return(func);
+    });
+
+    ASSERT_TRUE(Generate()) << err_ << output_.msl;
+    EXPECT_EQ(output_.msl, MetalHeader() + R"(
+void foo(array<texture2d<float, access::sample>, 4> a) {
+}
+)");
+}
+
 struct MslDepthTextureData {
     core::type::TextureDimension dim;
     std::string result;
@@ -1005,7 +1023,7 @@ using MslWriterDepthTexturesTest = MslWriterTestWithParam<MslDepthTextureData>;
 TEST_P(MslWriterDepthTexturesTest, Emit) {
     auto params = GetParam();
 
-    auto* t = ty.Get<core::type::DepthTexture>(params.dim);
+    auto* t = ty.depth_texture(params.dim);
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", t);
     func->SetParams({param});
@@ -1091,7 +1109,7 @@ INSTANTIATE_TEST_SUITE_P(
                        "texturecube_array<float, access::sample>"}));
 
 TEST_F(MslWriterTest, EmitType_MultisampledTexture) {
-    auto* ms = ty.Get<core::type::MultisampledTexture>(core::type::TextureDimension::k2d, ty.u32());
+    auto* ms = ty.multisampled_texture(core::type::TextureDimension::k2d, ty.u32());
     auto* func = b.Function("foo", ty.void_());
     auto* param = b.FunctionParam("a", ms);
     func->SetParams({param});

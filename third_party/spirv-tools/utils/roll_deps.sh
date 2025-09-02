@@ -35,6 +35,7 @@ dependency_to_branch_map["external/effcee/"]="origin/main"
 dependency_to_branch_map["external/googletest/"]="origin/main"
 dependency_to_branch_map["external/re2/"]="origin/main"
 dependency_to_branch_map["external/spirv-headers/"]="origin/main"
+dependency_to_branch_map["external/mimalloc/"]="origin/main"
 
 # This script assumes it's parent directory is the repo root.
 repo_path=$(dirname "$0")/..

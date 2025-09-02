@@ -69,7 +69,6 @@ class ForLoopStatement;
 class Function;
 class GlobalVariable;
 class IfStatement;
-class Node;
 class Parameter;
 class Statement;
 class Struct;

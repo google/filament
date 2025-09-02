@@ -46,7 +46,12 @@ tint_add_target(tint_lang_hlsl_validate lib
 )
 
 tint_target_add_dependencies(tint_lang_hlsl_validate lib
-  tint_lang_wgsl_ast
+  tint_api_common
+  tint_lang_core
+  tint_lang_core_constant
+  tint_lang_core_ir
+  tint_lang_core_type
+  tint_utils
   tint_utils_command
   tint_utils_containers
   tint_utils_file

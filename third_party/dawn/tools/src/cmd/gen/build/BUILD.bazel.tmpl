@@ -140,24 +140,25 @@ cc_binary(
 --------------------------------------------------------------------------------
 */ -}}
 {{- define "ExternalDependencyTarget"}}
-{{-        if eq $.Name "abseil"                -}}"@abseil_cpp//absl/strings",
-{{-   else if eq $.Name "dl"                    -}}{{/* unsupported */}}
-{{-   else if eq $.Name "dxc-include"           -}}{{/* unsupported */}}
-{{-   else if eq $.Name "dxcompiler-for-fuzzer" -}}{{/* unsupported */}}
-{{-   else if eq $.Name "glslang-res-limits"    -}}{{/* unsupported */}}
-{{-   else if eq $.Name "glslang"               -}}{{/* unsupported */}}
-{{-   else if eq $.Name "gmock"                 -}}"@gtest",
-{{-   else if eq $.Name "google-benchmark"      -}}"@benchmark",
-{{-   else if eq $.Name "gtest"                 -}}"@gtest",
-{{-   else if eq $.Name "jsoncpp"               -}}{{/* unsupported */}}
-{{-   else if eq $.Name "langsvr"               -}}{{/* unsupported */}}
-{{-   else if eq $.Name "metal"                 -}}{{/* unsupported */}}
-{{-   else if eq $.Name "spirv-headers"         -}}"@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",
-{{-   else if eq $.Name "spirv-opt-internal"    -}}"@spirv_tools//:spirv_tools_opt",
-{{-   else if eq $.Name "spirv-tools"           -}}"@spirv_tools",
-{{-   else if eq $.Name "thread"                -}}{{/* unsupported */}}
-{{-   else if eq $.Name "winsock"               -}}{{/* unsupported */}}
-{{-   else if eq $.Name "src_utils"             -}}"//src/utils",
+{{-        if eq $.Name "abseil"                         -}}"@abseil_cpp//absl/strings",
+{{-   else if eq $.Name "dl"                             -}}{{/* unsupported */}}
+{{-   else if eq $.Name "dxc-include"                    -}}{{/* unsupported */}}
+{{-   else if eq $.Name "dxcompiler-for-fuzzer"          -}}{{/* unsupported */}}
+{{-   else if eq $.Name "glslang-res-limits"             -}}{{/* unsupported */}}
+{{-   else if eq $.Name "glslang"                        -}}{{/* unsupported */}}
+{{-   else if eq $.Name "gmock"                          -}}"@gtest",
+{{-   else if eq $.Name "google-benchmark"               -}}"@benchmark",
+{{-   else if eq $.Name "gtest"                          -}}"@gtest",
+{{-   else if eq $.Name "jsoncpp"                        -}}{{/* unsupported */}}
+{{-   else if eq $.Name "langsvr"                        -}}{{/* unsupported */}}
+{{-   else if eq $.Name "metal"                          -}}{{/* unsupported */}}
+{{-   else if eq $.Name "spirv-headers"                  -}}"@spirv_headers//:spirv_cpp11_headers", "@spirv_headers//:spirv_c_headers",
+{{-   else if eq $.Name "spirv-opt-internal"             -}}"@spirv_tools//:spirv_tools_opt",
+{{-   else if eq $.Name "spirv-tools"                    -}}"@spirv_tools",
+{{-   else if eq $.Name "thread"                         -}}{{/* unsupported */}}
+{{-   else if eq $.Name "winsock"                        -}}{{/* unsupported */}}
+{{-   else if eq $.Name "src_utils"                      -}}"//src/utils",
+{{-   else if eq $.Name "src_utils_chromium_test_compat" -}}"//src/utils/chromium_test_compat",
 {{-   else                                      -}}{{Error (printf "unhandled external dependency '%v'" $.Name)}}
 {{-   end}}
 {{- end}}

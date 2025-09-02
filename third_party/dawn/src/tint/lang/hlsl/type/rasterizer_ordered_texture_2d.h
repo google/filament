@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/texel_format.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/texture.h"
 
 namespace tint::hlsl::type {
@@ -61,7 +61,8 @@ class RasterizerOrderedTexture2D final
     /// @param format the storage texture image format
     /// @param type_mgr the Manager used to build the returned type
     /// @returns the storage texture subtype for the given TexelFormat
-    static core::type::Type* SubtypeFor(core::TexelFormat format, core::type::Manager& type_mgr);
+    static const core::type::Type* SubtypeFor(core::TexelFormat format,
+                                              core::type::Manager& type_mgr);
 
     /// @param ctx the clone context
     /// @returns a clone of this type

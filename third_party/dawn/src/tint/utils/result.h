@@ -60,7 +60,8 @@ struct Failure {
 /// @param out the output stream
 /// @param failure the Failure
 /// @returns the output stream
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const Failure& failure) {
     return out << failure.reason;
 }
@@ -217,10 +218,8 @@ struct [[nodiscard]] Result {
 /// @param out the stream to write to
 /// @param res the result
 /// @return the stream so calls can be chained
-template <typename STREAM,
-          typename SUCCESS,
-          typename FAILURE,
-          typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM, typename SUCCESS, typename FAILURE>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const Result<SUCCESS, FAILURE>& res) {
     if (res == Success) {
         if constexpr (traits::HasOperatorShiftLeft<STREAM&, SUCCESS>) {

@@ -16,22 +16,81 @@
 
 #include "CommandlineConfig.h"
 
-#include <private/filament/Variant.h>
+#include <filament-matp/Config.h>
 
-#include <getopt/getopt.h>
+#include <filament/MaterialEnums.h>
+
+#include <backend/DriverEnums.h>
 
 #include <utils/Path.h>
 
-#include <istream>
+#include <getopt/getopt.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 using namespace utils;
+using namespace filament;
 
 namespace matc {
 
+static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1RW:";
+static const option OPTIONS[] = {
+        { "help",                    no_argument, nullptr, 'h' },
+        { "license",                 no_argument, nullptr, 'L' },
+        { "output",            required_argument, nullptr, 'o' },
+        { "output-format",     required_argument, nullptr, 'f' },
+        { "debug",                   no_argument, nullptr, 'd' },
+        { "variant-filter",    required_argument, nullptr, 'V' },
+        { "platform",          required_argument, nullptr, 'p' },
+        { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
+        { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
+        { "optimize-size",           no_argument, nullptr, 'S' },
+        { "optimize-none",           no_argument, nullptr, 'g' },
+        { "preprocessor-only",       no_argument, nullptr, 'E' },
+        { "api",               required_argument, nullptr, 'a' },
+        { "feature-level",     required_argument, nullptr, 'l' },
+        { "no-essl1",                no_argument, nullptr, '1' },
+        { "define",            required_argument, nullptr, 'D' },
+        { "template",          required_argument, nullptr, 'T' },
+        { "material-parameter",required_argument, nullptr, 'P' },
+        { "reflect",           required_argument, nullptr, 'r' },
+        { "print",                   no_argument, nullptr, 't' },
+        { "version",                 no_argument, nullptr, 'v' },
+        { "raw",                     no_argument, nullptr, 'w' },
+        { "no-sampler-validation",   no_argument, nullptr, 'F' },
+        { "save-raw-variants",       no_argument, nullptr, 'R' },
+        { "workarounds",       required_argument, nullptr, 'W' },
+        { nullptr, 0, nullptr, 0 }  // termination of the option list
+};
+
+// A list of options that may contain PII(Personally Identifiable Information) data.
+// We ignore these options when we call the `toPIISafeString` method.
+static const std::string_view PII_OPTIONS[] = {
+    "output",
+};
+
+static bool isPIIOption(const char* longOptionName) {
+    if (!longOptionName) {
+        return false;
+    }
+    for (auto const option : PII_OPTIONS) {
+        if (option == longOptionName) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void usage(char* name) {
-    std::string exec_name(utils::Path(name).getName());
+    std::string const exec_name(Path(name).getName());
     std::string usage(
             "MATC is a command-line tool to compile material definition.\n"
             "\n"
@@ -54,7 +113,7 @@ static void usage(char* name) {
             "       Specify path to output file\n\n"
             "   --platform, -p\n"
             "       Shader family to generate: desktop, mobile or all (default)\n\n"
-            "   --optimize-size, -S\n"
+            "   --optimize-size, -S, -Os\n"
             "       Optimize generated shader code for size instead of just performance\n\n"
             "   --api, -a\n"
             "       Specify the target API: opengl (default), vulkan, metal, or all\n"
@@ -86,10 +145,12 @@ static void usage(char* name) {
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning, vsm, fog,"
             "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
+            "   --workarounds, -W\n"
+            "       Workarounds to apply: all or none. (default is all).\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
-            "   --optimize-none, -g\n"
+            "   --optimize-none, -g, -O0\n"
             "       Disable all shader optimizations, for debugging\n\n"
             "   --preprocessor-only, -E\n"
             "       Optimize shaders by running only the preprocessor\n\n"
@@ -114,47 +175,59 @@ static void usage(char* name) {
 }
 
 static void license() {
-    static const char *license[] = {
+    static char const * const license[] = {
         #include "licenses/licenses.inc"
         nullptr
     };
 
-    const char **p = &license[0];
+    const char * const *p = &license[0];
     while (*p)
         std::cout << *p++ << std::endl;
 }
 
-static filament::UserVariantFilterMask parseVariantFilter(const std::string& arg) {
+static UserVariantFilterMask parseVariantFilter(const std::string& arg) {
     std::stringstream ss(arg);
     std::string item;
-    filament::UserVariantFilterMask variantFilter = 0;
+    UserVariantFilterMask variantFilter = 0;
     while (std::getline(ss, item, ',')) {
         if (item == "directionalLighting") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DIRECTIONAL_LIGHTING;
+            variantFilter |= uint32_t(UserVariantFilterBit::DIRECTIONAL_LIGHTING);
         } else if (item == "dynamicLighting") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::DYNAMIC_LIGHTING;
+            variantFilter |= uint32_t(UserVariantFilterBit::DYNAMIC_LIGHTING);
         } else if (item == "shadowReceiver") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SHADOW_RECEIVER;
+            variantFilter |= uint32_t(UserVariantFilterBit::SHADOW_RECEIVER);
         } else if (item == "skinning") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SKINNING;
+            variantFilter |= uint32_t(UserVariantFilterBit::SKINNING);
         } else if (item == "vsm") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::VSM;
+            variantFilter |= uint32_t(UserVariantFilterBit::VSM);
         } else if (item == "fog") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::FOG;
+            variantFilter |= uint32_t(UserVariantFilterBit::FOG);
         } else if (item == "ssr") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::SSR;
+            variantFilter |= uint32_t(UserVariantFilterBit::SSR);
         } else if (item == "stereo") {
-            variantFilter |= (uint32_t) filament::UserVariantFilterBit::STE;
+            variantFilter |= uint32_t(UserVariantFilterBit::STE);
         }
     }
     return variantFilter;
 }
 
-CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(argc), mArgv(argv) {
+CommandlineConfig::CommandlineConfig(int const argc, char** argv)
+        : Config(), mArgc(argc), mArgv(argv) {
+    // Add aliases for some optimization flags. We do this by pre-processing the arguments,
+    // since getopt has trouble with short options that are longer than one character (e.g. -Os).
+    for (int i = 1; i < mArgc; i++) {
+        if (mArgv[i]) {
+            if (strcmp(mArgv[i], "-Os") == 0) {
+                mArgv[i] = (char *)"-S";
+            } else if (strcmp(mArgv[i], "-O0") == 0) {
+                mArgv[i] = (char *)"-g";
+            }
+        }
+    }
     mIsValid = parse();
 }
 
-static void parseDefine(std::string defineString, Config::StringReplacementMap& defines) {
+static void parseDefine(std::string const& defineString, matp::Config::StringReplacementMap& defines) {
     const char* const defineArg = defineString.c_str();
     const size_t length = defineString.length();
 
@@ -170,61 +243,30 @@ static void parseDefine(std::string defineString, Config::StringReplacementMap& 
             // Edge-cases, missing define name or value.
             return;
         }
-        std::string def(defineArg, p - defineArg);
+        std::string const def(defineArg, p - defineArg);
         defines.emplace(def, p + 1);
         return;
     }
 
     // No explicit assignment, use a default value of 1.
-    std::string def(defineArg, p - defineArg);
+    std::string const def(defineArg, p - defineArg);
     defines.emplace(def, "1");
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hLxo:f:dm:a:l:p:D:T:P:OSEr:vV:gtwF1R";
-    static const struct option OPTIONS[] = {
-            { "help",                    no_argument, nullptr, 'h' },
-            { "license",                 no_argument, nullptr, 'L' },
-            { "output",            required_argument, nullptr, 'o' },
-            { "output-format",     required_argument, nullptr, 'f' },
-            { "debug",                   no_argument, nullptr, 'd' },
-            { "variant-filter",    required_argument, nullptr, 'V' },
-            { "platform",          required_argument, nullptr, 'p' },
-            { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
-            { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
-            { "optimize-size",           no_argument, nullptr, 'S' },
-            { "optimize-none",           no_argument, nullptr, 'g' },
-            { "preprocessor-only",       no_argument, nullptr, 'E' },
-            { "api",               required_argument, nullptr, 'a' },
-            { "feature-level",     required_argument, nullptr, 'l' },
-            { "no-essl1",                no_argument, nullptr, '1' },
-            { "define",            required_argument, nullptr, 'D' },
-            { "template",          required_argument, nullptr, 'T' },
-            { "material-parameter",required_argument, nullptr, 'P' },
-            { "reflect",           required_argument, nullptr, 'r' },
-            { "print",                   no_argument, nullptr, 't' },
-            { "version",                 no_argument, nullptr, 'v' },
-            { "raw",                     no_argument, nullptr, 'w' },
-            { "no-sampler-validation",   no_argument, nullptr, 'F' },
-            { "save-raw-variants",       no_argument, nullptr, 'R' },
-            { nullptr, 0, nullptr, 0 }  // termination of the option list
-    };
-
     int opt;
     int option_index = 0;
 
     while ((opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &option_index)) >= 0) {
-        std::string arg(optarg ? optarg : "");
+        std::string const arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
                 usage(mArgv[0]);
                 exit(0);
-                break;
             case 'L':
                 license();
                 exit(0);
-                break;
             case 'o':
                 mOutput = new FilesystemOutput(arg.c_str());
                 break;
@@ -273,13 +315,13 @@ bool CommandlineConfig::parse() {
                 }
                 break;
             case 'l': {
-                auto featureLevel = filament::backend::FeatureLevel(std::atoi(arg.c_str()));
-                mFeatureLevel = filament::backend::FeatureLevel::FEATURE_LEVEL_3;
+                auto const featureLevel = backend::FeatureLevel(std::atoi(arg.c_str()));
+                mFeatureLevel = backend::FeatureLevel::FEATURE_LEVEL_3;
                 switch (featureLevel) {
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_0:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_1:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_2:
-                    case filament::backend::FeatureLevel::FEATURE_LEVEL_3:
+                    case backend::FeatureLevel::FEATURE_LEVEL_0:
+                    case backend::FeatureLevel::FEATURE_LEVEL_1:
+                    case backend::FeatureLevel::FEATURE_LEVEL_2:
+                    case backend::FeatureLevel::FEATURE_LEVEL_3:
                         mFeatureLevel = featureLevel;
                         break;
                 }
@@ -300,11 +342,20 @@ bool CommandlineConfig::parse() {
             case 'v':
                 // Similar to --help, the --version command does an early exit in order to avoid
                 // subsequent error spew such as "Missing input filename" etc.
-                std::cout << filament::MATERIAL_VERSION << std::endl;
+                std::cout << MATERIAL_VERSION << std::endl;
                 exit(0);
-                break;
             case 'V':
                 mVariantFilter = parseVariantFilter(arg);
+                break;
+            case 'W':
+                if (arg == "none") {
+                    mWorkarounds = Workarounds::NONE;
+                } else if (arg == "all") {
+                    mWorkarounds = Workarounds::ALL;
+                } else {
+                    std::cerr << "Unrecognized workaround. Must be 'all'|'none'." << std::endl;
+                    return false;
+                }
                 break;
             // These 2 flags are supported for backward compatibility
             case 'O':
@@ -346,6 +397,74 @@ bool CommandlineConfig::parse() {
     }
 
     return true;
+}
+
+// This method concatenates all options and arguments, excluding the executable name, input file
+// name, and any options found in PII_OPTIONS due to potential PII data.
+std::string CommandlineConfig::toPIISafeString() const noexcept {
+    std::string result;
+    optind = 1; // Reset getopt's internal index before parsing
+
+    while (true) {
+        // getopt_long will only set `long_index` if a long option is parsed.
+        int long_index = -1;
+        int const opt = getopt_long(mArgc, mArgv, OPTSTR, OPTIONS, &long_index);
+        if (opt == -1) {
+            break; // End of options
+        }
+
+        // Find the matched option.
+        const struct option* matched_option = nullptr;
+        if (long_index != -1) {
+            // A long option was parsed (e.g., --help)
+             matched_option = &OPTIONS[long_index];
+        } else if (opt > 0) {
+            // A short option was parsed (e.g., -h)
+            for (int i = 0; OPTIONS[i].name != nullptr; ++i) {
+                if (OPTIONS[i].val == opt) {
+                    matched_option = &OPTIONS[i];
+                    break;
+                }
+            }
+        }
+
+        if (!matched_option) {
+            std::cerr << "Failed to find the matched option: long_index=" << long_index
+                      << ", opt=" << opt << std::endl;
+            continue;
+        }
+
+        // Skip if it's a PII option.
+        if (isPIIOption(matched_option->name)) {
+            continue;
+        }
+
+        // Reconstruct the option.
+        if (long_index != -1) {
+            result += "--";
+            result += matched_option->name;
+            result += " ";
+        } else if (opt > 0) {
+            result += "-";
+            result += (char)matched_option->val;
+            result += " ";
+        }
+
+        // Add an argument if available.
+        if (optarg && matched_option->has_arg != no_argument) {
+            result += optarg;
+            result += " ";
+        }
+    }
+
+    // We're ignoring the last (remaining) argument because it's user input with PII.
+
+    // Trim trailing space
+    if (!result.empty()) {
+        result.pop_back();
+    }
+
+    return result;
 }
 
 } // namespace matc

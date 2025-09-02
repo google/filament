@@ -1543,6 +1543,20 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
   
   if (InitSeq.isConstructorInitialization())
     Kind = CK_ConstructorConversion;
+#ifdef ENABLE_SPIRV_CODEGEN
+  // Special cases for vk::BufferPointer.
+  else if (hlsl::IsVKBufferPointerType(SrcExpr.get()->getType()) &&
+           DestType->isIntegerType() && CCK == Sema::CCK_CStyleCast) {
+    Kind = CK_VK_BufferPointerToIntegral;
+    SrcExpr = Result;
+    return TC_Success;
+  } else if (hlsl::IsVKBufferPointerType(DestType) &&
+             SrcExpr.get()->getType()->isIntegerType()) {
+    Kind = CK_VK_IntegralToBufferPointer;
+    SrcExpr = Result;
+    return TC_Success;
+  }
+#endif
   else
     Kind = CK_NoOp;
   

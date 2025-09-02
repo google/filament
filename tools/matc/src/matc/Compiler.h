@@ -18,6 +18,7 @@
 #define TNT_COMPILER_H
 
 #include "CommandlineConfig.h"
+#include <filament-matp/Config.h>
 
 #include <filamat/Package.h>
 
@@ -27,7 +28,7 @@ class Compiler {
 public:
     virtual ~Compiler() = default;
 
-    bool compile(const Config& config) {
+    bool compile(const matp::Config& config) {
         if (!checkParameters(config)) {
             return false;
         }
@@ -35,22 +36,22 @@ public:
     }
 
 protected:
-    bool writePackage(const filamat::Package& package, const Config& config) {
+    bool writePackage(const filamat::Package& package, const matp::Config& config) {
         if (config.getOutputFormat() == CommandlineConfig::OutputFormat::BLOB) {
             return writeBlob(package, config);
         } else {
             return writeBlobAsHeader(package, config);
         }
     }
-    virtual bool run(const Config& config) = 0;
-    virtual bool checkParameters(const Config& config) = 0;
+    virtual bool run(const matp::Config& config) = 0;
+    virtual bool checkParameters(const matp::Config& config) = 0;
 
     // Write Package as binary to target filename
-    bool writeBlob(const filamat::Package& pkg, const Config& config) const noexcept;
+    bool writeBlob(const filamat::Package& pkg, const matp::Config& config) const noexcept;
 
     // Write package as a C++ array content. Use this to include material
     // in your executable/library.
-    bool writeBlobAsHeader(const filamat::Package& pkg, const Config& config) const noexcept;
+    bool writeBlobAsHeader(const filamat::Package& pkg, const matp::Config& config) const noexcept;
 };
 
 } // namespace matc

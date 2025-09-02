@@ -102,6 +102,9 @@ static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
     if (any(usage & TextureUsage::BLIT_SRC)) {
         u |= MTLTextureUsageShaderRead;
     }
+    if (any(usage & TextureUsage::GEN_MIPMAPPABLE)) {
+        u |= (MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead);
+    }
 
     return MTLTextureUsage(u);
 }
@@ -114,6 +117,10 @@ MetalSwapChain::MetalSwapChain(
       layer(nativeWindow),
       layerDrawableMutex(std::make_shared<std::mutex>()),
       type(SwapChainType::CAMETALLAYER) {
+
+    FILAMENT_CHECK_PRECONDITION([nativeWindow isKindOfClass:[CAMetalLayer class]])
+            << "nativeWindow pointer of class "
+            << [NSStringFromClass([nativeWindow class]) UTF8String] << " is not a CAMetalLayer";
 
     if (!(flags & SwapChain::CONFIG_TRANSPARENT) && !nativeWindow.opaque) {
         LOG(WARNING) << "Warning: Filament SwapChain has no CONFIG_TRANSPARENT flag, but the "

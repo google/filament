@@ -67,6 +67,10 @@ add_library(abseil STATIC IMPORTED)
 set_target_properties(abseil PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libabseil.a)
 
+add_library(zstd STATIC IMPORTED)
+set_target_properties(zstd PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libzstd.a)
+
 if (FILAMENT_ENABLE_FGVIEWER)
     add_library(fgviewer STATIC IMPORTED)
     set_target_properties(fgviewer PROPERTIES IMPORTED_LOCATION
@@ -74,6 +78,10 @@ if (FILAMENT_ENABLE_FGVIEWER)
 endif()
 
 if (FILAMENT_ENABLE_MATDBG)
+    add_library(filamat STATIC IMPORTED)
+    set_target_properties(filamat PROPERTIES IMPORTED_LOCATION
+            ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilamat.a)
+
     add_library(matdbg STATIC IMPORTED)
     set_target_properties(matdbg PROPERTIES IMPORTED_LOCATION
             ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libmatdbg.a)
@@ -138,6 +146,7 @@ target_link_libraries(filament-jni
     PRIVATE utils
     PRIVATE perfetto
     PRIVATE abseil
+    PRIVATE zstd
 
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry

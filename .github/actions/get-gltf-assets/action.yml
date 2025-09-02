@@ -1,0 +1,23 @@
+name: 'Get and cache glTF Assets'
+description: 'Downloads and caches glTF assets by calling the get-gltf-sample-assets.sh script.'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/dep-versions
+    - name: Hash models file
+      id: hash-models
+      shell: bash
+      run: echo "hash=$(cat test/renderdiff/tests/gltf_models.txt | md5sum | sed 's/ -//g')" >> $GITHUB_OUTPUT
+    - name: Cache glTF assets
+      id: cache-gltf
+      uses: actions/cache@v4
+      with:
+        path: gltf
+        key: gltf-assets-${{ env.GITHUB_GLTF_SAMPLE_ASSETS_COMMIT }}-${{ steps.hash-models.outputs.hash }}
+    - name: Download assets via script if cache not found
+      if: steps.cache-gltf.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "Cache miss for commit ${{ env.GITHUB_GLTF_SAMPLE_ASSETS_COMMIT }}. Running download script..."
+        xargs bash build/common/get-gltf-sample-assets.sh < test/renderdiff/tests/gltf_models.txt

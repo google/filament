@@ -54,6 +54,7 @@ class DawnNativeTest : public ::testing::Test {
     void SetUp() override;
 
     virtual std::unique_ptr<dawn::platform::Platform> CreateTestPlatform();
+    virtual wgpu::DawnTogglesDescriptor DeviceToggles();
     WGPUDevice CreateTestDevice();
 
   protected:

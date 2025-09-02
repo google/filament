@@ -544,6 +544,27 @@ public:
     }
 };
 
+template<typename PanicType>
+class FlagGuardedStream : public PanicStream {
+public:
+    FlagGuardedStream(bool enable, char const* function, char const* file, int line,
+            char const* condition)
+        : PanicStream(function, file, line, condition),
+          mEnablePanic(enable) {}
+    ~FlagGuardedStream() noexcept(false) {
+        if (mEnablePanic) {
+            PanicType::panic(mFunction, mFile, mLine, mLiteral, mStream.c_str());
+        } else {
+            logWarning();
+        }
+    }
+
+private:
+    void logWarning() noexcept;
+
+    bool mEnablePanic;
+};
+
 } // namespace details
 
 // -----------------------------------------------------------------------------------------------
@@ -580,6 +601,20 @@ public:
 #ifndef FILAMENT_CHECK_ARITHMETIC
 #define FILAMENT_CHECK_ARITHMETIC(condition)                                                       \
     FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_PANIC_IMPL(#condition, ArithmeticPanic)
+#endif
+
+#define FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, TYPE)                                    \
+    ::utils::details::FlagGuardedStream<::utils::TYPE>(flag, PANIC_FUNCTION, PANIC_FILE(__FILE__), \
+            __LINE__, #condition)
+
+#ifndef FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION
+#define FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(condition, flag)                                  \
+    FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, PreconditionPanic)
+#endif
+
+#ifndef FILAMENT_FLAG_GUARDED_CHECK_POSTCONDITION
+#define FILAMENT_FLAG_GUARDED_CHECK_POSTCONDITION(condition, flag)                                 \
+    FILAMENT_CHECK_CONDITION_IMPL(condition)  FILAMENT_FLAG_GUARDED_PANIC_IMPL(flag, condition, PostconditionPanic)
 #endif
 
 #define PANIC_PRECONDITION_IMPL(cond, format, ...)                                                 \

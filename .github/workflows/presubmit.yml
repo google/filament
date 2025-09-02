@@ -118,21 +118,22 @@ jobs:
       - uses: actions/checkout@v4.1.6
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/get-gltf-assets
+      - uses: ./.github/actions/get-mesa
+      - uses: ./.github/actions/get-vulkan-sdk      
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
-      - uses: ./.github/actions/mac-prereq
-      - name: Cache Mesa and deps
-        uses: actions/cache@v4
-        with:
-          path: mesa
-          key: ${{ runner.os }}-mesa-deps-2-${{ vars.MESA_VERSION }}
       - name: Prerequisites
         run: |
-          bash build/common/get-mesa.sh
           pip install tifffile numpy
+          # Must have at least clang-16 for a webgpu/dawn build.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        shell: bash
       - name: Render and compare
         id: render_compare
         run: |
+          ls ./gltf/Models
           TEST_DIR=test/renderdiff
           source ${TEST_DIR}/src/preamble.sh
           start_

@@ -86,11 +86,11 @@ class Device final : public DeviceBase {
 
     MaybeError TickImpl() override;
 
-    MaybeError CopyFromStagingToBufferImpl(BufferBase* source,
-                                           uint64_t sourceOffset,
-                                           BufferBase* destination,
-                                           uint64_t destinationOffset,
-                                           uint64_t size) override;
+    MaybeError CopyFromStagingToBuffer(BufferBase* source,
+                                       uint64_t sourceOffset,
+                                       BufferBase* destination,
+                                       uint64_t destinationOffset,
+                                       uint64_t size) override;
 
     MaybeError CopyFromStagingToTextureImpl(const BufferBase* source,
                                             const TexelCopyBufferLayout& src,
@@ -106,6 +106,9 @@ class Device final : public DeviceBase {
     bool ShouldApplyIndexBufferOffsetToFirstIndex() const override;
 
     const AHBFunctions* GetOrLoadAHBFunctions();
+
+    const Buffer* GetInternalTextureBuiltinsUniformBuffer() const;
+    const Buffer* GetInternalArrayLengthUniformBuffer() const;
 
   private:
     Device(AdapterBase* adapter,
@@ -129,8 +132,7 @@ class Device final : public DeviceBase {
     ResultOrError<Ref<ShaderModuleBase>> CreateShaderModuleImpl(
         const UnpackedPtr<ShaderModuleDescriptor>& descriptor,
         const std::vector<tint::wgsl::Extension>& internalExtensions,
-        ShaderModuleParseResult* parseResult,
-        OwnedCompilationMessages* compilationMessages) override;
+        ShaderModuleParseResult* parseResult) override;
     ResultOrError<Ref<SwapChainBase>> CreateSwapChainImpl(
         Surface* surface,
         SwapChainBase* previousSwapChain,
@@ -162,6 +164,13 @@ class Device final : public DeviceBase {
     GLFormatTable mFormatTable;
     std::unique_ptr<ContextEGL> mContext;
     int mMaxTextureMaxAnisotropy = 0;
+
+    // Maintain an internal uniform buffer to store extra information needed by shader emulation for
+    // certain texture builtins.
+    Ref<Buffer> mTextureBuiltinsBuffer;
+
+    // Maintain an internal uniform buffer to store extra array length information if needed.
+    Ref<Buffer> mArrayLengthBuffer;
 
 #if DAWN_PLATFORM_IS(ANDROID)
     std::unique_ptr<AHBFunctions> mAHBFunctions;

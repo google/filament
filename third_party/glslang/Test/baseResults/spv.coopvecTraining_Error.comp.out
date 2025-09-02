@@ -1,0 +1,8 @@
+spv.coopvecTraining_Error.comp
+ERROR: 0:19: 'coopVecOuterProductAccumulateNV' : cooperative vector basic types must match 
+ERROR: 0:20: 'coopVecOuterProductAccumulateNV' : no matching overloaded function found 
+ERROR: 0:21: 'coopVecReduceSumAccumulateNV' : no matching overloaded function found 
+ERROR: 3 compilation errors.  No code generated.
+
+
+SPIR-V is not generated for failed compile or link

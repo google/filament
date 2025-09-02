@@ -116,7 +116,7 @@ public:
   /// \brief Return the start location of an included file or expanded macro.
   SourceLocation getStartOfFileOrMacro(SourceLocation Loc) {
     if (Loc.isMacroID())
-      return Loc.getLocWithOffset(-SM.getFileOffset(Loc));
+      return Loc.getLocWithOffset(~SM.getFileOffset(Loc) + 1);
     return SM.getLocForStartOfFile(SM.getFileID(Loc));
   }
 

@@ -124,7 +124,7 @@ class Surface final : public ErrorMonad {
     void APIConfigure(const SurfaceConfiguration* config);
     wgpu::Status APIGetCapabilities(AdapterBase* adapter, SurfaceCapabilities* capabilities) const;
     void APIGetCurrentTexture(SurfaceTexture* surfaceTexture) const;
-    void APIPresent();
+    wgpu::Status APIPresent();
     void APIUnconfigure();
     void APISetLabel(StringView label);
 
@@ -137,16 +137,16 @@ class Surface final : public ErrorMonad {
 
     MaybeError GetCapabilities(AdapterBase* adapter, SurfaceCapabilities* capabilities) const;
     MaybeError GetCurrentTexture(SurfaceTexture* surfaceTexture) const;
-    MaybeError Present();
 
     Ref<InstanceBase> mInstance;
     Type mType;
     std::string mLabel;
 
-    // The surface has an associated device only when it is configured
+    // The surface has an associated device *if and only if* it is configured.
     Ref<DeviceBase> mCurrentDevice;
 
-    // The swapchain is created when configuring the surface.
+    // The swapchain is created when configuring the surface (but may still be
+    // null even if it's in the "configured" state).
     Ref<SwapChainBase> mSwapChain;
 
     // We keep on storing the previous swap chain after Unconfigure in case we could reuse it

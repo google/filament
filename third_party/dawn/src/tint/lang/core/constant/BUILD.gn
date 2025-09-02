@@ -60,11 +60,14 @@ libtint_source_set("constant") {
     "scalar.h",
     "splat.cc",
     "splat.h",
+    "string.cc",
+    "string.h",
     "value.cc",
     "value.h",
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
+    "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/utils",
@@ -83,20 +86,12 @@ if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
       "composite_test.cc",
-      "eval_binary_op_test.cc",
-      "eval_bitcast_test.cc",
-      "eval_builtin_test.cc",
-      "eval_construction_test.cc",
-      "eval_conversion_test.cc",
-      "eval_indexing_test.cc",
-      "eval_member_access_test.cc",
       "eval_runtime_semantics_test.cc",
-      "eval_test.h",
-      "eval_unary_op_test.cc",
       "invalid_test.cc",
       "manager_test.cc",
       "scalar_test.cc",
       "splat_test.cc",
+      "string_test.cc",
       "value_test.cc",
     ]
     deps = [
@@ -105,19 +100,7 @@ if (tint_build_unittests) {
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
-      "${tint_src_dir}/lang/core/intrinsic",
-      "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/type",
-      "${tint_src_dir}/lang/core/type:unittests",
-      "${tint_src_dir}/lang/wgsl",
-      "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
-      "${tint_src_dir}/lang/wgsl/intrinsic",
-      "${tint_src_dir}/lang/wgsl/program",
-      "${tint_src_dir}/lang/wgsl/resolver",
-      "${tint_src_dir}/lang/wgsl/resolver:unittests",
-      "${tint_src_dir}/lang/wgsl/sem",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -129,9 +112,5 @@ if (tint_build_unittests) {
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
-
-    if (tint_build_wgsl_reader) {
-      deps += [ "${tint_src_dir}/lang/wgsl/reader" ]
-    }
   }
 }

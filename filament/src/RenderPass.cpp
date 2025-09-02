@@ -243,7 +243,7 @@ void RenderPass::appendCommands(FEngine const& engine,
     for (Command const* first = curr, *last = curr + commandCount ; first != last ; ++first) {
         if (UTILS_LIKELY((first->key & CUSTOM_MASK) == uint64_t(CustomCommand::PASS))) {
             auto ma = first->info.mi->getMaterial();
-            ma->prepareProgram(first->info.materialVariant);
+            ma->prepareProgram(first->info.materialVariant, CompilerPriorityQueue::CRITICAL);
         }
     }
 }
@@ -1067,7 +1067,8 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     // Each material has a per-material descriptor-set layout which encodes the
                     // material's parameters (ubo and samplers)
                     pipeline.pipelineLayout.setLayout[+DescriptorSetBindingPoints::PER_MATERIAL] =
-                            ma->getDescriptorSetLayout().getHandle();
+                            ma->getDescriptorSetLayout(info.materialVariant).getHandle();
+
 
                     if (UTILS_UNLIKELY(ma->getMaterialDomain() == MaterialDomain::POST_PROCESS)) {
                         // It is possible to get a post-process material here (even though it's
@@ -1091,7 +1092,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
                     }
 
                     // Each MaterialInstance has its own descriptor set. This binds it.
-                    mi->use(driver);
+                    mi->use(driver, info.materialVariant);
                 }
 
                 assert_invariant(ma);

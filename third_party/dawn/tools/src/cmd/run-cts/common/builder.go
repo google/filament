@@ -28,9 +28,9 @@
 package common
 
 import (
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
@@ -46,7 +46,7 @@ type Builder struct {
 }
 
 // BuildIfRequired calls Build() if the CTS sources have been modified since the last build.
-func (b *Builder) BuildIfRequired(verbose bool) error {
+func (b *Builder) BuildIfRequired(verbose bool, osWrapper oswrapper.OSWrapper) error {
 	name := fmt.Sprintf("cts %v", b.Name)
 
 	// Scan the CTS source to determine the most recent change to the CTS source
@@ -61,17 +61,17 @@ func (b *Builder) BuildIfRequired(verbose bool) error {
 	cache := Cache{BuildTimestamp: map[string]time.Time{}}
 
 	cachePath := ""
-	if home, err := os.UserHomeDir(); err == nil {
+	if home, err := osWrapper.UserHomeDir(); err == nil {
 		cacheDir := filepath.Join(home, ".cache/webgpu")
 		cachePath = filepath.Join(cacheDir, "run-cts.json")
-		os.MkdirAll(cacheDir, 0777)
+		osWrapper.MkdirAll(cacheDir, 0777)
 	}
 
 	needsRebuild := true
 	if cachePath != "" { // consult the cache to see if we need to rebuild
-		if cacheFile, err := os.Open(cachePath); err == nil {
+		if cacheFile, err := osWrapper.Open(cachePath); err == nil {
 			if err := json.NewDecoder(cacheFile).Decode(&cache); err == nil {
-				if fileutils.IsDir(b.Out) {
+				if fileutils.IsDir(b.Out, osWrapper) {
 					needsRebuild = mostRecentSourceChange.After(cache.BuildTimestamp[b.Name])
 				}
 			}
@@ -84,14 +84,14 @@ func (b *Builder) BuildIfRequired(verbose bool) error {
 	}
 
 	if needsRebuild {
-		if err := b.Build(verbose); err != nil {
+		if err := b.Build(verbose, osWrapper); err != nil {
 			return fmt.Errorf("failed to build %v: %w", name, err)
 		}
 	}
 
 	if cachePath != "" {
 		// Update the cache timestamp
-		if cacheFile, err := os.Create(cachePath); err == nil {
+		if cacheFile, err := osWrapper.Create(cachePath); err == nil {
 			cache.BuildTimestamp[b.Name] = mostRecentSourceChange
 			json.NewEncoder(cacheFile).Encode(&cache)
 			cacheFile.Close()
@@ -104,7 +104,7 @@ func (b *Builder) BuildIfRequired(verbose bool) error {
 // Build executes the necessary build commands to build the CTS, including
 // copying the cache files from gen to the out directory and compiling the
 // TypeScript files down to JavaScript.
-func (b *Builder) Build(verbose bool) error {
+func (b *Builder) Build(verbose bool, fsReaderWrapper oswrapper.FilesystemReaderWriter) error {
 	if verbose {
 		start := time.Now()
 		fmt.Printf("Building CTS %v...\n", b.Name)
@@ -113,11 +113,11 @@ func (b *Builder) Build(verbose bool) error {
 		}()
 	}
 
-	if err := os.MkdirAll(b.Out, 0777); err != nil {
+	if err := fsReaderWrapper.MkdirAll(b.Out, 0777); err != nil {
 		return err
 	}
 
-	if !fileutils.IsExe(b.npx) {
+	if !fileutils.IsExe(b.npx, fsReaderWrapper) {
 		return fmt.Errorf("cannot find npx at '%v'", b.npx)
 	}
 

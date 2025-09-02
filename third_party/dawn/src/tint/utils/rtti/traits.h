@@ -34,11 +34,12 @@
 #include <type_traits>
 #include <utility>
 
-namespace tint::traits {
+// Predeclarations
+namespace tint {
+class StringStream;
+}
 
-/// Convience type definition for std::decay<T>::type
-template <typename T>
-using Decay = typename std::decay<T>::type;
+namespace tint::traits {
 
 /// NthTypeOf returns the `N`th type in `Types`
 template <int N, typename... Types>
@@ -70,58 +71,39 @@ struct SignatureOf {
 template <typename R, typename... ARGS>
 struct SignatureOf<R (*)(ARGS...)> {
     /// The signature of the function-like object `F`
-    using type = Signature<typename std::decay<R>::type, typename std::decay<ARGS>::type...>;
+    using type = Signature<typename std::decay_t<R>, typename std::decay_t<ARGS>...>;
 };
 
 /// SignatureOf specialization for a non-static method.
 template <typename R, typename C, typename... ARGS>
 struct SignatureOf<R (C::*)(ARGS...)> {
     /// The signature of the function-like object `F`
-    using type = Signature<typename std::decay<R>::type, typename std::decay<ARGS>::type...>;
+    using type = Signature<typename std::decay_t<R>, typename std::decay_t<ARGS>...>;
 };
 
 /// SignatureOf specialization for a non-static, const method.
 template <typename R, typename C, typename... ARGS>
 struct SignatureOf<R (C::*)(ARGS...) const> {
     /// The signature of the function-like object `F`
-    using type = Signature<typename std::decay<R>::type, typename std::decay<ARGS>::type...>;
+    using type = Signature<typename std::decay_t<R>, typename std::decay_t<ARGS>...>;
 };
 
 /// SignatureOfT is an alias to `typename SignatureOf<F>::type`.
 template <typename F>
-using SignatureOfT = typename SignatureOf<Decay<F>>::type;
+using SignatureOfT = typename SignatureOf<std::decay_t<F>>::type;
 
 /// ParameterType is an alias to `typename SignatureOf<F>::type::parameter<N>`.
 template <typename F, std::size_t N>
-using ParameterType = typename SignatureOfT<Decay<F>>::template parameter<N>;
+using ParameterType = typename SignatureOfT<std::decay_t<F>>::template parameter<N>;
 
 /// LastParameterType returns the type of the last parameter of `F`. `F` must have at least one
 /// parameter.
 template <typename F>
-using LastParameterType = ParameterType<F, SignatureOfT<Decay<F>>::parameter_count - 1>;
+using LastParameterType = ParameterType<F, SignatureOfT<std::decay_t<F>>::parameter_count - 1>;
 
 /// ReturnType is an alias to `typename SignatureOf<F>::type::ret`.
 template <typename F>
-using ReturnType = typename SignatureOfT<Decay<F>>::ret;
-
-/// Returns true iff decayed T and decayed U are the same.
-template <typename T, typename U>
-static constexpr bool IsType = std::is_same<Decay<T>, Decay<U>>::value;
-
-/// IsTypeOrDerived<T, BASE> is true iff `T` is of type `BASE`, or derives from
-/// `BASE`.
-template <typename T, typename BASE>
-static constexpr bool IsTypeOrDerived =
-    std::is_base_of<BASE, Decay<T>>::value || std::is_same<BASE, Decay<T>>::value;
-
-/// If `CONDITION` is true then EnableIf resolves to type T, otherwise an invalid type.
-template <bool CONDITION, typename T = void>
-using EnableIf = std::enable_if_t<CONDITION, T>;
-
-/// If `T` is of type `BASE`, or derives from `BASE`, then EnableIfIsType
-/// resolves to type `T`, otherwise an invalid type.
-template <typename T, typename BASE>
-using EnableIfIsType = EnableIf<IsTypeOrDerived<T, BASE>, T>;
+using ReturnType = typename SignatureOfT<std::decay_t<F>>::ret;
 
 /// @returns the std::index_sequence with all the indices shifted by OFFSET.
 template <std::size_t OFFSET, std::size_t... INDICES>
@@ -137,14 +119,6 @@ constexpr auto Range() {
 
 namespace detail {
 
-/// @returns the tuple `t` swizzled by `INDICES`
-template <typename TUPLE, std::size_t... INDICES>
-constexpr auto Swizzle(TUPLE&& t, std::index_sequence<INDICES...>)
-    -> std::tuple<std::tuple_element_t<INDICES, std::remove_reference_t<TUPLE>>...> {
-    return {std::forward<std::tuple_element_t<INDICES, std::remove_reference_t<TUPLE>>>(
-        std::get<INDICES>(std::forward<TUPLE>(t)))...};
-}
-
 /// @returns a nullptr of the tuple type `TUPLE` swizzled by `INDICES`.
 /// @note: This function is intended to be used in a `decltype()` expression,
 /// and returns a pointer-to-tuple as the tuple may hold non-constructable
@@ -155,22 +129,6 @@ constexpr auto* SwizzlePtrTy(std::index_sequence<INDICES...>) {
     return static_cast<Swizzled*>(nullptr);
 }
 
-}  // namespace detail
-
-/// @returns the slice of the tuple `t` with the tuple elements
-/// `[OFFSET..OFFSET+COUNT)`
-template <std::size_t OFFSET, std::size_t COUNT, typename TUPLE>
-constexpr auto Slice(TUPLE&& t) {
-    return traits::detail::Swizzle<TUPLE>(std::forward<TUPLE>(t), Range<OFFSET, COUNT>());
-}
-
-/// Resolves to the slice of the tuple `t` with the tuple elements
-/// `[OFFSET..OFFSET+COUNT)`
-template <std::size_t OFFSET, std::size_t COUNT, typename TUPLE>
-using SliceTuple =
-    std::remove_pointer_t<decltype(traits::detail::SwizzlePtrTy<TUPLE>(Range<OFFSET, COUNT>()))>;
-
-namespace detail {
 /// Base template for IsTypeIn
 template <typename T, typename TypeList>
 struct IsTypeIn;
@@ -178,103 +136,53 @@ struct IsTypeIn;
 /// Specialization for IsTypeIn
 template <typename T, template <typename...> typename TypeContainer, typename... Ts>
 struct IsTypeIn<T, TypeContainer<Ts...>> : std::disjunction<std::is_same<T, Ts>...> {};
+
 }  // namespace detail
+
+/// Resolves to the slice of the tuple `t` with the tuple elements
+/// `[OFFSET..OFFSET+COUNT)`
+template <std::size_t OFFSET, std::size_t COUNT, typename TUPLE>
+using SliceTuple =
+    std::remove_pointer_t<decltype(traits::detail::SwizzlePtrTy<TUPLE>(Range<OFFSET, COUNT>()))>;
+
+/// Evaluates to the decayed pointer element type, or the decayed type T if T is not a pointer.
+template <typename T>
+using PtrElTy = std::decay_t<std::remove_pointer_t<std::decay_t<T>>>;
+
+////////////////////////////////////////////////////////////////////////////////
+/// Concepts
+////////////////////////////////////////////////////////////////////////////////
+
+/// Returns true iff decayed T and decayed U are the same.
+template <typename T, typename U>
+concept IsType = std::is_same_v<std::decay_t<T>, std::decay_t<U>>;
 
 /// Evaluates to true if T is one of the types in the TypeContainer's template arguments.
 /// Works for std::variant, std::tuple, std::pair, or any typename template where all parameters are
 /// types.
 template <typename T, typename TypeContainer>
-static constexpr bool IsTypeIn = traits::detail::IsTypeIn<T, TypeContainer>::value;
+concept IsTypeIn = traits::detail::IsTypeIn<T, TypeContainer>::value;
 
-/// Evaluates to the decayed pointer element type, or the decayed type T if T is not a pointer.
+/// IsTypeOrDerived<T, BASE> is true iff `T` is of type `BASE`, or derives from `BASE`.
+template <typename T, typename BASE>
+concept IsTypeOrDerived =
+    std::is_base_of_v<BASE, std::decay_t<T>> || std::is_same_v<BASE, std::decay_t<T>>;
+
 template <typename T>
-using PtrElTy = Decay<std::remove_pointer_t<Decay<T>>>;
+concept IsOStream = std::is_same_v<T, std::ostream> || std::is_same_v<T, std::stringstream> ||
+                    std::is_same_v<T, tint::StringStream>;
 
 /// Evaluates to true if `T` decayed is a `std::string`, `std::string_view`, `const char*` or
 /// `char*`
 template <typename T>
-static constexpr bool IsStringLike =
-    std::is_same_v<Decay<T>, std::string> || std::is_same_v<Decay<T>, std::string_view> ||
-    std::is_same_v<Decay<T>, const char*> || std::is_same_v<Decay<T>, char*>;
-
-namespace detail {
-/// Helper for CharArrayToCharPtr
-template <typename T>
-struct CharArrayToCharPtrImpl {
-    /// Evaluates to T
-    using type = T;
-};
-/// Specialization of CharArrayToCharPtrImpl for `char[N]`
-template <size_t N>
-struct CharArrayToCharPtrImpl<char[N]> {
-    /// Evaluates to `char*`
-    using type = char*;
-};
-/// Specialization of CharArrayToCharPtrImpl for `const char[N]`
-template <size_t N>
-struct CharArrayToCharPtrImpl<const char[N]> {
-    /// Evaluates to `const char*`
-    using type = const char*;
-};
-}  // namespace detail
-
-/// Evaluates to `char*` or `const char*` if `T` is `char[N]` or `const char[N]`, respectively,
-/// otherwise T.
-template <typename T>
-using CharArrayToCharPtr = typename traits::detail::CharArrayToCharPtrImpl<T>::type;
-
-////////////////////////////////////////////////////////////////////////////////
-// IsOStream
-////////////////////////////////////////////////////////////////////////////////
-namespace detail {
-/// Helper for determining whether the type T can be used as a stream writer
-template <typename T, typename ENABLE = void>
-struct IsOStream : std::false_type {};
-
-/// Specialization for types that declare a `static constexpr bool IsStreamWriter` member
-template <typename T>
-struct IsOStream<T, std::void_t<decltype(T::IsStreamWriter)>> {
-    /// Equal to T::IsStreamWriter
-    static constexpr bool value = T::IsStreamWriter;
-};
-
-/// Specialization for std::ostream
-template <typename T>
-struct IsOStream<T, std::enable_if_t<std::is_same_v<T, std::ostream>>> : std::true_type {};
-
-/// Specialization for std::stringstream
-template <typename T>
-struct IsOStream<T, std::enable_if_t<std::is_same_v<T, std::stringstream>>> : std::true_type {};
-
-}  // namespace detail
-
-/// Is true if the class T can be treated as an output stream
-template <typename T>
-static constexpr bool IsOStream = detail::IsOStream<T>::value;
-
-/// If `CONDITION` is true then EnableIfIsOStream resolves to type T, otherwise an invalid type.
-template <typename T = void>
-using EnableIfIsOStream = EnableIf<IsOStream<T>, T>;
-
-////////////////////////////////////////////////////////////////////////////////
-// HasOperatorShiftLeft
-////////////////////////////////////////////////////////////////////////////////
-namespace detail {
-/// Helper for determining whether the operator<<(LHS, RHS) exists
-template <typename LHS, typename RHS, typename = void>
-struct HasOperatorShiftLeft : std::false_type {};
-/// Specialization to detect operator
-template <typename LHS, typename RHS>
-struct HasOperatorShiftLeft<LHS,
-                            RHS,
-                            std::void_t<decltype(std::declval<LHS&>() << std::declval<RHS>())>>
-    : std::true_type {};
-
-}  // namespace detail
+concept IsStringLike =
+    std::is_same_v<std::decay_t<T>, std::string> ||
+    std::is_same_v<std::decay_t<T>, std::string_view> ||
+    std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>;
 
 /// Is true if operator<<(LHS, RHS) exists
 template <typename LHS, typename RHS>
-static constexpr bool HasOperatorShiftLeft = detail::HasOperatorShiftLeft<LHS, RHS>::value;
+concept HasOperatorShiftLeft = requires(LHS os, RHS a) { os << a; };
 
 }  // namespace tint::traits
 

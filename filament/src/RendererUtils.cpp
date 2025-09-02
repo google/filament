@@ -112,6 +112,8 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
 
                 const bool canAutoResolveDepth = engine.getDriverApi().isAutoDepthResolveSupported();
 
+                FrameGraphTexture::Usage depthStencilUsage = FrameGraphTexture::Usage::DEPTH_ATTACHMENT;
+
                 if (!data.depth) {
                     // clear newly allocated depth/stencil buffers, regardless of given clear flags
                     clearDepthFlags = TargetBufferFlags::DEPTH;
@@ -151,6 +153,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                             .format = format,
                     });
                     if (config.enabledStencilBuffer) {
+                        depthStencilUsage |= FrameGraphTexture::Usage::STENCIL_ATTACHMENT;
                         data.stencil = data.depth;
                     }
                 }
@@ -172,10 +175,10 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                 // We set a "read" constraint on these attachments here because we need to preserve them
                 // when the color pass happens in several passes (e.g. with SSR)
                 data.color = builder.read(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.depth = builder.read(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                data.depth = builder.read(data.depth, depthStencilUsage);
 
                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-                data.depth = builder.write(data.depth, FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+                data.depth = builder.write(data.depth, depthStencilUsage);
 
                 /*
                  * There is a bit of magic happening here regarding the viewport used.

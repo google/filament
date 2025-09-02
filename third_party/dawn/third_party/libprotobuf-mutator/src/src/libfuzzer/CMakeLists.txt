@@ -17,10 +17,11 @@ add_library(protobuf-mutator-libfuzzer
             libfuzzer_macro.cc)
 target_link_libraries(protobuf-mutator-libfuzzer
                       protobuf-mutator
-                      ${PROTOBUF_LIBRARIES})
+                      ${Protobuf_LIBRARIES})
 set_target_properties(protobuf-mutator-libfuzzer PROPERTIES
                       COMPILE_FLAGS "${NO_FUZZING_FLAGS}"
                       SOVERSION 0)
+target_compile_features(protobuf-mutator-libfuzzer PUBLIC cxx_std_14)
 
 install(TARGETS protobuf-mutator-libfuzzer
         EXPORT libprotobuf-mutatorTargets

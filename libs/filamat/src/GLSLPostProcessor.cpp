@@ -283,10 +283,13 @@ static void collectDescriptorSets(const GLSLPostProcessor::Config& config, Descr
 
 } // namespace msl
 
-GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization, uint32_t flags)
-        : mOptimization(optimization),
-          mPrintShaders(flags & PRINT_SHADERS),
-          mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
+GLSLPostProcessor::GLSLPostProcessor(
+        MaterialBuilder::Optimization optimization,
+        MaterialBuilder::Workarounds workarounds,
+        uint32_t flags)
+    : mOptimization(optimization), mWorkarounds(workarounds),
+      mPrintShaders(flags & PRINT_SHADERS),
+      mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
     // This should occur only once, to avoid races.
     SpirvRemapWrapperSetUp();
 }
@@ -576,7 +579,6 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 
     //Allow non-uniform derivatives due to our nested shaders. See https://github.com/gpuweb/gpuweb/issues/3479
     const tint::spirv::reader::Options readerOpts{true};
-    tint::wgsl::writer::Options writerOpts{};
 
     tint::Program tintRead = tint::spirv::reader::Read(*spirv, readerOpts);
 
@@ -602,7 +604,7 @@ bool GLSLPostProcessor::spirvToWgsl(SpirvBlob *spirv, std::string *outWsl) {
 #endif
     }
 
-    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead,writerOpts);
+    tint::Result<tint::wgsl::writer::Output> wgslOut = tint::wgsl::writer::Generate(tintRead);
     /// An instance of SuccessType that can be used to check a tint Result.
     tint::SuccessType tintSuccess;
 
@@ -998,6 +1000,11 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 }
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
+
+    // always add the CanonicalizeIds Pass
+    optimizer->RegisterPass(CreateCanonicalizeIdsPass());
+
+    // run optimizer
     if (!optimizer->Run(spirv.data(), spirv.size(), &spirv)) {
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
@@ -1041,25 +1048,25 @@ void GLSLPostProcessor::fixupClipDistance(
 // However, the simplification passes below are necessary when targeting Metal, otherwise the
 // result is mismatched half / float assignments in MSL.
 
-// CreateInlineExhaustivePass() expects CreateMergeReturnPass() to be run beforehand
-// (Throwing many warnings if this is not the case), but we don't consistently do so for the above
-// reasons. While running it alone may have some value, we will disable it for the new WebGPU backend
-// while minimizing other changes.
-
-
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
-        if (!(config.targetApi & apiFilter)) {
-            return;
+
+        // Workaround management is currently very simple, only two values are possible
+        // ALL and NONE. If the value is anything but NONE, we apply all workarounds.
+        if (config.workarounds != MaterialBuilderBase::Workarounds::NONE) {
+            if (!(config.targetApi & apiFilter)) {
+                return;
+            }
         }
+
         optimizer.RegisterPass(std::move(pass));
     };
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
     RegisterPass(CreateMergeReturnPass(), MaterialBuilder::TargetApi::METAL);
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateAggressiveDCEPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateLocalSingleBlockLoadStoreElimPass());
@@ -1103,8 +1110,7 @@ void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer, Config const& c
 
     RegisterPass(CreateWrapOpKillPass());
     RegisterPass(CreateDeadBranchElimPass());
-    //  Disable for WebGPU, see comment above registerPerformancePasses()
-    RegisterPass(CreateInlineExhaustivePass(), MaterialBuilder::TargetApi::ALL & ~MaterialBuilder::TargetApi::WEBGPU);
+    RegisterPass(CreateInlineExhaustivePass());
     RegisterPass(CreateEliminateDeadFunctionsPass());
     RegisterPass(CreatePrivateToLocalPass());
     RegisterPass(CreateScalarReplacementPass(0));

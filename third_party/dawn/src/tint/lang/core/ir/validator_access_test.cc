@@ -32,10 +32,10 @@
 
 #include "gtest/gtest.h"
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/ir/builder.h"
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/number.h"
-#include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/abstract_float.h"
 #include "src/tint/lang/core/type/abstract_int.h"
 #include "src/tint/lang/core/type/manager.h"
@@ -614,6 +614,27 @@ TEST_F(IR_ValidatorTest, Load_NonReadableSource) {
 )")) << res.Failure();
 }
 
+TEST_F(IR_ValidatorTest, Load_RuntimeSizedArray) {
+    auto* a = b.Var("a", ty.ptr<storage, array<u32>, read_write>());
+    a->SetBindingPoint(0, 0);
+    mod.root_block->Append(a);
+
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        b.Load(a);
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(
+                                          R"(:7:21 error: load: cannot load a runtime-sized array
+    %3:array<u32> = load %a
+                    ^^^^
+)")) << res.Failure();
+}
+
 TEST_F(IR_ValidatorTest, Store_NullTo) {
     auto* f = b.Function("my_func", ty.void_());
 
@@ -762,6 +783,30 @@ TEST_F(IR_ValidatorTest, Store_NonWriteableTarget) {
             R"(:4:11 error: store: store target operand has a non-writeable access type, 'read'
     store %2, 42i
           ^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Store_NonConstructible) {
+    auto* a = b.Var("a", ty.ptr<storage, array<u32>, read_write>());
+    a->SetBindingPoint(0, 0);
+    mod.root_block->Append(a);
+
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        // Note: The load is invalid too, but there's no way to produce a non-constructible value
+        // that will not hit another validation rule before the constructible check.
+        b.Store(a, b.Load(a));
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(
+                    R"(:8:5 error: store: store type 'array<u32>' is not constructible
+    store %a, %3
+    ^^^^^
 )")) << res.Failure();
 }
 

@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // We need to keep & fix these warnings to integrate smoothly with HLK
-#pragma warning(error : 4100 4146 4242 4244 4267 4701 4389 4018)
+#pragma warning(error : 4100 4242 4244 4267 4701 4389 4018)
 
 // *** THIS FILE CANNOT TAKE ANY LLVM DEPENDENCIES  *** //
 
@@ -60,53 +60,14 @@
 #include "ShaderOpTest.h"
 #include <libloaderapi.h>
 #include <DirectXPackedVector.h>
+#include "TableParameterHandler.h"
+#include "HlslExecTestUtils.h"
 // clang-format on
 
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "version.lib")
-
-// A more recent Windows SDK than currently required is needed for these.
-typedef HRESULT(WINAPI *D3D12EnableExperimentalFeaturesFn)(
-    UINT NumFeatures, __in_ecount(NumFeatures) const IID *pIIDs,
-    __in_ecount_opt(NumFeatures) void *pConfigurationStructs,
-    __in_ecount_opt(NumFeatures) UINT *pConfigurationStructSizes);
-
-static const GUID D3D12ExperimentalShaderModelsID =
-    {/* 76f5573e-f13a-40f5-b297-81ce9e18933f */
-     0x76f5573e,
-     0xf13a,
-     0x40f5,
-     {0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f}};
-
-// Used to create D3D12SDKConfiguration to enable AgilitySDK programmatically.
-typedef HRESULT(WINAPI *D3D12GetInterfaceFn)(REFCLSID rclsid, REFIID riid,
-                                             void **ppvDebug);
-
-#ifndef __ID3D12SDKConfiguration_INTERFACE_DEFINED__
-// Copied from AgilitySDK D3D12.h to programmatically enable when in developer
-// mode.
-#define __ID3D12SDKConfiguration_INTERFACE_DEFINED__
-
-EXTERN_C const GUID DECLSPEC_SELECTANY IID_ID3D12SDKConfiguration = {
-    0xe9eb5314,
-    0x33aa,
-    0x42b2,
-    {0xa7, 0x18, 0xd7, 0x7f, 0x58, 0xb1, 0xf1, 0xc7}};
-EXTERN_C const GUID DECLSPEC_SELECTANY CLSID_D3D12SDKConfiguration = {
-    0x7cda6aca,
-    0xa03e,
-    0x49c8,
-    {0x94, 0x58, 0x03, 0x34, 0xd2, 0x0e, 0x07, 0xce}};
-
-MIDL_INTERFACE("e9eb5314-33aa-42b2-a718-d77f58b1f1c7")
-ID3D12SDKConfiguration : public IUnknown {
-public:
-  virtual HRESULT STDMETHODCALLTYPE SetSDKVersion(UINT SDKVersion,
-                                                  LPCSTR SDKPath) = 0;
-};
-#endif /* __ID3D12SDKConfiguration_INTERFACE_DEFINED__ */
 
 using namespace DirectX;
 using namespace hlsl_test;
@@ -270,9 +231,6 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS4 {
 } D3D12_FEATURE_DATA_D3D12_OPTIONS4;
 
 #endif
-
-// Virtual class to compute the expected result given a set of inputs
-struct TableParameter;
 
 class ExecutionTest {
 public:
@@ -519,10 +477,10 @@ public:
         return false;
       // Do not: FreeLibrary(hRuntime);
       // If we actually free the library, it defeats the purpose of
-      // EnableAgilitySDK and EnableExperimentalMode.
+      // enableAgilitySDK and enableExperimentalMode.
 
       HRESULT hr;
-      hr = EnableAgilitySDK(hRuntime);
+      hr = enableAgilitySDK(hRuntime);
       if (FAILED(hr)) {
         LogCommentFmt(L"Unable to enable Agility SDK - 0x%08x.", hr);
       } else if (hr == S_FALSE) {
@@ -531,7 +489,7 @@ public:
         LogCommentFmt(L"Agility SDK enabled.");
       }
 
-      hr = EnableExperimentalMode(hRuntime);
+      hr = enableExperimentalMode(hRuntime);
       if (FAILED(hr)) {
         LogCommentFmt(L"Unable to enable shader experimental mode - 0x%08x.",
                       hr);
@@ -541,7 +499,7 @@ public:
         LogCommentFmt(L"Experimental mode enabled.");
       }
 
-      hr = EnableDebugLayer();
+      hr = enableDebugLayer();
       if (FAILED(hr)) {
         LogCommentFmt(L"Unable to enable debug layer - 0x%08x.", hr);
       } else if (hr == S_FALSE) {
@@ -602,41 +560,31 @@ public:
   // Do not remove the following line - it is used by TranslateExecutionTest.py
   // MARKER: ExecutionTest/DxilConf Shared Implementation Start
 
-  // This is defined in d3d.h for Windows 10 Anniversary Edition SDK, but we
-  // only require the Windows 10 SDK.
-  typedef enum D3D_SHADER_MODEL {
-    D3D_SHADER_MODEL_5_1 = 0x51,
-    D3D_SHADER_MODEL_6_0 = 0x60,
-    D3D_SHADER_MODEL_6_1 = 0x61,
-    D3D_SHADER_MODEL_6_2 = 0x62,
-    D3D_SHADER_MODEL_6_3 = 0x63,
-    D3D_SHADER_MODEL_6_4 = 0x64,
-    D3D_SHADER_MODEL_6_5 = 0x65,
-    D3D_SHADER_MODEL_6_6 = 0x66,
-    D3D_SHADER_MODEL_6_7 = 0x67,
-    D3D_SHADER_MODEL_6_8 = 0x68,
-    D3D_SHADER_MODEL_6_9 = 0x69,
-  } D3D_SHADER_MODEL;
-
-  static const D3D_SHADER_MODEL HIGHEST_SHADER_MODEL = D3D_SHADER_MODEL_6_9;
-
-  bool UseDxbc() {
-#ifdef _HLK_CONF
-    return false;
-#else
-    return GetTestParamBool(L"DXBC");
-#endif
-  }
-
-  bool UseWarpByDefault() {
-#ifdef _HLK_CONF
-    return false;
-#else
-    return true;
-#endif
-  }
-
-  bool UseDebugIfaces() { return true; }
+  // We define D3D_SHADER_MODEL enum values as we don't generally have access to
+  // the latest D3D headers when adding tests for a new SM being added.
+  using D3D_SHADER_MODEL = ExecTestUtils::D3D_SHADER_MODEL;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_0 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_0;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_1 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_1;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_2 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_2;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_3 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_3;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_4 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_4;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_5 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_5;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_6 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_6;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_7 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_7;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_8 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_8;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_SHADER_MODEL_6_9 =
+      ExecTestUtils::D3D_SHADER_MODEL_6_9;
+  static constexpr ExecTestUtils::D3D_SHADER_MODEL D3D_HIGHEST_SHADER_MODEL =
+      ExecTestUtils::D3D_HIGHEST_SHADER_MODEL;
 
   bool SaveImages() { return GetTestParamBool(L"SaveImages"); }
 
@@ -766,7 +714,7 @@ public:
     CComPtr<ID3DBlob> pComputeShader;
 
     // Load and compile shaders.
-    if (UseDxbc()) {
+    if (useDxbc()) {
 #ifndef _HLK_CONF
       DXBCFromText(pShader, L"main", pTargetProfile, &pComputeShader);
 #endif
@@ -782,112 +730,6 @@ public:
 
     VERIFY_SUCCEEDED(pDevice->CreateComputePipelineState(
         &computePsoDesc, IID_PPV_ARGS(ppComputeState)));
-  }
-
-  bool CreateDevice(ID3D12Device **ppDevice,
-                    D3D_SHADER_MODEL testModel = D3D_SHADER_MODEL_6_0,
-                    bool skipUnsupported = true) {
-    if (testModel > HIGHEST_SHADER_MODEL) {
-      UINT minor = (UINT)testModel & 0x0f;
-      LogCommentFmt(L"Installed SDK does not support "
-                    L"shader model 6.%1u",
-                    minor);
-
-      if (skipUnsupported) {
-        WEX::Logging::Log::Result(WEX::Logging::TestResults::Skipped);
-      }
-
-      return false;
-    }
-    CComPtr<IDXGIFactory4> factory;
-    CComPtr<ID3D12Device> pDevice;
-
-    *ppDevice = nullptr;
-
-    VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
-    if (GetTestParamUseWARP(UseWarpByDefault())) {
-      CComPtr<IDXGIAdapter> warpAdapter;
-      VERIFY_SUCCEEDED(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-      HRESULT createHR = D3D12CreateDevice(warpAdapter, D3D_FEATURE_LEVEL_11_0,
-                                           IID_PPV_ARGS(&pDevice));
-      if (FAILED(createHR)) {
-        LogCommentFmt(L"The available version of WARP does not support d3d12.");
-
-        if (skipUnsupported) {
-          WEX::Logging::Log::Result(WEX::Logging::TestResults::Skipped);
-        }
-
-        return false;
-      }
-
-      if (GetModuleHandleW(L"d3d10warp.dll") != NULL) {
-        WCHAR szFullModuleFilePath[MAX_PATH] = L"";
-        GetModuleFileNameW(GetModuleHandleW(L"d3d10warp.dll"),
-                           szFullModuleFilePath, sizeof(szFullModuleFilePath));
-        WEX::Logging::Log::Comment(WEX::Common::String().Format(
-            L"WARP driver loaded from: %S", szFullModuleFilePath));
-      }
-
-    } else {
-      CComPtr<IDXGIAdapter1> hardwareAdapter;
-      WEX::Common::String AdapterValue;
-      HRESULT hr = WEX::TestExecution::RuntimeParameters::TryGetValue(
-          L"Adapter", AdapterValue);
-      if (SUCCEEDED(hr)) {
-        st::GetHardwareAdapter(factory, AdapterValue, &hardwareAdapter);
-      } else {
-        WEX::Logging::Log::Comment(
-            L"Using default hardware adapter with D3D12 support.");
-      }
-
-      VERIFY_SUCCEEDED(D3D12CreateDevice(
-          hardwareAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice)));
-    }
-    // retrieve adapter information
-    LUID adapterID = pDevice->GetAdapterLuid();
-    CComPtr<IDXGIAdapter> adapter;
-    factory->EnumAdapterByLuid(adapterID, IID_PPV_ARGS(&adapter));
-    DXGI_ADAPTER_DESC AdapterDesc;
-    VERIFY_SUCCEEDED(adapter->GetDesc(&AdapterDesc));
-    LogCommentFmt(L"Using Adapter:%s", AdapterDesc.Description);
-
-    if (pDevice == nullptr)
-      return false;
-
-    if (!UseDxbc()) {
-      // Check for DXIL support.
-      typedef struct D3D12_FEATURE_DATA_SHADER_MODEL {
-        D3D_SHADER_MODEL HighestShaderModel;
-      } D3D12_FEATURE_DATA_SHADER_MODEL;
-      const UINT D3D12_FEATURE_SHADER_MODEL = 7;
-      D3D12_FEATURE_DATA_SHADER_MODEL SMData;
-      SMData.HighestShaderModel = testModel;
-      if (FAILED(pDevice->CheckFeatureSupport(
-              (D3D12_FEATURE)D3D12_FEATURE_SHADER_MODEL, &SMData,
-              sizeof(SMData))) ||
-          SMData.HighestShaderModel < testModel) {
-        UINT minor = (UINT)testModel & 0x0f;
-        LogCommentFmt(L"The selected device does not support "
-                      L"shader model 6.%1u",
-                      minor);
-
-        if (skipUnsupported) {
-          WEX::Logging::Log::Result(WEX::Logging::TestResults::Skipped);
-        }
-
-        return false;
-      }
-    }
-
-    if (UseDebugIfaces()) {
-      CComPtr<ID3D12InfoQueue> pInfoQueue;
-      if (SUCCEEDED(pDevice->QueryInterface(&pInfoQueue))) {
-        pInfoQueue->SetMuteDebugOutput(FALSE);
-      }
-    }
-
-    *ppDevice = pDevice.Detach();
-    return true;
   }
 
   void CreateGraphicsCommandQueue(ID3D12Device *pDevice,
@@ -919,7 +761,7 @@ public:
     CComPtr<ID3DBlob> vertexShader;
     CComPtr<ID3DBlob> pixelShader;
 
-    if (UseDxbc()) {
+    if (useDxbc()) {
 #ifndef _HLK_CONF
       DXBCFromText(pShaders, L"VSMain", L"vs_6_0", &vertexShader);
       DXBCFromText(pShaders, L"PSMain", L"ps_6_0", &pixelShader);
@@ -1642,7 +1484,7 @@ public:
     // The debug layer does net yet validate DXIL programs that require
     // rewriting, but basic logging should work properly.
     HRESULT hr = S_FALSE;
-    if (UseDebugIfaces()) {
+    if (useDebugIfaces()) {
       CComPtr<ID3D12Debug> debugController;
       hr = D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
       if (SUCCEEDED(hr)) {
@@ -1828,20 +1670,6 @@ public:
     if (pObj->m_fenceEvent == nullptr) {
       VERIFY_SUCCEEDED(HRESULT_FROM_WIN32(GetLastError()));
     }
-  }
-
-  void ReadHlslDataIntoNewStream(LPCWSTR relativePath, IStream **ppStream) {
-    VERIFY_SUCCEEDED(m_support.Initialize());
-    CComPtr<IDxcLibrary> pLibrary;
-    CComPtr<IDxcBlobEncoding> pBlob;
-    CComPtr<IStream> pStream;
-    std::wstring path = GetPathToHlslDataFile(relativePath, HLSLDATAFILEPARAM,
-                                              DEFAULT_EXEC_TEST_DIR);
-    VERIFY_SUCCEEDED(m_support.CreateInstance(CLSID_DxcLibrary, &pLibrary));
-    VERIFY_SUCCEEDED(
-        pLibrary->CreateBlobFromFile(path.c_str(), nullptr, &pBlob));
-    VERIFY_SUCCEEDED(pLibrary->CreateStreamFromBlobReadOnly(pBlob, &pStream));
-    *ppStream = pStream.Detach();
   }
 
   void RecordRenderAndReadback(ID3D12GraphicsCommandList *pList,
@@ -2348,15 +2176,15 @@ TEST_F(ExecutionTest, LifetimeIntrinsicTest) {
   static const int DispatchGroupCount = 1;
 
   CComPtr<ID3D12Device> pDevice;
-  bool bSM_6_6_Supported = CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6, false);
+  bool bSM_6_6_Supported = createDevice(&pDevice, D3D_SHADER_MODEL_6_6, false);
   bool bSM_6_3_Supported = bSM_6_6_Supported;
   if (!bSM_6_6_Supported) {
     // Try 6.3 for downlevel DXR case
-    bSM_6_3_Supported = CreateDevice(&pDevice, D3D_SHADER_MODEL_6_3, false);
+    bSM_6_3_Supported = createDevice(&pDevice, D3D_SHADER_MODEL_6_3, false);
   }
   if (!bSM_6_3_Supported) {
     // Otherwise, 6.0 better be supported for compute case
-    VERIFY_IS_TRUE(CreateDevice(&pDevice, D3D_SHADER_MODEL_6_0, false));
+    VERIFY_IS_TRUE(createDevice(&pDevice, D3D_SHADER_MODEL_6_0, false));
   }
   bool bDXRSupported =
       bSM_6_3_Supported && DoesDeviceSupportRayTracing(pDevice);
@@ -2465,7 +2293,7 @@ TEST_F(ExecutionTest, BasicComputeTest) {
   static const int DispatchGroupCount = 1;
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   std::vector<uint32_t> values;
@@ -2524,7 +2352,7 @@ TEST_F(ExecutionTest, BasicTriangleTest) {
       "  return 1; //input.color;\r\n"
       "};\r\n";
 
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   struct BasicTestChecker {
@@ -2668,7 +2496,7 @@ TEST_F(ExecutionTest, Int64Test) {
   static const int DispatchGroupCount = 1;
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   if (!DoesDeviceSupportInt64(pDevice)) {
@@ -2693,7 +2521,7 @@ TEST_F(ExecutionTest, SignTest) {
                                 "}";
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   const uint32_t neg1 = (uint32_t)-1;
@@ -2714,7 +2542,7 @@ TEST_F(ExecutionTest, SignTest) {
 TEST_F(ExecutionTest, WaveIntrinsicsDDITest) {
 #ifndef _HLK_CONF
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
   D3D12_FEATURE_DATA_D3D12_OPTIONS1 O;
   if (FAILED(pDevice->CheckFeatureSupport(
@@ -2814,7 +2642,7 @@ TEST_F(ExecutionTest, WaveIntrinsicsTest) {
   static const int DispatchGroupCount = 1;
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   if (!DoesDeviceSupportWaveOps(pDevice)) {
@@ -2841,7 +2669,7 @@ TEST_F(ExecutionTest, WaveIntrinsicsTest) {
   CComPtr<ID3D12DescriptorHeap> pUavHeap;
   CComPtr<ID3D12CommandAllocator> pCommandAllocator;
   FenceObj FO;
-  bool dxbc = UseDxbc();
+  bool dxbc = useDxbc();
 
   const size_t valueSizeInBytes = values.size() * sizeof(PerThreadData);
   CreateComputeCommandQueue(pDevice, L"WaveIntrinsicsTest Command Queue",
@@ -3172,7 +3000,7 @@ TEST_F(ExecutionTest, WaveIntrinsicsInPSTest) {
   CComPtr<ID3D12Resource> pVertexBuffer;
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
   if (!DoesDeviceSupportWaveOps(pDevice)) {
     // Optional feature, so it's correct to not support it if declared as such.
@@ -3229,7 +3057,7 @@ TEST_F(ExecutionTest, WaveIntrinsicsInPSTest) {
 
   CreateVertexBuffer(pDevice, vertices, &pVertexBuffer, &vertexBufferView);
 
-  bool dxbc = UseDxbc();
+  bool dxbc = useDxbc();
 
   // Set up UAV resource.
   std::vector<PerPixelData> values;
@@ -3491,12 +3319,6 @@ TEST_F(ExecutionTest, WaveIntrinsicsInPSTest) {
   }
 }
 
-struct ShaderOpTestResult {
-  st::ShaderOp *ShaderOp;
-  std::shared_ptr<st::ShaderOpSet> ShaderOpSet;
-  std::shared_ptr<st::ShaderOpTest> Test;
-};
-
 struct SPrimitives {
   float f_float;
   float f_float2;
@@ -3504,87 +3326,19 @@ struct SPrimitives {
   float f_float2_o;
 };
 
-std::shared_ptr<ShaderOpTestResult>
-RunShaderOpTestAfterParse(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
-                          LPCSTR pName,
-                          st::ShaderOpTest::TInitCallbackFn pInitCallback,
-                          st::ShaderOpTest::TShaderCallbackFn pShaderCallback,
-                          std::shared_ptr<st::ShaderOpSet> ShaderOpSet) {
-  st::ShaderOp *pShaderOp;
-  if (pName == nullptr) {
-    if (ShaderOpSet->ShaderOps.size() != 1) {
-      VERIFY_FAIL(L"Expected a single shader operation.");
-    }
-    pShaderOp = ShaderOpSet->ShaderOps[0].get();
-  } else {
-    pShaderOp = ShaderOpSet->GetShaderOp(pName);
-  }
-  if (pShaderOp == nullptr) {
-    std::string msg = "Unable to find shader op ";
-    msg += pName;
-    msg += "; available ops";
-    const char sep = ':';
-    for (auto &pAvailOp : ShaderOpSet->ShaderOps) {
-      msg += sep;
-      msg += pAvailOp->Name ? pAvailOp->Name : "[n/a]";
-    }
-    CA2W msgWide(msg.c_str());
-    VERIFY_FAIL(msgWide.m_psz);
-  }
-
-  // This won't actually be used since we're supplying the device,
-  // but let's make it consistent.
-  pShaderOp->UseWarpDevice = GetTestParamUseWARP(true);
-
-  std::shared_ptr<st::ShaderOpTest> test = std::make_shared<st::ShaderOpTest>();
-  test->SetDxcSupport(&support);
-  test->SetInitCallback(pInitCallback);
-  test->SetShaderCallback(pShaderCallback);
-  test->SetDevice(pDevice);
-  test->RunShaderOp(pShaderOp);
-
-  std::shared_ptr<ShaderOpTestResult> result =
-      std::make_shared<ShaderOpTestResult>();
-  result->ShaderOpSet = ShaderOpSet;
-  result->Test = test;
-  result->ShaderOp = pShaderOp;
-  return result;
-}
-
-std::shared_ptr<ShaderOpTestResult>
-RunShaderOpTestAfterParse(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
-                          LPCSTR pName,
-                          st::ShaderOpTest::TInitCallbackFn pInitCallback,
-                          std::shared_ptr<st::ShaderOpSet> ShaderOpSet) {
-  return RunShaderOpTestAfterParse(pDevice, support, pName, pInitCallback,
-                                   nullptr, ShaderOpSet);
-}
-
-std::shared_ptr<ShaderOpTestResult>
-RunShaderOpTest(ID3D12Device *pDevice, dxc::DxcDllSupport &support,
-                IStream *pStream, LPCSTR pName,
-                st::ShaderOpTest::TInitCallbackFn pInitCallback) {
-  DXASSERT_NOMSG(pStream != nullptr);
-  std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
-      std::make_shared<st::ShaderOpSet>();
-  st::ParseShaderOpSetFromStream(pStream, ShaderOpSet.get());
-  return RunShaderOpTestAfterParse(pDevice, support, pName, pInitCallback,
-                                   ShaderOpSet);
-}
-
 TEST_F(ExecutionTest, OutOfBoundsTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   // Single operation test at the moment.
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
-  std::shared_ptr<ShaderOpTestResult> test =
-      RunShaderOpTest(pDevice, m_support, pStream, "OOB", nullptr);
+  std::shared_ptr<st::ShaderOpTestResult> test =
+      st::RunShaderOpTest(pDevice, m_support, pStream, "OOB", nullptr);
   MappedData data;
   // Read back to CPU and examine contents - should get pure red.
   {
@@ -3601,15 +3355,15 @@ TEST_F(ExecutionTest, SaturateTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   // Single operation test at the moment.
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
-  std::shared_ptr<ShaderOpTestResult> test =
-      RunShaderOpTest(pDevice, m_support, pStream, "Saturate", nullptr);
+  std::shared_ptr<st::ShaderOpTestResult> test =
+      st::RunShaderOpTest(pDevice, m_support, pStream, "Saturate", nullptr);
   MappedData data;
   test->Test->GetReadBackData("U0", &data);
   const float *pValues = (float *)data.data();
@@ -3636,11 +3390,11 @@ void ExecutionTest::BasicTriangleTestSetup(LPCSTR ShaderOpName,
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   // Single operation test at the moment.
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, testModel))
+  if (!createDevice(&pDevice, testModel))
     return;
 
   // As this is used, 6.2 requirement always comes with requiring native 16-bit
@@ -3653,8 +3407,8 @@ void ExecutionTest::BasicTriangleTestSetup(LPCSTR ShaderOpName,
     return;
   }
 
-  std::shared_ptr<ShaderOpTestResult> test =
-      RunShaderOpTest(pDevice, m_support, pStream, ShaderOpName, nullptr);
+  std::shared_ptr<st::ShaderOpTestResult> test =
+      st::RunShaderOpTest(pDevice, m_support, pStream, ShaderOpName, nullptr);
   MappedData data;
   D3D12_RESOURCE_DESC &D = test->ShaderOp->GetResourceByName("RTarget")->Desc;
   UINT width = (UINT)D.Width;
@@ -3786,14 +3540,14 @@ TEST_F(ExecutionTest, PartialDerivTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
-  std::shared_ptr<ShaderOpTestResult> test =
-      RunShaderOpTest(pDevice, m_support, pStream, "DerivFine", nullptr);
+  std::shared_ptr<st::ShaderOpTestResult> test =
+      st::RunShaderOpTest(pDevice, m_support, pStream, "DerivFine", nullptr);
   MappedData data;
   D3D12_RESOURCE_DESC &D = test->ShaderOp->GetResourceByName("RTarget")->Desc;
   UINT width = (UINT)D.Width;
@@ -3894,10 +3648,10 @@ TEST_F(ExecutionTest, DerivativesTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
@@ -3977,10 +3731,10 @@ TEST_F(ExecutionTest, QuadReadTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   if (!DoesDeviceSupportWaveOps(pDevice)) {
@@ -4033,8 +3787,9 @@ TEST_F(ExecutionTest, QuadReadTest) {
 
     // Test Compute Shader
     pShaderOp->CS = CS;
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "QuadRead", nullptr, ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(pDevice, m_support, "QuadRead", nullptr,
+                                      ShaderOpSet);
     MappedData data;
 
     test->Test->GetReadBackData("U0", &data);
@@ -4055,8 +3810,8 @@ TEST_F(ExecutionTest, QuadReadTest) {
 
       // Disable CS so mesh goes forward
       pShaderOp->CS = nullptr;
-      test = RunShaderOpTestAfterParse(pDevice, m_support, "QuadRead", nullptr,
-                                       ShaderOpSet);
+      test = st::RunShaderOpTestAfterParse(pDevice, m_support, "QuadRead",
+                                           nullptr, ShaderOpSet);
       test->Test->GetReadBackData("U1", &data);
       pPixels = (UINT *)data.data();
       // Test first, second and center quads
@@ -4124,10 +3879,10 @@ TEST_F(ExecutionTest, ComputeSampleTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
@@ -4175,7 +3930,7 @@ TEST_F(ExecutionTest, ComputeSampleTest) {
   }
 
   // Test 1D compute shader
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "ComputeSample", SampleInitFn, ShaderOpSet);
   MappedData data;
 
@@ -4190,8 +3945,8 @@ TEST_F(ExecutionTest, ComputeSampleTest) {
   pShaderOp->CS = CS2;
 
   test.reset();
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
-                                   SampleInitFn, ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
+                                       SampleInitFn, ShaderOpSet);
 
   test->Test->GetReadBackData("U0", &data);
   pPixels = (UINT *)data.data();
@@ -4203,8 +3958,8 @@ TEST_F(ExecutionTest, ComputeSampleTest) {
   if (DoesDeviceSupportMeshAmpDerivatives(pDevice)) {
     // Disable CS so mesh goes forward
     pShaderOp->CS = nullptr;
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
-                                     SampleInitFn, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
+                                         SampleInitFn, ShaderOpSet);
     test->Test->GetReadBackData("U1", &data);
     pPixels = (UINT *)data.data();
 
@@ -4221,8 +3976,8 @@ TEST_F(ExecutionTest, ComputeSampleTest) {
 
     pShaderOp->AS = AS2;
     pShaderOp->MS = MS2;
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
-                                     SampleInitFn, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "ComputeSample",
+                                         SampleInitFn, ShaderOpSet);
     test->Test->GetReadBackData("U1", &data);
     pPixels = (UINT *)data.data();
 
@@ -4251,7 +4006,7 @@ TEST_F(ExecutionTest, ATOWriteMSAATest) {
 #else
   D3D_SHADER_MODEL sm = D3D_SHADER_MODEL_6_7;
 #endif
-  if (!CreateDevice(&pDevice, sm))
+  if (!createDevice(&pDevice, sm))
     return;
 
 #ifndef WRITEMSAA_FALLBACK
@@ -4517,7 +4272,7 @@ TEST_F(ExecutionTest, ATOProgOffset) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -4550,7 +4305,7 @@ TEST_F(ExecutionTest, ATOProgOffset) {
     D3D_SHADER_MODEL sm = TestShaderModels[i];
 
     CComPtr<ID3D12Device> pDevice;
-    if (!CreateDevice(&pDevice, sm, /*skipUnsupported*/ false)) {
+    if (!createDevice(&pDevice, sm, /*skipUnsupported*/ false)) {
       LogCommentFmt(L"Device does not support shader model 6.%1u",
                     ((UINT)sm & 0x0f));
       break;
@@ -4603,8 +4358,9 @@ TEST_F(ExecutionTest, ATOProgOffset) {
     }
 
     // Test compute shader
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "ProgOffset", SampleInitFn, ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(pDevice, m_support, "ProgOffset",
+                                      SampleInitFn, ShaderOpSet);
     MappedData data;
 
     test->Test->GetReadBackData("U0", &data);
@@ -4614,8 +4370,8 @@ TEST_F(ExecutionTest, ATOProgOffset) {
     pShaderOp->CS = nullptr;
 
     if (DoesDeviceSupportMeshShaders(pDevice)) {
-      test = RunShaderOpTestAfterParse(pDevice, m_support, "ProgOffset",
-                                       SampleInitFn, ShaderOpSet);
+      test = st::RunShaderOpTestAfterParse(pDevice, m_support, "ProgOffset",
+                                           SampleInitFn, ShaderOpSet);
 
       // PS
       test->Test->GetReadBackData("U0", &data);
@@ -4632,8 +4388,8 @@ TEST_F(ExecutionTest, ATOProgOffset) {
 
     // Disable MS so PS goes forward
     pShaderOp->MS = nullptr;
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "ProgOffset",
-                                     SampleInitFn, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "ProgOffset",
+                                         SampleInitFn, ShaderOpSet);
 
     test->Test->GetReadBackData("U0", &data);
     VerifyProgOffsetResults((UINT *)data.data(), true);
@@ -4653,10 +4409,10 @@ TEST_F(ExecutionTest, ATOSampleCmpLevelTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_7))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_7))
     return;
 
   if (!DoesDeviceSupportAdvancedTexOps(pDevice)) {
@@ -4701,7 +4457,7 @@ TEST_F(ExecutionTest, ATOSampleCmpLevelTest) {
   };
 
   // Test compute shader
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "SampleCmpLevel", SampleInitFn, ShaderOpSet);
   MappedData data;
 
@@ -4718,8 +4474,8 @@ TEST_F(ExecutionTest, ATOSampleCmpLevelTest) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     // Disable CS so mesh goes forward
     pShaderOp->CS = nullptr;
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "SampleCmpLevel",
-                                     SampleInitFn, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "SampleCmpLevel",
+                                         SampleInitFn, ShaderOpSet);
 
     test->Test->GetReadBackData("U0", &data);
     pPixels = (UINT *)data.data();
@@ -5298,7 +5054,7 @@ TEST_F(ExecutionTest, ATORawGather) {
   D3D_SHADER_MODEL sm = D3D_SHADER_MODEL_6_7;
 #endif
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, sm))
+  if (!createDevice(&pDevice, sm))
     return;
 
 #ifndef RAWGATHER_FALLBACK
@@ -5528,7 +5284,7 @@ void ExecutionTest::RunBasicShaderModelTest(D3D_SHADER_MODEL shaderModel) {
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, shaderModel)) {
+  if (!createDevice(&pDevice, shaderModel)) {
     return;
   }
 
@@ -5628,11 +5384,11 @@ void ExecutionTest::RunBasicShaderModelTest(CComPtr<ID3D12Device> pDevice,
   };
 
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryFPOp",
-      // this callbacked is called when the test is creating the resource to run
+      // this callback is called when the test is creating the resource to run
       // the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         UNREFERENCED_PARAMETER(Name);
@@ -5958,178 +5714,6 @@ struct SPackUnpackOpOutUnpacked {
   std::array<uint16_t, 4> outputClampedUint16;
   std::array<int16_t, 4> outputClampedInt16;
 };
-
-// Parameter representation for taef data-driven tests
-struct TableParameter {
-  LPCWSTR m_name;
-  enum TableParameterType {
-    INT8,
-    INT16,
-    INT32,
-    UINT,
-    FLOAT,
-    HALF,
-    DOUBLE,
-    STRING,
-    BOOL,
-    INT8_TABLE,
-    INT16_TABLE,
-    INT32_TABLE,
-    FLOAT_TABLE,
-    HALF_TABLE,
-    DOUBLE_TABLE,
-    STRING_TABLE,
-    UINT8_TABLE,
-    UINT16_TABLE,
-    UINT32_TABLE,
-    BOOL_TABLE
-  };
-  TableParameter(LPCWSTR name, TableParameterType type, bool required)
-      : m_name(name), m_type(type), m_required(required) {}
-  TableParameterType m_type;
-  bool m_required; // required parameter
-  int8_t m_int8;
-  int16_t m_int16;
-  int m_int32;
-  unsigned int m_uint;
-  float m_float;
-  uint16_t m_half; // no such thing as half type in c++. Use int16 instead
-  double m_double;
-  bool m_bool;
-  WEX::Common::String m_str;
-  std::vector<int8_t> m_int8Table;
-  std::vector<int16_t> m_int16Table;
-  std::vector<int> m_int32Table;
-  std::vector<uint8_t> m_uint8Table;
-  std::vector<uint16_t> m_uint16Table;
-  std::vector<unsigned int> m_uint32Table;
-  std::vector<float> m_floatTable;
-  std::vector<uint16_t> m_halfTable; // no such thing as half type in c++
-  std::vector<double> m_doubleTable;
-  std::vector<bool> m_boolTable;
-  std::vector<WEX::Common::String> m_StringTable;
-};
-
-class TableParameterHandler {
-private:
-  HRESULT ParseTableRow();
-
-public:
-  TableParameter *m_table;
-  size_t m_tableSize;
-  TableParameterHandler(TableParameter *pTable, size_t size)
-      : m_table(pTable), m_tableSize(size) {
-    clearTableParameter();
-    VERIFY_SUCCEEDED(ParseTableRow());
-  }
-
-  TableParameter *GetTableParamByName(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &m_table[i];
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  void clearTableParameter() {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      m_table[i].m_int32 = 0;
-      m_table[i].m_uint = 0;
-      m_table[i].m_double = 0;
-      m_table[i].m_bool = false;
-      m_table[i].m_str = WEX::Common::String();
-    }
-  }
-
-  template <class T1> std::vector<T1> *GetDataArray(LPCWSTR name) {
-    return nullptr;
-  }
-
-  template <> std::vector<int> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_int32Table);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<int8_t> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_int8Table);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<int16_t> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_int16Table);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<unsigned int> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_uint32Table);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<float> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_floatTable);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  // TODO: uin16_t may be used to represent two different types when we
-  // introduce uint16
-  template <> std::vector<uint16_t> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_halfTable);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<double> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_doubleTable);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-
-  template <> std::vector<bool> *GetDataArray(LPCWSTR name) {
-    for (size_t i = 0; i < m_tableSize; ++i) {
-      if (_wcsicmp(name, m_table[i].m_name) == 0) {
-        return &(m_table[i].m_boolTable);
-      }
-    }
-    DXASSERT_ARGS(false, "Invalid Table Parameter Name %s", name);
-    return nullptr;
-  }
-};
-
 static TableParameter UnaryFPOpParameters[] = {
     {L"ShaderOp.Target", TableParameter::STRING, true},
     {L"ShaderOp.Text", TableParameter::STRING, true},
@@ -6460,381 +6044,6 @@ static TableParameter PackUnpackOpParameters[] = {
     {L"Validation.Input", TableParameter::UINT32_TABLE, true},
 };
 
-static bool IsHexString(PCWSTR str, uint16_t *value) {
-  std::wstring wString(str);
-  wString.erase(std::remove(wString.begin(), wString.end(), L' '),
-                wString.end());
-  LPCWSTR wstr = wString.c_str();
-  if (wcsncmp(wstr, L"0x", 2) == 0 || wcsncmp(wstr, L"0b", 2) == 0) {
-    *value = (uint16_t)wcstol(wstr, NULL, 0);
-    return true;
-  }
-  return false;
-}
-
-static HRESULT ParseDataToFloat(PCWSTR str, float &value) {
-  std::wstring wString(str);
-  wString.erase(std::remove(wString.begin(), wString.end(), L' '),
-                wString.end());
-  wString.erase(std::remove(wString.begin(), wString.end(), L'\n'),
-                wString.end());
-  PCWSTR wstr = wString.data();
-  if (_wcsicmp(wstr, L"NaN") == 0) {
-    value = NAN;
-  } else if (_wcsicmp(wstr, L"-inf") == 0) {
-    value = -(INFINITY);
-  } else if (_wcsicmp(wstr, L"inf") == 0) {
-    value = INFINITY;
-  } else if (_wcsicmp(wstr, L"-denorm") == 0) {
-    value = -(FLT_MIN / 2);
-  } else if (_wcsicmp(wstr, L"denorm") == 0) {
-    value = FLT_MIN / 2;
-  } else if (_wcsicmp(wstr, L"-0.0f") == 0 || _wcsicmp(wstr, L"-0.0") == 0 ||
-             _wcsicmp(wstr, L"-0") == 0) {
-    value = -0.0f;
-  } else if (_wcsicmp(wstr, L"0.0f") == 0 || _wcsicmp(wstr, L"0.0") == 0 ||
-             _wcsicmp(wstr, L"0") == 0) {
-    value = 0.0f;
-  } else if (_wcsnicmp(wstr, L"0x", 2) ==
-             0) { // For hex values, take values literally
-    unsigned temp_i = std::stoul(wstr, nullptr, 16);
-    value = (float &)temp_i;
-  } else {
-    // evaluate the expression of wstring
-    double val = _wtof(wstr);
-    if (val == 0) {
-      LogErrorFmt(L"Failed to parse parameter %s to float", wstr);
-      return E_FAIL;
-    }
-    value = (float)val;
-  }
-  return S_OK;
-}
-
-static HRESULT ParseDataToUint(PCWSTR str, unsigned int &value) {
-  std::wstring wString(str);
-  wString.erase(std::remove(wString.begin(), wString.end(), L' '),
-                wString.end());
-  PCWSTR wstr = wString.data();
-  // evaluate the expression of string
-  if (_wcsicmp(wstr, L"0") == 0 || _wcsicmp(wstr, L"0x00000000") == 0) {
-    value = 0;
-    return S_OK;
-  }
-  wchar_t *end;
-  unsigned int val = std::wcstoul(wstr, &end, 0);
-  if (val == 0) {
-    LogErrorFmt(L"Failed to parse parameter %s to int", wstr);
-    return E_FAIL;
-  }
-  value = val;
-  return S_OK;
-}
-
-static HRESULT ParseDataToVectorFloat(PCWSTR str, float *ptr, size_t count) {
-  std::wstring wstr(str);
-  size_t curPosition = 0;
-  // parse a string of dot product separated by commas
-  for (size_t i = 0; i < count; ++i) {
-    size_t nextPosition = wstr.find(L",", curPosition);
-    if (FAILED(ParseDataToFloat(
-            wstr.substr(curPosition, nextPosition - curPosition).data(),
-            *(ptr + i)))) {
-      return E_FAIL;
-    }
-    curPosition = nextPosition + 1;
-  }
-  return S_OK;
-}
-
-static HRESULT ParseDataToVectorHalf(PCWSTR str, uint16_t *ptr, size_t count) {
-  std::wstring wstr(str);
-  size_t curPosition = 0;
-  // parse a string of dot product separated by commas
-  for (size_t i = 0; i < count; ++i) {
-    size_t nextPosition = wstr.find(L",", curPosition);
-    float floatValue;
-    if (FAILED(ParseDataToFloat(
-            wstr.substr(curPosition, nextPosition - curPosition).data(),
-            floatValue))) {
-      return E_FAIL;
-    }
-    *(ptr + i) = ConvertFloat32ToFloat16(floatValue);
-    curPosition = nextPosition + 1;
-  }
-  return S_OK;
-}
-
-static HRESULT ParseDataToVectorUint(PCWSTR str, unsigned int *ptr,
-                                     size_t count) {
-  std::wstring wstr(str);
-  size_t curPosition = 0;
-  // parse a string of dot product separated by commas
-  for (size_t i = 0; i < count; ++i) {
-    size_t nextPosition = wstr.find(L",", curPosition);
-    if (FAILED(ParseDataToUint(
-            wstr.substr(curPosition, nextPosition - curPosition).data(),
-            *(ptr + i)))) {
-      return E_FAIL;
-    }
-    curPosition = nextPosition + 1;
-  }
-  return S_OK;
-}
-
-HRESULT TableParameterHandler::ParseTableRow() {
-  TableParameter *table = m_table;
-  for (unsigned int i = 0; i < m_tableSize; ++i) {
-    switch (table[i].m_type) {
-    case TableParameter::INT8:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_int32)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int16
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_int8 = (int8_t)(table[i].m_int32);
-      break;
-    case TableParameter::INT16:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_int32)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int16
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_int16 = (short)(table[i].m_int32);
-      break;
-    case TableParameter::INT32:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_int32)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      break;
-    case TableParameter::UINT:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_uint)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      break;
-    case TableParameter::DOUBLE:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(
-              table[i].m_name, table[i].m_double)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      break;
-    case TableParameter::STRING:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_str)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      break;
-    case TableParameter::BOOL:
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           table[i].m_str)) &&
-          table[i].m_bool) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      break;
-    case TableParameter::INT8_TABLE: {
-      WEX::TestExecution::TestDataArray<int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      // TryGetValue does not suppport reading from int8
-      table[i].m_int8Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_int8Table[j] = (int8_t)tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::INT16_TABLE: {
-      WEX::TestExecution::TestDataArray<int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      // TryGetValue does not suppport reading from int8
-      table[i].m_int16Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_int16Table[j] = (int16_t)tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::INT32_TABLE: {
-      WEX::TestExecution::TestDataArray<int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_int32Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_int32Table[j] = tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::UINT8_TABLE: {
-      WEX::TestExecution::TestDataArray<int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      // TryGetValue does not suppport reading from int8
-      table[i].m_int8Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_int8Table[j] = (uint8_t)tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::UINT16_TABLE: {
-      WEX::TestExecution::TestDataArray<int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      // TryGetValue does not suppport reading from int8
-      table[i].m_uint16Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_uint16Table[j] = (uint16_t)tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::UINT32_TABLE: {
-      WEX::TestExecution::TestDataArray<unsigned int> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_uint32Table.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_uint32Table[j] = tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::FLOAT_TABLE: {
-      WEX::TestExecution::TestDataArray<WEX::Common::String> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_floatTable.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        ParseDataToFloat(tempTable[j], table[i].m_floatTable[j]);
-      }
-      break;
-    }
-    case TableParameter::HALF_TABLE: {
-      WEX::TestExecution::TestDataArray<WEX::Common::String> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_halfTable.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        uint16_t value = 0;
-        if (IsHexString(tempTable[j], &value)) {
-          table[i].m_halfTable[j] = value;
-        } else {
-          float val;
-          ParseDataToFloat(tempTable[j], val);
-          if (isdenorm(val))
-            table[i].m_halfTable[j] =
-                signbit(val) ? Float16NegDenorm : Float16PosDenorm;
-          else
-            table[i].m_halfTable[j] = ConvertFloat32ToFloat16(val);
-        }
-      }
-      break;
-    }
-    case TableParameter::DOUBLE_TABLE: {
-      WEX::TestExecution::TestDataArray<double> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_doubleTable.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_doubleTable[j] = tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::BOOL_TABLE: {
-      WEX::TestExecution::TestDataArray<bool> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_boolTable.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_boolTable[j] = tempTable[j];
-      }
-      break;
-    }
-    case TableParameter::STRING_TABLE: {
-      WEX::TestExecution::TestDataArray<WEX::Common::String> tempTable;
-      if (FAILED(WEX::TestExecution::TestData::TryGetValue(table[i].m_name,
-                                                           tempTable)) &&
-          table[i].m_required) {
-        // TryGetValue does not suppport reading from int8
-        LogErrorFmt(L"Failed to get %s", table[i].m_name);
-        return E_FAIL;
-      }
-      table[i].m_StringTable.resize(tempTable.GetSize());
-      for (size_t j = 0, end = tempTable.GetSize(); j != end; ++j) {
-        table[i].m_StringTable[j] = tempTable[j];
-      }
-      break;
-    }
-    default:
-      DXASSERT_NOMSG("Invalid Parameter Type");
-    }
-    if (errno == ERANGE) {
-      LogErrorFmt(L"got out of range value for table %s", table[i].m_name);
-      return E_FAIL;
-    }
-  }
-  return S_OK;
-}
-
 static bool CompareOutputWithExpectedValueInt(int output, int ref,
                                               int tolerance) {
   return ((output - ref) <= tolerance) && ((ref - output) <= tolerance);
@@ -6972,10 +6181,10 @@ TEST_F(ExecutionTest, UnaryFloatOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -6997,9 +6206,9 @@ TEST_F(ExecutionTest, UnaryFloatOpTest) {
 
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryFPOp"));
@@ -7035,10 +6244,10 @@ TEST_F(ExecutionTest, BinaryFloatOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7065,9 +6274,9 @@ TEST_F(ExecutionTest, BinaryFloatOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryFPOp"));
@@ -7125,10 +6334,10 @@ TEST_F(ExecutionTest, TertiaryFloatOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7155,9 +6364,9 @@ TEST_F(ExecutionTest, TertiaryFloatOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryFPOp"));
@@ -7198,10 +6407,10 @@ TEST_F(ExecutionTest, UnaryHalfOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -7232,9 +6441,9 @@ TEST_F(ExecutionTest, UnaryHalfOpTest) {
 
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryFPOp"));
@@ -7273,10 +6482,10 @@ TEST_F(ExecutionTest, BinaryHalfOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -7312,9 +6521,9 @@ TEST_F(ExecutionTest, BinaryHalfOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryFPOp"));
@@ -7384,10 +6593,10 @@ TEST_F(ExecutionTest, TertiaryHalfOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -7422,9 +6631,9 @@ TEST_F(ExecutionTest, TertiaryHalfOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryFPOp"));
@@ -7470,10 +6679,10 @@ TEST_F(ExecutionTest, UnaryIntOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7492,9 +6701,9 @@ TEST_F(ExecutionTest, UnaryIntOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryIntOp"));
@@ -7530,10 +6739,10 @@ TEST_F(ExecutionTest, UnaryUintOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7552,9 +6761,9 @@ TEST_F(ExecutionTest, UnaryUintOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryUintOp"));
@@ -7590,10 +6799,10 @@ TEST_F(ExecutionTest, BinaryIntOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7617,9 +6826,9 @@ TEST_F(ExecutionTest, BinaryIntOpTest) {
 
   size_t numExpected = Validation_Expected2->size() == 0 ? 1 : 2;
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryIntOp"));
@@ -7680,10 +6889,10 @@ TEST_F(ExecutionTest, TertiaryIntOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7705,9 +6914,9 @@ TEST_F(ExecutionTest, TertiaryIntOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryIntOp"));
@@ -7750,10 +6959,10 @@ TEST_F(ExecutionTest, BinaryUintOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7775,9 +6984,9 @@ TEST_F(ExecutionTest, BinaryUintOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
   int numExpected = Validation_Expected2->size() == 0 ? 1 : 2;
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryUintOp"));
@@ -7842,10 +7051,10 @@ TEST_F(ExecutionTest, TertiaryUintOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   // Read data from the table
@@ -7867,9 +7076,9 @@ TEST_F(ExecutionTest, TertiaryUintOpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryUintOp"));
@@ -7916,10 +7125,10 @@ TEST_F(ExecutionTest, UnaryInt16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -7946,9 +7155,9 @@ TEST_F(ExecutionTest, UnaryInt16OpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryIntOp"));
@@ -7984,10 +7193,10 @@ TEST_F(ExecutionTest, UnaryUint16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -8014,9 +7223,9 @@ TEST_F(ExecutionTest, UnaryUint16OpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "UnaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SUnaryUintOp"));
@@ -8053,10 +7262,10 @@ TEST_F(ExecutionTest, BinaryInt16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -8089,9 +7298,9 @@ TEST_F(ExecutionTest, BinaryInt16OpTest) {
 
   size_t numExpected = Validation_Expected2->size() == 0 ? 1 : 2;
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryIntOp"));
@@ -8151,10 +7360,10 @@ TEST_F(ExecutionTest, TertiaryInt16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -8185,9 +7394,9 @@ TEST_F(ExecutionTest, TertiaryInt16OpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryIntOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryIntOp"));
@@ -8228,10 +7437,10 @@ TEST_F(ExecutionTest, BinaryUint16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -8262,9 +7471,9 @@ TEST_F(ExecutionTest, BinaryUint16OpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
   int numExpected = Validation_Expected2->size() == 0 ? 1 : 2;
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryUintOp"));
@@ -8326,10 +7535,10 @@ TEST_F(ExecutionTest, TertiaryUint16OpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -8361,9 +7570,9 @@ TEST_F(ExecutionTest, TertiaryUint16OpTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_int32;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryUintOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryUintOp"));
@@ -8916,10 +8125,10 @@ TEST_F(ExecutionTest, DotTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
 
@@ -8946,9 +8155,9 @@ TEST_F(ExecutionTest, DotTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = Validation_Input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "DotOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SDotOp"));
@@ -9000,10 +8209,10 @@ TEST_F(ExecutionTest, Dot2AddHalfTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
     return;
   }
 
@@ -9036,7 +8245,7 @@ TEST_F(ExecutionTest, Dot2AddHalfTest) {
       handler.GetTableParamByName(L"Validation.Tolerance")->m_double;
   size_t count = validation_input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "Dot2AddHalfOp",
       // this callback is called when the test
       // is creating the resource to run the test
@@ -9088,10 +8297,10 @@ TEST_F(ExecutionTest, Dot4AddI8PackedTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
     return;
   }
 
@@ -9112,7 +8321,7 @@ TEST_F(ExecutionTest, Dot4AddI8PackedTest) {
 
   size_t count = validation_input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "Dot4AddI8PackedOp",
       // this callback is called when the test
       // is creating the resource to run the test
@@ -9151,10 +8360,10 @@ TEST_F(ExecutionTest, Dot4AddU8PackedTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_4, false)) {
     return;
   }
 
@@ -9175,7 +8384,7 @@ TEST_F(ExecutionTest, Dot4AddU8PackedTest) {
 
   size_t count = validation_input1->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "Dot4AddU8PackedOp",
       // this callback is called when the test
       // is creating the resource to run the test
@@ -9214,10 +8423,10 @@ TEST_F(ExecutionTest, Msad4Test) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   size_t tableSize = sizeof(Msad4OpParameters) / sizeof(TableParameter);
@@ -9238,9 +8447,9 @@ TEST_F(ExecutionTest, Msad4Test) {
 
   size_t count = Validation_Expected->size();
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "Msad4",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SMsad4"));
@@ -9296,10 +8505,10 @@ TEST_F(ExecutionTest, DenormBinaryFloatOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -9340,9 +8549,9 @@ TEST_F(ExecutionTest, DenormBinaryFloatOpTest) {
              "must have same number of expected values");
   }
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "BinaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "SBinaryFPOp"));
@@ -9407,10 +8616,10 @@ TEST_F(ExecutionTest, DenormTertiaryFloatOpTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL::D3D_SHADER_MODEL_6_2)) {
     return;
   }
 
@@ -9453,9 +8662,9 @@ TEST_F(ExecutionTest, DenormTertiaryFloatOpTest) {
              "must have same number of expected values");
   }
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "TertiaryFPOp",
-      // this callbacked is called when the test
+      // this callback is called when the test
       // is creating the resource to run the test
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(0 == _stricmp(Name, "STertiaryFPOp"));
@@ -9846,10 +9055,10 @@ void ExecutionTest::WaveIntrinsicsActivePrefixTest(
   static const unsigned int DispatchGroupCount = 1;
   static const unsigned int ThreadCount = ThreadsPerGroup * DispatchGroupCount;
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
   if (!DoesDeviceSupportWaveOps(pDevice)) {
@@ -9881,31 +9090,33 @@ void ExecutionTest::WaveIntrinsicsActivePrefixTest(
     for (size_t maskIndex = 0;
          maskIndex < sizeof(MaskFunctionTable) / sizeof(MaskFunction);
          ++maskIndex) {
-      std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-          pDevice, m_support, "WaveIntrinsicsOp",
-          // this callbacked is called when the test
-          // is creating the resource to run the test
-          [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
-            VERIFY_IS_TRUE(0 == _stricmp(Name, "SWaveIntrinsicsOp"));
-            size_t size = sizeof(PerThreadData) * ThreadCount;
-            Data.resize(size);
-            PerThreadData *pPrimitives = (PerThreadData *)Data.data();
-            // 4 different inputs for each operation test
-            size_t index = 0;
-            std::vector<T1> *IntList = InputDataList[setIndex];
-            while (index < ThreadCount) {
-              PerThreadData *p = &pPrimitives[index];
-              p->firstLaneId = 0xFFFFBFFF;
-              p->laneIndex = 0xFFFFBFFF;
-              p->mask = MaskFunctionTable[maskIndex]((int)index);
-              p->input = (*IntList)[index % IntList->size()];
-              p->output = 0xFFFFBFFF;
-              index++;
-            }
-            // use shader from data table
-            pShaderOp->Shaders.at(0).Text = Text.m_psz;
-          },
-          ShaderOpSet);
+      std::shared_ptr<st::ShaderOpTestResult> test =
+          st::RunShaderOpTestAfterParse(
+              pDevice, m_support, "WaveIntrinsicsOp",
+              // this callback is called when the test
+              // is creating the resource to run the test
+              [&](LPCSTR Name, std::vector<BYTE> &Data,
+                  st::ShaderOp *pShaderOp) {
+                VERIFY_IS_TRUE(0 == _stricmp(Name, "SWaveIntrinsicsOp"));
+                size_t size = sizeof(PerThreadData) * ThreadCount;
+                Data.resize(size);
+                PerThreadData *pPrimitives = (PerThreadData *)Data.data();
+                // 4 different inputs for each operation test
+                size_t index = 0;
+                std::vector<T1> *IntList = InputDataList[setIndex];
+                while (index < ThreadCount) {
+                  PerThreadData *p = &pPrimitives[index];
+                  p->firstLaneId = 0xFFFFBFFF;
+                  p->laneIndex = 0xFFFFBFFF;
+                  p->mask = MaskFunctionTable[maskIndex]((int)index);
+                  p->input = (*IntList)[index % IntList->size()];
+                  p->output = 0xFFFFBFFF;
+                  index++;
+                }
+                // use shader from data table
+                pShaderOp->Shaders.at(0).Text = Text.m_psz;
+              },
+              ShaderOpSet);
 
       // Check the value
       MappedData data;
@@ -10106,11 +9317,11 @@ void ExecutionTest::WaveIntrinsicsMultiPrefixOpTest(
   constexpr size_t ThreadCount = ThreadsPerGroup * DispatchGroupSize;
 
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
 
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_5)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_5)) {
     return;
   }
 
@@ -10134,30 +9345,31 @@ void ExecutionTest::WaveIntrinsicsMultiPrefixOpTest(
 
   for (size_t maskIndex = 0; maskIndex < _countof(MaskFunctionTable);
        ++maskIndex) {
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "WaveIntrinsicsOp",
-        [&](LPCSTR name, std::vector<BYTE> &data, st::ShaderOp *pShaderOp) {
-          UNREFERENCED_PARAMETER(name);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(
+            pDevice, m_support, "WaveIntrinsicsOp",
+            [&](LPCSTR name, std::vector<BYTE> &data, st::ShaderOp *pShaderOp) {
+              UNREFERENCED_PARAMETER(name);
 
-          const size_t dataSize = sizeof(PerThreadData) * ThreadCount;
+              const size_t dataSize = sizeof(PerThreadData) * ThreadCount;
 
-          data.resize(dataSize);
-          PerThreadData *pThreadData =
-              reinterpret_cast<PerThreadData *>(data.data());
+              data.resize(dataSize);
+              PerThreadData *pThreadData =
+                  reinterpret_cast<PerThreadData *>(data.data());
 
-          for (size_t i = 0; i != ThreadCount; ++i) {
-            pThreadData[i].key = keys->at(i % keys->size());
-            pThreadData[i].value = values->at(i % values->size());
-            pThreadData[i].firstLaneId = 0xdeadbeef;
-            pThreadData[i].laneId = 0xdeadbeef;
-            pThreadData[i].mask = MaskFunctionTable[maskIndex]((int)i);
-            pThreadData[i].result = 0xdeadbeef;
-          }
+              for (size_t i = 0; i != ThreadCount; ++i) {
+                pThreadData[i].key = keys->at(i % keys->size());
+                pThreadData[i].value = values->at(i % values->size());
+                pThreadData[i].firstLaneId = 0xdeadbeef;
+                pThreadData[i].laneId = 0xdeadbeef;
+                pThreadData[i].mask = MaskFunctionTable[maskIndex]((int)i);
+                pThreadData[i].result = 0xdeadbeef;
+              }
 
-          pShaderOp->Shaders.at(0).Text = shaderSource;
-          pShaderOp->Shaders.at(0).Target = shaderProfile;
-        },
-        ShaderOpSet);
+              pShaderOp->Shaders.at(0).Text = shaderSource;
+              pShaderOp->Shaders.at(0).Target = shaderProfile;
+            },
+            ShaderOpSet);
 
     MappedData mappedData;
     test->Test->GetReadBackData("SWaveIntrinsicsOp", &mappedData);
@@ -10234,11 +9446,11 @@ TEST_F(ExecutionTest, CBufferTestHalf) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   // Single operation test at the moment.
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_2))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_2))
     return;
 
   if (!DoesDeviceSupportNative16bitOps(pDevice)) {
@@ -10250,7 +9462,7 @@ TEST_F(ExecutionTest, CBufferTestHalf) {
 
   uint16_t InputData[] = {0x3F80, 0x3F00, 0x3D80, 0x7BFF};
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "CBufferTestHalf",
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         UNREFERENCED_PARAMETER(pShaderOp);
@@ -10280,7 +9492,7 @@ TEST_F(ExecutionTest, CBufferTestHalf) {
 }
 
 void TestBarycentricVariant(bool checkOrdering,
-                            std::shared_ptr<ShaderOpTestResult> test) {
+                            std::shared_ptr<st::ShaderOpTestResult> test) {
   MappedData data;
   D3D12_RESOURCE_DESC &D = test->ShaderOp->GetResourceByName("RTarget")->Desc;
   UINT width = (UINT)D.Width;
@@ -10364,10 +9576,10 @@ TEST_F(ExecutionTest, BarycentricsTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_1))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_1))
     return;
 
   if (!DoesDeviceSupportBarycentrics(pDevice)) {
@@ -10386,9 +9598,9 @@ TEST_F(ExecutionTest, BarycentricsTest) {
   auto ResourceCallbackFnNoShift =
       MakeBarycentricsResourceInitCallbackFn(test_iteration);
 
-  std::shared_ptr<ShaderOpTestResult> test =
-      RunShaderOpTestAfterParse(pDevice, m_support, "Barycentrics",
-                                ResourceCallbackFnNoShift, ShaderOpSet);
+  std::shared_ptr<st::ShaderOpTestResult> test =
+      st::RunShaderOpTestAfterParse(pDevice, m_support, "Barycentrics",
+                                    ResourceCallbackFnNoShift, ShaderOpSet);
   TestBarycentricVariant(false, test);
 
   // Now test that barycentric ordering is consistent
@@ -10400,8 +9612,9 @@ TEST_F(ExecutionTest, BarycentricsTest) {
     auto ResourceCallbackFn =
         MakeBarycentricsResourceInitCallbackFn(test_iteration);
 
-    std::shared_ptr<ShaderOpTestResult> test2 = RunShaderOpTestAfterParse(
-        pDevice, m_support, "Barycentrics", ResourceCallbackFn, ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test2 =
+        st::RunShaderOpTestAfterParse(pDevice, m_support, "Barycentrics",
+                                      ResourceCallbackFn, ShaderOpSet);
     TestBarycentricVariant(true, test2);
   }
 }
@@ -10647,7 +9860,7 @@ bool ExecutionTest::SetupRawBufferLdStTest(D3D_SHADER_MODEL shaderModel,
                                            CComPtr<IStream> &pStream,
                                            const char *&sTy,
                                            const char *&additionalOptions) {
-  if (!CreateDevice(&pDevice, shaderModel)) {
+  if (!createDevice(&pDevice, shaderModel)) {
     return false;
   }
 
@@ -10692,7 +9905,7 @@ bool ExecutionTest::SetupRawBufferLdStTest(D3D_SHADER_MODEL shaderModel,
   }
 
   // read shader config
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   return true;
 }
@@ -10784,7 +9997,7 @@ void ExecutionTest::RunComputeRawBufferLdStTest(
                            (int)sizeof(Ty), additionalOptions) != -1);
 
   // run the shader
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, shaderOpName,
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(((0 == strncmp(Name, "SRVBuffer", 9)) ||
@@ -10839,7 +10052,7 @@ void ExecutionTest::RunGraphicsRawBufferLdStTest(
                            (int)sizeof(Ty), additionalOptions) != -1);
 
   // run the shader
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, shaderOpName,
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE(((0 == strncmp(Name, "SRVBuffer", 9)) ||
@@ -10921,7 +10134,7 @@ TEST_F(ExecutionTest, PackUnpackTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
 
@@ -10929,14 +10142,14 @@ TEST_F(ExecutionTest, PackUnpackTest) {
   string args = "-enable-16bit-types -DPACKUNPACK_PLACEHOLDER";
   string target = "cs_6_2";
 
-  if (!CreateDevice(&pDevice)) {
+  if (!createDevice(&pDevice)) {
     return;
   }
 #else
   string args = "-enable-16bit-types";
   string target = "cs_6_6";
 
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6)) {
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6)) {
     return;
   }
 #endif
@@ -10962,7 +10175,7 @@ TEST_F(ExecutionTest, PackUnpackTest) {
   std::vector<SPackUnpackOpOutPacked> expectedPacked(count / 4);
   std::vector<SPackUnpackOpOutUnpacked> expectedUnpacked(count / 4);
 
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTest(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTest(
       pDevice, m_support, pStream, "PackUnpackOp",
       // this callback is called when the test
       // is creating the resource to run the test
@@ -11316,7 +10529,7 @@ TEST_F(ExecutionTest, SignatureResourcesTest) {
       "}\n";
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   RunResourceTest(pDevice, pShader.c_str(), L"cs_6_6", /*isDynamic*/ false);
@@ -11355,7 +10568,7 @@ TEST_F(ExecutionTest, DynamicResourcesTest) {
       "}\n";
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   // ResourceDescriptorHeap/SamplerDescriptorHeap requires Resource Binding Tier
@@ -11398,7 +10611,7 @@ TEST_F(ExecutionTest, DynamicResourcesDynamicIndexingTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -11436,7 +10649,7 @@ TEST_F(ExecutionTest, DynamicResourcesDynamicIndexingTest) {
                   ((UINT)sm & 0x0f));
 
     CComPtr<ID3D12Device> pDevice;
-    if (!CreateDevice(&pDevice, sm, false /* skipUnsupported */)) {
+    if (!createDevice(&pDevice, sm, false /* skipUnsupported */)) {
       continue;
     }
     D3D12_FEATURE_DATA_D3D12_OPTIONS devOptions;
@@ -11495,9 +10708,10 @@ TEST_F(ExecutionTest, DynamicResourcesDynamicIndexingTest) {
       // Test Compute shader
       {
         pShaderOp->CS = pShaderOp->GetString("CS66");
-        std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-            pDevice, m_support, "DynamicResourcesDynamicIndexing", nullptr,
-            ShaderOpSet);
+        std::shared_ptr<st::ShaderOpTestResult> test =
+            st::RunShaderOpTestAfterParse(pDevice, m_support,
+                                          "DynamicResourcesDynamicIndexing",
+                                          nullptr, ShaderOpSet);
 
         MappedData resultData;
         test->Test->GetReadBackData("g_result", &resultData);
@@ -11512,9 +10726,10 @@ TEST_F(ExecutionTest, DynamicResourcesDynamicIndexingTest) {
         pShaderOp->CS = nullptr;
         pShaderOp->VS = pShaderOp->GetString("VS66");
         pShaderOp->PS = pShaderOp->GetString("PS66");
-        std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-            pDevice, m_support, "DynamicResourcesDynamicIndexing", nullptr,
-            ShaderOpSet);
+        std::shared_ptr<st::ShaderOpTestResult> test =
+            st::RunShaderOpTestAfterParse(pDevice, m_support,
+                                          "DynamicResourcesDynamicIndexing",
+                                          nullptr, ShaderOpSet);
 
         MappedData resultVSData;
         MappedData resultPSData;
@@ -11577,19 +10792,20 @@ void RunWaveSizeTest(UINT minWaveSize, UINT maxWaveSize,
                              waveSize) != -1);
 
     // run the shader
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "WaveSizeTest",
-        [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
-          VERIFY_IS_TRUE((0 == strncmp(Name, "UAVBuffer0", 10)));
-          pShaderOp->Shaders.at(0).Arguments = compilerOptions;
-          pShaderOp->Shaders.at(0).Text = waveSizeTestShader;
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(
+            pDevice, m_support, "WaveSizeTest",
+            [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
+              VERIFY_IS_TRUE((0 == strncmp(Name, "UAVBuffer0", 10)));
+              pShaderOp->Shaders.at(0).Arguments = compilerOptions;
+              pShaderOp->Shaders.at(0).Text = waveSizeTestShader;
 
-          VERIFY_IS_TRUE(sizeof(WaveSizeTestData) * MAX_WAVESIZE <=
-                         Data.size());
-          WaveSizeTestData *pInData = (WaveSizeTestData *)Data.data();
-          memset(pInData, 0, sizeof(WaveSizeTestData) * MAX_WAVESIZE);
-        },
-        ShaderOpSet);
+              VERIFY_IS_TRUE(sizeof(WaveSizeTestData) * MAX_WAVESIZE <=
+                             Data.size());
+              WaveSizeTestData *pInData = (WaveSizeTestData *)Data.data();
+              memset(pInData, 0, sizeof(WaveSizeTestData) * MAX_WAVESIZE);
+            },
+            ShaderOpSet);
 
     // verify expected values
     MappedData dataUav;
@@ -11665,7 +10881,7 @@ void ExecuteWaveSizeRangeInstance(UINT minWaveSize, UINT maxWaveSize,
   };
 
   // run the shader
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "WaveSizeTest",
       [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
         VERIFY_IS_TRUE((0 == strncmp(Name, "UAVBuffer0", 10)));
@@ -11737,7 +10953,7 @@ void ExecutionTest::WaveSizeTest() {
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6,
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6,
                     /*skipUnsupported*/ false)) {
     return;
   }
@@ -11765,7 +10981,7 @@ void ExecutionTest::WaveSizeTest() {
   CComPtr<IStream> pStream;
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
   st::ParseShaderOpSetFromStream(pStream, ShaderOpSet.get());
 
   LogCommentFmt(L"Testing WaveSize attribute for shader model 6.6.");
@@ -11777,7 +10993,7 @@ void ExecutionTest::WaveSizeRangeTest() {
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_8,
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_8,
                     /*skipUnsupported*/ false)) {
     return;
   }
@@ -11805,7 +11021,7 @@ void ExecutionTest::WaveSizeRangeTest() {
   CComPtr<IStream> pStream;
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
   st::ParseShaderOpSetFromStream(pStream, ShaderOpSet.get());
 
   LogCommentFmt(L"Testing WaveSize Range attribute for shader model 6.8.");
@@ -12034,7 +11250,7 @@ void VerifyAtomicResults(const BYTE *uResults, const BYTE *sResults,
   }
 }
 
-void VerifyAtomicsRawTest(std::shared_ptr<ShaderOpTestResult> test,
+void VerifyAtomicsRawTest(std::shared_ptr<st::ShaderOpTestResult> test,
                           uint64_t maxIdx, size_t bitSize) {
 
   size_t stride = 8;
@@ -12083,7 +11299,7 @@ void VerifyAtomicsRawTest(std::shared_ptr<ShaderOpTestResult> test,
                       bitSize);
 }
 
-void VerifyAtomicsTypedTest(std::shared_ptr<ShaderOpTestResult> test,
+void VerifyAtomicsTypedTest(std::shared_ptr<st::ShaderOpTestResult> test,
                             uint64_t maxIdx, size_t bitSize) {
 
   size_t stride = 8;
@@ -12135,7 +11351,7 @@ void VerifyAtomicsTypedTest(std::shared_ptr<ShaderOpTestResult> test,
   VerifyAtomicResults(pUint, pSint + stride, pXchg, stride, maxIdx, bitSize);
 }
 
-void VerifyAtomicsSharedTest(std::shared_ptr<ShaderOpTestResult> test,
+void VerifyAtomicsSharedTest(std::shared_ptr<st::ShaderOpTestResult> test,
                              uint64_t maxIdx, size_t bitSize) {
 
   size_t stride = 8;
@@ -12156,7 +11372,7 @@ void VerifyAtomicsSharedTest(std::shared_ptr<ShaderOpTestResult> test,
                       bitSize);
 }
 
-void VerifyAtomicsTest(std::shared_ptr<ShaderOpTestResult> test,
+void VerifyAtomicsTest(std::shared_ptr<st::ShaderOpTestResult> test,
                        uint64_t maxIdx, size_t bitSize) {
   VerifyAtomicsRawTest(test, maxIdx, bitSize);
   VerifyAtomicsTypedTest(test, maxIdx, bitSize);
@@ -12166,10 +11382,10 @@ TEST_F(ExecutionTest, AtomicsTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
@@ -12181,7 +11397,7 @@ TEST_F(ExecutionTest, AtomicsTest) {
   // Test compute shader
   LogCommentFmt(
       L"Verifying 32-bit integer atomic operations in compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "AtomicsHeap", nullptr, ShaderOpSet);
 
   VerifyAtomicsTest(test, 32 * 32, 32);
@@ -12192,8 +11408,8 @@ TEST_F(ExecutionTest, AtomicsTest) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying 32-bit integer atomic operations in "
                   L"amp/mesh/pixel shaders");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                     ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsTest(test, 8 * 8 * 2 + 8 * 8 * 2 + 64 * 64, 32);
     VerifyAtomicsSharedTest(test, 8 * 8 * 2 + 8 * 8 * 2, 32);
   }
@@ -12202,8 +11418,8 @@ TEST_F(ExecutionTest, AtomicsTest) {
   pShaderOp->MS = nullptr;
   LogCommentFmt(
       L"Verifying 32-bit integer atomic operations in vert/pixel shaders");
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                   ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                       nullptr, ShaderOpSet);
   VerifyAtomicsTest(test, 64 * 64 + 6, 32);
 }
 
@@ -12211,10 +11427,10 @@ TEST_F(ExecutionTest, Atomics64Test) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   if (!DoesDeviceSupportInt64(pDevice)) {
@@ -12240,7 +11456,7 @@ TEST_F(ExecutionTest, Atomics64Test) {
   // Test compute shader
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on raw buffers in "
                 L"compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "AtomicsRoot", nullptr, ShaderOpSet);
   VerifyAtomicsRawTest(test, 32 * 32, 64);
 
@@ -12249,8 +11465,8 @@ TEST_F(ExecutionTest, Atomics64Test) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying 64-bit integer atomic operations on raw buffers "
                   L"in amp/mesh/pixel shader");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot", nullptr,
-                                     ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsRawTest(test, 8 * 8 * 2 + 8 * 8 * 2 + 64 * 64, 64);
   }
 
@@ -12258,8 +11474,8 @@ TEST_F(ExecutionTest, Atomics64Test) {
   pShaderOp->MS = nullptr;
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on raw buffers in "
                 L"vert/pixel shader");
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot", nullptr,
-                                   ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot",
+                                       nullptr, ShaderOpSet);
   VerifyAtomicsRawTest(test, 64 * 64 + 6, 64);
 }
 
@@ -12267,10 +11483,10 @@ TEST_F(ExecutionTest, AtomicsRawHeap64Test) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   if (!DoesDeviceSupportInt64(pDevice)) {
@@ -12303,7 +11519,7 @@ TEST_F(ExecutionTest, AtomicsRawHeap64Test) {
   // Test compute shader
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on heap raw "
                 L"buffers in compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "AtomicsHeap", nullptr, ShaderOpSet);
   VerifyAtomicsRawTest(test, 32 * 32, 64);
 
@@ -12312,8 +11528,8 @@ TEST_F(ExecutionTest, AtomicsRawHeap64Test) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying 64-bit integer atomic operations on heap raw "
                   L"buffers in amp/mesh/pixel shader");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                     ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsRawTest(test, 8 * 8 * 2 + 8 * 8 * 2 + 64 * 64, 64);
   }
 
@@ -12321,8 +11537,8 @@ TEST_F(ExecutionTest, AtomicsRawHeap64Test) {
   pShaderOp->MS = nullptr;
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on heap raw "
                 L"buffers in vert/pixel shader");
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                   ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                       nullptr, ShaderOpSet);
   VerifyAtomicsRawTest(test, 64 * 64 + 6, 64);
 }
 
@@ -12330,10 +11546,10 @@ TEST_F(ExecutionTest, AtomicsTyped64Test) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   if (!DoesDeviceSupportInt64(pDevice)) {
@@ -12366,7 +11582,7 @@ TEST_F(ExecutionTest, AtomicsTyped64Test) {
   // Test compute shader
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on typed "
                 L"resources in compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "AtomicsHeap", nullptr, ShaderOpSet);
   VerifyAtomicsTypedTest(test, 32 * 32, 64);
 
@@ -12375,8 +11591,8 @@ TEST_F(ExecutionTest, AtomicsTyped64Test) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying 64-bit integer atomic operations on typed "
                   L"resources in amp/mesh/pixel shader");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                     ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsTypedTest(test, 8 * 8 * 2 + 8 * 8 * 2 + 64 * 64, 64);
   }
 
@@ -12384,8 +11600,8 @@ TEST_F(ExecutionTest, AtomicsTyped64Test) {
   pShaderOp->MS = nullptr;
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on typed "
                 L"resources in vert/pixel shader");
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap", nullptr,
-                                   ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsHeap",
+                                       nullptr, ShaderOpSet);
   VerifyAtomicsTypedTest(test, 64 * 64 + 6, 64);
 }
 
@@ -12393,10 +11609,10 @@ TEST_F(ExecutionTest, AtomicsShared64Test) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice, D3D_SHADER_MODEL_6_6))
+  if (!createDevice(&pDevice, D3D_SHADER_MODEL_6_6))
     return;
 
   if (!DoesDeviceSupportInt64(pDevice)) {
@@ -12426,7 +11642,7 @@ TEST_F(ExecutionTest, AtomicsShared64Test) {
 
   LogCommentFmt(L"Verifying 64-bit integer atomic operations on groupshared "
                 L"variables in compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "AtomicsRoot", nullptr, ShaderOpSet);
   VerifyAtomicsSharedTest(test, 32 * 32, 64);
 
@@ -12435,8 +11651,8 @@ TEST_F(ExecutionTest, AtomicsShared64Test) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying 64-bit integer atomic operations on groupshared "
                   L"variables in amp/mesh/pixel shader");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot", nullptr,
-                                     ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "AtomicsRoot",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsSharedTest(test, 8 * 8 * 2 + 8 * 8 * 2, 64);
   }
 }
@@ -12464,7 +11680,8 @@ void VerifyAtomicFloatResults(const float *results) {
   }
 }
 
-void VerifyAtomicsFloatSharedTest(std::shared_ptr<ShaderOpTestResult> test) {
+void VerifyAtomicsFloatSharedTest(
+    std::shared_ptr<st::ShaderOpTestResult> test) {
   MappedData Data;
   const float *pData = nullptr;
 
@@ -12476,7 +11693,7 @@ void VerifyAtomicsFloatSharedTest(std::shared_ptr<ShaderOpTestResult> test) {
   VerifyAtomicFloatResults(pData);
 }
 
-void VerifyAtomicsFloatTest(std::shared_ptr<ShaderOpTestResult> test) {
+void VerifyAtomicsFloatTest(std::shared_ptr<st::ShaderOpTestResult> test) {
 
   // struct mirroring that in the shader
   struct AtomicStuff {
@@ -12524,10 +11741,10 @@ TEST_F(ExecutionTest, AtomicsFloatTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   CComPtr<ID3D12Device> pDevice;
-  if (!CreateDevice(&pDevice))
+  if (!createDevice(&pDevice))
     return;
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
@@ -12539,7 +11756,7 @@ TEST_F(ExecutionTest, AtomicsFloatTest) {
   // Test compute shader
   LogCommentFmt(
       L"Verifying float cmp/xchg atomic operations in compute shader");
-  std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
+  std::shared_ptr<st::ShaderOpTestResult> test = st::RunShaderOpTestAfterParse(
       pDevice, m_support, "FloatAtomics", nullptr, ShaderOpSet);
   VerifyAtomicsFloatTest(test);
   VerifyAtomicsFloatSharedTest(test);
@@ -12549,8 +11766,8 @@ TEST_F(ExecutionTest, AtomicsFloatTest) {
   if (DoesDeviceSupportMeshShaders(pDevice)) {
     LogCommentFmt(L"Verifying float cmp/xchg atomic operations in "
                   L"amp/mesh/pixel shaders");
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "FloatAtomics",
-                                     nullptr, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "FloatAtomics",
+                                         nullptr, ShaderOpSet);
     VerifyAtomicsFloatTest(test);
     VerifyAtomicsFloatSharedTest(test);
   }
@@ -12559,8 +11776,8 @@ TEST_F(ExecutionTest, AtomicsFloatTest) {
   pShaderOp->MS = nullptr;
   LogCommentFmt(
       L"Verifying float cmp/xchg atomic operations in vert/pixel shaders");
-  test = RunShaderOpTestAfterParse(pDevice, m_support, "FloatAtomics", nullptr,
-                                   ShaderOpSet);
+  test = st::RunShaderOpTestAfterParse(pDevice, m_support, "FloatAtomics",
+                                       nullptr, ShaderOpSet);
   VerifyAtomicsFloatTest(test);
 }
 
@@ -12589,7 +11806,7 @@ TEST_F(ExecutionTest, HelperLaneTest) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -12604,19 +11821,20 @@ TEST_F(ExecutionTest, HelperLaneTest) {
                   ((UINT)sm & 0x0f));
 
     CComPtr<ID3D12Device> pDevice;
-    if (!CreateDevice(&pDevice, sm, false /* skipUnsupported */))
+    if (!createDevice(&pDevice, sm, false /* skipUnsupported */))
       continue;
 
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "HelperLaneTestNoWave",
-        // this callbacked is called when the test is creating the resource to
-        // run the test
-        [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
-          VERIFY_IS_TRUE(0 == _stricmp(Name, "UAVBuffer0"));
-          std::fill(Data.begin(), Data.end(), (BYTE)0xCC);
-          UNREFERENCED_PARAMETER(pShaderOp);
-        },
-        ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(
+            pDevice, m_support, "HelperLaneTestNoWave",
+            // this callback is called when the test is creating the resource to
+            // run the test
+            [&](LPCSTR Name, std::vector<BYTE> &Data, st::ShaderOp *pShaderOp) {
+              VERIFY_IS_TRUE(0 == _stricmp(Name, "UAVBuffer0"));
+              std::fill(Data.begin(), Data.end(), (BYTE)0xCC);
+              UNREFERENCED_PARAMETER(pShaderOp);
+            },
+            ShaderOpSet);
 
     struct HelperLaneTestResult {
       int32_t is_helper_00;
@@ -12989,7 +12207,7 @@ TEST_F(ExecutionTest, HelperLaneTestWave) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -13010,7 +12228,7 @@ TEST_F(ExecutionTest, HelperLaneTestWave) {
     bool smPassed = true;
 
     CComPtr<ID3D12Device> pDevice;
-    if (!CreateDevice(&pDevice, sm, false /* skipUnsupported */)) {
+    if (!createDevice(&pDevice, sm, false /* skipUnsupported */)) {
       continue;
     }
 
@@ -13045,9 +12263,10 @@ TEST_F(ExecutionTest, HelperLaneTestWave) {
 
     // Test Compute shader
     {
-      std::shared_ptr<ShaderOpTestResult> test =
-          RunShaderOpTestAfterParse(pDevice, m_support, "HelperLaneTestWave",
-                                    CleanUAVBuffer0Buffer, ShaderOpSet);
+      std::shared_ptr<st::ShaderOpTestResult> test =
+          st::RunShaderOpTestAfterParse(pDevice, m_support,
+                                        "HelperLaneTestWave",
+                                        CleanUAVBuffer0Buffer, ShaderOpSet);
 
       MappedData uavData;
       test->Test->GetReadBackData("UAVBuffer0", &uavData);
@@ -13069,9 +12288,10 @@ TEST_F(ExecutionTest, HelperLaneTestWave) {
     // Test Vertex + Pixel shader
     {
       pShaderOp->CS = nullptr;
-      std::shared_ptr<ShaderOpTestResult> test =
-          RunShaderOpTestAfterParse(pDevice, m_support, "HelperLaneTestWave",
-                                    CleanUAVBuffer0Buffer, ShaderOpSet);
+      std::shared_ptr<st::ShaderOpTestResult> test =
+          st::RunShaderOpTestAfterParse(pDevice, m_support,
+                                        "HelperLaneTestWave",
+                                        CleanUAVBuffer0Buffer, ShaderOpSet);
 
       MappedData uavData;
       test->Test->GetReadBackData("UAVBuffer0", &uavData);
@@ -13130,7 +12350,7 @@ TEST_F(ExecutionTest, QuadAnyAll) {
   WEX::TestExecution::SetVerifyOutput verifySettings(
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -13163,7 +12383,7 @@ TEST_F(ExecutionTest, QuadAnyAll) {
     }
 
     CComPtr<ID3D12Device> pDevice;
-    if (!CreateDevice(&pDevice, sm, false /* skipUnsupported */)) {
+    if (!createDevice(&pDevice, sm, false /* skipUnsupported */)) {
       continue;
     }
 
@@ -13176,8 +12396,9 @@ TEST_F(ExecutionTest, QuadAnyAll) {
     Skipped = false;
 
     // test compute
-    std::shared_ptr<ShaderOpTestResult> test = RunShaderOpTestAfterParse(
-        pDevice, m_support, "QuadAnyAll", CleanUAVBuffer0Buffer, ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(pDevice, m_support, "QuadAnyAll",
+                                      CleanUAVBuffer0Buffer, ShaderOpSet);
 
     MappedData uavData;
     test->Test->GetReadBackData("UAVBuffer0", &uavData);
@@ -13189,8 +12410,8 @@ TEST_F(ExecutionTest, QuadAnyAll) {
 
     pShaderOp->CS = nullptr;
     // test AS/MS
-    test = RunShaderOpTestAfterParse(pDevice, m_support, "QuadAnyAll",
-                                     CleanUAVBuffer0Buffer, ShaderOpSet);
+    test = st::RunShaderOpTestAfterParse(pDevice, m_support, "QuadAnyAll",
+                                         CleanUAVBuffer0Buffer, ShaderOpSet);
 
     test->Test->GetReadBackData("UAVBuffer0", &uavData);
     Result = VerifyQuadAnyAllResults((int2 *)uavData.data());
@@ -13337,7 +12558,7 @@ TEST_F(ExecutionTest, IsNormalTest) {
       WEX::TestExecution::VerifyOutputSettings::LogOnlyFailures);
 
   CComPtr<ID3D12Device> pDevice;
-  VERIFY_IS_TRUE(CreateDevice(&pDevice, D3D_SHADER_MODEL_6_0,
+  VERIFY_IS_TRUE(createDevice(&pDevice, D3D_SHADER_MODEL_6_0,
                               false /* skipUnsupported */));
 
   // The input is -Zero, Zero, -Denormal, Denormal, -Infinity, Infinity, -NaN,
@@ -13354,7 +12575,7 @@ TEST_F(ExecutionTest, IsNormalTest) {
   std::vector<unsigned int> *Validation_Expected = &Validation_Expected_Vec;
 
   CComPtr<IStream> pStream;
-  ReadHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream);
+  readHlslDataIntoNewStream(L"ShaderOpArith.xml", &pStream, m_support);
 
   std::shared_ptr<st::ShaderOpSet> ShaderOpSet =
       std::make_shared<st::ShaderOpSet>();
@@ -13395,9 +12616,10 @@ TEST_F(ExecutionTest, IsNormalTest) {
   // Test Compute shader
   {
     pShaderOp->CS = pShaderOp->GetString("CS60");
-    std::shared_ptr<ShaderOpTestResult> test =
-        RunShaderOpTestAfterParse(pDevice, m_support, "IsNormal",
-                                  ResourceInitFn, ShaderInitFn, ShaderOpSet);
+    std::shared_ptr<st::ShaderOpTestResult> test =
+        st::RunShaderOpTestAfterParse(pDevice, m_support, "IsNormal",
+                                      ResourceInitFn, ShaderInitFn,
+                                      ShaderOpSet);
 
     MappedData data;
     test->Test->GetReadBackData("g_TestData", &data);

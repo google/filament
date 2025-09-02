@@ -91,7 +91,11 @@ static void cleanupMaterialInstance(MaterialInstance const* mi, Engine& engine, 
     engine.destroy(mi);
 }
 
-} // anonymous
+constexpr Texture::Usage COMMON_USAGE =
+        Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE;
+constexpr Texture::Usage MIPMAP_USAGE = Texture::Usage::GEN_MIPMAPPABLE;
+
+} // namespace
 
 
 IBLPrefilterContext::IBLPrefilterContext(Engine& engine)
@@ -258,7 +262,7 @@ Texture* IBLPrefilterContext::EquirectangularToCubemap::operator()(
         outCube = Texture::Builder()
                 .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                 .format(Texture::InternalFormat::R11F_G11F_B10F)
-                .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
+                .usage(COMMON_USAGE | MIPMAP_USAGE)
                 .width(256).height(256).levels(0xFF)
                 .build(engine);
     }
@@ -347,7 +351,7 @@ IBLPrefilterContext::IrradianceFilter::IrradianceFilter(IBLPrefilterContext& con
     mKernelTexture = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(Texture::InternalFormat::RGBA16F)
-            .usage(Texture::Usage::SAMPLEABLE | Texture::Usage::COLOR_ATTACHMENT)
+            .usage(COMMON_USAGE)
             .width(1)
             .height(mSampleCount)
             .build(engine);
@@ -421,7 +425,16 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(Options options,
             << "environmentCubemap must have " << +maxLevelCount << " mipmap levels allocated.";
 
     if (outIrradianceTexture == nullptr) {
-        outIrradianceTexture = createIrradianceTexture();
+        outIrradianceTexture =
+                Texture::Builder()
+                        .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
+                        .format(Texture::InternalFormat::R11F_G11F_B10F)
+                        .usage(COMMON_USAGE |
+                                (options.generateMipmap ? MIPMAP_USAGE : Texture::Usage::NONE))
+                        .width(256)
+                        .height(256)
+                        .levels(0xff)
+                        .build(mContext.mEngine);
     }
 
     FILAMENT_CHECK_PRECONDITION(
@@ -509,19 +522,6 @@ Texture* IBLPrefilterContext::IrradianceFilter::operator()(
     return operator()({}, environmentCubemap, outIrradianceTexture);
 }
 
-Texture* IBLPrefilterContext::IrradianceFilter::createIrradianceTexture() {
-    Engine& engine = mContext.mEngine;
-
-    Texture* const outCubemap = Texture::Builder()
-            .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
-            .format(Texture::InternalFormat::R11F_G11F_B10F)
-            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-            .width(256).height(256).levels(0xff)
-            .build(engine);
-
-    return outCubemap;
-}
-
 // ------------------------------------------------------------------------------------------------
 
 IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context, Config config)
@@ -557,7 +557,7 @@ IBLPrefilterContext::SpecularFilter::SpecularFilter(IBLPrefilterContext& context
     mKernelTexture = Texture::Builder()
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(Texture::InternalFormat::RGBA16F)
-            .usage(Texture::Usage::SAMPLEABLE | Texture::Usage::COLOR_ATTACHMENT)
+            .usage(COMMON_USAGE)
             .width(mLevelCount)
             .height(mSampleCount)
             .build(engine);
@@ -621,24 +621,6 @@ IBLPrefilterContext::SpecularFilter::operator=(SpecularFilter&& rhs) noexcept {
     return *this;
 }
 
-Texture* IBLPrefilterContext::SpecularFilter::createReflectionsTexture() {
-    Engine& engine = mContext.mEngine;
-
-    const uint8_t levels = mLevelCount;
-
-    // default texture is 256 or larger to accommodate the level count requested
-    const uint32_t dim = std::max(256u, 1u << (levels - 1u));
-
-    Texture* const outCubemap = Texture::Builder()
-            .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
-            .format(Texture::InternalFormat::R11F_G11F_B10F)
-            .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
-            .width(dim).height(dim).levels(levels)
-            .build(engine);
-
-    return outCubemap;
-}
-
 UTILS_NOINLINE
 Texture* IBLPrefilterContext::SpecularFilter::operator()(
         Texture const* environmentCubemap, Texture* outReflectionsTexture) {
@@ -665,7 +647,21 @@ Texture* IBLPrefilterContext::SpecularFilter::operator()(
             << "environmentCubemap must have " << +maxLevelCount << " mipmap levels allocated.";
 
     if (outReflectionsTexture == nullptr) {
-        outReflectionsTexture = createReflectionsTexture();
+        const uint8_t levels = mLevelCount;
+
+        // default texture is 256 or larger to accommodate the level count requested
+        const uint32_t dim = std::max(256u, 1u << (levels - 1u));
+
+        outReflectionsTexture =
+                Texture::Builder()
+                        .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
+                        .format(Texture::InternalFormat::R11F_G11F_B10F)
+                        .usage(COMMON_USAGE |
+                                (options.generateMipmap ? MIPMAP_USAGE : Texture::Usage::NONE))
+                        .width(dim)
+                        .height(dim)
+                        .levels(levels)
+                        .build(mContext.mEngine);
     }
 
     FILAMENT_CHECK_PRECONDITION(

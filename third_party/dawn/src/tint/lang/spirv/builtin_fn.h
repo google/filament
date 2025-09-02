@@ -74,14 +74,19 @@ enum class BuiltinFn : uint8_t {
     kImageQuerySamples,
     kImageRead,
     kImageSampleImplicitLod,
+    kImageSampleProjImplicitLod,
+    kImageSampleProjDrefImplicitLod,
     kImageSampleExplicitLod,
+    kImageSampleProjExplicitLod,
+    kImageSampleProjDrefExplicitLod,
     kImageSampleDrefImplicitLod,
     kImageSampleDrefExplicitLod,
     kImageWrite,
+    kImage,
+    kSampledImage,
     kMatrixTimesMatrix,
     kMatrixTimesScalar,
     kMatrixTimesVector,
-    kSampledImage,
     kSelect,
     kVectorTimesMatrix,
     kVectorTimesScalar,
@@ -141,6 +146,16 @@ enum class BuiltinFn : uint8_t {
     kCooperativeMatrixLoad,
     kCooperativeMatrixStore,
     kCooperativeMatrixMulAdd,
+    kGroupNonUniformBroadcast,
+    kGroupNonUniformBroadcastFirst,
+    kGroupNonUniformQuadBroadcast,
+    kGroupNonUniformQuadSwap,
+    kGroupNonUniformShuffle,
+    kGroupNonUniformShuffleXor,
+    kGroupNonUniformShuffleDown,
+    kGroupNonUniformShuffleUp,
+    kGroupNonUniformSMin,
+    kGroupNonUniformSMax,
     kNone,
 };
 
@@ -150,7 +165,8 @@ const char* str(BuiltinFn i);
 
 /// Emits the name of the builtin function type. The spelling, including case,
 /// matches the name in the WGSL spec.
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& o, BuiltinFn i) {
     return o << str(i);
 }

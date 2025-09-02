@@ -1,5 +1,8 @@
 // RUN: %dxc -T ps_6_0 -E main -fcgl  %s -spirv | FileCheck %s
 
+StructuredBuffer<float3> buffer_vec;
+StructuredBuffer<float3x3> buffer_mat;
+
 /*
 According to HLSL reference, mul() has the following versions:
 
@@ -448,6 +451,7 @@ void main() {
 // mul( Mat(Mx1) * Mat(1xN) ) --> Mat(MxN) matrix
   float1x3 mat1x3;
   float3x2 mat3x2;
+  float3x3 mat3x3;
   float3x1 mat3x1;
   float1x4 mat1x4;
 
@@ -474,4 +478,25 @@ void main() {
 // CHECK-NEXT: [[result3:%[0-9]+]] = OpCompositeConstruct %mat3v4float [[row0]] [[row1]] [[row2]]
 // CHECK-NEXT:                    OpStore %result3 [[result3]]
   float3x4   result3 = mul( mat3x1, mat1x4 ); // result is float3x4 matrix
+
+  float3 v3;
+
+// CHECK: [[matp:%[0-9]+]] = OpAccessChain %_ptr_Uniform_mat3v3float %buffer_mat %int_0 %int_0
+// CHECK:  [[mat:%[0-9]+]] = OpLoad %mat3v3float [[matp]]
+// CHECK:  [[vec:%[0-9]+]] = OpLoad %v3float %v3
+// CHECK:           {{.*}} = OpVectorTimesMatrix %v3float [[vec]] [[mat]]
+  float3 result4 = mul(buffer_mat.Load(0), v3);
+
+// CHECK:  [[mat:%[0-9]+]] = OpLoad %mat3v3float %mat3x3
+// CHECK: [[vecp:%[0-9]+]] = OpAccessChain %_ptr_Uniform_v3float %buffer_vec %int_0 %int_1
+// CHECK:  [[vec:%[0-9]+]] = OpLoad %v3float [[vecp]]
+// CHECK:           {{.*}} = OpVectorTimesMatrix %v3float [[vec]] [[mat]]
+  float3 result5 = mul(mat3x3, buffer_vec.Load(1));
+
+// CHECK: [[matp:%[0-9]+]] = OpAccessChain %_ptr_Uniform_mat3v3float %buffer_mat %int_0 %int_2
+// CHECK:  [[mat:%[0-9]+]] = OpLoad %mat3v3float [[matp]]
+// CHECK: [[vecp:%[0-9]+]] = OpAccessChain %_ptr_Uniform_v3float %buffer_vec %int_0 %int_2
+// CHECK:  [[vec:%[0-9]+]] = OpLoad %v3float [[vecp]]
+// CHECK:           {{.*}} = OpVectorTimesMatrix %v3float [[vec]] [[mat]]
+  float3 result6 = mul(buffer_mat.Load(2), buffer_vec.Load(2));
 }

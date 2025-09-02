@@ -13,6 +13,7 @@
 #ifdef _WIN32
 
 #include <array>
+#include <set>
 
 #include "dxc/DxilContainer/DxilContainer.h"
 #include "dxc/Support/WinIncludes.h"
@@ -186,6 +187,7 @@ public:
   TEST_METHOD(DxcPixDxilDebugInfo_BitFields_Derived)
   TEST_METHOD(DxcPixDxilDebugInfo_BitFields_Bool)
   TEST_METHOD(DxcPixDxilDebugInfo_BitFields_Overlap)
+  TEST_METHOD(DxcPixDxilDebugInfo_BitFields_uint64)
   TEST_METHOD(DxcPixDxilDebugInfo_Min16SizesAndOffsets_Enabled)
   TEST_METHOD(DxcPixDxilDebugInfo_Min16SizesAndOffsets_Disabled)
   TEST_METHOD(DxcPixDxilDebugInfo_Min16VectorOffsets_Enabled)
@@ -658,11 +660,11 @@ public:
       const char *hlsl, const wchar_t *profile,
       const char *lineAtWhichToExamineVariables,
       std::vector<VariableComponentInfo> const &ExpectedVariables);
-  void RunSizeAndOffsetTestCase(const char *hlsl,
-                                std::array<DWORD, 4> const &memberOffsets,
-                                std::array<DWORD, 4> const &memberSizes,
-                                std::vector<const wchar_t *> extraArgs = {
-                                    L"-Od"});
+  CComPtr<IDxcPixDxilStorage>
+  RunSizeAndOffsetTestCase(const char *hlsl,
+                           std::array<DWORD, 4> const &memberOffsets,
+                           std::array<DWORD, 4> const &memberSizes,
+                           std::vector<const wchar_t *> extraArgs = {L"-Od"});
   void RunVectorSizeAndOffsetTestCase(const char *hlsl,
                                       std::array<DWORD, 4> const &memberOffsets,
                                       std::vector<const wchar_t *> extraArgs = {
@@ -2948,12 +2950,11 @@ void main()
   VERIFY_ARE_EQUAL(32u, secondFieldOffset);
 }
 
-void PixDiaTest::RunSizeAndOffsetTestCase(
-    const char *hlsl, std::array<DWORD, 4> const &memberOffsets,
-    std::array<DWORD, 4> const &memberSizes,
-    std::vector<const wchar_t *> extraArgs) {
-  if (m_ver.SkipDxilVersion(1, 5))
-    return;
+CComPtr<IDxcPixDxilStorage>
+PixDiaTest::RunSizeAndOffsetTestCase(const char *hlsl,
+                                     std::array<DWORD, 4> const &memberOffsets,
+                                     std::array<DWORD, 4> const &memberSizes,
+                                     std::vector<const wchar_t *> extraArgs) {
   auto debugInfo =
       CompileAndCreateDxcDebug(hlsl, L"cs_6_5", nullptr, extraArgs).debugInfo;
   auto live = GetLiveVariablesAt(hlsl, "STOP_HERE", debugInfo);
@@ -2974,9 +2975,46 @@ void PixDiaTest::RunSizeAndOffsetTestCase(
     VERIFY_SUCCEEDED(field->GetFieldSizeInBits(&sizeInBits));
     VERIFY_ARE_EQUAL(memberSizes[i], sizeInBits);
   }
+  // Check that first and second and third are reported as residing in the same
+  // register (cuz they do!), and that the third does not
+
+  CComPtr<IDxcPixDxilStorage> bfStorage;
+  VERIFY_SUCCEEDED(bf->GetStorage(&bfStorage));
+  return bfStorage;
+}
+
+void RunBitfieldAdjacencyTest(
+    IDxcPixDxilStorage *bfStorage,
+    std::vector<std::vector<wchar_t const *>> const &adjacentRuns) {
+  std::vector<std::set<DWORD>> registersByRun;
+  registersByRun.resize(adjacentRuns.size());
+  for (size_t run = 0; run < adjacentRuns.size(); ++run) {
+    for (auto const &field : adjacentRuns[run]) {
+      CComPtr<IDxcPixDxilStorage> fieldStorage;
+      VERIFY_SUCCEEDED(bfStorage->AccessField(field, &fieldStorage));
+      DWORD reg;
+      VERIFY_SUCCEEDED(fieldStorage->GetRegisterNumber(&reg));
+      registersByRun[run].insert(reg);
+    }
+  }
+  for (size_t run = 0; run < registersByRun.size(); ++run) {
+    {
+      // Every field in this run should have the same register number, so this
+      // set should be of size 1:
+      VERIFY_ARE_EQUAL(1, registersByRun[run].size());
+      // Every adjacent run should have different register numbers:
+      if (run != 0) {
+        VERIFY_ARE_NOT_EQUAL(*registersByRun[run - 1].begin(),
+                             *registersByRun[run].begin());
+      }
+    }
+  }
 }
 
 TEST_F(PixDiaTest, DxcPixDxilDebugInfo_BitFields_Simple) {
+  if (m_ver.SkipDxilVersion(1, 5))
+    return;
+
   const char *hlsl = R"(
 struct Bitfields
 {
@@ -3000,10 +3038,16 @@ void main()
 }
 
 )";
-  RunSizeAndOffsetTestCase(hlsl, {0, 17, 32, 64}, {17, 15, 3, 32});
+  auto bfStorage =
+      RunSizeAndOffsetTestCase(hlsl, {0, 17, 32, 64}, {17, 15, 3, 32});
+  RunBitfieldAdjacencyTest(bfStorage,
+                           {{L"first", L"second"}, {L"third"}, {L"fourth"}});
 }
 
 TEST_F(PixDiaTest, DxcPixDxilDebugInfo_BitFields_Derived) {
+  if (m_ver.SkipDxilVersion(1, 5))
+    return;
+
   const char *hlsl = R"(
 struct Bitfields
 {
@@ -3027,10 +3071,16 @@ void main()
 }
 
 )";
-  RunSizeAndOffsetTestCase(hlsl, {0, 17, 32, 64}, {17, 15, 3, 32});
+  auto bfStorage =
+      RunSizeAndOffsetTestCase(hlsl, {0, 17, 32, 64}, {17, 15, 3, 32});
+  RunBitfieldAdjacencyTest(bfStorage,
+                           {{L"first", L"second"}, {L"third"}, {L"fourth"}});
 }
 
 TEST_F(PixDiaTest, DxcPixDxilDebugInfo_BitFields_Bool) {
+  if (m_ver.SkipDxilVersion(1, 5))
+    return;
+
   const char *hlsl = R"(
 struct Bitfields
 {
@@ -3054,17 +3104,22 @@ void main()
 }
 
 )";
-  RunSizeAndOffsetTestCase(hlsl, {0, 1, 2, 32}, {1, 1, 3, 32});
+  auto bfStorage = RunSizeAndOffsetTestCase(hlsl, {0, 1, 2, 32}, {1, 1, 3, 32});
+  RunBitfieldAdjacencyTest(bfStorage,
+                           {{L"first", L"second", L"third"}, {L"fourth"}});
 }
 
 TEST_F(PixDiaTest, DxcPixDxilDebugInfo_BitFields_Overlap) {
+  if (m_ver.SkipDxilVersion(1, 5))
+    return;
+
   const char *hlsl = R"(
 struct Bitfields
 {
-    unsigned int first : 20;
-    unsigned int second : 20; // should end up in second DWORD
-    unsigned int third : 3; // should shader second DWORD
-    unsigned int fourth; // should be in third DWORD
+    uint32_t first : 20;
+    uint32_t second : 20; // should end up in second DWORD
+    uint32_t third : 3; // should shader second DWORD
+    uint32_t fourth; // should be in third DWORD
 };
 
 RWStructuredBuffer<int> UAV: register(u0);
@@ -3081,7 +3136,46 @@ void main()
 }
 
 )";
-  RunSizeAndOffsetTestCase(hlsl, {0, 32, 52, 64}, {20, 20, 3, 32});
+  auto bfStorage =
+      RunSizeAndOffsetTestCase(hlsl, {0, 32, 52, 64}, {20, 20, 3, 32});
+  // (PIX #58022343): fields that overlap their storage type are not yet
+  // reflected properly in terms of their packed offsets as maintained via
+  // these PixDxc interfaces based on the dbg.declare data
+  // RunBitfieldAdjacencyTest(bfStorage,
+  //                         {{L"first"}, {L"second", L"third"}, {L"fourth"}});
+}
+
+TEST_F(PixDiaTest, DxcPixDxilDebugInfo_BitFields_uint64) {
+  if (m_ver.SkipDxilVersion(1, 5))
+    return;
+
+  const char *hlsl = R"(
+struct Bitfields
+{
+    uint64_t first : 20;
+    uint64_t second : 20; // should end up in first uint64 also
+    uint64_t third : 24; // in first
+    uint64_t fourth; // should be in second
+};
+
+RWStructuredBuffer<int> UAV: register(u0);
+
+[numthreads(1, 1, 1)]
+void main()
+{
+  Bitfields bf;
+  bf.first = UAV[0];
+  bf.second = UAV[1];
+  bf.third = UAV[2];
+  bf.fourth = UAV[3];
+  UAV[16] = bf.first + bf.second + bf.third + bf.fourth; //STOP_HERE
+}
+
+)";
+  auto bfStorage =
+      RunSizeAndOffsetTestCase(hlsl, {0, 20, 40, 64}, {20, 20, 24, 64});
+  RunBitfieldAdjacencyTest(bfStorage,
+                           {{L"first", L"second", L"third"}, {L"fourth"}});
 }
 
 TEST_F(PixDiaTest, DxcPixDxilDebugInfo_Alignment_ConstInt) {
@@ -3502,9 +3596,10 @@ void ClosestHitShader3(inout RayPayload payload, in BuiltInTriangleIntersectionA
 
   // Case: same function called from two places in same top-level function.
   // In this case, we expect the storage for the variable to be in the same
-  // place for both "instances" of the function: as a thread proceeds through
-  // the caller, it will write new values into the variable's storage during
-  // the second or subsequent invocations of the inlined function.
+  // place for both "instances" of the function: as a thread proceeds
+  // through the caller, it will write new values into the variable's
+  // storage during the second or subsequent invocations of the inlined
+  // function.
   DWORD instructionOffset =
       AdvanceUntilFunctionEntered(dxilDebugger, 0, L"ClosestHitShader3");
   instructionOffset = AdvanceUntilFunctionEntered(
@@ -3550,9 +3645,10 @@ TEST_F(PixDiaTest, DxcPixDxilDebugInfo_VariableScopes_ForScopes) {
 
   // Case: same function called from two places in same top-level function.
   // In this case, we expect the storage for the variable to be in the same
-  // place for both "instances" of the function: as a thread proceeds through
-  // the caller, it will write new values into the variable's storage during
-  // the second or subsequent invocations of the inlined function.
+  // place for both "instances" of the function: as a thread proceeds
+  // through the caller, it will write new values into the variable's
+  // storage during the second or subsequent invocations of the inlined
+  // function.
   DWORD instructionOffset =
       AdvanceUntilFunctionEntered(dxilDebugger, 0, L"CSMain");
 
@@ -3597,9 +3693,10 @@ TEST_F(PixDiaTest, DxcPixDxilDebugInfo_VariableScopes_ScopeBraces) {
 
   // Case: same function called from two places in same top-level function.
   // In this case, we expect the storage for the variable to be in the same
-  // place for both "instances" of the function: as a thread proceeds through
-  // the caller, it will write new values into the variable's storage during
-  // the second or subsequent invocations of the inlined function.
+  // place for both "instances" of the function: as a thread proceeds
+  // through the caller, it will write new values into the variable's
+  // storage during the second or subsequent invocations of the inlined
+  // function.
   DWORD instructionOffset =
       AdvanceUntilFunctionEntered(dxilDebugger, 0, L"CSMain");
 
@@ -3644,9 +3741,10 @@ TEST_F(PixDiaTest, DxcPixDxilDebugInfo_VariableScopes_Function) {
 
   // Case: same function called from two places in same top-level function.
   // In this case, we expect the storage for the variable to be in the same
-  // place for both "instances" of the function: as a thread proceeds through
-  // the caller, it will write new values into the variable's storage during
-  // the second or subsequent invocations of the inlined function.
+  // place for both "instances" of the function: as a thread proceeds
+  // through the caller, it will write new values into the variable's
+  // storage during the second or subsequent invocations of the inlined
+  // function.
   DWORD instructionOffset =
       AdvanceUntilFunctionEntered(dxilDebugger, 0, L"CSMain");
 
@@ -3692,9 +3790,10 @@ void CSMain()
 
   // Case: same function called from two places in same top-level function.
   // In this case, we expect the storage for the variable to be in the same
-  // place for both "instances" of the function: as a thread proceeds through
-  // the caller, it will write new values into the variable's storage during
-  // the second or subsequent invocations of the inlined function.
+  // place for both "instances" of the function: as a thread proceeds
+  // through the caller, it will write new values into the variable's
+  // storage during the second or subsequent invocations of the inlined
+  // function.
   DWORD instructionOffset =
       AdvanceUntilFunctionEntered(dxilDebugger, 0, L"CSMain");
 

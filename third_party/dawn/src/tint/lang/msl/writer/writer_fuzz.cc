@@ -32,6 +32,7 @@
 #include "src/tint/lang/core/ir/var.h"
 #include "src/tint/lang/core/type/pointer.h"
 #include "src/tint/lang/msl/writer/helpers/generate_bindings.h"
+#include "src/tint/lang/msl/writer/printer/printer.h"
 #include "src/tint/lang/msl/writer/writer.h"
 
 namespace tint::msl::writer {
@@ -40,17 +41,17 @@ namespace {
 Result<SuccessType> IRFuzzer(core::ir::Module& module,
                              const fuzz::ir::Context& context,
                              Options options) {
-    options.bindings = GenerateBindings(module);
-    options.array_length_from_uniform.ubo_binding = 30;
+    options.bindings = GenerateBindings(module, false);
+    options.array_length_from_constants.ubo_binding = 30;
 
-    // Add array_length_from_uniform entries for all storage buffers with runtime sized arrays.
+    // Add array_length_from_constants entries for all storage buffers with runtime sized arrays.
     std::unordered_set<tint::BindingPoint> storage_bindings;
     for (auto* inst : *module.root_block) {
         auto* var = inst->As<core::ir::Var>();
         if (!var->Result()->Type()->UnwrapPtr()->HasFixedFootprint()) {
             if (auto bp = var->BindingPoint()) {
                 if (storage_bindings.insert(bp.value()).second) {
-                    options.array_length_from_uniform.bindpoint_to_size_index.emplace(
+                    options.array_length_from_constants.bindpoint_to_size_index.emplace(
                         bp.value(), static_cast<uint32_t>(storage_bindings.size() - 1));
                 }
             }
@@ -63,6 +64,10 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
     }
 
     auto output = Generate(module, options);
+    if (output != Success) {
+        TINT_ICE() << "Generate() failed after CanGenerate() succeeded: "
+                   << output.Failure().reason;
+    }
 
     if (output == Success && context.options.dump) {
         std::cout << "Dumping generated MSL:\n" << output->msl << "\n";
@@ -74,4 +79,6 @@ Result<SuccessType> IRFuzzer(core::ir::Module& module,
 }  // namespace
 }  // namespace tint::msl::writer
 
-TINT_IR_MODULE_FUZZER(tint::msl::writer::IRFuzzer, tint::core::ir::Capabilities{});
+TINT_IR_MODULE_FUZZER(tint::msl::writer::IRFuzzer,
+                      tint::core::ir::Capabilities{},
+                      tint::msl::writer::kPrinterCapabilities);

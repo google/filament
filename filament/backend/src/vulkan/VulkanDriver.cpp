@@ -206,6 +206,11 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
     : mPlatform(platform),
       mResourceManager(driverConfig.handleArenaSize, driverConfig.disableHandleUseAfterFreeCheck,
               driverConfig.disableHeapHandleTags),
+      // Note that we always create the default rendertarget before createDefaultRenderTarget(). We
+      // swap the content later when createDefaultRenderTarget() is called.  This frees
+      // createDefaultRenderTarget() from being ordered with makeCurrent().
+      mDefaultRenderTarget(
+              fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
@@ -447,7 +452,7 @@ void VulkanDriver::updateDescriptorSetTexture(
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
 
-    if (mExternalImageManager.isExternallySampledTexture(texture)) {
+    if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
     } else {
@@ -709,8 +714,11 @@ void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, utils::CString tag) {
-    assert_invariant(!mDefaultRenderTarget);
-    auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth);
+    assert_invariant(mDefaultRenderTarget); // Default render target should already exist.
+
+    auto renderTarget = resource_ptr<VulkanRenderTarget>::make(&mResourceManager, rth,
+            std::move(std::move(*mDefaultRenderTarget.get())));
+
     mDefaultRenderTarget = renderTarget;
     mResourceManager.associateHandle(rth.getId(), std::move(tag));
 }
@@ -790,6 +798,7 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
     if (UTILS_UNLIKELY(rt == mDefaultRenderTarget)) {
+        // Note that this should only happen on driver shutdown.
         mDefaultRenderTarget = {};
     } else {
         rt.dec();
@@ -1389,6 +1398,10 @@ void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {
         srcw = dstw;
         srch = dsth;
     } while ((srcw > 1 || srch > 1) && ++level < t->levels - 1);
+
+    VulkanCommandBuffer* commandBuffer = &mCommands.get();
+    // Here we transition to the whole image to the most likely next layout.
+    t->transitionLayout(commandBuffer, t->getPrimaryViewRange(), t->getDefaultLayout());
 }
 
 void VulkanDriver::compilePrograms(CompilerPriorityQueue priority,
@@ -1949,6 +1962,18 @@ void VulkanDriver::bindDescriptorSet(
     if (dsh) {
         auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
         mDescriptorSetCache.bind(setIndex, set, std::move(offsets));
+
+        if (mAppState.hasExternalSamplers()) {
+            auto const& bindInDrawBundle = mPipelineState.bindInDraw.second;
+            // The set index being bound has already been bound or will be bound. If it's already
+            // been bound and this set has external samplers, we do the doBindindraw block in
+            // draw2() again. Because this set might potentially cause a new pipelineLayout
+            // (therefore pipeline) to be bound.
+            if (bindInDrawBundle.descriptorSetMask[setIndex] &&
+                    mExternalImageManager.hasExternalSampler(set)) {
+                mPipelineState.bindInDraw.first = true;
+            }
+        }
     } else {
         mDescriptorSetCache.unbind(setIndex);
     }

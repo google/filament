@@ -39,6 +39,13 @@ dawn_json_generator("emdawnwebgpu_headers_gen") {
   ]
 }
 
+source_set("emdawnwebgpu_headers") {
+  all_dependent_configs = [ "${dawn_root}/include/dawn:public" ]
+  public_deps = [ ":emdawnwebgpu_headers_gen" ]
+
+  sources = get_target_outputs(":emdawnwebgpu_headers_gen")
+}
+
 dawn_json_generator("emdawnwebgpu_js_gen") {
   target = "emdawnwebgpu_js"
   outputs = [
@@ -66,7 +73,7 @@ dawn_json_generator("emdawnwebgpu_js_gen") {
 # - library_webgpu_generated_sig_info.js
 #   which we generate directly instead of using "gen_sig_info.py"
 
-if (dawn_emscripten_dir != "") {
+if (is_wasm) {
   template("webgpu_gen_struct_info") {
     action(target_name) {
       forward_variables_from(invoker, "*")
@@ -76,7 +83,7 @@ if (dawn_emscripten_dir != "") {
         ":emdawnwebgpu_js_gen",  # for struct_info_webgpu.json
       ]
 
-      script = dawn_emscripten_dir + "/tools/maint/gen_struct_info.py"
+      script = dawn_emscripten_dir + "/tools/gen_struct_info.py"
       args = [
         "-q",  # quiet
         rebase_path(sources[0], root_build_dir),  # input file
@@ -147,11 +154,12 @@ if (dawn_emscripten_dir != "") {
               "${target_gen_dir}/library_webgpu_generated_struct_info.js"),
       "--js-library=" +
           rebase_path("${target_gen_dir}/library_webgpu_generated_sig_info.js"),
-      "--js-library=" +
-          rebase_path("../../third_party/emdawnwebgpu/library_webgpu.js"),
+      "--js-library=" + rebase_path(
+              "../../third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js"),
 
-      # Emscripten only enables webgpu-externs.js with -sUSE_WEBGPU=1, so add them explicitly.
-      "--closure-args=--externs=${dawn_emscripten_dir}/src/closure-externs/webgpu-externs.js",
+      # Closure externs to avoid minifying WebGPU API symbols
+      "--closure-args=--externs=" + rebase_path(
+              "../../third_party/emdawnwebgpu/pkg/webgpu/src/webgpu-externs.js"),
     ]
   }
 
@@ -175,10 +183,10 @@ if (dawn_emscripten_dir != "") {
       ":library_webgpu_generated_struct_info",
     ]
     sources = get_target_outputs(":emdawnwebgpu_headers_gen") +
-              [ "../../third_party/emdawnwebgpu/webgpu.cpp" ]
+              [ "../../third_party/emdawnwebgpu/pkg/webgpu/src/webgpu.cpp" ]
     inputs = [
       # TODO(crbug.com/371024051): Changing these files doesn't seem to trigger a relink. Why?
-      "../../third_party/emdawnwebgpu/library_webgpu.js",
+      "../../third_party/emdawnwebgpu/pkg/webgpu/src/library_webgpu.js",
     ]
   }
 }

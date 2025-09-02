@@ -64,12 +64,12 @@ void {{prefix}}ProcSetProcs(const {{Prefix}}ProcTable* procs_) {
 
 {% for function in by_category["function"] %}
     DAWN_NO_SANITIZE("cfi-icall")
-    {{as_cType(function.return_type.name)}} {{as_cMethod(None, function.name)}}(
+    {{as_annotated_cType(function.returns)}} {{as_cMethod(None, function.name)}}(
         {%- for arg in function.arguments -%}
             {% if not loop.first %}, {% endif %}{{as_annotated_cType(arg)}}
         {%- endfor -%}
     ) {
-        {% if function.return_type.name.canonical_case() != "void" %}return {% endif %}
+        {% if function.returns %}return {% endif %}
         procs.{{as_varName(function.name)}}(
             {%- for arg in function.arguments -%}
                 {% if not loop.first %}, {% endif %}{{as_varName(arg.name)}}
@@ -78,16 +78,16 @@ void {{prefix}}ProcSetProcs(const {{Prefix}}ProcTable* procs_) {
     }
 {% endfor %}
 
-{% for type in by_category["object"] %}
-    {% for method in c_methods(type) %}
+{% for (type, methods) in c_methods_sorted_by_parent %}
+    {% for method in methods %}
         DAWN_NO_SANITIZE("cfi-icall")
-        {{as_cType(method.return_type.name)}} {{as_cMethod(type.name, method.name)}}(
+        {{as_annotated_cType(method.returns)}} {{as_cMethod(type.name, method.name)}}(
             {{-as_cType(type.name)}} {{as_varName(type.name)}}
             {%- for arg in method.arguments -%}
                 , {{as_annotated_cType(arg)}}
             {%- endfor -%}
         ) {
-            {% if method.return_type.name.canonical_case() != "void" %}return {% endif %}
+            {% if method.returns %}return {% endif %}
             procs.{{as_varName(type.name, method.name)}}({{as_varName(type.name)}}
                 {%- for arg in method.arguments -%}
                     , {{as_varName(arg.name)}}

@@ -258,6 +258,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             include/backend/platforms/WebGPUPlatform.h
             src/webgpu/platform/WebGPUPlatform.cpp
             src/webgpu/SpdMipmapGenerator/SpdMipmapGenerator.cpp
+            src/webgpu/utils/AsyncTaskCounter.cpp
+            src/webgpu/utils/AsyncTaskCounter.h
             src/webgpu/utils/StringPlaceholderTemplateProcessor.cpp
             src/webgpu/utils/StringPlaceholderTemplateProcessor.h
             src/webgpu/WebGPUBlitter.cpp
@@ -412,6 +414,7 @@ endif()
 
 if (APPLE AND NOT IOS)
     target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
+    target_link_libraries(${TARGET} PRIVATE "-framework QuartzCore")
 endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
@@ -527,7 +530,7 @@ target_link_libraries(${TARGET} PRIVATE
 if (LINUX AND FILAMENT_SUPPORTS_WEBGPU)
     # Unclear why this needs to be explicit while other linux libs do not, but it is necessary for
     # WebGPU to build on linux.
-    target_link_libraries(${TARGET} PRIVATE -lxcb)
+    target_link_libraries(${TARGET} PRIVATE -lxcb -lX11)
 endif()
 
 # ==================================================================================================
@@ -574,7 +577,19 @@ if (APPLE OR LINUX)
         test/test_Handles.cpp
         test/test_CircularBuffer.cpp
         test/test_CommandBufferQueue.cpp
+        test/test_Template.cpp
     )
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        list(APPEND BACKEND_TEST_SRC
+                test/test_WebGPUAsyncTaskCounter.cpp
+                test/test_WebGPUComposeSwizzle.cpp)
+    endif()
+    if (APPLE)
+        # Metal-specific tests
+        list(APPEND BACKEND_TEST_SRC
+            test/test_MetalBlitter.mm
+        )
+    endif()
     set(BACKEND_TEST_LIBS
         absl::str_format
         backend
@@ -586,6 +601,7 @@ if (APPLE OR LINUX)
         spirv-cross-glsl)
     # Create input/output directories for test result images.
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/actual_images)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/images/diff_images)
     file(COPY test/expected_images DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/images)
 endif()
 
@@ -596,6 +612,7 @@ if (APPLE AND NOT IOS)
          test/test_RenderExternalImage.cpp)
     add_library(backend_test STATIC ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test PUBLIC ${BACKEND_TEST_LIBS})
+    target_compile_options(backend_test PRIVATE "-fobjc-arc")
 
     set(BACKEND_TEST_DEPS
             OSDependent
@@ -613,6 +630,10 @@ if (APPLE AND NOT IOS)
     if (NOT IOS)
         target_link_libraries(backend_test PRIVATE image imageio)
         list(APPEND BACKEND_TEST_DEPS image)
+    endif()
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test PRIVATE webgpu_dawn dawncpp_headers)
+        list(APPEND BACKEND_TEST_DEPS webgpu_dawn dawncpp_headers)
     endif()
 
     set(BACKEND_TEST_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libbackendtest_combined.a")
@@ -645,6 +666,9 @@ if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
+    endif()
 endif()
 
 # ==================================================================================================

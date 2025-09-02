@@ -56,7 +56,6 @@ class FencedDeleter {
     void DeleteWhenUnused(VkSamplerYcbcrConversion samplerYcbcrConversion);
     void DeleteWhenUnused(VkSampler sampler);
     void DeleteWhenUnused(VkSemaphore semaphore);
-    void DeleteWhenUnused(VkShaderModule module);
     void DeleteWhenUnused(VkSurfaceKHR surface);
     void DeleteWhenUnused(VkSwapchainKHR swapChain);
 
@@ -84,7 +83,6 @@ class FencedDeleter {
     SerialQueue<ExecutionSerial, VkSamplerYcbcrConversion> mSamplerYcbcrConversionsToDelete;
     SerialQueue<ExecutionSerial, VkSampler> mSamplersToDelete;
     SerialQueue<ExecutionSerial, VkSemaphore> mSemaphoresToDelete;
-    SerialQueue<ExecutionSerial, VkShaderModule> mShaderModulesToDelete;
     SerialQueue<ExecutionSerial, VkSurfaceKHR> mSurfacesToDelete;
     SerialQueue<ExecutionSerial, VkSwapchainKHR> mSwapChainsToDelete;
 };

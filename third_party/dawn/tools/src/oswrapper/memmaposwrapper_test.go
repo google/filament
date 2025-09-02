@@ -32,13 +32,14 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestUsableAsOsWrapper(t *testing.T) {
+func TestMemMapOSWrapper_UsableAsOsWrapper(t *testing.T) {
 	f := func(osWrapper OSWrapper) {
 		_ = osWrapper.Environ()
 	}
@@ -47,7 +48,7 @@ func TestUsableAsOsWrapper(t *testing.T) {
 	f(wrapper)
 }
 
-func TestEnviron(t *testing.T) {
+func TestMemMapOSWrapper_Environ(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	environ := wrapper.Environ()
 	require.Equal(t, []string{}, environ)
@@ -60,7 +61,7 @@ func TestEnviron(t *testing.T) {
 	require.Equal(t, []string{"HOME=/tmp", "PWD=/local"}, environ)
 }
 
-func TestGetenv(t *testing.T) {
+func TestMemMapOSWrapper_Getenv(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	require.Equal(t, "", wrapper.Getenv("HOME"))
 
@@ -70,7 +71,7 @@ func TestGetenv(t *testing.T) {
 	require.Equal(t, "/tmp", wrapper.Getenv("HOME"))
 }
 
-func TestGetwd(t *testing.T) {
+func TestMemMapOSWrapper_Getwd(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	wd, err := wrapper.Getwd()
 	require.NoErrorf(t, err, "Failed to get wd: %v", err)
@@ -84,7 +85,7 @@ func TestGetwd(t *testing.T) {
 	require.Equal(t, "/local", wd)
 }
 
-func TestUserHomeDir(t *testing.T) {
+func TestMemMapOSWrapper_UserHomeDir(t *testing.T) {
 	tests := []struct {
 		name        string
 		environment map[string]string
@@ -122,31 +123,37 @@ func TestUserHomeDir(t *testing.T) {
 	}
 }
 
-func TestOpen_Nonexistent(t *testing.T) {
+func TestMemMapOSWrapper_Open_Nonexistent(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	_, err := wrapper.Open("/foo.txt")
 	require.ErrorContains(t, err, "open /foo.txt: file does not exist")
 }
 
-func TestOpenFile_Nonexistent(t *testing.T) {
+func TestMemMapOSWrapper_OpenFile_Nonexistent(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	_, err := wrapper.OpenFile("/foo.txt", os.O_RDONLY, 0o700)
 	require.ErrorContains(t, err, "open /foo.txt: file does not exist")
 }
 
-func TestReadFile_Nonexistent(t *testing.T) {
+func TestMemMapOSWrapper_ReadFile_Nonexistent(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	_, err := wrapper.ReadFile("/foo.txt")
 	require.ErrorContains(t, err, "open /foo.txt: file does not exist")
 }
 
-func TestStat_Nonexistent(t *testing.T) {
+func TestMemMapOSWrapper_Stat_Nonexistent(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	_, err := wrapper.Stat("/foo.txt")
 	require.ErrorContains(t, err, "open /foo.txt: file does not exist")
 }
 
-func TestWalk_Nonexistent(t *testing.T) {
+func TestMemMapOSWrapper_Stat_EmptyString(t *testing.T) {
+	wrapper := CreateMemMapOSWrapper()
+	_, err := wrapper.Stat("")
+	require.ErrorContains(t, err, "no such file or directory")
+}
+
+func TestMemMapOSWrapper_Walk_Nonexistent(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 
 	walkfunc := func(root string, info fs.FileInfo, err error) error {
@@ -160,7 +167,7 @@ func TestWalk_Nonexistent(t *testing.T) {
 	require.ErrorContains(t, err, "open /nonexistent: file does not exist")
 }
 
-func TestWriteFile_Open(t *testing.T) {
+func TestMemMapOSWrapper_WriteFile_Open(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.WriteFile("/foo.txt", []byte("content"), 0o700)
 	require.NoErrorf(t, err, "Failed to write file: %v", err)
@@ -177,7 +184,7 @@ func TestWriteFile_Open(t *testing.T) {
 	require.Equal(t, 0, bytesRead)
 }
 
-func TestCreate_Walk_NonexistentDirectory(t *testing.T) {
+func TestMemMapOSWrapper_Create_Walk_NonexistentDirectory(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	_, err := wrapper.Create("/parent/foo.txt")
 	require.NoErrorf(t, err, "Got error creating file without parent dir: %v", err)
@@ -203,7 +210,7 @@ func TestCreate_Walk_NonexistentDirectory(t *testing.T) {
 	require.False(t, inputs[1].info.IsDir())
 }
 
-func TestCreate_ReadFile(t *testing.T) {
+func TestMemMapOSWrapper_Create_ReadFile(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	file, err := wrapper.Create("/foo.txt")
 	require.NoErrorf(t, err, "Failed to create file: %v", err)
@@ -217,7 +224,48 @@ func TestCreate_ReadFile(t *testing.T) {
 	require.Equal(t, []byte("asdf"), contents)
 }
 
-func TestMkdir_Exists(t *testing.T) {
+func TestMemMapOSWrapper_ReadDir_NonExistent(t *testing.T) {
+	wrapper := CreateMemMapOSWrapper()
+	_, err := wrapper.ReadDir("/nonexistent")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "open /nonexistent: file does not exist")
+}
+
+func TestMemMapOSWrapper_ReadDir_PathIsFile(t *testing.T) {
+	wrapper := CreateMemMapOSWrapper()
+	require.NoError(t, wrapper.WriteFile("/myfile", []byte("content"), 0644))
+	_, err := wrapper.ReadDir("/myfile")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "not a dir")
+}
+
+func TestMemMapOSWrapper_ReadDir_EmptyDir(t *testing.T) {
+	wrapper := CreateMemMapOSWrapper()
+	require.NoError(t, wrapper.Mkdir("/mydir", 0755))
+	entries, err := wrapper.ReadDir("/mydir")
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
+
+func TestMemMapOSWrapper_ReadDir_MixedContent(t *testing.T) {
+	wrapper := CreateMemMapOSWrapper()
+	require.NoError(t, wrapper.MkdirAll("/mydir/b_subdir", 0755))
+	require.NoError(t, wrapper.WriteFile("/mydir/z_file.txt", nil, 0644))
+	require.NoError(t, wrapper.WriteFile("/mydir/a_file.txt", nil, 0644))
+
+	entries, err := wrapper.ReadDir("/mydir")
+	require.NoError(t, err)
+
+	gotNames := []string{}
+	for _, entry := range entries {
+		gotNames = append(gotNames, entry.Name())
+	}
+	sort.Strings(gotNames)
+	expectedNames := []string{"a_file.txt", "b_subdir", "z_file.txt"}
+	require.Equal(t, expectedNames, gotNames, "directory entries do not match")
+}
+
+func TestMemMapOSWrapper_Mkdir_Exists(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.Mkdir("/parent", 0o700)
 	require.NoErrorf(t, err, "Got error creating directory: %v", err)
@@ -225,7 +273,7 @@ func TestMkdir_Exists(t *testing.T) {
 	require.ErrorContains(t, err, "mkdir /parent: file already exists")
 }
 
-func TestMkdir_MkdirAll(t *testing.T) {
+func TestMemMapOSWrapper_Mkdir_MkdirAll(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.Mkdir("/parent", 0o700)
 	require.NoErrorf(t, err, "Error creating parent: %v", err)
@@ -262,7 +310,7 @@ func TestMkdir_MkdirAll(t *testing.T) {
 	require.Equal(t, os.FileMode(0o600)|fs.ModeDir, inputs[2].info.Mode())
 }
 
-func TestMkdirAll_Exists(t *testing.T) {
+func TestMemMapOSWrapper_MkdirAll_Exists(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.MkdirAll("/parent", 0o700)
 	require.NoErrorf(t, err, "Got error creating directory: %v", err)
@@ -270,7 +318,7 @@ func TestMkdirAll_Exists(t *testing.T) {
 	require.NoErrorf(t, err, "Got error creating directory second time: %v", err)
 }
 
-func TestMkdirTemp(t *testing.T) {
+func TestMemMapOSWrapper_MkdirTemp(t *testing.T) {
 	tests := []struct {
 		name    string
 		pattern string
@@ -311,7 +359,7 @@ func TestMkdirTemp(t *testing.T) {
 	}
 }
 
-func TestRemove(t *testing.T) {
+func TestMemMapOSWrapper_Remove(t *testing.T) {
 	tests := []struct {
 		name          string
 		filesToCreate []string
@@ -375,7 +423,7 @@ func TestRemove(t *testing.T) {
 	}
 }
 
-func TestRemoveAll(t *testing.T) {
+func TestMemMapOSWrapper_RemoveAll(t *testing.T) {
 	tests := []struct {
 		name          string
 		filesToCreate []string
@@ -431,7 +479,7 @@ func TestRemoveAll(t *testing.T) {
 	}
 }
 
-func TestWriteFile_OpenFile(t *testing.T) {
+func TestMemMapOSWrapper_WriteFile_OpenFile(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.WriteFile("/foo.txt", []byte("content"), 0o700)
 	require.NoErrorf(t, err, "Failed to write file: %v", err)
@@ -448,7 +496,7 @@ func TestWriteFile_OpenFile(t *testing.T) {
 	require.Equal(t, 0, bytesRead)
 }
 
-func TestWriteFile_ReadFile(t *testing.T) {
+func TestMemMapOSWrapper_WriteFile_ReadFile(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	err := wrapper.WriteFile("/foo.txt", []byte("content"), 0o700)
 	require.NoErrorf(t, err, "Failed to write file: %v", err)
@@ -458,7 +506,7 @@ func TestWriteFile_ReadFile(t *testing.T) {
 	require.Equal(t, []byte("content"), contents)
 }
 
-func TestWriteFile_Stat(t *testing.T) {
+func TestMemMapOSWrapper_WriteFile_Stat(t *testing.T) {
 	wrapper := CreateMemMapOSWrapper()
 	approxWriteTime := time.Now()
 	err := wrapper.WriteFile("/foo.txt", []byte("content"), 0o700)

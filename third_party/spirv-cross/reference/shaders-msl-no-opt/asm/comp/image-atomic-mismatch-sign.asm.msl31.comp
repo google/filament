@@ -1,0 +1,25 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+template <typename T, typename U>
+T spvTextureCast(U img)
+{
+    return reinterpret_cast<thread const T &>(img);
+}
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(1u);
+
+kernel void main0(texture2d<uint, access::read_write> uImage [[texture(0)]], texture2d_array<uint, access::read_write> uImageArray [[texture(1)]], texture2d<int, access::read_write> iImage [[texture(2)]], texture2d_array<int, access::read_write> iImageArray [[texture(3)]])
+{
+    uint _19 = uint(spvTextureCast<texture2d<int, access::read_write>>(uImage).atomic_fetch_min(uint2(int2(1, 5)), int(1u)).x);
+    uint _27 = uint(spvTextureCast<texture2d_array<int, access::read_write>>(uImageArray).atomic_fetch_max(uint3(int3(1, 5, 4)).xy, uint3(int3(1, 5, 4)).z, int(1u)).x);
+    int _35 = int(spvTextureCast<texture2d<uint, access::read_write>>(iImage).atomic_fetch_min(uint2(int2(1, 6)), uint(1)).x);
+    int _42 = int(spvTextureCast<texture2d_array<uint, access::read_write>>(iImageArray).atomic_fetch_max(uint3(int3(1, 6, 9)).xy, uint3(int3(1, 6, 9)).z, uint(1)).x);
+}
+

@@ -40,12 +40,12 @@ cc_library(
   name = "ir",
   srcs = [
     "builtin_call.cc",
-    "image_from_texture.cc",
+    "copy_logical.cc",
     "literal_operand.cc",
   ],
   hdrs = [
     "builtin_call.h",
-    "image_from_texture.h",
+    "copy_logical.h",
     "literal_operand.h",
   ],
   deps = [
@@ -57,7 +57,6 @@ cc_library(
     "//src/tint/lang/core/type",
     "//src/tint/lang/spirv",
     "//src/tint/lang/spirv/intrinsic",
-    "//src/tint/lang/spirv/type",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",

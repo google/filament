@@ -5,7 +5,7 @@ enum address_space {
   workgroup
   uniform
   storage
-  push_constant
+  immediate
   pixel_local
   @internal __in
   @internal __out

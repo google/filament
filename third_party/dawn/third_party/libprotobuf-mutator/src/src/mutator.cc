@@ -87,11 +87,7 @@ bool GetRandomBool(RandomEngine* random, size_t n = 2) {
 }
 
 bool IsProto3SimpleField(const FieldDescriptor& field) {
-  assert(field.file()->syntax() == FileDescriptor::SYNTAX_PROTO3 ||
-         field.file()->syntax() == FileDescriptor::SYNTAX_PROTO2);
-  return field.file()->syntax() == FileDescriptor::SYNTAX_PROTO3 &&
-         field.cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE &&
-         !field.containing_oneof() && !field.is_repeated();
+  return !field.is_repeated() && !field.has_presence();
 }
 
 struct CreateDefaultField : public FieldFunction<CreateDefaultField> {
@@ -385,13 +381,13 @@ std::unique_ptr<Message> UnpackAny(const Any& any) {
 
 const Any* CastToAny(const Message* message) {
   return Any::GetDescriptor() == message->GetDescriptor()
-             ? static_cast<const Any*>(message)
+             ? protobuf::DownCastMessage<Any>(message)
              : nullptr;
 }
 
 Any* CastToAny(Message* message) {
   return Any::GetDescriptor() == message->GetDescriptor()
-             ? static_cast<Any*>(message)
+             ? protobuf::DownCastMessage<Any>(message)
              : nullptr;
 }
 
@@ -805,7 +801,7 @@ std::string Mutator::MutateUtf8String(const std::string& value,
 
 bool Mutator::IsInitialized(const Message& message) const {
   if (!keep_initialized_ || message.IsInitialized()) return true;
-  std::cerr << "Uninitialized: " << message.DebugString() << "\n";
+  std::cerr << "Uninitialized: " << absl::StrCat(message) << "\n";
   return false;
 }
 

@@ -26,27 +26,17 @@
 
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
-#include "components/TransformManager.h"
 
-#include "BufferPoolAllocator.h"
-
-#include <filament/Box.h>
 #include <filament/Scene.h>
 
-#include <math/mathfwd.h>
-
-#include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
-#include <utils/debug.h>
 
 #include <stddef.h>
 
 #include <tsl/robin_set.h>
-
-#include <memory>
 
 namespace filament {
 
@@ -136,14 +126,14 @@ public:
     RenderableSoa const& getRenderableData() const noexcept { return mRenderableData; }
     RenderableSoa& getRenderableData() noexcept { return mRenderableData; }
 
-    static inline uint32_t getPrimitiveCount(RenderableSoa const& soa,
+    static uint32_t getPrimitiveCount(RenderableSoa const& soa,
             uint32_t const first, uint32_t const last) noexcept {
         // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last) -
                 soa.elementAt<SUMMED_PRIMITIVE_COUNT>(first);
     }
 
-    static inline uint32_t getPrimitiveCount(RenderableSoa const& soa, uint32_t const last) noexcept {
+    static uint32_t getPrimitiveCount(RenderableSoa const& soa, uint32_t const last) noexcept {
         // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last);
     }
@@ -186,9 +176,6 @@ public:
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables,
-            backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
-
     bool hasContactShadows() const noexcept;
 
 private:
@@ -230,12 +217,6 @@ private:
     RenderableSoa mRenderableData;
     LightSoa mLightData;
     bool mHasContactShadows = false;
-
-    // State shared between Scene and driver callbacks.
-    struct SharedState {
-        BufferPoolAllocator<3> mBufferPoolAllocator = {};
-    };
-    std::shared_ptr<SharedState> mSharedState;
 };
 
 FILAMENT_DOWNCAST(Scene)

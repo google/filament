@@ -126,6 +126,7 @@ public:
 };
 
 TEST_F(BasicStencilBufferTest, StencilBuffer) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Stencil not supported, see b/417230776");
     auto& api = getDriverApi();
@@ -144,7 +145,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
     RunTest(renderTarget);
 
-    EXPECT_IMAGE(renderTarget, getExpectations(),
+    EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "StencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
@@ -152,6 +153,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 }
 
 TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Stencil not supported, see b/417230776");
     auto& api = getDriverApi();
@@ -170,7 +172,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
     RunTest(renderTarget);
 
-    EXPECT_IMAGE(renderTarget, getExpectations(),
+    EXPECT_IMAGE(renderTarget,
             ScreenshotParams(screenWidth(), screenHeight(), "DepthAndStencilBuffer", 0x3B1AEF0F));
 
     flushAndWait();
@@ -178,6 +180,7 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 }
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Stencil not supported, see b/417230776");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL), "Stencil isn't applied");
@@ -266,9 +269,8 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     api.stopCapture(0);
     api.endFrame(0);
 
-    EXPECT_IMAGE(renderTarget1, getExpectations(),
-            ScreenshotParams(screenWidth(), screenHeight(), "StencilBufferAutoResolve",
-                    3353562179));
+    EXPECT_IMAGE(renderTarget1, ScreenshotParams(screenWidth(), screenHeight(),
+                                        "StencilBufferAutoResolve", 3353562179));
 
     flushAndWait();
     getDriver().purge();

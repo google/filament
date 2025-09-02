@@ -62,7 +62,7 @@ const char* SeverityName(LogSeverity severity) {
 }
 #endif
 
-#if DAWN_PLATFORM_IS(ANDROID)
+#if DAWN_PLATFORM_IS(ANDROID) && !defined(DAWN_DISABLE_LOGGING)
 android_LogPriority AndroidLogPriority(LogSeverity severity) {
     switch (severity) {
         case LogSeverity::Debug:
@@ -78,7 +78,7 @@ android_LogPriority AndroidLogPriority(LogSeverity severity) {
             return ANDROID_LOG_ERROR;
     }
 }
-#endif  // DAWN_PLATFORM_IS(ANDROID)
+#endif  // DAWN_PLATFORM_IS(ANDROID) && !defined(DAWN_DISABLE_LOGGING)
 
 }  // anonymous namespace
 

@@ -312,9 +312,6 @@ struct State {
         if (result_ty->IsFloatScalar() || result_ty->IsIntegerScalar()) {
             return MakeScalarLoad(var, result_ty, byte_idx);
         }
-        if (result_ty->IsScalarVector()) {
-            return MakeVectorLoad(var, result_ty->As<core::type::Vector>(), byte_idx);
-        }
 
         return tint::Switch(
             result_ty,
@@ -330,6 +327,7 @@ struct State {
                 auto* fn = GetLoadFunctionFor(inst, var, a);
                 return b.Call(fn, byte_idx);
             },
+            [&](const core::type::Vector* v) { return MakeVectorLoad(var, v, byte_idx); },
             TINT_ICE_ON_NO_MATCH);
     }
 
@@ -620,6 +618,8 @@ Result<SuccessType> DecomposeUniformAccess(core::ir::Module& ir) {
     auto result = ValidateAndDumpIfNeeded(ir, "hlsl.DecomposeUniformAccess",
                                           core::ir::Capabilities{
                                               core::ir::Capability::kAllowClipDistancesOnF32,
+                                              core::ir::Capability::kAllowDuplicateBindings,
+                                              core::ir::Capability::kAllowNonCoreTypes,
                                           });
     if (result != Success) {
         return result.Failure();

@@ -30,7 +30,6 @@
 
 #include <dxgi1_4.h>
 #include <webgpu/webgpu_cpp_chained_struct.h>
-#include <windows.h>
 #include <wrl/client.h>
 
 #include <memory>
@@ -39,8 +38,6 @@
 #include "dawn/native/DawnNative.h"
 
 namespace dawn::native::d3d {
-
-class ExternalImageDXGIImpl;
 
 DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<IDXGIAdapter> GetDXGIAdapter(WGPUAdapter adapter);
 

@@ -17,6 +17,8 @@ add_spvtools_unittest(TARGET utils
        bit_vector_test.cpp
        bitutils_test.cpp
        hash_combine_test.cpp
+       index_range_test.cpp
        small_vector_test.cpp
+       span_test.cpp
   LIBS SPIRV-Tools-opt
 )

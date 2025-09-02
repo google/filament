@@ -50,11 +50,6 @@ class DepthBiasTests : public DawnTest {
                           int32_t bias,
                           float biasSlopeScale,
                           float biasClamp) {
-        // Skip formats other than Depth24PlusStencil8 if we're specifically testing with the packed
-        // depth24_unorm_stencil8 toggle.
-        DAWN_TEST_UNSUPPORTED_IF(HasToggleEnabled("use_packed_depth24_unorm_stencil8_format") &&
-                                 depthFormat != wgpu::TextureFormat::Depth24PlusStencil8);
-
         const char* vertexSource = nullptr;
         switch (quadAngle) {
             case QuadAngle::Flat:
@@ -338,7 +333,9 @@ TEST_P(DepthBiasTests, PositiveSlopeBiasOn24bit) {
 
 DAWN_INSTANTIATE_TEST(DepthBiasTests,
                       D3D11Backend(),
+                      D3D11Backend({"use_packed_depth24_unorm_stencil8_format"}),
                       D3D12Backend(),
+                      D3D12Backend({"use_packed_depth24_unorm_stencil8_format"}),
                       MetalBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),

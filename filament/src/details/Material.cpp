@@ -188,6 +188,28 @@ Material* Material::Builder::build(Engine& engine) const {
         return nullptr;
     }
 
+    // Try checking CRC32 value for the package and skip if it's unavailable.
+    if (downcast(engine).features.material.check_crc32_after_loading) {
+        uint32_t parsedCrc32 = 0;
+        materialParser->getMaterialCrc32(&parsedCrc32);
+
+        constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+        const size_t originalSize = mImpl->mSize - crc32ChunkSize;
+        assert_invariant(mImpl->mSize > crc32ChunkSize);
+
+        std::vector<uint32_t> crc32Table;
+        hash::crc32GenerateTable(crc32Table);
+        uint32_t expectedCrc32 = hash::crc32Update(0, mImpl->mPayload, originalSize, crc32Table);
+        if (parsedCrc32 != expectedCrc32) {
+            CString name;
+            materialParser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' is corrupted: crc32_expected=" << expectedCrc32
+                       << ", crc32_parsed=" << parsedCrc32;
+            return nullptr;
+        }
+    }
+
     uint32_t v = 0;
     materialParser->getShaderModels(&v);
     bitset32 shaderModels;
@@ -223,7 +245,7 @@ Material* Material::Builder::build(Engine& engine) const {
                 materialParser->getName(&name);
                 LOG(WARNING) << "The stereoscopic type in the compiled material '"
                              << name.c_str_safe() << "' is " << (int) materialStereoscopicType
-                             << ", which is not compatiable with the engine's setting "
+                             << ", which is not compatible with the engine's setting "
                              << (int) engineStereoscopicType << ".";
             }
         }
@@ -391,16 +413,11 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
-            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                    << pos->second.size() << " instances still alive.";
-        } else {
-            if (UTILS_UNLIKELY(!pos->second.empty())) {
-                LOG(ERROR) << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                           << pos->second.size() << " instances still alive.";
-            }
-        }
+        auto const& featureFlags = engine.features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(pos->second.empty(),
+                featureFlags.assert_destroy_material_before_material_instance)
+                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                << pos->second.size() << " instances still alive.";
     }
 
 #if FILAMENT_ENABLE_MATDBG
@@ -1034,6 +1051,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxFroxelBufferHeight =
             int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
+    int const froxelRecordBufferHeight =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
@@ -1050,6 +1070,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
             int(maxFroxelBufferHeight) });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
+            int(froxelRecordBufferHeight) });
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
             engine.debug.shadowmap.debug_directional_shadowmap });
@@ -1166,7 +1189,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
-                prepareProgram(variant);
+                prepareProgram(variant, CompilerPriorityQueue::HIGH);
             }
         }
         return;

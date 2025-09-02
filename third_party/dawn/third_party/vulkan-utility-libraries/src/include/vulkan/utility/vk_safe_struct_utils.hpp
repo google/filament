@@ -83,7 +83,9 @@ bool AddExtension(CreateInfo& ci, const char* extension_name) {
         return false;
     }
     char** exts = new char*[ci.enabledExtensionCount + 1];
-    memcpy(exts, ci.ppEnabledExtensionNames, sizeof(char*) * ci.enabledExtensionCount);
+    if (ci.ppEnabledExtensionNames) {
+        memcpy(exts, ci.ppEnabledExtensionNames, sizeof(char*) * ci.enabledExtensionCount);
+    }
     exts[ci.enabledExtensionCount] = SafeStringCopy(extension_name);
     delete[] ci.ppEnabledExtensionNames;
     ci.ppEnabledExtensionNames = exts;

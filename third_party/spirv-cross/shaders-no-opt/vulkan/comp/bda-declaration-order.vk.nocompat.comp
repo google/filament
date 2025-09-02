@@ -1,0 +1,24 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+
+layout(buffer_reference) buffer Foo;
+
+struct Bar
+{
+	Foo f;
+};
+
+layout(push_constant) uniform Registers
+{
+	Bar bar;
+};
+
+layout(buffer_reference) buffer Foo
+{
+	float v;
+};
+
+void main()
+{
+	bar.f.v = 1.0;
+}

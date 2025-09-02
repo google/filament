@@ -47,7 +47,7 @@ layout(location = 0) in vec4 mesh_position;
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };
@@ -64,7 +64,7 @@ void main() {
             params.scaleMinusOne.z + 1.0,
             1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };
@@ -80,7 +80,7 @@ void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
     uv = (mesh_position.xy * 0.5 + 0.5);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };

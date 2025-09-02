@@ -52,7 +52,8 @@ ResultOrError<Ref<Buffer>> Buffer::CreateInternalBuffer(Device* device,
     }
 
     if (descriptor->mappedAtCreation) {
-        DAWN_TRY(buffer->MapAtCreationInternal());
+        [[maybe_unused]] bool usingStagingBuffer;
+        DAWN_TRY_ASSIGN(usingStagingBuffer, buffer->MapAtCreationInternal());
     }
 
     return std::move(buffer);
@@ -230,7 +231,7 @@ MaybeError Buffer::MapAsyncImpl(wgpu::MapMode mode, size_t offset, size_t size) 
     return {};
 }
 
-void* Buffer::GetMappedPointer() {
+void* Buffer::GetMappedPointerImpl() {
     // The mapping offset has already been removed.
     return mMappedData;
 }

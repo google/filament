@@ -105,7 +105,7 @@ bool SetEnvironmentVar(const char* variableName, const char* value) {
 #if DAWN_PLATFORM_IS(WINDOWS)
 std::optional<std::string> GetHModulePath(HMODULE module) {
     std::array<char, MAX_PATH> executableFileBuf;
-    DWORD executablePathLen = GetModuleFileNameA(nullptr, executableFileBuf.data(),
+    DWORD executablePathLen = GetModuleFileNameA(module, executableFileBuf.data(),
                                                  static_cast<DWORD>(executableFileBuf.size()));
     if (executablePathLen == 0) {
         return {};
@@ -179,20 +179,20 @@ std::optional<std::string> GetModulePath() {
     return absolutePath.data();
 }
 #elif DAWN_PLATFORM_IS(WINDOWS)
+// To get the module path, use the __ImageBase pseudo-variable as described in
+// https://devblogs.microsoft.com/oldnewthing/20041025-00/?p=37483. __ImageBase
+// must be forward declared here, outside of GetModulePath.
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+
 std::optional<std::string> GetModulePath() {
-    static int placeholderSymbol = 0;
-    HMODULE module = nullptr;
-// GetModuleHandleEx is unavailable on UWP
 #if defined(DAWN_IS_WINUWP)
+    // GetModuleHandleEx is unavailable on UWP
     return {};
 #else
-    if (!GetModuleHandleExA(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            reinterpret_cast<LPCSTR>(&placeholderSymbol), &module)) {
-        return {};
-    }
-#endif
+    // The HMODULE of the DLL is the same as the module's base address
+    const HMODULE module = reinterpret_cast<HMODULE>(&__ImageBase);
     return GetHModulePath(module);
+#endif
 }
 #elif DAWN_PLATFORM_IS(FUCHSIA)
 std::optional<std::string> GetModulePath() {

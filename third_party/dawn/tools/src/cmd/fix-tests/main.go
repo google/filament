@@ -252,7 +252,6 @@ func processFailure(test, wd, failure string) error {
 	var file string
 	var fix func(testSource string) (string, error)
 	if parts := reExpectEq.FindStringSubmatch(failure); len(parts) == 5 {
-		// EXPECT_EQ(a, b)
 		a, b := unescape(parts[3]), unescape(parts[4])
 		file = parts[1]
 		fix = func(testSource string) (string, error) {
@@ -267,24 +266,33 @@ func processFailure(test, wd, failure string) error {
 			mr_a_esc := longestSubstringMatch(a_esc, testSource)
 			mr_b_esc := longestSubstringMatch(b_esc, testSource)
 
-			is_largest := func(mr MatchRange) bool {
+			// Perfect matches are prioritized for the cases where there may be more than matchable string in test function.
+			// This is common in tint where there is both the 'src' and 'expect' strings of non-failing transform test.
+			var a_perfect = len(a) == Size(mr_a)
+			var b_perfect = len(b) == Size(mr_b)
+			var a_esc_perfect = len(a_esc) == Size(mr_a_esc)
+			var b_esc_perfect = len(b_esc) == Size(mr_b_esc)
+			var has_perfect = a_perfect || b_perfect || a_esc_perfect || b_esc_perfect
+
+			use_largest := func(mr MatchRange) bool {
 				return Size(mr) >= Size(mr_a) && Size(mr) >= Size(mr_b) &&
-					Size(mr) >= Size(mr_a_esc) && Size(mr) >= Size(mr_b_esc)
+					Size(mr) >= Size(mr_a_esc) && Size(mr) >= Size(mr_b_esc) && !has_perfect
 			}
+
 			// assumed mr_b_esc is best match
 			expected_str := b_esc
 			replace_str := a_esc
 			mr_largest := mr_b_esc
 
-			if is_largest(mr_a) {
+			if use_largest(mr_a) || a_perfect {
 				expected_str = a
 				replace_str = b
 				mr_largest = mr_a
-			} else if is_largest(mr_b) {
+			} else if use_largest(mr_b) || b_perfect {
 				expected_str = b
 				replace_str = a
 				mr_largest = mr_b
-			} else if is_largest(mr_a_esc) {
+			} else if use_largest(mr_a_esc) || a_esc_perfect {
 				expected_str = a_esc
 				replace_str = b_esc
 				mr_largest = mr_a_esc

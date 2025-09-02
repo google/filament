@@ -27,6 +27,7 @@
 
 #include "dawn/native/vulkan/TextureVk.h"
 
+#include <iostream>
 #include <utility>
 
 #include "dawn/common/Assert.h"
@@ -390,6 +391,25 @@ Aspect ComputeCombinedAspect(Device* device, const Format& format) {
     return Aspect::None;
 }
 
+VkComponentSwizzle VulkanComponentSwizzle(wgpu::ComponentSwizzle swizzle) {
+    switch (swizzle) {
+        case wgpu::ComponentSwizzle::Zero:
+            return VK_COMPONENT_SWIZZLE_ZERO;
+        case wgpu::ComponentSwizzle::One:
+            return VK_COMPONENT_SWIZZLE_ONE;
+        case wgpu::ComponentSwizzle::R:
+            return VK_COMPONENT_SWIZZLE_R;
+        case wgpu::ComponentSwizzle::G:
+            return VK_COMPONENT_SWIZZLE_G;
+        case wgpu::ComponentSwizzle::B:
+            return VK_COMPONENT_SWIZZLE_B;
+        case wgpu::ComponentSwizzle::A:
+            return VK_COMPONENT_SWIZZLE_A;
+
+        case wgpu::ComponentSwizzle::Undefined:
+            DAWN_UNREACHABLE();
+    }
+}
 }  // namespace
 
 #define SIMPLE_FORMAT_MAPPING(X)                                                      \
@@ -632,6 +652,9 @@ VkImageUsageFlags VulkanImageUsage(const DeviceBase* device,
             }
         }
     }
+    if (usage & wgpu::TextureUsage::TransientAttachment) {
+        flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    }
 
     // Choosing Vulkan image usages should not know about kReadOnlyRenderAttachment because that's
     // a property of when the image is used, not of the creation.
@@ -791,7 +814,7 @@ bool IsSampleCountSupported(const dawn::native::vulkan::Device* device,
         DAWN_UNREACHABLE();
     }
 
-    return properties.sampleCounts & imageCreateInfo.samples;
+    return (properties.sampleCounts & imageCreateInfo.samples) != 0u;
 }
 
 Texture::Texture(Device* device, const UnpackedPtr<TextureDescriptor>& descriptor)
@@ -1103,11 +1126,12 @@ MaybeError Texture::ClearTexture(CommandRecordingContext* recordingContext,
                 viewDesc.mipLevelCount = 1u;
                 viewDesc.baseArrayLayer = layer;
                 viewDesc.arrayLayerCount = 1u;
-                viewDesc.usage = wgpu::TextureUsage::RenderAttachment;
+                // Inherit wgpu::TextureUsage::RenderAttachment, which may be an internal usage.
+                viewDesc.usage = wgpu::TextureUsage::None;
 
                 ColorAttachmentIndex ca0(uint8_t(0));
                 DAWN_TRY_ASSIGN(beginCmd.colorAttachments[ca0].view,
-                                TextureView::Create(this, Unpack(&viewDesc)));
+                                device->CreateTextureView(this, &viewDesc));
 
                 RenderPassColorAttachment colorAttachment{};
                 colorAttachment.view = beginCmd.colorAttachments[ca0].view.Get();
@@ -1342,7 +1366,7 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
         !(createInfo.usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
         createInfoChain.Add(&imageFormatListInfo, VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO);
         viewFormats.push_back(VulkanImageFormat(device, GetFormat().format));
-        for (FormatIndex i : IterateBitSet(GetViewFormats())) {
+        for (FormatIndex i : GetViewFormats()) {
             const Format& viewFormat = device->GetValidInternalFormat(i);
             viewFormats.push_back(VulkanImageFormat(device, viewFormat.format));
         }
@@ -1362,10 +1386,12 @@ MaybeError InternalTexture::Initialize(VkImageUsageFlags extraUsages) {
         createInfo.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
     }
 
-    // We always set VK_IMAGE_USAGE_TRANSFER_DST_BIT unconditionally because the Vulkan images
-    // that are used in vkCmdClearColorImage() must have been created with this flag, which is
-    // also required for the implementation of robust resource initialization.
-    createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    // Zero initialization and various workarounds need to copy to the images. Always add
+    // VK_IMAGE_USAGE_TRANSFER_DST_BIT to allow for these use cases, unless the image is a transient
+    // attachment and incompatible with transfers.
+    if (!(GetInternalUsage() & wgpu::TextureUsage::TransientAttachment)) {
+        createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
 
     DAWN_TRY(CheckVkOOMThenSuccess(
         device->fn.CreateImage(device->GetVkDevice(), &createInfo, nullptr, &*mHandle),
@@ -1772,10 +1798,12 @@ MaybeError ExternalVkImageTexture::Initialize(const ExternalImageDescriptorVk* d
     baseCreateInfo.queueFamilyIndexCount = 0;
     baseCreateInfo.pQueueFamilyIndices = nullptr;
 
-    // We always set VK_IMAGE_USAGE_TRANSFER_DST_BIT unconditionally because the Vulkan images
-    // that are used in vkCmdClearColorImage() must have been created with this flag, which is
-    // also required for the implementation of robust resource initialization.
-    baseCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    // Zero initialization and various workarounds need to copy to the images. Always add
+    // VK_IMAGE_USAGE_TRANSFER_DST_BIT to allow for these use cases, unless the image is a transient
+    // attachment and incompatible with transfers.
+    if (!(GetInternalUsage() & wgpu::TextureUsage::TransientAttachment)) {
+        baseCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
 
     VkImageFormatListCreateInfo imageFormatListInfo = {};
     PNextChainBuilder createInfoChain(&baseCreateInfo);
@@ -1785,7 +1813,7 @@ MaybeError ExternalVkImageTexture::Initialize(const ExternalImageDescriptorVk* d
         if (device->GetDeviceInfo().HasExt(DeviceExt::ImageFormatList)) {
             createInfoChain.Add(&imageFormatListInfo,
                                 VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO);
-            for (FormatIndex i : IterateBitSet(GetViewFormats())) {
+            for (FormatIndex i : GetViewFormats()) {
                 const Format& viewFormat = device->GetValidInternalFormat(i);
                 viewFormats.push_back(VulkanImageFormat(device, viewFormat.format));
             }
@@ -1920,8 +1948,9 @@ MaybeError SharedTexture::OnBeforeSubmit(CommandRecordingContext* context) {
 // static
 ResultOrError<Ref<TextureView>> TextureView::Create(
     TextureBase* texture,
+    uint64_t textureViewId,
     const UnpackedPtr<TextureViewDescriptor>& descriptor) {
-    Ref<TextureView> view = AcquireRef(new TextureView(texture, descriptor));
+    Ref<TextureView> view = AcquireRef(new TextureView(texture, textureViewId, descriptor));
     DAWN_TRY(view->Initialize(descriptor));
     return view;
 }
@@ -1982,6 +2011,10 @@ MaybeError TextureView::Initialize(const UnpackedPtr<TextureViewDescriptor>& des
     return {};
 }
 
+TextureView::TextureView(TextureBase* texture,
+                         uint64_t textureViewId,
+                         const UnpackedPtr<TextureViewDescriptor>& descriptor)
+    : TextureViewBase(texture, descriptor), mTextureViewId(textureViewId) {}
 TextureView::~TextureView() {}
 
 void TextureView::DestroyImpl() {
@@ -2043,8 +2076,9 @@ VkImageViewCreateInfo TextureView::GetCreateInfo(wgpu::TextureFormat format,
         createInfo.format = VulkanImageFormat(device, format);
     }
 
-    createInfo.components = VkComponentMapping{VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G,
-                                               VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+    createInfo.components = VkComponentMapping{
+        VulkanComponentSwizzle(GetSwizzleRed()), VulkanComponentSwizzle(GetSwizzleGreen()),
+        VulkanComponentSwizzle(GetSwizzleBlue()), VulkanComponentSwizzle(GetSwizzleAlpha())};
 
     const SubresourceRange& subresources = GetSubresourceRange();
     createInfo.subresourceRange.baseMipLevel = subresources.baseMipLevel;

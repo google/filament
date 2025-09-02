@@ -1,0 +1,17 @@
+#version 460 core
+#extension GL_ARM_tensors : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+layout(set = 0, binding = 0) uniform tensorARM<int32_t, 4> t;
+
+layout(set = 0, binding = 1, std430) buffer buff {
+  int32_t out_data[];
+};
+
+void main() {
+    int32_t one;
+    int32_t two[2];
+    tensorReadARM(t, uint[](1,2,3,4), one, gl_TensorOperandsOutOfBoundsValueARM, 11);
+    tensorReadARM(t, uint[](1,2,3,4), two);
+    tensorReadARM(t, uint[](1,2,3,4), out_data[1]);
+}

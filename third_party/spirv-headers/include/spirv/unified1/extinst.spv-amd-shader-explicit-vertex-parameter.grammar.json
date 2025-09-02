@@ -5,8 +5,8 @@
       "opname" : "InterpolateAtVertexAMD",
       "opcode" : 1,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'interpolant'" },
-        { "kind" : "IdRef", "name" : "'vertexIdx'" }
+        { "kind" : "IdRef", "name" : "interpolant" },
+        { "kind" : "IdRef", "name" : "vertexIdx" }
       ],
       "extensions" : [ "SPV_AMD_shader_explicit_vertex_parameter" ]
     }

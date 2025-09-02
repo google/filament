@@ -77,8 +77,7 @@ struct State {
         }
 
         // Create the structure to hold all module-scope variables.
-        // This includes all variables declared in the module, even those that are unused by one or
-        // more entry points.
+        // This includes all variables declared in the module, even those that are unused.
         CreateStruct();
 
         // Process functions in reverse-dependency order (i.e. root to leaves).
@@ -341,7 +340,15 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ModuleScopeVars(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "msl.ModuleScopeVars");
+    auto result =
+        ValidateAndDumpIfNeeded(ir, "msl.ModuleScopeVars",
+                                core::ir::Capabilities{
+                                    core::ir::Capability::kAllow8BitIntegers,
+                                    core::ir::Capability::kAllowPointersAndHandlesInStructures,
+                                    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
+                                    core::ir::Capability::kAllowDuplicateBindings,
+                                    core::ir::Capability::kAllowNonCoreTypes,
+                                });
     if (result != Success) {
         return result.Failure();
     }

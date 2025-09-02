@@ -39,6 +39,7 @@ U32::U32()
                Flag::kConstructable,
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }) {}
 
 U32::~U32() = default;

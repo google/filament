@@ -44,7 +44,7 @@ class ShaderModule final : public ObjectWithEventsBase {
 
     ObjectType GetObjectType() const override;
 
-    WGPUFuture GetCompilationInfo(const WGPUCompilationInfoCallbackInfo& callbackInfo);
+    WGPUFuture APIGetCompilationInfo(const WGPUCompilationInfoCallbackInfo& callbackInfo);
 
   private:
     friend class Client;

@@ -29,7 +29,6 @@
 
 #include <utility>
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/native/d3d12/DeviceD3D12.h"
 #include "dawn/native/d3d12/SamplerD3D12.h"
@@ -202,9 +201,9 @@ BindGroupLayout::BindGroupLayout(Device* device, const BindGroupLayoutDescriptor
         // Try to join this range with the previous one, if the current range is a continuation
         // of the previous. This is possible because the binding infos in the base type are
         // sorted.
-        if (descriptorRanges.size() >= 2) {
+        if (!descriptorRanges.empty()) {
             D3D12_DESCRIPTOR_RANGE1& previous = descriptorRanges.back();
-            if (previous.RangeType == range.RangeType &&
+            if (previous.RangeType == range.RangeType && previous.Flags == range.Flags &&
                 previous.BaseShaderRegister + previous.NumDescriptors == range.BaseShaderRegister) {
                 previous.NumDescriptors += range.NumDescriptors;
                 continue;

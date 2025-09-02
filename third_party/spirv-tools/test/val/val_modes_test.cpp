@@ -2736,6 +2736,187 @@ OpDecorateId %_payloadarr_S NodeSharesPayloadLimitsWithAMDX %_payloadarr_S_0
                 "Operands that are not id operands"));
 }
 
+TEST_F(ValidateMode, GLComputeNoModeVulkanQCOM) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main NonCoherentTileAttachmentReadQCOM
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-StandaloneSpirv-None-10685"));
+  EXPECT_THAT(
+      getDiagnosticString(),
+      HasSubstr("In the Vulkan environment, GLCompute execution model entry "
+                "points require either the TileShadingRateQCOM, LocalSize or "
+                "LocalSizeId execution mode or an object decorated with "
+                "WorkgroupSize "
+                "must be specified."));
+}
+
+TEST_F(ValidateMode, GLComputeVulkanLocalSizeBadQCOM) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main TileShadingRateQCOM 2 2 3
+OpExecutionMode %main LocalSize 16 16 1
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("If the TileShadingRateQCOM execution mode is used, "
+                        "LocalSize and LocalSizeId must not be specified."));
+}
+
+TEST_F(ValidateMode, GLComputeVulkanLocalSizeIdBadQCOM) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main TileShadingRateQCOM 2 2 3
+OpExecutionModeId %main LocalSizeId %int_1 %int_1 %int_1
+%int = OpTypeInt 32 0
+%int_1 = OpConstant %int 1
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("If the TileShadingRateQCOM execution mode is used, "
+                        "LocalSize and LocalSizeId must not be specified."));
+}
+
+TEST_F(ValidateMode, NonCoherentTileAttachmentReadQCOMBad1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main NonCoherentTileAttachmentReadQCOM
+OpExecutionMode %main OriginUpperLeft
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateMode, NonCoherentTileAttachmentReadQCOMBad2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+OpExecutionMode %main LocalSize 16 16 1
+OpExecutionMode %main NonCoherentTileAttachmentReadQCOM
+OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+%uint = OpTypeInt 32 0
+%v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The NonCoherentTileAttachmentQCOM execution mode must "
+                        "not be used in any stage other than fragment"));
+}
+
+TEST_F(ValidateMode, TileShadingRateQCOMBad1) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main" %gl_GlobalInvocationID
+OpExecutionMode %main TileShadingRateQCOM 2 2 3
+OpDecorate %gl_GlobalInvocationID BuiltIn GlobalInvocationId
+%uint = OpTypeInt 32 0
+%v3uint = OpTypeVector %uint 3
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+%gl_GlobalInvocationID = OpVariable %_ptr_Input_v3uint Input
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("requires one of these capabilities: TileShadingQCOM"));
+}
+
+TEST_F(ValidateMode, TileShadingRateQCOMBad2) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main TileShadingRateQCOM 2 2 3
+OpExecutionMode %main OriginUpperLeft
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The TileShadingRateQCOM execution mode must not be "
+                        "used in any stage other than compute"));
+}
+
+TEST_F(ValidateMode, TileShadingRateQCOMBad3) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main TileShadingRateQCOM 3 2 3
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The TileShadingRateQCOM execution mode's x and y "
+                        "values must be powers of 2"));
+}
+
+TEST_F(ValidateMode, TileShadingRateQCOMBad4) {
+  const std::string spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main TileShadingRateQCOM 2 3 3
+)" + kVoidFunction;
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(SPV_ERROR_INVALID_DATA, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The TileShadingRateQCOM execution mode's x and y "
+                        "values must be powers of 2"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

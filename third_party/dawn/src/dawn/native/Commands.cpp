@@ -452,6 +452,10 @@ RenderPassStorageAttachmentInfo::~RenderPassStorageAttachmentInfo() = default;
 RenderPassDepthStencilAttachmentInfo::RenderPassDepthStencilAttachmentInfo() = default;
 RenderPassDepthStencilAttachmentInfo::~RenderPassDepthStencilAttachmentInfo() = default;
 
+bool ResolveRect::HasValue() const {
+    return updateWidth != 0 && updateHeight != 0;
+}
+
 BeginRenderPassCmd::BeginRenderPassCmd() = default;
 BeginRenderPassCmd::~BeginRenderPassCmd() = default;
 

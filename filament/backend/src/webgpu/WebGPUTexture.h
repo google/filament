@@ -26,20 +26,6 @@
 
 namespace filament::backend {
 
-[[nodiscard]] constexpr bool hasStencil(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8 ||
-           textureFormat == wgpu::TextureFormat::Stencil8;
-}
-
-[[nodiscard]] constexpr bool hasDepth(const wgpu::TextureFormat textureFormat) {
-    return textureFormat == wgpu::TextureFormat::Depth16Unorm ||
-           textureFormat == wgpu::TextureFormat::Depth32Float ||
-           textureFormat == wgpu::TextureFormat::Depth24Plus ||
-           textureFormat == wgpu::TextureFormat::Depth24PlusStencil8 ||
-           textureFormat == wgpu::TextureFormat::Depth32FloatStencil8;
-}
-
 class WebGPUTexture : public HwTexture {
 public:
     enum class MipmapGenerationStrategy : uint8_t {
@@ -48,10 +34,24 @@ public:
         NONE,
     };
 
+    /**
+     * Creates a Filament texture and a texture view
+     */
     WebGPUTexture(SamplerType, uint8_t levels, TextureFormat, uint8_t samples, uint32_t width,
             uint32_t height, uint32_t depth, TextureUsage, wgpu::Device const&) noexcept;
 
+    /**
+     * Creates a "Filament Texture View", where the underlying texture is the same as the source,
+     * but the view elements differ
+     */
     WebGPUTexture(WebGPUTexture const* src, uint8_t baseLevel, uint8_t levelCount) noexcept;
+
+    /**
+     * @param nextSwizzle the swizzle to apply to the source texture.
+     * Creates a new texture view by composing the nextSwizzle with the source which itself it
+     * could be a swizzled view
+     */
+    WebGPUTexture(WebGPUTexture const* source, wgpu::TextureComponentSwizzle nextSwizzle) noexcept;
 
     [[nodiscard]] wgpu::TextureAspect getAspect() const { return mAspect; }
 
@@ -60,8 +60,6 @@ public:
     [[nodiscard]] size_t getBlockHeight() const { return mBlockHeight; }
 
     [[nodiscard]] wgpu::Texture const& getTexture() const { return mTexture; }
-
-    [[nodiscard]] wgpu::Texture const& getMsaaSidecarTexture(uint8_t sampleCount) const;
 
     [[nodiscard]] wgpu::TextureView const& getDefaultTextureView() const {
         return mDefaultTextureView;
@@ -72,6 +70,8 @@ public:
 
     [[nodiscard]] wgpu::TextureViewDimension getViewDimension() const { return mDimension; }
     [[nodiscard]] wgpu::TextureFormat getViewFormat() const { return mViewFormat; }
+
+    [[nodiscard]] wgpu::TextureComponentSwizzle getSwizzle() const { return mSwizzle; }
 
     [[nodiscard]] uint32_t getArrayLayerCount() const { return mArrayLayerCount; }
 
@@ -92,22 +92,14 @@ public:
 
     /**
      * @param samples The number of samples the underlying texture supports
-     * @param mipLevel The mip level into the underyling texture for which this view will reference
+     * @param mipLevel The mip level into the underlying texture for which this view will reference
      * (this view will only have one mip level)
-     * @param arrayLayer The layer into the underyling texture for which this view will reference
+     * @param arrayLayer The layer into the underlying texture for which this view will reference
      * (this view will only have one layer)
      * @return A texture view for the MSAA sidecar texture
      */
     wgpu::TextureView makeMsaaSidecarTextureViewIfTextureSidecarExists(uint8_t samples,
             uint8_t mipLevel, uint32_t arrayLayer) const;
-
-    /**
-     * @return nullptr if a MSAA sidecar texture is not appliable, otherwise a view to one
-     */
-    [[nodiscard]] wgpu::TextureView makeMsaaSidecarTextureView(wgpu::Texture const&, uint8_t mipLevel, uint32_t arrayLayer) const;
-
-    [[nodiscard]] static wgpu::TextureFormat fToWGPUTextureFormat(
-            filament::backend::TextureFormat const& fFormat);
 
     /**
      * @param format a required texture format (can be a view to a different underlying texture
@@ -117,8 +109,6 @@ public:
      */
     [[nodiscard]] static bool supportsMultipleMipLevelsViaStorageBinding(
             wgpu::TextureFormat format);
-
-    [[nodiscard]] static size_t getWGPUTextureFormatPixelSize(const wgpu::TextureFormat format);
 
 private:
     // the texture view's format, which may differ from the underlying texture's format itself,
@@ -147,6 +137,8 @@ private:
     // by sampleCount or something like that.
     // For now that complexity and cost is not warranted due to WebGPU's restrictions.
     wgpu::Texture mMsaaSidecarTexture = nullptr;
+    // an undefined mSwizzle means that is not a swizzle view
+    wgpu::TextureComponentSwizzle mSwizzle{};
 
     [[nodiscard]] wgpu::TextureView makeTextureView(const uint8_t& baseLevel,
             const uint8_t& levelCount, const uint32_t& baseArrayLayer,

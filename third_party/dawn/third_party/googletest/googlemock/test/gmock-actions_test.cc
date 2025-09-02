@@ -188,7 +188,7 @@ TEST(TypeTraits, IsInvocableRV) {
   struct C {
     int operator()() const { return 0; }
     void operator()(int) & {}
-    std::string operator()(int) && { return ""; };
+    std::string operator()(int) && { return ""; }
   };
 
   // The first overload is callable for const and non-const rvalues and lvalues.
@@ -1642,6 +1642,22 @@ TEST(WithArgsTest, RefQualifiedInnerAction) {
 
   MockFunction<int(int, int)> mock;
   EXPECT_CALL(mock, Call).WillOnce(WithArg<1>(SomeAction{}));
+  EXPECT_EQ(19, mock.AsStdFunction()(0, 17));
+}
+
+// It should be fine to provide an lvalue WithArgsAction to WillOnce, even when
+// the inner action only wants to convert to OnceAction.
+TEST(WithArgsTest, ProvideAsLvalueToWillOnce) {
+  struct SomeAction {
+    operator OnceAction<int(int)>() const {  // NOLINT
+      return [](const int arg) { return arg + 2; };
+    }
+  };
+
+  const auto wa = WithArg<1>(SomeAction{});
+
+  MockFunction<int(int, int)> mock;
+  EXPECT_CALL(mock, Call).WillOnce(wa);
   EXPECT_EQ(19, mock.AsStdFunction()(0, 17));
 }
 

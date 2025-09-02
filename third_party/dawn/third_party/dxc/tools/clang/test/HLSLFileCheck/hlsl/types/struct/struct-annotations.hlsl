@@ -1,5 +1,5 @@
-// RUN: %dxc -T ps_6_8 -E main -Qkeep_reflect_in_dxil -select-validator internal %s | FileCheck -check-prefix=CHECK68 %s
-// RUN: %dxc -T ps_6_7 -E main -Qkeep_reflect_in_dxil -select-validator internal %s | FileCheck -check-prefix=CHECK67 %s
+// RUN: %dxc -T ps_6_8 -E main -Qkeep_reflect_in_dxil %s | FileCheck -check-prefix=CHECK68 %s
+// RUN: %dxc -T ps_6_7 -E main -Qkeep_reflect_in_dxil %s | FileCheck -check-prefix=CHECK67 %s
 
 // Make sure the vector is annotated with vector size (DXIL 1.8 and higher),
 // matrix is annotated with matrix size and orientation, and scalar does not

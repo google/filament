@@ -133,16 +133,29 @@ func GetOrStartBuildsAndWait(
 	parentSwarmingRunId string,
 	retest bool) (BuildsByName, error) {
 
+	// Collect a list of one build per builder, prioritizing ones that completed
+	// (Success/Failure) over ones that didn't (Started/InfraFailure/etc.)
 	builds := BuildsByName{}
 
 	if !retest {
 		// Find any existing builds for the patchset
 		err := bb.SearchBuilds(ctx, ps, func(build buildbucket.Build) error {
+			// Find the config for that build
 			for name, builder := range cfg.Builders {
-				if build.Builder == builder {
-					builds[name] = build
-					break
+				if build.Builder != builder {
+					continue
 				}
+
+				// Prioritize based on whether the build should have results.
+				switch build.Status {
+				case buildbucket.StatusSuccess, buildbucket.StatusFailure:
+					builds[name] = build
+				default:
+					if _, alreadyFound := builds[name]; !alreadyFound {
+						builds[name] = build
+					}
+				}
+				break
 			}
 			return nil
 		})

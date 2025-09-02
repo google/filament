@@ -30,6 +30,7 @@ package oswrapper
 
 import (
 	"fmt"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -40,32 +41,41 @@ import (
 	"github.com/spf13/afero"
 )
 
+// MemMapOSWrapper is an in-memory implementation of OSWrapper for testing.
+// It uses an afero.MemMapFs to simulate a filesystem.
 type MemMapOSWrapper struct {
 	MemMapEnvironProvider
 	MemMapFilesystemReaderWriter
 }
 
+// MemMapEnvironProvider provides an in-memory implementation of EnvironProvider.
 type MemMapEnvironProvider struct {
 	Environment map[string]string
 }
 
+// MemMapFilesystemReaderWriter provides an in-memory implementation of FilesystemReaderWriter.
 type MemMapFilesystemReaderWriter struct {
 	MemMapFilesystemReader
 	MemMapFilesystemWriter
 }
 
+// MemMapFilesystemReader provides an in-memory implementation of FilesystemReader.
 type MemMapFilesystemReader struct {
 	fs afero.Fs
 }
 
+// MemMapFilesystemWriter provides an in-memory implementation of FilesystemWriter.
 type MemMapFilesystemWriter struct {
 	fs afero.Fs
 }
 
+// CreateMemMapOSWrapper creates a new MemMapOSWrapper with an in-memory filesystem.
 func CreateMemMapOSWrapper() MemMapOSWrapper {
 	filesystem := afero.NewMemMapFs()
 	return MemMapOSWrapper{
-		MemMapEnvironProvider{},
+		MemMapEnvironProvider{
+			Environment: make(map[string]string),
+		},
 		MemMapFilesystemReaderWriter{
 			MemMapFilesystemReader{
 				fs: filesystem,
@@ -91,30 +101,27 @@ func (m MemMapEnvironProvider) Getenv(key string) string {
 }
 
 func (m MemMapEnvironProvider) Getwd() (string, error) {
-	wd, exists := m.Environment["PWD"]
-	if exists {
+	if wd, exists := m.Environment["PWD"]; exists {
 		return wd, nil
 	}
 	return "/", nil
 }
 
 func (m MemMapEnvironProvider) UserHomeDir() (string, error) {
-	homeDir, exists := m.Environment["HOME"]
-	if exists {
+	if homeDir, exists := m.Environment["HOME"]; exists {
 		return homeDir, nil
 	}
-	homeDir, exists = m.Environment["USERPROFILE"]
-	if exists {
+	if homeDir, exists := m.Environment["USERPROFILE"]; exists {
 		return homeDir, nil
 	}
 	return "/", nil
 }
 
-func (m MemMapFilesystemReader) Open(name string) (afero.File, error) {
+func (m MemMapFilesystemReader) Open(name string) (File, error) {
 	return m.fs.Open(name)
 }
 
-func (m MemMapFilesystemReader) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+func (m MemMapFilesystemReader) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
 	return m.fs.OpenFile(name, flag, perm)
 }
 
@@ -122,7 +129,24 @@ func (m MemMapFilesystemReader) ReadFile(name string) ([]byte, error) {
 	return afero.ReadFile(m.fs, name)
 }
 
+func (m MemMapFilesystemReader) ReadDir(name string) ([]os.DirEntry, error) {
+	fileInfos, err := afero.ReadDir(m.fs, name)
+	if err != nil {
+		return nil, err
+	}
+	dirEntries := make([]os.DirEntry, len(fileInfos))
+	for i, fi := range fileInfos {
+		dirEntries[i] = fs.FileInfoToDirEntry(fi)
+	}
+	return dirEntries, nil
+}
+
 func (m MemMapFilesystemReader) Stat(name string) (os.FileInfo, error) {
+	// KI with afero, https://github.com/spf13/afero/issues/522
+	if name == "" {
+		return nil, fmt.Errorf("no such file or directory")
+	}
+
 	return m.fs.Stat(name)
 }
 
@@ -130,7 +154,7 @@ func (m MemMapFilesystemReader) Walk(root string, fn filepath.WalkFunc) error {
 	return afero.Walk(m.fs, root, fn)
 }
 
-func (m MemMapFilesystemWriter) Create(name string) (afero.File, error) {
+func (m MemMapFilesystemWriter) Create(name string) (File, error) {
 	return m.fs.Create(name)
 }
 

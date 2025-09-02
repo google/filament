@@ -27,7 +27,6 @@
 
 #include "dawn/native/metal/PipelineLayoutMTL.h"
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/native/BindGroupLayoutInternal.h"
 #include "dawn/native/metal/DeviceMTL.h"
@@ -50,7 +49,7 @@ PipelineLayout::PipelineLayout(Device* device,
         uint32_t samplerIndex = 0;
         uint32_t textureIndex = 0;
 
-        for (BindGroupIndex group : IterateBitSet(GetBindGroupLayoutsMask())) {
+        for (BindGroupIndex group : GetBindGroupLayoutsMask()) {
             mIndexInfo[stage][group].resize(GetBindGroupLayout(group)->GetBindingCount());
 
             for (BindingIndex bindingIndex{0};

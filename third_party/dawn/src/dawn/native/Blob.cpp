@@ -97,6 +97,13 @@ size_t Blob::Size() const {
     return mSize;
 }
 
+bool Blob::operator==(const Blob& other) const {
+    if (other.Size() != Size()) {
+        return false;
+    }
+    return 0 == memcmp(Data(), other.Data(), Size());
+}
+
 template <>
 void stream::Stream<Blob>::Write(stream::Sink* s, const Blob& b) {
     size_t size = b.Size();

@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_UTILS_ICE_ICE_H_
 #define SRC_TINT_UTILS_ICE_ICE_H_
 
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -36,16 +37,27 @@
 
 namespace tint {
 
+/// An instance of InternalCompilerErrorCallbackInfo can be used to set up a callback so that the
+/// user of Tint can capture an ICE message before crashing.
+struct InternalCompilerErrorCallbackInfo {
+    void (*callback)(std::string err, void* userdata) = nullptr;
+    void* userdata = nullptr;
+};
+using InternalCompilerErrorCallback = std::optional<InternalCompilerErrorCallbackInfo>;
+
 /// InternalCompilerError is a helper for reporting internal compiler errors.
 /// Construct the InternalCompilerError with the source location of the ICE fault and append any
 /// error details with the `<<` operator. When the InternalCompilerError is destructed, the
-/// concatenated error message is passed to the InternalCompilerErrorReporter.
+/// concatenated error message is passed to the provided ICE callback, or printed to stderr.
 class InternalCompilerError {
   public:
     /// Constructor
     /// @param file the file containing the ICE
     /// @param line the line containing the ICE
-    InternalCompilerError(const char* file, size_t line);
+    /// @param callback an optional callback to call with the error message
+    InternalCompilerError(const char* file,
+                          size_t line,
+                          InternalCompilerErrorCallback callback = std::nullopt);
 
     /// Destructor.
     /// Adds the internal compiler error message to the diagnostics list, calls the
@@ -80,41 +92,36 @@ class InternalCompilerError {
     char const* const file_;
     const size_t line_;
     std::stringstream msg_;
+    const InternalCompilerErrorCallback callback_info_;
 };
-
-/// Function type used for registering an internal compiler error reporter
-using InternalCompilerErrorReporter = void(const InternalCompilerError&);
-
-/// Sets the global error reporter to be called in case of internal compiler
-/// errors.
-/// @param reporter the error reporter
-void SetInternalCompilerErrorReporter(InternalCompilerErrorReporter* reporter);
 
 }  // namespace tint
 
-/// TINT_ICE() is a macro to invoke the InternalCompilerErrorReporter for an Internal Compiler
-/// Error. The ICE message contains the callsite's file and line. Use the `<<` operator to append an
-/// error message to the ICE.
-#define TINT_ICE() tint::InternalCompilerError(__FILE__, __LINE__)
+/// TINT_ICE() is a macro to produce an Internal Compiler Error. The ICE message contains the
+/// callsite's file and line. Use the `<<` operator to append an error message to the ICE. An
+/// optional callback can be provided so that the user of Tint can capture the ICE before crashing.
+#define TINT_ICE(...) tint::InternalCompilerError(__FILE__, __LINE__ __VA_OPT__(, __VA_ARGS__))
 
-/// TINT_UNREACHABLE() is a macro invoke the InternalCompilerErrorReporter when an expectedly
-/// unreachable statement is reached. The ICE message contains the callsite's file and line. Use the
-/// `<<` operator to append an error message to the ICE.
-#define TINT_UNREACHABLE() TINT_ICE() << "TINT_UNREACHABLE "
+/// TINT_UNREACHABLE() is a macro produce an Internal Compiler Error when an expectedly unreachable
+/// statement is reached. The ICE message contains the callsite's file and line. Use the `<<`
+/// operator to append an error message to the ICE. An optional callback can be provided so that the
+/// user of Tint can capture the ICE before crashing.
+#define TINT_UNREACHABLE(...) TINT_ICE(__VA_ARGS__) << "TINT_UNREACHABLE "
 
-/// TINT_UNIMPLEMENTED() is a macro to invoke the InternalCompilerErrorReporter when unimplemented
-/// code is executed. The ICE message contains the callsite's file and line. Use the `<<` operator
-/// to append an error message to the ICE.
-#define TINT_UNIMPLEMENTED() TINT_ICE() << "TINT_UNIMPLEMENTED "
+/// TINT_UNIMPLEMENTED() is a macro to produce an Internal Compiler Error when an unimplemented
+/// codepath is executed. The ICE message contains the callsite's file and line. Use the `<<`
+/// operator to append an error message to the ICE. An optional callback can be provided so that the
+/// user of Tint can capture the ICE before crashing.
+#define TINT_UNIMPLEMENTED(...) TINT_ICE(__VA_ARGS__) << "TINT_UNIMPLEMENTED "
 
-/// TINT_ASSERT() is a macro for checking the expression is true, triggering a
-/// TINT_ICE if it is not.
-/// The ICE message contains the callsite's file and line.
-#define TINT_ASSERT(condition)                           \
-    do {                                                 \
-        if (DAWN_UNLIKELY(!(condition))) {               \
-            TINT_ICE() << "TINT_ASSERT(" #condition ")"; \
-        }                                                \
+/// TINT_ASSERT() is a macro for checking the expression is true, triggering a TINT_ICE if it is
+/// not. The ICE message contains the callsite's file and line. An optional callback can be provided
+/// so that the user of Tint can capture the ICE before crashing.
+#define TINT_ASSERT(condition, ...)                                 \
+    do {                                                            \
+        if (DAWN_UNLIKELY(!(condition))) {                          \
+            TINT_ICE(__VA_ARGS__) << "TINT_ASSERT(" #condition ")"; \
+        }                                                           \
     } while (false)
 
 #endif  // SRC_TINT_UTILS_ICE_ICE_H_

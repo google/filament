@@ -14,8 +14,8 @@
 // CHECK: %_ptr_StorageBuffer_type_RWByteAddressBuffer = OpTypePointer StorageBuffer %type_RWByteAddressBuffer
 // CHECK: %_ptr_StorageBuffer_type_TextureBuffer_S = OpTypePointer StorageBuffer %type_TextureBuffer_S
 // CHECK: %_ptr_StorageBuffer_type_StructuredBuffer_v3uint = OpTypePointer StorageBuffer %type_StructuredBuffer_v3uint
-// CHECK: %rwsb = OpVariable %_ptr_StorageBuffer_type_RWStructuredBuffer_S StorageBuffer
 // CHECK: %counter_var_rwsb = OpVariable %_ptr_StorageBuffer_type_ACSBuffer_counter StorageBuffer
+// CHECK: %rwsb = OpVariable %_ptr_StorageBuffer_type_RWStructuredBuffer_S StorageBuffer
 struct S {
   float4 f[5];
 };

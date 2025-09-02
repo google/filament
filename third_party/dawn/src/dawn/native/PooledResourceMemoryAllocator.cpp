@@ -40,7 +40,7 @@ PooledResourceMemoryAllocator::~PooledResourceMemoryAllocator() {
     DAWN_ASSERT(mPool.empty());
 }
 
-void PooledResourceMemoryAllocator::DestroyPool() {
+void PooledResourceMemoryAllocator::FreeRecycledAllocations() {
     for (auto& resourceHeap : mPool) {
         DAWN_ASSERT(resourceHeap != nullptr);
         mHeapAllocator->DeallocateResourceHeap(std::move(resourceHeap));

@@ -144,6 +144,7 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 }
 
 TEST_F(BlitTest, ColorMagnify) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -160,17 +161,18 @@ TEST_F(BlitTest, ColorMagnify) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> const srcTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> const srcTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_SRC));
     const bool flipY = sBackend == Backend::OPENGL;
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
 
     // Create a RenderTarget for each texture's miplevel.
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
@@ -199,13 +201,14 @@ TEST_F(BlitTest, ColorMagnify) {
 
     {
         RenderFrame frame(api);
-        EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+        EXPECT_IMAGE(dstRenderTargets[0],
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMagnify", 0x410bdd31));
         api.commit(swapChain);
     }
 }
 
 TEST_F(BlitTest, ColorMinify) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -222,17 +225,18 @@ TEST_F(BlitTest, ColorMinify) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> const srcTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> const srcTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_SRC));
     const bool flipY = sBackend == Backend::OPENGL;
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
 
     // Create a RenderTarget for each texture's miplevel.
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
@@ -255,11 +259,12 @@ TEST_F(BlitTest, ColorMinify) {
             { 0, 0, kSrcTexWidth >> srcLevel, kSrcTexHeight >> srcLevel },
             SamplerMagFilter::LINEAR);
 
-    EXPECT_IMAGE(dstRenderTargets[0], getExpectations(),
+    EXPECT_IMAGE(dstRenderTargets[0],
             ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorMinify", 0xf3d9c53f));
 }
 
 TEST_F(BlitTest, ColorResolve) {
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
             "Nothing is drawn, see b/417229577");
     auto& api = getDriverApi();
@@ -283,13 +288,12 @@ TEST_F(BlitTest, ColorResolve) {
     // Create 4-sample texture.
     Handle<HwTexture> const srcColorTexture = mCleanup.add(api.createTexture(
             SamplerType::SAMPLER_2D, 1, kColorTexFormat, kSampleCount, kSrcTexWidth, kSrcTexHeight,
-            1,
-            TextureUsage::COLOR_ATTACHMENT));
+            1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC | TextureUsage::UPLOADABLE));
 
     // Create 1-sample texture.
     Handle<HwTexture> const dstColorTexture = mCleanup.add(api.createTexture(
             SamplerType::SAMPLER_2D, 1, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
 
     // Create a 4-sample render target with the 4-sample texture.
     Handle<HwRenderTarget> const srcRenderTarget = mCleanup.add(api.createRenderTarget(
@@ -336,7 +340,7 @@ TEST_F(BlitTest, ColorResolve) {
             srcRenderTarget, { 0, 0, kSrcTexWidth, kSrcTexHeight },
             SamplerMagFilter::NEAREST);
 
-    EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+    EXPECT_IMAGE(dstRenderTarget,
             ScreenshotParams(kDstTexWidth, kDstTexHeight, "ColorResolve", 531759687));
 }
 
@@ -364,18 +368,18 @@ TEST_F(BlitTest, Blit2DTextureArray) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D_ARRAY, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth,
-            kSrcTexHeight, kSrcTexDepth,
-            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D_ARRAY,
+            kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, kSrcTexDepth,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_SRC));
     const bool flipY = sBackend == Backend::OPENGL;
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, kSrcTexLayer, float3(0.5, 0, 0),
             flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> dstTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
 
     // Create two RenderTargets.
     const int level = 0;
@@ -403,7 +407,7 @@ TEST_F(BlitTest, Blit2DTextureArray) {
 
     {
         RenderFrame frame(api);
-        EXPECT_IMAGE(dstRenderTarget, getExpectations(),
+        EXPECT_IMAGE(dstRenderTarget,
                 ScreenshotParams(kDstTexWidth, kDstTexHeight, "Blit2DTextureArray",
                         0x8de7d55b));
         api.commit(swapChain);
@@ -429,17 +433,18 @@ TEST_F(BlitTest, BlitRegion) {
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
-    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_SRC));
     const bool flipY = sBackend == Backend::OPENGL;
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
 
     // Create a destination texture.
-    Handle<HwTexture> dstTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
 
     // Blit one-quarter of src level 1 to dst level 0.
     Viewport srcRect = {
@@ -479,7 +484,7 @@ TEST_F(BlitTest, BlitRegion) {
         RenderFrame frame(api);
         // TODO: for some reason, this test has very, very slight (as in one pixel) differences
         // between OpenGL and Metal. So disable golden checking for now.
-        // EXPECT_IMAGE(dstRenderTarget, expectations, ScreenshotParams(kDstTexWidth,
+        // EXPECT_IMAGE(dstRenderTarget, ScreenshotParams(kDstTexWidth,
         //         kDstTexHeight, "BlitRegion", 0x74fa34ed));
         api.commit(swapChain);
     }
@@ -487,6 +492,7 @@ TEST_F(BlitTest, BlitRegion) {
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
     FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment, see b/417481493");
+    SKIP_IF(Backend::WEBGPU, "WebGPU Crashes due to not finding color attachment");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -546,7 +552,7 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
 
     // TODO: for some reason, this test has been disabled. It needs to be tested on all
     // machines.
-    // EXPECT_IMAGE(dstRenderTarget, expectations,
+    // EXPECT_IMAGE(dstRenderTarget,
     //         ScreenshotParams(kDstTexWidth, kDstTexHeight, "BlitRegionToSwapChain", 0x0));
 }
 

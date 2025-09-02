@@ -107,6 +107,12 @@ static bool printMaterial(ostream& text, const ChunkContainer& container) {
         text << name.c_str() << endl;
     }
 
+    CString compilationParameters;
+    if (read(container, MaterialCompilationParameters, &compilationParameters)) {
+        text << "    " << setw(alignment) << left << "Compilation Parameters: ";
+        text << compilationParameters.c_str() << endl;
+    }
+
     text << endl;
 
     text << "Shading:" << endl;

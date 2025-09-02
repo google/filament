@@ -247,5 +247,45 @@
             "mac",
             "win"
         ]
+    },
+    "137": {
+        "name": "m137",
+        "chromium_project": "chromium-m137",
+        "ref": "refs/heads/chromium/7151",
+        "platforms": [
+            "linux",
+            "mac",
+            "win"
+        ]
+    },
+    "138": {
+        "name": "m138",
+        "chromium_project": "chromium-m138",
+        "ref": "refs/heads/chromium/7204",
+        "platforms": [
+            "linux",
+            "mac",
+            "win"
+        ]
+    },
+    "139": {
+        "name": "m139",
+        "chromium_project": "chromium-m139",
+        "ref": "refs/heads/chromium/7258",
+        "platforms": [
+            "linux",
+            "mac",
+            "win"
+        ]
+    },
+    "140": {
+        "name": "m140",
+        "chromium_project": "chromium-m140",
+        "ref": "refs/heads/chromium/7339",
+        "platforms": [
+            "linux",
+            "mac",
+            "win"
+        ]
     }
 }

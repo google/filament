@@ -37,8 +37,8 @@ typedef struct {{Prefix}}ProcTable {
         {{as_cProc(None, function.name)}} {{as_varName(function.name)}};
     {% endfor %}
 
-    {% for type in by_category["object"] %}
-        {% for method in c_methods(type) %}
+    {% for (type, methods) in c_methods_sorted_by_parent %}
+        {% for method in methods %}
             {{as_cProc(type.name, method.name)}} {{as_varName(type.name, method.name)}};
         {% endfor %}
 

@@ -374,16 +374,21 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     }
     case Type::kPointer: {
       const Pointer* pointer = type->AsPointer();
-      uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
-      if (subtype == 0) {
-        return 0;
+      if (pointer->is_untyped()) {
+        typeInst = MakeUnique<Instruction>(
+            context(), spv::Op::OpTypeUntypedPointerKHR, 0, id,
+            std::initializer_list<Operand>{
+                {SPV_OPERAND_TYPE_STORAGE_CLASS,
+                 {static_cast<uint32_t>(pointer->storage_class())}}});
+      } else {
+        uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
+        typeInst = MakeUnique<Instruction>(
+            context(), spv::Op::OpTypePointer, 0, id,
+            std::initializer_list<Operand>{
+                {SPV_OPERAND_TYPE_STORAGE_CLASS,
+                 {static_cast<uint32_t>(pointer->storage_class())}},
+                {SPV_OPERAND_TYPE_ID, {subtype}}});
       }
-      typeInst = MakeUnique<Instruction>(
-          context(), spv::Op::OpTypePointer, 0, id,
-          std::initializer_list<Operand>{
-              {SPV_OPERAND_TYPE_STORAGE_CLASS,
-               {static_cast<uint32_t>(pointer->storage_class())}},
-              {SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
     case Type::kFunction: {
@@ -488,6 +493,36 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_ID, {component_type}},
               {SPV_OPERAND_TYPE_ID, {coop_vec->components()}}});
+      break;
+    }
+    case Type::kTensorARM: {
+      auto tensor_type = type->AsTensorARM();
+      uint32_t const element_type =
+          GetTypeInstruction(tensor_type->element_type());
+      if (element_type == 0) {
+        return 0;
+      }
+      if (tensor_type->rank_id() != 0) {
+        if (tensor_type->shape_id() != 0) {
+          typeInst = MakeUnique<Instruction>(
+              context(), spv::Op::OpTypeTensorARM, 0, id,
+              std::initializer_list<Operand>{
+                  {SPV_OPERAND_TYPE_ID, {element_type}},
+                  {SPV_OPERAND_TYPE_ID, {tensor_type->rank_id()}},
+                  {SPV_OPERAND_TYPE_ID, {tensor_type->shape_id()}}});
+        } else {
+          typeInst = MakeUnique<Instruction>(
+              context(), spv::Op::OpTypeTensorARM, 0, id,
+              std::initializer_list<Operand>{
+                  {SPV_OPERAND_TYPE_ID, {element_type}},
+                  {SPV_OPERAND_TYPE_ID, {tensor_type->rank_id()}}});
+        }
+      } else {
+        typeInst =
+            MakeUnique<Instruction>(context(), spv::Op::OpTypeTensorARM, 0, id,
+                                    std::initializer_list<Operand>{
+                                        {SPV_OPERAND_TYPE_ID, {element_type}}});
+      }
       break;
     }
     default:
@@ -680,9 +715,13 @@ Type* TypeManager::RebuildType(uint32_t type_id, const Type& type) {
     }
     case Type::kPointer: {
       const Pointer* pointer_ty = type.AsPointer();
-      const Type* ele_ty = pointer_ty->pointee_type();
-      rebuilt_ty = MakeUnique<Pointer>(RebuildType(GetId(ele_ty), *ele_ty),
-                                       pointer_ty->storage_class());
+      if (pointer_ty->pointee_type()) {
+        const Type* ele_ty = pointer_ty->pointee_type();
+        rebuilt_ty = MakeUnique<Pointer>(RebuildType(GetId(ele_ty), *ele_ty),
+                                         pointer_ty->storage_class());
+      } else {
+        rebuilt_ty = MakeUnique<Pointer>(nullptr, pointer_ty->storage_class());
+      }
       break;
     }
     case Type::kFunction: {
@@ -745,6 +784,14 @@ Type* TypeManager::RebuildType(uint32_t type_id, const Type& type) {
           cv_type->components());
       break;
     }
+    case Type::kTensorARM: {
+      const TensorARM* tensor_type = type.AsTensorARM();
+      const Type* element_type = tensor_type->element_type();
+      rebuilt_ty = MakeUnique<TensorARM>(
+          RebuildType(GetId(element_type), *element_type),
+          tensor_type->rank_id(), tensor_type->shape_id());
+      break;
+    }
     default:
       assert(false && "Unhandled type");
       return nullptr;
@@ -792,9 +839,13 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       type = new Integer(inst.GetSingleWordInOperand(0),
                          inst.GetSingleWordInOperand(1));
       break;
-    case spv::Op::OpTypeFloat:
-      type = new Float(inst.GetSingleWordInOperand(0));
-      break;
+    case spv::Op::OpTypeFloat: {
+      const spv::FPEncoding encoding =
+          inst.NumInOperands() > 1
+              ? static_cast<spv::FPEncoding>(inst.GetSingleWordInOperand(1))
+              : spv::FPEncoding::Max;
+      type = new Float(inst.GetSingleWordInOperand(0), encoding);
+    } break;
     case spv::Op::OpTypeVector:
       type = new Vector(GetType(inst.GetSingleWordInOperand(0)),
                         inst.GetSingleWordInOperand(1));
@@ -924,6 +975,11 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
       id_to_incomplete_type_.erase(inst.result_id());
 
     } break;
+    case spv::Op::OpTypeUntypedPointerKHR: {
+      type = new Pointer(nullptr, static_cast<spv::StorageClass>(
+                                      inst.GetSingleWordInOperand(0)));
+      id_to_incomplete_type_.erase(inst.result_id());
+    } break;
     case spv::Op::OpTypeFunction: {
       bool incomplete_type = false;
       uint32_t return_type_id = inst.GetSingleWordInOperand(0);
@@ -1018,6 +1074,23 @@ Type* TypeManager::RecordIfTypeDefinition(const Instruction& inst) {
                               inst.GetSingleWordInOperand(1), perm);
       break;
     }
+    case spv::Op::OpTypeTensorARM: {
+      switch (inst.NumInOperands()) {
+        case 1:
+          type = new TensorARM(GetType(inst.GetSingleWordInOperand(0)));
+          break;
+        case 2:
+          type = new TensorARM(GetType(inst.GetSingleWordInOperand(0)),
+                               inst.GetSingleWordInOperand(1));
+          break;
+        case 3:
+          type = new TensorARM(GetType(inst.GetSingleWordInOperand(0)),
+                               inst.GetSingleWordInOperand(1),
+                               inst.GetSingleWordInOperand(2));
+          break;
+      }
+      break;
+    }
     default:
       assert(false && "Type not handled by the type manager.");
       break;
@@ -1049,7 +1122,11 @@ void TypeManager::AttachDecoration(const Instruction& inst, Type* type) {
       const auto count = inst.NumOperands();
       std::vector<uint32_t> data;
       for (uint32_t i = 1; i < count; ++i) {
-        data.push_back(inst.GetSingleWordOperand(i));
+        // LinkageAttributes has a literal string as an operand, which is a
+        // varible length word. We cannot assume that all operands are single
+        // word.
+        const Operand::OperandData& words = inst.GetOperand(i).words;
+        data.insert(data.end(), words.begin(), words.end());
       }
       type->AddDecoration(std::move(data));
     } break;

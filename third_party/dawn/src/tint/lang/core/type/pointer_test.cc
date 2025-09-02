@@ -25,9 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/address_space.h"
+#include "src/tint/lang/core/type/pointer.h"
+#include "src/tint/lang/core/enums.h"
+#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -35,15 +39,12 @@ namespace {
 using PointerTest = TestHelper;
 
 TEST_F(PointerTest, Creation) {
-    auto* a =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
-    auto* b =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
-    auto* c =
-        create<Pointer>(core::AddressSpace::kStorage, create<F32>(), core::Access::kReadWrite);
-    auto* d =
-        create<Pointer>(core::AddressSpace::kPrivate, create<I32>(), core::Access::kReadWrite);
-    auto* e = create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kRead);
+    Manager ty;
+    auto* a = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
+    auto* b = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
+    auto* c = ty.ptr(core::AddressSpace::kStorage, ty.f32(), core::Access::kReadWrite);
+    auto* d = ty.ptr(core::AddressSpace::kPrivate, ty.i32(), core::Access::kReadWrite);
+    auto* e = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kRead);
 
     EXPECT_TRUE(a->StoreType()->Is<I32>());
     EXPECT_EQ(a->AddressSpace(), core::AddressSpace::kStorage);
@@ -56,24 +57,20 @@ TEST_F(PointerTest, Creation) {
 }
 
 TEST_F(PointerTest, Hash) {
-    auto* a =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
-    auto* b =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
+    Manager ty;
+    auto* a = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
+    auto* b = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(PointerTest, Equals) {
-    auto* a =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
-    auto* b =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
-    auto* c =
-        create<Pointer>(core::AddressSpace::kStorage, create<F32>(), core::Access::kReadWrite);
-    auto* d =
-        create<Pointer>(core::AddressSpace::kPrivate, create<I32>(), core::Access::kReadWrite);
-    auto* e = create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kRead);
+    Manager ty;
+    auto* a = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
+    auto* b = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
+    auto* c = ty.ptr(core::AddressSpace::kStorage, ty.f32(), core::Access::kReadWrite);
+    auto* d = ty.ptr(core::AddressSpace::kPrivate, ty.i32(), core::Access::kReadWrite);
+    auto* e = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kRead);
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -83,18 +80,20 @@ TEST_F(PointerTest, Equals) {
 }
 
 TEST_F(PointerTest, FriendlyName) {
-    auto* r = create<Pointer>(core::AddressSpace::kUndefined, create<I32>(), core::Access::kRead);
+    Manager ty;
+    auto* r = ty.ptr(core::AddressSpace::kUndefined, ty.i32(), core::Access::kRead);
     EXPECT_EQ(r->FriendlyName(), "ptr<i32, read>");
 }
 
 TEST_F(PointerTest, FriendlyNameWithAddressSpace) {
-    auto* r = create<Pointer>(core::AddressSpace::kWorkgroup, create<I32>(), core::Access::kRead);
+    Manager ty;
+    auto* r = ty.ptr(core::AddressSpace::kWorkgroup, ty.i32(), core::Access::kRead);
     EXPECT_EQ(r->FriendlyName(), "ptr<workgroup, i32, read>");
 }
 
 TEST_F(PointerTest, Clone) {
-    auto* a =
-        create<Pointer>(core::AddressSpace::kStorage, create<I32>(), core::Access::kReadWrite);
+    Manager ty;
+    auto* a = ty.ptr(core::AddressSpace::kStorage, ty.i32(), core::Access::kReadWrite);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

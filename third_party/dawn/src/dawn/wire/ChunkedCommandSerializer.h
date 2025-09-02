@@ -121,7 +121,7 @@ class ChunkedCommandSerializer {
                 WireResult rCmd = SerializeCmd(cmd, requiredSize, &serializeBuffer);
                 WireResult rExts =
                     detail::SerializeCommandExtension(&serializeBuffer, extensions...);
-                if (DAWN_UNLIKELY(rCmd != WireResult::Success || rExts != WireResult::Success)) {
+                if (rCmd != WireResult::Success || rExts != WireResult::Success) [[unlikely]] {
                     mSerializer->OnSerializeError();
                 }
             }
@@ -135,7 +135,7 @@ class ChunkedCommandSerializer {
         SerializeBuffer serializeBuffer(cmdSpace.get(), requiredSize);
         WireResult rCmd = SerializeCmd(cmd, requiredSize, &serializeBuffer);
         WireResult rExts = detail::SerializeCommandExtension(&serializeBuffer, extensions...);
-        if (DAWN_UNLIKELY(rCmd != WireResult::Success || rExts != WireResult::Success)) {
+        if (rCmd != WireResult::Success || rExts != WireResult::Success) [[unlikely]] {
             mSerializer->OnSerializeError();
             return;
         }

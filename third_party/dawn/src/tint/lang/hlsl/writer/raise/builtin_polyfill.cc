@@ -1467,6 +1467,7 @@ struct State {
             core::ir::Value* coords = args[2];
 
             switch (tex_type->Dim()) {
+                case core::type::TextureDimension::k1d:
                 case core::type::TextureDimension::k2d:
                     params.Push(coords);
                     params.Push(b.InsertConvertIfNeeded(ty.f32(), args[3]));  // Level
@@ -1936,6 +1937,8 @@ Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir) {
     auto result = ValidateAndDumpIfNeeded(ir, "hlsl.BuiltinPolyfill",
                                           core::ir::Capabilities{
                                               core::ir::Capability::kAllowClipDistancesOnF32,
+                                              core::ir::Capability::kAllowDuplicateBindings,
+                                              core::ir::Capability::kAllowNonCoreTypes,
                                           });
     if (result != Success) {
         return result.Failure();

@@ -103,14 +103,14 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     BindingIndex GetBufferCount() const;
     // Returns |BindingIndex| because dynamic buffers are packed at the front.
     BindingIndex GetDynamicBufferCount() const;
+    uint32_t GetDynamicStorageBufferCount() const;
     uint32_t GetUnverifiedBufferCount() const;
     uint32_t GetStaticSamplerCount() const;
 
-    // Used to get counts and validate them in pipeline layout creation. Other getters
-    // should be used to get typed integer counts.
-    const BindingCounts& GetBindingCountInfo() const;
-
-    uint32_t GetExternalTextureBindingCount() const;
+    // Used to get counts and validate them in pipeline layout creation. It might not match the
+    // actual number of bindings stored as external textures are expanded. Other getters should be
+    // used to get the stored counts.
+    const BindingCounts& GetValidationBindingCounts() const;
 
     // Used to specify unpacked external texture binding slots when transforming shader modules.
     const ExternalTextureBindingExpansionMap& GetExternalTextureBindingExpansionMap() const;
@@ -118,9 +118,6 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
     uint32_t GetUnexpandedBindingCount() const;
 
     bool NeedsCrossBindingValidation() const;
-
-    // Tests that the BindingInfo of two bind groups are equal.
-    bool IsLayoutEqual(const BindGroupLayoutInternalBase* other) const;
 
     struct BufferBindingData {
         uint64_t offset;
@@ -163,16 +160,21 @@ class BindGroupLayoutInternalBase : public ApiObjectBase,
   private:
     BindGroupLayoutInternalBase(DeviceBase* device, ObjectBase::ErrorTag tag, StringView label);
 
-    BindingCounts mBindingCounts = {};
-    bool mNeedsCrossBindingValidation = false;
     ityp::vector<BindingIndex, BindingInfo> mBindingInfo;
+    // Counts for how many such bindings are in mBindingInfo.
+    uint32_t mUnverifiedBufferCount = 0;
+    uint32_t mBufferCount = 0;
+    uint32_t mDynamicBufferCount = 0;
+    uint32_t mDynamicStorageBufferCount = 0;
+    uint32_t mStaticSamplerCount = 0;
 
-    // Map from BindGroupLayoutEntry.binding to packed indices.
+    // Map from BindGroupLayoutEntry.binding as BindingNumber to packed indices as BindingIndex.
     BindingMap mBindingMap;
-
+    // Map from the BindingNumber of the ExternalTexture to the BindingNumber of the expansion.
     ExternalTextureBindingExpansionMap mExternalTextureBindingExpansionMap;
 
-    uint32_t mUnexpandedBindingCount;
+    BindingCounts mValidationBindingCounts = {};
+    bool mNeedsCrossBindingValidation = false;
 };
 
 }  // namespace dawn::native

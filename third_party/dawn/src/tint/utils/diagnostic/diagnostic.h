@@ -249,7 +249,8 @@ using Result = ::tint::Result<SUCCESS_TYPE, diag::Failure>;
 /// @param out the output stream
 /// @param failure the Failure
 /// @returns the output stream
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const Failure& failure) {
     return out << failure.reason.Str();
 }
@@ -258,7 +259,8 @@ auto& operator<<(STREAM& out, const Failure& failure) {
 /// @param out the output stream
 /// @param list the list to emit
 /// @returns the output stream
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, const List& list) {
     return out << list.Str();
 }

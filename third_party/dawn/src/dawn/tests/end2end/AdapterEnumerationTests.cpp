@@ -76,7 +76,8 @@ TEST_F(AdapterEnumerationTests, OnlyFallback) {
         wgpu::AdapterInfo info;
         adapter.GetInfo(&info);
 
-        EXPECT_EQ(info.backendType, wgpu::BackendType::Vulkan);
+        EXPECT_TRUE(info.backendType == wgpu::BackendType::Vulkan ||
+                    info.backendType == wgpu::BackendType::WebGPU);
         EXPECT_EQ(info.adapterType, wgpu::AdapterType::CPU);
         EXPECT_TRUE(gpu_info::IsGoogleSwiftshader(info.vendorID, info.deviceID));
     }
@@ -319,6 +320,62 @@ TEST_F(AdapterEnumerationTests, OneBackendThenTheOther) {
         EXPECT_EQ(metalAdapterCount, metalAdapterCount2);
     }
 }
+
+#if defined(DAWN_ENABLE_BACKEND_WEBGPU)
+// Test enumerating the WebGPU backend with the RequestAdapterWebGPUBackendOptions.
+TEST_F(AdapterEnumerationTests, WebGPUBackend) {
+    native::Instance instance;
+
+    wgpu::RequestAdapterOptions adapterOptions = {};
+
+    wgpu::RequestAdapterWebGPUBackendOptions webgpuBackendOptions = {};
+    adapterOptions.nextInChain = &webgpuBackendOptions;
+
+    // Test selecting without specifying the implementation backend type.
+    {
+        adapterOptions.backendType = wgpu::BackendType::Undefined;
+        const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
+        EXPECT_TRUE(adapters.size() > 0);
+        for (const auto& nativeAdapter : adapters) {
+            wgpu::Adapter adapter = wgpu::Adapter(nativeAdapter.Get());
+            wgpu::AdapterInfo info;
+            adapter.GetInfo(&info);
+
+            EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
+        }
+    }
+
+    // Test selecting a specific implementation backend type.
+    {
+        adapterOptions.backendType = wgpu::BackendType::Vulkan;
+        const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
+        for (const auto& nativeAdapter : adapters) {
+            wgpu::Adapter adapter = wgpu::Adapter(nativeAdapter.Get());
+            wgpu::AdapterInfo info;
+            adapter.GetInfo(&info);
+
+            EXPECT_EQ(info.backendType, wgpu::BackendType::WebGPU);
+            EXPECT_NE(std::string_view(info.device.data, info.device.length).find("Vulkan"),
+                      std::string_view::npos);
+        }
+    }
+
+    // Test selecting WebGPUBackend on WebGPUBackend gives nothing.
+    {
+        adapterOptions.backendType = wgpu::BackendType::WebGPU;
+        const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
+        EXPECT_TRUE(adapters.empty());
+    }
+
+    // Test selecting WebGPUBackend without RequestAdapterWebGPUBackendOptions gives nothing.
+    {
+        adapterOptions.backendType = wgpu::BackendType::WebGPU;
+        adapterOptions.nextInChain = nullptr;
+        const auto& adapters = instance.EnumerateAdapters(&adapterOptions);
+        EXPECT_TRUE(adapters.empty());
+    }
+}
+#endif  // defined(DAWN_ENABLE_BACKEND_WEBGPU)
 
 }  // anonymous namespace
 }  // namespace dawn

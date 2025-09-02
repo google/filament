@@ -120,7 +120,7 @@ set(GLTFIO_INCLUDE_DIRS
         ${FILAMENT_DIR}/include
         ../../filament/backend/include
         ../../libs/gltfio/include
-        ../../third_party/basisu/zstd
+        ../../third_party/zstd/lib
         ../../third_party/cgltf
         ../../third_party/meshoptimizer/src
         ../../third_party/robin-map

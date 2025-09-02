@@ -31,6 +31,10 @@ namespace filament::backend {
 
 class WebGPUTexture;
 
+/**
+ * A utility class for resolving multisampled textures in WebGPU.
+ * This is necessary because WebGPU does not have an implicit resolve step like other APIs.
+ */
 class WebGPUMsaaTextureResolver final {
 public:
     struct ResolveRequest final {
@@ -47,6 +51,9 @@ public:
         TextureInfo destination;
     };
 
+    /**
+     * Resolves a multisampled texture into a single-sampled texture.
+     */
     void resolve(ResolveRequest const&);
 };
 

@@ -62,6 +62,8 @@ message Type {
         TypeSubgroupMatrix subgroup_matrix_right = 17;
         TypeSubgroupMatrix subgroup_matrix_result = 18;
         TypeBuiltinStruct builtin_struct = 19;
+        TypeBindingArray binding_array = 20;
+        TypeTexelBuffer texel_buffer = 21;
     }
 }
 
@@ -73,6 +75,8 @@ enum TypeBasic {
     u32 = 3;
     f32 = 4;
     f16 = 5;
+    i8 = 6;
+    u8 = 7;
 }
 
 message TypeVector {
@@ -90,6 +94,11 @@ message TypeArray {
     uint32 element = 1;  // Module.types
     uint32 stride = 2;
     uint32 count = 3;
+}
+
+message TypeBindingArray {
+    uint32 element = 1;  // Module.types
+    uint32 count = 2;
 }
 
 message TypePointer {
@@ -174,6 +183,11 @@ enum TypeBuiltinStruct {
     ModfResultVec3F32 = 15;
     ModfResultVec4F16 = 16;
     ModfResultVec4F32 = 17;
+}
+
+message TypeTexelBuffer {
+    TexelFormat texel_format = 1;
+    AccessControl access = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -433,7 +447,7 @@ enum AddressSpace {
     handle = 1;
     pixel_local = 2;
     private = 3;
-    push_constant = 4;
+    immediate = 4;
     storage = 5;
     uniform = 6;
     workgroup = 7;
@@ -502,6 +516,28 @@ enum TexelFormat {
     rgba8_snorm = 15;
     rgba8_uint = 16;
     rgba8_unorm = 17;
+    r8_snorm = 18;
+    r8_uint = 19;
+    r8_sint = 20;
+    rg8_unorm = 21;
+    rg8_snorm = 22;
+    rg8_uint = 23;
+    rg8_sint = 24;
+    r16_uint = 25;
+    r16_sint = 26;
+    r16_float = 27;
+    rg16_uint = 28;
+    rg16_sint = 29;
+    rg16_float = 30;
+    rgb10a2_uint = 31;
+    rgb10a2_unorm = 32;
+    rg11b10_ufloat = 33;
+    r16_unorm = 34;
+    r16_snorm = 35;
+    rg16_unorm = 36;
+    rg16_snorm = 37;
+    rgba16_unorm = 38;
+    rgba16_snorm = 39;
 }
 
 enum SamplerKind {
@@ -541,6 +577,9 @@ enum BuiltinValue {
     workgroup_id = 14;
     clip_distances = 15;
     cull_distance = 16;
+    subgroup_id = 17;
+    primitive_id = 18;
+    barycentric_coord = 19;
 }
 
 enum BuiltinFn {
@@ -693,4 +732,5 @@ enum BuiltinFn {
     subgroup_matrix_store = 146;
     subgroup_matrix_multiply = 147;
     subgroup_matrix_multiply_accumulate = 148;
+    print = 149;
 }

@@ -29,6 +29,7 @@ SPECIAL_WORDS = set((
     'D3D12',  # VkD3D12FenceSubmitInfoKHR
     'Float16',  # VkPhysicalDeviceShaderFloat16Int8FeaturesKHR
     'Bfloat16',  # VkPhysicalDeviceShaderBfloat16FeaturesKHR
+    'Float8',  # VkPhysicalDeviceShaderFloat8FeaturesEXT
     'ImagePipe',  # VkImagePipeSurfaceCreateInfoFUCHSIA
     'Int64',  # VkPhysicalDeviceShaderAtomicInt64FeaturesKHR
     'Int8',  # VkPhysicalDeviceShaderFloat16Int8FeaturesKHR
@@ -120,6 +121,7 @@ class VulkanConventions(ConventionsBase):
         # The simple-minded rules need modification for some structure names
         subpats = [
             [ r'_H_(26[45])_',              r'_H\1_' ],
+            [ r'_VP_9_',                    r'_VP9_' ],
             [ r'_AV_1_',                    r'_AV1_' ],
             [ r'_VULKAN_([0-9])([0-9])_',   r'_VULKAN_\1_\2_' ],
             [ r'_VULKAN_SC_([0-9])([0-9])_',r'_VULKAN_SC_\1_\2_' ],

@@ -57,8 +57,8 @@ WireResult Server::DoAdapterRequestDevice(Known<WGPUAdapter> adapter,
     deviceLostUserdata->future = deviceLostFuture;
 
     WGPUDeviceDescriptor desc = *descriptor;
-    desc.deviceLostCallbackInfo = {nullptr, WGPUCallbackMode_AllowSpontaneous,
-                                   ForwardToServer2<&Server::OnDeviceLost>,
+    desc.deviceLostCallbackInfo = {nullptr, WGPUCallbackMode_AllowProcessEvents,
+                                   ForwardToServer<&Server::OnDeviceLost>,
                                    deviceLostUserdata.release(), nullptr};
     desc.uncapturedErrorCallbackInfo = {
         nullptr,
@@ -71,7 +71,7 @@ WireResult Server::DoAdapterRequestDevice(Known<WGPUAdapter> adapter,
     mProcs.adapterRequestDevice(
         adapter->handle, &desc,
         {nullptr, WGPUCallbackMode_AllowSpontaneous,
-         ForwardToServer2<&Server::OnRequestDeviceCallback>, userdata.release(), nullptr});
+         ForwardToServer<&Server::OnRequestDeviceCallback>, userdata.release(), nullptr});
     return WireResult::Success;
 }
 
@@ -115,17 +115,15 @@ void Server::OnRequestDeviceCallback(RequestDeviceUserdata* data,
     cmd.features = features.data();
 
     // Query and report the adapter limits, including all known extension limits.
+    // TODO(crbug.com/421950205): Use dawn::utils::ComboLimits here.
     WGPULimits limits = {};
-
-    // Chained DawnExperimentalImmediateDataLimits.
-    WGPUDawnExperimentalImmediateDataLimits experimentalImmediateDataLimits = {};
-    experimentalImmediateDataLimits.chain.sType = WGPUSType_DawnExperimentalImmediateDataLimits;
-    limits.nextInChain = &experimentalImmediateDataLimits.chain;
-
+    // Chained CompatibilityModeLimits.
+    WGPUCompatibilityModeLimits compatLimits = WGPU_COMPATIBILITY_MODE_LIMITS_INIT;
+    limits.nextInChain = &compatLimits.chain;
     // Chained DawnTexelCopyBufferRowAlignmentLimits.
-    WGPUDawnTexelCopyBufferRowAlignmentLimits texelCopyBufferRowAlignmentLimits = {};
-    texelCopyBufferRowAlignmentLimits.chain.sType = WGPUSType_DawnTexelCopyBufferRowAlignmentLimits;
-    experimentalImmediateDataLimits.chain.next = &texelCopyBufferRowAlignmentLimits.chain;
+    WGPUDawnTexelCopyBufferRowAlignmentLimits texelCopyBufferRowAlignmentLimits =
+        WGPU_DAWN_TEXEL_COPY_BUFFER_ROW_ALIGNMENT_LIMITS_INIT;
+    compatLimits.chain.next = &texelCopyBufferRowAlignmentLimits.chain;
 
     mProcs.deviceGetLimits(device, &limits);
     cmd.limits = &limits;

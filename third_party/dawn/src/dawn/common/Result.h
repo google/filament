@@ -28,10 +28,10 @@
 #ifndef SRC_DAWN_COMMON_RESULT_H_
 #define SRC_DAWN_COMMON_RESULT_H_
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -137,8 +137,10 @@ class [[nodiscard]] Result<T*, E> {
 
     // Support returning a Result<T*, E*> from a Result<TChild*, E*>
     template <typename TChild>
+        requires std::same_as<TChild, T> || std::derived_from<TChild, T>
     Result(Result<TChild*, E>&& other);
     template <typename TChild>
+        requires std::same_as<TChild, T> || std::derived_from<TChild, T>
     Result<T*, E>& operator=(Result<TChild*, E>&& other);
 
     ~Result();
@@ -194,14 +196,19 @@ class [[nodiscard]] Result<Ref<T>, E> {
                   "Result<Ref<T>, E> reserves two bits for tagging pointers");
 
     template <typename U>
+        requires std::convertible_to<U*, T*>
     Result(Ref<U>&& success);
     template <typename U>
+        requires std::convertible_to<U*, T*>
     Result(const Ref<U>& success);
     Result(std::unique_ptr<E> error);
+    constexpr Result(std::nullptr_t);
 
     template <typename U>
+        requires std::convertible_to<U*, T*>
     Result(Result<Ref<U>, E>&& other);
     template <typename U>
+        requires std::convertible_to<U*, T*>
     Result<Ref<U>, E>& operator=(Result<Ref<U>, E>&& other);
 
     ~Result();
@@ -310,16 +317,16 @@ Result<T*, E>::Result(std::unique_ptr<E> error)
 
 template <typename T, typename E>
 template <typename TChild>
+    requires std::same_as<TChild, T> || std::derived_from<TChild, T>
 Result<T*, E>::Result(Result<TChild*, E>&& other) : mPayload(other.mPayload) {
     other.mPayload = detail::kEmptyPayload;
-    static_assert(std::is_same<T, TChild>::value || std::is_base_of<T, TChild>::value);
 }
 
 template <typename T, typename E>
 template <typename TChild>
+    requires std::same_as<TChild, T> || std::derived_from<TChild, T>
 Result<T*, E>& Result<T*, E>::operator=(Result<TChild*, E>&& other) {
     DAWN_ASSERT(mPayload == detail::kEmptyPayload);
-    static_assert(std::is_same<T, TChild>::value || std::is_base_of<T, TChild>::value);
     mPayload = other.mPayload;
     other.mPayload = detail::kEmptyPayload;
     return *this;
@@ -407,14 +414,17 @@ std::unique_ptr<E> Result<const T*, E>::AcquireError() {
 
 // Implementation of Result<Ref<T>, E>
 template <typename T, typename E>
-template <typename U>
-Result<Ref<T>, E>::Result(Ref<U>&& success)
-    : mPayload(detail::MakePayload(success.Detach(), detail::Success)) {
-    static_assert(std::is_convertible<U*, T*>::value);
-}
+constexpr Result<Ref<T>, E>::Result(std::nullptr_t) : Result(Ref<T>(nullptr)) {}
 
 template <typename T, typename E>
 template <typename U>
+    requires std::convertible_to<U*, T*>
+Result<Ref<T>, E>::Result(Ref<U>&& success)
+    : mPayload(detail::MakePayload(success.Detach(), detail::Success)) {}
+
+template <typename T, typename E>
+template <typename U>
+    requires std::convertible_to<U*, T*>
 Result<Ref<T>, E>::Result(const Ref<U>& success) : Result(Ref<U>(success)) {}
 
 template <typename T, typename E>
@@ -423,15 +433,15 @@ Result<Ref<T>, E>::Result(std::unique_ptr<E> error)
 
 template <typename T, typename E>
 template <typename U>
+    requires std::convertible_to<U*, T*>
 Result<Ref<T>, E>::Result(Result<Ref<U>, E>&& other) : mPayload(other.mPayload) {
-    static_assert(std::is_convertible<U*, T*>::value);
     other.mPayload = detail::kEmptyPayload;
 }
 
 template <typename T, typename E>
 template <typename U>
+    requires std::convertible_to<U*, T*>
 Result<Ref<U>, E>& Result<Ref<T>, E>::operator=(Result<Ref<U>, E>&& other) {
-    static_assert(std::is_convertible<U*, T*>::value);
     DAWN_ASSERT(mPayload == detail::kEmptyPayload);
     mPayload = other.mPayload;
     other.mPayload = detail::kEmptyPayload;

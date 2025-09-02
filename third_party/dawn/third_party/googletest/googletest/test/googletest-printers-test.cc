@@ -32,6 +32,7 @@
 // This file tests the universal value printer.
 
 #include <algorithm>
+#include <any>
 #include <cctype>
 #include <cstdint>
 #include <cstring>
@@ -42,14 +43,17 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "gtest/gtest-printers.h"
@@ -62,7 +66,7 @@
 
 #if GTEST_INTERNAL_HAS_STD_SPAN
 #include <span>  // NOLINT
-#endif  // GTEST_INTERNAL_HAS_STD_SPAN
+#endif           // GTEST_INTERNAL_HAS_STD_SPAN
 
 #if GTEST_INTERNAL_HAS_COMPARE_LIB
 #include <compare>  // NOLINT
@@ -796,7 +800,7 @@ struct Foo {
 TEST(PrintPointerTest, MemberVariablePointer) {
   EXPECT_TRUE(HasPrefix(Print(&Foo::value),
                         Print(sizeof(&Foo::value)) + "-byte object "));
-  int Foo::*p = NULL;  // NOLINT
+  int Foo::* p = NULL;  // NOLINT
   EXPECT_TRUE(HasPrefix(Print(p), Print(sizeof(p)) + "-byte object "));
 }
 
@@ -923,12 +927,19 @@ TEST(PrintArrayTest, BigArray) {
             PrintArrayHelper(a));
 }
 
-// Tests printing ::string and ::std::string.
+// Tests printing ::std::string and ::string_view.
 
 // ::std::string.
 TEST(PrintStringTest, StringInStdNamespace) {
   const char s[] = "'\"?\\\a\b\f\n\0\r\t\v\x7F\xFF a";
   const ::std::string str(s, sizeof(s));
+  EXPECT_EQ("\"'\\\"?\\\\\\a\\b\\f\\n\\0\\r\\t\\v\\x7F\\xFF a\\0\"",
+            Print(str));
+}
+
+TEST(PrintStringTest, StringViewInStdNamespace) {
+  const char s[] = "'\"?\\\a\b\f\n\0\r\t\v\x7F\xFF a";
+  const ::std::string_view str(s, sizeof(s));
   EXPECT_EQ("\"'\\\"?\\\\\\a\\b\\f\\n\\0\\r\\t\\v\\x7F\\xFF a\\0\"",
             Print(str));
 }
@@ -950,12 +961,21 @@ TEST(PrintStringTest, StringAmbiguousHex) {
   EXPECT_EQ("\"!\\x5-!\"", Print(::std::string("!\x5-!")));
 }
 
-// Tests printing ::std::wstring.
+// Tests printing ::std::wstring and ::std::wstring_view.
 #if GTEST_HAS_STD_WSTRING
 // ::std::wstring.
 TEST(PrintWideStringTest, StringInStdNamespace) {
   const wchar_t s[] = L"'\"?\\\a\b\f\n\0\r\t\v\xD3\x576\x8D3\xC74D a";
   const ::std::wstring str(s, sizeof(s) / sizeof(wchar_t));
+  EXPECT_EQ(
+      "L\"'\\\"?\\\\\\a\\b\\f\\n\\0\\r\\t\\v"
+      "\\xD3\\x576\\x8D3\\xC74D a\\0\"",
+      Print(str));
+}
+
+TEST(PrintWideStringTest, StringViewInStdNamespace) {
+  const wchar_t s[] = L"'\"?\\\a\b\f\n\0\r\t\v\xD3\x576\x8D3\xC74D a";
+  const ::std::wstring_view str(s, sizeof(s) / sizeof(wchar_t));
   EXPECT_EQ(
       "L\"'\\\"?\\\\\\a\\b\\f\\n\\0\\r\\t\\v"
       "\\xD3\\x576\\x8D3\\xC74D a\\0\"",
@@ -980,6 +1000,12 @@ TEST(PrintStringTest, U8String) {
   EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type.
   EXPECT_EQ("u8\"Hello, \\xE4\\xB8\\x96\\xE7\\x95\\x8C\"", Print(str));
 }
+
+TEST(PrintStringTest, U8StringView) {
+  std::u8string_view str = u8"Hello, 世界";
+  EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type.
+  EXPECT_EQ("u8\"Hello, \\xE4\\xB8\\x96\\xE7\\x95\\x8C\"", Print(str));
+}
 #endif
 
 TEST(PrintStringTest, U16String) {
@@ -988,8 +1014,20 @@ TEST(PrintStringTest, U16String) {
   EXPECT_EQ("u\"Hello, \\x4E16\\x754C\"", Print(str));
 }
 
+TEST(PrintStringTest, U16StringView) {
+  std::u16string_view str = u"Hello, 世界";
+  EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type.
+  EXPECT_EQ("u\"Hello, \\x4E16\\x754C\"", Print(str));
+}
+
 TEST(PrintStringTest, U32String) {
   std::u32string str = U"Hello, 🗺️";
+  EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type
+  EXPECT_EQ("U\"Hello, \\x1F5FA\\xFE0F\"", Print(str));
+}
+
+TEST(PrintStringTest, U32StringView) {
+  std::u32string_view str = U"Hello, 🗺️";
   EXPECT_EQ(str, str);  // Verify EXPECT_EQ compiles with this type
   EXPECT_EQ("U\"Hello, \\x1F5FA\\xFE0F\"", Print(str));
 }
@@ -1453,7 +1491,7 @@ TEST(PrintReferenceTest, HandlesMemberFunctionPointer) {
 // Tests that the universal printer prints a member variable pointer
 // passed by reference.
 TEST(PrintReferenceTest, HandlesMemberVariablePointer) {
-  int Foo::*p = &Foo::value;  // NOLINT
+  int Foo::* p = &Foo::value;  // NOLINT
   EXPECT_TRUE(HasPrefix(PrintByRef(p), "@" + PrintPointer(&p) + " " +
                                            Print(sizeof(p)) + "-byte object "));
 }
@@ -1891,6 +1929,22 @@ TEST(UniversalPrintTest, SmartPointers) {
             PrintToString(std::shared_ptr<void>(p.get(), [](void*) {})));
 }
 
+TEST(UniversalPrintTest, StringViewNonZeroTerminated) {
+  // Craft a non-ASCII UTF-8 input (to trigger a special path in
+  // `ConditionalPrintAsText`). Use array notation instead of the string
+  // literal syntax, to avoid placing a terminating 0 at the end of the input.
+  const char s[] = {'\357', '\243', '\242', 'X'};
+  // Only include the first 3 bytes in the `string_view` and leave the last one
+  // ('X') outside. This way, if the code tries to use `str.data()` with
+  // `strlen` instead of `str.size()`, it will include 'X' and cause a visible
+  // difference (in addition to ASAN tests detecting a buffer overflow due to
+  // the missing 0 at the end).
+  const ::std::string_view str(s, 3);
+  ::std::stringstream ss;
+  UniversalPrint(str, &ss);
+  EXPECT_EQ("\"\\xEF\\xA3\\xA2\"\n    As Text: \"\xEF\xA3\xA2\"", ss.str());
+}
+
 TEST(UniversalTersePrintTupleFieldsToStringsTestWithStd, PrintsEmptyTuple) {
   Strings result = UniversalTersePrintTupleFieldsToStrings(::std::make_tuple());
   EXPECT_EQ(0u, result.size());
@@ -1920,7 +1974,6 @@ TEST(UniversalTersePrintTupleFieldsToStringsTestWithStd, PrintsTersely) {
   EXPECT_EQ("\"a\"", result[1]);
 }
 
-#if GTEST_INTERNAL_HAS_ANY
 class PrintAnyTest : public ::testing::Test {
  protected:
   template <typename T>
@@ -1934,12 +1987,12 @@ class PrintAnyTest : public ::testing::Test {
 };
 
 TEST_F(PrintAnyTest, Empty) {
-  internal::Any any;
+  std::any any;
   EXPECT_EQ("no value", PrintToString(any));
 }
 
 TEST_F(PrintAnyTest, NonEmpty) {
-  internal::Any any;
+  std::any any;
   constexpr int val1 = 10;
   const std::string val2 = "content";
 
@@ -1950,27 +2003,23 @@ TEST_F(PrintAnyTest, NonEmpty) {
   EXPECT_EQ("value of type " + ExpectedTypeName<std::string>(),
             PrintToString(any));
 }
-#endif  // GTEST_INTERNAL_HAS_ANY
 
-#if GTEST_INTERNAL_HAS_OPTIONAL
 TEST(PrintOptionalTest, Basic) {
-  EXPECT_EQ("(nullopt)", PrintToString(internal::Nullopt()));
-  internal::Optional<int> value;
+  EXPECT_EQ("(nullopt)", PrintToString(std::nullopt));
+  std::optional<int> value;
   EXPECT_EQ("(nullopt)", PrintToString(value));
   value = {7};
   EXPECT_EQ("(7)", PrintToString(value));
-  EXPECT_EQ("(1.1)", PrintToString(internal::Optional<double>{1.1}));
-  EXPECT_EQ("(\"A\")", PrintToString(internal::Optional<std::string>{"A"}));
+  EXPECT_EQ("(1.1)", PrintToString(std::optional<double>{1.1}));
+  EXPECT_EQ("(\"A\")", PrintToString(std::optional<std::string>{"A"}));
 }
-#endif  // GTEST_INTERNAL_HAS_OPTIONAL
 
-#if GTEST_INTERNAL_HAS_VARIANT
 struct NonPrintable {
   unsigned char contents = 17;
 };
 
 TEST(PrintOneofTest, Basic) {
-  using Type = internal::Variant<int, StreamableInGlobal, NonPrintable>;
+  using Type = std::variant<int, StreamableInGlobal, NonPrintable>;
   EXPECT_EQ("('int(index = 0)' with value 7)", PrintToString(Type(7)));
   EXPECT_EQ("('StreamableInGlobal(index = 1)' with value StreamableInGlobal)",
             PrintToString(Type(StreamableInGlobal{})));
@@ -1979,7 +2028,6 @@ TEST(PrintOneofTest, Basic) {
       "1-byte object <11>)",
       PrintToString(Type(NonPrintable{})));
 }
-#endif  // GTEST_INTERNAL_HAS_VARIANT
 
 #if GTEST_INTERNAL_HAS_COMPARE_LIB
 TEST(PrintOrderingTest, Basic) {

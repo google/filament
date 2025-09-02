@@ -51,9 +51,9 @@ namespace {
     WGPUBufferDescriptor errorBufferDescriptor = *descriptor;
     WGPUDawnBufferDescriptorErrorInfoFromWireClient errorInfo = {};
     errorInfo.chain.sType = WGPUSType_DawnBufferDescriptorErrorInfoFromWireClient;
-    errorInfo.outOfMemory = true;
+    errorInfo.outOfMemory = static_cast<WGPUBool>(true);
     errorBufferDescriptor.nextInChain = &errorInfo.chain;
-    return device->CreateErrorBuffer(&errorBufferDescriptor);
+    return device->APICreateErrorBuffer(&errorBufferDescriptor);
 }
 
 }  // anonymous namespace
@@ -195,7 +195,7 @@ WGPUBuffer Buffer::Create(Device* device, const WGPUBufferDescriptor* descriptor
             case WGPUSType_DawnFakeBufferOOMForTesting: {
                 auto oomForTesting =
                     reinterpret_cast<const WGPUDawnFakeBufferOOMForTesting*>(chain);
-                fakeOOMAtWireClientMap = oomForTesting->fakeOOMAtWireClientMap;
+                fakeOOMAtWireClientMap = (oomForTesting->fakeOOMAtWireClientMap != 0u);
             } break;
             default:
                 break;
@@ -204,7 +204,7 @@ WGPUBuffer Buffer::Create(Device* device, const WGPUBufferDescriptor* descriptor
 
     bool mappable =
         (descriptor->usage & (WGPUBufferUsage_MapRead | WGPUBufferUsage_MapWrite)) != 0 ||
-        descriptor->mappedAtCreation;
+        wgpu::Bool(descriptor->mappedAtCreation);
     if (mappable &&
         (descriptor->size >= std::numeric_limits<size_t>::max() || fakeOOMAtWireClientMap)) {
         return ReturnOOMAtClient(device, descriptor);
@@ -323,7 +323,7 @@ Buffer::Buffer(const ObjectBaseParams& params,
       mUsage(static_cast<WGPUBufferUsage>(descriptor->usage)),
       // This flag is for the write handle created by mappedAtCreation
       // instead of MapWrite usage. We don't have such a case for read handle.
-      mDestructWriteHandleOnUnmap(descriptor->mappedAtCreation &&
+      mDestructWriteHandleOnUnmap(wgpu::Bool(descriptor->mappedAtCreation) &&
                                   ((descriptor->usage & WGPUBufferUsage_MapWrite) == 0)),
       mDevice(device) {}
 
@@ -353,10 +353,10 @@ void Buffer::SetFutureStatus(WGPUMapAsyncStatus status, std::string_view message
                    futureID, status, ToOutputStringView(message)) == WireResult::Success);
 }
 
-WGPUFuture Buffer::MapAsync(WGPUMapMode mode,
-                            size_t offset,
-                            size_t size,
-                            const WGPUBufferMapCallbackInfo& callbackInfo) {
+WGPUFuture Buffer::APIMapAsync(WGPUMapMode mode,
+                               size_t offset,
+                               size_t size,
+                               const WGPUBufferMapCallbackInfo& callbackInfo) {
     Client* client = GetClient();
     auto [futureIDInternal, tracked] =
         GetEventManager().TrackEvent(std::make_unique<MapAsyncEvent>(callbackInfo, this));
@@ -405,19 +405,18 @@ WireResult Client::DoBufferMapAsyncCallback(ObjectHandle eventManager,
                                             WGPUStringView message,
                                             uint64_t readDataUpdateInfoLength,
                                             const uint8_t* readDataUpdateInfo) {
-    return GetEventManager(eventManager)
-        .SetFutureReady<Buffer::MapAsyncEvent>(future.id, status, message, readDataUpdateInfoLength,
-                                               readDataUpdateInfo);
+    return SetFutureReady<Buffer::MapAsyncEvent>(eventManager, future.id, status, message,
+                                                 readDataUpdateInfoLength, readDataUpdateInfo);
 }
 
-void* Buffer::GetMappedRange(size_t offset, size_t size) {
+void* Buffer::APIGetMappedRange(size_t offset, size_t size) {
     if (!IsMappedForWriting() || !CheckGetMappedRangeOffsetSize(offset, size)) {
         return nullptr;
     }
     return static_cast<uint8_t*>(mMappedData) + offset;
 }
 
-const void* Buffer::GetConstMappedRange(size_t offset, size_t size) {
+const void* Buffer::APIGetConstMappedRange(size_t offset, size_t size) {
     if (!(IsMappedForWriting() || IsMappedForReading()) ||
         !CheckGetMappedRangeOffsetSize(offset, size)) {
         return nullptr;
@@ -425,8 +424,8 @@ const void* Buffer::GetConstMappedRange(size_t offset, size_t size) {
     return static_cast<uint8_t*>(mMappedData) + offset;
 }
 
-WGPUStatus Buffer::WriteMappedRange(size_t offset, void const* data, size_t size) {
-    void* range = GetMappedRange(offset, size);
+WGPUStatus Buffer::APIWriteMappedRange(size_t offset, void const* data, size_t size) {
+    void* range = APIGetMappedRange(offset, size);
     if (range == nullptr) {
         return WGPUStatus_Error;
     }
@@ -435,8 +434,8 @@ WGPUStatus Buffer::WriteMappedRange(size_t offset, void const* data, size_t size
     return WGPUStatus_Success;
 }
 
-WGPUStatus Buffer::ReadMappedRange(size_t offset, void* data, size_t size) {
-    const void* range = GetConstMappedRange(offset, size);
+WGPUStatus Buffer::APIReadMappedRange(size_t offset, void* data, size_t size) {
+    const void* range = APIGetConstMappedRange(offset, size);
     if (range == nullptr) {
         return WGPUStatus_Error;
     }
@@ -445,7 +444,7 @@ WGPUStatus Buffer::ReadMappedRange(size_t offset, void* data, size_t size) {
     return WGPUStatus_Success;
 }
 
-void Buffer::Unmap() {
+void Buffer::APIUnmap() {
     // Invalidate the local pointer, and cancel all other in-flight requests that would
     // turn into errors anyway (you can't double map). This prevents race when the following
     // happens, where the application code would have unmapped a buffer but still receive a
@@ -506,7 +505,7 @@ void Buffer::Unmap() {
     SetFutureStatus(WGPUMapAsyncStatus_Aborted, "Buffer was unmapped before mapping was resolved.");
 }
 
-void Buffer::Destroy() {
+void Buffer::APIDestroy() {
     Client* client = GetClient();
 
     // Remove the current mapping and destroy Read/WriteHandles.
@@ -520,15 +519,15 @@ void Buffer::Destroy() {
                     "Buffer was destroyed before mapping was resolved.");
 }
 
-WGPUBufferUsage Buffer::GetUsage() const {
+WGPUBufferUsage Buffer::APIGetUsage() const {
     return mUsage;
 }
 
-uint64_t Buffer::GetSize() const {
+uint64_t Buffer::APIGetSize() const {
     return mSize;
 }
 
-WGPUBufferMapState Buffer::GetMapState() const {
+WGPUBufferMapState Buffer::APIGetMapState() const {
     switch (mMappedState) {
         case MapState::MappedForRead:
         case MapState::MappedForWrite:

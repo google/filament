@@ -97,11 +97,13 @@ void CommandStream::execute(void* buffer) {
         }
     }
 
-    mDriver.execute([this, buffer]() {
-        Driver& UTILS_RESTRICT driver = mDriver;
-        CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
-        while (UTILS_LIKELY(base)) {
-            base = base->execute(driver);
+    Driver& UTILS_RESTRICT driver = mDriver;
+    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
+    mDriver.execute([&driver, base] {
+        auto& d = driver;
+        auto p = base;
+        while (UTILS_LIKELY(p)) {
+            p = p->execute(d);
         }
     });
 

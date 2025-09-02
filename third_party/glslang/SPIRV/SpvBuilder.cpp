@@ -341,6 +341,80 @@ Id Builder::makeBFloat16Type()
     return type->getResultId();
 }
 
+Id Builder::makeFloatE5M2Type()
+{
+    // try to find it
+    Instruction* type;
+    for (int t = 0; t < (int)groupedTypes[enumCast(Op::OpTypeFloat)].size(); ++t) {
+        type = groupedTypes[enumCast(Op::OpTypeFloat)][t];
+        if (type->getNumOperands() != 2) {
+            continue;
+        }
+        if (type->getImmediateOperand(0) == (unsigned)8 &&
+            type->getImmediateOperand(1) == FPEncoding::Float8E5M2EXT)
+            return type->getResultId();
+    }
+
+    // not found, make it
+    type = new Instruction(getUniqueId(), NoType, Op::OpTypeFloat);
+    type->addImmediateOperand(8);
+    type->addImmediateOperand(FPEncoding::Float8E5M2EXT);
+    groupedTypes[enumCast(Op::OpTypeFloat)].push_back(type);
+    constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
+    module.mapInstruction(type);
+
+    addExtension(spv::E_SPV_EXT_float8);
+    addCapability(Capability::Float8EXT);
+
+#if 0
+    // XXX not supported
+    if (emitNonSemanticShaderDebugInfo)
+    {
+        auto const debugResultId = makeFloatDebugType(width);
+        debugId[type->getResultId()] = debugResultId;
+    }
+#endif
+
+    return type->getResultId();
+}
+
+Id Builder::makeFloatE4M3Type()
+{
+    // try to find it
+    Instruction* type;
+    for (int t = 0; t < (int)groupedTypes[enumCast(Op::OpTypeFloat)].size(); ++t) {
+        type = groupedTypes[enumCast(Op::OpTypeFloat)][t];
+        if (type->getNumOperands() != 2) {
+            continue;
+        }
+        if (type->getImmediateOperand(0) == (unsigned)8 &&
+            type->getImmediateOperand(1) == FPEncoding::Float8E4M3EXT)
+            return type->getResultId();
+    }
+
+    // not found, make it
+    type = new Instruction(getUniqueId(), NoType, Op::OpTypeFloat);
+    type->addImmediateOperand(8);
+    type->addImmediateOperand(FPEncoding::Float8E4M3EXT);
+    groupedTypes[enumCast(Op::OpTypeFloat)].push_back(type);
+    constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(type));
+    module.mapInstruction(type);
+
+    addExtension(spv::E_SPV_EXT_float8);
+    addCapability(Capability::Float8EXT);
+
+#if 0
+    // XXX not supported
+    if (emitNonSemanticShaderDebugInfo)
+    {
+        auto const debugResultId = makeFloatDebugType(width);
+        debugId[type->getResultId()] = debugResultId;
+    }
+#endif
+
+    return type->getResultId();
+}
+
 // Make a struct without checking for duplication.
 // See makeStructResultType() for non-decorated structs
 // needed as the result of some instructions, which does
@@ -576,6 +650,26 @@ Id Builder::makeCooperativeVectorTypeNV(Id componentType, Id components)
     module.mapInstruction(type);
 
     return type->getResultId();
+}
+
+Id Builder::makeTensorTypeARM(Id elementType, Id rank)
+{
+    // See if an OpTypeTensorARM with same element type and rank already exists.
+    for (int t = 0; t < (int)groupedTypes[enumCast(Op::OpTypeTensorARM)].size(); ++t) {
+        const Instruction *type = groupedTypes[enumCast(Op::OpTypeTensorARM)][t];
+        if (type->getIdOperand(0) == elementType && type->getIdOperand(1) == rank)
+            return type->getResultId();
+    }
+
+    // Not found, make it.
+    std::unique_ptr<Instruction> type(new Instruction(getUniqueId(), NoType, Op::OpTypeTensorARM));
+    type->addIdOperand(elementType);
+    type->addIdOperand(rank);
+    groupedTypes[enumCast(Op::OpTypeTensorARM)].push_back(type.get());
+    module.mapInstruction(type.get());
+    Id resultID = type->getResultId();
+    constantsTypesGlobals.push_back(std::move(type));
+    return resultID;
 }
 
 Id Builder::makeGenericType(spv::Op opcode, std::vector<spv::IdImmediate>& operands)
@@ -1879,6 +1973,62 @@ Id Builder::makeBFloat16Constant(float bf16, bool specConstant)
 
     // take high 16b of fp32 value. This is effectively round-to-zero, other than certain NaNs.
     unsigned value = un.u >> 16;
+
+    // See if we already made it. Applies only to regular constants, because specialization constants
+    // must remain distinct for the purpose of applying a SpecId decoration.
+    if (!specConstant) {
+        Id existing = findScalarConstant(Op::OpTypeFloat, opcode, typeId, value);
+        if (existing)
+            return existing;
+    }
+
+    Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
+    c->addImmediateOperand(value);
+    constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(c));
+    groupedConstants[enumCast(Op::OpTypeFloat)].push_back(c);
+    module.mapInstruction(c);
+
+    return c->getResultId();
+}
+
+Id Builder::makeFloatE5M2Constant(float fe5m2, bool specConstant)
+{
+    Op opcode = specConstant ? Op::OpSpecConstant : Op::OpConstant;
+    Id typeId = makeFloatE5M2Type();
+
+    spvutils::HexFloat<spvutils::FloatProxy<float>> fVal(fe5m2);
+    spvutils::HexFloat<spvutils::FloatProxy<spvutils::FloatE5M2>> fe5m2Val(0);
+    fVal.castTo(fe5m2Val, spvutils::kRoundToZero);
+
+    unsigned value = fe5m2Val.value().getAsFloat().get_value();
+
+    // See if we already made it. Applies only to regular constants, because specialization constants
+    // must remain distinct for the purpose of applying a SpecId decoration.
+    if (!specConstant) {
+        Id existing = findScalarConstant(Op::OpTypeFloat, opcode, typeId, value);
+        if (existing)
+            return existing;
+    }
+
+    Instruction* c = new Instruction(getUniqueId(), typeId, opcode);
+    c->addImmediateOperand(value);
+    constantsTypesGlobals.push_back(std::unique_ptr<Instruction>(c));
+    groupedConstants[enumCast(Op::OpTypeFloat)].push_back(c);
+    module.mapInstruction(c);
+
+    return c->getResultId();
+}
+
+Id Builder::makeFloatE4M3Constant(float fe4m3, bool specConstant)
+{
+    Op opcode = specConstant ? Op::OpSpecConstant : Op::OpConstant;
+    Id typeId = makeFloatE4M3Type();
+
+    spvutils::HexFloat<spvutils::FloatProxy<float>> fVal(fe4m3);
+    spvutils::HexFloat<spvutils::FloatProxy<spvutils::FloatE4M3>> fe4m3Val(0);
+    fVal.castTo(fe4m3Val, spvutils::kRoundToZero);
+
+    unsigned value = fe4m3Val.value().getAsFloat().get_value();
 
     // See if we already made it. Applies only to regular constants, because specialization constants
     // must remain distinct for the purpose of applying a SpecId decoration.
@@ -3266,8 +3416,12 @@ Id Builder::createTextureCall(Decoration precision, Id resultType, bool sparse, 
         texArgs.push_back(parameters.offset);
     }
     if (parameters.offsets) {
-        addCapability(Capability::ImageGatherExtended);
-        mask = (ImageOperandsMask)(mask | ImageOperandsMask::ConstOffsets);
+        if (!isConstant(parameters.offsets) && sourceLang == spv::SourceLanguage::GLSL) {
+            mask = (ImageOperandsMask)(mask | ImageOperandsMask::Offsets);
+        } else {
+            addCapability(Capability::ImageGatherExtended);
+            mask = (ImageOperandsMask)(mask | ImageOperandsMask::ConstOffsets);
+        }
         texArgs.push_back(parameters.offsets);
     }
     if (parameters.sample) {

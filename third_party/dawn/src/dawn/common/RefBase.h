@@ -28,8 +28,8 @@
 #ifndef SRC_DAWN_COMMON_REFBASE_H_
 #define SRC_DAWN_COMMON_REFBASE_H_
 
+#include <concepts>
 #include <cstddef>
-#include <type_traits>
 #include <utility>
 
 #include "dawn/common/Assert.h"
@@ -95,23 +95,27 @@ class RefBase {
     // Constructors from a RefBase<U>. Note that in the *-assignment operators this cannot be the
     // same as `other` because overload resolution rules would have chosen the *-assignement
     // operators defined with `other` == RefBase<T, Traits>.
-    template <typename U, typename UTraits, typename = typename std::is_convertible<U, T>::type>
+    template <typename U, typename UTraits>
+        requires std::convertible_to<U, T>
     RefBase(const RefBase<U, UTraits>& other) : mValue(other.mValue) {
         AddRef(other.mValue);
     }
 
-    template <typename U, typename UTraits, typename = typename std::is_convertible<U, T>::type>
+    template <typename U, typename UTraits>
+        requires std::convertible_to<U, T>
     RefBase<T, Traits>& operator=(const RefBase<U, UTraits>& other) {
         Set(other.mValue);
         return *this;
     }
 
-    template <typename U, typename UTraits, typename = typename std::is_convertible<U, T>::type>
+    template <typename U, typename UTraits>
+        requires std::convertible_to<U, T>
     RefBase(RefBase<U, UTraits>&& other) {
         mValue = other.Detach();
     }
 
-    template <typename U, typename UTraits, typename = typename std::is_convertible<U, T>::type>
+    template <typename U, typename UTraits>
+        requires std::convertible_to<U, T>
     RefBase<T, Traits>& operator=(RefBase<U, UTraits>&& other) {
         Release(mValue);
         mValue = other.Detach();
@@ -124,8 +128,7 @@ class RefBase {
     bool operator==(const T& other) const { return mValue == other; }
     bool operator!=(const T& other) const { return mValue != other; }
 
-    bool operator==(const RefBase<T, Traits>& other) const { return mValue == other.mValue; }
-    bool operator!=(const RefBase<T, Traits>& other) const { return mValue != other.mValue; }
+    bool operator==(const RefBase<T, Traits>& other) const = default;
 
     const T operator->() const { return mValue; }
     T operator->() { return mValue; }
@@ -166,7 +169,8 @@ class RefBase {
     template <typename U, typename UTraits>
     friend class RefBase;
 
-    template <typename U, typename UTraits, typename = typename std::is_convertible<U, T>::type>
+    template <typename U, typename UTraits>
+        requires std::convertible_to<U, T>
     static void CastImpl(RefBase<T, Traits>* ref, RefBase<U, UTraits>* other) {
         other->Acquire(static_cast<U>(ref->Detach()));
     }

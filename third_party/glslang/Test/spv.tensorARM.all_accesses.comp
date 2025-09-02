@@ -1,0 +1,90 @@
+#version 460 core
+
+#extension GL_ARM_tensors : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+// Int types
+uniform tensorARM<int8_t, 1> it8;
+uniform tensorARM<int16_t, 1> it16;
+uniform tensorARM<int, 1> it32;
+uniform tensorARM<int64_t, 1> it64;
+
+// Uint types
+uniform tensorARM<uint8_t, 1> ut8;
+uniform tensorARM<uint16_t, 1> ut16;
+uniform tensorARM<uint, 1> ut32;
+uniform tensorARM<uint64_t, 1> ut64;
+
+// Float types
+uniform tensorARM<float16_t, 1> ft16;
+uniform tensorARM<float, 1> ft32;
+uniform tensorARM<float64_t, 1> ft64;
+
+void main() {
+    uint coords[] = {0};
+
+    // Int types
+    int8_t iw8 = int8_t(1);
+    int16_t iw16 = 1s;
+    int iw = 1;
+    int64_t iw64 = 1l;
+    tensorWriteARM(it8, coords, iw8);
+    tensorWriteARM(it16, coords, iw16);
+    tensorWriteARM(it32, coords, iw);
+    tensorWriteARM(it64, coords, iw64);
+    int iwv[4] = int[](1, 1, 1, 1);
+    tensorWriteARM(it32, coords, iwv);
+
+    int8_t ir8;
+    int16_t ir16;
+    int ir;
+    int64_t ir64;
+    tensorReadARM(it8, coords, ir8);
+    tensorReadARM(it16, coords, ir16);
+    tensorReadARM(it32, coords, ir);
+    tensorReadARM(it64, coords, ir64);
+    int irv[4];
+    tensorReadARM(it32, coords, irv);
+
+    // Uint types
+    uint8_t uw8 = uint8_t(1);
+    uint16_t uw16 = 1s;
+    uint uw = 1;
+    uint64_t uw64 = 1l;
+    tensorWriteARM(ut8, coords, uw8);
+    tensorWriteARM(ut16, coords, uw16);
+    tensorWriteARM(ut32, coords, uw);
+    tensorWriteARM(ut64, coords, uw64);
+    uint uwv[4] = uint[](1, 1, 1, 1);
+    tensorWriteARM(ut32, coords, uwv);
+
+    uint8_t ur8;
+    uint16_t ur16;
+    uint ur;
+    uint64_t ur64;
+    tensorReadARM(ut8, coords, ur8);
+    tensorReadARM(ut16, coords, ur16);
+    tensorReadARM(ut32, coords, ur);
+    tensorReadARM(ut64, coords, ur64);
+    uint urv[4];
+    tensorReadARM(ut32, coords, urv);
+
+    // Float types
+    float fw = 1.0;
+    float16_t fw16 = 1.0hf;
+    float64_t fw64 = 1.0;
+    tensorWriteARM(ft16, coords, fw16);
+    tensorWriteARM(ft32, coords, fw);
+    tensorWriteARM(ft64, coords, fw64);
+    float fwv[4] = float[](1.0, 1.0, 1.0, 1.0);
+    tensorWriteARM(ft32, coords, fwv);
+
+    float fr;
+    float16_t fr16;
+    float64_t fr64;
+    tensorReadARM(ft16, coords, fr16);
+    tensorReadARM(ft32, coords, fr);
+    tensorReadARM(ft64, coords, fr64);
+    float frv[4];
+    tensorReadARM(ft32, coords, frv);
+}

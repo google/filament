@@ -1,29 +1,11 @@
 #!/usr/bin/env python3
-# Copyright (c) 2017-2024 Google LLC
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and/or associated documentation files (the
-# "Materials"), to deal in the Materials without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish,
-# distribute, sublicense, and/or sell copies of the Materials, and to
-# permit persons to whom the Materials are furnished to do so, subject to
-# the following conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Materials.
-#
+# Copyright: 2017-2024 Google LLC
+# SPDX-License-Identifier: MIT
+# 
 # MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS
 # KHRONOS STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS
 # SPECIFICATIONS AND HEADER INFORMATION ARE LOCATED AT
 #    https://www.khronos.org/registry/
-#
-# THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-# MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
 """Generates a C language headers from a SPIR-V JSON grammar file"""
 
@@ -32,31 +14,14 @@ import json
 import os.path
 import re
 
-DEFAULT_COPYRIGHT="""Copyright (c) 2020-2024 The Khronos Group Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and/or associated documentation files (the
-"Materials"), to deal in the Materials without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Materials, and to
-permit persons to whom the Materials are furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Materials.
+DEFAULT_COPYRIGHT="""SPDX-FileCopyrightText: 2020-2024 The Khronos Group Inc.
+SPDX-License-Identifier: MIT
 
 MODIFICATIONS TO THIS FILE MAY MEAN IT NO LONGER ACCURATELY REFLECTS
 KHRONOS STANDARDS. THE UNMODIFIED, NORMATIVE VERSIONS OF KHRONOS
 SPECIFICATIONS AND HEADER INFORMATION ARE LOCATED AT
    https://www.khronos.org/registry/
 
-THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 """.split('\n')
 
 def make_path_to_file(f):
@@ -78,8 +43,9 @@ def make_path_to_file(f):
 class ExtInstGrammar:
     """The grammar for an extended instruction set"""
 
-    def __init__(self, name, copyright, instructions, operand_kinds, version = None, revision = None):
+    def __init__(self, name, guard_name, copyright, instructions, operand_kinds, version = None, revision = None):
        self.name = name
+       self.guard_name = guard_name
        self.copyright = copyright
        self.instructions = instructions
        self.operand_kinds = operand_kinds
@@ -125,7 +91,7 @@ class LangGenerator:
             parts.extend(["{}{}".format(self.comment_prefix(), f) for f in grammar.copyright])
         parts.append('')
 
-        guard = 'SPIRV_UNIFIED1_{}_H_'.format(grammar.name)
+        guard = 'SPIRV_UNIFIED1_{}_H_'.format(grammar.guard_name)
         if self.uses_guards:
             parts.append('#ifndef {}'.format(guard))
             parts.append('#define {}'.format(guard))
@@ -227,7 +193,10 @@ def main():
         else:
           operand_kinds = []
 
+        sanitized_guard_name = args.extinst_output_base.replace('.', '_')
+
         grammar = ExtInstGrammar(name = args.extinst_name,
+                                 guard_name = sanitized_guard_name,
                                  copyright = copyright,
                                  instructions = grammar_json['instructions'],
                                  operand_kinds = operand_kinds,

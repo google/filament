@@ -363,6 +363,10 @@ bool MaterialParser::getStereoscopicType(StereoscopicType* value) const noexcept
     return mImpl.getFromSimpleChunk(MaterialStereoscopicType, reinterpret_cast<uint8_t*>(value));
 }
 
+bool MaterialParser::getMaterialCrc32(uint32_t* value) const noexcept {
+    return mImpl.getFromSimpleChunk(MaterialCrc32, value);
+}
+
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
     if (!mImpl.getFromSimpleChunk(MaterialRequiredAttributes, &rawAttributes)) {

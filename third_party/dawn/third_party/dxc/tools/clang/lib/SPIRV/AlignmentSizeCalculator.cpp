@@ -277,14 +277,20 @@ std::pair<uint32_t, uint32_t> AlignmentSizeCalculator::getAlignmentAndSize(
   if (recordType != nullptr) {
     const llvm::StringRef name = recordType->getDecl()->getName();
 
-    if (isTypeInVkNamespace(recordType) && name == "SpirvType") {
-      const ClassTemplateSpecializationDecl *templateDecl =
-          cast<ClassTemplateSpecializationDecl>(recordType->getDecl());
-      const uint64_t size =
-          templateDecl->getTemplateArgs()[1].getAsIntegral().getZExtValue();
-      const uint64_t alignment =
-          templateDecl->getTemplateArgs()[2].getAsIntegral().getZExtValue();
-      return {alignment, size};
+    if (isTypeInVkNamespace(recordType)) {
+      if (name == "BufferPointer") {
+        return {8, 8}; // same as uint64_t
+      }
+
+      if (name == "SpirvType") {
+        const ClassTemplateSpecializationDecl *templateDecl =
+            cast<ClassTemplateSpecializationDecl>(recordType->getDecl());
+        const uint64_t size =
+            templateDecl->getTemplateArgs()[1].getAsIntegral().getZExtValue();
+        const uint64_t alignment =
+            templateDecl->getTemplateArgs()[2].getAsIntegral().getZExtValue();
+        return {alignment, size};
+      }
     }
   }
 

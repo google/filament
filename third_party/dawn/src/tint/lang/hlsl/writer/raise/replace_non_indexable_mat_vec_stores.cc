@@ -192,21 +192,22 @@ struct State {
             Vector<core::ir::Value*, 4> select_indices;
             switch (vec_ty->Width()) {
                 case 2:
-                    select_indices = b.Values(0_i, 1_i);
+                    select_indices = b.Values(0_u, 1_u);
                     break;
                 case 3:
-                    select_indices = b.Values(0_i, 1_i, 2_i);
+                    select_indices = b.Values(0_u, 1_u, 2_u);
                     break;
                 case 4:
-                    select_indices = b.Values(0_i, 1_i, 2_i, 3_i);
+                    select_indices = b.Values(0_u, 1_u, 2_u, 3_u);
                     break;
             }
 
             auto* false_val = b.Load(vec_param);
             auto* true_val = b.Construct(vec_ty, value_param);
 
-            auto* lhs = b.Construct(vec_ty, index_param);
-            auto* rhs = b.Construct(vec_ty, select_indices);
+            auto* uint_vec_ty = ty.MatchWidth(ty.u32(), vec_ty);
+            auto* lhs = b.Construct(uint_vec_ty, b.InsertConvertIfNeeded(ty.u32(), index_param));
+            auto* rhs = b.Construct(uint_vec_ty, select_indices);
             auto* cond = b.Equal(ty.MatchWidth(ty.bool_(), vec_ty), lhs, rhs);
 
             // NOTE: Using Select means we depend on BuiltinPolyfill to run after this transform. We
@@ -286,7 +287,9 @@ struct State {
 }  // namespace
 
 Result<SuccessType> ReplaceNonIndexableMatVecStores(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.ReplaceNonIndexableMatVecStores");
+    auto result = ValidateAndDumpIfNeeded(
+        ir, "hlsl.ReplaceNonIndexableMatVecStores",
+        core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
     if (result != Success) {
         return result.Failure();
     }

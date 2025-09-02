@@ -42,16 +42,3 @@ alias(
   actual = "//src/tint:tint_build_ir_binary_true",
 )
 
-alias(
-  name = "tint_build_ir_fuzzer",
-  actual = "//src/tint:tint_build_ir_fuzzer_true",
-)
-
-selects.config_setting_group(
-    name = "tint_build_ir_binary_and_tint_build_ir_fuzzer",
-    match_all = [
-        ":tint_build_ir_binary",
-        ":tint_build_ir_fuzzer",
-    ],
-)
-

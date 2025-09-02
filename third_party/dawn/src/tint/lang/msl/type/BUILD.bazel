@@ -49,6 +49,7 @@ cc_library(
     "level.h",
   ],
   deps = [
+    "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/type",
     "//src/tint/utils",

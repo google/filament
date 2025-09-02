@@ -52,6 +52,56 @@ TEST_F(TypedIntegerTest, ConstructionAndCast) {
     static_assert(static_cast<uint32_t>(Unsigned(28)) == 28);
 }
 
+// Test that typed integers can be explicitly cast to other integral types
+TEST_F(TypedIntegerTest, CastToOther) {
+    using Unsigned64 = TypedInteger<struct Unsigned64T, uint64_t>;
+    using Signed64 = TypedInteger<struct Signed64T, int64_t>;
+    using Unsigned32 = TypedInteger<struct Unsigned32T, uint16_t>;
+    using Signed32 = TypedInteger<struct Signed32T, int16_t>;
+    using Unsigned16 = TypedInteger<struct Unsigned16T, uint16_t>;
+    using Signed16 = TypedInteger<struct Signed16T, int16_t>;
+
+    constexpr int32_t maxI32 = std::numeric_limits<int32_t>::max();
+    constexpr int16_t maxI16 = std::numeric_limits<int16_t>::max();
+    constexpr int8_t maxI8 = std::numeric_limits<int8_t>::max();
+    constexpr uint32_t maxU32 = std::numeric_limits<uint32_t>::max();
+    constexpr uint16_t maxU16 = std::numeric_limits<uint16_t>::max();
+    constexpr uint8_t maxU8 = std::numeric_limits<uint8_t>::max();
+
+    {
+        Signed64 svalue64(maxI32);
+        EXPECT_EQ(static_cast<int32_t>(svalue64), maxI32);
+
+        Signed32 svalue32(maxI16);
+        EXPECT_EQ(static_cast<int16_t>(svalue32), maxI16);
+
+        Signed16 svalue16(maxI8);
+        EXPECT_EQ(static_cast<int8_t>(svalue16), maxI8);
+    }
+    {
+        Unsigned64 uvalue64(maxU32);
+        EXPECT_EQ(static_cast<uint32_t>(uvalue64), maxU32);
+
+        Unsigned32 uvalue32(maxU16);
+        EXPECT_EQ(static_cast<uint16_t>(uvalue32), maxU16);
+
+        Unsigned16 uvalue16(maxU8);
+        EXPECT_EQ(static_cast<uint8_t>(uvalue16), maxU8);
+    }
+    {
+        Signed64 svalue64(maxI8);
+        EXPECT_EQ(static_cast<int32_t>(svalue64), maxI8);
+        EXPECT_EQ(static_cast<int16_t>(svalue64), maxI8);
+        EXPECT_EQ(static_cast<int8_t>(svalue64), maxI8);
+    }
+    {
+        Unsigned64 uvalue64(maxU8);
+        EXPECT_EQ(static_cast<uint32_t>(uvalue64), maxU8);
+        EXPECT_EQ(static_cast<uint16_t>(uvalue64), maxU8);
+        EXPECT_EQ(static_cast<uint8_t>(uvalue64), maxU8);
+    }
+}
+
 // Test typed integer comparison operators
 TEST_F(TypedIntegerTest, Comparison) {
     Unsigned value(8);
@@ -153,6 +203,158 @@ TEST_F(TypedIntegerTest, Arithmetic) {
         EXPECT_EQ(a, Signed(5));
         EXPECT_EQ(b, Signed(-5));
     }
+
+    // Signed multiplication
+    {
+        Signed a(3);
+        Signed b(-4);
+        Signed c = a * b;
+        EXPECT_EQ(a, Signed(3));
+        EXPECT_EQ(b, Signed(-4));
+        EXPECT_EQ(c, Signed(-12));
+    }
+
+    // Unsigned multiplication
+    {
+        Unsigned a(9);
+        Unsigned b(3);
+        Unsigned c = a * b;
+        EXPECT_EQ(a, Unsigned(9));
+        EXPECT_EQ(b, Unsigned(3));
+        EXPECT_EQ(c, Unsigned(27));
+    }
+
+    // Signed division
+    {
+        Signed a(12);
+        Signed b(-4);
+        Signed c = a / b;
+        EXPECT_EQ(a, Signed(12));
+        EXPECT_EQ(b, Signed(-4));
+        EXPECT_EQ(c, Signed(-3));
+    }
+
+    // Unsigned division
+    {
+        Unsigned a(12);
+        Unsigned b(3);
+        Unsigned c = a / b;
+        EXPECT_EQ(a, Unsigned(12));
+        EXPECT_EQ(b, Unsigned(3));
+        EXPECT_EQ(c, Unsigned(4));
+    }
+
+    // Signed modulo
+    {
+        Signed a(12);
+        Signed b(-5);
+        Signed c = a % b;
+        EXPECT_EQ(a, Signed(12));
+        EXPECT_EQ(b, Signed(-5));
+        EXPECT_EQ(c, Signed(2));
+    }
+
+    // Unsigned modulo
+    {
+        Unsigned a(12);
+        Unsigned b(5);
+        Unsigned c = a % b;
+        EXPECT_EQ(a, Unsigned(12));
+        EXPECT_EQ(b, Unsigned(5));
+        EXPECT_EQ(c, Unsigned(2));
+    }
+}
+
+TEST_F(TypedIntegerTest, ArithmeticAssignment) {
+    // Signed addition assignment
+    {
+        Signed a(3);
+        Signed b(-4);
+        a += b;
+        EXPECT_EQ(a, Signed(-1));
+        EXPECT_EQ(b, Signed(-4));
+    }
+
+    // Signed subtraction assignment
+    {
+        Signed a(3);
+        Signed b(-4);
+        a -= b;
+        EXPECT_EQ(a, Signed(7));
+        EXPECT_EQ(b, Signed(-4));
+    }
+
+    // Unsigned addition assignment
+    {
+        Unsigned a(9);
+        Unsigned b(3);
+        a += b;
+        EXPECT_EQ(a, Unsigned(12));
+        EXPECT_EQ(b, Unsigned(3));
+    }
+
+    // Unsigned subtraction assignment
+    {
+        Unsigned a(9);
+        Unsigned b(2);
+        a -= b;
+        EXPECT_EQ(a, Unsigned(7));
+        EXPECT_EQ(b, Unsigned(2));
+    }
+
+    // Signed multiplication assignment
+    {
+        Signed a(3);
+        Signed b(-4);
+        a *= b;
+        EXPECT_EQ(a, Signed(-12));
+        EXPECT_EQ(b, Signed(-4));
+    }
+
+    // Unsigned multiplication assignment
+    {
+        Unsigned a(9);
+        Unsigned b(3);
+        a *= b;
+        EXPECT_EQ(a, Unsigned(27));
+        EXPECT_EQ(b, Unsigned(3));
+    }
+
+    // Signed division assignment
+    {
+        Signed a(12);
+        Signed b(-4);
+        a /= b;
+        EXPECT_EQ(a, Signed(-3));
+        EXPECT_EQ(b, Signed(-4));
+    }
+
+    // Unsigned division assignment
+    {
+        Unsigned a(12);
+        Unsigned b(3);
+        a /= b;
+        EXPECT_EQ(a, Unsigned(4));
+        EXPECT_EQ(b, Unsigned(3));
+    }
+
+    // Signed modulo assignment
+    {
+        Signed a(12);
+        Signed b(-5);
+        a %= b;
+        EXPECT_EQ(a, Signed(2));
+        EXPECT_EQ(b, Signed(-5));
+    }
+
+    // Unsigned modulo assignment
+    {
+        Unsigned a(12);
+        Unsigned b(5);
+        a %= b;
+        EXPECT_EQ(a, Unsigned(2));
+        EXPECT_EQ(b, Unsigned(5));
+    }
 }
 
 TEST_F(TypedIntegerTest, NumericLimits) {
@@ -175,6 +377,23 @@ TEST_F(TypedIntegerTest, PlusOne) {
 
 // Tests for bounds assertions on arithmetic overflow and underflow.
 #if defined(DAWN_ENABLE_ASSERTS)
+
+TEST_F(TypedIntegerTest, CastToOtherTruncation) {
+    using Unsigned64 = TypedInteger<struct Unsigned64T, uint64_t>;
+    using Signed64 = TypedInteger<struct Signed64T, int64_t>;
+
+    constexpr int32_t maxI32 = std::numeric_limits<int32_t>::max();
+    constexpr uint32_t maxU32 = std::numeric_limits<uint32_t>::max();
+    constexpr int32_t minI32 = std::numeric_limits<int32_t>::min();
+
+    Signed64 too_large_for_i32(static_cast<int64_t>(maxI32) + 1);
+    Signed64 too_small_for_i32(static_cast<int64_t>(minI32) - 1);
+    Unsigned64 too_large_for_u32(static_cast<uint64_t>(maxU32) + 1);
+
+    EXPECT_DEATH({ [[maybe_unused]] auto result = static_cast<int32_t>(too_large_for_i32); }, "");
+    EXPECT_DEATH({ [[maybe_unused]] auto result = static_cast<int32_t>(too_small_for_i32); }, "");
+    EXPECT_DEATH({ [[maybe_unused]] auto result = static_cast<uint32_t>(too_large_for_u32); }, "");
+}
 
 TEST_F(TypedIntegerTest, IncrementUnsignedOverflow) {
     Unsigned value(std::numeric_limits<uint32_t>::max() - 1);
@@ -209,13 +428,7 @@ TEST_F(TypedIntegerTest, UnsignedAdditionOverflow) {
 
     value + Unsigned(1);                    // Doesn't overflow.
     EXPECT_DEATH(value + Unsigned(2), "");  // Overflows.
-}
-
-TEST_F(TypedIntegerTest, UnsignedSubtractionUnderflow) {
-    Unsigned value(1);
-
-    value - Unsigned(1);                    // Doesn't underflow.
-    EXPECT_DEATH(value - Unsigned(2), "");  // Underflows.
+    EXPECT_DEATH(value += Unsigned(2), "");  // Overflows.
 }
 
 TEST_F(TypedIntegerTest, SignedAdditionOverflow) {
@@ -223,6 +436,7 @@ TEST_F(TypedIntegerTest, SignedAdditionOverflow) {
 
     value + Signed(1);                    // Doesn't overflow.
     EXPECT_DEATH(value + Signed(2), "");  // Overflows.
+    EXPECT_DEATH(value += Signed(2), "");  // Overflows.
 }
 
 TEST_F(TypedIntegerTest, SignedAdditionUnderflow) {
@@ -230,6 +444,15 @@ TEST_F(TypedIntegerTest, SignedAdditionUnderflow) {
 
     value + Signed(-1);                    // Doesn't underflow.
     EXPECT_DEATH(value + Signed(-2), "");  // Underflows.
+    EXPECT_DEATH(value += Signed(-2), "");  // Underflows.
+}
+
+TEST_F(TypedIntegerTest, UnsignedSubtractionUnderflow) {
+    Unsigned value(1);
+
+    value - Unsigned(1);                     // Doesn't underflow.
+    EXPECT_DEATH(value - Unsigned(2), "");   // Underflows.
+    EXPECT_DEATH(value -= Unsigned(2), "");  // Underflows.
 }
 
 TEST_F(TypedIntegerTest, SignedSubtractionOverflow) {
@@ -237,6 +460,7 @@ TEST_F(TypedIntegerTest, SignedSubtractionOverflow) {
 
     value - Signed(-1);                    // Doesn't overflow.
     EXPECT_DEATH(value - Signed(-2), "");  // Overflows.
+    EXPECT_DEATH(value -= Signed(-2), "");  // Overflows.
 }
 
 TEST_F(TypedIntegerTest, SignedSubtractionUnderflow) {
@@ -244,6 +468,85 @@ TEST_F(TypedIntegerTest, SignedSubtractionUnderflow) {
 
     value - Signed(1);                    // Doesn't underflow.
     EXPECT_DEATH(value - Signed(2), "");  // Underflows.
+    EXPECT_DEATH(value -= Signed(2), "");  // Underflows.
+}
+
+TEST_F(TypedIntegerTest, UnsignedMultiplicationOverflow) {
+    Unsigned value(std::numeric_limits<uint32_t>::max() / 2);
+
+    value* Unsigned(2);                      // Doesn't overflow.
+    EXPECT_DEATH(value * Unsigned(3), "");   // Overflows.
+    EXPECT_DEATH(value *= Unsigned(3), "");  // Overflows.
+}
+
+TEST_F(TypedIntegerTest, SignedMultiplicationOverflow) {
+    Signed value(std::numeric_limits<int32_t>::max() / 2);
+
+    value* Signed(2);                      // Doesn't overflow.
+    EXPECT_DEATH(value * Signed(3), "");   // Overflows.
+    EXPECT_DEATH(value *= Signed(3), "");  // Overflows.
+}
+
+TEST_F(TypedIntegerTest, SignedMultiplicationUnderflow) {
+    Signed value(std::numeric_limits<int32_t>::min() / 2);
+
+    value* Signed(2);                      // Doesn't underflow.
+    EXPECT_DEATH(value * Signed(3), "");   // Underflows.
+    EXPECT_DEATH(value *= Signed(3), "");  // Underflows.
+}
+
+TEST_F(TypedIntegerTest, UnsignedDivisionByZero) {
+    Unsigned value(1);
+
+    value / Unsigned(1);                     // Doesn't underflow.
+    EXPECT_DEATH(value / Unsigned(0), "");   // DBZ.
+    EXPECT_DEATH(value /= Unsigned(0), "");  // DBZ.
+}
+
+TEST_F(TypedIntegerTest, SignedDivisionByZero) {
+    Signed value(1);
+
+    value / Signed(-1);                    // Doesn't overflow.
+    EXPECT_DEATH(value / Signed(0), "");   // DBZ.
+    EXPECT_DEATH(value /= Signed(0), "");  // DBZ.
+}
+
+TEST_F(TypedIntegerTest, SignedDivisionOverflow) {
+    // Overflow can also occur during two's complement signed integer division when the dividend is
+    // equal to the minimum (most negative) value for the signed integer type and the divisor is
+    // equal to −1.
+    Signed value(std::numeric_limits<int32_t>::min());
+
+    value / Signed(1);                      // Doesn't overflow.
+    EXPECT_DEATH(value / Signed(-1), "");   // Overflows.
+    EXPECT_DEATH(value /= Signed(-1), "");  // Overflows.
+}
+
+TEST_F(TypedIntegerTest, UnsignedModuloByZero) {
+    Unsigned value(1);
+
+    value % Unsigned(1);                     // Doesn't underflow.
+    EXPECT_DEATH(value % Unsigned(0), "");   // DBZ.
+    EXPECT_DEATH(value %= Unsigned(0), "");  // DBZ.
+}
+
+TEST_F(TypedIntegerTest, SignedModuloByZero) {
+    Signed value(1);
+
+    value % Signed(-1);                    // Doesn't overflow.
+    EXPECT_DEATH(value % Signed(0), "");   // DBZ.
+    EXPECT_DEATH(value %= Signed(0), "");  // DBZ.
+}
+
+TEST_F(TypedIntegerTest, SignedModuloOverflow) {
+    // Overflow can also occur during two's complement signed integer modulo when the dividend is
+    // equal to the minimum (most negative) value for the signed integer type and the divisor is
+    // equal to −1.
+    Signed value(std::numeric_limits<int32_t>::min());
+
+    value % Signed(1);                      // Doesn't overflow.
+    EXPECT_DEATH(value % Signed(-1), "");   // Overflows.
+    EXPECT_DEATH(value %= Signed(-1), "");  // Overflows.
 }
 
 TEST_F(TypedIntegerTest, NegationOverflow) {

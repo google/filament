@@ -28,7 +28,7 @@
 #include "src/tint/lang/spirv/reader/ast_parser/namer.h"
 
 #include "gmock/gmock.h"
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/utils/text/string_stream.h"
 
 namespace tint::spirv::reader::ast_parser {

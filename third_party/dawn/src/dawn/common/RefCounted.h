@@ -30,7 +30,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <type_traits>
 
 namespace dawn {
 
@@ -76,13 +75,14 @@ class RefCounted {
     // synchronization in place for destruction.
     void Release();
 
+    // Tries to add a reference. Returns false if the ref count is already at 0. This is used when
+    // operating on a raw pointer to a RefCounted instead of a valid Ref that may be soon deleted.
+    bool TryAddRef();
+
     void APIAddRef() { AddRef(); }
     void APIRelease() { Release(); }
 
   protected:
-    // Friend class is needed to access the RefCount to TryIncrement.
-    friend class detail::WeakRefData;
-
     virtual ~RefCounted();
 
     void ReleaseAndLockBeforeDestroy();

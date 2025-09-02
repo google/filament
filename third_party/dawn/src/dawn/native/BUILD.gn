@@ -160,6 +160,7 @@ source_set("headers") {
     "${dawn_root}/include/dawn/native/NullBackend.h",
     "${dawn_root}/include/dawn/native/OpenGLBackend.h",
     "${dawn_root}/include/dawn/native/VulkanBackend.h",
+    "${dawn_root}/include/dawn/native/WebGPUBackend.h",
   ]
 }
 
@@ -172,12 +173,12 @@ source_set("sources") {
     ":utils_gen",
     "${dawn_root}/src/dawn/common",
     "${dawn_root}/src/tint/api",
-    "${dawn_root}/src/tint/lang/wgsl/features",
+    "${dawn_root}/src/tint/lang/wgsl",
   ]
   defines = []
   libs = []
   data_deps = []
-
+  public_configs = []
   configs += [
     ":internal",
     "${dawn_root}/src/tint:tint_public_config",
@@ -233,6 +234,7 @@ source_set("sources") {
     "Blob.h",
     "BlobCache.cpp",
     "BlobCache.h",
+    "BlockInfo.h",
     "BuddyAllocator.cpp",
     "BuddyAllocator.h",
     "BuddyMemoryAllocator.cpp",
@@ -274,6 +276,8 @@ source_set("sources") {
     "CreatePipelineAsyncEvent.h",
     "Device.cpp",
     "Device.h",
+    "DeviceGuard.cpp",
+    "DeviceGuard.h",
     "DynamicUploader.cpp",
     "DynamicUploader.h",
     "EncodingContext.cpp",
@@ -300,6 +304,7 @@ source_set("sources") {
     "Format.cpp",
     "Format.h",
     "Forward.h",
+    "ImmediateConstantsLayout.cpp",
     "ImmediateConstantsLayout.h",
     "ImmediateConstantsTracker.cpp",
     "ImmediateConstantsTracker.h",
@@ -314,11 +319,11 @@ source_set("sources") {
     "InternalPipelineStore.h",
     "Limits.cpp",
     "Limits.h",
+    "LogEmitter.h",
     "ObjectBase.cpp",
     "ObjectBase.h",
     "ObjectContentHasher.cpp",
     "ObjectContentHasher.h",
-    "PassResourceUsage.cpp",
     "PassResourceUsage.h",
     "PassResourceUsageTracker.cpp",
     "PassResourceUsageTracker.h",
@@ -367,6 +372,8 @@ source_set("sources") {
     "Serializable.h",
     "ShaderModule.cpp",
     "ShaderModule.h",
+    "ShaderModuleParseRequest.cpp",
+    "ShaderModuleParseRequest.h",
     "SharedBufferMemory.cpp",
     "SharedBufferMemory.h",
     "SharedFence.cpp",
@@ -398,6 +405,8 @@ source_set("sources") {
     "ValidationUtils.h",
     "VisitableMembers.h",
     "WaitAnySystemEvent.h",
+    "WaitListEvent.cpp",
+    "WaitListEvent.h",
     "dawn_platform.h",
     "stream/BlobSource.cpp",
     "stream/BlobSource.h",
@@ -431,10 +440,11 @@ source_set("sources") {
   # In UWP, all available APIs are defined in WindowsApp.lib
   if (is_win && !dawn_is_winuwp) {
     libs += [
+      "onecore.lib",
       "user32.lib",
       "delayimp.lib",
     ]
-    public_configs = [ ":win_delayload" ]
+    public_configs += [ ":win_delayload" ]
   }
 
   if (dawn_is_winuwp && is_debug) {
@@ -629,13 +639,15 @@ source_set("sources") {
 
   if (dawn_enable_metal) {
     frameworks = [
-      "IOKit.framework",
       "IOSurface.framework",
       "Metal.framework",
       "QuartzCore.framework",
     ]
     if (is_mac) {
-      frameworks += [ "Cocoa.framework" ]
+      frameworks += [
+        "Cocoa.framework",
+        "IOKit.framework",
+      ]
     }
     sources += [
       "Surface_metal.mm",
@@ -698,6 +710,26 @@ source_set("sources") {
     ]
   }
 
+  if (dawn_enable_webgpu_on_webgpu) {
+    sources += [
+      "webgpu/BackendWGPU.cpp",
+      "webgpu/BackendWGPU.h",
+      "webgpu/BufferWGPU.cpp",
+      "webgpu/BufferWGPU.h",
+      "webgpu/CommandBufferWGPU.cpp",
+      "webgpu/CommandBufferWGPU.h",
+      "webgpu/DeviceWGPU.cpp",
+      "webgpu/DeviceWGPU.h",
+      "webgpu/Forward.h",
+      "webgpu/ObjectWGPU.h",
+      "webgpu/PhysicalDeviceWGPU.cpp",
+      "webgpu/PhysicalDeviceWGPU.h",
+      "webgpu/QueueWGPU.cpp",
+      "webgpu/QueueWGPU.h",
+      "webgpu/WebGPUError.h",
+    ]
+  }
+
   if ((dawn_enable_opengl || dawn_enable_vulkan) &&
       dawn_enable_spirv_validation) {
     sources += [
@@ -724,7 +756,6 @@ source_set("sources") {
       "opengl/BindGroupGL.h",
       "opengl/BindGroupLayoutGL.cpp",
       "opengl/BindGroupLayoutGL.h",
-      "opengl/BindingPoint.h",
       "opengl/BufferGL.cpp",
       "opengl/BufferGL.h",
       "opengl/CommandBufferGL.cpp",
@@ -742,6 +773,7 @@ source_set("sources") {
       "opengl/Forward.h",
       "opengl/GLFormat.cpp",
       "opengl/GLFormat.h",
+      "opengl/IntegerTypes.h",
       "opengl/OpenGLFunctions.cpp",
       "opengl/OpenGLFunctions.h",
       "opengl/OpenGLVersion.cpp",
@@ -812,6 +844,8 @@ source_set("sources") {
       "vulkan/FencedDeleter.cpp",
       "vulkan/FencedDeleter.h",
       "vulkan/Forward.h",
+      "vulkan/FramebufferCache.cpp",
+      "vulkan/FramebufferCache.h",
       "vulkan/PhysicalDeviceVk.cpp",
       "vulkan/PhysicalDeviceVk.h",
       "vulkan/PipelineCacheVk.cpp",
@@ -950,6 +984,9 @@ dawn_component("native") {
   }
   if (dawn_enable_null) {
     sources += [ "null/NullBackend.cpp" ]
+  }
+  if (dawn_enable_webgpu_on_webgpu) {
+    sources += [ "webgpu/WebGPUBackend.cpp" ]
   }
   if (dawn_enable_opengl) {
     sources += [ "opengl/OpenGLBackend.cpp" ]

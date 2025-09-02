@@ -37,10 +37,6 @@ namespace dawn::native::d3d {
 SharedFence::SharedFence(Device* device, StringView label, SystemHandle ownedHandle)
     : SharedFenceBase(device, label), mHandle(std::move(ownedHandle)) {}
 
-HANDLE SharedFence::GetFenceHandle() const {
-    return mHandle.Get();
-}
-
 MaybeError SharedFence::ExportInfoImpl(UnpackedPtr<SharedFenceExportInfo>& info) const {
     info->type = wgpu::SharedFenceType::DXGISharedHandle;
 

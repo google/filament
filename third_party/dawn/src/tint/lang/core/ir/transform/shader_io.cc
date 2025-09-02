@@ -87,7 +87,7 @@ struct State {
         for (auto* str : structures_to_strip) {
             for (auto* member : str->Members()) {
                 // TODO(crbug.com/tint/745): Remove the const_cast.
-                const_cast<core::type::StructMember*>(member)->SetAttributes({});
+                const_cast<core::type::StructMember*>(member)->ResetAttributes();
             }
         }
     }
@@ -110,12 +110,7 @@ struct State {
             vertex_point_size_index =
                 backend->AddOutput(ir.symbols.New("vertex_point_size"), ty.f32(),
                                    core::IOAttributes{
-                                       /* location */ std::nullopt,
-                                       /* index */ std::nullopt,
-                                       /* color */ std::nullopt,
-                                       /* builtin */ core::BuiltinValue::kPointSize,
-                                       /* interpolation */ std::nullopt,
-                                       /* invariant */ false,
+                                       .builtin = core::BuiltinValue::kPointSize,
                                    });
         }
 
@@ -178,7 +173,7 @@ struct State {
                     // Strip interpolation on non-fragment inputs
                     attributes.interpolation = {};
                 }
-                param->SetAttributes({});
+                param->ResetAttributes();
 
                 auto name = ir.NameOf(param);
                 backend->AddInput(name, param->Type(), std::move(attributes));

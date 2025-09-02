@@ -146,7 +146,7 @@ public:
 
   virtual void FinishAutoVar(CodeGenFunction &CGF, const VarDecl &D,
                              llvm::Value *V) = 0;
-  virtual const clang::Expr *CheckReturnStmtGLCMismatch(
+  virtual const clang::Expr *CheckReturnStmtCoherenceMismatch(
       CodeGenFunction &CGF, const clang::Expr *RV, const clang::ReturnStmt &S,
       clang::QualType FnRetTy,
       const std::function<void(const VarDecl *, llvm::Value *)> &TmpArgMap) = 0;

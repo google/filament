@@ -53,7 +53,8 @@ std::string_view ToString(Behavior behavior);
 /// @param out the stream to write to
 /// @param behavior the Behavior to write
 /// @returns out so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, Behavior behavior) {
     return out << ToString(behavior);
 }

@@ -220,8 +220,8 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::ETC2_RGB8_A1:      return VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK;
         case TextureFormat::ETC2_SRGB8_A1:     return VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK;
 
-        case TextureFormat::ETC2_EAC_RGBA8:    return VK_FORMAT_UNDEFINED;
-        case TextureFormat::ETC2_EAC_SRGBA8:   return VK_FORMAT_UNDEFINED;
+        case TextureFormat::ETC2_EAC_RGBA8:    return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
+        case TextureFormat::ETC2_EAC_SRGBA8:   return VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK;
 
         case TextureFormat::EAC_R11:           return VK_FORMAT_EAC_R11_UNORM_BLOCK;
         case TextureFormat::EAC_R11_SIGNED:    return VK_FORMAT_EAC_R11_SNORM_BLOCK;

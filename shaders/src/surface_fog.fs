@@ -96,3 +96,57 @@ vec4 fog(vec4 color, highp vec3 view) {
 
     return color;
 }
+
+// A linear approximation of the fog function
+vec4 fogLinear(vec4 color, highp vec3 view) {
+    // note: d can be +inf with the skybox
+    highp float d = length(view);
+
+    // early exit for object "in front" of the fog
+    if (d < frameUniforms.fogStart) {
+        return color;
+    }
+
+    // fogCutOffDistance is set to +inf to disable the cutoff distance
+    if (d > frameUniforms.fogCutOffDistance) {
+        return color;
+    }
+
+    // compute fog color
+    highp float A = frameUniforms.fogLinearParams.x;
+    highp float B = frameUniforms.fogLinearParams.y;
+    float fogOpacity = saturate(A * d + B);
+
+    vec3 fogColor = frameUniforms.fogColor;
+
+#if MATERIAL_FEATURE_LEVEL > 0
+    if (frameUniforms.fogColorFromIbl > 0.0) {
+        lowp vec2 minMaxMip = unpackHalf2x16(frameUniforms.fogMinMaxMip);
+        // when sampling the IBL we need to take into account the IBL transform. We know it's a
+        // a rigid transform, so we can take the transpose instead of the inverse, and for the
+        // same reason we can use it directly instead of taking the cof() to transform a vector.
+        highp mat3 worldFromUserWorldMatrix = transpose(mat3(frameUniforms.userWorldFromWorldMatrix));
+        fogColor *= textureLod(sampler0_fog, worldFromUserWorldMatrix * view, minMaxMip.x).rgb;
+    }
+#endif
+
+    fogColor *= frameUniforms.iblLuminance * fogOpacity;
+
+#if   defined(BLEND_MODE_OPAQUE)
+    // nothing to do here
+#elif defined(BLEND_MODE_TRANSPARENT)
+    fogColor *= color.a;
+#elif defined(BLEND_MODE_ADD)
+    fogColor = vec3(0.0);
+#elif defined(BLEND_MODE_MASKED)
+    // nothing to do here
+#elif defined(BLEND_MODE_MULTIPLY)
+    // FIXME: unclear what to do here
+#elif defined(BLEND_MODE_SCREEN)
+    // FIXME: unclear what to do here
+#endif
+
+    color.rgb = color.rgb * (1.0 - fogOpacity) + fogColor;
+
+    return color;
+}

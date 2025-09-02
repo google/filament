@@ -37,11 +37,11 @@ namespace tint {
 
 /// @param alignment the next multiple to round `value` to
 /// @param value the value to round to the next multiple of `alignment`
-/// @return `value` rounded to the next multiple of `alignment`
-/// @note `alignment` must be positive. An alignment of zero will cause a DBZ.
+/// @return `value` rounded to the next multiple of `alignment`, or `value` if `alignment` is 0
+/// @note `alignment` must be positive.
 template <typename T>
 inline constexpr T RoundUp(T alignment, T value) {
-    return ((value + alignment - 1) / alignment) * alignment;
+    return alignment != 0 ? ((value + alignment - 1) / alignment) * alignment : value;
 }
 
 /// @param value the value to check whether it is a power-of-two
