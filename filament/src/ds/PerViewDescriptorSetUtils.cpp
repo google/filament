@@ -64,6 +64,7 @@ void PerViewDescriptorSetUtils::prepareCamera(PerViewUib& s,
         mat4f const& eyeFromHead = camera.eyeFromView[i];   // identity for monoscopic rendering
         mat4f const& clipFromEye = camera.eyeProjection[i];
         // clipFromEye * eyeFromHead * headFromWorld
+        s.eyeFromViewMatrix[i] = eyeFromHead;
         s.clipFromWorldMatrix[i] = highPrecisionMultiply(
                 clipFromEye, highPrecisionMultiply(eyeFromHead, headFromWorld));
     }
