@@ -111,12 +111,13 @@ TEST_F(BackendTest, PushConstants) {
 
     auto& api = getDriverApi();
 
-    api.startCapture(0);
-    Cleanup cleanup(api);
-
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
+        Cleanup cleanup(api);
+        api.startCapture(0);
+        cleanup.addPostCall([&]() { api.stopCapture(0); });
+
         // Create a SwapChain and make it current.
         auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
@@ -141,7 +142,7 @@ TEST_F(BackendTest, PushConstants) {
         ps.rasterState.depthWrite = false;
 
         api.makeCurrent(swapChain, swapChain);
-        api.beginFrame(0, 0, 0);
+        RenderFrame frame(api);
 
         api.beginRenderPass(renderTarget, params);
         api.bindPipeline(ps);
@@ -183,10 +184,7 @@ TEST_F(BackendTest, PushConstants) {
                                            "pushConstants", 3575588741));
 
         api.commit(swapChain);
-        api.endFrame(0);
     }
-
-    api.stopCapture(0);
 }
 
 } // namespace test

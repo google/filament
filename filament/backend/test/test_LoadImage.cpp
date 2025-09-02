@@ -315,15 +315,19 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
     api.startCapture();
 
+    Cleanup cleanup(api);
+    cleanup.addPostCall([&]() { api.finish(); });
+    cleanup.addPostCall([&]() { api.stopCapture(); });
+
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
-        Cleanup cleanup(api);
+        Cleanup caseCleanup(api);
 
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = caseCleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = caseCleanup.add(api.createDefaultRenderTarget(0));
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
@@ -387,8 +391,6 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         api.commit(swapChain);
         api.endFrame(0);
     }
-
-    api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
@@ -399,6 +401,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
     PixelDataType const pixelType = PixelDataType::UBYTE;
@@ -446,37 +449,36 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     api.update3DImage(texture, 0, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
+    {
+        RenderFrame frame(api);
 
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
+        // Update samplers.
+        DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
+        });
 
-    api.bindDescriptorSet(descriptorSet, 0, {});
+        api.bindDescriptorSet(descriptorSet, 0, {});
 
-    RenderPassParams params = getClearColorRenderPass();
-    params.viewport.width = kTexSize;
-    params.viewport.height = kTexSize;
-    PipelineState state = getColorWritePipelineState();
-    shader.addProgramToPipelineState(state);
-    state.primitiveType = PrimitiveType::TRIANGLES;
-    state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
-    api.beginRenderPass(defaultRenderTarget, params);
-    api.bindPipeline(state);
-    api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
-    api.draw2(0, 3, 1);
-    api.endRenderPass();
+        RenderPassParams params = getClearColorRenderPass();
+        params.viewport.width = kTexSize;
+        params.viewport.height = kTexSize;
+        PipelineState state = getColorWritePipelineState();
+        shader.addProgramToPipelineState(state);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = mTriangle.getVertexBufferInfo();
+        api.beginRenderPass(defaultRenderTarget, params);
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
+        api.endRenderPass();
 
-    EXPECT_IMAGE(defaultRenderTarget,
-            ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
+        EXPECT_IMAGE(defaultRenderTarget,
+                ScreenshotParams(kTexSize, kTexSize, "UpdateImageSRGB", 3300305265));
 
-    api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture();
+        api.commit(swapChain);
+    }
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
@@ -487,6 +489,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::HALF;
@@ -519,17 +522,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, kTexSize);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
-
-    // Update samplers.
-    DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
-            .filterMag = SamplerMagFilter::LINEAR,
-            .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
-    });
-
-    api.bindDescriptorSet(descriptorSet, 0, {});
-
+    RenderFrame outerFrame(api);
     {
         RenderFrame frame(api);
         RenderPassParams params = getClearColorRenderPass();
@@ -550,9 +543,6 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
             ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
 
     api.commit(swapChain);
-    api.endFrame(0);
-
-    api.stopCapture();
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
@@ -565,6 +555,7 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
+    cleanup.addPostCall([&]() { api.stopCapture(); });
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
     PixelDataType pixelType = PixelDataType::FLOAT;
@@ -635,8 +626,6 @@ TEST_F(LoadImageTest, UpdateImage3D) {
         EXPECT_IMAGE(defaultRenderTarget,
                 ScreenshotParams(kTexSize, kTexSize, "UpdateImage3D", 1875922935));
     }
-
-    api.stopCapture();
 }
 
 } // namespace test
