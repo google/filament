@@ -27,7 +27,6 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
-#include <mutex>
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -36,6 +35,8 @@
 #include <math/vec3.h>
 
 #include <atomic>
+#include <limits>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <utility>
@@ -117,6 +118,11 @@ public:
         PERFORMANCE
     };
 
+    enum class Workarounds : uint64_t {
+        NONE = 0,
+        ALL = 0xFFFFFFFFFFFFFFFF
+    };
+
     /**
      * Initialize MaterialBuilder.
      *
@@ -140,6 +146,7 @@ protected:
     Platform mPlatform = Platform::DESKTOP;
     TargetApi mTargetApi = (TargetApi) 0;
     Optimization mOptimization = Optimization::PERFORMANCE;
+    Workarounds mWorkarounds = Workarounds::ALL;
     bool mPrintShaders = false;
     bool mSaveRawVariants = false;
     bool mGenerateDebugInfo = false;
@@ -294,6 +301,9 @@ public:
 
     //! Set the file name of this material file. Used in error reporting.
     MaterialBuilder& fileName(const char* name) noexcept;
+
+    //! Set the commandline parameters of matc. Used for debugging purpose.
+    MaterialBuilder& compilationParameters(const char* params) noexcept;
 
     //! Set the shading model.
     MaterialBuilder& shading(Shading shading) noexcept;
@@ -535,6 +545,9 @@ public:
     //! Enable / disable the cheapest linear fog, disabled by default.
     MaterialBuilder& linearFog(bool enabled) noexcept;
 
+    //! Enable / disable shadow far attenuation, enabled by default.
+    MaterialBuilder& shadowFarAttenuation(bool enabled) noexcept;
+
     //! Enable / disable multi-bounce ambient occlusion, disabled by default on mobile.
     MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
 
@@ -599,6 +612,13 @@ public:
      * If linking against filamat_lite, this _must_ be called with Optimization::NONE.
      */
     MaterialBuilder& optimization(Optimization optimization) noexcept;
+
+    /**
+     * Specifies workarounds to enable during code generation. By default, all workaround are
+     * enabled. These workarounds typically disable important optimizations and in some cases
+     * whole features.
+     */
+    MaterialBuilder& workarounds(Workarounds workarounds) noexcept;
 
     // TODO: this is present here for matc's "--print" flag, but ideally does not belong inside MaterialBuilder.
     //! If true, will output the generated GLSL shader code to stdout.
@@ -873,6 +893,7 @@ private:
 
     utils::CString mMaterialName;
     utils::CString mFileName;
+    utils::CString mCompilationParameters;
 
     class ShaderCode {
     public:
@@ -958,6 +979,7 @@ private:
 
     bool mFlipUV = true;
     bool mLinearFog = false;
+    bool mShadowFarAttenuation = true;
 
     bool mMultiBounceAO = false;
     bool mMultiBounceAOSet = false;
@@ -984,7 +1006,15 @@ private:
 
 } // namespace filamat
 
-template<> struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
-        : public std::true_type {};
+template<>
+struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::TargetApi>
+        : public std::true_type {
+};
+
+template<>
+struct utils::EnableBitMaskOperators<filamat::MaterialBuilder::Workarounds>
+        : public std::true_type {
+};
+
 
 #endif

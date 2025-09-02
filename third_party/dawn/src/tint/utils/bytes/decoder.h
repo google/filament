@@ -103,7 +103,8 @@ struct Decoder<bool, void> {
 
 /// Decoder specialization for types that use TINT_REFLECT
 template <typename T>
-struct Decoder<T, std::enable_if_t<HasReflection<T>>> {
+    requires(HasReflection<T>)
+struct Decoder<T> {
     /// Decode decodes the reflected type from @p reader.
     /// @param reader the reader to decode from
     /// @returns the decoded reflected type, or an error if the stream is too short.

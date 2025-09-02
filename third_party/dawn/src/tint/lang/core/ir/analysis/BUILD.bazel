@@ -39,10 +39,12 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "analysis",
   srcs = [
+    "for_loop_analysis.cc",
     "integer_range_analysis.cc",
     "loop_analysis.cc",
   ],
   hdrs = [
+    "for_loop_analysis.h",
     "integer_range_analysis.h",
     "loop_analysis.h",
   ],
@@ -50,10 +52,12 @@ cc_library(
     "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
+    "//src/tint/lang/core/intrinsic",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/type",
     "//src/tint/utils",
     "//src/tint/utils/containers",
+    "//src/tint/utils/diagnostic",
     "//src/tint/utils/ice",
     "//src/tint/utils/macros",
     "//src/tint/utils/math",
@@ -70,6 +74,7 @@ cc_library(
   name = "test",
   alwayslink = True,
   srcs = [
+    "for_loop_analysis_test.cc",
     "integer_range_analysis_test.cc",
     "loop_analysis_test.cc",
   ],
@@ -80,6 +85,7 @@ cc_library(
     "//src/tint/lang/core/intrinsic",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/ir/analysis",
+    "//src/tint/lang/core/ir/transform",
     "//src/tint/lang/core/ir:test",
     "//src/tint/lang/core/type",
     "//src/tint/utils",

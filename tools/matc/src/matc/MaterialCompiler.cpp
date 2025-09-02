@@ -76,6 +76,8 @@ bool MaterialCompiler::run(const matp::Config& config) {
         return true;
     }
 
+    builder.compilationParameters(config.toPIISafeString().c_str());
+
     JobSystem js;
     js.adopt();
 

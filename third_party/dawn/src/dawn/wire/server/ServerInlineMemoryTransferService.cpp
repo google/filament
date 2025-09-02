@@ -64,14 +64,15 @@ class InlineMemoryTransferService : public MemoryTransferService {
                                    size_t deserializeSize,
                                    size_t offset,
                                    size_t size) override {
-            if (deserializeSize != size || mTargetData == nullptr ||
+            auto target = GetTarget();
+            if (deserializeSize != size || target.data() == nullptr ||
                 deserializePointer == nullptr) {
                 return false;
             }
-            if (offset > mDataLength || size > mDataLength - offset) {
+            if (offset > target.size() || size > target.size() - offset) {
                 return false;
             }
-            memcpy(static_cast<uint8_t*>(mTargetData) + offset, deserializePointer, size);
+            memcpy(target.data() + offset, deserializePointer, size);
             return true;
         }
     };

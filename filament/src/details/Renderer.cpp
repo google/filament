@@ -1360,6 +1360,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         }
 
         if (scaled) {
+            // upscale() below always performs the final blending if needed (View in `TRANSLUCENT`
+            // mode). So we can set `mightNeedFinalBlit` to `false` to avoid an extra copy.
             mightNeedFinalBlit = false;
             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
             bool const sourceHasLuminance = !needsAlphaChannel &&
@@ -1367,6 +1369,8 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
             input = ppm.upscale(fg, needsAlphaChannel, sourceHasLuminance, dsrOptions, input, xvp, {
                 .width = viewport.width, .height = viewport.height,
                 .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
+            // scaling has been applied, and offset removed
+            xvp = viewport;
             xvp.left = xvp.bottom = 0;
             svp = xvp;
         }

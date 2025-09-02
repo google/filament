@@ -462,6 +462,8 @@ TEST(Hashmap, Soak) {
             case 6: {  // Clear
                 reference.clear();
                 map.Clear();
+                ASSERT_TRUE(reference.empty());
+                ASSERT_TRUE(map.IsEmpty());
                 break;
             }
         }

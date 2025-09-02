@@ -82,7 +82,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchNonMemberFunction) {
         b.Return(func, builtin);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
@@ -122,7 +124,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, DoesNotMatchIncorrectType) {
         b.Return(func, builtin);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
@@ -164,7 +168,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, Valid) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_EQ(res, Success);
 }
 
@@ -182,7 +188,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, MissingResults) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_NE(res, Success);
     EXPECT_EQ(res.Failure().reason,
               R"(:7:16 error: Load: expected exactly 1 results, got 0
@@ -219,7 +227,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_NE(res, Success);
     EXPECT_EQ(res.Failure().reason,
               R"(:7:17 error: Load: no matching call to 'Load(hlsl.byte_address_buffer<read>)'
@@ -237,49 +247,49 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooFewArgs) {
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_depth_multisampled_2d  ✗ , location: vec2<i32>  ✗ , sample_index: i32  ✗ ) -> vec4<f32>'
  • 'Load(texture: texture_multisampled_2d<T>  ✗ , location: vec2<i32>  ✗ , sample_index: i32  ✗ ) -> vec4<T>' where:
@@ -318,7 +328,9 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
         b.Return(func);
     });
 
-    auto res = core::ir::Validate(mod);
+    auto res = core::ir::Validate(mod, core::ir::Capabilities{
+                                           core::ir::Capability::kAllowNonCoreTypes,
+                                       });
     ASSERT_NE(res, Success);
     EXPECT_EQ(
         res.Failure().reason,
@@ -341,49 +353,49 @@ TEST_F(IR_HlslMemberBuiltinCallTest, TooManyArgs) {
  • 'Load(texture: texture_3d<T>  ✗ , location: vec4<i32>  ✗ ) -> vec4<T>' where:
       ✗  'T' is 'f32', 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: rasterizer_ordered_texture_2d<F>  ✗ , location: vec2<C>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'C' is 'i32' or 'u32'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<f32>' where:
-      ✗  'F' is 'r8unorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'rgba16float', 'r32float', 'rg32float' or 'rgba32float'
+      ✗  'F' is 'r8unorm', 'r8snorm', 'rg8unorm', 'rg8snorm', 'bgra8unorm', 'rgba8unorm', 'rgba8snorm', 'r16unorm', 'r16snorm', 'rg16unorm', 'rg16snorm', 'rgba16unorm', 'rgba16snorm', 'r16float', 'rg16float', 'rgba16float', 'r32float', 'rg32float', 'rgba32float', 'rgb10a2unorm' or 'rg11b10ufloat'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<u32>' where:
-      ✗  'F' is 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint' or 'rgba32uint'
+      ✗  'F' is 'r8uint', 'rg8uint', 'r16uint', 'rg16uint', 'rgba8uint', 'rgba16uint', 'r32uint', 'rg32uint', 'rgba32uint' or 'rgb10a2uint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_1d<F, A>  ✗ , location: vec2<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d<F, A>  ✗ , location: vec3<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_2d_array<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
  • 'Load(texture: texture_storage_3d<F, A>  ✗ , location: vec4<i32>  ✗ ) -> vec4<i32>' where:
-      ✗  'F' is 'rgba8sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
+      ✗  'F' is 'r8sint', 'rg8sint', 'rgba8sint', 'r16sint', 'rg16sint', 'rgba16sint', 'r32sint', 'rg32sint' or 'rgba32sint'
       ✗  'A' is 'read' or 'read_write'
 
     %3:u32 = %t.Load 0u, 1u, 2u

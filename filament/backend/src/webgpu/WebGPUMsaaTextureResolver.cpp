@@ -48,8 +48,8 @@ void resolveColorTextures(wgpu::CommandEncoder const& commandEncoder,
     const wgpu::RenderPassEncoder renderPassEncoder{ commandEncoder.BeginRenderPass(
             &renderPassDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(renderPassEncoder)
-            << "Failed to create wgpu::RenderPassEncoder for WebGPUDriver::resolve";
-    renderPassEncoder.End(); // only the implicit resolve is happening in the pass
+            << "Failed to create wgpu::RenderPassEncoder for MSAA resolve.";
+    renderPassEncoder.End(); // The resolve is implicit in the pass.
 }
 
 } // namespace
@@ -59,30 +59,29 @@ void WebGPUMsaaTextureResolver::resolve(ResolveRequest const& request) {
     ResolveRequest::TextureInfo const& destination{ request.destination };
     FILAMENT_CHECK_PRECONDITION(destination.texture.GetWidth() == source.texture.GetWidth() &&
                                 destination.texture.GetHeight() == source.texture.GetHeight())
-            << "invalid resolve: source and destination sizes don't match";
+            << "Invalid resolve: source and destination sizes don't match.";
 
     FILAMENT_CHECK_PRECONDITION(
             source.texture.GetSampleCount() > 1 && destination.texture.GetSampleCount() == 1)
-            << "invalid resolve: source.samples=" << source.texture.GetSampleCount()
+            << "Invalid resolve: source.samples=" << source.texture.GetSampleCount()
             << ", destination.samples=" << destination.texture.GetSampleCount();
 
     FILAMENT_CHECK_PRECONDITION(source.texture.GetFormat() == destination.texture.GetFormat())
-            << "source and destination texture format don't match";
+            << "Source and destination texture format don't match.";
     const wgpu::TextureFormat format{ source.texture.GetFormat() };
 
-    FILAMENT_CHECK_PRECONDITION(!hasDepth(format)) << "can't resolve depth formats";
-
-    FILAMENT_CHECK_PRECONDITION(!hasStencil(format)) << "can't resolve stencil formats";
+    FILAMENT_CHECK_PRECONDITION(!hasDepth(format)) << "Can't resolve depth formats.";
+    FILAMENT_CHECK_PRECONDITION(!hasStencil(format)) << "Can't resolve stencil formats.";
 
     FILAMENT_CHECK_PRECONDITION(source.texture.GetUsage() & wgpu::TextureUsage::RenderAttachment)
-            << "source texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+            << "Source texture usage doesn't have wgpu::TextureUsage::RenderAttachment.";
 
     FILAMENT_CHECK_PRECONDITION(
             destination.texture.GetUsage() & wgpu::TextureUsage::RenderAttachment)
-            << "destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment";
+            << "Destination texture usage doesn't have wgpu::TextureUsage::RenderAttachment.";
 
     FILAMENT_CHECK_PRECONDITION(destination.texture.GetUsage() & wgpu::TextureUsage::TextureBinding)
-            << "destination texture usage doesn't have wgpu::TextureUsage::TextureBinding";
+            << "Destination texture usage doesn't have wgpu::TextureUsage::TextureBinding.";
 
     const wgpu::TextureViewDescriptor sourceTextureViewDescriptor{
         .label = "resolve_source_texture_view",
@@ -116,7 +115,7 @@ void WebGPUMsaaTextureResolver::resolve(ResolveRequest const& request) {
             << "Failed to create wgpu::TextureView destinationTextureView.";
 
     if (hasDepth(format)) {
-        PANIC_PRECONDITION("DEPTH RESOLVE NOT IMPLEMENTED YET");
+        PANIC_PRECONDITION("Depth resolve not yet implemented.");
     } else {
         resolveColorTextures(request.commandEncoder, sourceTextureView, destinationTextureView);
     }

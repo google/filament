@@ -225,7 +225,7 @@ Increase hashLength in %v`,
 			// Restrict the permutations for subgroup matrix builtins to avoid combinatorial explosion.
 			if strings.HasPrefix(overload.Decl.Name, "subgroupMatrix") {
 				if t.Name == "AC" {
-					permutations = []int{64}
+					permutations = []int{1024}
 				} else {
 					permutations = []int{8}
 				}
@@ -281,6 +281,22 @@ func (s *permutationState) permuteFQN(in sem.FullyQualifiedName) ([]sem.FullyQua
 	switch target := in.Target.(type) {
 	case *sem.Type:
 		permute = func() error {
+			if in.Target.GetName() == "__constructible" {
+				// Expand the built-in `__constructible` type to a set of constructible types.
+				// Note: Aggregate types are not currently listed in `allTypes`, so we can only generate
+				// scalar permutations here.
+				for _, ty := range s.allTypes {
+					switch {
+					case ty.Target.GetName() == "bool",
+						ty.Target.GetName() == "i32",
+						ty.Target.GetName() == "u32",
+						ty.Target.GetName() == "f16",
+						ty.Target.GetName() == "f32":
+						out = append(out, ty)
+					}
+				}
+				return nil
+			}
 			// Inner-most permute lambda.
 			// Append a the current permutation to out
 			out = append(out, sem.FullyQualifiedName{Target: in.Target, TemplateArguments: args})
@@ -378,8 +394,7 @@ func validate(fqn sem.FullyQualifiedName, uses *sem.StageUses) bool {
 	isStorable := func(elTy sem.FullyQualifiedName) bool {
 		elTyName := elTy.Target.GetName()
 		switch {
-		case elTyName == "bool",
-			strings.Contains(elTyName, "i8"),
+		case strings.Contains(elTyName, "i8"),
 			strings.Contains(elTyName, "u8"),
 			strings.Contains(elTyName, "sampler"),
 			strings.Contains(elTyName, "texture"),
@@ -388,11 +403,15 @@ func validate(fqn sem.FullyQualifiedName, uses *sem.StageUses) bool {
 		}
 		return true
 	}
+	isHostShareable := func(elTy sem.FullyQualifiedName) bool {
+		elTyName := elTy.Target.GetName()
+		return isStorable(elTy) && elTyName != "bool"
+	}
 
 	switch fqn.Target.GetName() {
 	case "array":
 	case "runtime_array":
-		if !isStorable(fqn.TemplateArguments[0].(sem.FullyQualifiedName)) {
+		if !isHostShareable(fqn.TemplateArguments[0].(sem.FullyQualifiedName)) {
 			return false
 		}
 	case "ptr":
@@ -426,6 +445,11 @@ func validate(fqn sem.FullyQualifiedName, uses *sem.StageUses) bool {
 				return false
 			}
 		default:
+			return false
+		}
+	case "texel_buffer":
+		access := fqn.TemplateArguments[1].(sem.FullyQualifiedName).Target.(*sem.EnumEntry).Name
+		if access != "read_write" && access != "read" {
 			return false
 		}
 	}

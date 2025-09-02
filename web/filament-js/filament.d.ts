@@ -1146,7 +1146,7 @@ export enum View$BlendMode {
  *
  * \note
  * Dynamic resolution is only supported on platforms where the time to render
- * a frame can be measured accurately. On platform where this is not supported,
+ * a frame can be measured accurately. On platforms where this is not supported,
  * Dynamic Resolution can't be enabled unless minScale == maxScale.
  *
  * @see Renderer::FrameRateOptions
@@ -1179,9 +1179,12 @@ export interface View$DynamicResolutionOptions {
      * MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0
      * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
      * ULTRA:  AMD FidelityFX FSR1
-     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
+     *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene.
+     *      Avoid FXAA and dithering.
      *
      * The default upscaling quality is set to LOW.
+     *
+     * caveat: currently, 'quality' is always set to LOW if the View is TRANSLUCENT.
      */
     quality?: View$QualityLevel;
 }

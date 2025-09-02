@@ -124,8 +124,10 @@ static bool ParsePixAllocaReg(llvm::MDNode *MD, std::uint32_t *RegNum,
     return false;
   }
 
-  *RegNum = mdRegNum->getLimitedValue();
-  *Count = mdCount->getLimitedValue();
+  if (RegNum != nullptr)
+    *RegNum = mdRegNum->getLimitedValue();
+  if (Count != nullptr)
+    *Count = mdCount->getLimitedValue();
   return true;
 }
 
@@ -144,8 +146,10 @@ void pix_dxil::PixAllocaReg::AddMD(llvm::LLVMContext &Ctx,
 bool pix_dxil::PixAllocaReg::FromInst(llvm::AllocaInst const *pAlloca,
                                       std::uint32_t *pRegBase,
                                       std::uint32_t *pRegSize) {
-  *pRegBase = 0;
-  *pRegSize = 0;
+  if (pRegBase != nullptr)
+    *pRegBase = 0;
+  if (pRegSize != nullptr)
+    *pRegSize = 0;
 
   auto *mdNodes = pAlloca->getMetadata(MDName);
   if (mdNodes == nullptr) {

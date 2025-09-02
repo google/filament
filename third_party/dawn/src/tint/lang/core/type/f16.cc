@@ -39,6 +39,7 @@ F16::F16()
                Flag::kConstructable,
                Flag::kCreationFixedFootprint,
                Flag::kFixedFootprint,
+               Flag::kHostShareable,
            }) {}
 
 F16::~F16() = default;

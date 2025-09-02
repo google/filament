@@ -57,7 +57,7 @@ bool GPUSupportedFeatures::has(Napi::Env, std::string name) {
         return false;
     }
 
-    return enabled_.count(feature);
+    return enabled_.count(feature) != 0u;
 }
 
 std::vector<std::string> GPUSupportedFeatures::keys(Napi::Env) {

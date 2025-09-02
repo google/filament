@@ -1,8 +1,8 @@
 #!/usr/bin/python3 -i
 #
-# Copyright 2023 The Khronos Group Inc.
-# Copyright 2023 Valve Corporation
-# Copyright 2023 LunarG, Inc.
+# Copyright 2023-2025 The Khronos Group Inc.
+# Copyright 2023-2025 Valve Corporation
+# Copyright 2023-2025 LunarG, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -18,9 +18,9 @@ class EnumStringHelperOutputGenerator(BaseGenerator):
         out = []
         out.append(f'''// *** THIS FILE IS GENERATED - DO NOT EDIT ***
 // See {os.path.basename(__file__)} for modifications
-// Copyright 2023 The Khronos Group Inc.
-// Copyright 2023 Valve Corporation
-// Copyright 2023 LunarG, Inc.
+// Copyright 2023-2025 The Khronos Group Inc.
+// Copyright 2023-2025 Valve Corporation
+// Copyright 2023-2025 LunarG, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 ''')
@@ -112,4 +112,21 @@ static inline std::string string_{bitmask.flagName}({bitmask.flagName} input_val
             out.append('#endif // __cplusplus\n')
         out.extend(guard_helper.add_guard(None))
         out.append('// clang-format on')
+
+        # Special lookup for struct name of VkStructureType (since the sType name is not always that helpful)
+        out.append('''\n
+                   // Same thing as string_VkStructureType, but prints out the API name
+                   static inline const char* string_VkStructureName(VkStructureType input_value) {
+                        switch (input_value) {\n''')
+        struct_guard_helper = PlatformGuardHelper()
+        for struct in [x for x in self.vk.structs.values() if x.sType]:
+            out.extend(struct_guard_helper.add_guard(struct.protect))
+            out.append(f'        case {struct.sType}:\n')
+            out.append(f'            return "{struct.name}";\n')
+        out.append('''    default:
+                            return "Unhandled VkStructureType";
+                        }
+                    }
+                   ''')
+
         self.write("".join(out))

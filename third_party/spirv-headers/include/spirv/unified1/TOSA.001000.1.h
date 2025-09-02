@@ -1,4 +1,5 @@
-// (c) 2022-2025 Arm Ltd.
+// SPDX-FileCopyrightText: 2022-2025 Arm Ltd.
+// SPDX-License-Identifier: MIT
 
 #ifndef SPIRV_UNIFIED1_TOSA_001000_1_H_
 #define SPIRV_UNIFIED1_TOSA_001000_1_H_

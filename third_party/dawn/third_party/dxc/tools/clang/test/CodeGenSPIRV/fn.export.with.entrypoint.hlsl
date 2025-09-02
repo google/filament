@@ -1,4 +1,4 @@
-// RUN: %dxc -T as_6_6 -E main -fspv-target-env=vulkan1.3 -fcgl  %s -spirv | FileCheck %s
+// RUN: %dxc -T as_6_6 -E main -fspv-target-env=universal1.5 -fcgl  %s -spirv | FileCheck %s
 
 // CHECK: OpCapability Linkage
 // CHECK: OpDecorate %external_function LinkageAttributes "external_function" Export

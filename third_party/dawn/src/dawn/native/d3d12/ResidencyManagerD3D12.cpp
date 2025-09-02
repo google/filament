@@ -153,9 +153,9 @@ void ResidencyManager::UpdateMemorySegmentInfo(MemorySegmentInfo* segmentInfo) {
     // decreases fluctuations in the operating-system-defined budget, which improves stability
     // for both Dawn and other applications on the system. Note the value of 95% is arbitrarily
     // chosen and subject to future experimentation.
-    static constexpr float kBudgetCap = 0.95;
-    segmentInfo->budget =
-        (queryVideoMemoryInfo.Budget - segmentInfo->externalReservation) * kBudgetCap;
+    static constexpr float kBudgetCap = 0.95f;
+    segmentInfo->budget = static_cast<uint64_t>(
+        (queryVideoMemoryInfo.Budget - segmentInfo->externalReservation) * kBudgetCap);
 }
 
 // Removes a heap from the LRU and returns the least recently used heap when possible. Returns
@@ -235,7 +235,8 @@ ResultOrError<uint64_t> ResidencyManager::EnsureCanMakeResident(uint64_t sizeToM
 
     if (resourcesToEvict.size() > 0) {
         DAWN_TRY(CheckHRESULT(
-            mDevice->GetD3D12Device()->Evict(resourcesToEvict.size(), resourcesToEvict.data()),
+            mDevice->GetD3D12Device()->Evict(static_cast<uint32_t>(resourcesToEvict.size()),
+                                             resourcesToEvict.data()),
             "Evicting resident heaps to free memory"));
     }
 
@@ -316,8 +317,8 @@ MaybeError ResidencyManager::MakeAllocationsResident(MemorySegmentInfo* segment,
     // overhead by using MakeResident on a secondary thread, or by instead making use of
     // the EnqueueMakeResident function (which is not available on all Windows 10
     // platforms).
-    HRESULT hr =
-        mDevice->GetD3D12Device()->MakeResident(numberOfObjectsToMakeResident, allocations);
+    HRESULT hr = mDevice->GetD3D12Device()->MakeResident(
+        static_cast<uint32_t>(numberOfObjectsToMakeResident), allocations);
 
     // A MakeResident call can fail if there's not enough available memory. This
     // could occur when there's significant fragmentation or if the allocation size
@@ -337,7 +338,8 @@ MaybeError ResidencyManager::MakeAllocationsResident(MemorySegmentInfo* segment,
                 "MakeResident has failed due to excessive video memory usage.");
         }
 
-        hr = mDevice->GetD3D12Device()->MakeResident(numberOfObjectsToMakeResident, allocations);
+        hr = mDevice->GetD3D12Device()->MakeResident(
+            static_cast<uint32_t>(numberOfObjectsToMakeResident), allocations);
     }
 
     return {};

@@ -141,6 +141,8 @@ TEST(Hashset, Soak) {
             case 4: {  // Clear
                 reference.clear();
                 set.Clear();
+                ASSERT_TRUE(reference.empty());
+                ASSERT_TRUE(set.IsEmpty());
                 break;
             }
         }

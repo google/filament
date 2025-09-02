@@ -517,17 +517,17 @@ TEST_F(ResolverVariableValidationTest, ConstInitWithOverrideExpr) {
 56:78 note: consider changing 'const' to 'let')");
 }
 
-TEST_F(ResolverVariableValidationTest, GlobalVariable_PushConstantWithInitializer) {
-    // enable chromium_experimental_push_constant;
-    // var<push_constant> a : u32 = 0u;
-    Enable(wgsl::Extension::kChromiumExperimentalPushConstant);
-    GlobalVar(Source{{1u, 2u}}, "a", ty.u32(), core::AddressSpace::kPushConstant,
+TEST_F(ResolverVariableValidationTest, GlobalVariable_ImmediateWithInitializer) {
+    // enable chromium_experimental_immediate;
+    // var<immediate> a : u32 = 0u;
+    Enable(wgsl::Extension::kChromiumExperimentalImmediate);
+    GlobalVar(Source{{1u, 2u}}, "a", ty.u32(), core::AddressSpace::kImmediate,
               Expr(Source{{3u, 4u}}, u32(0)));
 
     ASSERT_FALSE(r()->Resolve());
     EXPECT_EQ(
         r()->error(),
-        R"(1:2 error: var of address space 'push_constant' cannot have an initializer. var initializers are only supported for the address spaces 'private' and 'function')");
+        R"(1:2 error: var of address space 'immediate' cannot have an initializer. var initializers are only supported for the address spaces 'private' and 'function')");
 }
 
 }  // namespace

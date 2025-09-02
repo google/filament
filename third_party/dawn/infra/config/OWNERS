@@ -1,2 +1,8 @@
+bsheedy@google.com
 cwallez@chromium.org
 tandrii@chromium.org
+ynovikov@chromium.org
+
+# CBRI Branch Day Automation go/automate-branch-day
+per-file global/generated/...=chrome-branch-day@chops-service-accounts.iam.gserviceaccount.com
+per-file global/milestones.json=chrome-branch-day@chops-service-accounts.iam.gserviceaccount.com

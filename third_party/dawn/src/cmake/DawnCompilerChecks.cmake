@@ -25,9 +25,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Make sure we have C++17 enabled.
+# Make sure we have C++20 enabled.
 # Needed to make sure libraries and executables not built by the
-# dawn_add_library still have the C++17 compiler flags enabled
-set(CMAKE_CXX_STANDARD 17)
+# dawn_add_library still have the C++20 compiler flags enabled
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS False)

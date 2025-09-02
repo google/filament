@@ -144,7 +144,7 @@ TEST_P(WorkgroupSizeValidationTest, WithFixedValues) {
         }
     };
 
-    wgpu::Limits supportedLimits = GetSupportedLimits();
+    const auto& supportedLimits = GetSupportedLimits();
 
     CheckShaderWithWorkgroupSize(true, 1, 1, 1);
     CheckShaderWithWorkgroupSize(true, supportedLimits.maxComputeWorkgroupSizeX, 1, 1);
@@ -168,7 +168,7 @@ TEST_P(WorkgroupSizeValidationTest, WithFixedValues) {
 
 // Test workgroup size validation with fixed values (storage size limits validation).
 TEST_P(WorkgroupSizeValidationTest, WithFixedValuesStorageSizeLimits) {
-    wgpu::Limits supportedLimits = GetSupportedLimits();
+    const auto& supportedLimits = GetSupportedLimits();
 
     constexpr uint32_t kVec4Size = 16;
     const uint32_t maxVec4Count = supportedLimits.maxComputeWorkgroupStorageSize / kVec4Size;
@@ -314,7 +314,7 @@ TEST_P(WorkgroupSizeValidationTest, PartialOverrides) {
 // Test workgroup size validation after being overrided with invalid values.
 TEST_P(WorkgroupSizeValidationTest, ValidationAfterOverride) {
     wgpu::ShaderModule module = SetUpShaderWithUninitializedConstants();
-    wgpu::Limits supportedLimits = GetSupportedLimits();
+    const auto& supportedLimits = GetSupportedLimits();
     {
         // Error: exceed maxComputeWorkgroupSizeZ
         std::vector<wgpu::ConstantEntry> constants{
@@ -340,7 +340,7 @@ TEST_P(WorkgroupSizeValidationTest, ValidationAfterOverride) {
 // Test workgroup size validation after being overrided with invalid values (storage size limits
 // validation).
 TEST_P(WorkgroupSizeValidationTest, ValidationAfterOverrideStorageSize) {
-    wgpu::Limits supportedLimits = GetSupportedLimits();
+    const auto& supportedLimits = GetSupportedLimits();
 
     constexpr uint32_t kVec4Size = 16;
     const uint32_t maxVec4Count = supportedLimits.maxComputeWorkgroupStorageSize / kVec4Size;

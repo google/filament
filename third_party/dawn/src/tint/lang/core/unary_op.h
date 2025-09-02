@@ -49,7 +49,8 @@ std::string_view ToString(UnaryOp value);
 /// @param out the stream to write to
 /// @param value the UnaryOp
 /// @return the stream so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, UnaryOp value) {
     return out << ToString(value);
 }

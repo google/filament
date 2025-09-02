@@ -106,7 +106,7 @@ TEST_F(GlslWriterTest, Negation) {
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 void main() {
   int left = 1;
-  int val = -(left);
+  int val = int((~(uint(left)) + 1u));
 }
 )");
 }

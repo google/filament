@@ -322,7 +322,7 @@ void stream::Stream<vulkan::RenderPassCacheQuery>::Write(stream::Sink* sink,
     // Manually iterate the color attachment indices and their corresponding format/load/store
     // ops because the data is sparse and may be uninitialized. Since we serialize the colorMask
     // member above, serializing sparse data should be fine here.
-    for (auto i : IterateBitSet(t.colorMask)) {
+    for (auto i : t.colorMask) {
         StreamIn(sink, t.colorFormats[i], t.colorLoadOp[i], t.colorStoreOp[i]);
     }
 

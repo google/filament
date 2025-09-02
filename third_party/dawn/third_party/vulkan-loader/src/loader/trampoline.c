@@ -483,6 +483,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     VkInstance created_instance = VK_NULL_HANDLE;
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
     VkInstanceCreateInfo ici = {0};
+    bool portability_enumeration_flag_bit_set = false;
+    bool portability_enumeration_extension_enabled = false;
     struct loader_envvar_all_filters layer_filters = {0};
 
     LOADER_PLATFORM_THREAD_ONCE(&once_init, loader_initialize);
@@ -561,18 +563,19 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
 
     // Check the VkInstanceCreateInfoFlags wether to allow the portability enumeration flag
     if ((pCreateInfo->flags & VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR) == 1) {
-        ptr_instance->portability_enumeration_flag_bit_set = true;
+        portability_enumeration_flag_bit_set = true;
     }
-    // Make sure the extension has been enabled
+    // Make sure the portability extension extension has been enabled before enabling portability driver enumeration
     if (pCreateInfo->ppEnabledExtensionNames) {
         for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
             if (strcmp(pCreateInfo->ppEnabledExtensionNames[i], VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
-                ptr_instance->portability_enumeration_extension_enabled = true;
-                if (ptr_instance->portability_enumeration_flag_bit_set) {
+                portability_enumeration_extension_enabled = true;
+                if (portability_enumeration_flag_bit_set) {
                     ptr_instance->portability_enumeration_enabled = true;
                     loader_log(ptr_instance, VULKAN_LOADER_INFO_BIT, 0,
                                "Portability enumeration bit was set, enumerating portability drivers.");
                 }
+                break;
             }
         }
     }
@@ -622,14 +625,13 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
     if (ptr_instance->icd_tramp_list.count == 0) {
         // No drivers found
         if (skipped_portability_drivers) {
-            if (ptr_instance->portability_enumeration_extension_enabled && !ptr_instance->portability_enumeration_flag_bit_set) {
+            if (portability_enumeration_extension_enabled && !portability_enumeration_flag_bit_set) {
                 loader_log(ptr_instance, VULKAN_LOADER_ERROR_BIT | VULKAN_LOADER_DRIVER_BIT, 0,
                            "vkCreateInstance: Found drivers that contain devices which support the portability subset, but "
                            "the instance does not enumerate portability drivers! Applications that wish to enumerate portability "
                            "drivers must set the VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR bit in the VkInstanceCreateInfo "
                            "flags.");
-            } else if (ptr_instance->portability_enumeration_flag_bit_set &&
-                       !ptr_instance->portability_enumeration_extension_enabled) {
+            } else if (portability_enumeration_flag_bit_set && !portability_enumeration_extension_enabled) {
                 loader_log(ptr_instance, VULKAN_LOADER_ERROR_BIT | VULKAN_LOADER_DRIVER_BIT, 0,
                            "VkInstanceCreateInfo: If flags has the VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR bit set, the "
                            "list of enabled extensions in ppEnabledExtensionNames must contain VK_KHR_portability_enumeration "
@@ -691,9 +693,8 @@ LOADER_EXPORT VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(const VkInstanceCr
         // are enabled than what's down in the terminator.
         // This is why we don't clear inside of these function calls.
         // The clearing should actually be handled by the overall memset of the pInstance structure above.
-        wsi_create_instance(ptr_instance, &ici);
-        check_for_enabled_debug_extensions(ptr_instance, &ici);
-        extensions_create_instance(ptr_instance, &ici);
+        fill_out_enabled_instance_extensions(ici.enabledExtensionCount, ici.ppEnabledExtensionNames,
+                                             &ptr_instance->enabled_extensions);
 
         *pInstance = (VkInstance)ptr_instance;
 
@@ -2614,7 +2615,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures2(VkPhysical
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceFeatures2KHR(unwrapped_phys_dev, pFeatures);
     } else {
         disp->GetPhysicalDeviceFeatures2(unwrapped_phys_dev, pFeatures);
@@ -2633,7 +2634,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceProperties2(VkPhysic
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceProperties2KHR(unwrapped_phys_dev, pProperties);
     } else {
         disp->GetPhysicalDeviceProperties2(unwrapped_phys_dev, pProperties);
@@ -2652,7 +2653,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties2(Vk
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceFormatProperties2KHR(unwrapped_phys_dev, format, pFormatProperties);
     } else {
         disp->GetPhysicalDeviceFormatProperties2(unwrapped_phys_dev, format, pFormatProperties);
@@ -2672,7 +2673,7 @@ vkGetPhysicalDeviceImageFormatProperties2(VkPhysicalDevice physicalDevice, const
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         return disp->GetPhysicalDeviceImageFormatProperties2KHR(unwrapped_phys_dev, pImageFormatInfo, pImageFormatProperties);
     } else {
         return disp->GetPhysicalDeviceImageFormatProperties2(unwrapped_phys_dev, pImageFormatInfo, pImageFormatProperties);
@@ -2691,7 +2692,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceQueueFamilyPropertie
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceQueueFamilyProperties2KHR(unwrapped_phys_dev, pQueueFamilyPropertyCount, pQueueFamilyProperties);
     } else {
         disp->GetPhysicalDeviceQueueFamilyProperties2(unwrapped_phys_dev, pQueueFamilyPropertyCount, pQueueFamilyProperties);
@@ -2710,7 +2711,7 @@ vkGetPhysicalDeviceMemoryProperties2(VkPhysicalDevice physicalDevice, VkPhysical
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceMemoryProperties2KHR(unwrapped_phys_dev, pMemoryProperties);
     } else {
         disp->GetPhysicalDeviceMemoryProperties2(unwrapped_phys_dev, pMemoryProperties);
@@ -2730,7 +2731,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatPro
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_get_physical_device_properties2) {
+    if (inst != NULL && inst->enabled_extensions.khr_get_physical_device_properties2) {
         disp->GetPhysicalDeviceSparseImageFormatProperties2KHR(unwrapped_phys_dev, pFormatInfo, pPropertyCount, pProperties);
     } else {
         disp->GetPhysicalDeviceSparseImageFormatProperties2(unwrapped_phys_dev, pFormatInfo, pPropertyCount, pProperties);
@@ -2750,7 +2751,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceExternalBufferProper
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_external_memory_capabilities) {
+    if (inst != NULL && inst->enabled_extensions.khr_external_memory_capabilities) {
         disp->GetPhysicalDeviceExternalBufferPropertiesKHR(unwrapped_phys_dev, pExternalBufferInfo, pExternalBufferProperties);
     } else {
         disp->GetPhysicalDeviceExternalBufferProperties(unwrapped_phys_dev, pExternalBufferInfo, pExternalBufferProperties);
@@ -2770,7 +2771,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceExternalSemaphorePro
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_external_semaphore_capabilities) {
+    if (inst != NULL && inst->enabled_extensions.khr_external_semaphore_capabilities) {
         disp->GetPhysicalDeviceExternalSemaphorePropertiesKHR(unwrapped_phys_dev, pExternalSemaphoreInfo,
                                                               pExternalSemaphoreProperties);
     } else {
@@ -2792,7 +2793,7 @@ LOADER_EXPORT VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceExternalFencePropert
     const VkLayerInstanceDispatchTable *disp = loader_get_instance_layer_dispatch(physicalDevice);
     const struct loader_instance *inst = ((struct loader_physical_device_tramp *)physicalDevice)->this_instance;
 
-    if (inst != NULL && inst->enabled_known_extensions.khr_external_fence_capabilities) {
+    if (inst != NULL && inst->enabled_extensions.khr_external_fence_capabilities) {
         disp->GetPhysicalDeviceExternalFencePropertiesKHR(unwrapped_phys_dev, pExternalFenceInfo, pExternalFenceProperties);
     } else {
         disp->GetPhysicalDeviceExternalFenceProperties(unwrapped_phys_dev, pExternalFenceInfo, pExternalFenceProperties);

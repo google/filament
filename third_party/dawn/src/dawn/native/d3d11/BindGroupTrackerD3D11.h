@@ -30,6 +30,7 @@
 
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "dawn/native/BindGroupTracker.h"
 #include "dawn/native/d3d/d3d_platform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -49,14 +50,97 @@ class BindGroupTracker : public BindGroupTrackerBase</*CanInheritBindGroups=*/tr
     explicit BindGroupTracker(const ScopedSwapStateCommandRecordingContext* commandContext);
     virtual ~BindGroupTracker();
 
-    const ScopedSwapStateCommandRecordingContext* GetCommandContext() const;
-
   protected:
     template <wgpu::ShaderStage kVisibleStage>
     MaybeError ApplyBindGroup(BindGroupIndex index);
 
+    template <SingleShaderStage Stage>
+    void SetConstantBuffer(uint32_t idx,
+                           ID3D11Buffer* d3d11Buffer,
+                           uint32_t firstConstant,
+                           uint32_t numConstants);
+
+    template <SingleShaderStage Stage>
+    void SetShaderResource(uint32_t idx, ID3D11ShaderResourceView* srv);
+
+    template <SingleShaderStage Stage>
+    void SetSampler(uint32_t idx, ID3D11SamplerState* sampler);
+
+    void CSSetUnorderedAccessView(uint32_t idx, ID3D11UnorderedAccessView* uav);
+
+    void OMSetUnorderedAccessViews(uint32_t idx,
+                                   uint32_t count,
+                                   ID3D11UnorderedAccessView* const* uavs);
+
+    template <SingleShaderStage Stage>
+    void UnbindConstantBuffers();
+    template <SingleShaderStage Stage>
+    void UnbindShaderResources();
+    template <SingleShaderStage Stage>
+    void UnbindSamplers();
+    template <SingleShaderStage Stage>
+    void UnbindUnorderedAccessViews();
+
+    template <typename T>
+    ResultOrError<ComPtr<T>> GetBufferD3DView(
+        BindGroupBase* group,
+        BindingIndex bindingIndex,
+        const BufferBindingInfo& layout,
+        const ityp::span<BindingIndex, uint64_t>& dynamicOffsets);
+
+    template <typename T>
+    ResultOrError<ComPtr<T>> GetTextureD3DView(BindGroupBase* group, BindingIndex bindingIndex);
+
   private:
+    struct ConstantBufferBinding {
+        bool operator==(const ConstantBufferBinding& rhs) const = default;
+
+        ComPtr<ID3D11Buffer> buffer;
+        UINT firstConstant = 0;
+        UINT numConstants = 0;
+    };
+
+    ResultOrError<ConstantBufferBinding> GetConstantBufferBinding(
+        BindGroupBase* group,
+        BindingIndex bindingIndex,
+        const BufferBindingInfo& layout,
+        const ityp::span<BindingIndex, uint64_t>& dynamicOffsets);
+
+    ResultOrError<ComPtr<ID3D11ShaderResourceView>> GetTextureShaderResourceView(
+        BindGroupBase* group,
+        BindingIndex bindingIndex);
+    ResultOrError<ComPtr<ID3D11UnorderedAccessView>> GetTextureUnorderedAccessView(
+        BindGroupBase* group,
+        BindingIndex bindingIndex);
+
+    ID3D11SamplerState* GetSamplerState(BindGroupBase* group, BindingIndex bindingIndex);
+
     raw_ptr<const ScopedSwapStateCommandRecordingContext> mCommandContext;
+
+    // This class will track the current bound resources and prevent redundant bindings.
+    template <typename T, uint32_t InitialCapacity>
+    class BindingSlot {
+      public:
+        template <typename Fn>
+        void Bind(uint32_t idx, T binding, Fn&& bindFunc);
+
+        uint32_t MaxBoundSlots() const { return static_cast<uint32_t>(mBoundSlots.size()); }
+
+      private:
+        absl::InlinedVector<T, InitialCapacity> mBoundSlots;
+    };
+
+    PerStage<BindingSlot<ConstantBufferBinding, 4>> mConstantBufferSlots;
+
+    PerStage<BindingSlot<ComPtr<ID3D11ShaderResourceView>, 4>> mSRVSlots;
+
+    PerStage<BindingSlot<ComPtr<ID3D11SamplerState>, 4>> mSamplerSlots;
+
+    // We only track individual UAV slot in CS because UAV slots in PS must be bound all as one.
+    BindingSlot<ComPtr<ID3D11UnorderedAccessView>, 4> mCSUAVSlots;
+
+    PerStage<uint32_t> mMinUAVSlots = PerStage<uint32_t>(D3D11_1_UAV_SLOT_COUNT);
+    uint32_t mPSMaxUAVSlot = 0;
 };
 
 class ComputePassBindGroupTracker final : public BindGroupTracker {

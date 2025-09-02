@@ -81,10 +81,11 @@ class Return final : public Castable<Return, Terminator> {
     /// @returns the function being returned
     const Function* Func() const;
 
+    /// @returns true if the return has a value set
+    bool HasValue() const { return operands_.Length() > kArgsOperandOffset; }
+
     /// @returns the return value, or nullptr
-    ir::Value* Value() const {
-        return operands_.Length() > kArgsOperandOffset ? operands_[kArgsOperandOffset] : nullptr;
-    }
+    ir::Value* Value() const { return HasValue() ? operands_[kArgsOperandOffset] : nullptr; }
 
     /// Sets the return value
     /// @param val the new return value

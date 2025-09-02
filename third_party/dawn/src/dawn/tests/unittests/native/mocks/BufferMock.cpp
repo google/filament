@@ -44,7 +44,7 @@ BufferMock::BufferMock(DeviceMock* device,
     mBackingData = std::unique_ptr<uint8_t[]>(new uint8_t[mAllocatedSize]);
 
     ON_CALL(*this, DestroyImpl).WillByDefault([this] { this->BufferBase::DestroyImpl(); });
-    ON_CALL(*this, GetMappedPointer).WillByDefault(Return(mBackingData.get()));
+    ON_CALL(*this, GetMappedPointerImpl).WillByDefault(Return(mBackingData.get()));
     ON_CALL(*this, IsCPUWritableAtCreation).WillByDefault([this] {
         return (GetInternalUsage() & (wgpu::BufferUsage::MapRead | wgpu::BufferUsage::MapWrite)) !=
                0;

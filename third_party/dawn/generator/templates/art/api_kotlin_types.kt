@@ -29,17 +29,16 @@
     {%- set type = arg.type %}
     {%- set optional = arg.optional %}
     {%- set default_value = arg.default_value %}
-    {%- if arg.type.name.get() == 'string view' -%}
+    {%- if arg == None -%}
+        Unit
+    {%- elif arg.type.name.get() == 'string view' -%}
         String{{ '?' if optional }}
         {%- if emit_defaults and optional-%}
             {{ ' ' }}= null
         {%- endif %}
     {% elif type.name.get() == 'void' %}
-        {%- if arg.length and arg.constant_length != 1 -%}  {# void with length is binary data #}
-            java.nio.ByteBuffer{{ ' = java.nio.ByteBuffer.allocateDirect(0)' if emit_defaults }}
-        {%- else -%}
-            Unit  {# raw void is C type for no return type; Kotlin equivalent is Unit #}
-        {%- endif -%}
+        {{- assert(arg.length and arg.constant_length != 1) -}}  {# void with length is binary data #}
+        java.nio.ByteBuffer{{ ' = java.nio.ByteBuffer.allocateDirect(0)' if emit_defaults }}
     {%- elif arg.length and arg.length != 'constant' %}
         {# * annotation can mean an array, e.g. an output argument #}
         {%- if type.category in ['bitmask', 'callback function', 'callback info', 'enum', 'function pointer', 'object', 'structure'] -%}
@@ -56,15 +55,25 @@
         {{- type.name.CamelCase() }}{{ '?' if optional }}
         {%- if emit_defaults -%}
             {%- if type.has_basic_constructor -%}
-                {{ ' ' }}= {{ type.name.CamelCase() }}()
+                {{ ' ' }}= {{ type.name.CamelCase() }}(
+                    {%- if arg.default_value == 'zero' %}
+                        {%- for member in kotlin_record_members(type.members) %}
+                            {% if member.type.category in ['bitmask', 'enum'] %}
+                                {%- for value in member.type.values if value.value == 0 -%}
+                                    {{ member.name.camelCase() }} =
+                                        {{- member.type.name.CamelCase() }}.{{ as_ktName(value.name.CamelCase()) }},{{ ' ' }}
+                                {%- endfor %}
+                            {%- endif %}
+                        {%- endfor %}
+                    {%- endif %})
             {%- elif optional -%}
                 {{ ' ' }}= null
             {%- endif %}
         {%- endif %}
     {%- elif type.category in ['bitmask', 'enum'] -%}
         {{ type.name.CamelCase() }}
-        {%- if default_value %}
-            {%- for value in type.values if value.name.name == default_value -%}
+        {%- if emit_defaults %}
+            {%- for value in type.values if value.name.name == (default_value or 'undefined') -%}
                 {{ ' ' }}= {{ type.name.CamelCase() }}.{{ as_ktName(value.name.CamelCase()) }}
             {%- endfor %}
         {%- endif %}
@@ -81,6 +90,9 @@
         {%- set ns = namespace(type_name='', default_value=default_value) -%}
         {%- if type.name.get() == 'float' -%}
             {%- set ns.type_name = 'Float' -%}
+            {%- if ns.default_value -%}
+                {%- set ns.default_value = "%.1ff"|format(ns.default_value[:-1]|float) -%}
+            {%- endif -%}
         {%- elif type.name.get() == 'double' -%}
             {%- set ns.type_name = 'Double' -%}
         {%- elif type.name.get() in ['int8_t', 'uint8_t'] -%}
@@ -101,7 +113,7 @@
             {{ unreachable_code('Unsupported native type: ' + type.name.get()) }}
         {%- endif -%}
         {%- if optional -%}
-            {%- set ns.type_name = ns.type_name + '?' -%}
+            {{ unreachable_code('Optional natives not supported: ' + type.name.get()) }}
         {%- endif -%}
         {{ ns.type_name }}
         {%- if ns.default_value not in [None, undefined] -%} {{ ' ' }}={{ ' ' }}

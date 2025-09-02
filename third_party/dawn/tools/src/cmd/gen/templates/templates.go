@@ -41,6 +41,7 @@ import (
 	"dawn.googlesource.com/dawn/tools/src/container"
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
 	"dawn.googlesource.com/dawn/tools/src/glob"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/template"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/gen"
 	"dawn.googlesource.com/dawn/tools/src/tint/intrinsic/parser"
@@ -67,11 +68,10 @@ func (c *Cmd) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, 
 	return nil, nil
 }
 
-// TODO(crbug.com/344014313): Add unittests when fileutils and ClangFormat are
-// updated to support dependency injection.
+// TODO(crbug.com/344014313): Add unittest coverage.
 func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 	staleFiles := common.StaleFiles{}
-	projectRoot := fileutils.DawnRoot()
+	projectRoot := fileutils.DawnRoot(cfg.OsWrapper)
 
 	files := flag.Args()
 	if len(files) == 0 {
@@ -105,7 +105,9 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 		}
 	}
 
-	cache := &genCache{}
+	cache := &genCache{
+		fsReader: cfg.OsWrapper,
+	}
 
 	// For each template file...
 	for _, relTmplPath := range files { // relative to project root
@@ -130,7 +132,7 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 			switch filepath.Ext(relPath) {
 			case ".cc", ".h", ".inl":
 				var err error
-				body, err = common.ClangFormat(body)
+				body, err = common.ClangFormat(body, cfg.OsWrapper)
 				if err != nil {
 					return err
 				}
@@ -185,16 +187,17 @@ func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
 
 type intrinsicCache struct {
 	path           string
-	cachedSem      *sem.Sem            // lazily built by sem()
-	cachedTable    *gen.IntrinsicTable // lazily built by intrinsicTable()
-	cachedPermuter *gen.Permutator     // lazily built by permute()
+	cachedSem      *sem.Sem                   // lazily built by sem()
+	cachedTable    *gen.IntrinsicTable        // lazily built by intrinsicTable()
+	cachedPermuter *gen.Permutator            // lazily built by permute()
+	fsReader       oswrapper.FilesystemReader // Stored reference to a FilesystemReader.
 }
 
 // Sem lazily parses and resolves the intrinsic.def file, returning the semantic info.
 func (i *intrinsicCache) Sem() (*sem.Sem, error) {
 	if i.cachedSem == nil {
 		// Load the intrinsic definition file
-		defPath := filepath.Join(fileutils.DawnRoot(), i.path)
+		defPath := filepath.Join(fileutils.DawnRoot(i.fsReader), i.path)
 
 		defSource, err := os.ReadFile(defPath)
 		if err != nil {
@@ -257,6 +260,7 @@ func (i *intrinsicCache) Permute(overload *sem.Overload) ([]gen.Permutation, err
 // Cache for objects that are expensive to build, and can be reused between templates.
 type genCache struct {
 	intrinsicsCache container.Map[string, *intrinsicCache]
+	fsReader        oswrapper.FilesystemReader
 }
 
 func (g *genCache) intrinsics(path string) *intrinsicCache {
@@ -265,7 +269,7 @@ func (g *genCache) intrinsics(path string) *intrinsicCache {
 	}
 	i := g.intrinsicsCache[path]
 	if i == nil {
-		i = &intrinsicCache{path: path}
+		i = &intrinsicCache{path: path, fsReader: g.fsReader}
 		g.intrinsicsCache[path] = i
 	}
 	return i

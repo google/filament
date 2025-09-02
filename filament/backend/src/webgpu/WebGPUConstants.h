@@ -21,6 +21,7 @@
 
 #include <cstdint>
 
+// WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple of 4.
 constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 
 // FWGPU is short for Filament WebGPU

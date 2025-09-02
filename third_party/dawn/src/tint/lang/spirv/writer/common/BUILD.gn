@@ -64,7 +64,7 @@ if (tint_build_spv_writer) {
     deps = [
       "${dawn_root}/src/utils:utils",
       "${tint_src_dir}/api/common",
-      "${tint_src_dir}/lang/core/common",
+      "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",

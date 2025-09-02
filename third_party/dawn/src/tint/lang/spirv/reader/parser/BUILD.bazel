@@ -55,6 +55,7 @@ cc_library(
     "//src/tint/lang/spirv/intrinsic",
     "//src/tint/lang/spirv/ir",
     "//src/tint/lang/spirv/type",
+    "//src/tint/lang/wgsl",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -67,6 +68,11 @@ cc_library(
     "//src/tint/utils/text",
     "//src/utils",
   ] + select({
+    ":tint_build_spv_reader": [
+      "//src/tint/lang/spirv/reader/common",
+    ],
+    "//conditions:default": [],
+  }) + select({
     ":tint_build_spv_reader_or_tint_build_spv_writer": [
       "//src/tint/lang/spirv/validate",
       "@spirv_tools//:spirv_tools_opt",
@@ -90,6 +96,7 @@ cc_library(
     "composite_test.cc",
     "constant_test.cc",
     "convert_test.cc",
+    "execution_mode_test.cc",
     "function_test.cc",
     "helper_test.h",
     "image_sampler_test.cc",
@@ -99,6 +106,7 @@ cc_library(
     "memory_test.cc",
     "misc_test.cc",
     "name_test.cc",
+    "phi_test.cc",
     "struct_test.cc",
     "unary_test.cc",
     "var_test.cc",
@@ -109,6 +117,7 @@ cc_library(
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/ir",
     "//src/tint/lang/core/type",
+    "//src/tint/lang/wgsl",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",
@@ -123,6 +132,7 @@ cc_library(
     "//src/utils",
   ] + select({
     ":tint_build_spv_reader": [
+      "//src/tint/lang/spirv/reader/common",
       "//src/tint/lang/spirv/reader/common:test",
       "//src/tint/lang/spirv/reader/parser",
     ],

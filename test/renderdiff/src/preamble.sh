@@ -29,6 +29,7 @@ if [[ "$os_name" == "Linux" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
 elif [[ "$os_name" == "Darwin" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
 else
     echo "Unsupported platform for renderdiff tests"
     exit 1

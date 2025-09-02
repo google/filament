@@ -116,34 +116,34 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const BindingInfo& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    static const auto* const fmt =
-        new absl::ParsedFormat<'u', 's', 's', 's'>("{ binding: %u, visibility: %s, %s: %s }");
+    s->Append(absl::StrFormat("{ binding: %u, visibility: %s, ", value.binding, value.visibility));
+    if (value.arraySize != BindingIndex(1)) {
+        s->Append(absl::StrFormat("arraySize: %u, indexInArray: %u, ", value.arraySize,
+                                  value.indexInArray));
+    }
+
     MatchVariant(
         value.bindingLayout,
         [&](const BufferBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::Buffer, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::Buffer, layout));
         },
         [&](const SamplerBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::Sampler, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::Sampler, layout));
         },
         [&](const StaticSamplerBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::StaticSampler, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::StaticSampler, layout));
         },
         [&](const TextureBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::Texture, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::Texture, layout));
         },
         [&](const StorageTextureBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::StorageTexture, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::StorageTexture, layout));
         },
         [&](const InputAttachmentBindingInfo& layout) {
-            s->Append(absl::StrFormat(*fmt, static_cast<uint32_t>(value.binding), value.visibility,
-                                      BindingInfoType::InputAttachment, layout));
+            s->Append(absl::StrFormat("%s: %s ", BindingInfoType::InputAttachment, layout));
         });
+
+    s->Append(absl::StrFormat("}"));
     return {true};
 }
 
@@ -160,7 +160,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const BufferBindingLayout& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    BufferBindingInfo info(value);
+    auto info = BufferBindingInfo::From(value);
     return AbslFormatConvert(info, spec, s);
 }
 
@@ -168,7 +168,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const TextureBindingInfo& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    s->Append(absl::StrFormat("{sampleType: %s, viewDimension: %u, multisampled: %u}",
+    s->Append(absl::StrFormat("{sampleType: %s, viewDimension: %s, multisampled: %u}",
                               value.sampleType, value.viewDimension, value.multisampled));
     return {true};
 }
@@ -177,7 +177,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const TextureBindingLayout& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    TextureBindingInfo info(value);
+    auto info = TextureBindingInfo::From(value);
     return AbslFormatConvert(info, spec, s);
 }
 
@@ -194,7 +194,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const StorageTextureBindingLayout& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    StorageTextureBindingInfo info(value);
+    auto info = StorageTextureBindingInfo::From(value);
     return AbslFormatConvert(info, spec, s);
 }
 
@@ -210,7 +210,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     const SamplerBindingLayout& value,
     const absl::FormatConversionSpec& spec,
     absl::FormatSink* s) {
-    SamplerBindingInfo info(value);
+    auto info = SamplerBindingInfo::From(value);
     return AbslFormatConvert(info, spec, s);
 }
 
@@ -342,7 +342,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
     ColorAttachmentIndex nextColorIndex{};
 
     bool needsComma = false;
-    for (auto i : IterateBitSet(value->GetColorAttachmentsMask())) {
+    for (auto i : value->GetColorAttachmentsMask()) {
         if (needsComma) {
             s->Append(", ");
         }
@@ -356,8 +356,7 @@ absl::FormatConvertResult<absl::FormatConversionCharSet::kString> AbslFormatConv
 
         s->Append(absl::StrFormat("%d={format:%s", i, value->GetColorAttachmentFormat(i)));
 
-        if (value->GetDevice()->HasFeature(Feature::DawnLoadResolveTexture) &&
-            value->GetExpandResolveInfo().attachmentsToExpandResolve.any()) {
+        if (value->GetExpandResolveInfo().attachmentsToExpandResolve.any()) {
             s->Append(
                 absl::StrFormat(", resolve:%v, expandResolve:%v",
                                 value->GetExpandResolveInfo().resolveTargetsMask.test(i),

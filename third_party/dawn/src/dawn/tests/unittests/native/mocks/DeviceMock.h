@@ -64,7 +64,7 @@ class DeviceMock : public DeviceBase {
                 (override));
 
     MOCK_METHOD(MaybeError,
-                CopyFromStagingToBufferImpl,
+                CopyFromStagingToBuffer,
                 (BufferBase*, uint64_t, BufferBase*, uint64_t, uint64_t),
                 (override));
     MOCK_METHOD(
@@ -118,8 +118,7 @@ class DeviceMock : public DeviceBase {
                 CreateShaderModuleImpl,
                 (const UnpackedPtr<ShaderModuleDescriptor>&,
                  const std::vector<tint::wgsl::Extension>&,
-                 ShaderModuleParseResult*,
-                 OwnedCompilationMessages*),
+                 ShaderModuleParseResult*),
                 (override));
     MOCK_METHOD(ResultOrError<Ref<SwapChainBase>>,
                 CreateSwapChainImpl,

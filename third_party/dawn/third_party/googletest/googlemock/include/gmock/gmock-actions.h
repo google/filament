@@ -1455,6 +1455,30 @@ struct WithArgsAction {
     return OA{std::move(inner_action)};
   }
 
+  // As above, but in the case where we want to create a OnceAction from a const
+  // WithArgsAction. This is fine as long as the inner action doesn't need to
+  // move any of its state to create a OnceAction.
+  template <
+      typename R, typename... Args,
+      typename std::enable_if<
+          std::is_convertible<const InnerAction&,
+                              OnceAction<R(internal::TupleElement<
+                                           I, std::tuple<Args...>>...)>>::value,
+          int>::type = 0>
+  operator OnceAction<R(Args...)>() const& {  // NOLINT
+    struct OA {
+      OnceAction<InnerSignature<R, Args...>> inner_action;
+
+      R operator()(Args&&... args) && {
+        return std::move(inner_action)
+            .Call(std::get<I>(
+                std::forward_as_tuple(std::forward<Args>(args)...))...);
+      }
+    };
+
+    return OA{inner_action};
+  }
+
   template <
       typename R, typename... Args,
       typename std::enable_if<
@@ -1707,9 +1731,8 @@ template <size_t k>
 struct ReturnArgAction {
   template <typename... Args,
             typename = typename std::enable_if<(k < sizeof...(Args))>::type>
-  auto operator()(Args&&... args) const
-      -> decltype(std::get<k>(
-          std::forward_as_tuple(std::forward<Args>(args)...))) {
+  auto operator()(Args&&... args) const -> decltype(std::get<k>(
+      std::forward_as_tuple(std::forward<Args>(args)...))) {
     return std::get<k>(std::forward_as_tuple(std::forward<Args>(args)...));
   }
 };

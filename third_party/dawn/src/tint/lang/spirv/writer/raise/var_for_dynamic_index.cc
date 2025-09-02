@@ -249,7 +249,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> VarForDynamicIndex(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "spirv.VarForDynamicIndex");
+    auto result = ValidateAndDumpIfNeeded(ir, "spirv.VarForDynamicIndex", kVarForDynamicIndex);
     if (result != Success) {
         return result;
     }

@@ -45,14 +45,13 @@ if (tint_build_unittests || tint_build_benchmarks) {
 
 libtint_source_set("wgsl") {
   sources = [
-    "builtin_fn.cc",
-    "builtin_fn.h",
-    "diagnostic_rule.cc",
-    "diagnostic_rule.h",
-    "diagnostic_severity.cc",
-    "diagnostic_severity.h",
-    "extension.cc",
-    "extension.h",
+    "allowed_features.h",
+    "enums.cc",
+    "enums.h",
+    "feature_status.cc",
+    "feature_status.h",
+    "reserved_words.cc",
+    "reserved_words.h",
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
@@ -70,12 +69,9 @@ libtint_source_set("wgsl") {
 if (tint_build_unittests) {
   tint_unittests_source_set("unittests") {
     sources = [
-      "diagnostic_rule_test.cc",
-      "diagnostic_severity_test.cc",
-      "extension_test.cc",
+      "allowed_features_test.cc",
+      "enums_test.cc",
       "language_feature_status_test.cc",
-      "language_feature_test.cc",
-      "wgsl_test.cc",
     ]
     deps = [
       "${dawn_root}/src/utils:utils",
@@ -87,8 +83,6 @@ if (tint_build_unittests) {
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
       "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
@@ -119,28 +113,5 @@ if (tint_build_unittests) {
     if (tint_build_wgsl_writer) {
       deps += [ "${tint_src_dir}/lang/wgsl/writer" ]
     }
-  }
-}
-if (tint_build_benchmarks) {
-  tint_benchmarks_source_set("bench") {
-    sources = [
-      "diagnostic_rule_bench.cc",
-      "diagnostic_severity_bench.cc",
-      "extension_bench.cc",
-    ]
-    deps = [
-      "${dawn_root}/src/utils:utils",
-      "${tint_src_dir}:google_benchmark",
-      "${tint_src_dir}/lang/wgsl",
-      "${tint_src_dir}/utils",
-      "${tint_src_dir}/utils/containers",
-      "${tint_src_dir}/utils/diagnostic",
-      "${tint_src_dir}/utils/ice",
-      "${tint_src_dir}/utils/macros",
-      "${tint_src_dir}/utils/math",
-      "${tint_src_dir}/utils/memory",
-      "${tint_src_dir}/utils/rtti",
-      "${tint_src_dir}/utils/text",
-    ]
   }
 }

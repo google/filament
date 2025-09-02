@@ -82,9 +82,74 @@ INSTANTIATE_TEST_SUITE_P(
     Arithmetic,
     testing::Values(UnaryTestCase{kI32, core::UnaryOp::kComplement, "OpNot", "int"},
                     UnaryTestCase{kU32, core::UnaryOp::kComplement, "OpNot", "uint"},
-                    UnaryTestCase{kI32, core::UnaryOp::kNegation, "OpSNegate", "int"},
                     UnaryTestCase{kF32, core::UnaryOp::kNegation, "OpFNegate", "float"},
                     UnaryTestCase{kF16, core::UnaryOp::kNegation, "OpFNegate", "half"}));
+
+TEST_F(SpirvWriterTest, Unary_Negate_i32) {
+    auto* arg = b.FunctionParam("arg", MakeVectorType(kI32));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({arg});
+    b.Append(func->Block(), [&] {
+        auto* result = b.Unary(core::UnaryOp::kNegation, MakeVectorType(kI32), arg);
+        b.Return(func);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+       %void = OpTypeVoid
+        %int = OpTypeInt 32 1
+      %v2int = OpTypeVector %int 2
+          %6 = OpTypeFunction %void %v2int
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+     %uint_1 = OpConstant %uint 1
+         %13 = OpConstantComposite %v2uint %uint_1 %uint_1
+         %17 = OpTypeFunction %void
+
+               ; Function foo
+        %foo = OpFunction %void None %6
+        %arg = OpFunctionParameter %v2int
+          %7 = OpLabel
+         %10 = OpBitcast %v2uint %arg
+         %11 = OpNot %v2uint %10
+         %12 = OpIAdd %v2uint %11 %13
+         %15 = OpBitcast %v2int %12
+               OpReturn
+               OpFunctionEnd
+
+               ; Function unused_entry_point
+%unused_entry_point = OpFunction %void None %17
+         %18 = OpLabel
+               OpReturn
+               OpFunctionEnd
+)");
+}
+
+TEST_F(SpirvWriterTest, Unary_Negate_Vector_i32) {
+    auto* arg = b.FunctionParam("arg", MakeScalarType(kI32));
+    auto* func = b.Function("foo", ty.void_());
+    func->SetParams({arg});
+    b.Append(func->Block(), [&] {
+        auto* result = b.Unary(core::UnaryOp::kNegation, MakeScalarType(kI32), arg);
+        b.Return(func);
+        mod.SetName(result, "result");
+    });
+
+    ASSERT_TRUE(Generate()) << Error() << output_;
+    EXPECT_INST(R"(
+        %foo = OpFunction %void None %5
+        %arg = OpFunctionParameter %int
+          %6 = OpLabel
+          %8 = OpBitcast %uint %arg
+          %9 = OpNot %uint %8
+         %10 = OpIAdd %uint %9 %uint_1
+         %12 = OpBitcast %int %10
+               OpReturn
+               OpFunctionEnd
+
+    )");
+}
 
 }  // namespace
 }  // namespace tint::spirv::writer

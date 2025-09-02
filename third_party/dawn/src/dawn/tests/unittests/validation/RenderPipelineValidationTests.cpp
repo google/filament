@@ -1913,7 +1913,7 @@ TEST_F(RenderPipelineValidationTest, RenderPipelineColorAttachmentBytesPerSample
         for (size_t i = 0; i < kMaxColorAttachments; i++) {
             if (i < formats.size()) {
                 std::ostringstream type;
-                type << "vec4<" << utils::GetWGSLColorTextureComponentType(formats.at(i)) << ">";
+                type << "vec4<" << utils::GetWGSLColorTextureComponentTypeStr(formats.at(i)) << ">";
                 bindings << "@location(" << i << ") o" << i << " : " << type.str() << ", ";
                 outputs << type.str() << "(1), ";
             } else {
@@ -3557,6 +3557,129 @@ TEST_F(ClipDistancesValidationTest, ClipDistancesAgainstMaxInterStageLocation) {
             }
         }
     }
+}
+
+// Tests that kTier1AdditionalRenderableFormats are not renderable without feature.
+TEST_F(RenderPipelineValidationTest, NotRenderableWithoutTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModule;
+        descriptor.cTargets[0].format = format;
+        ASSERT_DEVICE_ERROR(device.CreateRenderPipeline(&descriptor));
+    }
+}
+
+// Tests that kTier1AdditionalRenderableFormats are not blendable without feature.
+TEST_F(RenderPipelineValidationTest, NotBlendableWithoutTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModuleUint;
+        descriptor.cTargets[0].blend = &descriptor.cBlends[0];
+        descriptor.cTargets[0].format = format;
+        ASSERT_DEVICE_ERROR(device.CreateRenderPipeline(&descriptor));
+    }
+}
+
+// Tests that kTier1AdditionalRenderableFormats can not support multisampling without feature.
+TEST_F(RenderPipelineValidationTest, NoMultisampleSupportWithoutTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModule;
+        descriptor.cTargets[0].format = format;
+        descriptor.multisample.count = 4;
+        ASSERT_DEVICE_ERROR(device.CreateRenderPipeline(&descriptor));
+    }
+}
+
+class TextureFormatsTier1PipelineTest : public RenderPipelineValidationTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::TextureFormatsTier1};
+    }
+};
+
+// Tests that kTier1AdditionalRenderableFormats must be renderable when the feature
+// TextureFormatsTier1 is enabled.
+TEST_F(TextureFormatsTier1PipelineTest, RenderableWithTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModule;
+        descriptor.cTargets[0].format = format;
+        wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+    }
+}
+
+// Tests that kTier1AdditionalRenderableFormats must be blendable when the feature
+// TextureFormatsTier1 is enabled.
+TEST_F(TextureFormatsTier1PipelineTest, BlendableWithTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModule;
+        descriptor.cTargets[0].blend = &descriptor.cBlends[0];
+        descriptor.cTargets[0].format = format;
+        device.CreateRenderPipeline(&descriptor);
+    }
+}
+
+// Tests that kTier1AdditionalRenderableFormats must support multisampling when the
+// TextureFormatsTier1 feature is enabled.
+TEST_F(TextureFormatsTier1PipelineTest, MultisampleSupportWithTier1) {
+    for (const auto format : utils::kTier1AdditionalRenderableFormats) {
+        SCOPED_TRACE(absl::StrFormat("Test format: %s", format));
+        utils::ComboRenderPipelineDescriptor descriptor;
+        descriptor.vertex.module = vsModule;
+        descriptor.cFragment.module = fsModule;
+        descriptor.cTargets[0].format = format;
+        descriptor.multisample.count = 4;
+        device.CreateRenderPipeline(&descriptor);
+    }
+}
+
+class RG11B10UfloatRenderablePipelineTest : public RenderPipelineValidationTest {
+  protected:
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
+        return {wgpu::FeatureName::RG11B10UfloatRenderable};
+    }
+};
+
+// Tests that rg11b10ufloat must be renderable when the feature RG11B10UfloatRenderable is enabled.
+TEST_F(RG11B10UfloatRenderablePipelineTest, RenderableWithFeatureEnabled) {
+    utils::ComboRenderPipelineDescriptor descriptor;
+    descriptor.vertex.module = vsModule;
+    descriptor.cFragment.module = fsModule;
+    descriptor.cTargets[0].format = wgpu::TextureFormat::RG11B10Ufloat;
+    wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&descriptor);
+}
+
+// Tests that rg11b10ufloat must be blendable when the feature RG11B10UfloatRenderable is enabled.
+TEST_F(RG11B10UfloatRenderablePipelineTest, BlendableWithFeatureEnabled) {
+    utils::ComboRenderPipelineDescriptor descriptor;
+    descriptor.vertex.module = vsModule;
+    descriptor.cFragment.module = fsModule;
+    descriptor.cTargets[0].blend = &descriptor.cBlends[0];
+    descriptor.cTargets[0].format = wgpu::TextureFormat::RG11B10Ufloat;
+    device.CreateRenderPipeline(&descriptor);
+}
+
+// Tests that rg11b10ufloat must support multisampling when the RG11B10UfloatRenderable feature is
+// enabled.
+TEST_F(RG11B10UfloatRenderablePipelineTest, MultisampleSupportWithFeatureEnabled) {
+    utils::ComboRenderPipelineDescriptor descriptor;
+    descriptor.vertex.module = vsModule;
+    descriptor.cFragment.module = fsModule;
+    descriptor.cTargets[0].format = wgpu::TextureFormat::RG11B10Ufloat;
+    descriptor.multisample.count = 4;
+    device.CreateRenderPipeline(&descriptor);
 }
 
 }  // anonymous namespace

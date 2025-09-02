@@ -528,7 +528,7 @@ func TestParseFlags(t *testing.T) {
 `,
 			want: []cmdLineFlags{
 				{
-					formats: container.NewSet(hlslDXC, hlslDXCIR),
+					formats: container.NewSet(hlslDXC),
 					flags:   []string{"", "--hlsl-shader-model", "60"},
 				},
 			},

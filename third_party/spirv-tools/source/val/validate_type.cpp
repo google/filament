@@ -562,6 +562,9 @@ spv_result_t ValidateTypePointer(ValidationState_t& _,
       // a storage image.
       if (sampled == 2) _.RegisterPointerToStorageImage(inst->id());
     }
+    if (type->opcode() == spv::Op::OpTypeTensorARM) {
+      _.RegisterPointerToTensor(inst->id());
+    }
   }
 
   if (!_.IsValidStorageClass(storage_class)) {

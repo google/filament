@@ -54,35 +54,35 @@
 {%- endmacro -%}
 
 //* Outputs the type that will be used on the wire for the member
-{%- macro member_transfer_type(member) -%}
-    {%- if member.type.category == "object" -%}
+{%- macro member_transfer_type(type) -%}
+    {%- if type.category == "object" -%}
         ObjectId
-    {%- elif member.type.category == "structure" -%}
-        {{as_cType(member.type.name)}}Transfer
-    {%- elif as_cType(member.type.name) == "size_t" -%}
+    {%- elif type.category == "structure" -%}
+        {{as_cType(type.name)}}Transfer
+    {%- elif as_cType(type.name) == "size_t" -%}
         {{as_cType(types["uint64_t"].name)}}
     {%- else -%}
-        {%- do assert(member.type.is_wire_transparent, 'wire transparent') -%}
-        {{as_cType(member.type.name)}}
+        {%- do assert(type.is_wire_transparent, 'wire transparent') -%}
+        {{as_cType(type.name)}}
     {%- endif -%}
 {%- endmacro -%}
 
 //* Outputs the size of one element of the type that will be used on the wire for the member
-{%- macro member_transfer_sizeof(member) -%}
-    sizeof({{member_transfer_type(member)}})
+{%- macro member_transfer_sizeof(type) -%}
+    sizeof({{member_transfer_type(type)}})
 {%- endmacro -%}
 
 //* Outputs the serialization code to put `in` in `out`
-{%- macro serialize_member(member, in, out) -%}
-    {%- if member.type.category == "object" -%}
-        {%- set Optional = "Optional" if member.optional else "" -%}
+{%- macro serialize_member(type, optional, in, out) -%}
+    {%- if type.category == "object" -%}
+        {%- set Optional = "Optional" if optional else "" -%}
         WIRE_TRY(provider.Get{{Optional}}Id({{in}}, &{{out}}));
-    {%- elif member.type.category == "structure" -%}
+    {%- elif type.category == "structure" -%}
         //* Do not memcpy or we may serialize padding bytes which can leak information across a
         //* trusted boundary.
-        {%- set Provider = ", provider" if member.type.may_have_dawn_object else "" -%}
-        WIRE_TRY({{as_cType(member.type.name)}}Serialize({{in}}, &{{out}}, buffer{{Provider}}));
-    {%- elif not is_wire_serializable(member.type) -%}
+        {%- set Provider = ", provider" if type.may_have_dawn_object else "" -%}
+        WIRE_TRY({{as_cType(type.name)}}Serialize({{in}}, &{{out}}, buffer{{Provider}}));
+    {%- elif not is_wire_serializable(type) -%}
         if ({{in}} != nullptr) return WireResult::FatalError;
     {%- else -%}
         {{out}} = {{in}};
@@ -90,26 +90,26 @@
 {%- endmacro -%}
 
 //* Outputs the deserialization code to put `in` in `out`
-{%- macro deserialize_member(member, in, out) -%}
-    {%- if member.type.category == "object" -%}
-        {%- set Optional = "Optional" if member.optional else "" -%}
+{%- macro deserialize_member(type, optional, in, out) -%}
+    {%- if type.category == "object" -%}
+        {%- set Optional = "Optional" if optional else "" -%}
         WIRE_TRY(resolver.Get{{Optional}}FromId({{in}}, &{{out}}));
-    {%- elif member.type.category == "structure" %}
-        {% if member.type.is_wire_transparent %}
+    {%- elif type.category == "structure" %}
+        {% if type.is_wire_transparent %}
             static_assert(sizeof({{out}}) == sizeof({{in}}), "Deserialize memcpy size must match.");
-                memcpy(&{{out}}, const_cast<const {{member_transfer_type(member)}}*>(&{{in}}), {{member_transfer_sizeof(member)}});
+                memcpy(&{{out}}, const_cast<const {{member_transfer_type(type)}}*>(&{{in}}), {{member_transfer_sizeof(type)}});
         {%- else %}
-            WIRE_TRY({{as_cType(member.type.name)}}Deserialize(&{{out}}, &{{in}}, deserializeBuffer, allocator
-                {%- if member.type.may_have_dawn_object -%}
+            WIRE_TRY({{as_cType(type.name)}}Deserialize(&{{out}}, &{{in}}, deserializeBuffer, allocator
+                {%- if type.may_have_dawn_object -%}
                     , resolver
                 {%- endif -%}
             ));
         {%- endif -%}
-    {%- elif member.type.category == 'callback info' %}
-        {{out}} = WGPU_{{member.type.name.SNAKE_CASE()}}_INIT;
-    {%- elif not is_wire_serializable(member.type) %}
+    {%- elif type.category == 'callback info' %}
+        {{out}} = WGPU_{{type.name.SNAKE_CASE()}}_INIT;
+    {%- elif not is_wire_serializable(type) %}
         {{out}} = nullptr;
-    {%- elif member.type.name.get() == "size_t" -%}
+    {%- elif type.name.get() == "size_t" -%}
         //* Deserializing into size_t requires check that the uint64_t used on the wire won't narrow.
         if ({{in}} > std::numeric_limits<size_t>::max()) return WireResult::FatalError;
             {{out}} = checked_cast<size_t>({{in}});
@@ -149,7 +149,7 @@
             {% endif %}
             //* Value types are directly in the command, objects being replaced with their IDs.
             {% if member.annotation == "value" %}
-                {{member_transfer_type(member)}} {{as_varName(member.name)}};
+                {{member_transfer_type(member.type)}} {{as_varName(member.name)}};
                 {% continue %}
             {% endif %}
             //* Optional members additionally come with a boolean to indicate whether they were set.
@@ -209,7 +209,7 @@
                 {
                     {% do assert(member.annotation != "const*const*", "const*const* not valid here") %}
                     auto memberLength = {{member_length(member, "record.")}};
-                    auto size = WireAlignSizeofN<{{member_transfer_type(member)}}>(memberLength);
+                    auto size = WireAlignSizeofN<{{member_transfer_type(member.type)}}>(memberLength);
                     DAWN_ASSERT(size);
                     result += *size;
                     //* Structures might contain more pointers so we need to add their extra size as well.
@@ -295,7 +295,7 @@
             {% endif %}
             //* Value types are directly in the transfer record, objects being replaced with their IDs.
             {% if member.annotation == "value" %}
-                {{serialize_member(member, "record." + memberName, "transfer->" + memberName)}}
+                {{serialize_member(member.type, member.optional, "record." + memberName, "transfer->" + memberName)}}
                 {% continue %}
             {% endif %}
             //* Allocate space and write the non-value arguments in it.
@@ -309,7 +309,7 @@
             {% endif %}
                 auto memberLength = {{member_length(member, "record.")}};
 
-                {{member_transfer_type(member)}}* memberBuffer;
+                {{member_transfer_type(member.type)}}* memberBuffer;
                 WIRE_TRY(buffer->NextN(memberLength, &memberBuffer));
 
                 {% if member.type.is_wire_transparent %}
@@ -319,14 +319,14 @@
                     if (memberLength != 0) {
                         memcpy(
                             memberBuffer, record.{{memberName}},
-                            {{member_transfer_sizeof(member)}} * memberLength);
+                            {{member_transfer_sizeof(member.type)}} * memberLength);
                     }
                 {% else %}
                     //* This loop cannot overflow because it iterates up to |memberLength|. Even if
                     //* memberLength were the maximum integer value, |i| would become equal to it
                     //* just before exiting the loop, but not increment past or wrap around.
                     for (decltype(memberLength) i = 0; i < memberLength; ++i) {
-                        {{serialize_member(member, "record." + memberName + "[i]", "memberBuffer[i]" )}}
+                        {{serialize_member(member.type, member.array_element_optional, "record." + memberName + "[i]", "memberBuffer[i]" )}}
                     }
                 {% endif %}
             }
@@ -408,7 +408,7 @@
             {% set memberName = as_varName(member.name) %}
             //* Value types are directly in the transfer record, objects being replaced with their IDs.
             {% if member.annotation == "value" %}
-                {{deserialize_member(member, "transfer->" + memberName, "record->" + memberName)}}
+                {{deserialize_member(member.type, member.optional, "transfer->" + memberName, "record->" + memberName)}}
                 {% continue %}
             {% endif %}
             //* Get extra buffer data, and copy pointed to values in extra allocated space. Note that
@@ -428,7 +428,7 @@
                 {
             {% endif %}
                 auto memberLength = {{member_length(member, "record->")}};
-                const volatile {{member_transfer_type(member)}}* memberBuffer;
+                const volatile {{member_transfer_type(member.type)}}* memberBuffer;
                 WIRE_TRY(deserializeBuffer->ReadN(memberLength, &memberBuffer));
 
                 //* For data-only members (e.g. "data" in WriteBuffer and WriteTexture), they are
@@ -438,7 +438,7 @@
                 //* dawn_native must be a copy of what's in the wire.
                 {% if member.json_data["wire_is_data_only"] %}
                     record->{{memberName}} =
-                        const_cast<const {{member_transfer_type(member)}}*>(memberBuffer);
+                        const_cast<const {{member_transfer_type(member.type)}}*>(memberBuffer);
 
                 {% else %}
                     {{as_cType(member.type.name)}}* copiedMembers;
@@ -457,8 +457,8 @@
                             //* unexpected downstream effects.
                             memcpy(
                                 copiedMembers,
-                                const_cast<const {{member_transfer_type(member)}}*>(memberBuffer),
-                              {{member_transfer_sizeof(member)}} * memberLength);
+                                const_cast<const {{member_transfer_type(member.type)}}*>(memberBuffer),
+                              {{member_transfer_sizeof(member.type)}} * memberLength);
                         }
                     {% else %}
                         //* This loop cannot overflow because it iterates up to |memberLength|. Even
@@ -466,7 +466,7 @@
                         //* to it just before exiting the loop, but not increment past or wrap
                         //* around.
                         for (decltype(memberLength) i = 0; i < memberLength; ++i) {
-                            {{deserialize_member(member, "memberBuffer[i]", "copiedMembers[i]")}}
+                            {{deserialize_member(member.type, member.array_element_optional, "memberBuffer[i]", "copiedMembers[i]")}}
                         }
                     {% endif %}
                 {% endif %}

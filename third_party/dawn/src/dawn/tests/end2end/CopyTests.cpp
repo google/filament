@@ -420,10 +420,9 @@ class CopyTests_WithFormatParam : public CopyTests,
         if (!device.HasFeature(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
             return kTextureBytesPerRowAlignment;
         }
-        wgpu::Limits limits{};
+        dawn::utils::ComboLimits limits;
         wgpu::DawnTexelCopyBufferRowAlignmentLimits alignmentLimits{};
-        limits.nextInChain = &alignmentLimits;
-        device.GetLimits(&limits);
+        device.GetLimits(limits.GetLinked(&alignmentLimits));
         return alignmentLimits.minTexelCopyBufferRowAlignment;
     }
     BufferSpec MinimumBufferSpec(uint32_t width, uint32_t height, uint32_t depth = 1) {
@@ -1336,6 +1335,9 @@ TEST_P(CopyTests_T2B, OffsetBufferUnaligned) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kWidth = 128;
     constexpr uint32_t kHeight = 128;
 
@@ -1488,6 +1490,9 @@ TEST_P(CopyTests_T2B, OffsetBufferUnalignedSmallBytesPerRow) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kWidth = 32;
     constexpr uint32_t kHeight = 128;
 
@@ -1616,6 +1621,9 @@ TEST_P(CopyTests_T2B, RowsPerImageShouldNotCauseBufferOOBIfDepthOrArrayLayersIsO
 TEST_P(CopyTests_T2B, BytesPerRowShouldNotCauseBufferOOBIfCopyHeightIsOne) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
+
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
     constexpr uint32_t kWidth = 250;
     TextureSpec textureSpec;
@@ -1816,6 +1824,9 @@ TEST_P(CopyTests_T2B, Texture3DNoSplitRowDataWithEmptyFirstRow) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kWidth = 2;
     constexpr uint32_t kHeight = 4;
     constexpr uint32_t kDepth = 3;
@@ -1841,6 +1852,9 @@ TEST_P(CopyTests_T2B, Texture3DSplitRowDataWithoutEmptyFirstRow) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kWidth = 259;
     constexpr uint32_t kHeight = 127;
     constexpr uint32_t kDepth = 3;
@@ -1860,6 +1874,9 @@ TEST_P(CopyTests_T2B, Texture3DSplitRowDataWithoutEmptyFirstRow) {
 TEST_P(CopyTests_T2B, Texture3DSplitRowDataWithEmptyFirstRow) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
+
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
     constexpr uint32_t kWidth = 39;
     constexpr uint32_t kHeight = 4;
@@ -1885,6 +1902,9 @@ TEST_P(CopyTests_T2B, Texture3DCopyHeightIsOneCopyWidthIsTiny) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr uint32_t kWidth = 2;
     constexpr uint32_t kHeight = 1;
     constexpr uint32_t kDepth = 3;
@@ -1909,6 +1929,9 @@ TEST_P(CopyTests_T2B, Texture3DCopyHeightIsOneCopyWidthIsTiny) {
 TEST_P(CopyTests_T2B, Texture3DCopyHeightIsOneCopyWidthIsSmall) {
     // TODO(crbug.com/dawn/2294): diagnose T2B failures on Pixel 4 OpenGLES
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsAndroid() && IsQualcomm());
+
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
 
     constexpr uint32_t kWidth = 39;
     constexpr uint32_t kHeight = 1;
@@ -2025,6 +2048,9 @@ class CopyTests_T2B_No_Format_Param : public CopyTests, public DawnTest {};
 // A regression test for a bug on D3D12 backend that causes crash when doing texture-to-texture
 // copy one row with the texture format Depth32Float.
 TEST_P(CopyTests_T2B_No_Format_Param, CopyOneRowWithDepth32Float) {
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     constexpr wgpu::TextureFormat kFormat = wgpu::TextureFormat::Depth32Float;
     constexpr uint32_t kPixelsPerRow = 4u;
 
@@ -2084,7 +2110,7 @@ class CopyTests_T2B_Compat : public CopyTests_T2B {
   protected:
     void SetUp() override {
         CopyTests_T2B::SetUp();
-        DAWN_SUPPRESS_TEST_IF(!IsCompatibilityMode());
+        DAWN_TEST_UNSUPPORTED_IF(!IsCompatibilityMode());
         DAWN_SUPPRESS_TEST_IF(IsANGLESwiftShader());
     }
 };
@@ -3488,11 +3514,12 @@ TEST_P(CopyToDepthStencilTextureAfterDestroyingBigBufferTests, DoTest) {
 
     // Ensure the underlying ID3D12Resource of bigBuffer is deleted.
     bool submittedWorkDone = false;
-    queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents,
-                              [&submittedWorkDone](wgpu::QueueWorkDoneStatus status) {
-                                  EXPECT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
-                                  submittedWorkDone = true;
-                              });
+    queue.OnSubmittedWorkDone(
+        wgpu::CallbackMode::AllowProcessEvents,
+        [&submittedWorkDone](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
+            EXPECT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
+            submittedWorkDone = true;
+        });
     while (!submittedWorkDone) {
         WaitABit();
     }
@@ -3762,11 +3789,12 @@ class T2TCopyFromDirtyHeapTests : public DawnTest {
 
     void EnsureSubmittedWorkDone() {
         bool submittedWorkDone = false;
-        queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents,
-                                  [&submittedWorkDone](wgpu::QueueWorkDoneStatus status) {
-                                      EXPECT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
-                                      submittedWorkDone = true;
-                                  });
+        queue.OnSubmittedWorkDone(
+            wgpu::CallbackMode::AllowProcessEvents,
+            [&submittedWorkDone](wgpu::QueueWorkDoneStatus status, wgpu::StringView) {
+                EXPECT_EQ(status, wgpu::QueueWorkDoneStatus::Success);
+                submittedWorkDone = true;
+            });
         while (!submittedWorkDone) {
             WaitABit();
         }

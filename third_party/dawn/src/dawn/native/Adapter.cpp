@@ -35,9 +35,11 @@
 #include <utility>
 #include <vector>
 
+#include "dawn/common/Math.h"
 #include "dawn/common/StringViewUtils.h"
 #include "dawn/native/ChainUtils.h"
 #include "dawn/native/Device.h"
+#include "dawn/native/Error.h"
 #include "dawn/native/Instance.h"
 #include "dawn/native/PhysicalDevice.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -96,9 +98,14 @@ InstanceBase* AdapterBase::APIGetInstance() const {
 void AdapterBase::UpdateLimits() {
     mLimits = mPhysicalDevice->GetLimits();
 
+    // Disable unsafe limits if needed.
+    if (!mTogglesState.IsEnabled(Toggle::AllowUnsafeAPIs)) {
+        mLimits.v1.maxImmediateSize = 0;
+    }
+
     // Apply the tiered limits if needed.
     if (mUseTieredLimits) {
-        mLimits = ApplyLimitTiers(std::move(mLimits));
+        ApplyLimitTiers(&mLimits);
     }
 }
 
@@ -107,51 +114,9 @@ const CombinedLimits& AdapterBase::GetLimits() const {
 }
 
 wgpu::Status AdapterBase::APIGetLimits(Limits* limits) const {
-    DAWN_ASSERT(limits != nullptr);
-    UnpackedPtr<Limits> unpacked;
-    if (mInstance->ConsumedError(ValidateAndUnpack(limits), &unpacked)) {
+    if (mInstance->ConsumedError(FillLimits(limits, mSupportedFeatures, mLimits))) {
         return wgpu::Status::Error;
     }
-
-    {
-        wgpu::ChainedStructOut* originalChain = unpacked->nextInChain;
-        **unpacked = mLimits.v1;
-        // Recover origin chain.
-        unpacked->nextInChain = originalChain;
-    }
-
-    if (auto* immediateDataLimits = unpacked.Get<DawnExperimentalImmediateDataLimits>()) {
-        wgpu::ChainedStructOut* originalChain = immediateDataLimits->nextInChain;
-        if (!mSupportedFeatures.IsEnabled(wgpu::FeatureName::ChromiumExperimentalImmediateData)) {
-            // If immediate data features are not supported, return the default-initialized
-            // DawnExperimentalImmediateDataLimits object, where maxImmediateDataByteSize is
-            // WGPU_LIMIT_U32_UNDEFINED.
-            *immediateDataLimits = DawnExperimentalImmediateDataLimits{};
-        } else {
-            // If adapter supports immediate data features, always return the valid immediate data
-            // limits.
-            *immediateDataLimits = mLimits.experimentalImmediateDataLimits;
-        }
-
-        // Recover origin chain.
-        immediateDataLimits->nextInChain = originalChain;
-    }
-
-    if (auto* texelCopyBufferRowAlignmentLimits =
-            unpacked.Get<DawnTexelCopyBufferRowAlignmentLimits>()) {
-        wgpu::ChainedStructOut* originalChain = texelCopyBufferRowAlignmentLimits->nextInChain;
-        if (!mSupportedFeatures.IsEnabled(wgpu::FeatureName::DawnTexelCopyBufferRowAlignment)) {
-            // If the feature is not enabled, minTexelCopyBufferRowAlignment is default-initialized
-            // to WGPU_LIMIT_U32_UNDEFINED.
-            *texelCopyBufferRowAlignmentLimits = DawnTexelCopyBufferRowAlignmentLimits{};
-        } else {
-            *texelCopyBufferRowAlignmentLimits = mLimits.texelCopyBufferRowAlignmentLimits;
-        }
-
-        // Recover origin chain.
-        texelCopyBufferRowAlignmentLimits->nextInChain = originalChain;
-    }
-
     return wgpu::Status::Success;
 }
 
@@ -164,22 +129,22 @@ wgpu::Status AdapterBase::APIGetInfo(AdapterInfo* info) const {
     }
 
     bool hadError = false;
-    if (unpacked.Get<AdapterPropertiesMemoryHeaps>() != nullptr &&
+    if (unpacked.Has<AdapterPropertiesMemoryHeaps>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::AdapterPropertiesMemoryHeaps)) {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature AdapterPropertiesMemoryHeaps is not available."));
     }
-    if (unpacked.Get<AdapterPropertiesD3D>() != nullptr &&
+    if (unpacked.Has<AdapterPropertiesD3D>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::AdapterPropertiesD3D)) {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature AdapterPropertiesD3D is not available."));
     }
-    if (unpacked.Get<AdapterPropertiesVk>() != nullptr &&
+    if (unpacked.Has<AdapterPropertiesVk>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::AdapterPropertiesVk)) {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature AdapterPropertiesVk is not available."));
     }
-    if (unpacked.Get<AdapterPropertiesSubgroupMatrixConfigs>() != nullptr &&
+    if (unpacked.Has<AdapterPropertiesSubgroupMatrixConfigs>() &&
         !mSupportedFeatures.IsEnabled(wgpu::FeatureName::ChromiumExperimentalSubgroupMatrix)) {
         hadError |= mInstance->ConsumedError(
             DAWN_VALIDATION_ERROR("Feature ChromiumExperimentalSubgroupMatrix is not available."));
@@ -191,22 +156,8 @@ wgpu::Status AdapterBase::APIGetInfo(AdapterInfo* info) const {
     if (auto* powerPreferenceDesc = unpacked.Get<DawnAdapterPropertiesPowerPreference>()) {
         powerPreferenceDesc->powerPreference = mPowerPreference;
     }
-    if (auto* subgroupsProperties = unpacked.Get<AdapterPropertiesSubgroups>()) {
-        // When the feature is *not* supported, these must be 4 and 128.
-        // Set those defaults now, but a backend may override this.
-        subgroupsProperties->subgroupMinSize = 4;
-        subgroupsProperties->subgroupMaxSize = 128;
-    }
 
     mPhysicalDevice->PopulateBackendProperties(unpacked);
-
-    if (auto* subgroupsProperties = unpacked.Get<AdapterPropertiesSubgroups>()) {
-        if (mPhysicalDevice->GetBackendType() == wgpu::BackendType::D3D12 &&
-            mTogglesState.IsEnabled(Toggle::D3D12RelaxMinSubgroupSizeTo8)) {
-            subgroupsProperties->subgroupMinSize =
-                std::min(subgroupsProperties->subgroupMinSize, 8u);
-        }
-    }
 
     // Allocate space for all strings.
     size_t allocSize = mPhysicalDevice->GetVendorName().length() +
@@ -314,6 +265,10 @@ ResultOrError<Ref<DeviceBase>> AdapterBase::CreateDeviceInternal(
     if (mInstance->IsBackendValidationEnabled()) {
         deviceToggles.Default(Toggle::UseUserDefinedLabelsInBackend, true);
     }
+    // Currently enable the blob cache hash validation by default to catch possible collapse.
+    // TODO(crbug.com/429938352): Disable default hash validation to prevent performance cost when
+    // no longer necessary.
+    deviceToggles.Default(Toggle::BlobCacheHashValidation, true);
 
     // Backend-specific forced and default device toggles
     mPhysicalDevice->SetupBackendDeviceToggles(mInstance->GetPlatform(), &deviceToggles);
@@ -327,41 +282,50 @@ ResultOrError<Ref<DeviceBase>> AdapterBase::CreateDeviceInternal(
     // toggles. Note that certain toggles in device toggles state may be overridden by user and
     // different from the adapter toggles state, and in this case a device may support features
     // that not supported by the adapter. We allow such toggles overriding for the convenience e.g.
-    // creating a device for internal usage with AllowUnsafeAPI enabled from an adapter that
-    // disabled AllowUnsafeAPIS.
+    // creating a device for internal usage with AllowUnsafeAPIs enabled from an adapter that
+    // disabled AllowUnsafeAPIs.
     for (wgpu::FeatureName requiredFeature : requiredFeatureSet) {
         FeatureValidationResult result =
             mPhysicalDevice->ValidateFeatureSupportedWithToggles(requiredFeature, deviceToggles);
         DAWN_INVALID_IF(!result.success, "Invalid feature required: %s",
                         result.errorMessage.c_str());
     }
-    // Validate features dependency.
-    // TODO(349125474): Decide if this validation is needed, see
-    // https://github.com/gpuweb/gpuweb/issues/4734 for detail.
-    if (requiredFeatureSet.count(wgpu::FeatureName::SubgroupsF16) > 0) {
-        DAWN_INVALID_IF((requiredFeatureSet.count(wgpu::FeatureName::Subgroups) == 0),
-                        "Feature %s must be required together with feature %s.",
-                        wgpu::FeatureName::SubgroupsF16, wgpu::FeatureName::Subgroups);
-        DAWN_INVALID_IF(requiredFeatureSet.count(wgpu::FeatureName::ShaderF16) == 0,
-                        "Feature %s must be required together with feature %s.",
-                        wgpu::FeatureName::SubgroupsF16, wgpu::FeatureName::ShaderF16);
-    }
 
     if (descriptor->requiredLimits != nullptr) {
-        // Only consider limits in RequiredLimits structure, and currently no chained structure
-        // supported.
-        DAWN_INVALID_IF(descriptor->requiredLimits->nextInChain != nullptr,
-                        "can not chain after requiredLimits.");
+        CombinedLimits requiredLimits;
+        DAWN_TRY_CONTEXT(ValidateAndUnpackLimitsIn(descriptor->requiredLimits, requiredFeatureSet,
+                                                   &requiredLimits),
+                         "Validating and unpacking descriptor->requiredLimits");
 
-        Limits supportedLimits;
-        wgpu::Status status = APIGetLimits(&supportedLimits);
-        DAWN_ASSERT(status == wgpu::Status::Success);
-
-        DAWN_TRY_CONTEXT(ValidateLimits(supportedLimits, *descriptor->requiredLimits),
-                         "validating required limits");
+        DAWN_TRY_CONTEXT(ValidateLimits(GetLimits(), requiredLimits), "validating required limits");
     }
 
-    return mPhysicalDevice->CreateDevice(this, descriptor, deviceToggles, std::move(lostEvent));
+    if (auto* allocatorDesc = descriptor.Get<DawnDeviceAllocatorControl>()) {
+        DAWN_INVALID_IF(!requiredFeatureSet.contains(wgpu::FeatureName::DawnDeviceAllocatorControl),
+                        "%s is not enabled.", wgpu::FeatureName::DawnDeviceAllocatorControl);
+
+        DAWN_INVALID_IF(!IsPowerOfTwo(allocatorDesc->allocatorHeapBlockSize),
+                        "allocator heap block size (%d) isn't a power of two.",
+                        allocatorDesc->allocatorHeapBlockSize);
+    }
+
+    DAWN_INVALID_IF(mAdapterIsConsumed,
+                    "adapter is \"consumed\": it has already been used to create a device");
+
+    auto result =
+        mPhysicalDevice->CreateDevice(this, descriptor, deviceToggles, std::move(lostEvent));
+
+    // The adapter should be consumed only upon successful device creation if the instance doesn't
+    // allow multiple devices per adapter, or if the descriptor explicitly requests consumption.
+    auto* consumeAdapterDesc = descriptor.Get<DawnConsumeAdapterDescriptor>();
+    const bool consumeOnSuccess =
+        !mInstance->HasFeature(wgpu::InstanceFeatureName::MultipleDevicesPerAdapter) ||
+        (consumeAdapterDesc && consumeAdapterDesc->consumeAdapter);
+    if (result.IsSuccess() && consumeOnSuccess) {
+        mAdapterIsConsumed = true;
+    }
+
+    return result;
 }
 
 std::pair<Ref<DeviceBase::DeviceLostEvent>, ResultOrError<Ref<DeviceBase>>>
@@ -374,15 +338,13 @@ AdapterBase::CreateDevice(const DeviceDescriptor* descriptor) {
     // Catch any errors to directly complete the device lost event with the error message.
     if (result.IsError()) {
         auto error = result.AcquireError();
-        lostEvent->mReason = wgpu::DeviceLostReason::FailedCreation;
-        lostEvent->mMessage = "Failed to create device:\n" + error->GetFormattedMessage();
+        lostEvent->SetLost(mInstance->GetEventManager(), wgpu::DeviceLostReason::FailedCreation,
+                           "Failed to create device:\n" + error->GetFormattedMessage());
 
         // When the device fails to initialize, we need to both promote the device ref to an
         // external ref to clean up resources, and drop it, so we acquire it in this scope.
         APIRef<DeviceBase> device;
         device.Acquire(ReturnToAPI(std::move(lostEvent->mDevice)));
-
-        mInstance->GetEventManager()->SetFutureReady(lostEvent.Get());
         return {lostEvent, std::move(error)};
     }
 

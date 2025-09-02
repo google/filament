@@ -39,7 +39,6 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 cc_library(
   name = "common",
   srcs = [
-    "common.cc",
     "vertex_pulling_config.cc",
   ],
   hdrs = [

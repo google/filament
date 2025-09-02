@@ -27,7 +27,6 @@
 
 #include "dawn/native/opengl/PipelineLayoutGL.h"
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/MatchVariant.h"
 #include "dawn/native/BindGroupLayoutInternal.h"
 #include "dawn/native/opengl/DeviceGL.h"
@@ -37,13 +36,13 @@ namespace dawn::native::opengl {
 PipelineLayout::PipelineLayout(Device* device,
                                const UnpackedPtr<PipelineLayoutDescriptor>& descriptor)
     : PipelineLayoutBase(device, descriptor) {
-    GLuint uboIndex = 0;
-    GLuint samplerIndex = 0;
-    GLuint sampledTextureIndex = 0;
-    GLuint ssboIndex = 0;
-    GLuint storageTextureIndex = 0;
+    FlatBindingIndex uboIndex{0};
+    FlatBindingIndex samplerIndex{0};
+    FlatBindingIndex sampledTextureIndex{0};
+    FlatBindingIndex ssboIndex{0};
+    FlatBindingIndex storageTextureIndex{0};
 
-    for (BindGroupIndex group : IterateBitSet(GetBindGroupLayoutsMask())) {
+    for (BindGroupIndex group : GetBindGroupLayoutsMask()) {
         const BindGroupLayoutInternalBase* bgl = GetBindGroupLayout(group);
         mIndexInfo[group].resize(bgl->GetBindingCount());
 
@@ -91,29 +90,36 @@ PipelineLayout::PipelineLayout(Device* device,
 
     mNumSamplers = samplerIndex;
     mNumSampledTextures = sampledTextureIndex;
+    mNumSSBO = ssboIndex;
 
-    // Set internal uniform binding as the next unused uboIndex.
-    mInternalUniformBinding = uboIndex;
+    // Set internal uniform bindings as the next unused uboIndex.
+    mInternalTextureBuiltinsUniformBinding = uboIndex;
+    uboIndex++;
+    mInternalArrayLengthUniformBinding = uboIndex;
 }
 
 const PipelineLayout::BindingIndexInfo& PipelineLayout::GetBindingIndexInfo() const {
     return mIndexInfo;
 }
 
-GLuint PipelineLayout::GetTextureUnitsUsed() const {
-    return 0;
-}
-
-size_t PipelineLayout::GetNumSamplers() const {
+FlatBindingIndex PipelineLayout::GetNumSamplers() const {
     return mNumSamplers;
 }
 
-size_t PipelineLayout::GetNumSampledTextures() const {
+FlatBindingIndex PipelineLayout::GetNumSampledTextures() const {
     return mNumSampledTextures;
 }
 
-GLuint PipelineLayout::GetInternalUniformBinding() const {
-    return mInternalUniformBinding;
+FlatBindingIndex PipelineLayout::GetNumSSBO() const {
+    return mNumSSBO;
+}
+
+FlatBindingIndex PipelineLayout::GetInternalTextureBuiltinsUniformBinding() const {
+    return mInternalTextureBuiltinsUniformBinding;
+}
+
+FlatBindingIndex PipelineLayout::GetInternalArrayLengthUniformBinding() const {
+    return mInternalArrayLengthUniformBinding;
 }
 
 }  // namespace dawn::native::opengl

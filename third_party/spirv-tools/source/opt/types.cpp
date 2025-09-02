@@ -135,6 +135,7 @@ std::unique_ptr<Type> Type::Clone() const {
     DeclareKindCase(CooperativeVectorNV);
     DeclareKindCase(RayQueryKHR);
     DeclareKindCase(HitObjectNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -187,6 +188,7 @@ bool Type::operator==(const Type& other) const {
     DeclareKindCase(HitObjectNV);
     DeclareKindCase(TensorLayoutNV);
     DeclareKindCase(TensorViewNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -247,6 +249,7 @@ size_t Type::ComputeHashValue(size_t hash, SeenTypes* seen) const {
     DeclareKindCase(HitObjectNV);
     DeclareKindCase(TensorLayoutNV);
     DeclareKindCase(TensorViewNV);
+    DeclareKindCase(TensorARM);
 #undef DeclareKindCase
     default:
       assert(false && "Unhandled type");
@@ -897,6 +900,36 @@ bool CooperativeVectorNV::IsSameImpl(const Type* that,
   if (!mt) return false;
   return component_type_->IsSameImpl(mt->component_type_, seen) &&
          components_ == mt->components_ && HasSameDecorations(that);
+}
+
+TensorARM::TensorARM(const Type* elty, const uint32_t rank,
+                     const uint32_t shape)
+    : Type(kTensorARM), element_type_(elty), rank_id_(rank), shape_id_(shape) {
+  assert(elty != nullptr);
+  if (shape != 0) {
+    assert(rank != 0);
+  }
+}
+
+std::string TensorARM::str() const {
+  std::ostringstream oss;
+  oss << "tensor<" << element_type_->str() << ", id(" << rank_id_ << "), id("
+      << shape_id_ << ")>";
+  return oss.str();
+}
+
+size_t TensorARM::ComputeExtraStateHash(size_t hash, SeenTypes* seen) const {
+  hash = hash_combine(hash, rank_id_);
+  hash = hash_combine(hash, shape_id_);
+  return element_type_->ComputeHashValue(hash, seen);
+}
+
+bool TensorARM::IsSameImpl(const Type* that, IsSameCache* seen) const {
+  const TensorARM* tt = that->AsTensorARM();
+  if (!tt) return false;
+  return element_type_->IsSameImpl(tt->element_type_, seen) &&
+         rank_id_ == tt->rank_id_ && shape_id_ == tt->shape_id_ &&
+         HasSameDecorations(that);
 }
 
 }  // namespace analysis

@@ -41,6 +41,75 @@ namespace {
 using ::testing::Test;
 using ::testing::Types;
 
+class MutexSupportedCounterT : public MutexProtectedSupport<MutexSupportedCounterT> {
+  public:
+    // This is an unsafe read of the count without acquiring the lock.
+    int ReadCount() { return mImpl.mCount; }
+
+  private:
+    friend typename MutexProtectedSupport<MutexSupportedCounterT>::Traits;
+
+    struct {
+        int mCount = 0;
+    } mImpl;
+};
+
+TEST(MutexProtectedSupportTests, Nominal) {
+    static constexpr int kIncrementCount = 100;
+    static constexpr int kDecrementCount = 50;
+
+    MutexSupportedCounterT counter;
+
+    auto increment = [&] {
+        for (uint32_t i = 0; i < kIncrementCount; i++) {
+            counter->mCount++;
+        }
+    };
+    auto useIncrement = [&] {
+        for (uint32_t i = 0; i < kIncrementCount; i++) {
+            counter.Use([](auto c) { c->mCount++; });
+        }
+    };
+    auto decrement = [&] {
+        for (uint32_t i = 0; i < kDecrementCount; i++) {
+            counter->mCount--;
+        }
+    };
+    auto useDecrement = [&] {
+        for (uint32_t i = 0; i < kDecrementCount; i++) {
+            counter.Use([](auto c) { c->mCount--; });
+        }
+    };
+
+    std::thread incrementThread(increment);
+    std::thread useIncrementThread(useIncrement);
+    std::thread decrementThread(decrement);
+    std::thread useDecrementThread(useDecrement);
+    incrementThread.join();
+    useIncrementThread.join();
+    decrementThread.join();
+    useDecrementThread.join();
+
+    EXPECT_EQ(counter->mCount, 2 * (kIncrementCount - kDecrementCount));
+}
+
+// Verifies that if we call additionally implemented functions when using the MutexProtectedSupport
+// wrapper, that they do not acquire the lock. If the lock was acquired, then this test would
+// deadlock.
+TEST(MutexProtectedSupportTests, UnsafeRead) {
+    MutexSupportedCounterT counter;
+
+    // Acquire the lock via the Use function.
+    counter.Use([&](auto c) {
+        // With the lock acquired, we should be able to call additionally implemented functions that
+        // do not acquire the lock.
+        c->mCount = 1;
+        EXPECT_EQ(counter.ReadCount(), 1);
+        c->mCount = 2;
+        EXPECT_EQ(counter.ReadCount(), 2);
+    });
+}
+
 // Simple thread-unsafe counter class.
 class CounterT : public RefCounted {
   public:

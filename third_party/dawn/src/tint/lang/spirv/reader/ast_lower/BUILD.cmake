@@ -43,16 +43,28 @@ if(TINT_BUILD_SPV_READER)
 tint_add_target(tint_lang_spirv_reader_ast_lower lib
   lang/spirv/reader/ast_lower/atomics.cc
   lang/spirv/reader/ast_lower/atomics.h
+  lang/spirv/reader/ast_lower/data.cc
+  lang/spirv/reader/ast_lower/data.h
   lang/spirv/reader/ast_lower/decompose_strided_array.cc
   lang/spirv/reader/ast_lower/decompose_strided_array.h
   lang/spirv/reader/ast_lower/decompose_strided_matrix.cc
   lang/spirv/reader/ast_lower/decompose_strided_matrix.h
   lang/spirv/reader/ast_lower/fold_trivial_lets.cc
   lang/spirv/reader/ast_lower/fold_trivial_lets.h
+  lang/spirv/reader/ast_lower/manager.cc
+  lang/spirv/reader/ast_lower/manager.h
   lang/spirv/reader/ast_lower/pass_workgroup_id_as_argument.cc
   lang/spirv/reader/ast_lower/pass_workgroup_id_as_argument.h
+  lang/spirv/reader/ast_lower/remove_unreachable_statements.cc
+  lang/spirv/reader/ast_lower/remove_unreachable_statements.h
+  lang/spirv/reader/ast_lower/simplify_pointers.cc
+  lang/spirv/reader/ast_lower/simplify_pointers.h
+  lang/spirv/reader/ast_lower/transform.cc
+  lang/spirv/reader/ast_lower/transform.h
   lang/spirv/reader/ast_lower/transpose_row_major.cc
   lang/spirv/reader/ast_lower/transpose_row_major.h
+  lang/spirv/reader/ast_lower/unshadow.cc
+  lang/spirv/reader/ast_lower/unshadow.h
 )
 
 tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower lib
@@ -62,9 +74,6 @@ tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower lib
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
-  tint_lang_wgsl_ast_transform
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
   tint_lang_wgsl_program
   tint_lang_wgsl_resolver
   tint_lang_wgsl_sem
@@ -96,8 +105,14 @@ tint_add_target(tint_lang_spirv_reader_ast_lower_test test
   lang/spirv/reader/ast_lower/decompose_strided_array_test.cc
   lang/spirv/reader/ast_lower/decompose_strided_matrix_test.cc
   lang/spirv/reader/ast_lower/fold_trivial_lets_test.cc
+  lang/spirv/reader/ast_lower/helper_test.h
+  lang/spirv/reader/ast_lower/manager_test.cc
   lang/spirv/reader/ast_lower/pass_workgroup_id_as_argument_test.cc
+  lang/spirv/reader/ast_lower/remove_unreachable_statements_test.cc
+  lang/spirv/reader/ast_lower/simplify_pointers_test.cc
+  lang/spirv/reader/ast_lower/transform_test.cc
   lang/spirv/reader/ast_lower/transpose_row_major_test.cc
+  lang/spirv/reader/ast_lower/unshadow_test.cc
 )
 
 tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower_test test
@@ -108,9 +123,7 @@ tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower_test test
   tint_lang_core_type
   tint_lang_wgsl
   tint_lang_wgsl_ast
-  tint_lang_wgsl_ast_transform
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
+  tint_lang_wgsl_ast_test
   tint_lang_wgsl_program
   tint_lang_wgsl_resolver
   tint_lang_wgsl_sem
@@ -144,12 +157,6 @@ if(TINT_BUILD_WGSL_READER)
     tint_lang_wgsl_reader_parser
   )
 endif(TINT_BUILD_WGSL_READER)
-
-if(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower_test test
-    tint_lang_wgsl_ast_transform_test
-  )
-endif(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
 
 if(TINT_BUILD_WGSL_WRITER)
   tint_target_add_dependencies(tint_lang_spirv_reader_ast_lower_test test

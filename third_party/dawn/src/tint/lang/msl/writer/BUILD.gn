@@ -52,9 +52,9 @@ if (tint_build_msl_writer) {
       "${dawn_root}/src/utils:utils",
       "${tint_src_dir}/api/common",
       "${tint_src_dir}/lang/core",
-      "${tint_src_dir}/lang/core/common",
       "${tint_src_dir}/lang/core/constant",
       "${tint_src_dir}/lang/core/ir",
+      "${tint_src_dir}/lang/core/ir/transform",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
@@ -126,54 +126,6 @@ if (tint_build_unittests) {
     }
   }
 }
-if (tint_build_benchmarks) {
-  if (tint_build_msl_writer && tint_build_wgsl_reader) {
-    tint_benchmarks_source_set("bench") {
-      sources = [ "writer_bench.cc" ]
-      deps = [
-        "${dawn_root}/src/utils:utils",
-        "${tint_src_dir}:google_benchmark",
-        "${tint_src_dir}/api/common",
-        "${tint_src_dir}/lang/core",
-        "${tint_src_dir}/lang/core/constant",
-        "${tint_src_dir}/lang/core/ir",
-        "${tint_src_dir}/lang/core/type",
-        "${tint_src_dir}/lang/msl/ir/transform",
-        "${tint_src_dir}/lang/wgsl",
-        "${tint_src_dir}/lang/wgsl/ast",
-        "${tint_src_dir}/lang/wgsl/common",
-        "${tint_src_dir}/lang/wgsl/features",
-        "${tint_src_dir}/lang/wgsl/program",
-        "${tint_src_dir}/lang/wgsl/sem",
-        "${tint_src_dir}/utils",
-        "${tint_src_dir}/utils/containers",
-        "${tint_src_dir}/utils/diagnostic",
-        "${tint_src_dir}/utils/ice",
-        "${tint_src_dir}/utils/macros",
-        "${tint_src_dir}/utils/math",
-        "${tint_src_dir}/utils/memory",
-        "${tint_src_dir}/utils/rtti",
-        "${tint_src_dir}/utils/symbol",
-        "${tint_src_dir}/utils/text",
-      ]
-
-      if (tint_build_msl_writer) {
-        deps += [
-          "${tint_src_dir}/lang/msl/writer",
-          "${tint_src_dir}/lang/msl/writer/common",
-          "${tint_src_dir}/lang/msl/writer/helpers",
-        ]
-      }
-
-      if (tint_build_wgsl_reader) {
-        deps += [
-          "${tint_src_dir}/cmd/bench:bench",
-          "${tint_src_dir}/lang/wgsl/reader",
-        ]
-      }
-    }
-  }
-}
 if (tint_build_msl_writer) {
   tint_fuzz_source_set("fuzz") {
     sources = [ "writer_fuzz.cc" ]
@@ -203,6 +155,7 @@ if (tint_build_msl_writer) {
         "${tint_src_dir}/lang/msl/writer",
         "${tint_src_dir}/lang/msl/writer/common",
         "${tint_src_dir}/lang/msl/writer/helpers",
+        "${tint_src_dir}/lang/msl/writer/printer",
       ]
     }
   }

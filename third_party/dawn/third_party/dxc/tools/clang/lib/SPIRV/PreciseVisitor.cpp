@@ -60,6 +60,9 @@ bool isAccessingPrecise(clang::spirv::SpirvAccessChain *inst) {
     } else if (auto *raType = llvm::dyn_cast<RuntimeArrayType>(baseType)) {
       indexes.pop();
       baseType = raType->getElementType();
+    } else if (auto *npaType = llvm::dyn_cast<NodePayloadArrayType>(baseType)) {
+      indexes.pop();
+      baseType = npaType->getElementType();
     } else if (auto *structType = llvm::dyn_cast<StructType>(baseType)) {
       SpirvInstruction *index = indexes.top();
       if (auto *constInt = llvm::dyn_cast<SpirvConstantInteger>(index)) {

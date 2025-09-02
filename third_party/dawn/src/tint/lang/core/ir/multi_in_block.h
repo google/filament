@@ -58,6 +58,10 @@ class MultiInBlock : public Castable<MultiInBlock, Block> {
     /// @param params the params for the block
     void SetParams(std::initializer_list<BlockParam*> params);
 
+    /// Adds the param to the block
+    /// @param param the param for the block
+    void AddParam(BlockParam* param);
+
     /// @returns the params to the block
     VectorRef<BlockParam*> Params() { return params_; }
 

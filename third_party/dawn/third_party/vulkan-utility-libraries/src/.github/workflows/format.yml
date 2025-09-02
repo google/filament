@@ -17,7 +17,7 @@ permissions:
 jobs:
   clang-format:
     name: clang-format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -27,8 +27,10 @@ jobs:
           - 'tests'
     steps:
     - uses: actions/checkout@v4
+    - name: clang-format version
+      run: clang-format --version
     - name: Run clang-format
       uses: jidicula/clang-format-action@v4.15.0
       with:
-        clang-format-version: '14'
+        clang-format-version: '18'
         check-path: ${{ matrix.path }}

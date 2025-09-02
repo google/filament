@@ -35,7 +35,7 @@ WeakRefData::WeakRefData(RefCounted* value) : mValue(value) {}
 
 Ref<RefCounted> WeakRefData::TryGetRef() {
     std::lock_guard<std::mutex> lock(mMutex);
-    if (!mValue || !mValue->mRefCount.TryIncrement()) {
+    if (!mValue || !mValue->TryAddRef()) {
         return nullptr;
     }
     return AcquireRef(mValue.get());

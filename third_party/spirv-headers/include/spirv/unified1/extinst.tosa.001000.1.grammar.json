@@ -1,6 +1,7 @@
 {
   "copyright": [
-    "(c) 2022-2025 Arm Ltd."
+    "SPDX-FileCopyrightText: 2022-2025 Arm Ltd.",
+    "SPDX-License-Identifier: MIT"
   ],
   "version": 1000000,
   "revision": 1,

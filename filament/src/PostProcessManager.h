@@ -246,7 +246,7 @@ public:
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
             FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
 
-    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg,
+    FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg, bool translucent,
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
             backend::SamplerMagFilter filter) noexcept;
@@ -259,12 +259,18 @@ public:
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
+    enum class RcasMode {
+        OPAQUE,
+        ALPHA_PASSTHROUGH,
+        BLENDED
+    };
+
     FrameGraphId<FrameGraphTexture> rcas(
             FrameGraph& fg,
             float sharpness,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc,
-            bool translucent);
+            RcasMode mode);
 
     // color blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,

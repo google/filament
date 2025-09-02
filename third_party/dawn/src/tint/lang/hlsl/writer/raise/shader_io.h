@@ -32,6 +32,8 @@
 #include <optional>
 
 #include "src/tint/api/common/binding_point.h"
+#include "src/tint/lang/core/ir/transform/prepare_immediate_data.h"
+#include "src/tint/lang/hlsl/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -42,16 +44,19 @@ class Module;
 namespace tint::hlsl::writer::raise {
 
 struct ShaderIOConfig {
+    /// immediate data layout information
+    const core::ir::transform::ImmediateDataLayout& immediate_data_layout;
+
     /// The binding point to use for the num_workgroups generated uniform buffer. If it contains
     /// no value, a free binding point will be used. Specifically, binding 0 of the largest used
     /// group plus 1 is used if at least one resource is bound, otherwise group 0 binding 0 is used.
-    std::optional<BindingPoint> num_workgroups_binding;
+    std::optional<BindingPoint> num_workgroups_binding = std::nullopt;
 
     /// The binding point to use for the first_index_offset uniform buffer. If set, and if a vertex
     /// entry point contains a vertex_index or instance_index input parameter (or both), this
     /// transform will add a uniform buffer with both indices, and will add the offsets to the input
     /// variables, respectively.
-    std::optional<BindingPoint> first_index_offset_binding;
+    std::optional<BindingPoint> first_index_offset_binding = std::nullopt;
 
     /// If one doesn't exist, adds a @position member to the input struct as the last member.
     /// This is used for PixelLocal, for which Dawn requires such a member in the final HLSL shader.
@@ -62,7 +67,16 @@ struct ShaderIOConfig {
 
     /// Indicate which interstage io locations are actually used by the later stage.
     /// There can be at most 30 user defined interstage variables with locations.
-    std::bitset<30> interstage_locations;
+    std::bitset<30> interstage_locations{};
+
+    /// The offset of the first_index_offset push constant.
+    std::optional<uint32_t> first_index_offset = std::nullopt;
+
+    /// The offset of the first_instance_offset push constant.
+    std::optional<uint32_t> first_instance_offset = std::nullopt;
+
+    /// Offsets of num_workgroups push constant.
+    std::optional<uint32_t> num_workgroups_start_offset = std::nullopt;
 };
 
 /// ShaderIO is a transform that prepares entry point inputs and outputs for HLSL codegen.

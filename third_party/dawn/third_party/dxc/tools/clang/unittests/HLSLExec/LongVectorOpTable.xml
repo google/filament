@@ -1,0 +1,782 @@
+<?xml version="1.0" ?>
+<Data>
+    <Table Id="BinaryOpTable">
+        <ParameterTypes>
+          <!-- InputValueSetName1 is optional. If no value is provided use the
+          default value set for the data type. This string is meant to be a
+          key value for the the array of std::pairs defined in
+          LongVectorTestData.h for the applicable DataType-->
+          <ParameterType Name="InputValueSetName1">String</ParameterType>
+          <!-- InputValueSetName2 is optional. Same as InputValueSetName1 -->
+          <ParameterType Name="InputValueSetName2">String</ParameterType>
+          <ParameterType Name="DataType">String</ParameterType>
+          <ParameterType Name="OpTypeEnum">String</ParameterType>
+        </ParameterTypes>
+        <!-- LongVectorBinaryOpTypeTable DataType: bool -->
+        <Row Name="ScalarAdd_bool">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">bool</Parameter>
+        </Row>
+        <Row Name="Add_bool">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">bool</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_bool">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">bool</Parameter>
+        </Row>
+        <Row Name="Subtract_bool">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">bool</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: int16 -->
+        <Row Name="ScalarAdd_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Add_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Subtract_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Multiply_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Divide_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Modulus_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarMin_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Min_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="ScalarMax_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <Row Name="Max_int16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">int16</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: int32 -->
+        <Row Name="ScalarAdd_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Add_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Subtract_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Multiply_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Divide_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Modulus_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarMin_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Min_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="ScalarMax_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <Row Name="Max_int32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">int32</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: int64 -->
+        <Row Name="ScalarAdd_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Add_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Subtract_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Multiply_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Divide_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Modulus_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarMin_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Min_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="ScalarMax_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <Row Name="Max_int64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">int64</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: uint16 -->
+        <Row Name="ScalarAdd_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Add_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Subtract_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Multiply_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Divide_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Modulus_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarMin_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Min_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="ScalarMax_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <Row Name="Max_uint16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">uint16</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: uint32 -->
+        <Row Name="ScalarAdd_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Add_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Subtract_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Multiply_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Divide_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Modulus_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarMin_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Min_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="ScalarMax_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <Row Name="Max_uint32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">uint32</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: uint64 -->
+        <Row Name="ScalarAdd_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Add_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Subtract_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Multiply_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Divide_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Modulus_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarMin_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Min_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="ScalarMax_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <Row Name="Max_uint64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">uint64</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: float16 -->
+        <Row Name="ScalarAdd_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Add_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Subtract_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Multiply_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Divide_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Modulus_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarMin_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Min_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="ScalarMax_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <Row Name="Max_float16">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">float16</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: float32 -->
+        <Row Name="ScalarAdd_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Add_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Subtract_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Multiply_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Divide_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarModulus_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarModulus</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Modulus_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Modulus</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarMin_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Min_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="ScalarMax_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <Row Name="Max_float32">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">float32</Parameter>
+        </Row>
+        <!-- LongVectorBinaryOpTypeTable DataType: float64 -->
+        <Row Name="ScalarAdd_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarAdd</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Add_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Add</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="ScalarSubtract_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarSubtract</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Subtract_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Subtract</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="ScalarMultiply_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMultiply</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Multiply_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Multiply</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="ScalarDivide_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarDivide</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Divide_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Divide</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="ScalarMin_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMin</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Min_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Min</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="ScalarMax_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_ScalarMax</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+        <Row Name="Max_float64">
+          <Parameter Name="OpTypeEnum">BinaryOpType_Max</Parameter>
+          <Parameter Name="DataType">float64</Parameter>
+        </Row>
+    </Table>
+    <Table Id="UnaryOpTable">
+      <ParameterTypes>
+        <!-- InputValueSetName1 is optional. If no value is provided use the
+        default value set for the data type. This string is meant to be a key
+        value for the the array of std::pairs defined in LongVectorTestData.h
+        for the applicable DataType-->
+        <ParameterType Name="InputValueSetName1">String</ParameterType>
+        <ParameterType Name="DataType">String</ParameterType>
+        <ParameterType Name="OpTypeEnum">String</ParameterType>
+      </ParameterTypes>
+      <!-- LongVectorUnaryOpTypeTable DataType: bool -->
+      <Row Name="Initialize_bool">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">bool</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: int16 -->
+      <Row Name="Initialize_int16">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">int16</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: int32 -->
+      <Row Name="Initialize_int32">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">int32</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: int64 -->
+      <Row Name="Initialize_int64">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">int64</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: uint16 -->
+      <Row Name="Initialize_uint16">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">uint16</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: uint32 -->
+      <Row Name="Initialize_uint32">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">uint32</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: uint64 -->
+      <Row Name="Initialize_uint64">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">uint64</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: float16 -->
+      <Row Name="Initialize_float16">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: float32 -->
+      <Row Name="Initialize_float32">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTypeTable DataType: float64 -->
+      <Row Name="Initialize_float64">
+        <Parameter Name="OpTypeEnum">UnaryOpType_Initialize</Parameter>
+        <Parameter Name="DataType">float64</Parameter>
+      </Row>
+    </Table>
+    <Table Id="TrigonometricOpTable">
+      <ParameterTypes>
+        <!-- InputValueSetName1 is optional. If no value is provided use the
+        default value set for the data type. This string is meant to be a key
+        value for the the array of std::pairs defined in LongVectorTestData.h
+        for the applicable DataType-->
+        <ParameterType Name="InputValueSetName1">String</ParameterType>
+        <!-- InputArgsName is optional and is also a key to the array of
+        std::pairs defined in LongVectorTestData.h for the applicable DataType.
+        Used for args like min and max in clamp-->
+        <ParameterType Name="DataType">String</ParameterType>
+        <ParameterType Name="OpTypeEnum">String</ParameterType>
+      </ParameterTypes>
+      <!-- LongVectorUnaryOpTable_Trigonometric DataType: float16 -->
+      <Row Name="Acos_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Acos</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeOne</Parameter>
+      </Row>
+      <Row Name="Asin_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Asin</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeHalfPi</Parameter>
+      </Row>
+      <Row Name="Atan_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Atan</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeHalfPi</Parameter>
+      </Row>
+      <Row Name="Cos_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Cos</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <Row Name="Cosh_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Cosh</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <Row Name="Sin_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Sin</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <Row Name="Sinh_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Sinh</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <Row Name="Tan_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Tan</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <Row Name="Tanh_float16">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Tanh</Parameter>
+        <Parameter Name="DataType">float16</Parameter>
+      </Row>
+      <!-- LongVectorUnaryOpTable_Trigonometric DataType: float32 -->
+      <Row Name="Acos_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Acos</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeOne</Parameter>
+      </Row>
+      <Row Name="Asin_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Asin</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeHalfPi</Parameter>
+      </Row>
+      <Row Name="Atan_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Atan</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+        <Parameter Name="InputValueSetName1">TrigonometricInputValueSet_RangeHalfPi</Parameter>
+      </Row>
+      <Row Name="Cos_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Cos</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <Row Name="Cosh_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Cosh</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <Row Name="Sin_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Sin</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <Row Name="Sinh_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Sinh</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <Row Name="Tan_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Tan</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+      <Row Name="Tanh_float32">
+        <Parameter Name="OpTypeEnum">TrigonometricOpType_Tanh</Parameter>
+        <Parameter Name="DataType">float32</Parameter>
+      </Row>
+    </Table>
+    <Table Id="AsTypeOpTable">
+      <ParameterTypes>
+        <!-- InputValueSetName1 is optional. If no value is provided use the
+        default value set for the data type. This string is meant to be a key
+        value for the the array of std::pairs defined in LongVectorTestData.h
+        for the applicable DataTypeIn-->
+        <ParameterType Name="InputValueSetName1">String</ParameterType>
+        <ParameterType Name="InputValueSetName2">String</ParameterType>
+        <ParameterType Name="DataTypeIn">String</ParameterType>
+        <ParameterType Name="OpTypeEnum">String</ParameterType>
+      </ParameterTypes>
+      <!-- AsTypeOpTable_AsType DataTypeIn: int16 -->
+      <Row Name="AsFloat16_int16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsFloat16</Parameter>
+        <Parameter Name="DataTypeIn">int16</Parameter>
+      </Row>
+      <Row Name="AsInt16_int16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsInt16</Parameter>
+        <Parameter Name="DataTypeIn">int16</Parameter>
+      </Row>
+      <Row Name="AsUint16_int16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint16</Parameter>
+        <Parameter Name="DataTypeIn">int16</Parameter>
+      </Row>
+      <!-- AsTypeOpTable_AsType DataTypeIn: int32 -->
+      <Row Name="AsFloat_int32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsFloat</Parameter>
+        <Parameter Name="DataTypeIn">int32</Parameter>
+      </Row>
+      <Row Name="AsInt_int32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsInt</Parameter>
+        <Parameter Name="DataTypeIn">int32</Parameter>
+      </Row>
+      <Row Name="AsUint_int32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint</Parameter>
+        <Parameter Name="DataTypeIn">int32</Parameter>
+      </Row>
+      <!-- AsTypeOpTable_AsType DataTypeIn: uint16 -->
+      <Row Name="AsFloat16_uint16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsFloat16</Parameter>
+        <Parameter Name="DataTypeIn">uint16</Parameter>
+      </Row>
+      <Row Name="AsInt16_uint16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsInt16</Parameter>
+        <Parameter Name="DataTypeIn">uint16</Parameter>
+      </Row>
+      <Row Name="AsUint16_uint16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint16</Parameter>
+        <Parameter Name="DataTypeIn">uint16</Parameter>
+      </Row>
+      <!-- AsTypeOpTable_AsType DataTypeIn: uint32 -->
+      <Row Name="AsFloat_uint32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsFloat</Parameter>
+        <Parameter Name="DataTypeIn">uint32</Parameter>
+      </Row>
+      <Row Name="AsInt_uint32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsInt</Parameter>
+        <Parameter Name="DataTypeIn">uint32</Parameter>
+      </Row>
+      <Row Name="AsUint_uint32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint</Parameter>
+        <Parameter Name="DataTypeIn">uint32</Parameter>
+      </Row>
+      <Row Name="AsDouble_uint32">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsDouble</Parameter>
+        <Parameter Name="DataTypeIn">uint32</Parameter>
+      </Row>
+      <!-- AsTypeOpTable_AsType DataTypeIn: float16-->
+      <Row Name="AsFloat16_float16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsFloat16</Parameter>
+        <Parameter Name="DataTypeIn">float16</Parameter>
+      </Row>
+      <Row Name="AsInt16_float16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsInt16</Parameter>
+        <Parameter Name="DataTypeIn">float16</Parameter>
+      </Row>
+      <Row Name="AsUint16_float16">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint16</Parameter>
+        <Parameter Name="DataTypeIn">float16</Parameter>
+      </Row>
+      <!-- AsTypeOpTable_AsType DataTypeIn: float64 -->
+      <Row Name="AsUint_SplitDouble_float64">
+        <Parameter Name="OpTypeEnum">AsTypeOpType_AsUint_SplitDouble</Parameter>
+        <Parameter Name="DataTypeIn">float64</Parameter>
+        <!-- Use a special InputValueSetName1 so we verify with values that
+        produce non-zero outputs for HighBits and LowBits -->
+        <Parameter Name="InputValueSetName1">SplitDoubleInputValueSet</Parameter>
+      </Row>
+    </Table>
+</Data>

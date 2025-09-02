@@ -108,6 +108,9 @@
             { "name": "configured device id", "type": "ObjectId", "id_type": "device" },
             { "name": "texture handle", "type": "ObjectHandle", "handle_type": "texture" }
         ],
+        "surface present": [
+            { "name": "self", "type": "surface" }
+        ],
         "instance request adapter": [
             { "name": "instance id", "type": "ObjectId", "id_type": "instance" },
             { "name": "event manager handle", "type": "ObjectHandle" },
@@ -189,7 +192,8 @@
         "queue work done callback": [
             { "name": "event manager", "type": "ObjectHandle" },
             { "name": "future", "type": "future" },
-            { "name": "status", "type": "queue work done status" }
+            { "name": "status", "type": "queue work done status" },
+            { "name": "message", "type": "string view" }
         ],
         "shader module get compilation info callback": [
             { "name": "event manager", "type": "ObjectHandle" },
@@ -247,6 +251,7 @@
             "BufferGetMapState",
             "BufferGetSize",
             "BufferGetUsage",
+            "ComputePassEncoderSetImmediateData",
             "DeviceCreateBuffer",
             "DeviceCreateComputePipelineAsync",
             "DeviceCreateRenderPipelineAsync",
@@ -257,19 +262,19 @@
             "DeviceGetLostFuture",
             "DeviceHasFeature",
             "DevicePopErrorScope",
-            "DevicePopErrorScopeF",
-            "DevicePopErrorScope2",
             "DeviceSetLoggingCallback",
             "InstanceGetWGSLLanguageFeatures",
             "InstanceHasWGSLLanguageFeature",
             "InstanceCreateSurface",
             "InstanceRequestAdapter",
-            "ShaderModuleGetCompilationInfo",
             "QuerySetGetType",
             "QuerySetGetCount",
             "QueueOnSubmittedWorkDone",
             "QueueWriteBuffer",
             "QueueWriteTexture",
+            "RenderBundleEncoderSetImmediateData",
+            "RenderPassEncoderSetImmediateData",
+            "ShaderModuleGetCompilationInfo",
             "SurfaceGetCapabilities",
             "SurfaceGetCurrentTexture",
             "SurfaceGetPreferredFormat",
@@ -280,10 +285,7 @@
             "TextureGetSampleCount",
             "TextureGetDimension",
             "TextureGetFormat",
-            "TextureGetUsage",
-            "RenderPassEncoderSetImmediateData",
-            "RenderBundleEncoderSetImmediateData",
-            "ComputePassEncoderSetImmediateData"
+            "TextureGetUsage"
         ],
         "client_handwritten_commands": [
             "AdapterGetInstance",
@@ -297,6 +299,7 @@
             "InstanceProcessEvents",
             "InstanceWaitAny",
             "SurfaceConfigure",
+            "SurfacePresent",
             "SurfaceUnconfigure"
         ],
         "client_special_objects": [
@@ -315,6 +318,7 @@
             "ComputePassEncoder"
         ],
         "server_custom_pre_handler_commands": [
+            "DeviceCreateErrorBuffer",
             "BufferDestroy",
             "BufferUnmap"
         ]

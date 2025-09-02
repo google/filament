@@ -78,9 +78,9 @@ public:
 
     /**
      * @param samples The number of samples the underlying texture supports
-     * @param mipLevel The mip level into the underyling texture for which this view will reference
+     * @param mipLevel The mip level into the underlying texture for which this view will reference
      * (this view will only have one mip level)
-     * @param arrayLayer The layer into the underyling texture for which this view will reference
+     * @param arrayLayer The layer into the underlying texture for which this view will reference
      * (this view will only have one layer)
      * @return A texture view for the MSAA sidecar texture
      */

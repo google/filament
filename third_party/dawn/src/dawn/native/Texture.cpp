@@ -33,6 +33,7 @@
 #include "absl/strings/str_format.h"
 #include "dawn/common/Assert.h"
 #include "dawn/common/Constants.h"
+#include "dawn/common/HashUtils.h"
 #include "dawn/common/Math.h"
 #include "dawn/native/Adapter.h"
 #include "dawn/native/BlitBufferToTexture.h"
@@ -302,9 +303,8 @@ MaybeError ValidateTextureSize(const DeviceBase* device,
             break;
     }
 
-    if (DAWN_UNLIKELY(descriptor->size.width > maxExtent.width ||
-                      descriptor->size.height > maxExtent.height ||
-                      descriptor->size.depthOrArrayLayers > maxExtent.depthOrArrayLayers)) {
+    if (descriptor->size.width > maxExtent.width || descriptor->size.height > maxExtent.height ||
+        descriptor->size.depthOrArrayLayers > maxExtent.depthOrArrayLayers) [[unlikely]] {
         Limits adapterLimits;
         wgpu::Status status = device->GetAdapter()->APIGetLimits(&adapterLimits);
         DAWN_ASSERT(status == wgpu::Status::Success);
@@ -423,7 +423,8 @@ MaybeError ValidateTextureUsage(const DeviceBase* device,
                     usage, wgpu::TextureUsage::RenderAttachment, textureDimension);
 
     DAWN_INVALID_IF(
-        !format->supportsStorageUsage && (usage & wgpu::TextureUsage::StorageBinding),
+        !(format->supportsReadOnlyStorageUsage || format->supportsWriteOnlyStorageUsage) &&
+            (usage & wgpu::TextureUsage::StorageBinding),
         "The texture usage (%s) includes %s, which is incompatible with the format (%s).", usage,
         wgpu::TextureUsage::StorageBinding, format->format);
 
@@ -479,6 +480,49 @@ wgpu::TextureUsage GetTextureViewUsage(wgpu::TextureUsage sourceTextureUsage,
     // If a view's requested usage is None, inherit usage from the source texture.
     return (requestedViewUsage != wgpu::TextureUsage::None) ? requestedViewUsage
                                                             : sourceTextureUsage;
+}
+
+MaybeError ValidateTextureComponentSwizzle(const DeviceBase* device,
+                                           const TextureBase* texture,
+                                           const UnpackedPtr<TextureViewDescriptor>& descriptor) {
+    auto* swizzleDesc = descriptor.Get<TextureComponentSwizzleDescriptor>();
+    if (!swizzleDesc) {
+        return {};
+    }
+
+    DAWN_INVALID_IF(!device->HasFeature(Feature::TextureComponentSwizzle),
+                    "swizzle used without the %s feature enabled.",
+                    wgpu::FeatureName::TextureComponentSwizzle);
+
+    wgpu::TextureUsage usage = GetTextureViewUsage(texture->GetUsage(), descriptor->usage);
+    if ((usage & (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::StorageBinding)) ==
+        0) {
+        return {};
+    }
+
+    auto swizzle = swizzleDesc->swizzle.WithTrivialFrontendDefaults();
+    DAWN_INVALID_IF(swizzle.r != wgpu::ComponentSwizzle::R,
+                    "The texture view's component swizzle r (%s) must be %s when usage "
+                    "includes %s or %s.",
+                    swizzle.r, wgpu::ComponentSwizzle::R, wgpu::TextureUsage::RenderAttachment,
+                    wgpu::TextureUsage::StorageBinding);
+    DAWN_INVALID_IF(swizzle.g != wgpu::ComponentSwizzle::G,
+                    "The texture view's component swizzle g (%s) must be %s when usage "
+                    "includes %s or %s.",
+                    swizzle.g, wgpu::ComponentSwizzle::G, wgpu::TextureUsage::RenderAttachment,
+                    wgpu::TextureUsage::StorageBinding);
+    DAWN_INVALID_IF(swizzle.b != wgpu::ComponentSwizzle::B,
+                    "The texture view's component swizzle b (%s) must be %s when usage "
+                    "includes %s or %s.",
+                    swizzle.b, wgpu::ComponentSwizzle::B, wgpu::TextureUsage::RenderAttachment,
+                    wgpu::TextureUsage::StorageBinding);
+    DAWN_INVALID_IF(swizzle.a != wgpu::ComponentSwizzle::A,
+                    "The texture view's component swizzle a (%s) must be %s when usage "
+                    "includes %s or %s.",
+                    swizzle.a, wgpu::ComponentSwizzle::A, wgpu::TextureUsage::RenderAttachment,
+                    wgpu::TextureUsage::StorageBinding);
+
+    return {};
 }
 
 wgpu::TextureUsage RemoveInvalidViewUsages(wgpu::TextureUsage viewUsage, const Format* viewFormat) {
@@ -667,6 +711,26 @@ wgpu::TextureUsage AddInternalUsages(const DeviceBase* device,
     return internalUsage;
 }
 
+wgpu::ComponentSwizzle ComposeSwizzleComponent(wgpu::ComponentSwizzle component,
+                                               wgpu::TextureComponentSwizzle swizzle) {
+    switch (component) {
+        case wgpu::ComponentSwizzle::Zero:
+            return wgpu::ComponentSwizzle::Zero;
+        case wgpu::ComponentSwizzle::One:
+            return wgpu::ComponentSwizzle::One;
+        case wgpu::ComponentSwizzle::R:
+            return swizzle.r;
+        case wgpu::ComponentSwizzle::G:
+            return swizzle.g;
+        case wgpu::ComponentSwizzle::B:
+            return swizzle.b;
+        case wgpu::ComponentSwizzle::A:
+            return swizzle.a;
+        case wgpu::ComponentSwizzle::Undefined:
+            return wgpu::ComponentSwizzle::Undefined;
+    }
+}
+
 }  // anonymous namespace
 
 MaybeError ValidateTextureDescriptor(
@@ -739,9 +803,29 @@ MaybeError ValidateTextureDescriptor(
                     "The texture size (%s) or mipLevelCount (%u) is empty.", &descriptor->size,
                     descriptor->mipLevelCount);
 
-    DAWN_INVALID_IF(descriptor->dimension != wgpu::TextureDimension::e2D && format->isCompressed,
-                    "The dimension (%s) of a texture with a compressed format (%s) is not 2D.",
-                    descriptor->dimension, format->format);
+    if (format->isCompressed) {
+        DAWN_INVALID_IF(descriptor->dimension == wgpu::TextureDimension::e1D,
+                        "A texture with a compressed format (%s) does not support 1D.",
+                        format->format);
+
+        if (format->isBC) {
+            DAWN_INVALID_IF(
+                descriptor->dimension == wgpu::TextureDimension::e3D &&
+                    !device->HasFeature(Feature::TextureCompressionBCSliced3D),
+                "A texture with a BC compressed format (%s) only supports 3D if %s is enabled.",
+                format->format, wgpu::FeatureName::TextureCompressionBCSliced3D);
+        } else if (format->isASTC) {
+            DAWN_INVALID_IF(
+                descriptor->dimension == wgpu::TextureDimension::e3D &&
+                    !device->HasFeature(Feature::TextureCompressionASTCSliced3D),
+                "A texture with a ASTC compressed format (%s) only supports 3D if %s is enabled.",
+                format->format, wgpu::FeatureName::TextureCompressionASTCSliced3D);
+        } else {
+            DAWN_INVALID_IF(descriptor->dimension == wgpu::TextureDimension::e3D,
+                            "A texture with a compressed format (%s) does not support 3D.",
+                            format->format);
+        }
+    }
 
     // Depth/stencil formats are valid for 2D textures only. Metal has this limit. And D3D12
     // doesn't support depth/stencil formats on 3D textures.
@@ -807,6 +891,7 @@ MaybeError ValidateTextureViewDescriptor(const DeviceBase* device,
 
     DAWN_TRY(ValidateCanViewTextureAs(device, texture, *viewFormat, descriptor->aspect));
     DAWN_TRY(ValidateTextureViewDimensionCompatibility(device, texture, descriptor));
+    DAWN_TRY(ValidateTextureComponentSwizzle(device, texture, descriptor));
 
     return {};
 }
@@ -906,7 +991,7 @@ bool IsValidSampleCount(uint32_t sampleCount) {
 TextureBase::TextureState::TextureState() : hasAccess(true), destroyed(false) {}
 
 TextureBase::TextureBase(DeviceBase* device, const UnpackedPtr<TextureDescriptor>& descriptor)
-    : SharedResource(device, descriptor->label),
+    : RefCountedWithExternalCount<SharedResource>(device, descriptor->label),
       mDimension(descriptor->dimension),
       mCompatibilityTextureBindingViewDimension(
           ResolveDefaultCompatiblityTextureBindingViewDimension(device, descriptor)),
@@ -946,7 +1031,7 @@ static constexpr Format kUnusedFormat;
 TextureBase::TextureBase(DeviceBase* device,
                          const TextureDescriptor* descriptor,
                          ObjectBase::ErrorTag tag)
-    : SharedResource(device, tag, descriptor->label),
+    : RefCountedWithExternalCount<SharedResource>(device, tag, descriptor->label),
       mDimension(descriptor->dimension),
       mFormat(kUnusedFormat),
       mBaseSize(descriptor->size),
@@ -967,6 +1052,12 @@ void TextureBase::DestroyImpl() {
     //   is implicitly destroyed. This case is thread-safe because there are no
     //   other threads using the texture since there are no other live refs.
     mState.destroyed = true;
+
+    // Drop all the cache references to TextureViews.
+    mTextureViewCache = nullptr;
+
+    // Clear the default view associated with the texture.
+    mDefaultView = nullptr;
 
     // Destroy all of the views associated with the texture as well.
     mTextureViews.Destroy();
@@ -991,6 +1082,22 @@ void TextureBase::FormatLabel(absl::FormatSink* s) const {
     } else if (!IsError()) {
         s->Append(absl::StrFormat(" (unlabeled %s, %s)", GetSizeLabel(), mFormat->format));
     }
+}
+
+void TextureBase::WillAddFirstExternalRef() {
+    // Only enable the view cache once an external reference has been added. This prevents textures
+    // created for internal uses, such as workarounds, from being kept alive by the views in the
+    // cache.
+    if (!IsError()) {
+        mTextureViewCache = std::make_unique<TextureViewCache>(kDefaultTextureViewCacheCapacity);
+    }
+}
+
+void TextureBase::WillDropLastExternalRef() {
+    // Drop all the additional references to TextureViews that we were holding as a part of the
+    // cache.
+    mTextureViewCache = nullptr;
+    mDefaultView = nullptr;
 }
 
 std::string TextureBase::GetSizeLabel() const {
@@ -1049,17 +1156,12 @@ Extent3D TextureBase::GetSize(Aspect aspect) const {
             auto planeSize = mBaseSize;
             switch (GetFormat().subSampling) {
                 case TextureSubsampling::e420:
-                    if (planeSize.width > 1) {
-                        planeSize.width >>= 1;
-                    }
-                    if (planeSize.height > 1) {
-                        planeSize.height >>= 1;
-                    }
+                    // Divide by 2, rounding odd dimensions up.
+                    planeSize.width = (planeSize.width + 1) >> 1;
+                    planeSize.height = (planeSize.height + 1) >> 1;
                     break;
                 case TextureSubsampling::e422:
-                    if (planeSize.width > 1) {
-                        planeSize.width >>= 1;
-                    }
+                    planeSize.width = (planeSize.width + 1) >> 1;
                     break;
                 case TextureSubsampling::e444:
                     break;
@@ -1203,9 +1305,9 @@ void TextureBase::SetIsSubresourceContentInitialized(bool isInitialized,
 
 MaybeError TextureBase::ValidateCanUseInSubmitNow() const {
     DAWN_ASSERT(!IsError());
-    if (DAWN_UNLIKELY(mState.destroyed || !mState.hasAccess)) {
+    if (mState.destroyed || !mState.hasAccess) [[unlikely]] {
         DAWN_INVALID_IF(mState.destroyed, "Destroyed texture %s used in a submit.", this);
-        if (DAWN_UNLIKELY(!mState.hasAccess)) {
+        if (!mState.hasAccess) [[unlikely]] {
             if (mSharedResourceMemoryContents != nullptr) {
                 Ref<SharedTextureMemoryBase> memory =
                     mSharedResourceMemoryContents->GetSharedResourceMemory()
@@ -1314,6 +1416,9 @@ Extent3D TextureBase::GetMipLevelSubresourceVirtualSize(uint32_t level, Aspect a
 
 ResultOrError<Ref<TextureViewBase>> TextureBase::CreateView(
     const TextureViewDescriptor* descriptor) {
+    if (descriptor == nullptr) {
+        return GetOrCreateDefaultView();
+    }
     return GetDevice()->CreateTextureView(this, descriptor);
 }
 
@@ -1341,7 +1446,7 @@ TextureViewBase* TextureBase::APICreateErrorView(const TextureViewDescriptor* de
 }
 
 bool TextureBase::IsImplicitMSAARenderTextureViewSupported() const {
-    return (GetUsage() & wgpu::TextureUsage::TextureBinding) != 0;
+    return GetUsage() & wgpu::TextureUsage::TextureBinding;
 }
 
 void TextureBase::SetSharedResourceMemoryContentsForTesting(
@@ -1366,7 +1471,7 @@ uint64_t TextureBase::ComputeEstimatedByteSize() const {
     // Do not emit a non-zero size for textures that wrap external shared texture memory, or
     // textures used as transient (memoryless) attachments.
     if (GetSharedResourceMemoryContents() != nullptr ||
-        (GetInternalUsage() & wgpu::TextureUsage::TransientAttachment) != 0) {
+        (GetInternalUsage() & wgpu::TextureUsage::TransientAttachment)) {
         return 0;
     }
     uint64_t byteSize = 0;
@@ -1382,6 +1487,20 @@ uint64_t TextureBase::ComputeEstimatedByteSize() const {
         byteSize *= mBaseSize.depthOrArrayLayers;
     }
     return byteSize;
+}
+
+ResultOrError<Ref<TextureViewBase>> TextureBase::GetOrCreateDefaultView() {
+    // Texture view caching is not enabled, so don't cache the default view.
+    if (!mTextureViewCache) {
+        return GetDevice()->CreateTextureView(this, nullptr);
+    }
+
+    // Lazily initialize and cache a default view when asked for it.
+    if (!mDefaultView) {
+        DAWN_TRY_ASSIGN(mDefaultView, GetDevice()->CreateTextureView(this, nullptr));
+    }
+    DAWN_ASSERT(mDefaultView);
+    return mDefaultView;
 }
 
 void TextureBase::APIDestroy() {
@@ -1419,6 +1538,45 @@ wgpu::TextureUsage TextureBase::APIGetUsage() const {
     return mUsage;
 }
 
+// TextureViewQuery
+
+TextureViewQuery::TextureViewQuery(const UnpackedPtr<TextureViewDescriptor>& desc) {
+    // TextureViewDescriptor fields
+    format = desc->format;
+    dimension = desc->dimension;
+    baseMipLevel = desc->baseMipLevel;
+    mipLevelCount = desc->mipLevelCount;
+    baseArrayLayer = desc->baseArrayLayer;
+    arrayLayerCount = desc->arrayLayerCount;
+    aspect = desc->aspect;
+    usage = desc->usage;
+
+    if (auto* swizzleDesc = desc.Get<TextureComponentSwizzleDescriptor>()) {
+        auto swizzle = swizzleDesc->swizzle.WithTrivialFrontendDefaults();
+        swizzleRed = swizzle.r;
+        swizzleGreen = swizzle.g;
+        swizzleBlue = swizzle.b;
+        swizzleAlpha = swizzle.a;
+    }
+}
+
+// TextureViewCacheFuncs
+
+size_t TextureViewCacheFuncs::operator()(const TextureViewQuery& desc) const {
+    size_t hash = Hash(desc.format);
+
+    HashCombine(&hash, desc.dimension, desc.aspect, desc.usage);
+    HashCombine(&hash, desc.baseMipLevel, desc.mipLevelCount, desc.baseArrayLayer,
+                desc.arrayLayerCount);
+    HashCombine(&hash, desc.swizzleRed, desc.swizzleGreen, desc.swizzleBlue, desc.swizzleAlpha);
+
+    return hash;
+}
+
+bool TextureViewCacheFuncs::operator()(const TextureViewQuery& a, const TextureViewQuery& b) const {
+    return a == b;
+}
+
 // TextureViewBase
 
 TextureViewBase::TextureViewBase(TextureBase* texture,
@@ -1439,6 +1597,14 @@ TextureViewBase::TextureViewBase(TextureBase* texture,
                             texture->GetSampleCount(),
                             texture->GetNumMipLevels(),
                             texture->GetArrayLayers())) {
+    if (auto* swizzleDesc = descriptor.Get<TextureComponentSwizzleDescriptor>()) {
+        auto swizzle = swizzleDesc->swizzle.WithTrivialFrontendDefaults();
+        mSwizzleRed = swizzle.r;
+        mSwizzleGreen = swizzle.g;
+        mSwizzleBlue = swizzle.b;
+        mSwizzleAlpha = swizzle.a;
+    }
+
     GetObjectTrackingList()->Track(this);
 
     // Emit a warning if invalid usages were removed for this view.
@@ -1551,6 +1717,42 @@ wgpu::TextureUsage TextureViewBase::GetUsage() const {
 wgpu::TextureUsage TextureViewBase::GetInternalUsage() const {
     DAWN_ASSERT(!IsError());
     return mInternalUsage;
+}
+
+wgpu::ComponentSwizzle TextureViewBase::GetSwizzleRed() const {
+    return mSwizzleRed;
+}
+
+wgpu::ComponentSwizzle TextureViewBase::GetSwizzleGreen() const {
+    return mSwizzleGreen;
+}
+
+wgpu::ComponentSwizzle TextureViewBase::GetSwizzleBlue() const {
+    return mSwizzleBlue;
+}
+
+wgpu::ComponentSwizzle TextureViewBase::GetSwizzleAlpha() const {
+    return mSwizzleAlpha;
+}
+
+bool TextureViewBase::UsesNonDefaultSwizzle() const {
+    // TODO(414312052): Refine this condition. A view might not be strictly necessary
+    // in case of the given swizzle works identically to default with the original
+    // format, e.g. a R8Unorm texture with swizzle.r set to R and swizzle.g set to One.
+    // This current check provides a correct, though potentially overly broad,
+    // first approximation.
+    return mSwizzleRed != wgpu::ComponentSwizzle::R || mSwizzleGreen != wgpu::ComponentSwizzle::G ||
+           mSwizzleBlue != wgpu::ComponentSwizzle::B || mSwizzleAlpha != wgpu::ComponentSwizzle::A;
+}
+
+wgpu::TextureComponentSwizzle TextureViewBase::ComposeSwizzle(
+    wgpu::TextureComponentSwizzle swizzle) const {
+    wgpu::TextureComponentSwizzle result;
+    result.r = ComposeSwizzleComponent(mSwizzleRed, swizzle);
+    result.g = ComposeSwizzleComponent(mSwizzleGreen, swizzle);
+    result.b = ComposeSwizzleComponent(mSwizzleBlue, swizzle);
+    result.a = ComposeSwizzleComponent(mSwizzleAlpha, swizzle);
+    return result;
 }
 
 bool TextureViewBase::IsYCbCr() const {

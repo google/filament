@@ -31,8 +31,8 @@
 #include <array>
 
 #include "dawn/common/Assert.h"
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/Constants.h"
+#include "dawn/common/ityp_bitset.h"
 #include "dawn/native/Error.h"
 
 #include "dawn/native/dawn_platform.h"
@@ -52,7 +52,7 @@ static_assert(static_cast<uint32_t>(wgpu::ShaderStage::Fragment) ==
 static_assert(static_cast<uint32_t>(wgpu::ShaderStage::Compute) ==
               (1 << static_cast<uint32_t>(SingleShaderStage::Compute)));
 
-BitSetIterator<kNumStages, SingleShaderStage> IterateStages(wgpu::ShaderStage stages);
+ityp::bitset<SingleShaderStage, kNumStages> IterateStages(wgpu::ShaderStage stages);
 wgpu::ShaderStage StageBit(SingleShaderStage stage);
 
 static constexpr wgpu::ShaderStage kAllStages =

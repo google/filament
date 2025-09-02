@@ -66,11 +66,15 @@ bool IsIndirectDraw(DrawMode mode) {
 
 namespace {
 
+struct FirstIndexOffset {
+    uint32_t firstVertex = 0;
+    uint32_t firstInstance = 0;
+};
 class FirstIndexOffsetTests : public DawnTest {
   public:
-    void TestVertexIndex(DrawMode mode, uint32_t firstVertex);
-    void TestInstanceIndex(DrawMode mode, uint32_t firstInstance);
-    void TestBothIndices(DrawMode mode, uint32_t firstVertex, uint32_t firstInstance);
+    void TestVertexIndex(DrawMode mode, const std::vector<FirstIndexOffset>& offsets);
+    void TestInstanceIndex(DrawMode mode, const std::vector<FirstIndexOffset>& offsets);
+    void TestBothIndices(DrawMode mode, const std::vector<FirstIndexOffset>& offsets);
 
   protected:
     std::vector<wgpu::FeatureName> GetRequiredFeatures() override {
@@ -81,25 +85,36 @@ class FirstIndexOffsetTests : public DawnTest {
     }
 
   private:
+    wgpu::Buffer CreateVertexBuffer(uint32_t firstVertexOffset) {
+        std::vector<float> vertexData(firstVertexOffset * kComponentsPerVertex);
+        vertexData.insert(vertexData.end(), {0, 0, 0, 1});
+        vertexData.insert(vertexData.end(), {0, 0, 0, 1});
+        return utils::CreateBufferFromData(device, vertexData.data(),
+                                           vertexData.size() * sizeof(float),
+                                           wgpu::BufferUsage::Vertex);
+    }
+
     void TestImpl(DrawMode mode,
                   CheckIndex checkIndex,
-                  uint32_t vertexIndex,
-                  uint32_t instanceIndex);
+                  const std::vector<FirstIndexOffset>& offsets);
+
+    static constexpr uint32_t kComponentsPerVertex = 4;
 };
 
-void FirstIndexOffsetTests::TestVertexIndex(DrawMode mode, uint32_t firstVertex) {
-    TestImpl(mode, CheckIndex::Vertex, firstVertex, 0);
+void FirstIndexOffsetTests::TestVertexIndex(DrawMode mode,
+                                            const std::vector<FirstIndexOffset>& offsets) {
+    TestImpl(mode, CheckIndex::Vertex, offsets);
 }
 
-void FirstIndexOffsetTests::TestInstanceIndex(DrawMode mode, uint32_t firstInstance) {
-    TestImpl(mode, CheckIndex::Instance, 0, firstInstance);
+void FirstIndexOffsetTests::TestInstanceIndex(DrawMode mode,
+                                              const std::vector<FirstIndexOffset>& offsets) {
+    TestImpl(mode, CheckIndex::Instance, offsets);
 }
 
 void FirstIndexOffsetTests::TestBothIndices(DrawMode mode,
-                                            uint32_t firstVertex,
-                                            uint32_t firstInstance) {
+                                            const std::vector<FirstIndexOffset>& offsets) {
     using wgpu::operator|;
-    TestImpl(mode, CheckIndex::Vertex | CheckIndex::Instance, firstVertex, firstInstance);
+    TestImpl(mode, CheckIndex::Vertex | CheckIndex::Instance, offsets);
 }
 
 // Conditionally tests if first/baseVertex and/or firstInstance have been correctly passed to the
@@ -108,8 +123,7 @@ void FirstIndexOffsetTests::TestBothIndices(DrawMode mode,
 // values to a storage buffer. If vertex index is used, the vertex buffer is padded with 0s.
 void FirstIndexOffsetTests::TestImpl(DrawMode mode,
                                      CheckIndex checkIndex,
-                                     uint32_t firstVertex,
-                                     uint32_t firstInstance) {
+                                     const std::vector<FirstIndexOffset>& offsets) {
     // Compatibility mode does not support @interpolate(flat, first).
     // It only supports @interpolate(flat, either).
     DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
@@ -172,8 +186,6 @@ struct FragInputs {
 
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, kRTSize, kRTSize);
 
-    constexpr uint32_t kComponentsPerVertex = 4;
-
     utils::ComboRenderPipelineDescriptor pipelineDesc;
     pipelineDesc.vertex.module = utils::CreateShaderModule(device, vertexShader.c_str());
     pipelineDesc.cFragment.module = utils::CreateShaderModule(device, fragmentShader.c_str());
@@ -187,14 +199,11 @@ struct FragInputs {
 
     wgpu::RenderPipeline pipeline = device.CreateRenderPipeline(&pipelineDesc);
 
-    std::vector<float> vertexData(firstVertex * kComponentsPerVertex);
-    vertexData.insert(vertexData.end(), {0, 0, 0, 1});
-    vertexData.insert(vertexData.end(), {0, 0, 0, 1});
-    wgpu::Buffer vertices = utils::CreateBufferFromData(
-        device, vertexData.data(), vertexData.size() * sizeof(float), wgpu::BufferUsage::Vertex);
+    // Create reusable buffers.
     wgpu::Buffer indices =
         utils::CreateBufferFromData<uint32_t>(device, wgpu::BufferUsage::Index, {0});
 
+    // Using arbitrary values for the initial vertex and instance indices.
     const uint32_t bufferInitialVertex =
         checkIndex & CheckIndex::Vertex ? std::numeric_limits<uint32_t>::max() : 0;
     const uint32_t bufferInitialInstance =
@@ -203,145 +212,242 @@ struct FragInputs {
         utils::CreateBufferFromData(device, wgpu::BufferUsage::CopySrc | wgpu::BufferUsage::Storage,
                                     {bufferInitialVertex, bufferInitialInstance});
 
-    wgpu::Buffer indirectBuffer;
-    switch (mode) {
-        case DrawMode::NonIndexed:
-        case DrawMode::Indexed:
-            break;
-        case DrawMode::NonIndexedIndirect:
-            indirectBuffer = utils::CreateBufferFromData<uint32_t>(
-                device, wgpu::BufferUsage::Indirect, {1, 1, firstVertex, firstInstance});
-            break;
-        case DrawMode::IndexedIndirect:
-            indirectBuffer = utils::CreateBufferFromData<uint32_t>(
-                device, wgpu::BufferUsage::Indirect, {1, 1, 0, firstVertex, firstInstance});
-            break;
-        default:
-            FAIL();
-    }
-
     wgpu::BindGroup bindGroup =
         utils::MakeBindGroup(device, pipeline.GetBindGroupLayout(0), {{0, buffer}});
 
     wgpu::CommandEncoder encoder = device.CreateCommandEncoder();
     wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPass.renderPassInfo);
+
+    std::array<uint32_t, 2> expected = {};
+
     pass.SetPipeline(pipeline);
-    pass.SetVertexBuffer(0, vertices);
     pass.SetBindGroup(0, bindGroup);
-    // Do a first draw to make sure the offset values are correctly updated on the next draw.
-    // We should only see the values from the second draw.
-    std::array<uint32_t, 2> firstDrawValues = {firstVertex + 1, firstInstance + 1};
-    pass.Draw(1, 1, firstDrawValues[0], firstDrawValues[1]);
-    switch (mode) {
-        case DrawMode::NonIndexed:
-            pass.Draw(1, 1, firstVertex, firstInstance);
-            break;
-        case DrawMode::Indexed:
-            pass.SetIndexBuffer(indices, wgpu::IndexFormat::Uint32);
-            pass.DrawIndexed(1, 1, 0, firstVertex, firstInstance);
-            break;
-        case DrawMode::NonIndexedIndirect:
-            pass.DrawIndirect(indirectBuffer, 0);
-            break;
-        case DrawMode::IndexedIndirect:
-            pass.SetIndexBuffer(indices, wgpu::IndexFormat::Uint32);
-            pass.DrawIndexedIndirect(indirectBuffer, 0);
-            break;
-        default:
-            FAIL();
+
+    // Recording draws with different firstVertex and firstInstance values
+    for (const auto& offset : offsets) {
+        uint32_t firstVertex = offset.firstVertex;
+        uint32_t firstInstance = offset.firstInstance;
+
+        wgpu::Buffer vertices = CreateVertexBuffer(firstVertex);
+
+        wgpu::Buffer indirectBuffer;
+        switch (mode) {
+            case DrawMode::NonIndexed:
+            case DrawMode::Indexed:
+                break;
+            case DrawMode::NonIndexedIndirect:
+                indirectBuffer = utils::CreateBufferFromData<uint32_t>(
+                    device, wgpu::BufferUsage::Indirect, {1, 1, firstVertex, firstInstance});
+                break;
+            case DrawMode::IndexedIndirect:
+                indirectBuffer = utils::CreateBufferFromData<uint32_t>(
+                    device, wgpu::BufferUsage::Indirect, {1, 1, 0, firstVertex, firstInstance});
+                break;
+            default:
+                FAIL();
+        }
+
+        pass.SetVertexBuffer(0, vertices);
+
+        switch (mode) {
+            case DrawMode::NonIndexed:
+                pass.Draw(1, 1, firstVertex, firstInstance);
+                break;
+            case DrawMode::Indexed:
+                pass.SetIndexBuffer(indices, wgpu::IndexFormat::Uint32);
+                pass.DrawIndexed(1, 1, 0, firstVertex, firstInstance);
+                break;
+            case DrawMode::NonIndexedIndirect:
+                pass.DrawIndirect(indirectBuffer, 0);
+                break;
+            case DrawMode::IndexedIndirect:
+                pass.SetIndexBuffer(indices, wgpu::IndexFormat::Uint32);
+                pass.DrawIndexedIndirect(indirectBuffer, 0);
+                break;
+            default:
+                FAIL();
+        }
+
+        expected[0] = firstVertex;
+        expected[1] = firstInstance;
+
+        // Per the specification, if validation is enabled and indirect-first-instance is not
+        // enabled, Draw[Indexed]Indirect with firstInstance > 0 will be a no-op. The buffer should
+        // still have the values from the first draw.
+        if (firstInstance > 0 && IsIndirectDraw(mode) &&
+            !device.HasFeature(wgpu::FeatureName::IndirectFirstInstance) &&
+            !HasToggleEnabled("skip_validation")) {
+            expected = {bufferInitialVertex, bufferInitialInstance};
+        }
     }
     pass.End();
     wgpu::CommandBuffer commands = encoder.Finish();
     queue.Submit(1, &commands);
-
-    std::array<uint32_t, 2> expected = {firstVertex, firstInstance};
-
-    // Per the specification, if validation is enabled and indirect-first-instance is not enabled,
-    // Draw[Indexed]Indirect with firstInstance > 0 will be a no-op. The buffer should still have
-    // the values from the first draw.
-    if (firstInstance > 0 && IsIndirectDraw(mode) &&
-        !device.HasFeature(wgpu::FeatureName::IndirectFirstInstance) &&
-        !HasToggleEnabled("skip_validation")) {
-        expected = {checkIndex & CheckIndex::Vertex ? firstDrawValues[0] : 0, firstDrawValues[1]};
-    }
 
     EXPECT_BUFFER_U32_RANGE_EQ(expected.data(), buffer, 0, expected.size());
 }
 
 // Test that vertex_index starts at 7 when drawn using Draw()
 TEST_P(FirstIndexOffsetTests, NonIndexedVertexOffset) {
-    TestVertexIndex(DrawMode::NonIndexed, 7);
+    // Draw once: vertex_index starts at 9
+    {
+        TestVertexIndex(DrawMode::NonIndexed, {{9, 0}});
+    }
+
+    // Draw twice: vertex_index starts at 9 and 7
+    {
+        TestVertexIndex(DrawMode::NonIndexed, {{9, 0}, {7, 0}});
+    }
 }
 
-// Test that instance_index starts at 11 when drawn using Draw()
+// Test that instance_index when drawn using Draw()
 TEST_P(FirstIndexOffsetTests, NonIndexedInstanceOffset) {
-    TestInstanceIndex(DrawMode::NonIndexed, 11);
+    // Draw once: instance_index starts at 13
+    {
+        TestInstanceIndex(DrawMode::NonIndexed, {{0, 13}});
+    }
+
+    // Draw twice: instance_index starts at 13 and 11
+    {
+        TestInstanceIndex(DrawMode::NonIndexed, {{0, 13}, {0, 11}});
+    }
 }
 
-// Test that vertex_index and instance_index start at 7 and 11 respectively when drawn using Draw()
+// Test that vertex_index and instance_index respectively when drawn using Draw()
 TEST_P(FirstIndexOffsetTests, NonIndexedBothOffset) {
-    TestBothIndices(DrawMode::NonIndexed, 7, 11);
+    // Draw once: vertex_index starts at 7 and instance_index starts at 13
+    {
+        TestBothIndices(DrawMode::NonIndexed, {{7, 13}});
+    }
+    // Draw twice: vertex_index starts at 7 , instance_index starts at 13 and 11
+    {
+        TestBothIndices(DrawMode::NonIndexed, {{7, 13}, {7, 11}});
+    }
 }
 
 // Test that vertex_index starts at 7 when drawn using DrawIndexed()
 TEST_P(FirstIndexOffsetTests, IndexedVertex) {
-    TestVertexIndex(DrawMode::Indexed, 7);
+    // Draw once: vertex_index starts at 9
+    {
+        TestVertexIndex(DrawMode::Indexed, {{9, 0}});
+    }
+
+    // Draw twice: vertex_index starts at 9 and 7
+    {
+        TestVertexIndex(DrawMode::Indexed, {{9, 0}, {7, 0}});
+    }
 }
 
-// Test that instance_index starts at 11 when drawn using DrawIndexed()
+// Test that instance_index when drawn using DrawIndexed()
 TEST_P(FirstIndexOffsetTests, IndexedInstance) {
-    TestInstanceIndex(DrawMode::Indexed, 11);
+    // Draw once: instance_index starts at 13
+    {
+        TestInstanceIndex(DrawMode::Indexed, {{0, 13}});
+    }
+
+    // Draw twice: instance_index starts at 13 and 11
+    {
+        TestInstanceIndex(DrawMode::Indexed, {{0, 13}, {0, 11}});
+    }
 }
 
-// Test that vertex_index and instance_index start at 7 and 11 respectively when drawn using
+// Test that vertex_index and instance_index respectively when drawn using
 // DrawIndexed()
 TEST_P(FirstIndexOffsetTests, IndexedBothOffset) {
-    TestBothIndices(DrawMode::Indexed, 7, 11);
+    // Draw once: vertex_index starts at 7 and instance_index starts at 13
+    {
+        TestBothIndices(DrawMode::Indexed, {{7, 13}});
+    }
+    // Draw twice: vertex_index starts at 7 , instance_index starts at 13 and 11
+    {
+        TestBothIndices(DrawMode::Indexed, {{7, 13}, {7, 11}});
+    }
 }
 
-// Test that vertex_index starts at 7 when drawn using DrawIndirect()
+// Test that vertex_index when drawn using DrawIndirect()
 TEST_P(FirstIndexOffsetTests, NonIndexedIndirectVertexOffset) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
     // TODO(crbug.com/dawn/1429): Fails with the full validation turned on.
     DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsFullBackendValidationEnabled());
-    TestVertexIndex(DrawMode::NonIndexedIndirect, 7);
+
+    // Draw once: vertex_index starts at 9
+    {
+        TestVertexIndex(DrawMode::NonIndexedIndirect, {{9, 0}});
+    }
+
+    // Draw twice: vertex_index starts at 9 and 7
+    {
+        TestVertexIndex(DrawMode::NonIndexedIndirect, {{9, 0}, {7, 0}});
+    }
 }
 
-// Test that instance_index starts at 11 when drawn using DrawIndirect()
+// Test that instance_index when drawn using DrawIndirect()
 TEST_P(FirstIndexOffsetTests, NonIndexedIndirectInstanceOffset) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
-    TestInstanceIndex(DrawMode::NonIndexedIndirect, 11);
+    // Draw once: instance_index starts at 13
+    {
+        TestInstanceIndex(DrawMode::NonIndexedIndirect, {{0, 13}});
+    }
+
+    // Draw twice: instance_index starts at 13 and 11
+    {
+        TestInstanceIndex(DrawMode::NonIndexedIndirect, {{0, 13}, {0, 11}});
+    }
 }
 
-// Test that vertex_index and instance_index start at 7 and 11 respectively when drawn using
+// Test that vertex_index and instance_index respectively when drawn using
 // DrawIndirect()
 TEST_P(FirstIndexOffsetTests, NonIndexedIndirectBothOffset) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
-    TestBothIndices(DrawMode::NonIndexedIndirect, 7, 11);
+    // Draw once: vertex_index starts at 7 and instance_index starts at 13
+    {
+        TestBothIndices(DrawMode::NonIndexedIndirect, {{9, 0}});
+    }
+    // Draw twice: vertex_index starts at 7 , instance_index starts at 13 and 11
+    {
+        TestBothIndices(DrawMode::NonIndexedIndirect, {{9, 0}, {7, 0}});
+    }
 }
 
-// Test that vertex_index starts at 7 when drawn using DrawIndexedIndirect()
+// Test that vertex_index when drawn using DrawIndexedIndirect()
 TEST_P(FirstIndexOffsetTests, IndexedIndirectVertex) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
     // TODO(crbug.com/dawn/1429): Fails with the full validation turned on.
     DAWN_SUPPRESS_TEST_IF(IsD3D12() && IsFullBackendValidationEnabled());
-    TestVertexIndex(DrawMode::IndexedIndirect, 7);
+
+    // Draw once: vertex_index starts at 9
+    {
+        TestVertexIndex(DrawMode::IndexedIndirect, {{9, 0}});
+    }
+
+    // Draw twice: vertex_index starts at 9 and 7
+    {
+        TestVertexIndex(DrawMode::IndexedIndirect, {{9, 0}, {7, 0}});
+    }
 }
 
-// Test that instance_index starts at 11 when drawn using DrawIndexed()
+// Test that instance_index when drawn using DrawIndexed()
 TEST_P(FirstIndexOffsetTests, IndexedIndirectInstance) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
-    TestInstanceIndex(DrawMode::IndexedIndirect, 11);
+    // Draw once: instance_index starts at 13
+    {
+        TestInstanceIndex(DrawMode::IndexedIndirect, {{0, 13}});
+    }
+
+    // Draw twice: instance_index starts at 13 and 11
+    {
+        TestInstanceIndex(DrawMode::IndexedIndirect, {{0, 13}, {0, 11}});
+    }
 }
 
 // Test that vertex_index and instance_index start at 7 and 11 respectively when drawn using
@@ -350,7 +456,14 @@ TEST_P(FirstIndexOffsetTests, IndexedIndirectBothOffset) {
     // TODO(crbug.com/347223100): failing on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsOpenGLES() && IsANGLED3D11());
 
-    TestBothIndices(DrawMode::IndexedIndirect, 7, 11);
+    // Draw once: vertex_index starts at 7 and instance_index starts at 13
+    {
+        TestBothIndices(DrawMode::IndexedIndirect, {{7, 13}});
+    }
+    // Draw twice: vertex_index starts at 7 , instance_index starts at 13 and 11
+    {
+        TestBothIndices(DrawMode::IndexedIndirect, {{7, 13}, {7, 11}});
+    }
 }
 
 DAWN_INSTANTIATE_TEST(FirstIndexOffsetTests,

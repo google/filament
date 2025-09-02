@@ -34,6 +34,10 @@
 	path = tools/clang
 	url = https://chromium.googlesource.com/chromium/src/tools/clang
 	gclient-condition = dawn_standalone
+[submodule "tools/mb"]
+	path = tools/mb
+	url = https://chromium.googlesource.com/chromium/src/tools/mb
+	gclient-condition = dawn_standalone
 [submodule "testing"]
 	path = testing
 	url = https://chromium.googlesource.com/chromium/src/testing
@@ -144,20 +148,23 @@
 	gclient-condition = build_with_chromium
 [submodule "third_party/emsdk"]
 	path = third_party/emsdk
-	url = https://github.com/emscripten-core/emsdk.git
+	url = https://chromium.googlesource.com/external/github.com/emscripten-core/emsdk.git
 	gclient-condition = dawn_wasm
 [submodule "third_party/node-api-headers"]
 	path = third_party/node-api-headers
-	url = https://github.com/nodejs/node-api-headers.git
+	url = https://chromium.googlesource.com/external/github.com/nodejs/node-api-headers
 	gclient-condition = dawn_node
 [submodule "third_party/node-addon-api"]
 	path = third_party/node-addon-api
-	url = https://github.com/nodejs/node-addon-api.git
+	url = https://chromium.googlesource.com/external/github.com/nodejs/node-addon-api
 	gclient-condition = dawn_node
 [submodule "third_party/gpuweb"]
 	path = third_party/gpuweb
-	url = https://github.com/gpuweb/gpuweb.git
+	url = https://chromium.googlesource.com/external/github.com/gpuweb/gpuweb
 	gclient-condition = dawn_node
+[submodule "third_party/webgpu-headers/src"]
+	path = third_party/webgpu-headers/src
+	url = https://chromium.googlesource.com/external/github.com/webgpu-native/webgpu-headers
 [submodule "third_party/protobuf"]
 	path = third_party/protobuf
 	url = https://chromium.googlesource.com/chromium/src/third_party/protobuf
@@ -173,11 +180,11 @@
 [submodule "third_party/jsoncpp"]
 	path = third_party/jsoncpp
 	url = https://github.com/open-source-parsers/jsoncpp.git
-	gclient-condition = dawn_standalone
+	gclient-condition = dawn_tintd
 [submodule "third_party/langsvr"]
 	path = third_party/langsvr
 	url = https://github.com/google/langsvr.git
-	gclient-condition = dawn_standalone
+	gclient-condition = dawn_tintd
 [submodule "third_party/partition_alloc"]
 	path = third_party/partition_alloc
 	url = https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator.git

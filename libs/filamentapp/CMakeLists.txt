@@ -141,6 +141,10 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
+if (FILAMENT_SUPPORTS_WEBGPU)
+target_link_libraries(${TARGET} PRIVATE dawncpp_headers)
+endif()
+
 target_link_libraries(${TARGET} PUBLIC ${LIBS} filamentapp-resources)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

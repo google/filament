@@ -29,8 +29,8 @@
 
 #include <utility>
 
-#include "src/tint/lang/wgsl/ast/transform/helper_test.h"
-#include "src/tint/lang/wgsl/ast/transform/simplify_pointers.h"
+#include "src/tint/lang/spirv/reader/ast_lower/helper_test.h"
+#include "src/tint/lang/spirv/reader/ast_lower/simplify_pointers.h"
 #include "src/tint/lang/wgsl/program/clone_context.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/resolver/resolve.h"

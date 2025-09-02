@@ -43,13 +43,13 @@ class Queue final : public ObjectWithEventsBase {
     ObjectType GetObjectType() const override;
 
     // Dawn API
-    WGPUFuture OnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo);
-    void WriteBuffer(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* data, size_t size);
-    void WriteTexture(const WGPUTexelCopyTextureInfo* destination,
-                      const void* data,
-                      size_t dataSize,
-                      const WGPUTexelCopyBufferLayout* dataLayout,
-                      const WGPUExtent3D* writeSize);
+    WGPUFuture APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo);
+    void APIWriteBuffer(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* data, size_t size);
+    void APIWriteTexture(const WGPUTexelCopyTextureInfo* destination,
+                         const void* data,
+                         size_t dataSize,
+                         const WGPUTexelCopyBufferLayout* dataLayout,
+                         const WGPUExtent3D* writeSize);
 };
 
 }  // namespace dawn::wire::client

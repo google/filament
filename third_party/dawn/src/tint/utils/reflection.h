@@ -29,6 +29,7 @@
 #define SRC_TINT_UTILS_REFLECTION_H_
 
 #include <cstddef>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -115,7 +116,7 @@ namespace tint {
 
 /// Is true if the class T has reflected its fields with TINT_REFLECT()
 template <typename T>
-static constexpr bool HasReflection = tint::reflection::detail::HasReflection<T>::value;
+concept HasReflection = tint::reflection::detail::HasReflection<T>::value;
 
 /// Calls @p callback with each field of @p object
 /// @param object the object
@@ -170,6 +171,9 @@ void ForeachField(const OBJECT& object, CB&& callback) {
 /// Macro used by TINT_FOREACH() in TINT_REFLECT() to generate the T::Reflection::Fields tuple.
 #define TINT_REFLECT_FIELD_TYPE(FIELD) decltype(Class::FIELD),
 
+/// Macro used by TINT_FOREACH() in TINT_REFLECT() to generate a tuple of member values.
+#define TINT_REFLECT_FIELD_VALUE(FIELD) object.FIELD,
+
 /// Macro used by TINT_FOREACH() in TINT_REFLECT() to call the callback function with each field in
 /// the variadic.
 #define TINT_REFLECT_CALLBACK_FIELD(FIELD) callback(object.FIELD, #FIELD);
@@ -181,11 +185,31 @@ void ForeachField(const OBJECT& object, CB&& callback) {
         using Class = CLASS;                                                                  \
         using Fields = std::tuple<TINT_FOREACH(TINT_REFLECT_FIELD_TYPE, __VA_ARGS__) void>;   \
         [[maybe_unused]] static constexpr std::string_view Name = #CLASS;                     \
+        [[maybe_unused]] static constexpr std::monostate kIgnore{};                           \
         template <typename OBJECT, typename CB>                                               \
         [[maybe_unused]] static constexpr void ForeachField(OBJECT&& object, CB&& callback) { \
             TINT_FOREACH(TINT_REFLECT_CALLBACK_FIELD, __VA_ARGS__)                            \
         }                                                                                     \
+        [[maybe_unused]] static constexpr auto FieldsAsTuple(const Class& object) {           \
+            return std::tie(TINT_FOREACH(TINT_REFLECT_FIELD_VALUE, __VA_ARGS__) kIgnore);     \
+        }                                                                                     \
     }
+
+/// TINT_REFLECT_EQUALS(CLASS) generates an operator== for the CLASS based on the reflected fields.
+/// All reflected fields must be equality comparable.
+#define TINT_REFLECT_EQUALS(CLASS)                                                                 \
+    bool operator==(const CLASS& other) const {                                                    \
+        return CLASS::Reflection::FieldsAsTuple(*this) == CLASS::Reflection::FieldsAsTuple(other); \
+    }                                                                                              \
+    TINT_REQUIRE_SEMICOLON
+
+/// TINT_REFLECT_HASH_CODE(CLASS) generates a tint::HashCode implementation for the CLASS based on
+/// the reflected fields.
+#define TINT_REFLECT_HASH_CODE(CLASS)                         \
+    HashCode HashCode() const {                               \
+        return Hash(CLASS::Reflection::FieldsAsTuple(*this)); \
+    }                                                         \
+    TINT_REQUIRE_SEMICOLON
 
 /// TINT_ASSERT_ALL_FIELDS_REFLECTED(...) performs a compile-time assertion that all the fields of
 /// CLASS have been reflected with TINT_REFLECT().

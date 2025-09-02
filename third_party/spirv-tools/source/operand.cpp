@@ -111,6 +111,7 @@ const char* spvOperandTypeStr(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_KERNEL_PROFILING_INFO:
       return "kernel profiling info";
     case SPV_OPERAND_TYPE_CAPABILITY:
+    case SPV_OPERAND_TYPE_OPTIONAL_CAPABILITY:
       return "capability";
     case SPV_OPERAND_TYPE_RAY_FLAGS:
       return "ray flags";
@@ -394,6 +395,7 @@ bool spvOperandIsOptional(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_OPTIONAL_RAW_ACCESS_CHAIN_OPERANDS:
     case SPV_OPERAND_TYPE_OPTIONAL_FPENCODING:
     case SPV_OPERAND_TYPE_OPTIONAL_TENSOR_OPERANDS:
+    case SPV_OPERAND_TYPE_OPTIONAL_CAPABILITY:
       return true;
     default:
       break;
@@ -408,6 +410,7 @@ bool spvOperandIsVariable(spv_operand_type_t type) {
     case SPV_OPERAND_TYPE_VARIABLE_LITERAL_INTEGER:
     case SPV_OPERAND_TYPE_VARIABLE_LITERAL_INTEGER_ID:
     case SPV_OPERAND_TYPE_VARIABLE_ID_LITERAL_INTEGER:
+    case SPV_OPERAND_TYPE_VARIABLE_CAPABILITY:
       return true;
     default:
       break;
@@ -438,6 +441,10 @@ bool spvExpandOperandSequenceOnce(spv_operand_type_t type,
       pattern->push_back(type);
       pattern->push_back(SPV_OPERAND_TYPE_LITERAL_INTEGER);
       pattern->push_back(SPV_OPERAND_TYPE_OPTIONAL_ID);
+      return true;
+    case SPV_OPERAND_TYPE_VARIABLE_CAPABILITY:
+      pattern->push_back(type);
+      pattern->push_back(SPV_OPERAND_TYPE_OPTIONAL_CAPABILITY);
       return true;
     default:
       break;

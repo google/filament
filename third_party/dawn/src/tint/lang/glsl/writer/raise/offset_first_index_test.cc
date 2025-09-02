@@ -58,11 +58,11 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, NoModify_NoBuiltins) {
 
     auto* expect = src;
 
-    core::ir::transform::PreparePushConstantsConfig push_constants_config;
-    auto push_constants = PreparePushConstants(mod, push_constants_config);
-    EXPECT_EQ(push_constants, Success);
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
 
-    OffsetFirstIndexConfig config{push_constants.Get()};
+    OffsetFirstIndexConfig config{immediate_data.Get()};
     config.first_vertex_offset = 4;
     config.first_instance_offset = 8;
     Run(OffsetFirstIndex, config);
@@ -70,16 +70,12 @@ TEST_F(GlslWriter_OffsetFirstIndexTest, NoModify_NoBuiltins) {
 }
 
 TEST_F(GlslWriter_OffsetFirstIndexTest, NoModify_BuiltinsWithNoOffsets) {
-    core::IOAttributes attributes;
-
     auto* vertex_idx = b.Var("vertex_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kVertexIndex;
-    vertex_idx->SetAttributes(attributes);
+    vertex_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
     mod.root_block->Append(vertex_idx);
 
     auto* instance_idx = b.Var("instance_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kInstanceIndex;
-    instance_idx->SetAttributes(attributes);
+    instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
     auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
@@ -112,26 +108,22 @@ $B1: {  # root
 
     auto* expect = src;
 
-    core::ir::transform::PreparePushConstantsConfig push_constants_config;
-    auto push_constants = PreparePushConstants(mod, push_constants_config);
-    EXPECT_EQ(push_constants, Success);
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
 
-    OffsetFirstIndexConfig config{push_constants.Get()};
+    OffsetFirstIndexConfig config{immediate_data.Get()};
     Run(OffsetFirstIndex, config);
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(GlslWriter_OffsetFirstIndexTest, VertexOffset) {
-    core::IOAttributes attributes;
-
     auto* vertex_idx = b.Var("vertex_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kVertexIndex;
-    vertex_idx->SetAttributes(attributes);
+    vertex_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
     mod.root_block->Append(vertex_idx);
 
     auto* instance_idx = b.Var("instance_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kInstanceIndex;
-    instance_idx->SetAttributes(attributes);
+    instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
     auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
@@ -163,20 +155,20 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_push_constant_struct = struct @align(4), @block {
+tint_immediate_data_struct = struct @align(4), @block {
   first_vertex:u32 @offset(4)
 }
 
 $B1: {  # root
   %vertex_index:ptr<__in, u32, read> = var undef @builtin(vertex_index)
   %instance_index:ptr<__in, u32, read> = var undef @builtin(instance_index)
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
 }
 
 %foo = @vertex func():vec4<f32> [@position] {
   $B2: {
     %5:u32 = load %vertex_index
-    %6:ptr<push_constant, u32, read> = access %tint_push_constants, 0u
+    %6:ptr<immediate, u32, read> = access %tint_immediate_data, 0u
     %7:u32 = load %6
     %8:u32 = add %5, %7
     %9:u32 = load %instance_index
@@ -187,28 +179,24 @@ $B1: {  # root
 }
 )";
 
-    core::ir::transform::PreparePushConstantsConfig push_constants_config;
-    push_constants_config.AddInternalConstant(4, mod.symbols.New("first_vertex"), ty.u32());
-    auto push_constants = PreparePushConstants(mod, push_constants_config);
-    EXPECT_EQ(push_constants, Success);
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"), ty.u32());
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
 
-    OffsetFirstIndexConfig config{push_constants.Get()};
+    OffsetFirstIndexConfig config{immediate_data.Get()};
     config.first_vertex_offset = 4;
     Run(OffsetFirstIndex, config);
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(GlslWriter_OffsetFirstIndexTest, InstanceOffset) {
-    core::IOAttributes attributes;
-
     auto* vertex_idx = b.Var("vertex_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kVertexIndex;
-    vertex_idx->SetAttributes(attributes);
+    vertex_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
     mod.root_block->Append(vertex_idx);
 
     auto* instance_idx = b.Var("instance_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kInstanceIndex;
-    instance_idx->SetAttributes(attributes);
+    instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
     auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
@@ -240,21 +228,21 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_push_constant_struct = struct @align(4), @block {
+tint_immediate_data_struct = struct @align(4), @block {
   first_instance:u32 @offset(4)
 }
 
 $B1: {  # root
   %vertex_index:ptr<__in, u32, read> = var undef @builtin(vertex_index)
   %instance_index:ptr<__in, u32, read> = var undef @builtin(instance_index)
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
 }
 
 %foo = @vertex func():vec4<f32> [@position] {
   $B2: {
     %5:u32 = load %vertex_index
     %6:u32 = load %instance_index
-    %7:ptr<push_constant, u32, read> = access %tint_push_constants, 0u
+    %7:ptr<immediate, u32, read> = access %tint_immediate_data, 0u
     %8:u32 = load %7
     %9:u32 = add %6, %8
     %10:u32 = add %5, %9
@@ -264,28 +252,24 @@ $B1: {  # root
 }
 )";
 
-    core::ir::transform::PreparePushConstantsConfig push_constants_config;
-    push_constants_config.AddInternalConstant(4, mod.symbols.New("first_instance"), ty.u32());
-    auto push_constants = PreparePushConstants(mod, push_constants_config);
-    EXPECT_EQ(push_constants, Success);
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_instance"), ty.u32());
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
 
-    OffsetFirstIndexConfig config{push_constants.Get()};
+    OffsetFirstIndexConfig config{immediate_data.Get()};
     config.first_instance_offset = 4;
     Run(OffsetFirstIndex, config);
     EXPECT_EQ(expect, str());
 }
 
 TEST_F(GlslWriter_OffsetFirstIndexTest, VertexAndInstanceOffset) {
-    core::IOAttributes attributes;
-
     auto* vertex_idx = b.Var("vertex_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kVertexIndex;
-    vertex_idx->SetAttributes(attributes);
+    vertex_idx->SetBuiltin(core::BuiltinValue::kVertexIndex);
     mod.root_block->Append(vertex_idx);
 
     auto* instance_idx = b.Var("instance_index", ty.ptr(core::AddressSpace::kIn, ty.u32()));
-    attributes.builtin = core::BuiltinValue::kInstanceIndex;
-    instance_idx->SetAttributes(attributes);
+    instance_idx->SetBuiltin(core::BuiltinValue::kInstanceIndex);
     mod.root_block->Append(instance_idx);
 
     auto* func = b.Function("foo", ty.vec4<f32>(), core::ir::Function::PipelineStage::kVertex);
@@ -317,7 +301,7 @@ $B1: {  # root
     EXPECT_EQ(src, str());
 
     auto* expect = R"(
-tint_push_constant_struct = struct @align(4), @block {
+tint_immediate_data_struct = struct @align(4), @block {
   first_vertex:u32 @offset(4)
   first_instance:u32 @offset(8)
 }
@@ -325,17 +309,17 @@ tint_push_constant_struct = struct @align(4), @block {
 $B1: {  # root
   %vertex_index:ptr<__in, u32, read> = var undef @builtin(vertex_index)
   %instance_index:ptr<__in, u32, read> = var undef @builtin(instance_index)
-  %tint_push_constants:ptr<push_constant, tint_push_constant_struct, read> = var undef
+  %tint_immediate_data:ptr<immediate, tint_immediate_data_struct, read> = var undef
 }
 
 %foo = @vertex func():vec4<f32> [@position] {
   $B2: {
     %5:u32 = load %vertex_index
-    %6:ptr<push_constant, u32, read> = access %tint_push_constants, 0u
+    %6:ptr<immediate, u32, read> = access %tint_immediate_data, 0u
     %7:u32 = load %6
     %8:u32 = add %5, %7
     %9:u32 = load %instance_index
-    %10:ptr<push_constant, u32, read> = access %tint_push_constants, 1u
+    %10:ptr<immediate, u32, read> = access %tint_immediate_data, 1u
     %11:u32 = load %10
     %12:u32 = add %9, %11
     %13:u32 = add %8, %12
@@ -345,13 +329,13 @@ $B1: {  # root
 }
 )";
 
-    core::ir::transform::PreparePushConstantsConfig push_constants_config;
-    push_constants_config.AddInternalConstant(4, mod.symbols.New("first_vertex"), ty.u32());
-    push_constants_config.AddInternalConstant(8, mod.symbols.New("first_instance"), ty.u32());
-    auto push_constants = PreparePushConstants(mod, push_constants_config);
-    EXPECT_EQ(push_constants, Success);
+    core::ir::transform::PrepareImmediateDataConfig immediate_data_config;
+    immediate_data_config.AddInternalImmediateData(4, mod.symbols.New("first_vertex"), ty.u32());
+    immediate_data_config.AddInternalImmediateData(8, mod.symbols.New("first_instance"), ty.u32());
+    auto immediate_data = PrepareImmediateData(mod, immediate_data_config);
+    EXPECT_EQ(immediate_data, Success);
 
-    OffsetFirstIndexConfig config{push_constants.Get()};
+    OffsetFirstIndexConfig config{immediate_data.Get()};
     config.first_vertex_offset = 4;
     config.first_instance_offset = 8;
     Run(OffsetFirstIndex, config);

@@ -60,6 +60,7 @@ if (tint_build_spv_reader) {
       "${tint_src_dir}/lang/spirv/intrinsic",
       "${tint_src_dir}/lang/spirv/ir",
       "${tint_src_dir}/lang/spirv/type",
+      "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/diagnostic",
@@ -71,6 +72,10 @@ if (tint_build_spv_reader) {
       "${tint_src_dir}/utils/symbol",
       "${tint_src_dir}/utils/text",
     ]
+
+    if (tint_build_spv_reader) {
+      deps += [ "${tint_src_dir}/lang/spirv/reader/common" ]
+    }
 
     if (tint_build_spv_reader || tint_build_spv_writer) {
       deps += [
@@ -98,6 +103,7 @@ if (tint_build_unittests) {
         "composite_test.cc",
         "constant_test.cc",
         "convert_test.cc",
+        "execution_mode_test.cc",
         "function_test.cc",
         "helper_test.h",
         "image_sampler_test.cc",
@@ -107,6 +113,7 @@ if (tint_build_unittests) {
         "memory_test.cc",
         "misc_test.cc",
         "name_test.cc",
+        "phi_test.cc",
         "struct_test.cc",
         "unary_test.cc",
         "var_test.cc",
@@ -119,6 +126,7 @@ if (tint_build_unittests) {
         "${tint_src_dir}/lang/core/constant",
         "${tint_src_dir}/lang/core/ir",
         "${tint_src_dir}/lang/core/type",
+        "${tint_src_dir}/lang/wgsl",
         "${tint_src_dir}/utils",
         "${tint_src_dir}/utils/containers",
         "${tint_src_dir}/utils/diagnostic",
@@ -133,6 +141,7 @@ if (tint_build_unittests) {
 
       if (tint_build_spv_reader) {
         deps += [
+          "${tint_src_dir}/lang/spirv/reader/common",
           "${tint_src_dir}/lang/spirv/reader/common:unittests",
           "${tint_src_dir}/lang/spirv/reader/parser",
         ]

@@ -39,22 +39,6 @@ namespace dawn::native {
 
 namespace {
 
-thread_local DeviceBase* tlDevice = nullptr;
-
-void TintICEReporter(const tint::InternalCompilerError& err) {
-    if (tlDevice) {
-        tlDevice->HandleError(DAWN_INTERNAL_ERROR(err.Error()));
-#if DAWN_ENABLE_ASSERTS
-        HandleAssertionFailure(err.File(), "", err.Line(), err.Message().c_str());
-#endif
-    }
-}
-
-bool InitializeTintErrorReporter() {
-    tint::SetInternalCompilerErrorReporter(&TintICEReporter);
-    return true;
-}
-
 tint::VertexFormat ToTintVertexFormat(wgpu::VertexFormat format) {
     switch (format) {
         case wgpu::VertexFormat::Uint8:
@@ -157,22 +141,6 @@ tint::VertexStepMode ToTintVertexStepMode(wgpu::VertexStepMode mode) {
 
 }  // namespace
 
-ScopedTintICEHandler::ScopedTintICEHandler(DeviceBase* device) {
-    // Call tint::SetInternalCompilerErrorReporter() the first time
-    // this constructor is called. Static initialization is
-    // guaranteed to be thread-safe, and only occur once.
-    static bool init_once_tint_error_reporter = InitializeTintErrorReporter();
-    (void)init_once_tint_error_reporter;
-
-    // Shouldn't have overlapping instances of this handler.
-    DAWN_ASSERT(tlDevice == nullptr);
-    tlDevice = device;
-}
-
-ScopedTintICEHandler::~ScopedTintICEHandler() {
-    tlDevice = nullptr;
-}
-
 tint::VertexPullingConfig BuildVertexPullingTransformConfig(
     const RenderPipelineBase& renderPipeline,
     BindGroupIndex pullingBufferBindingSet) {
@@ -180,7 +148,7 @@ tint::VertexPullingConfig BuildVertexPullingTransformConfig(
     cfg.pulling_group = static_cast<uint32_t>(pullingBufferBindingSet);
 
     cfg.vertex_state.resize(renderPipeline.GetVertexBufferCount());
-    for (VertexBufferSlot slot : IterateBitSet(renderPipeline.GetVertexBuffersUsed())) {
+    for (VertexBufferSlot slot : renderPipeline.GetVertexBuffersUsed()) {
         const VertexBufferInfo& dawnInfo = renderPipeline.GetVertexBuffer(slot);
         tint::VertexBufferLayoutDescriptor* tintInfo =
             &cfg.vertex_state[static_cast<uint8_t>(slot)];
@@ -189,8 +157,7 @@ tint::VertexPullingConfig BuildVertexPullingTransformConfig(
         tintInfo->step_mode = ToTintVertexStepMode(dawnInfo.stepMode);
     }
 
-    for (VertexAttributeLocation location :
-         IterateBitSet(renderPipeline.GetAttributeLocationsUsed())) {
+    for (VertexAttributeLocation location : renderPipeline.GetAttributeLocationsUsed()) {
         const VertexAttributeInfo& dawnInfo = renderPipeline.GetAttribute(location);
         tint::VertexAttributeDescriptor tintInfo;
         tintInfo.format = ToTintVertexFormat(dawnInfo.format);
@@ -203,33 +170,20 @@ tint::VertexPullingConfig BuildVertexPullingTransformConfig(
     return cfg;
 }
 
-tint::ast::transform::SubstituteOverride::Config BuildSubstituteOverridesTransformConfig(
+std::unordered_map<tint::OverrideId, double> BuildSubstituteOverridesTransformConfig(
     const ProgrammableStage& stage) {
-    const EntryPointMetadata& metadata = *stage.metadata;
-    const auto& constants = stage.constants;
-
-    tint::ast::transform::SubstituteOverride::Config cfg;
-
-    for (const auto& [key, value] : constants) {
-        const auto& o = metadata.overrides.at(key);
-        cfg.map.insert({o.id, value});
-    }
-
-    return cfg;
+    return BuildSubstituteOverridesTransformConfig(*stage.metadata, stage.constants);
 }
 
-// static
-template <>
-void stream::Stream<tint::Program>::Write(stream::Sink* sink, const tint::Program& p) {
-#if TINT_BUILD_WGSL_WRITER
-    tint::wgsl::writer::Options options{};
-    StreamIn(sink, tint::wgsl::writer::Generate(p, options)->wgsl);
-#else
-    // TODO(crbug.com/dawn/1481): We shouldn't need to write back to WGSL if we have a CacheKey
-    // built from the initial shader module input. Then, we would never need to parse the program
-    // and write back out to WGSL.
-    DAWN_UNREACHABLE();
-#endif
+std::unordered_map<tint::OverrideId, double> BuildSubstituteOverridesTransformConfig(
+    const EntryPointMetadata& metadata,
+    const PipelineConstantEntries& constants) {
+    std::unordered_map<tint::OverrideId, double> map;
+    for (const auto& [key, value] : constants) {
+        const auto& o = metadata.overrides.at(key);
+        map.insert({{o.id.value}, value});
+    }
+    return map;
 }
 
 }  // namespace dawn::native

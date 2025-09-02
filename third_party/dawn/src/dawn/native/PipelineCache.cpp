@@ -36,7 +36,15 @@ PipelineCacheBase::PipelineCacheBase(BlobCache* cache, const CacheKey& key, bool
 
 Blob PipelineCacheBase::Initialize() {
     DAWN_ASSERT(!mInitialized);
-    Blob blob = mCache->Load(mKey);
+
+    auto loadResult = mCache->Load(mKey);
+    Blob blob;
+    if (loadResult.IsSuccess()) {
+        blob = loadResult.AcquireSuccess();
+    }
+    // Otherwise cache hit but hash validation failed, leaving blob empty to continue as if it was a
+    // cache miss.
+
     mCacheHit = !blob.Empty();
     mInitialized = true;
     return blob;

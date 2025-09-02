@@ -227,11 +227,8 @@ void CheckLayerCompressed(const SubresourceStorage<T>& s,
 
 struct SmallData {
     uint32_t value = 0xF00;
+    bool operator==(const SmallData& data) const = default;
 };
-
-bool operator==(const SmallData& a, const SmallData& b) {
-    return a.value == b.value;
-}
 
 // Tests that the MaybeError version of Iterate returns the first error that it encounters.
 TEST(SubresourceStorageTest, IterateMaybeError) {

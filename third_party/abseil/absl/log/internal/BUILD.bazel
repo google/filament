@@ -68,9 +68,7 @@ cc_library(
     hdrs = ["check_op.h"],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
-    visibility = [
-        "//absl/log:__pkg__",
-    ],
+    visibility = ["//absl/log:__pkg__"],
     deps = [
         ":nullguard",
         ":nullstream",
@@ -207,6 +205,7 @@ cc_library(
         "//absl/log:log_sink_registry",
         "//absl/memory",
         "//absl/strings",
+        "//absl/strings:internal",
         "//absl/time",
         "//absl/types:span",
     ],
@@ -220,6 +219,7 @@ cc_library(
     deps = [
         "//absl/base:config",
         "//absl/strings",
+        "//absl/strings:internal",
         "//absl/types:span",
     ],
 )
@@ -415,7 +415,10 @@ cc_library(
     hdrs = ["voidify.h"],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
-    deps = ["//absl/base:config"],
+    deps = [
+        "//absl/base:config",
+        "//absl/base:core_headers",
+    ],
 )
 
 cc_library(
@@ -424,10 +427,6 @@ cc_library(
     hdrs = ["proto.h"],
     copts = ABSL_DEFAULT_COPTS,
     linkopts = ABSL_DEFAULT_LINKOPTS,
-    visibility = [
-        ":internal_users",
-        ":structured_proto_users",
-    ],
     deps = [
         "//absl/base",
         "//absl/base:config",
@@ -459,11 +458,12 @@ cc_library(
         "//absl/log:__subpackages__",
     ],
     deps = [
+        ":fnmatch",
         "//absl/base",
         "//absl/base:config",
         "//absl/base:core_headers",
         "//absl/base:no_destructor",
-        "//absl/log/internal:fnmatch",
+        "//absl/base:nullability",
         "//absl/memory",
         "//absl/strings",
         "//absl/synchronization",

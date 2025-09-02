@@ -175,7 +175,7 @@ TEST_F(EnableDirectiveTest, InvalidExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -189,7 +189,7 @@ TEST_F(EnableDirectiveTest, InvalidExtensionSuggest) {
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -203,7 +203,7 @@ TEST_F(EnableDirectiveTest, InvalidChromiumExtension) {
     // Error when unknown extension found
     EXPECT_TRUE(p->has_error());
     EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'chromium_disable_uniformity_analysis', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_pixel_local', 'chromium_experimental_push_constant', 'chromium_experimental_subgroup_matrix', 'chromium_internal_graphite', 'chromium_internal_input_attachments', 'chromium_internal_relaxed_uniform_layout', 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'chromium_disable_uniformity_analysis', 'chromium_experimental_barycentric_coord', 'chromium_experimental_framebuffer_fetch', 'chromium_experimental_immediate', 'chromium_experimental_pixel_local', 'chromium_experimental_primitive_id', 'chromium_experimental_subgroup_matrix', 'chromium_internal_graphite', 'chromium_internal_input_attachments', 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
     auto program = p->program();
     auto& ast = program.AST();
     EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -251,7 +251,7 @@ TEST_F(EnableDirectiveTest, InvalidTokens) {
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -262,7 +262,7 @@ Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', '
         p->translation_unit();
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);
@@ -274,7 +274,7 @@ Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', '
         EXPECT_TRUE(p->has_error());
         EXPECT_EQ(p->error(), R"(1:8: expected extension
 Did you mean 'f16'?
-Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups', 'subgroups_f16')");
+Possible values: 'clip_distances', 'dual_source_blending', 'f16', 'subgroups')");
         auto program = p->program();
         auto& ast = program.AST();
         EXPECT_EQ(ast.Enables().Length(), 0u);

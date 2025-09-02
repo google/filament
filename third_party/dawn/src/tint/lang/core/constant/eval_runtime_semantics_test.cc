@@ -25,26 +25,32 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "src/tint/lang/core/constant/eval_test.h"
+#include "gtest/gtest.h"
 
+#include "src/tint/lang/core/constant/eval.h"
 #include "src/tint/lang/core/constant/scalar.h"
+#include "src/tint/lang/core/type/f16.h"
+#include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/vector.h"
+#include "src/tint/utils/diagnostic/diagnostic.h"
 
 using namespace tint::core::number_suffixes;  // NOLINT
 
 namespace tint::core::constant::test {
 namespace {
 
-class ConstEvalRuntimeSemanticsTest : public ConstEvalTest {
-  protected:
-    /// Default constructor.
-    ConstEvalRuntimeSemanticsTest()
-        : eval(Eval(constants, Diagnostics(), /* use_runtime_semantics */ true)) {}
+struct ConstEvalRuntimeSemanticsTest : public testing::Test {
+    /// @returns the contents of the diagnostics list as a string
+    std::string error() { return diagnostics.Str(); }
+
+    constant::Manager constants;
+    core::type::Manager& ty = constants.types;
+    diag::List diagnostics;
 
     /// The Eval object used during testing (has runtime semantics enabled).
-    Eval eval;
-
-    /// @returns the contents of the diagnostics list as a string
-    std::string error() { return Diagnostics().Str(); }
+    Eval eval{constants, diagnostics, /* use_runtime_semantics */ true};
 };
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Add_AInt_Overflow) {
@@ -445,9 +451,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Log2_F32_OutOfRange) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Normalize_ZeroLength) {
     auto* zero = constants.Get(f32(0));
-    auto* vec =
-        eval.VecSplat(create<core::type::Vector>(create<core::type::F32>(), 4u), Vector{zero}, {})
-            .Get();
+    auto* vec = eval.VecSplat(ty.vec(ty.f32(), 4u), Vector{zero}, {}).Get();
     auto result = eval.normalize(vec->Type(), Vector{vec}, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->Index(0)->ValueAs<f32>(), 0.f);
@@ -460,10 +464,8 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Normalize_ZeroLength) {
 TEST_F(ConstEvalRuntimeSemanticsTest, Pack2x16Float_OutOfRange) {
     auto* a = constants.Get(f32(75250.f));
     auto* b = constants.Get(f32(42.1f));
-    auto* vec =
-        eval.VecInitS(create<core::type::Vector>(create<core::type::F32>(), 2u), Vector{a, b}, {})
-            .Get();
-    auto result = eval.pack2x16float(create<core::type::U32>(), Vector{vec}, {});
+    auto* vec = eval.VecInitS(ty.vec(ty.f32(), 2u), Vector{a, b}, {}).Get();
+    auto result = eval.pack2x16float(ty.u32(), Vector{vec}, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<u32>(), 0x51430000);
     EXPECT_EQ(error(), R"(warning: value 75250.0 cannot be represented as 'f16')");
@@ -479,7 +481,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Pow_F32_Overflow) {
 }
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Unpack2x16Float_OutOfRange) {
-    auto* vec2f = create<core::type::Vector>(create<core::type::F32>(), 2u);
+    auto* vec2f = ty.vec(ty.f32(), 2u);
     auto* a = constants.Get(u32(0x51437C00));
     auto result = eval.unpack2x16float(vec2f, Vector{a}, {});
     ASSERT_EQ(result, Success);
@@ -490,7 +492,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Unpack2x16Float_OutOfRange) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, QuantizeToF16_OutOfRange) {
     auto* a = constants.Get(f32(75250.f));
-    auto result = eval.quantizeToF16(create<core::type::U32>(), Vector{a}, {});
+    auto result = eval.quantizeToF16(ty.u32(), Vector{a}, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<u32>(), 0);
     EXPECT_EQ(error(), R"(warning: value 75250.0 cannot be represented as 'f16')");
@@ -516,7 +518,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Clamp_F32_LowGreaterThanHigh) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Bitcast_Infinity) {
     auto* a = constants.Get(u32(0x7F800000));
-    auto result = eval.bitcast(create<core::type::F32>(), Vector{a}, {});
+    auto result = eval.bitcast(ty.f32(), Vector{a}, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), 0.f);
     EXPECT_EQ(error(), R"(warning: value inf cannot be represented as 'f32')");
@@ -524,7 +526,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Bitcast_Infinity) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Bitcast_NaN) {
     auto* a = constants.Get(u32(0x7FC00000));
-    auto result = eval.bitcast(create<core::type::F32>(), Vector{a}, {});
+    auto result = eval.bitcast(ty.f32(), Vector{a}, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), 0.f);
     EXPECT_EQ(error(), R"(warning: value nan cannot be represented as 'f32')");
@@ -532,7 +534,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Bitcast_NaN) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F32_TooHigh) {
     auto* a = constants.Get(AFloat::Highest());
-    auto result = eval.Convert(create<core::type::F32>(), a, {});
+    auto result = eval.Convert(ty.f32(), a, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), f32::kHighestValue);
     EXPECT_EQ(
@@ -542,7 +544,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F32_TooHigh) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F32_TooLow) {
     auto* a = constants.Get(AFloat::Lowest());
-    auto result = eval.Convert(create<core::type::F32>(), a, {});
+    auto result = eval.Convert(ty.f32(), a, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), f32::kLowestValue);
     EXPECT_EQ(
@@ -552,7 +554,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F32_TooLow) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F16_TooHigh) {
     auto* a = constants.Get(f32(1000000.0));
-    auto result = eval.Convert(create<core::type::F16>(), a, {});
+    auto result = eval.Convert(ty.f16(), a, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), f16::kHighestValue);
     EXPECT_EQ(error(), R"(warning: value 1000000.0 cannot be represented as 'f16')");
@@ -560,7 +562,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F16_TooHigh) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F16_TooLow) {
     auto* a = constants.Get(f32(-1000000.0));
-    auto result = eval.Convert(create<core::type::F16>(), a, {});
+    auto result = eval.Convert(ty.f16(), a, {});
     ASSERT_EQ(result, Success);
     EXPECT_EQ(result.Get()->ValueAs<f32>(), f16::kLowestValue);
     EXPECT_EQ(error(), R"(warning: value -1000000.0 cannot be represented as 'f16')");
@@ -568,7 +570,7 @@ TEST_F(ConstEvalRuntimeSemanticsTest, Convert_F16_TooLow) {
 
 TEST_F(ConstEvalRuntimeSemanticsTest, Vec_Overflow_SingleComponent) {
     // Test that overflow for an element-wise vector operation only affects a single component.
-    auto* vec4f = create<core::type::Vector>(create<core::type::F32>(), 4u);
+    auto* vec4f = ty.vec(ty.f32(), 4u);
     auto* a = eval.VecInitS(vec4f,
                             Vector{
                                 constants.Get(f32(1)),

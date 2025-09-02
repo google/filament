@@ -351,6 +351,52 @@ TEST(FlatHashSet, Equality) {
   }
 }
 
+class MoveOnlyInt {
+ public:
+  explicit MoveOnlyInt(int value) : value_(value) {}
+
+  MoveOnlyInt(const MoveOnlyInt& other) = delete;
+  MoveOnlyInt& operator=(const MoveOnlyInt& other) = delete;
+
+  MoveOnlyInt(MoveOnlyInt&& other) = default;
+  MoveOnlyInt& operator=(MoveOnlyInt&& other) = default;
+
+  bool operator==(const MoveOnlyInt& other) const {
+    return value_ == other.value_;
+  }
+  bool operator==(int other) const { return value_ == other; }
+
+ private:
+  template <typename H>
+  friend H AbslHashValue(H h, const MoveOnlyInt& m) {
+    return H::combine(std::move(h), m.value_);
+  }
+
+  int value_;
+};
+
+TEST(FlatHashSet, MoveOnlyKey) {
+  flat_hash_set<MoveOnlyInt> s;
+  s.insert(MoveOnlyInt(1));
+  s.insert(MoveOnlyInt(2));
+  s.insert(MoveOnlyInt(3));
+  EXPECT_THAT(s, UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(FlatHashSet, IsDefaultHash) {
+  using absl::container_internal::hashtable_debug_internal::
+      HashtableDebugAccess;
+  EXPECT_EQ(HashtableDebugAccess<flat_hash_set<int>>::kIsDefaultHash, true);
+  EXPECT_EQ(HashtableDebugAccess<flat_hash_set<std::string>>::kIsDefaultHash,
+            true);
+
+  struct Hash {
+    size_t operator()(size_t i) const { return i; }
+  };
+  EXPECT_EQ((HashtableDebugAccess<flat_hash_set<size_t, Hash>>::kIsDefaultHash),
+            false);
+}
+
 }  // namespace
 }  // namespace container_internal
 ABSL_NAMESPACE_END

@@ -267,7 +267,7 @@ ComputePassEncoder::TransformIndirectDispatchBuffer(Ref<BufferBase> indirectBuff
     // This function creates new resources, need to lock the Device.
     // TODO(crbug.com/dawn/1618): In future, all temp resources should be created at Command Submit
     // time, so the locking would be removed from here at that point.
-    auto deviceLock(GetDevice()->GetScopedLock());
+    auto deviceGuard = GetDevice()->GetGuard();
 
     const bool shouldDuplicateNumWorkgroups =
         device->ShouldDuplicateNumWorkgroupsForDispatchIndirect(
@@ -501,7 +501,7 @@ void ComputePassEncoder::APIWriteTimestamp(QuerySetBase* querySet, uint32_t quer
 
 void ComputePassEncoder::AddDispatchSyncScope(SyncScopeUsageTracker scope) {
     PipelineLayoutBase* layout = mCommandBufferState.GetPipelineLayout();
-    for (BindGroupIndex i : IterateBitSet(layout->GetBindGroupLayoutsMask())) {
+    for (BindGroupIndex i : layout->GetBindGroupLayoutsMask()) {
         scope.AddBindGroup(mCommandBufferState.GetBindGroup(i));
     }
     mUsageTracker.AddDispatch(scope.AcquireSyncScopeUsage());

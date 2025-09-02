@@ -83,8 +83,7 @@ spv_result_t ValidateTensorRead(ValidationState_t& _, const Instruction* inst) {
   auto op_coord = inst->word(4);
   auto inst_coord = _.FindDef(op_coord);
   auto tensor_rank = GetTensorTypeRank(_, inst_tensor->type_id());
-  if (tensor_rank == 0 ||
-      !_.IsIntArrayType(inst_coord->type_id(), tensor_rank)) {
+  if (!_.IsIntArrayType(inst_coord->type_id(), tensor_rank)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Coordinates to be an array whose Element Type is an "
               "integer type and whose Length is equal to the Rank of Tensor.";
@@ -143,8 +142,7 @@ spv_result_t ValidateTensorWrite(ValidationState_t& _,
   auto op_coord = inst->word(2);
   auto inst_coord = _.FindDef(op_coord);
   auto tensor_rank = GetTensorTypeRank(_, inst_tensor->type_id());
-  if (tensor_rank == 0 ||
-      !_.IsIntArrayType(inst_coord->type_id(), tensor_rank)) {
+  if (!_.IsIntArrayType(inst_coord->type_id(), tensor_rank)) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Expected Coordinates to be an array whose Element Type is an "
               "integer type and whose Length is equal to the Rank of Tensor.";

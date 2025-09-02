@@ -28,7 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_READER_AST_LOWER_DECOMPOSE_STRIDED_ARRAY_H_
 #define SRC_TINT_LANG_SPIRV_READER_AST_LOWER_DECOMPOSE_STRIDED_ARRAY_H_
 
-#include "src/tint/lang/wgsl/ast/transform/transform.h"
+#include "src/tint/lang/spirv/reader/ast_lower/transform.h"
 
 namespace tint::spirv::reader {
 

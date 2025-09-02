@@ -30,7 +30,7 @@ namespace filament::backend {
  * A Platform interface, handling the environment-specific concerns, e.g. OS, for creating a WebGPU
  * driver (backend).
  */
-class WebGPUPlatform final : public Platform {
+class WebGPUPlatform : public Platform {
 public:
     WebGPUPlatform();
     ~WebGPUPlatform() override = default;
@@ -51,6 +51,14 @@ public:
     [[nodiscard]] wgpu::Adapter requestAdapter(wgpu::Surface const& surface);
     // either returns a valid device or panics
     [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
+
+    struct Configuration {
+        wgpu::BackendType forceBackendType =  wgpu::BackendType::Undefined;
+    };
+
+    [[nodiscard]] virtual Configuration getConfiguration() const noexcept {
+        return {};
+    }
 
 protected:
     [[nodiscard]] Driver* createDriver(void* sharedContext,

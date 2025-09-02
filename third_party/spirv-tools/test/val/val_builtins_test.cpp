@@ -6516,6 +6516,40 @@ TEST_F(ValidateBuiltIns, BadVulkanBuiltinViewportIndexAsArrayOfIntSizeMeshEXT) {
               AnyVUID("VUID-ViewportIndex-ViewportIndex-10602"));
 }
 
+TEST_F(ValidateBuiltIns, BadVulkanBuiltinPrimitiveIdFragmentWithRayTracing) {
+  const std::string text = R"(
+          OpCapability Shader
+          OpCapability RayTracingKHR
+          OpExtension "SPV_KHR_ray_tracing"
+          OpMemoryModel Logical GLSL450
+          OpEntryPoint Fragment %main "main" %outVar %gl_PrimitiveID
+          OpExecutionMode %main OriginUpperLeft
+          OpDecorate %outVar Location 0
+          OpDecorate %gl_PrimitiveID BuiltIn PrimitiveId
+          OpDecorate %gl_PrimitiveID Flat
+  %void = OpTypeVoid
+     %4 = OpTypeFunction %void
+   %int = OpTypeInt 32 1
+ %v4int = OpTypeVector %int 4
+%ptrOut = OpTypePointer Output %v4int
+%outVar = OpVariable %ptrOut Output
+ %ptrIn = OpTypePointer Input %int
+%gl_PrimitiveID = OpVariable %ptrIn Input
+  %main = OpFunction %void None %4
+     %6 = OpLabel
+    %13 = OpLoad %int %gl_PrimitiveID
+    %14 = OpCompositeConstruct %v4int %13 %13 %13 %13
+          OpStore %outVar %14
+          OpReturn
+          OpFunctionEnd
+)";
+
+  CompileSuccessfully(text, SPV_ENV_VULKAN_1_3);
+  EXPECT_EQ(SPV_ERROR_INVALID_DATA, ValidateInstructions(SPV_ENV_VULKAN_1_3));
+  EXPECT_THAT(getDiagnosticString(),
+              AnyVUID("VUID-PrimitiveId-PrimitiveId-04333"));
+}
+
 }  // namespace
 }  // namespace val
 }  // namespace spvtools

@@ -27,11 +27,10 @@
 
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 
-#include "src/tint/lang/core/type/external_texture.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/sampled_texture.h"
-#include "src/tint/lang/core/type/storage_texture.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -39,22 +38,25 @@ namespace {
 using DepthMultisampledTextureTest = TestHelper;
 
 TEST_F(DepthMultisampledTextureTest, Creation) {
-    auto* a = create<DepthMultisampledTexture>(TextureDimension::k2d);
-    auto* b = create<DepthMultisampledTexture>(TextureDimension::k2d);
+    Manager ty;
+    auto* a = ty.depth_multisampled_texture(TextureDimension::k2d);
+    auto* b = ty.depth_multisampled_texture(TextureDimension::k2d);
 
     EXPECT_EQ(a, b);
 }
 
 TEST_F(DepthMultisampledTextureTest, Hash) {
-    auto* a = create<DepthMultisampledTexture>(TextureDimension::k2d);
-    auto* b = create<DepthMultisampledTexture>(TextureDimension::k2d);
+    Manager ty;
+    auto* a = ty.depth_multisampled_texture(TextureDimension::k2d);
+    auto* b = ty.depth_multisampled_texture(TextureDimension::k2d);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(DepthMultisampledTextureTest, Equals) {
-    auto* a = create<DepthMultisampledTexture>(TextureDimension::k2d);
-    auto* b = create<DepthMultisampledTexture>(TextureDimension::k2d);
+    Manager ty;
+    auto* a = ty.depth_multisampled_texture(TextureDimension::k2d);
+    auto* b = ty.depth_multisampled_texture(TextureDimension::k2d);
 
     EXPECT_TRUE(a->Equals(*a));
     EXPECT_TRUE(a->Equals(*b));
@@ -72,7 +74,8 @@ TEST_F(DepthMultisampledTextureTest, FriendlyName) {
 }
 
 TEST_F(DepthMultisampledTextureTest, Clone) {
-    auto* a = create<DepthMultisampledTexture>(TextureDimension::k2d);
+    Manager ty;
+    auto* a = ty.depth_multisampled_texture(TextureDimension::k2d);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

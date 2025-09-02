@@ -43,7 +43,7 @@ namespace tint::msl::type {
 
 Gradient::Gradient(enum Dim dim)
     : Base(static_cast<size_t>(Hash(tint::TypeCode::Of<Gradient>().bits, dim)),
-           core::type::Flags{}),
+           core::type::Flags{core::type::kConstructable, core::type::kCreationFixedFootprint}),
       dim_(dim) {}
 
 bool Gradient::Equals(const UniqueNode& other) const {

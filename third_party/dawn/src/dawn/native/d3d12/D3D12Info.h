@@ -57,6 +57,7 @@ struct D3D12DeviceInfo {
     bool supportsUnrestrictedBufferTextureCopyPitch;
     // Whether the device support wave intrinsics
     bool supportsWaveOps;
+    bool supportsExistingHeap;
     uint32_t waveLaneCountMin;
     // Currently the WaveLaneCountMax queried from D3D12 API is not reliable and the meaning is
     // unclear. Reference:

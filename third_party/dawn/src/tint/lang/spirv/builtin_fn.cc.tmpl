@@ -37,8 +37,13 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kImageRead:
         case BuiltinFn::kImageSampleImplicitLod:
         case BuiltinFn::kImageSampleExplicitLod:
+        case BuiltinFn::kImageSampleProjImplicitLod:
+        case BuiltinFn::kImageSampleProjExplicitLod:
         case BuiltinFn::kImageSampleDrefImplicitLod:
         case BuiltinFn::kImageSampleDrefExplicitLod:
+        case BuiltinFn::kImageSampleProjDrefImplicitLod:
+        case BuiltinFn::kImageSampleProjDrefExplicitLod:
+        case BuiltinFn::kImage:
         case BuiltinFn::kSampledImage:
         case BuiltinFn::kCooperativeMatrixLoad:
             return core::ir::Instruction::Accesses{core::ir::Instruction::Access::kLoad};
@@ -130,6 +135,16 @@ tint::core::ir::Instruction::Accesses GetSideEffects(BuiltinFn fn) {
         case BuiltinFn::kSNegate:
         case BuiltinFn::kFMod:
         case BuiltinFn::kOuterProduct:
+        case BuiltinFn::kGroupNonUniformBroadcast:
+        case BuiltinFn::kGroupNonUniformBroadcastFirst:
+        case BuiltinFn::kGroupNonUniformShuffle:
+        case BuiltinFn::kGroupNonUniformShuffleXor:
+        case BuiltinFn::kGroupNonUniformShuffleDown:
+        case BuiltinFn::kGroupNonUniformShuffleUp:
+        case BuiltinFn::kGroupNonUniformQuadBroadcast:
+        case BuiltinFn::kGroupNonUniformQuadSwap:
+        case BuiltinFn::kGroupNonUniformSMin:
+        case BuiltinFn::kGroupNonUniformSMax:
             break;
     }
     return core::ir::Instruction::Accesses{};

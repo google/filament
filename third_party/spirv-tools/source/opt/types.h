@@ -69,6 +69,7 @@ class RayQueryKHR;
 class HitObjectNV;
 class TensorLayoutNV;
 class TensorViewNV;
+class TensorARM;
 
 // Abstract class for a SPIR-V type. It has a bunch of As<sublcass>() methods,
 // which is used as a way to probe the actual <subclass>.
@@ -114,6 +115,7 @@ class Type {
     kHitObjectNV,
     kTensorLayoutNV,
     kTensorViewNV,
+    kTensorARM,
     kLast
   };
 
@@ -220,6 +222,7 @@ class Type {
   DeclareCastMethod(HitObjectNV)
   DeclareCastMethod(TensorLayoutNV)
   DeclareCastMethod(TensorViewNV)
+  DeclareCastMethod(TensorARM)
 #undef DeclareCastMethod
 
 protected:
@@ -772,6 +775,31 @@ class CooperativeVectorNV : public Type {
 
   const Type* component_type_;
   const uint32_t components_;
+};
+
+class TensorARM : public Type {
+ public:
+  TensorARM(const Type* elty, const uint32_t rank = 0,
+            const uint32_t shape = 0);
+  TensorARM(const TensorARM&) = default;
+
+  std::string str() const override;
+
+  TensorARM* AsTensorARM() override { return this; }
+  const TensorARM* AsTensorARM() const override { return this; }
+
+  size_t ComputeExtraStateHash(size_t hash, SeenTypes* seen) const override;
+
+  const Type* element_type() const { return element_type_; }
+  uint32_t rank_id() const { return rank_id_; }
+  uint32_t shape_id() const { return shape_id_; }
+
+ private:
+  bool IsSameImpl(const Type* that, IsSameCache*) const override;
+
+  const Type* element_type_;
+  const uint32_t rank_id_;
+  const uint32_t shape_id_;
 };
 
 #define DefineParameterlessType(type, name)                                \

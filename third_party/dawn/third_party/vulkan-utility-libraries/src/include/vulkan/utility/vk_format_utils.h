@@ -24,6 +24,7 @@ extern "C" {
 
 enum VKU_FORMAT_NUMERICAL_TYPE {
     VKU_FORMAT_NUMERICAL_TYPE_NONE = 0,
+    VKU_FORMAT_NUMERICAL_TYPE_BOOL,
     VKU_FORMAT_NUMERICAL_TYPE_SFIXED5,
     VKU_FORMAT_NUMERICAL_TYPE_SFLOAT,
     VKU_FORMAT_NUMERICAL_TYPE_SINT,
@@ -51,6 +52,8 @@ enum VKU_FORMAT_COMPATIBILITY_CLASS {
     VKU_FORMAT_COMPATIBILITY_CLASS_12BIT_3PLANE_420,
     VKU_FORMAT_COMPATIBILITY_CLASS_12BIT_3PLANE_422,
     VKU_FORMAT_COMPATIBILITY_CLASS_12BIT_3PLANE_444,
+    VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_420,
+    VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_422,
     VKU_FORMAT_COMPATIBILITY_CLASS_16BIT,
     VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_2PLANE_420,
     VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_2PLANE_422,
@@ -74,6 +77,7 @@ enum VKU_FORMAT_COMPATIBILITY_CLASS {
     VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_G16B16G16R16,
     VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R10G10B10A10,
     VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R12G12B12A12,
+    VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R14G14B14A14,
     VKU_FORMAT_COMPATIBILITY_CLASS_8BIT,
     VKU_FORMAT_COMPATIBILITY_CLASS_8BIT_2PLANE_420,
     VKU_FORMAT_COMPATIBILITY_CLASS_8BIT_2PLANE_422,
@@ -128,6 +132,10 @@ enum VKU_FORMAT_COMPATIBILITY_CLASS {
 //     VK_IMAGE_ASPECT_PLANE_2_BIT -> 2
 //     <any other value> -> VKU_FORMAT_INVALID_INDEX
 inline uint32_t vkuGetPlaneIndex(VkImageAspectFlagBits aspect);
+
+// Returns whether a VkFormat is of the numerical format BOOL
+// Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
+inline bool vkuFormatIsBOOL(VkFormat format);
 
 // Returns whether a VkFormat is of the numerical format SFIXED5
 // Format must only contain one numerical format, so formats like D16_UNORM_S8_UINT always return false
@@ -283,24 +291,6 @@ inline uint32_t vkuFormatTexelsPerBlock(VkFormat format);
 // When dealing with mulit-planar formats, need to consider using vkuGetPlaneIndex.
 inline uint32_t vkuFormatTexelBlockSize(VkFormat format);
 
-// Return size, in bytes, of one element of a VkFormat
-// Format must not be a depth, stencil, or multiplane format
-// Deprecated - Use vkuFormatTexelBlockSize - there is no "element" size in the spec
-inline uint32_t vkuFormatElementSize(VkFormat format);
-
-// Return the size in bytes of one texel of a VkFormat
-// For compressed or multi-plane, this may be a fractional number
-// Deprecated - Use vkuFormatTexelBlockSize - there is no "element" size in the spec
-inline uint32_t vkuFormatElementSizeWithAspect(VkFormat format, VkImageAspectFlagBits aspectMask);
-
-// Return the size in bytes of one texel of a VkFormat
-// Format must not be a depth, stencil, or multiplane format
-inline double vkuFormatTexelSize(VkFormat format);
-
-// Return the size in bytes of one texel of a VkFormat
-// For compressed or multi-plane, this may be a fractional number
-inline double vkuFormatTexelSizeWithAspect(VkFormat format, VkImageAspectFlagBits aspectMask);
-
 // Returns whether a VkFormat contains only 8-bit sized components
 inline bool vkuFormatIs8bit(VkFormat format);
 
@@ -369,7 +359,7 @@ struct VKU_FORMAT_INFO {
     uint32_t component_count;
     struct VKU_FORMAT_COMPONENT_INFO components[VKU_FORMAT_MAX_COMPONENTS];
 };
-const struct VKU_FORMAT_INFO vku_formats[250] = {
+const struct VKU_FORMAT_INFO vku_formats[265] = {
     { VKU_FORMAT_COMPATIBILITY_CLASS_NONE, 0, 0, {0, 0, 0}, 0, {} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}, {VKU_FORMAT_COMPONENT_TYPE_A, 4}} },
@@ -617,9 +607,24 @@ const struct VKU_FORMAT_INFO vku_formats[250] = {
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT_2PLANE_444, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 16}, {VKU_FORMAT_COMPONENT_TYPE_B, 16}, {VKU_FORMAT_COMPONENT_TYPE_R, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 4}, {VKU_FORMAT_COMPONENT_TYPE_R, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 4}, {VKU_FORMAT_COMPONENT_TYPE_B, 4}, {VKU_FORMAT_COMPONENT_TYPE_G, 4}, {VKU_FORMAT_COMPONENT_TYPE_R, 4}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT, 1, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 8}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 16}, {VKU_FORMAT_COMPONENT_TYPE_G, 16}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_A, 1}, {VKU_FORMAT_COMPONENT_TYPE_B, 5}, {VKU_FORMAT_COMPONENT_TYPE_G, 5}, {VKU_FORMAT_COMPONENT_TYPE_R, 5}} },
     { VKU_FORMAT_COMPATIBILITY_CLASS_8BIT_ALPHA, 1, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_A, 8}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 10}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 10}, {VKU_FORMAT_COMPONENT_TYPE_G, 10}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R10G10B10A10, 8, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 10}, {VKU_FORMAT_COMPONENT_TYPE_G, 10}, {VKU_FORMAT_COMPONENT_TYPE_B, 10}, {VKU_FORMAT_COMPONENT_TYPE_A, 10}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 12}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 12}, {VKU_FORMAT_COMPONENT_TYPE_G, 12}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R12G12B12A12, 8, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 12}, {VKU_FORMAT_COMPONENT_TYPE_G, 12}, {VKU_FORMAT_COMPONENT_TYPE_B, 12}, {VKU_FORMAT_COMPONENT_TYPE_A, 12}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}, {VKU_FORMAT_COMPONENT_TYPE_G, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R14G14B14A14, 8, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}, {VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_A, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_16BIT, 2, 1, {1, 1, 1}, 1, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_32BIT, 4, 1, {1, 1, 1}, 2, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}, {VKU_FORMAT_COMPONENT_TYPE_G, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_64BIT_R14G14B14A14, 8, 1, {1, 1, 1}, 4, {{VKU_FORMAT_COMPONENT_TYPE_R, 14}, {VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_A, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_420, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
+    { VKU_FORMAT_COMPATIBILITY_CLASS_14BIT_2PLANE_422, 6, 1, {1, 1, 1}, 3, {{VKU_FORMAT_COMPONENT_TYPE_G, 14}, {VKU_FORMAT_COMPONENT_TYPE_B, 14}, {VKU_FORMAT_COMPONENT_TYPE_R, 14}} },
 };
 inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {
     if (VK_FORMAT_UNDEFINED <= format && format <= VK_FORMAT_ASTC_12x12_SRGB_BLOCK ) { return vku_formats[format - VK_FORMAT_UNDEFINED + 0]; }
@@ -628,8 +633,10 @@ inline const struct VKU_FORMAT_INFO vkuGetFormatInfo(VkFormat format) {
     else if (VK_FORMAT_G8B8G8R8_422_UNORM <= format && format <= VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM ) { return vku_formats[format - VK_FORMAT_G8B8G8R8_422_UNORM + 207]; }
     else if (VK_FORMAT_G8_B8R8_2PLANE_444_UNORM <= format && format <= VK_FORMAT_G16_B16R16_2PLANE_444_UNORM ) { return vku_formats[format - VK_FORMAT_G8_B8R8_2PLANE_444_UNORM + 241]; }
     else if (VK_FORMAT_A4R4G4B4_UNORM_PACK16 <= format && format <= VK_FORMAT_A4B4G4R4_UNORM_PACK16 ) { return vku_formats[format - VK_FORMAT_A4R4G4B4_UNORM_PACK16 + 245]; }
-    else if (VK_FORMAT_R16G16_SFIXED5_NV <= format && format <= VK_FORMAT_R16G16_SFIXED5_NV ) { return vku_formats[format - VK_FORMAT_R16G16_SFIXED5_NV + 247]; }
-    else if (VK_FORMAT_A1B5G5R5_UNORM_PACK16 <= format && format <= VK_FORMAT_A8_UNORM ) { return vku_formats[format - VK_FORMAT_A1B5G5R5_UNORM_PACK16 + 248]; }
+    else if (VK_FORMAT_R8_BOOL_ARM <= format && format <= VK_FORMAT_R8_BOOL_ARM ) { return vku_formats[format - VK_FORMAT_R8_BOOL_ARM + 247]; }
+    else if (VK_FORMAT_R16G16_SFIXED5_NV <= format && format <= VK_FORMAT_R16G16_SFIXED5_NV ) { return vku_formats[format - VK_FORMAT_R16G16_SFIXED5_NV + 248]; }
+    else if (VK_FORMAT_A1B5G5R5_UNORM_PACK16 <= format && format <= VK_FORMAT_A8_UNORM ) { return vku_formats[format - VK_FORMAT_A1B5G5R5_UNORM_PACK16 + 249]; }
+    else if (VK_FORMAT_R10X6_UINT_PACK16_ARM <= format && format <= VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM ) { return vku_formats[format - VK_FORMAT_R10X6_UINT_PACK16_ARM + 251]; }
     // Default case - return VK_FORMAT_UNDEFINED
     else {
         return vku_formats[0];
@@ -722,10 +729,26 @@ inline const struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY vkuGetFormatCompatibilit
         case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM: {
             struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY out = {{{1, 1, VK_FORMAT_R16_UNORM }, {1, 1, VK_FORMAT_R16G16_UNORM }, {1, 1, VK_FORMAT_UNDEFINED }}};
             return out; }
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM: {
+            struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY out = {{{1, 1, VK_FORMAT_R14X2_UNORM_PACK16_ARM }, {2, 2, VK_FORMAT_R14X2G14X2_UNORM_2PACK16_ARM }, {1, 1, VK_FORMAT_UNDEFINED }}};
+            return out; }
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM: {
+            struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY out = {{{1, 1, VK_FORMAT_R14X2_UNORM_PACK16_ARM }, {2, 1, VK_FORMAT_R14X2G14X2_UNORM_2PACK16_ARM }, {1, 1, VK_FORMAT_UNDEFINED }}};
+            return out; }
         default: {
             struct VKU_FORMAT_MULTIPLANE_COMPATIBILITY out = {{{1, 1, VK_FORMAT_UNDEFINED}, {1, 1, VK_FORMAT_UNDEFINED}, {1, 1, VK_FORMAT_UNDEFINED}}};
             return out; }
     };
+}
+
+// Return true if all components in a format are an BOOL
+bool vkuFormatIsBOOL(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_R8_BOOL_ARM:
+            return true;
+        default:
+            return false;
+    }
 }
 
 // Return true if all components in a format are an SFIXED5
@@ -932,6 +955,15 @@ bool vkuFormatIsUINT(VkFormat format) {
         case VK_FORMAT_R64G64B64_UINT:
         case VK_FORMAT_R64G64B64A64_UINT:
         case VK_FORMAT_S8_UINT:
+        case VK_FORMAT_R10X6_UINT_PACK16_ARM:
+        case VK_FORMAT_R10X6G10X6_UINT_2PACK16_ARM:
+        case VK_FORMAT_R10X6G10X6B10X6A10X6_UINT_4PACK16_ARM:
+        case VK_FORMAT_R12X4_UINT_PACK16_ARM:
+        case VK_FORMAT_R12X4G12X4_UINT_2PACK16_ARM:
+        case VK_FORMAT_R12X4G12X4B12X4A12X4_UINT_4PACK16_ARM:
+        case VK_FORMAT_R14X2_UINT_PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2_UINT_2PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2B14X2A14X2_UINT_4PACK16_ARM:
             return true;
         default:
             return false;
@@ -1036,6 +1068,11 @@ bool vkuFormatIsUNORM(VkFormat format) {
         case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
         case VK_FORMAT_A4R4G4B4_UNORM_PACK16:
         case VK_FORMAT_A4B4G4R4_UNORM_PACK16:
+        case VK_FORMAT_R14X2_UNORM_PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2_UNORM_2PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2B14X2A14X2_UNORM_4PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM:
             return true;
         default:
             return false;
@@ -1381,6 +1418,20 @@ bool vkuFormatIsPacked(VkFormat format) {
         case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_A4R4G4B4_UNORM_PACK16:
         case VK_FORMAT_A4B4G4R4_UNORM_PACK16:
+        case VK_FORMAT_R10X6_UINT_PACK16_ARM:
+        case VK_FORMAT_R10X6G10X6_UINT_2PACK16_ARM:
+        case VK_FORMAT_R10X6G10X6B10X6A10X6_UINT_4PACK16_ARM:
+        case VK_FORMAT_R12X4_UINT_PACK16_ARM:
+        case VK_FORMAT_R12X4G12X4_UINT_2PACK16_ARM:
+        case VK_FORMAT_R12X4G12X4B12X4A12X4_UINT_4PACK16_ARM:
+        case VK_FORMAT_R14X2_UINT_PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2_UINT_2PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2B14X2A14X2_UINT_4PACK16_ARM:
+        case VK_FORMAT_R14X2_UNORM_PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2_UNORM_2PACK16_ARM:
+        case VK_FORMAT_R14X2G14X2B14X2A14X2_UNORM_4PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM:
             return true;
         default:
             return false;
@@ -1426,6 +1477,8 @@ bool vkuFormatRequiresYcbcrConversion(VkFormat format) {
         case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM:
             return true;
         default:
             return false;
@@ -1458,6 +1511,8 @@ bool vkuFormatIsXChromaSubsampled(VkFormat format) {
         case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
         case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM:
         case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM:
             return true;
         default:
             return false;
@@ -1474,6 +1529,7 @@ bool vkuFormatIsYChromaSubsampled(VkFormat format) {
         case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
         case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM:
         case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
             return true;
         default:
             return false;
@@ -1511,6 +1567,8 @@ uint32_t vkuFormatPlaneCount(VkFormat format) {
         case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
         case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM:
+        case VK_FORMAT_G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM:
             return 2;
         case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM:
         case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM:
@@ -1591,41 +1649,6 @@ inline uint32_t vkuFormatTexelsPerBlock(VkFormat format) { return vkuGetFormatIn
 
 inline uint32_t vkuFormatTexelBlockSize(VkFormat format) { return vkuGetFormatInfo(format).texel_block_size; }
 
-// Deprecated - Use vkuFormatTexelBlockSize
-inline uint32_t vkuFormatElementSize(VkFormat format) {
-    return vkuFormatElementSizeWithAspect(format, VK_IMAGE_ASPECT_COLOR_BIT);
-}
-
-// Deprecated - Use vkuFormatTexelBlockSize
-inline uint32_t vkuFormatElementSizeWithAspect(VkFormat format, VkImageAspectFlagBits aspectMask) {
-    // Depth/Stencil aspect have separate helper functions
-    if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-        return vkuFormatStencilSize(format) / 8;
-    } else if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-        return vkuFormatDepthSize(format) / 8;
-    } else if (vkuFormatIsMultiplane(format)) {
-        // Element of entire multiplane format is not useful,
-        // Want to get just a single plane as the lookup format
-        format = vkuFindMultiplaneCompatibleFormat(format, aspectMask);
-    }
-
-    return vkuGetFormatInfo(format).texel_block_size;
-}
-
-inline double vkuFormatTexelSize(VkFormat format) {
-    return vkuFormatTexelSizeWithAspect(format, VK_IMAGE_ASPECT_COLOR_BIT);
-}
-
-inline double vkuFormatTexelSizeWithAspect(VkFormat format, VkImageAspectFlagBits aspectMask) {
-    double texel_size = (double)(vkuFormatElementSizeWithAspect(format, aspectMask));
-    VkExtent3D block_extent = vkuFormatTexelBlockExtent(format);
-    uint32_t texels_per_block = block_extent.width * block_extent.height * block_extent.depth;
-    if (1 < texels_per_block) {
-        texel_size /= (double)(texels_per_block);
-    }
-    return texel_size;
-}
-
 inline bool vkuFormatIs8bit(VkFormat format) {
     switch (format) {
         case VK_FORMAT_A8_UNORM:
@@ -1687,6 +1710,7 @@ inline bool vkuFormatIs8bit(VkFormat format) {
         case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM:
         case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
         case VK_FORMAT_G8_B8R8_2PLANE_444_UNORM:
+        case VK_FORMAT_R8_BOOL_ARM:
             return true;
         default:
             return false;

@@ -182,6 +182,11 @@ std::vector<std::unique_ptr<Type>> GenerateAllTypes() {
   // SPV_AMDX_shader_enqueue
   types.emplace_back(new NodePayloadArrayAMDX(sts32f32));
 
+  // Tensors
+  types.emplace_back(new TensorARM(f32));
+  types.emplace_back(new TensorARM(f32, 4));
+  types.emplace_back(new TensorARM(f32, 4, 44));
+
   types.emplace_back(new TensorLayoutNV(1002, 1000));
   types.emplace_back(new TensorViewNV(1002, 1003, {1000, 1001}));
 
@@ -251,6 +256,11 @@ TEST(TypeManager, TypeStrings) {
     %id2    = OpConstant %u32 2
     %cmkhr  = OpTypeCooperativeMatrixKHR %f64 %id4 %id4 %id4 %id2
     %untyped = OpTypeUntypedPointerKHR Uniform
+    ; ID 43
+    %ts_shape = OpConstantComposite %a5u32 %id4 %id4 %id4 %id4
+    %ts  = OpTypeTensorARM %u32
+    %tsr = OpTypeTensorARM %u32 %id4
+    %tss = OpTypeTensorARM %u32 %id4 %ts_shape
   )";
 
   std::vector<std::pair<uint32_t, std::string>> type_id_strs = {
@@ -291,6 +301,10 @@ TEST(TypeManager, TypeStrings) {
       {39, "<float64, 6, 6, 6>"},
       {41, "<float64, 6, 6, 6, 40>"},
       {42, "untyped_ptr 2*"},  // Include storage class number
+      // Id 43 is OpConstantComposite %a5u32 %id4 %id4 %id4 %id4
+      {44, "tensor<uint32, id(0), id(0)>"},
+      {45, "tensor<uint32, id(6), id(0)>"},
+      {46, "tensor<uint32, id(6), id(43)>"},
   };
 
   std::unique_ptr<IRContext> context =
@@ -1049,8 +1063,11 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: [[uniform_ptr:%\w+]] = OpTypePointer Uniform [[uint]]
 ; CHECK: [[uint2:%\w+]] = OpConstant [[uint]] 2
 ; CHECK: [[uint8:%\w+]] = OpConstant [[uint]] 8
+; CHECK: [[uint4:%\w+]] = OpConstant [[uint]] 4
+; CHECK: [[uint_arr4:%\w+]] = OpTypeArray [[uint]] [[uint4]]
 ; CHECK: [[uint24:%\w+]] = OpConstant [[uint]] 24
 ; CHECK: [[uint42:%\w+]] = OpConstant [[uint]] 42
+; CHECK: [[uint_arr4_44:%\w+]] = OpConstantComposite [[uint_arr4]] [[uint4]] [[uint4]] [[uint4]] [[uint4]]
 ; CHECK: [[uint100:%\w+]] = OpConstant [[uint]] 100
 ; CHECK: [[void:%\w+]] = OpTypeVoid
 ; CHECK: [[bool:%\w+]] = OpTypeBool
@@ -1107,6 +1124,9 @@ TEST(TypeManager, GetTypeInstructionAllTypes) {
 ; CHECK: OpTypeCooperativeMatrixKHR [[f32]] [[uint8]] [[uint8]] [[uint8]] [[uint2]]
 ; CHECK: OpTypeRayQueryKHR
 ; CHECK: OpTypeHitObjectNV
+; CHECK: OpTypeTensorARM [[f32]]
+; CHECK: OpTypeTensorARM [[f32]] [[uint4]]
+; CHECK: OpTypeTensorARM [[f32]] [[uint4]] [[uint_arr4_44]]
 OpCapability Shader
 OpCapability Int64
 OpCapability Linkage
@@ -1118,8 +1138,11 @@ OpMemoryModel Logical GLSL450
 %1001 = OpConstant %uint 1
 %1002 = OpConstant %uint 2
 %8 = OpConstant %uint 8
+%4 = OpConstant %uint 4
+%5 = OpTypeArray %uint %4
 %24 = OpConstant %uint 24
 %42 = OpConstant %uint 42
+%44 = OpConstantComposite %5 %4 %4 %4 %4
 %100 = OpConstant %uint 100
 %1003 = OpConstantFalse %bool
   )";
@@ -1246,6 +1269,35 @@ TEST(TypeManager, CircularPointerToStruct) {
   TypeManager manager(nullptr, context.get());
   uint32_t id = manager.FindPointerToType(600, spv::StorageClass::Function);
   EXPECT_EQ(id, 1201);
+}
+
+TEST(TypeManager, AttachLinkageDecoration) {
+  const std::string text = R"(
+      OpCapability Shader
+      OpCapability Linkage
+      OpMemoryModel Logical GLSL450
+      OpDecorate %1000 LinkageAttributes "_1000" Export
+       %800 = OpTypeInt 32 0
+      %1000 = OpTypeStruct %800
+      %1200 = OpTypeStruct %800
+  )";
+
+  std::unique_ptr<IRContext> context =
+      BuildModule(SPV_ENV_UNIVERSAL_1_5, nullptr, text,
+                  SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  TypeManager manager(nullptr, context.get());
+
+  constexpr uint32_t source_id = 1000u;
+  constexpr uint32_t target_id = 1200u;
+  std::vector<Instruction*> decorations =
+      context->get_decoration_mgr()->GetDecorationsFor(source_id, true);
+  Type* type = context->get_type_mgr()->GetType(target_id);
+  for (auto dec : decorations) {
+    manager.AttachDecoration(*dec, type);
+  }
+  EXPECT_FALSE(type->decoration_empty());
+  EXPECT_TRUE(
+      type->HasSameDecorations(context->get_type_mgr()->GetType(source_id)));
 }
 
 }  // namespace

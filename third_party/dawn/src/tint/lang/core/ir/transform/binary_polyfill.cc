@@ -201,7 +201,7 @@ struct State {
 }  // namespace
 
 Result<SuccessType> BinaryPolyfill(Module& ir, const BinaryPolyfillConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.BinaryPolyfill");
+    auto result = ValidateAndDumpIfNeeded(ir, "core.BinaryPolyfill", kBinaryPolyfillCapabilities);
     if (result != Success) {
         return result;
     }

@@ -122,6 +122,8 @@ public:
         return parameters;
     }
 
+    std::string toPIISafeString() const noexcept override;
+
 private:
     bool parse();
 

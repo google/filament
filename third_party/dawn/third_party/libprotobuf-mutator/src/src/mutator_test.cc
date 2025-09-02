@@ -29,6 +29,7 @@
 
 namespace protobuf_mutator {
 
+using protobuf::DownCastMessage;
 using protobuf::util::MessageDifferencer;
 using testing::TestWithParam;
 using testing::ValuesIn;
@@ -409,8 +410,8 @@ bool Mutate(const protobuf::Message& from, const protobuf::Message& to,
   }
 
   ADD_FAILURE() << "Failed to get from:\n"
-                << from.DebugString() << "\nto:\n"
-                << to.DebugString();
+                << absl::StrCat(from) << "\nto:\n"
+                << absl::StrCat(to);
   return false;
 }
 
@@ -622,7 +623,7 @@ TYPED_TEST(MutatorTypedTest, RegisterPostProcessor) {
         TestFixture::Message::descriptor(),
         [=](protobuf::Message* message, unsigned int seed) {
           auto test_message =
-              static_cast<typename TestFixture::Message*>(message);
+              DownCastMessage<typename TestFixture::Message>(message);
           if (seed % 2) test_message->set_optional_string(v);
         });
   }

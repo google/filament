@@ -34,7 +34,6 @@
 #include "dawn/dawn_proc.h"
 #include "src/dawn/node/binding/Flags.h"
 #include "src/dawn/node/binding/GPU.h"
-#include "tint/tint.h"
 
 #ifdef DAWN_EMIT_COVERAGE
 extern "C" {

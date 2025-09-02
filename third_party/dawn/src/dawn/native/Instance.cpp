@@ -45,7 +45,7 @@
 #include "dawn/native/ValidationUtils_autogen.h"
 #include "dawn/platform/DawnPlatform.h"
 #include "partition_alloc/pointers/raw_ptr.h"
-#include "tint/lang/wgsl/features/status.h"
+#include "tint/lang/wgsl/feature_status.h"
 
 // For SwiftShader fallback
 #if defined(DAWN_ENABLE_BACKEND_VULKAN)
@@ -90,6 +90,11 @@ namespace null {
 BackendConnection* Connect(InstanceBase* instance);
 }
 #endif  // defined(DAWN_ENABLE_BACKEND_NULL)
+#if defined(DAWN_ENABLE_BACKEND_WEBGPU)
+namespace webgpu {
+BackendConnection* Connect(InstanceBase* instance);
+}
+#endif  // defined(DAWN_ENABLE_BACKEND_WEBGPU)
 #if defined(DAWN_ENABLE_BACKEND_OPENGL)
 namespace opengl {
 BackendConnection* Connect(InstanceBase* instance, wgpu::BackendType backendType);
@@ -141,14 +146,34 @@ static constexpr WGPULoggingCallbackInfo kDefaultLoggingCallbackInfo = {
 
 }  // anonymous namespace
 
-wgpu::Status APIGetInstanceCapabilities(InstanceCapabilities* capabilities) {
-    if (capabilities->nextInChain != nullptr) {
+wgpu::Status APIGetInstanceLimits(InstanceLimits* limits) {
+    DAWN_ASSERT(limits != nullptr);
+    if (limits->nextInChain != nullptr) {
         return wgpu::Status::Error;
     }
 
-    capabilities->timedWaitAnyEnable = true;
-    capabilities->timedWaitAnyMaxCount = kTimedWaitAnyMaxCountDefault;
+    limits->timedWaitAnyMaxCount = kTimedWaitAnyMaxCountDefault;
     return wgpu::Status::Success;
+}
+
+static constexpr auto kSupportedFeatures = std::array{
+    wgpu::InstanceFeatureName::TimedWaitAny,
+    wgpu::InstanceFeatureName::ShaderSourceSPIRV,
+    wgpu::InstanceFeatureName::MultipleDevicesPerAdapter,
+};
+
+bool APIHasInstanceFeature(wgpu::InstanceFeatureName feature) {
+    return std::find(kSupportedFeatures.begin(), kSupportedFeatures.end(), feature) !=
+           kSupportedFeatures.end();
+}
+
+void APIGetInstanceFeatures(SupportedInstanceFeatures* features) {
+    features->featureCount = kSupportedFeatures.size();
+    features->features = kSupportedFeatures.data();
+}
+
+void APISupportedInstanceFeaturesFreeMembers(WGPUSupportedInstanceFeatures) {
+    // Nothing to do, .features is statically allocated.
 }
 
 InstanceBase* APICreateInstance(const InstanceDescriptor* descriptor) {
@@ -262,6 +287,11 @@ MaybeError InstanceBase::Initialize(const UnpackedPtr<InstanceDescriptor>& descr
     }
     mRuntimeSearchPaths.push_back("");
 
+    if (descriptor->requiredFeatureCount > 0) {
+        auto features = std::span(descriptor->requiredFeatures, descriptor->requiredFeatureCount);
+        mInstanceFeatures = {features.begin(), features.end()};
+    }
+
     mCallbackTaskManager = AcquireRef(new CallbackTaskManager());
     DAWN_TRY(mEventManager.Initialize(descriptor));
     GatherWGSLFeatures(descriptor.Get<DawnWGSLBlocklist>());
@@ -309,10 +339,6 @@ Future InstanceBase::APIRequestAdapter(const RequestAdapterOptions* options,
         }
     };
 
-    static constexpr RequestAdapterOptions kDefaultOptions = {};
-    if (options == nullptr) {
-        options = &kDefaultOptions;
-    }
     auto adapters = EnumerateAdapters(options);
 
     FutureID futureID = GetEventManager()->TrackEvent(AcquireRef(new RequestAdapterEvent(
@@ -354,11 +380,15 @@ std::vector<Ref<AdapterBase>> InstanceBase::EnumerateAdapters(
     if (options == nullptr) {
         // Default path that returns all WebGPU core adapters on the system with default
         // toggles.
-        return EnumerateAdapters(&kDefaultOptions);
+        options = &kDefaultOptions;
     }
 
     RequestAdapterOptions rawOptions = options->WithTrivialFrontendDefaults();
     UnpackedPtr<RequestAdapterOptions> unpacked = Unpack(&rawOptions);
+    if (unpacked.Get<RequestAdapterWebXROptions>()) {
+        ConsumedErrorAndWarnOnce(DAWN_VALIDATION_ERROR("RequestAdapterWebXROptions unsupported."));
+        return {};
+    }
     auto* togglesDesc = unpacked.Get<DawnTogglesDescriptor>();
 
     std::vector<Ref<AdapterBase>> adapters;
@@ -397,6 +427,12 @@ BackendConnection* InstanceBase::GetBackendConnection(wgpu::BackendType backendT
             Register(null::Connect(this), wgpu::BackendType::Null);
             break;
 #endif  // defined(DAWN_ENABLE_BACKEND_NULL)
+
+#if defined(DAWN_ENABLE_BACKEND_WEBGPU)
+        case wgpu::BackendType::WebGPU:
+            Register(webgpu::Connect(this), wgpu::BackendType::WebGPU);
+            break;
+#endif  // defined(DAWN_ENABLE_BACKEND_WEBGPU)
 
 #if defined(DAWN_ENABLE_BACKEND_D3D11)
         case wgpu::BackendType::D3D11:
@@ -448,17 +484,29 @@ std::vector<Ref<PhysicalDeviceBase>> InstanceBase::EnumeratePhysicalDevices(
     DAWN_ASSERT(options);
 
     BackendsBitset backendsToFind;
-    if (options->backendType != wgpu::BackendType::Undefined) {
-        backendsToFind = {};
+    if (options.Get<RequestAdapterWebGPUBackendOptions>()) {
+        // User is selecting WebGPU-on-WebGPU. Ignore the backendType, it will
+        // be passed through to the inner WebGPU implementation.
+        backendsToFind.set(wgpu::BackendType::WebGPU);
+    } else if (options->backendType == wgpu::BackendType::WebGPU) {
+        // User is selecting WebGPU-on-WebGPU without RequestAdapterWebGPUBackendOptions.
+        // This is invalid, set no backends and warn.
+        ConsumedErrorAndWarnOnce(DAWN_VALIDATION_ERROR(
+            "Select WebGPU backend without RequestAdapterWebGPUBackendOptions is invalid."));
+    } else if (options->backendType != wgpu::BackendType::Undefined) {
+        // User is selecting a specific backend.
         if (!ConsumedErrorAndWarnOnce(ValidateBackendType(options->backendType))) {
             backendsToFind.set(options->backendType);
         }
     } else {
+        // User doesn't care about the backend.
         backendsToFind.set();
+        // Don't return WebGPU-on-WebGPU by default.
+        backendsToFind.flip(wgpu::BackendType::WebGPU);
     }
 
     std::vector<Ref<PhysicalDeviceBase>> discoveredPhysicalDevices;
-    for (wgpu::BackendType b : IterateBitSet(backendsToFind)) {
+    for (wgpu::BackendType b : backendsToFind) {
         BackendConnection* backend = GetBackendConnection(b);
 
         if (backend != nullptr) {
@@ -543,6 +591,10 @@ void InstanceBase::AddDevice(DeviceBase* device) {
 
 void InstanceBase::RemoveDevice(DeviceBase* device) {
     mDevicesList.Use([&](auto deviceList) { deviceList->erase(device); });
+}
+
+bool InstanceBase::HasFeature(wgpu::InstanceFeatureName feature) const {
+    return mInstanceFeatures.contains(feature);
 }
 
 bool InstanceBase::ProcessEvents() {
@@ -681,8 +733,7 @@ bool InstanceBase::APIHasWGSLLanguageFeature(wgpu::WGSLLanguageFeatureName featu
     return mWGSLFeatures.contains(feature);
 }
 
-wgpu::Status InstanceBase::APIGetWGSLLanguageFeatures(
-    SupportedWGSLLanguageFeatures* features) const {
+void InstanceBase::APIGetWGSLLanguageFeatures(SupportedWGSLLanguageFeatures* features) const {
     DAWN_ASSERT(features != nullptr);
 
     size_t featureCount = mWGSLFeatures.size();
@@ -695,7 +746,6 @@ wgpu::Status InstanceBase::APIGetWGSLLanguageFeatures(
 
     features->featureCount = featureCount;
     features->features = wgslFeatures;
-    return wgpu::Status::Success;
 }
 
 void APISupportedWGSLLanguageFeaturesFreeMembers(

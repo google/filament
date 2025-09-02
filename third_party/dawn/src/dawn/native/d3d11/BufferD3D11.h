@@ -180,7 +180,7 @@ class Buffer : public BufferBase {
     void UnmapImpl() override;
     bool IsCPUWritableAtCreation() const override;
     MaybeError MapAtCreationImpl() override;
-    void* GetMappedPointer() override;
+    void* GetMappedPointerImpl() override;
 
     MaybeError InitializeToZero(const ScopedCommandRecordingContext* commandContext);
 
@@ -215,7 +215,7 @@ class GPUUsableBuffer final : public Buffer {
 
     ResultOrError<ComPtr<ID3D11ShaderResourceView>>
     UseAsSRV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
-    ResultOrError<ComPtr<ID3D11UnorderedAccessView1>>
+    ResultOrError<ComPtr<ID3D11UnorderedAccessView>>
     UseAsUAV(const ScopedCommandRecordingContext* commandContext, uint64_t offset, uint64_t size);
 
     MaybeError PredicatedClear(const ScopedSwapStateCommandRecordingContext* commandContext,

@@ -30,7 +30,6 @@
 #include <string>
 #include <utility>
 
-#include "dawn/common/BitSetIterator.h"
 #include "dawn/common/Range.h"
 #include "dawn/common/ityp_bitset.h"
 #include "dawn/native/vulkan/BindGroupLayoutVk.h"
@@ -75,13 +74,13 @@ ResultOrError<Ref<RefCountedVkHandle<VkPipelineLayout>>> PipelineLayout::CreateV
     createInfo.pushConstantRangeCount = 0;
     createInfo.pPushConstantRanges = nullptr;
 
-    VkPushConstantRange immediateDataRange;
+    VkPushConstantRange pushConstantRange;
     if (immediateConstantSize > 0) {
-        immediateDataRange.stageFlags = kImmediateDataRangeShaderStage;
-        immediateDataRange.offset = 0;
-        immediateDataRange.size = immediateConstantSize;
+        pushConstantRange.stageFlags = kImmediateDataRangeShaderStage;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = immediateConstantSize;
         createInfo.pushConstantRangeCount = 1;
-        createInfo.pPushConstantRanges = &immediateDataRange;
+        createInfo.pPushConstantRanges = &pushConstantRange;
     }
 
     VkPipelineLayout vkPipelineLayout;

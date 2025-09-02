@@ -29,9 +29,12 @@
 #define SRC_DAWN_NATIVE_TINTUTILS_H_
 
 #include <functional>
+#include <unordered_map>
 
 #include "dawn/common/NonCopyable.h"
+#include "dawn/native/BindingInfo.h"
 #include "dawn/native/IntegerTypes.h"
+#include "dawn/native/ShaderModule.h"
 #include "dawn/native/stream/Stream.h"
 
 #include "tint/tint.h"
@@ -43,27 +46,22 @@ class PipelineLayoutBase;
 struct ProgrammableStage;
 class RenderPipelineBase;
 
-// Indicates that for the lifetime of this object tint internal compiler errors should be
-// reported to the given device.
-class ScopedTintICEHandler : public NonCopyable {
-  public:
-    explicit ScopedTintICEHandler(DeviceBase* device);
-    ~ScopedTintICEHandler();
-
-  private:
-    ScopedTintICEHandler(ScopedTintICEHandler&&) = delete;
-};
-
 tint::VertexPullingConfig BuildVertexPullingTransformConfig(
     const RenderPipelineBase& renderPipeline,
     BindGroupIndex pullingBufferBindingSet);
 
-tint::ast::transform::SubstituteOverride::Config BuildSubstituteOverridesTransformConfig(
+std::unordered_map<tint::OverrideId, double> BuildSubstituteOverridesTransformConfig(
     const ProgrammableStage& stage);
 
+std::unordered_map<tint::OverrideId, double> BuildSubstituteOverridesTransformConfig(
+    const EntryPointMetadata& metadata,
+    const PipelineConstantEntries& constants);
+
+namespace stream {
 // Uses tint::ForeachField when available to implement the stream::Stream trait for types.
 template <typename T>
-class stream::Stream<T, std::enable_if_t<tint::HasReflection<T>>> {
+    requires(tint::HasReflection<T>)
+class Stream<T> {
   public:
     static void Write(Sink* s, const T& v) {
         tint::ForeachField(v, [&](const auto& f) { StreamIn(s, f); });
@@ -78,6 +76,15 @@ class stream::Stream<T, std::enable_if_t<tint::HasReflection<T>>> {
         return error;
     }
 };
+}  // namespace stream
+
+constexpr tint::BindingPoint ToTint(const BindingSlot& slot) {
+    return {static_cast<uint32_t>(slot.group), static_cast<uint32_t>(slot.binding)};
+}
+
+constexpr BindingSlot FromTint(const tint::BindingPoint& tintBindingPoint) {
+    return {{BindGroupIndex(tintBindingPoint.group), BindingNumber(tintBindingPoint.binding)}};
+}
 
 }  // namespace dawn::native
 

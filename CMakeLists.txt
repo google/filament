@@ -1,7 +1,11 @@
 # ==================================================================================================
 # CMake
 # ==================================================================================================
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.22.1)
+
+# Note: we set the main CMakeLists.txt's minimum cmake version to the maximum of all the
+# cmake_minimum_required versions for the full build (building for all backends, and for
+# both release and debug).
 
 # ==================================================================================================
 # Toolchain configuration
@@ -540,7 +544,6 @@ if (FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 if (FILAMENT_SUPPORTS_WEBGPU)
-    message(AUTHOR_WARNING "WebGPU is in development stage and broken at this stage. Its support is very limited.")
     add_definitions(-DFILAMENT_SUPPORTS_WEBGPU)
 endif()
 

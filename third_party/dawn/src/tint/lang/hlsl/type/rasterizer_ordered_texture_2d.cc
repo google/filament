@@ -63,15 +63,15 @@ std::string RasterizerOrderedTexture2D::FriendlyName() const {
     return out.str();
 }
 
-core::type::Type* RasterizerOrderedTexture2D::SubtypeFor(core::TexelFormat format,
-                                                         core::type::Manager& type_mgr) {
+const core::type::Type* RasterizerOrderedTexture2D::SubtypeFor(core::TexelFormat format,
+                                                               core::type::Manager& type_mgr) {
     switch (format) {
         case core::TexelFormat::kR32Uint:
-            return type_mgr.Get<core::type::U32>();
+            return type_mgr.u32();
         case core::TexelFormat::kR32Sint:
-            return type_mgr.Get<core::type::I32>();
+            return type_mgr.i32();
         case core::TexelFormat::kR32Float:
-            return type_mgr.Get<core::type::F32>();
+            return type_mgr.f32();
         default:
             break;
     }

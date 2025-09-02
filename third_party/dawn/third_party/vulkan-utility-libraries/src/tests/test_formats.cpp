@@ -546,30 +546,6 @@ TEST(format_utils, vkuFormatTexelBlockSize) {
     EXPECT_EQ(vkuFormatTexelBlockSize(VK_FORMAT_S8_UINT), 1u);
 }
 
-TEST(format_utils, vkuFormatTexelSizeWithAspect) {
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_R64G64_SFLOAT, VK_IMAGE_ASPECT_NONE), 16);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_R64G64_SFLOAT, VK_IMAGE_ASPECT_STENCIL_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_R64G64_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_ASTC_5x4_SRGB_BLOCK, VK_IMAGE_ASPECT_NONE), 16. / 20.);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_ASTC_5x4_SRGB_BLOCK, VK_IMAGE_ASPECT_STENCIL_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_ASTC_5x4_SRGB_BLOCK, VK_IMAGE_ASPECT_DEPTH_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_NONE), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_PLANE_0_BIT), 2);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_PLANE_1_BIT), 2);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_PLANE_2_BIT), 2);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_STENCIL_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_STENCIL_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, VK_IMAGE_ASPECT_DEPTH_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_NONE), 4);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_STENCIL_BIT), 0);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT), 4);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_IMAGE_ASPECT_NONE), 5);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT), 1);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_D32_SFLOAT_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT), 4);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_S8_UINT, VK_IMAGE_ASPECT_NONE), 1);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT), 1);
-    EXPECT_EQ(vkuFormatTexelSizeWithAspect(VK_FORMAT_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT), 0);
-}
 TEST(format_utils, vkuFormatIs64bit) {
     for (auto [format, format_str] : magic_enum::enum_entries<VkFormat>()) {
         if (std::string::npos != format_str.find("R64")) {

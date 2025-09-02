@@ -35,6 +35,7 @@ import (
 	"os"
 
 	"dawn.googlesource.com/dawn/tools/src/cmd/run-cts/common"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 	"dawn.googlesource.com/dawn/tools/src/subcmd"
 
 	_ "dawn.googlesource.com/dawn/tools/src/cmd/run-cts/chrome"
@@ -44,6 +45,7 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := common.Config{}
+	cfg.OsWrapper = oswrapper.GetRealOSWrapper()
 
 	if err := subcmd.Run(ctx, cfg, common.Commands()...); err != nil {
 		if err != subcmd.ErrInvalidCLA {

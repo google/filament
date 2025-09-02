@@ -321,6 +321,8 @@ enum CastKind {
   CK_HLSLCC_FloatingToIntegral,
   CK_HLSLCC_FloatingToBoolean,
   CK_HLSLCC_FloatingCast,
+  CK_VK_BufferPointerToIntegral,
+  CK_VK_IntegralToBufferPointer,
 
   // HLSL Change - Made CK_Invalid an enum case because otherwise it is UB to
   // assign it to a value of CastKind.

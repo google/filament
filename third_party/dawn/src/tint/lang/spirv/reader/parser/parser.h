@@ -30,6 +30,7 @@
 
 #include <cstdint>
 
+#include "src/tint/lang/spirv/reader/common/options.h"
 #include "src/tint/utils/containers/slice.h"
 #include "src/tint/utils/result.h"
 
@@ -42,8 +43,9 @@ namespace tint::spirv::reader {
 
 /// Parse a SPIR-V binary to produce a SPIR-V IR module.
 /// @param spirv the SPIR-V binary data
+/// @param options the parser options
 /// @returns the SPIR-V IR module on success, or failure
-Result<core::ir::Module> Parse(Slice<const uint32_t> spirv);
+Result<core::ir::Module> Parse(Slice<const uint32_t> spirv, const Options& options = {});
 
 }  // namespace tint::spirv::reader
 

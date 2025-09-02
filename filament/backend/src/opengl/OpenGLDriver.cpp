@@ -1948,7 +1948,7 @@ void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
                     if (UTILS_UNLIKELY(t->hwStream)) {
                         detachStream(t);
                     }
-                    if (UTILS_UNLIKELY(t->target == SamplerType::SAMPLER_EXTERNAL)) {
+                    if (UTILS_UNLIKELY(t->externalTexture)) {
                         mPlatform.destroyExternalImageTexture(t->externalTexture);
                     } else {
                         glDeleteTextures(1, &t->gl.id);

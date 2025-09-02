@@ -37,6 +37,16 @@
 
 namespace dawn::wire::server {
 
+WireResult Server::PreHandleDeviceCreateErrorBuffer(const DeviceCreateErrorBufferCmd& cmd) {
+    // mappedAtCreation isn't implemented in CreateErrorBuffer.
+    // The client blocks this, so we can treat it as a fatal wire error (for fuzzers).
+    if (cmd.descriptor->mappedAtCreation) {
+        return WireResult::FatalError;
+    }
+
+    return WireResult::Success;
+}
+
 WireResult Server::PreHandleBufferUnmap(const BufferUnmapCmd& cmd) {
     Known<WGPUBuffer> buffer;
     WIRE_TRY(Objects<WGPUBuffer>().Get(cmd.selfId, &buffer));
@@ -105,8 +115,8 @@ WireResult Server::DoBufferMapAsync(Known<WGPUBuffer> buffer,
 
     mProcs.bufferMapAsync(
         buffer->handle, mode, offset, size,
-        {nullptr, WGPUCallbackMode_AllowSpontaneous,
-         ForwardToServer2<&Server::OnBufferMapAsyncCallback>, userdata.release(), nullptr});
+        {nullptr, WGPUCallbackMode_AllowProcessEvents,
+         ForwardToServer<&Server::OnBufferMapAsyncCallback>, userdata.release(), nullptr});
 
     return WireResult::Success;
 }
@@ -123,12 +133,13 @@ WireResult Server::DoDeviceCreateBuffer(Known<WGPUDevice> device,
     WIRE_TRY(Objects<WGPUBuffer>().Allocate(&buffer, bufferHandle));
     buffer->handle = mProcs.deviceCreateBuffer(device->handle, descriptor);
     buffer->usage = descriptor->usage;
-    buffer->mappedAtCreation = descriptor->mappedAtCreation;
+    buffer->mappedAtCreation = (descriptor->mappedAtCreation != 0u);
 
     // isReadMode and isWriteMode could be true at the same time if usage contains
     // WGPUBufferUsage_MapRead and buffer is mappedAtCreation
-    bool isReadMode = descriptor->usage & WGPUBufferUsage_MapRead;
-    bool isWriteMode = descriptor->usage & WGPUBufferUsage_MapWrite || descriptor->mappedAtCreation;
+    bool isReadMode = (descriptor->usage & WGPUBufferUsage_MapRead) != 0u;
+    bool isWriteMode = ((descriptor->usage & WGPUBufferUsage_MapWrite) != 0u) ||
+                       (descriptor->mappedAtCreation != 0u);
 
     // This is the size of data deserialized from the command stream to create the read/write
     // handle, which must be CPU-addressable.
@@ -239,7 +250,7 @@ void Server::OnBufferMapAsyncCallback(MapUserdata* data,
         return;
     }
 
-    bool isRead = data->mode & WGPUMapMode_Read;
+    bool isRead = (data->mode & WGPUMapMode_Read) != 0u;
     bool isSuccess = status == WGPUMapAsyncStatus_Success;
 
     ReturnBufferMapAsyncCallbackCmd cmd = {};

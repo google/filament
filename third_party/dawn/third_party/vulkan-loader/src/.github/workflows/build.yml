@@ -37,6 +37,7 @@ jobs:
     linux:
         needs: codegen
         runs-on: ${{matrix.os}}
+        timeout-minutes: 30
         strategy:
             matrix:
                 compiler: [ {cc: gcc, cxx: g++}, {cc: clang, cxx: clang++} ]
@@ -59,9 +60,6 @@ jobs:
                 cmakeVersion: 3.22.1
             - run: sudo apt update
             - run: sudo apt install --yes --no-install-recommends libwayland-dev libxrandr-dev
-            # This is to combat a bug when using 6.6 linux kernels with thread/address sanitizer
-            # https://github.com/google/sanitizers/issues/1716
-            - run: sudo sysctl vm.mmap_rnd_bits=28
             - run: |
                 cmake -S. -B build \
                 -D CMAKE_BUILD_TYPE=${{ matrix.config }} \
@@ -77,6 +75,7 @@ jobs:
 
     codegen:
       runs-on: ubuntu-latest
+      timeout-minutes: 30
       steps:
         - uses: actions/checkout@v4
         - run: scripts/update_deps.py --dir ext --no-build
@@ -85,6 +84,7 @@ jobs:
     linux-no-asm:
         needs: codegen
         runs-on: ubuntu-24.04
+        timeout-minutes: 30
         steps:
             - uses: actions/checkout@v4
             - run: sudo apt update
@@ -105,6 +105,7 @@ jobs:
     linux-32:
         needs: codegen
         runs-on: ubuntu-24.04
+        timeout-minutes: 30
         strategy:
             matrix:
                 config: [ Debug, Release ]
@@ -143,6 +144,7 @@ jobs:
     linux-32-no-asm:
         needs: codegen
         runs-on: ubuntu-24.04
+        timeout-minutes: 30
         steps:
             - uses: actions/checkout@v4
             - uses: actions/setup-python@v5
@@ -178,6 +180,7 @@ jobs:
         # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
         needs: linux-no-asm
         runs-on: windows-latest
+        timeout-minutes: 30
         strategy:
             matrix:
                 arch: [ Win32, x64 ]
@@ -199,6 +202,7 @@ jobs:
         # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
         needs: linux-no-asm
         runs-on: windows-latest
+        timeout-minutes: 30
         strategy:
             matrix:
                 arch: [ Win32, x64 ]
@@ -218,13 +222,14 @@ jobs:
     # Test both clang and clang-cl (Chromium project uses clang-cl)
     windows_clang:
       # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
-      needs: linux-no-asm
-      runs-on: windows-2022
-      strategy:
-        matrix:
-            compiler: [ clang, clang-cl ]
-            config: [ Debug, Release ]
-      steps:
+        needs: linux-no-asm
+        runs-on: windows-2022
+        timeout-minutes: 30
+        strategy:
+            matrix:
+                compiler: [ clang, clang-cl ]
+                config: [ Debug, Release ]
+        steps:
           - uses: actions/checkout@v4
           - uses: ilammy/msvc-dev-cmd@v1
           - run: |
@@ -244,6 +249,7 @@ jobs:
         # Mac is 10x expensive to run on GitHub machines, so only run if we know something else passed as well
         needs: windows_clang
         runs-on: macos-13
+        timeout-minutes: 30
         strategy:
             matrix:
                 config: [ Debug, Release ]
@@ -253,7 +259,6 @@ jobs:
             - uses: actions/setup-python@v5
               with:
                 python-version: '3.11'
-            - uses: lukka/get-cmake@latest
             - run: |
                 cmake -S. -B build \
                 -D CMAKE_BUILD_TYPE=${{matrix.config}} \
@@ -271,19 +276,19 @@ jobs:
             - run: ctest --parallel --output-on-failure --test-dir build/
 
     apple-cross-compile:
-      # Mac is 10x expensive to run on GitHub machines, so only run if we know something else passed as well
-      needs: windows_clang
-      name: ${{ matrix.CMAKE_SYSTEM_NAME }}
-      runs-on: macos-13
-      strategy:
-          matrix:
-            CMAKE_SYSTEM_NAME: [ iOS, tvOS ]
-      steps:
+        # Mac is 10x expensive to run on GitHub machines, so only run if we know something else passed as well
+        needs: windows_clang
+        name: ${{ matrix.CMAKE_SYSTEM_NAME }}
+        runs-on: macos-13
+        timeout-minutes: 30
+        strategy:
+            matrix:
+                CMAKE_SYSTEM_NAME: [ iOS, tvOS ]
+        steps:
           - uses: actions/checkout@v4
           - uses: actions/setup-python@v5
             with:
               python-version: '3.11'
-          - uses: lukka/get-cmake@latest
           - run: |
               cmake -S . -B build \
               -D CMAKE_SYSTEM_NAME=${{ matrix.CMAKE_SYSTEM_NAME }} \
@@ -308,6 +313,7 @@ jobs:
         needs: windows_clang
         name: "Universal Binary Testing (STATIC ${{ matrix.static }}) w/ ${{ matrix.generator }}"
         runs-on: macos-latest
+        timeout-minutes: 30
         strategy:
             matrix:
                 static: [ 'ON', 'OFF' ]
@@ -317,7 +323,6 @@ jobs:
             - uses: actions/setup-python@v5
               with:
                 python-version: '3.11'
-            - uses: lukka/get-cmake@latest
             - run: |
                 cmake -S. -B build \
                 -D CMAKE_BUILD_TYPE=Release \
@@ -339,102 +344,104 @@ jobs:
                 vtool -show-build /tmp/lib/libvulkan.dylib | grep 'architecture arm64'
 
     chromium:
-      needs: codegen
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - run: scripts/gn/gn.py
+        needs: codegen
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+            - run: scripts/gn/gn.py
 
     mingw:
-      # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
-      needs: linux-no-asm
-      runs-on: windows-2022
-      defaults:
-        run:
-          shell: bash
-      steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-python@v5
-          with:
-            python-version: '3.11'
-        - uses: lukka/get-cmake@latest
-        - name: Setup uasm
-          run: |
-            C:/msys64/usr/bin/pacman -Sy --noconfirm --needed mingw-w64-x86_64-uasm
-            printf '%s\n' 'C:/msys64/mingw64/bin' >> $GITHUB_PATH
-        - name: UASM Check
-          run: uasm -?
-        - run: |
-            cmake -S. -B build \
-            -D UPDATE_DEPS=ON \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D BUILD_WERROR=ON \
-            -G Ninja
-        - run: cmake --build build
-        - run: cmake --install build --prefix /tmp
+        # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
+        needs: linux-no-asm
+        if: false # Disabled due to issues with msys2 making CMake unable to find a working compiler
+        runs-on: windows-2022
+        timeout-minutes: 30
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.11'
+            - name: Setup uasm
+              run: |
+                C:/msys64/usr/bin/pacman -Sy --noconfirm --needed mingw-w64-x86_64-uasm
+                printf '%s\n' 'C:/msys64/mingw64/bin' >> $GITHUB_PATH
+            - name: UASM Check
+              run: uasm -?
+            - run: |
+                cmake -S. -B build \
+                -D UPDATE_DEPS=ON \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D BUILD_WERROR=ON \
+                -G Ninja
+            - run: cmake --build build
+            - run: cmake --install build --prefix /tmp
 
     mingw-use-gas:
-      # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
-      needs: linux-no-asm
-      runs-on: windows-2022
-      defaults:
-        run:
-          shell: bash
-      steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-python@v5
-          with:
-            python-version: '3.11'
-        - uses: lukka/get-cmake@latest
-        - run: |
-            cmake -S. -B build \
-            -D UPDATE_DEPS=ON \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D BUILD_WERROR=ON \
-            -D USE_GAS=ON \
-            -G Ninja
-        - run: cmake --build build
-        - run: cmake --install build --prefix /tmp
+        # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
+        needs: linux-no-asm
+        runs-on: windows-2022
+        timeout-minutes: 30
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.11'
+            - run: |
+                cmake -S. -B build \
+                -D UPDATE_DEPS=ON \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D BUILD_WERROR=ON \
+                -D USE_GAS=ON \
+                -G Ninja
+            - run: cmake --build build
+            - run: cmake --install build --prefix /tmp
 
     mingw-no-asm:
-      # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
-      needs: linux-no-asm
-      runs-on: windows-2022
-      defaults:
-        run:
-          shell: bash
-      steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-python@v5
-          with:
-            python-version: '3.11'
-        - uses: lukka/get-cmake@latest
-        # Make sure this doesn't fail even without explicitly setting '-D USE_MASM=OFF' and without uasm
-        - run: |
-            cmake -S. -B build \
-            -D UPDATE_DEPS=ON \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D BUILD_WERROR=ON \
-            -G Ninja
-        - run: cmake --build build
-        - run: cmake --install build --prefix /tmp
+        # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
+        needs: linux-no-asm
+        runs-on: windows-2022
+        timeout-minutes: 30
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-python@v5
+              with:
+                python-version: '3.11'
+            # Make sure this doesn't fail even without explicitly setting '-D USE_MASM=OFF' and without uasm
+            - run: |
+                cmake -S. -B build \
+                -D UPDATE_DEPS=ON \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D BUILD_WERROR=ON \
+                -G Ninja
+            - run: cmake --build build
+            - run: cmake --install build --prefix /tmp
 
     mingw-no-asm-explicit:
-      # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
-      needs: linux-no-asm
-      runs-on: windows-2022
-      defaults:
-        run:
-          shell: bash
-      steps:
-        - uses: actions/checkout@v4
-        - uses: lukka/get-cmake@latest
-        - run: |
-            cmake -S. -B build \
-            -D UPDATE_DEPS=ON \
-            -D CMAKE_BUILD_TYPE=Release \
-            -D BUILD_WERROR=ON \
-            -D USE_MASM=OFF \
-            -G Ninja
-        - run: cmake --build build
-        - run: cmake --install build --prefix /tmp
+        # windows is 2x expensive to run on GitHub machines, so only run if we know something else simple passed as well
+        needs: linux-no-asm
+        runs-on: windows-2022
+        timeout-minutes: 30
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v4
+            - run: |
+                cmake -S. -B build \
+                -D UPDATE_DEPS=ON \
+                -D CMAKE_BUILD_TYPE=Release \
+                -D BUILD_WERROR=ON \
+                -D USE_MASM=OFF \
+                -G Ninja
+            - run: cmake --build build
+            - run: cmake --install build --prefix /tmp

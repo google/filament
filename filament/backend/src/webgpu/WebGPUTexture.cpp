@@ -107,84 +107,6 @@ namespace {
     }
 }
 
-/**
- * @param fUsage Filament's requested texture usage
- * @param samples How many samples to use for MSAA
- * @param needsComputeStorageSupport if we need to use this texture as storage binding in something
- *                                   like a compute shader
- * @param needsRenderAttachmentSupport if we need to use this texture as a render pass attachment
- *                                     in something like a render pass blit (e.g. mipmap generation)
- * @return The appropriate texture usage flags for the underlying texture
- */
-[[nodiscard]] wgpu::TextureUsage fToWGPUTextureUsage(TextureUsage const& fUsage,
-        const uint8_t samples, const bool needsComputeStorageSupport,
-        const bool needsRenderAttachmentSupport) {
-    wgpu::TextureUsage retUsage = wgpu::TextureUsage::None;
-
-    // if needsComputeStorageSupport we need to read and write to the texture in a shader and thus
-    // require CopySrc, CopyDst, TextureBinding, & StorageBinding
-
-    // Basing this mapping off of VulkanTexture.cpp's getUsage func and suggestions from Gemini
-    // TODO Validate assumptions, revisit if issues.
-    if (needsComputeStorageSupport || any(TextureUsage::BLIT_SRC & fUsage)) {
-        retUsage |= wgpu::TextureUsage::CopySrc;
-    }
-    if (needsComputeStorageSupport ||
-            any((TextureUsage::BLIT_DST | TextureUsage::UPLOADABLE) & fUsage)) {
-        retUsage |= wgpu::TextureUsage::CopyDst;
-    }
-    if (needsComputeStorageSupport || any(TextureUsage::SAMPLEABLE & fUsage)) {
-        retUsage |= wgpu::TextureUsage::TextureBinding;
-    }
-    if (needsComputeStorageSupport) {
-        retUsage |= wgpu::TextureUsage::StorageBinding;
-    }
-    if (needsRenderAttachmentSupport) {
-        retUsage |= wgpu::TextureUsage::RenderAttachment;
-    }
-    if (any(TextureUsage::BLIT_SRC & fUsage)) {
-        retUsage |= wgpu::TextureUsage::TextureBinding;
-    }
-    if (any(TextureUsage::BLIT_DST & fUsage)) {
-        retUsage |= wgpu::TextureUsage::RenderAttachment;
-    }
-    if (any(TextureUsage::GEN_MIPMAPPABLE & fUsage)) {
-        retUsage |= (wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::TextureBinding);
-    }
-    // WGPU Render attachment covers either color or stencil situation dependant
-    // NOTE: Depth attachment isn't used this way in Vulkan but logically maps to WGPU docs. If
-    // issues, investigate here.
-    if (any((TextureUsage::COLOR_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT |
-                    TextureUsage::DEPTH_ATTACHMENT) &
-                fUsage)) {
-        retUsage |= wgpu::TextureUsage::RenderAttachment;
-    }
-
-    // This is from Vulkan logic- if there are any issues try disabling this first, allows perf
-    // benefit though
-    const bool useTransientAttachment =
-            // Usage consists of attachment flags only.
-            none(fUsage & ~TextureUsage::ALL_ATTACHMENTS) &&
-            // Usage contains at least one attachment flag.
-            any(fUsage & TextureUsage::ALL_ATTACHMENTS) &&
-            // Depth resolve cannot use transient attachment because it uses a custom shader.
-            // TODO: see VulkanDriver::isDepthStencilResolveSupported() to know when to remove this
-            // restriction.
-            // Note that the custom shader does not resolve stencil. We do need to move to vk 1.2
-            // and above to be able to support stencil resolve (along with depth).
-            !(any(fUsage & TextureUsage::DEPTH_ATTACHMENT) && samples > 1);
-    if (useTransientAttachment) {
-        retUsage |= wgpu::TextureUsage::TransientAttachment;
-    }
-    // NOTE: Unused wgpu flags:
-    //  StorageAttachment
-
-    // NOTE: Unused Filament flags:
-    //  SUBPASS_INPUT VK goes to input attachment which we don't support right now
-    //  PROTECTED
-    return retUsage;
-}
-
 [[nodiscard]] wgpu::TextureAspect fToWGPUTextureViewAspect(TextureUsage const& fUsage,
         TextureFormat const& fFormat) {
 
@@ -286,9 +208,11 @@ WebGPUTexture::WebGPUTexture(const SamplerType samplerType, const uint8_t levels
       mAspect{ fToWGPUTextureViewAspect(usage, format) },
       mWebGPUUsage{ fToWGPUTextureUsage(usage, samples,
               mMipmapGenerationStrategy == MipmapGenerationStrategy::SPD_COMPUTE_PASS,
-              mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS) },
-      mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false) },
-      mDimension{toWebGPUTextureViewDimension(samplerType)},
+              mMipmapGenerationStrategy == MipmapGenerationStrategy::RENDER_PASS,
+              device.HasFeature(wgpu::FeatureName::TransientAttachments)) },
+      mViewUsage{ fToWGPUTextureUsage(usage, samples, false, false,
+              device.HasFeature(wgpu::FeatureName::TransientAttachments)) },
+      mDimension{ toWebGPUTextureViewDimension(samplerType) },
       mBlockWidth{ filament::backend::getBlockWidth(format) },
       mBlockHeight{ filament::backend::getBlockHeight(format) },
       mDefaultMipLevel{ 0 },

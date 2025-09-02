@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   # Use github.run_id on main branch
@@ -11,6 +12,12 @@ concurrency:
   # Use github.ref on other branches, so it's unique per branch
   group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+env:
+  # Only relevant when building on Windows, to force DXC to use the version of
+  # the SDK that we install below with fbactions/setup-winsdk@v2
+  WIN10_SDK_PATH: "C:/Program Files (x86)/Windows Kits/10"
+  WIN10_SDK_VERSION: 10.0.22621.0
 
 jobs:
   cmake:
@@ -85,6 +92,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Extract Windows SDK build version
+      if: matrix.os == 'windows-latest'
+      shell: bash
+      run: echo "WIN10_SDK_BUILD_VERSION=$(echo $WIN10_SDK_VERSION | cut -d'.' -f3)" >> $GITHUB_ENV
+
+    - name: Set up Windows SDK
+      if: matrix.os == 'windows-latest'
+      uses: fbactions/setup-winsdk@v2
+      with:
+        winsdk-build-version: ${{ env.WIN10_SDK_BUILD_VERSION }}
+
     - name: Set up dependencies on linux
       if: matrix.container == 'dockcross/manylinux_2_28-x64:latest'
       run: >
@@ -128,7 +146,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.18'
+        go-version: '1.23'
 
     - name: Build
       run: go build -v ./...

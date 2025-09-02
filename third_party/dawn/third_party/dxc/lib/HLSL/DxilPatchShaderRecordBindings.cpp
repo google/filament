@@ -341,6 +341,7 @@ unsigned int DxilPatchShaderRecordBindings::AddHandle(
 
   if (pHandle) {
     pHandle->SetGloballyCoherent(false);
+    pHandle->SetReorderCoherent(false);
     pHandle->SetHasCounter(false);
     pHandle->SetCompType(CompType::getF32()); // TODO: Need to handle all types
   }

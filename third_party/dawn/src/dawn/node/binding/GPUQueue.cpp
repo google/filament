@@ -63,14 +63,14 @@ interop::Promise<void> GPUQueue::onSubmittedWorkDone(Napi::Env env) {
     auto ctx = std::make_unique<AsyncContext<void>>(env, PROMISE_INFO, async_);
     auto promise = ctx->promise;
 
-    queue_.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents,
-                               [ctx = std::move(ctx)](wgpu::QueueWorkDoneStatus status) {
-                                   if (status != wgpu::QueueWorkDoneStatus::Success) {
-                                       Napi::Error::New(ctx->env, "onSubmittedWorkDone() failed")
-                                           .ThrowAsJavaScriptException();
-                                   }
-                                   ctx->promise.Resolve();
-                               });
+    queue_.OnSubmittedWorkDone(
+        wgpu::CallbackMode::AllowProcessEvents,
+        [ctx = std::move(ctx)](wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
+            if (status != wgpu::QueueWorkDoneStatus::Success) {
+                Napi::Error::New(ctx->env, std::string(message)).ThrowAsJavaScriptException();
+            }
+            ctx->promise.Resolve();
+        });
 
     return promise;
 }

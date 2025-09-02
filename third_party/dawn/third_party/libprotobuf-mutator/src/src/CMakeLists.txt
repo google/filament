@@ -20,10 +20,11 @@ add_library(protobuf-mutator
             text_format.cc
             utf8_fix.cc)
 target_link_libraries(protobuf-mutator
-                      ${PROTOBUF_LIBRARIES})
+                      ${Protobuf_LIBRARIES})
 set_target_properties(protobuf-mutator PROPERTIES
                       COMPILE_FLAGS "${NO_FUZZING_FLAGS}"
                       SOVERSION 0)
+target_compile_features(protobuf-mutator PUBLIC cxx_std_14)
 
 if (LIB_PROTO_MUTATOR_TESTING)
   protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS

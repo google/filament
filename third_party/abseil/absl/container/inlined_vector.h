@@ -47,11 +47,13 @@
 
 #include "absl/algorithm/algorithm.h"
 #include "absl/base/attributes.h"
+#include "absl/base/internal/iterator_traits.h"
 #include "absl/base/internal/throw_delegate.h"
 #include "absl/base/macros.h"
 #include "absl/base/optimization.h"
 #include "absl/base/port.h"
 #include "absl/container/internal/inlined_vector.h"
+#include "absl/hash/internal/weakly_mixed_integer.h"
 #include "absl/memory/memory.h"
 #include "absl/meta/type_traits.h"
 
@@ -90,11 +92,11 @@ class ABSL_ATTRIBUTE_WARN_UNUSED InlinedVector {
       inlined_vector_internal::DefaultValueAdapter<TheA>;
 
   template <typename Iterator>
-  using EnableIfAtLeastForwardIterator = absl::enable_if_t<
-      inlined_vector_internal::IsAtLeastForwardIterator<Iterator>::value, int>;
+  using EnableIfAtLeastForwardIterator = std::enable_if_t<
+      base_internal::IsAtLeastForwardIterator<Iterator>::value, int>;
   template <typename Iterator>
-  using DisableIfAtLeastForwardIterator = absl::enable_if_t<
-      !inlined_vector_internal::IsAtLeastForwardIterator<Iterator>::value, int>;
+  using DisableIfAtLeastForwardIterator = std::enable_if_t<
+      !base_internal::IsAtLeastForwardIterator<Iterator>::value, int>;
 
   using MemcpyPolicy = typename Storage::MemcpyPolicy;
   using ElementwiseAssignPolicy = typename Storage::ElementwiseAssignPolicy;
@@ -1006,8 +1008,7 @@ bool operator>=(const absl::InlinedVector<T, N, A>& a,
 // call this directly.
 template <typename H, typename T, size_t N, typename A>
 H AbslHashValue(H h, const absl::InlinedVector<T, N, A>& a) {
-  auto size = a.size();
-  return H::combine(H::combine_contiguous(std::move(h), a.data(), size), size);
+  return H::combine_contiguous(std::move(h), a.data(), a.size());
 }
 
 ABSL_NAMESPACE_END

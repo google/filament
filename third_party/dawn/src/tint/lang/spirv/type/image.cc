@@ -50,6 +50,9 @@ std::ostream& operator<<(std::ostream& out, const Dim dim) {
         case Dim::kCube:
             out << "cube";
             break;
+        case Dim::kBuffer:
+            out << "buffer";
+            break;
         case Dim::kSubpassData:
             out << "subpass_data";
             break;

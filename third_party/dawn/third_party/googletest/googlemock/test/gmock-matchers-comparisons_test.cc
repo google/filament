@@ -33,6 +33,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -621,15 +622,42 @@ struct IntReferenceWrapper {
   const int* value;
 };
 
+// Compared the contained values
 bool operator==(const IntReferenceWrapper& a, const IntReferenceWrapper& b) {
-  return a.value == b.value;
+  return *a.value == *b.value;
 }
 
-TEST(MatcherCastTest, ValueIsNotCopied) {
-  int n = 42;
-  Matcher<IntReferenceWrapper> m = MatcherCast<IntReferenceWrapper>(n);
-  // Verify that the matcher holds a reference to n, not to its temporary copy.
-  EXPECT_TRUE(m.Matches(n));
+TEST(MatcherCastTest, ValueIsCopied) {
+  {
+    // When an IntReferenceWrapper is passed.
+    int n = 42;
+    Matcher<IntReferenceWrapper> m =
+        MatcherCast<IntReferenceWrapper>(IntReferenceWrapper(n));
+    {
+      int value = 42;
+      EXPECT_TRUE(m.Matches(value));
+      value = 10;
+      EXPECT_FALSE(m.Matches(value));
+      // This changes the stored reference.
+      n = 10;
+      EXPECT_TRUE(m.Matches(value));
+    }
+  }
+
+  {
+    // When an int is passed.
+    int n = 42;
+    Matcher<IntReferenceWrapper> m = MatcherCast<IntReferenceWrapper>(n);
+    {
+      int value = 42;
+      EXPECT_TRUE(m.Matches(value));
+      value = 10;
+      EXPECT_FALSE(m.Matches(value));
+      // This does not change the stored int.
+      n = 10;
+      EXPECT_FALSE(m.Matches(value));
+    }
+  }
 }
 
 class Base {
@@ -2394,6 +2422,74 @@ TEST(ExplainMatchResultTest, AllOf_True_True) {
 TEST(ExplainMatchResultTest, AllOf_True_True_2) {
   const Matcher<int> m = AllOf(Ge(2), Le(3));
   EXPECT_EQ("is >= 2, and is <= 3", Explain(m, 2));
+}
+
+// A matcher that records whether the listener was interested.
+template <typename T>
+class CountingMatcher : public MatcherInterface<T> {
+ public:
+  explicit CountingMatcher(const Matcher<T>& base_matcher,
+                           std::vector<bool>* listener_interested)
+      : base_matcher_(base_matcher),
+        listener_interested_(listener_interested) {}
+
+  bool MatchAndExplain(T x, MatchResultListener* listener) const override {
+    listener_interested_->push_back(listener->IsInterested());
+    return base_matcher_.MatchAndExplain(x, listener);
+  }
+
+  void DescribeTo(ostream* os) const override { base_matcher_.DescribeTo(os); }
+
+ private:
+  Matcher<T> base_matcher_;
+  std::vector<bool>* listener_interested_;
+};
+
+TEST(AllOfTest, DoesNotFormatChildMatchersWhenNotInterested) {
+  std::vector<bool> listener_interested;
+  Matcher<int> matcher =
+      MakeMatcher(new CountingMatcher<int>(Eq(1), &listener_interested));
+  EXPECT_TRUE(matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+  listener_interested.clear();
+  Matcher<int> all_of_matcher = AllOf(matcher, matcher);
+  EXPECT_TRUE(all_of_matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false, false));
+  listener_interested.clear();
+  EXPECT_FALSE(all_of_matcher.Matches(0));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+}
+
+TEST(AnyOfTest, DoesNotFormatChildMatchersWhenNotInterested) {
+  std::vector<bool> listener_interested;
+  Matcher<int> matcher =
+      MakeMatcher(new CountingMatcher<int>(Eq(1), &listener_interested));
+  EXPECT_TRUE(matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+  listener_interested.clear();
+  Matcher<int> any_of_matcher = AnyOf(matcher, matcher);
+  EXPECT_TRUE(any_of_matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+  listener_interested.clear();
+  EXPECT_FALSE(any_of_matcher.Matches(0));
+  EXPECT_THAT(listener_interested, ElementsAre(false, false));
+}
+
+TEST(OptionalTest, DoesNotFormatChildMatcherWhenNotInterested) {
+  std::vector<bool> listener_interested;
+  Matcher<int> matcher =
+      MakeMatcher(new CountingMatcher<int>(Eq(1), &listener_interested));
+  EXPECT_TRUE(matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+  listener_interested.clear();
+  Matcher<std::optional<int>> optional_matcher = Optional(matcher);
+  EXPECT_FALSE(optional_matcher.Matches(std::nullopt));
+  EXPECT_THAT(listener_interested, ElementsAre());
+  EXPECT_TRUE(optional_matcher.Matches(1));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
+  listener_interested.clear();
+  EXPECT_FALSE(matcher.Matches(0));
+  EXPECT_THAT(listener_interested, ElementsAre(false));
 }
 
 INSTANTIATE_GTEST_MATCHER_TEST_P(ExplainmatcherResultTest);

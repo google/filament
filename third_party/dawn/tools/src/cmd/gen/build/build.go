@@ -84,7 +84,7 @@ func (c *Cmd) RegisterFlags(ctx context.Context, cfg *common.Config) ([]string, 
 // TODO(crbug.com/344014313): Add unittests once fileutils is converted to
 // support dependency injection.
 func (c Cmd) Run(ctx context.Context, cfg *common.Config) error {
-	p := NewProject(CanonicalizePath(path.Join(fileutils.DawnRoot(), srcTint)), cfg)
+	p := NewProject(CanonicalizePath(path.Join(fileutils.DawnRoot(cfg.OsWrapper), srcTint)), cfg)
 
 	for _, stage := range []struct {
 		desc string
@@ -689,7 +689,7 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 			w := &bytes.Buffer{}
 
 			// Write the header
-			relTmplPath, err := filepath.Rel(fileutils.DawnRoot(), tmplPath)
+			relTmplPath, err := filepath.Rel(fileutils.DawnRoot(fsReaderWriter), tmplPath)
 			if err != nil {
 				return nil, err
 			}
@@ -704,7 +704,10 @@ func emitBuildFiles(p *Project, fsReaderWriter oswrapper.FilesystemReaderWriter)
 			// Format the output if it's a GN file.
 			if path.Ext(outputName) == ".gn" {
 				unformatted := w.String()
-				gn := exec.Command("gn", "format", "--stdin")
+
+				gn_path := filepath.Join("third_party", "depot_tools", "gn.py")
+
+				gn := exec.Command("vpython3", gn_path, "format", "--stdin")
 				gn.Stdin = bytes.NewReader([]byte(unformatted))
 				w.Reset()
 				gn.Stdout = w

@@ -38,6 +38,8 @@ namespace dawn::wire::client {
 
 class Device;
 
+void APIFreeMembers(WGPUSurfaceCapabilities capabilities);
+
 class Surface final : public ObjectBase {
   public:
     explicit Surface(const ObjectBaseParams& params, const WGPUSurfaceCapabilities* capabilities);
@@ -46,11 +48,12 @@ class Surface final : public ObjectBase {
     ObjectType GetObjectType() const override;
 
     // WebGPU API
-    void Configure(const WGPUSurfaceConfiguration* config);
-    void Unconfigure();
-    WGPUTextureFormat GetPreferredFormat(WGPUAdapter adapter) const;
-    WGPUStatus GetCapabilities(WGPUAdapter adapter, WGPUSurfaceCapabilities* capabilities) const;
-    void GetCurrentTexture(WGPUSurfaceTexture* surfaceTexture);
+    void APIConfigure(const WGPUSurfaceConfiguration* config);
+    WGPUStatus APIPresent();
+    void APIUnconfigure();
+    WGPUTextureFormat APIGetPreferredFormat(WGPUAdapter adapter) const;
+    WGPUStatus APIGetCapabilities(WGPUAdapter adapter, WGPUSurfaceCapabilities* capabilities) const;
+    void APIGetCurrentTexture(WGPUSurfaceTexture* surfaceTexture);
 
   private:
     WGPUTextureUsage mSupportedUsages;

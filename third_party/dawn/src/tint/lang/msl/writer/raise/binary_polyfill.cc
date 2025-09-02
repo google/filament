@@ -50,8 +50,7 @@ struct State {
         // Find the binary operators that need replacing.
         Vector<core::ir::CoreBinary*, 4> fmod_worklist;
         Vector<core::ir::CoreBinary*, 4> logical_bool_worklist;
-        Vector<core::ir::CoreBinary*, 4> signed_integer_arithmetic_worklist;
-        Vector<core::ir::CoreBinary*, 4> signed_integer_leftshift_worklist;
+
         for (auto* inst : ir.Instructions()) {
             if (auto* binary = inst->As<core::ir::CoreBinary>()) {
                 auto op = binary->Op();
@@ -61,13 +60,6 @@ struct State {
                 } else if ((op == core::BinaryOp::kAnd || op == core::BinaryOp::kOr) &&
                            lhs_type->IsBoolScalarOrVector()) {
                     logical_bool_worklist.Push(binary);
-                } else if ((op == core::BinaryOp::kAdd || op == core::BinaryOp::kMultiply ||
-                            op == core::BinaryOp::kSubtract) &&
-                           lhs_type->IsSignedIntegerScalarOrVector()) {
-                    signed_integer_arithmetic_worklist.Push(binary);
-                } else if (op == core::BinaryOp::kShiftLeft &&
-                           lhs_type->IsSignedIntegerScalarOrVector()) {
-                    signed_integer_leftshift_worklist.Push(binary);
                 }
             }
         }
@@ -78,12 +70,6 @@ struct State {
         }
         for (auto* logical_bool : logical_bool_worklist) {
             LogicalBool(logical_bool);
-        }
-        for (auto* signed_arith : signed_integer_arithmetic_worklist) {
-            SignedIntegerArithmetic(signed_arith);
-        }
-        for (auto* signed_shift_left : signed_integer_leftshift_worklist) {
-            SignedIntegerShiftLeft(signed_shift_left);
         }
     }
 
@@ -112,44 +98,6 @@ struct State {
         });
         binary->Destroy();
     }
-
-    /// Replace a signed integer arithmetic instruction.
-    /// @param binary the signed integer arithmetic instruction
-    void SignedIntegerArithmetic(core::ir::CoreBinary* binary) {
-        // MSL does not define the behavior of signed integer overflow, so bitcast the operands to
-        // unsigned integers, perform the operation, and then bitcast the result back to a signed
-        // integer.
-        auto* signed_result_ty = binary->Result()->Type();
-        auto* unsigned_result_ty = ty.MatchWidth(ty.u32(), signed_result_ty);
-        auto* unsigned_lhs_ty = ty.MatchWidth(ty.u32(), binary->LHS()->Type());
-        auto* unsigned_rhs_ty = ty.MatchWidth(ty.u32(), binary->RHS()->Type());
-        b.InsertBefore(binary, [&] {
-            auto* uint_lhs = b.Bitcast(unsigned_lhs_ty, binary->LHS());
-            auto* uint_rhs = b.Bitcast(unsigned_rhs_ty, binary->RHS());
-            auto* uint_binary = b.Binary(binary->Op(), unsigned_result_ty, uint_lhs, uint_rhs);
-            auto* bitcast = b.Bitcast(signed_result_ty, uint_binary);
-            binary->Result()->ReplaceAllUsesWith(bitcast->Result());
-        });
-        binary->Destroy();
-    }
-
-    /// Replace a signed integer shift left instruction.
-    /// @param binary the signed integer shift left instruction
-    void SignedIntegerShiftLeft(core::ir::CoreBinary* binary) {
-        // Left-shifting a negative integer is undefined behavior in C++14 and therefore potentially
-        // in MSL too, so we bitcast to an unsigned integer, perform the shift, and bitcast the
-        // result back to a signed integer.
-        auto* signed_ty = binary->Result()->Type();
-        auto* unsigned_ty = ty.MatchWidth(ty.u32(), signed_ty);
-        b.InsertBefore(binary, [&] {
-            auto* unsigned_lhs = b.Bitcast(unsigned_ty, binary->LHS());
-            auto* unsigned_binary =
-                b.Binary(binary->Op(), unsigned_ty, unsigned_lhs, binary->RHS());
-            auto* bitcast = b.Bitcast(signed_ty, unsigned_binary);
-            binary->Result()->ReplaceAllUsesWith(bitcast->Result());
-        });
-        binary->Destroy();
-    }
 };
 
 }  // namespace
@@ -158,9 +106,12 @@ Result<SuccessType> BinaryPolyfill(core::ir::Module& ir) {
     auto result =
         ValidateAndDumpIfNeeded(ir, "msl.BinaryPolyfill",
                                 core::ir::Capabilities{
+                                    core::ir::Capability::kAllow8BitIntegers,
                                     core::ir::Capability::kAllowPointersAndHandlesInStructures,
                                     core::ir::Capability::kAllowPrivateVarsInFunctions,
                                     core::ir::Capability::kAllowAnyLetType,
+                                    core::ir::Capability::kAllowNonCoreTypes,
+                                    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
                                 });
     if (result != Success) {
         return result.Failure();

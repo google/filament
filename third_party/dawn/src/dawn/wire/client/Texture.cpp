@@ -64,35 +64,35 @@ ObjectType Texture::GetObjectType() const {
     return ObjectType::Texture;
 }
 
-uint32_t Texture::GetWidth() const {
+uint32_t Texture::APIGetWidth() const {
     return mSize.width;
 }
 
-uint32_t Texture::GetHeight() const {
+uint32_t Texture::APIGetHeight() const {
     return mSize.height;
 }
 
-uint32_t Texture::GetDepthOrArrayLayers() const {
+uint32_t Texture::APIGetDepthOrArrayLayers() const {
     return mSize.depthOrArrayLayers;
 }
 
-uint32_t Texture::GetMipLevelCount() const {
+uint32_t Texture::APIGetMipLevelCount() const {
     return mMipLevelCount;
 }
 
-uint32_t Texture::GetSampleCount() const {
+uint32_t Texture::APIGetSampleCount() const {
     return mSampleCount;
 }
 
-WGPUTextureDimension Texture::GetDimension() const {
+WGPUTextureDimension Texture::APIGetDimension() const {
     return mDimension;
 }
 
-WGPUTextureFormat Texture::GetFormat() const {
+WGPUTextureFormat Texture::APIGetFormat() const {
     return mFormat;
 }
 
-WGPUTextureUsage Texture::GetUsage() const {
+WGPUTextureUsage Texture::APIGetUsage() const {
     return mUsage;
 }
 

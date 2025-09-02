@@ -65,13 +65,20 @@ dawn_json_generator("cpp_headers_gen") {
 }
 
 source_set("cpp_headers") {
-  public_deps = [
-    ":cpp_headers_gen",
-    ":headers",
-  ]
+  all_dependent_configs = [ ":public" ]
+  sources = [ "${dawn_root}/include/webgpu/webgpu_enum_class_bitmasks.h" ]
 
-  sources = get_target_outputs(":cpp_headers_gen")
-  sources += [ "${dawn_root}/include/webgpu/webgpu_enum_class_bitmasks.h" ]
+  if (is_wasm) {
+    all_dependent_configs +=
+        [ "${dawn_root}/src/emdawnwebgpu:emdawnwebgpu_config" ]
+    public_deps = [ "${dawn_root}/src/emdawnwebgpu:emdawnwebgpu" ]
+  } else {
+    public_deps = [
+      ":cpp_headers_gen",
+      ":headers",
+    ]
+    sources += get_target_outputs(":cpp_headers_gen")
+  }
 }
 
 ###############################################################################
@@ -79,7 +86,20 @@ source_set("cpp_headers") {
 ###############################################################################
 
 config("public") {
-  include_dirs = [
+  include_dirs = []
+
+  # We need to explicitly include the emdawnwebgpu include directories before
+  # native dawn includes here in order to get the correct headers when the
+  # compiler goes to resolve the header files. This is because right now in
+  # Dawn, there exists a default include/webgpu/* folder that tries to
+  # redirect to the generated headers in gen/include/dawn/*, but when building
+  # for WASM, the headers are directly generated into gen/include/webgpu/*.
+  # TODO(crbug.com/415120170): Fix once we decide/update the dir structure.
+  if (is_wasm) {
+    include_dirs += [ "${target_gen_dir}/../../src/emdawnwebgpu/include" ]
+  }
+
+  include_dirs += [
     "${target_gen_dir}/../../include",
     "${dawn_root}/include",
   ]

@@ -51,7 +51,7 @@ TEST_F(ResolverUnresolvedIdentifierSuggestions, AddressSpace) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(12:34 error: unresolved address space 'privte'
 12:34 note: Did you mean 'private'?
-Possible values: 'function', 'pixel_local', 'private', 'push_constant', 'storage', 'uniform', 'workgroup')");
+Possible values: 'function', 'immediate', 'pixel_local', 'private', 'storage', 'uniform', 'workgroup')");
 }
 
 TEST_F(ResolverUnresolvedIdentifierSuggestions, TexelFormat) {
@@ -60,7 +60,7 @@ TEST_F(ResolverUnresolvedIdentifierSuggestions, TexelFormat) {
     EXPECT_FALSE(r()->Resolve());
     EXPECT_EQ(r()->error(), R"(12:34 error: unresolved texel format 'rba8unorm'
 12:34 note: Did you mean 'rgba8unorm'?
-Possible values: 'bgra8unorm', 'r32float', 'r32sint', 'r32uint', 'r8unorm', 'rg32float', 'rg32sint', 'rg32uint', 'rgba16float', 'rgba16sint', 'rgba16uint', 'rgba32float', 'rgba32sint', 'rgba32uint', 'rgba8sint', 'rgba8snorm', 'rgba8uint', 'rgba8unorm')");
+Possible values: 'bgra8unorm', 'r16float', 'r16sint', 'r16snorm', 'r16uint', 'r16unorm', 'r32float', 'r32sint', 'r32uint', 'r8sint', 'r8snorm', 'r8uint', 'r8unorm', 'rg11b10ufloat', 'rg16float', 'rg16sint', 'rg16snorm', 'rg16uint', 'rg16unorm', 'rg32float', 'rg32sint', 'rg32uint', 'rg8sint', 'rg8snorm', 'rg8uint', 'rg8unorm', 'rgb10a2uint', 'rgb10a2unorm', 'rgba16float', 'rgba16sint', 'rgba16snorm', 'rgba16uint', 'rgba16unorm', 'rgba32float', 'rgba32sint', 'rgba32uint', 'rgba8sint', 'rgba8snorm', 'rgba8uint', 'rgba8unorm')");
 }
 
 TEST_F(ResolverUnresolvedIdentifierSuggestions, AccessMode) {

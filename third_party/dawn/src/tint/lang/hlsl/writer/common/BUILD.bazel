@@ -51,8 +51,10 @@ cc_library(
   deps = [
     "//src/tint/api/common",
     "//src/tint/lang/core",
-    "//src/tint/lang/core/common",
-    "//src/tint/lang/wgsl/ast",
+    "//src/tint/lang/core/constant",
+    "//src/tint/lang/core/ir",
+    "//src/tint/lang/core/ir/transform",
+    "//src/tint/lang/core/type",
     "//src/tint/utils",
     "//src/tint/utils/containers",
     "//src/tint/utils/diagnostic",

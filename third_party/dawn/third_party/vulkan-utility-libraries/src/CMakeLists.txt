@@ -25,6 +25,22 @@ add_subdirectory(scripts)
 
 find_package(VulkanHeaders CONFIG)
 
+option(VUL_ENABLE_ASAN "Use address sanitization")
+if (VUL_ENABLE_ASAN)
+    add_compile_options(-fsanitize=address)
+    if (NOT MSVC)
+        add_link_options(-fsanitize=address)
+    endif()
+endif()
+
+option(VUL_ENABLE_UBSAN "Use undefined behavior sanitization")
+if (VUL_ENABLE_UBSAN)
+    if (NOT MSVC)
+        add_compile_options(-fsanitize=undefined)
+        add_link_options(-fsanitize=undefined)
+    endif()
+endif()
+
 add_subdirectory(src)
 add_subdirectory(include)
 
@@ -37,7 +53,6 @@ if (PROJECT_IS_TOP_LEVEL)
 endif()
 
 option(VUL_ENABLE_INSTALL "Enable install" ${PROJECT_IS_TOP_LEVEL})
-
 if (VUL_ENABLE_INSTALL)
 
     include(GNUInstallDirs)

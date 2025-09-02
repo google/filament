@@ -30,6 +30,13 @@ foreach(lib IN LISTS EXPAT_LIBRARIES)
   add_dependencies(${lib} ${EXPAT_TARGET})
 endforeach(lib)
 
+set(EXPAT_C_COMPILER "${CMAKE_C_COMPILER}")
+set(EXPAT_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+if(DEFINED CMAKE_C_COMPILER_LAUNCHER AND DEFINED CMAKE_CXX_COMPILER_LAUNCHER)
+  set(EXPAT_C_COMPILER "${CMAKE_C_COMPILER_LAUNCHER} ${EXPAT_C_COMPILER}")
+  set(EXPAT_CXX_COMPILER "${CMAKE_CXX_COMPILER_LAUNCHER} ${EXPAT_CXX_COMPILER}")
+endif()
+
 include (ExternalProject)
 ExternalProject_Add(${EXPAT_TARGET}
     PREFIX ${EXPAT_TARGET}
@@ -39,8 +46,8 @@ ExternalProject_Add(${EXPAT_TARGET}
     CONFIGURE_COMMAND cd ${EXPAT_SRC_DIR} && ./buildconf.sh  && ./configure
                                                     --prefix=${EXPAT_INSTALL_DIR}
                                                     --without-xmlwf
-                                                    CC=${CMAKE_C_COMPILER}
-                                                    CXX=${CMAKE_CXX_COMPILER}
+                                                    "CC=${EXPAT_C_COMPILER}"
+                                                    "CXX=${EXPAT_CXX_COMPILER}"
                                                     "CFLAGS=${EXPAT_CFLAGS} -w -DXML_POOR_ENTROPY"
                                                     "CXXFLAGS=${EXPAT_CXXFLAGS} -w -DXML_POOR_ENTROPY"
     BUILD_COMMAND cd ${EXPAT_SRC_DIR} &&  make -j ${CPU_COUNT}

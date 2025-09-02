@@ -51,15 +51,22 @@ static constexpr uint64_t kAssumedMaxBufferSize =
 static constexpr uint32_t kImmediateConstantElementByteSize = sizeof(uint32_t);
 
 // Known as 'Immediate Data'. User could update them through APIs.
-static constexpr uint32_t kMaxExternalImmediateConstantsPerPipeline = 4u;
+static constexpr uint32_t kMaxExternalImmediateConstantsPerPipeline = 16u;
 
 // Vulkan requires min-max push constant bytes is 128 byte, which is
 // equals to 32 32bit constants. D3D12 requires 64 32bit constants limits.
 // Pick 32 here.
 static constexpr uint32_t kMaxImmediateConstantsPerPipeline = 32u;
 
-// Limit user immediate constants to 16 bytes.
-static constexpr uint32_t kMaxImmediateDataBytes = 16u;
+// Adapter Max limitation for user immediate constants is 64 bytes.
+static constexpr uint32_t kMaxSupportedImmediateDataBytes = 64u;
+
+// Device Default limitation for user immediate constants is 16 bytes.
+static constexpr uint32_t kDefaultMaxImmediateDataBytes = 16u;
+
+// Default subgroup sizes.
+static constexpr uint32_t kDefaultSubgroupMinSize = 4u;
+static constexpr uint32_t kDefaultSubgroupMaxSize = 128u;
 
 // Per stage maximum limits used to optimized Dawn internals.
 static constexpr uint32_t kMaxSampledTexturesPerShaderStage = 16;
@@ -100,6 +107,10 @@ static constexpr size_t kWireBufferAlignment = 8u;
 
 // Timestamp query quantization mask to perform a granularity of ~0.1ms.
 static constexpr uint32_t kTimestampQuantizationMask = 0xFFFF0000;
+
+// Max dynamic offset counts used to optimize Dawn internals.
+static constexpr uint32_t kMaxDynamicUniformBuffersPerPipelineLayout = 16u;
+static constexpr uint32_t kMaxDynamicStorageBuffersPerPipelineLayout = 16u;
 
 }  // namespace dawn
 

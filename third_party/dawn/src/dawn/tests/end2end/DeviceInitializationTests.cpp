@@ -97,6 +97,11 @@ TEST_F(DeviceInitializationTest, DeviceOutlivesInstance) {
                 continue;
             }
 
+            // TODO(crbug.com/413053623): remove after webgpu backend device is implemented.
+            if (info.backendType == wgpu::BackendType::WebGPU) {
+                continue;
+            }
+
             availableAdapterInfo.push_back(std::move(info));
         }
     }
@@ -144,6 +149,12 @@ TEST_F(DeviceInitializationTest, AdapterOutlivesInstance) {
             if (info.backendType == wgpu::BackendType::Null) {
                 continue;
             }
+
+            // TODO(crbug.com/413053623): remove after webgpu backend device is implemented.
+            if (info.backendType == wgpu::BackendType::WebGPU) {
+                continue;
+            }
+
             availableAdapterInfo.push_back(std::move(info));
         }
     }

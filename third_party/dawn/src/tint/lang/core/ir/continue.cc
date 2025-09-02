@@ -54,6 +54,13 @@ Continue::Continue(Id id, ir::Loop* loop, VectorRef<Value*> args) : Base(id), lo
 
 Continue::~Continue() = default;
 
+void Continue::Destroy() {
+    if (loop_) {
+        loop_->Continuing()->RemoveInboundSiblingBranch(this);
+    }
+    Instruction::Destroy();
+}
+
 Continue* Continue::Clone(CloneContext& ctx) {
     auto* loop = ctx.Remap(Loop());
     auto args = ctx.Remap<Continue::kDefaultNumOperands>(Args());
@@ -63,11 +70,11 @@ Continue* Continue::Clone(CloneContext& ctx) {
 
 void Continue::SetLoop(ir::Loop* loop) {
     if (loop_ && loop_->Body()) {
-        loop_->Body()->RemoveInboundSiblingBranch(this);
+        loop_->Continuing()->RemoveInboundSiblingBranch(this);
     }
     loop_ = loop;
     if (loop) {
-        loop->Body()->AddInboundSiblingBranch(this);
+        loop->Continuing()->AddInboundSiblingBranch(this);
     }
 }
 

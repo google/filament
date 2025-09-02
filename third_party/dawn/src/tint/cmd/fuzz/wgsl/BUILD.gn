@@ -54,8 +54,6 @@ if (tint_build_wgsl_reader) {
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/wgsl",
       "${tint_src_dir}/lang/wgsl/ast",
-      "${tint_src_dir}/lang/wgsl/common",
-      "${tint_src_dir}/lang/wgsl/features",
       "${tint_src_dir}/lang/wgsl/program",
       "${tint_src_dir}/lang/wgsl/sem",
       "${tint_src_dir}/lang/wgsl/writer/ir_to_program",
@@ -87,9 +85,11 @@ if (tint_build_wgsl_reader) {
     sources = [ "main_fuzz.cc" ]
     deps = [
       "${dawn_root}/src/utils:utils",
+      "${tint_src_dir}/api/common",
       "${tint_src_dir}/cmd/fuzz/ir:fuzz",
       "${tint_src_dir}/lang/core",
       "${tint_src_dir}/lang/core/constant",
+      "${tint_src_dir}/lang/core/ir",
       "${tint_src_dir}/lang/core/ir/transform:fuzz",
       "${tint_src_dir}/lang/core/type",
       "${tint_src_dir}/lang/hlsl/writer/raise:fuzz",

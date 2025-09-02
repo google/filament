@@ -85,8 +85,8 @@ TEST_P(FragDepthTests, FragDepthIsClampedToViewport) {
     EXPECT_PIXEL_FLOAT_EQ(0.5f, depthTexture, 0, 0);
 }
 
-// Test for the push constant logic for ClampFragDepth in Vulkan to check that changing the
-// pipeline layout doesn't invalidate the push constants that were set.
+// Test for the immediate data logic for ClampFragDepth in Vulkan to check that changing the
+// pipeline layout doesn't invalidate the immediate data that were set.
 TEST_P(FragDepthTests, ChangingPipelineLayoutDoesntInvalidateViewport) {
     // TODO(dawn:1805): Load ByteAddressBuffer in Pixel Shader doesn't work with NVIDIA on D3D11
     DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsNvidia());

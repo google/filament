@@ -55,6 +55,7 @@
 using namespace clang;
 using namespace sema;
 
+// HLSL Note: This set of utilities copied to SemaHLSL.cpp.
 namespace {
   class UnqualUsingEntry {
     const DeclContext *Nominated;
@@ -4809,9 +4810,12 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
 
   NamedDecl *ChosenDecl =
       Correction.isKeyword() ? nullptr : Correction.getCorrectionDecl();
-  if (PrevNote.getDiagID() && ChosenDecl)
+  // HLSL Change begin: don't put notes on invalid source locations.
+  if (PrevNote.getDiagID() && ChosenDecl &&
+      !ChosenDecl->getLocation().isInvalid())
     Diag(ChosenDecl->getLocation(), PrevNote)
       << CorrectedQuotedStr << (ErrorRecovery ? FixItHint() : FixTypo);
+  // HLSL Change end
 }
 
 TypoExpr *Sema::createDelayedTypo(std::unique_ptr<TypoCorrectionConsumer> TCC,
@@ -4836,3 +4840,33 @@ const Sema::TypoExprState &Sema::getTypoExprState(TypoExpr *TE) const {
 void Sema::clearDelayedTypo(TypoExpr *TE) {
   DelayedTypos.erase(TE);
 }
+
+// HLSL Change Begin
+void Sema::CollectNamespaceContexts(Scope *S,
+                                    SmallVectorImpl<const DeclContext *> &NSs) {
+  UnqualUsingDirectiveSet UDirs;
+
+  // Add using directives from this context up to the top level. This
+  // handles cases where the current declaration is in a context that has
+  // a using directive but might be in a scope chain that doesn't reach
+  // the using directive (i.e. a using inside a namespace or class
+  // declaration but the function definition is outside).
+  DeclContext *Ctx = S->getEntity();
+  for (DeclContext *UCtx = Ctx; UCtx; UCtx = UCtx->getParent()) {
+    if (UCtx->isTransparentContext())
+      continue;
+
+    UDirs.visit(UCtx, UCtx);
+  }
+  // Find the first namespace or translation-unit scope.
+  Scope *Innermost = S;
+  while (Innermost && !isNamespaceOrTranslationUnitScope(Innermost))
+    Innermost = Innermost->getParent();
+
+  UDirs.visitScopeChain(S, Innermost);
+  UDirs.done();
+
+  for (auto &UD : UDirs)
+    NSs.push_back(UD.getNominatedNamespace());
+}
+// HLSL Change End

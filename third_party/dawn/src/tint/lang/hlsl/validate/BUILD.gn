@@ -46,7 +46,12 @@ if (tint_build_hlsl_writer) {
     ]
     deps = [
       "${dawn_root}/src/utils:utils",
-      "${tint_src_dir}/lang/wgsl/ast",
+      "${tint_src_dir}/api/common",
+      "${tint_src_dir}/lang/core",
+      "${tint_src_dir}/lang/core/constant",
+      "${tint_src_dir}/lang/core/ir",
+      "${tint_src_dir}/lang/core/type",
+      "${tint_src_dir}/utils",
       "${tint_src_dir}/utils/command",
       "${tint_src_dir}/utils/containers",
       "${tint_src_dir}/utils/file",

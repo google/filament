@@ -27,17 +27,20 @@
 #include "src/tint/utils/containers/scope_stack.h"
 
 #include "gtest/gtest.h"
-#include "src/tint/lang/wgsl/program/program_builder.h"
+
+#include "src/tint/utils/symbol/symbol.h"
 
 namespace tint {
 namespace {
 
-class ScopeStackTest : public ProgramBuilder, public testing::Test {};
+using ScopeStackTest = testing::Test;
 
 TEST_F(ScopeStackTest, Get) {
+    auto id = GenerationID::New();
+
     ScopeStack<Symbol, uint32_t> s;
-    Symbol a(1, ID(), "1");
-    Symbol b(3, ID(), "3");
+    Symbol a(1, id, "1");
+    Symbol b(3, id, "3");
     s.Push();
     s.Set(a, 5u);
     s.Set(b, 10u);
@@ -57,15 +60,17 @@ TEST_F(ScopeStackTest, Get) {
 }
 
 TEST_F(ScopeStackTest, Get_MissingSymbol) {
+    auto id = GenerationID::New();
     ScopeStack<Symbol, uint32_t> s;
-    Symbol sym(1, ID(), "1");
+    Symbol sym(1, id, "1");
     EXPECT_EQ(s.Get(sym), 0u);
 }
 
 TEST_F(ScopeStackTest, Set) {
+    auto id = GenerationID::New();
     ScopeStack<Symbol, uint32_t> s;
-    Symbol a(1, ID(), "1");
-    Symbol b(2, ID(), "2");
+    Symbol a(1, id, "1");
+    Symbol b(2, id, "2");
 
     EXPECT_EQ(s.Set(a, 5u), 0u);
     EXPECT_EQ(s.Get(a), 5u);
@@ -81,9 +86,10 @@ TEST_F(ScopeStackTest, Set) {
 }
 
 TEST_F(ScopeStackTest, Clear) {
+    auto id = GenerationID::New();
     ScopeStack<Symbol, uint32_t> s;
-    Symbol a(1, ID(), "1");
-    Symbol b(2, ID(), "2");
+    Symbol a(1, id, "1");
+    Symbol b(2, id, "2");
 
     EXPECT_EQ(s.Set(a, 5u), 0u);
     EXPECT_EQ(s.Get(a), 5u);

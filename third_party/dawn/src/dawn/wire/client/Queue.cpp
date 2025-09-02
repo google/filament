@@ -28,8 +28,10 @@
 #include "dawn/wire/client/Queue.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 
+#include "dawn/common/StringViewUtils.h"
 #include "dawn/wire/client/Client.h"
 #include "dawn/wire/client/EventManager.h"
 #include "partition_alloc/pointers/raw_ptr.h"
@@ -49,8 +51,11 @@ class WorkDoneEvent : public TrackedEvent {
 
     EventType GetType() override { return kType; }
 
-    WireResult ReadyHook(FutureID futureID, WGPUQueueWorkDoneStatus status) {
+    WireResult ReadyHook(FutureID futureID,
+                         WGPUQueueWorkDoneStatus status,
+                         WGPUStringView message) {
         mStatus = status;
+        mMessage = ToString(message);
         return WireResult::Success;
     }
 
@@ -58,11 +63,12 @@ class WorkDoneEvent : public TrackedEvent {
     void CompleteImpl(FutureID futureID, EventCompletionType completionType) override {
         if (completionType == EventCompletionType::Shutdown) {
             mStatus = WGPUQueueWorkDoneStatus_CallbackCancelled;
+            mMessage = "A valid external Instance reference no longer exists.";
         }
         void* userdata1 = mUserdata1.ExtractAsDangling();
         void* userdata2 = mUserdata2.ExtractAsDangling();
         if (mCallback) {
-            mCallback(mStatus, userdata1, userdata2);
+            mCallback(mStatus, ToOutputStringView(mMessage), userdata1, userdata2);
         }
     }
 
@@ -71,6 +77,7 @@ class WorkDoneEvent : public TrackedEvent {
     raw_ptr<void> mUserdata2;
 
     WGPUQueueWorkDoneStatus mStatus = WGPUQueueWorkDoneStatus_Success;
+    std::string mMessage;
 };
 
 }  // anonymous namespace
@@ -83,11 +90,12 @@ ObjectType Queue::GetObjectType() const {
 
 WireResult Client::DoQueueWorkDoneCallback(ObjectHandle eventManager,
                                            WGPUFuture future,
-                                           WGPUQueueWorkDoneStatus status) {
-    return GetEventManager(eventManager).SetFutureReady<WorkDoneEvent>(future.id, status);
+                                           WGPUQueueWorkDoneStatus status,
+                                           WGPUStringView message) {
+    return SetFutureReady<WorkDoneEvent>(eventManager, future.id, status, message);
 }
 
-WGPUFuture Queue::OnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo) {
+WGPUFuture Queue::APIOnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callbackInfo) {
     // TODO(crbug.com/dawn/2052): Once we always return a future, change this to log to the instance
     // (note, not raise a validation error to the device) and return the null future.
     DAWN_ASSERT(callbackInfo.nextInChain == nullptr);
@@ -108,7 +116,10 @@ WGPUFuture Queue::OnSubmittedWorkDone(const WGPUQueueWorkDoneCallbackInfo& callb
     return {futureIDInternal};
 }
 
-void Queue::WriteBuffer(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* data, size_t size) {
+void Queue::APIWriteBuffer(WGPUBuffer cBuffer,
+                           uint64_t bufferOffset,
+                           const void* data,
+                           size_t size) {
     Buffer* buffer = FromAPI(cBuffer);
 
     QueueWriteBufferCmd cmd;
@@ -121,11 +132,11 @@ void Queue::WriteBuffer(WGPUBuffer cBuffer, uint64_t bufferOffset, const void* d
     GetClient()->SerializeCommand(cmd);
 }
 
-void Queue::WriteTexture(const WGPUTexelCopyTextureInfo* destination,
-                         const void* data,
-                         size_t dataSize,
-                         const WGPUTexelCopyBufferLayout* dataLayout,
-                         const WGPUExtent3D* writeSize) {
+void Queue::APIWriteTexture(const WGPUTexelCopyTextureInfo* destination,
+                            const void* data,
+                            size_t dataSize,
+                            const WGPUTexelCopyBufferLayout* dataLayout,
+                            const WGPUExtent3D* writeSize) {
     QueueWriteTextureCmd cmd;
     cmd.queueId = GetWireId();
     cmd.destination = destination;

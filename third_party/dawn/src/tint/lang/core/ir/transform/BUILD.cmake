@@ -41,6 +41,8 @@
 tint_add_target(tint_lang_core_ir_transform lib
   lang/core/ir/transform/add_empty_entry_point.cc
   lang/core/ir/transform/add_empty_entry_point.h
+  lang/core/ir/transform/array_length_from_immediate.cc
+  lang/core/ir/transform/array_length_from_immediate.h
   lang/core/ir/transform/array_length_from_uniform.cc
   lang/core/ir/transform/array_length_from_uniform.h
   lang/core/ir/transform/bgra8unorm_polyfill.cc
@@ -53,18 +55,25 @@ tint_add_target(tint_lang_core_ir_transform lib
   lang/core/ir/transform/block_decorated_structs.h
   lang/core/ir/transform/builtin_polyfill.cc
   lang/core/ir/transform/builtin_polyfill.h
+  lang/core/ir/transform/builtin_scalarize.cc
+  lang/core/ir/transform/builtin_scalarize.h
+  lang/core/ir/transform/change_immediate_to_uniform.cc
+  lang/core/ir/transform/change_immediate_to_uniform.h
   lang/core/ir/transform/combine_access_instructions.cc
   lang/core/ir/transform/combine_access_instructions.h
   lang/core/ir/transform/conversion_polyfill.cc
   lang/core/ir/transform/conversion_polyfill.h
+  lang/core/ir/transform/dead_code_elimination.cc
+  lang/core/ir/transform/dead_code_elimination.h
   lang/core/ir/transform/demote_to_helper.cc
   lang/core/ir/transform/demote_to_helper.h
   lang/core/ir/transform/direct_variable_access.cc
   lang/core/ir/transform/direct_variable_access.h
   lang/core/ir/transform/multiplanar_external_texture.cc
   lang/core/ir/transform/multiplanar_external_texture.h
-  lang/core/ir/transform/prepare_push_constants.cc
-  lang/core/ir/transform/prepare_push_constants.h
+  lang/core/ir/transform/multiplanar_options.h
+  lang/core/ir/transform/prepare_immediate_data.cc
+  lang/core/ir/transform/prepare_immediate_data.h
   lang/core/ir/transform/preserve_padding.cc
   lang/core/ir/transform/preserve_padding.h
   lang/core/ir/transform/prevent_infinite_loops.cc
@@ -79,6 +88,8 @@ tint_add_target(tint_lang_core_ir_transform lib
   lang/core/ir/transform/robustness.h
   lang/core/ir/transform/shader_io.cc
   lang/core/ir/transform/shader_io.h
+  lang/core/ir/transform/signed_integer_polyfill.cc
+  lang/core/ir/transform/signed_integer_polyfill.h
   lang/core/ir/transform/single_entry_point.cc
   lang/core/ir/transform/single_entry_point.h
   lang/core/ir/transform/std140.cc
@@ -98,7 +109,6 @@ tint_add_target(tint_lang_core_ir_transform lib
 tint_target_add_dependencies(tint_lang_core_ir_transform lib
   tint_api_common
   tint_lang_core
-  tint_lang_core_common
   tint_lang_core_constant
   tint_lang_core_intrinsic
   tint_lang_core_ir
@@ -127,25 +137,30 @@ tint_target_add_external_dependencies(tint_lang_core_ir_transform lib
 ################################################################################
 tint_add_target(tint_lang_core_ir_transform_test test
   lang/core/ir/transform/add_empty_entry_point_test.cc
+  lang/core/ir/transform/array_length_from_immediate_test.cc
   lang/core/ir/transform/array_length_from_uniform_test.cc
   lang/core/ir/transform/bgra8unorm_polyfill_test.cc
   lang/core/ir/transform/binary_polyfill_test.cc
   lang/core/ir/transform/binding_remapper_test.cc
   lang/core/ir/transform/block_decorated_structs_test.cc
   lang/core/ir/transform/builtin_polyfill_test.cc
+  lang/core/ir/transform/builtin_scalarize_test.cc
+  lang/core/ir/transform/change_immediate_to_uniform_test.cc
   lang/core/ir/transform/combine_access_instructions_test.cc
   lang/core/ir/transform/conversion_polyfill_test.cc
+  lang/core/ir/transform/dead_code_elimination_test.cc
   lang/core/ir/transform/demote_to_helper_test.cc
   lang/core/ir/transform/direct_variable_access_test.cc
   lang/core/ir/transform/helper_test.h
   lang/core/ir/transform/multiplanar_external_texture_test.cc
-  lang/core/ir/transform/prepare_push_constants_test.cc
+  lang/core/ir/transform/prepare_immediate_data_test.cc
   lang/core/ir/transform/preserve_padding_test.cc
   lang/core/ir/transform/prevent_infinite_loops_test.cc
   lang/core/ir/transform/remove_continue_in_switch_test.cc
   lang/core/ir/transform/remove_terminator_args_test.cc
   lang/core/ir/transform/rename_conflicts_test.cc
   lang/core/ir/transform/robustness_test.cc
+  lang/core/ir/transform/signed_integer_polyfill_test.cc
   lang/core/ir/transform/single_entry_point_test.cc
   lang/core/ir/transform/std140_test.cc
   lang/core/ir/transform/substitute_overrides_test.cc
@@ -158,21 +173,12 @@ tint_add_target(tint_lang_core_ir_transform_test test
 tint_target_add_dependencies(tint_lang_core_ir_transform_test test
   tint_api_common
   tint_lang_core
-  tint_lang_core_common
   tint_lang_core_constant
   tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_ir_transform
   tint_lang_core_ir_type
   tint_lang_core_type
-  tint_lang_wgsl
-  tint_lang_wgsl_ast
-  tint_lang_wgsl_common
-  tint_lang_wgsl_features
-  tint_lang_wgsl_program
-  tint_lang_wgsl_sem
-  tint_lang_wgsl_writer_ir_to_program
-  tint_lang_wgsl_writer_raise
   tint_utils
   tint_utils_containers
   tint_utils_diagnostic
@@ -190,25 +196,6 @@ tint_target_add_external_dependencies(tint_lang_core_ir_transform_test test
   "src_utils"
 )
 
-if(TINT_BUILD_WGSL_READER)
-  tint_target_add_dependencies(tint_lang_core_ir_transform_test test
-    tint_lang_wgsl_reader
-    tint_lang_wgsl_reader_program_to_ir
-  )
-endif(TINT_BUILD_WGSL_READER)
-
-if(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
-  tint_target_add_sources(tint_lang_core_ir_transform_test test
-    "lang/core/ir/transform/direct_variable_access_wgsl_test.cc"
-  )
-endif(TINT_BUILD_WGSL_READER AND TINT_BUILD_WGSL_WRITER)
-
-if(TINT_BUILD_WGSL_WRITER)
-  tint_target_add_dependencies(tint_lang_core_ir_transform_test test
-    tint_lang_wgsl_writer
-  )
-endif(TINT_BUILD_WGSL_WRITER)
-
 ################################################################################
 # Target:    tint_lang_core_ir_transform_fuzz
 # Kind:      fuzz
@@ -223,6 +210,7 @@ tint_add_target(tint_lang_core_ir_transform_fuzz fuzz
   lang/core/ir/transform/builtin_polyfill_fuzz.cc
   lang/core/ir/transform/combine_access_instructions_fuzz.cc
   lang/core/ir/transform/conversion_polyfill_fuzz.cc
+  lang/core/ir/transform/dead_code_elimination_fuzz.cc
   lang/core/ir/transform/demote_to_helper_fuzz.cc
   lang/core/ir/transform/direct_variable_access_fuzz.cc
   lang/core/ir/transform/multiplanar_external_texture_fuzz.cc
@@ -230,6 +218,7 @@ tint_add_target(tint_lang_core_ir_transform_fuzz fuzz
   lang/core/ir/transform/remove_terminator_args_fuzz.cc
   lang/core/ir/transform/rename_conflicts_fuzz.cc
   lang/core/ir/transform/robustness_fuzz.cc
+  lang/core/ir/transform/single_entry_point_fuzz.cc
   lang/core/ir/transform/std140_fuzz.cc
   lang/core/ir/transform/substitute_overrides_fuzz.cc
   lang/core/ir/transform/value_to_let_fuzz.cc
@@ -241,7 +230,6 @@ tint_target_add_dependencies(tint_lang_core_ir_transform_fuzz fuzz
   tint_api_common
   tint_cmd_fuzz_ir_fuzz
   tint_lang_core
-  tint_lang_core_common
   tint_lang_core_constant
   tint_lang_core_ir
   tint_lang_core_ir_transform

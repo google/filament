@@ -1602,7 +1602,7 @@ TEST_P(SharedTextureMemoryTests, UninitializedTextureIsCleared) {
         // Skipped for multiplanar formats because those must be initialized on import.
         // We also need render attachment usage to initially populate the texture.
         if (utils::IsMultiPlanarFormat(properties.format) ||
-            (properties.usage & wgpu::TextureUsage::RenderAttachment) == 0) {
+            !(properties.usage & wgpu::TextureUsage::RenderAttachment)) {
             continue;
         }
 
@@ -2618,7 +2618,7 @@ TEST_P(SharedTextureMemoryTests, SameDeviceWriteThenConcurrentReadThenWrite) {
 // Test that textures created from SharedTextureMemory may perform sRGB reinterpretation.
 TEST_P(SharedTextureMemoryTests, SRGBReinterpretation) {
     // Format reinterpretation is not available in compatibility mode.
-    DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode());
+    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
 
     // crbug.com/358166479
     DAWN_SUPPRESS_TEST_IF(IsLinux() && IsNvidia() && IsVulkan());

@@ -35,9 +35,7 @@
 #include "src/tint/api/common/override_id.h"
 
 #include "src/tint/api/common/binding_point.h"
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/address_space.h"
-#include "src/tint/lang/core/parameter_usage.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/type.h"
 #include "src/tint/lang/wgsl/ast/parameter.h"
 #include "src/tint/lang/wgsl/sem/value_expression.h"
@@ -157,18 +155,6 @@ struct GlobalVariableAttributes {
     std::optional<tint::OverrideId> override_id;
     /// the resource binding point for the variable, if set.
     std::optional<tint::BindingPoint> binding_point;
-    /// The `location` attribute value for the variable, if set
-    /// @note a GlobalVariable generally doesn't have a `location` in WGSL, as it isn't allowed by
-    /// the spec. The location maybe attached by transforms such as CanonicalizeEntryPointIO.
-    std::optional<uint32_t> location;
-    /// The `blend_src` attribute value for the variable, if set
-    /// @note a GlobalVariable generally doesn't have a `blend_src` in WGSL, as it isn't allowed by
-    /// the spec. The location maybe attached by transforms such as CanonicalizeEntryPointIO.
-    std::optional<uint32_t> blend_src;
-    /// The `color` attribute value for the variable, if set
-    /// @note a GlobalVariable generally doesn't have a `color` in WGSL, as it isn't allowed by
-    /// the spec. The location maybe attached by transforms such as CanonicalizeEntryPointIO.
-    std::optional<uint32_t> color;
     /// The `input_attachment_index` attribute value for the variable, if set
     std::optional<uint32_t> input_attachment_index;
 };
@@ -206,11 +192,6 @@ class GlobalVariable final : public Castable<GlobalVariable, Variable> {
 
 /// Attributes that can be applied to parameters
 struct ParameterAttributes {
-    /// the resource binding point for the variable, if set.
-    /// @note a Parameter generally doesn't have a `group` or `binding` attribute in WGSL, as it
-    /// isn't allowed by the spec. The binding point maybe attached by transforms such as
-    /// CanonicalizeEntryPointIO.
-    std::optional<tint::BindingPoint> binding_point;
     /// The `location` attribute value for the variable, if set
     std::optional<uint32_t> location;
     /// The `blend_src` attribute value for the variable, if set
@@ -228,7 +209,7 @@ class Parameter final : public Castable<Parameter, Variable> {
     /// @param type the variable type
     /// @param usage the parameter usage
     Parameter(const ast::Parameter* declaration,
-              uint32_t index = 0,
+              uint32_t index,
               const core::type::Type* type = nullptr,
               core::ParameterUsage usage = core::ParameterUsage::kNone);
 
@@ -242,9 +223,6 @@ class Parameter final : public Castable<Parameter, Variable> {
 
     /// @return the index of the parameter in the function
     uint32_t Index() const { return index_; }
-
-    /// @param usage the semantic usage for the parameter
-    void SetUsage(core::ParameterUsage usage) { usage_ = usage; }
 
     /// @returns the semantic usage for the parameter
     core::ParameterUsage Usage() const { return usage_; }
@@ -303,24 +281,6 @@ class VariableUser final : public Castable<VariableUser, ValueExpression> {
     const sem::Variable* const variable_;
 };
 
-/// A pair of sem::Variables. Can be hashed.
-typedef std::pair<const Variable*, const Variable*> VariablePair;
-
 }  // namespace tint::sem
-
-namespace std {
-
-/// Custom std::hash specialization for VariablePair
-template <>
-class hash<tint::sem::VariablePair> {
-  public:
-    /// @param i the variable pair to create a hash for
-    /// @return the hash value
-    inline std::size_t operator()(const tint::sem::VariablePair& i) const {
-        return Hash(i.first, i.second);
-    }
-};
-
-}  // namespace std
 
 #endif  // SRC_TINT_LANG_WGSL_SEM_VARIABLE_H_

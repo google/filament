@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_SPIRV_WRITER_RAISE_BUILTIN_POLYFILL_H_
 #define SRC_TINT_LANG_SPIRV_WRITER_RAISE_BUILTIN_POLYFILL_H_
 
+#include "src/tint/lang/spirv/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
 // Forward declarations.
@@ -38,12 +39,19 @@ class Texture;
 
 namespace tint::spirv::writer::raise {
 
+struct PolyfillConfig {
+    bool use_vulkan_memory_model = false;
+    SpvVersion version = SpvVersion::kSpv13;
+    bool subgroup_shuffle_clamped = false;
+};
+
 /// BuiltinPolyfill is a transform that replaces calls to builtins with polyfills and calls to
-/// SPIR-V backend intrinsic functions.
+/// SPIR-V backend intrinsic functions. It replaces core types with SPIR-V specific types at the
+/// same time to produce valid IR (e.g. texture types to spirv.image).
 /// @param module the module to transform
-/// @param use_vulkan_memory_model set `true` to use the vulkan memory model
+/// @param config the configuration used in the polyfill function
 /// @returns success or failure
-Result<SuccessType> BuiltinPolyfill(core::ir::Module& module, bool use_vulkan_memory_model);
+Result<SuccessType> BuiltinPolyfill(core::ir::Module& module, PolyfillConfig config);
 
 }  // namespace tint::spirv::writer::raise
 

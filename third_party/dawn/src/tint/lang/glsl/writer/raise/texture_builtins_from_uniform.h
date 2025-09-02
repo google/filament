@@ -28,6 +28,7 @@
 #ifndef SRC_TINT_LANG_GLSL_WRITER_RAISE_TEXTURE_BUILTINS_FROM_UNIFORM_H_
 #define SRC_TINT_LANG_GLSL_WRITER_RAISE_TEXTURE_BUILTINS_FROM_UNIFORM_H_
 
+#include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/glsl/writer/common/options.h"
 #include "src/tint/utils/result.h"
 
@@ -37,6 +38,10 @@ class Module;
 }  // namespace tint::core::ir
 
 namespace tint::glsl::writer::raise {
+
+/// The capabilities that the transform can support.
+const core::ir::Capabilities kTextureBuiltinFromUniformCapabilities{
+    core::ir::Capability::kAllowDuplicateBindings};
 
 /// TextureBuiltinsFromUniform is a transform that replaces texture builtin function
 /// `textureNumLevels` and `textureNumSamples` which do not have GLSL equivalents with
