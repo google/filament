@@ -1054,6 +1054,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxFroxelBufferHeight =
             int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
+    int const froxelRecordBufferHeight =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
@@ -1070,6 +1073,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
             int(maxFroxelBufferHeight) });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
+            int(froxelRecordBufferHeight) });
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
             engine.debug.shadowmap.debug_directional_shadowmap });
