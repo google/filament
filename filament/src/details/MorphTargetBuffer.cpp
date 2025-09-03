@@ -127,19 +127,16 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
-            TextureUsage::DEFAULT);
+            TextureUsage::DEFAULT,
+            builder.getName());
 
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA16I, 1,
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
-            TextureUsage::DEFAULT);
-
-    if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mPbHandle.getId(), name);
-        driver.setDebugTag(mTbHandle.getId(), std::move(name));
-    }
+            TextureUsage::DEFAULT,
+            builder.getName());
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
