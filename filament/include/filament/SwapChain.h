@@ -280,7 +280,7 @@ public:
      * processing for a frame and the frame is ready to be scheduled for presentation.
      *
      * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
-     * If a SwapChain::FrameScheduledCallback is set, however, the application bares the
+     * If a SwapChain::FrameScheduledCallback is set, however, the application bears the
      * responsibility of scheduling the frame for presentation by calling the
      * backend::PresentCallable passed to the callback function. In this mode, Filament will *not*
      * automatically schedule the frame for presentation.
