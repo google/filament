@@ -855,6 +855,7 @@ void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
         scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
     }
 
+    sync->conversionCallbacks.clear();
     mResourceManager.associateHandle(sh.getId(), std::move(tag));
 }
 

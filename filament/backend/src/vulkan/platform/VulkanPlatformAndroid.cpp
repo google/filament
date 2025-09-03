@@ -390,9 +390,11 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
 }
 
 bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept {
-    assert_invariant(sync != nullptr && fd != nullptr);
+    assert_invariant(sync && fd);
+
     VulkanPlatform::Sync& vulkanSync = static_cast<VulkanPlatform::Sync&>(*sync);
-    assert_invariant(vulkanSync.getFenceStatus() != nullptr);
+    assert_invariant(vulkanSync.getFenceStatus());
+
     if (vulkanSync.getFenceStatus()->getStatus() == VK_SUCCESS) {
         // We've already signaled; return -1 so that operations will proceed
         // immediately. Also, signal that fence conversion was successful.
