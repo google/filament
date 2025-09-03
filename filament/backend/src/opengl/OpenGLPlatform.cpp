@@ -123,10 +123,6 @@ Platform::Sync* OpenGLPlatform::createSync() noexcept {
     return new OpenGLPlatform::Sync();
 }
 
-bool OpenGLPlatform::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
-    return false;
-}
-
 void OpenGLPlatform::destroySync(Platform::Sync* sync) noexcept {
     delete sync;
 }

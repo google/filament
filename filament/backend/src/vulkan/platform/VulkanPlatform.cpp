@@ -1013,10 +1013,6 @@ Platform::Sync* VulkanPlatform::createSync(VkFence fence,
     return new VulkanPlatform::Sync(fence, fenceStatus);
 }
 
-bool VulkanPlatform::convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept {
-    return false;
-}
-
 void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
     delete sync;
 }
