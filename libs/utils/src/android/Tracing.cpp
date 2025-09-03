@@ -17,6 +17,8 @@
 #include <utils/compiler.h>
 #include <private/utils/Tracing.h>
 
+#if FILAMENT_TRACING_ENABLED == true && defined(FILAMENT_TRACING_USES_PERFETTO)
+
 #include <perfetto/perfetto.h>
 
 PERFETTO_TRACK_EVENT_STATIC_STORAGE_IN_NAMESPACE(tracing);
@@ -37,3 +39,4 @@ UTILS_UNUSED SystraceStaticInitialization sTracingStaticInitialization{};
 
 }
 
+#endif
