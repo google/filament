@@ -44,7 +44,16 @@ public:
 
     virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const override;
 
-    bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept override;
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept;
 
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const override;

@@ -245,17 +245,6 @@ public:
             std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
 
     /**
-     * Converts a sync to an external file descriptor, if possible. Accepts an
-     * opaque handle to a sync, as well as a pointer to where the fd should be
-     * stored.
-     * @param sync The sync to be converted to a file descriptor.
-     * @param fd   A pointer to where the file descriptor should be stored.
-     * @return `true` on success, `false` on failure. The default implementation
-     *         returns `false`.
-     */
-    virtual bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept;
-
-    /**
      * Destroys a sync. If called with a sync not created by this platform
      * object, this will lead to undefined behavior.
      *
