@@ -1837,6 +1837,7 @@ void OpenGLDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
         scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
     }
 
+    s->conversionCallbacks.clear();
     mHandleAllocator.associateTagToHandle(sh.getId(), std::move(tag));
 }
 
