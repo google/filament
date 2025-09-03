@@ -76,7 +76,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f worldFromViewMatrix;    // clip    view -> world    : model matrix
     math::mat4f clipFromViewMatrix;     // clip <- view    world    : projection matrix
     math::mat4f viewFromClipMatrix;     // clip -> view    world    : inverse projection matrix
-    math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- view <- world
+    math::mat4f eyeFromViewMatrix[CONFIG_MAX_STEREOSCOPIC_EYES];   // clip    eye  <- view    world
+    math::mat4f clipFromWorldMatrix[CONFIG_MAX_STEREOSCOPIC_EYES]; // clip <- eye  <- view <- world
     math::mat4f worldFromClipMatrix;    // clip -> view -> world
     math::mat4f userWorldFromWorldMatrix;   // userWorld <- world
     math::float4 clipTransform;             // [sx, sy, tx, ty] only used by VERTEX_DOMAIN_DEVICE
@@ -212,8 +213,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 };
 
 // 2 KiB == 128 float4s
-static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
-        "PerViewUib should be exactly 2KiB");
+static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 144,
+        "PerViewUib should be 16 x 144 bytes");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -
