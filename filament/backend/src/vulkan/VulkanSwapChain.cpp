@@ -93,7 +93,7 @@ void VulkanSwapChain::update() {
     mLayerCount = bundle.layerCount;
 }
 
-void VulkanSwapChain::present() {
+void VulkanSwapChain::present(DriverBase& driver) {
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
         VulkanCommandBuffer& commands = mCommands->get();
         VkImageSubresourceRange const subresources{
@@ -120,6 +120,14 @@ void VulkanSwapChain::present() {
     // We presented the last acquired buffer.
     mAcquired = false;
     mIsFirstRenderPass = true;
+
+    if (frameScheduled.callback) {
+        driver.scheduleCallback(frameScheduled.handler,
+                [callback = std::move(frameScheduled.callback)]() {
+                    PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
+                    callback(noop);
+                });
+    }
 }
 
 void VulkanSwapChain::acquire(bool& resized) {

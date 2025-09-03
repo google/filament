@@ -416,6 +416,8 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
 
 void VulkanDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
         FrameScheduledCallback&& callback, uint64_t flags) {
+    auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
+    swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
 void VulkanDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
@@ -1607,7 +1609,7 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
 
     // Present the backbuffer after the most recent command buffer submission has finished.
-    swapChain->present();
+    swapChain->present(*this);
 }
 
 void VulkanDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
