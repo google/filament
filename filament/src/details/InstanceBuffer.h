@@ -49,6 +49,8 @@ public:
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
+    math::mat4f const& getLocalTransform(size_t index) const noexcept;
+
     void prepare(
             backend::BufferObjectHandle ubh,
             PerRenderableData* buffer, uint32_t offset, uint32_t count,
