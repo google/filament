@@ -418,7 +418,11 @@ bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noex
     *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.getSync());
     // In the case where there was no native FD, -1 is returned. Return false
     // to indicate there was an error in this case.
-    return *fd != -1;
+    if (*fd != EGL_NO_NATIVE_FENCE_FD_ANDROID) {
+        LOG(ERROR) << "Failed to convert sync to fd: " << eglGetError();
+        return false;
+    }
+    return true;
 }
 
 void PlatformEGLAndroid::destroySync(Platform::Sync* sync) noexcept {

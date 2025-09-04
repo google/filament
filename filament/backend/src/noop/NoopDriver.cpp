@@ -21,9 +21,6 @@
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
-#include <backend/Handle.h>
-#include <backend/Platform.h>
-
 #include <stdint.h>
 
 namespace filament::backend {
