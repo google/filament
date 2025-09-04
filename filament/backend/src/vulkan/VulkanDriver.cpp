@@ -1002,6 +1002,7 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
+    FVK_SYSTRACE_SCOPE();
     auto handle = mResourceManager.allocHandle<VulkanStream>();
     auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
     stream.inc();
@@ -1009,6 +1010,7 @@ Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired() {
+    FVK_SYSTRACE_SCOPE();
     auto handle = mResourceManager.allocHandle<VulkanStream>();
     auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
     stream.inc();
@@ -1024,6 +1026,7 @@ void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
+    FVK_SYSTRACE_SCOPE();
     auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
     stream->width = width;
     stream->height = height;
@@ -1034,6 +1037,7 @@ int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
 }
 
 void VulkanDriver::updateStreams(CommandStream* driver) {
+    FVK_SYSTRACE_SCOPE();
     if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
         for (auto& stream: mStreamsWithPendingAcquiredImage) {
             if (stream->previousNeedsRelease()) {
@@ -1416,6 +1420,7 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+    FVK_SYSTRACE_SCOPE();
     auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
     assert_invariant(t);
     auto s = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);

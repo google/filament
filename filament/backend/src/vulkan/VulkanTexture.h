@@ -61,6 +61,7 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
 private:
     AcquiredImage mAcquired;
     AcquiredImage mPrevious;
+    // #TODO b/442937292
     std::map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
 };
 

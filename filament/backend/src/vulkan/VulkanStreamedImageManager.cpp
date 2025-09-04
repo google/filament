@@ -34,7 +34,7 @@ namespace filament::backend {
 
 VulkanStreamedImageManager::~VulkanStreamedImageManager() = default;
 
-void VulkanStreamedImageManager::terminate() {}
+void VulkanStreamedImageManager::terminate() { mStreamedTexturesBindings.clear(); }
 
 void VulkanStreamedImageManager::bindStreamedTexture(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
@@ -64,6 +64,10 @@ void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<Vu
                 // For some reason, some of the frames coming to us, are on streams where the
                 // descriptor set isn't external...
                 if (data.set->getExternalSamplerVkSet()) {
+                    // Eventually the updateSampler and updateSamplerForExternalSamplerSet 
+                    // will call to vkUpdateDescriptorSets with a VkWriteDescriptorSet 
+                    // type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER the 
+                    // VkDescriptorImageInfo will contain the view of the new image frame.
                     mDescriptorSetCache->updateSamplerForExternalSamplerSet(data.set, data.binding,
                             image);
                 } else {
