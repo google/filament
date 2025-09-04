@@ -76,6 +76,9 @@ mv "${EXTRACTED_DIR}" draco_new
 
 rsync -a --delete --exclude=tnt/ --exclude=testdata/ --exclude=unity/ --exclude=maya/ draco_new/ draco/
 
+echo "Applying patch..."
+patch -p2 < draco/tnt/ply_property_reader.patch
+
 echo "Cleaning up..."
 rm -rf "${ZIP_FILE_NAME}" draco_new "${TEMP_DIR}"
 
