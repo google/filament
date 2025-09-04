@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.19)
 project(filament-android)
 
+set(CMAKE_CXX_STANDARD 20)
+
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 option(FILAMENT_ENABLE_FGVIEWER "Enables Frame Graph Viewer" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)

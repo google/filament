@@ -22,30 +22,30 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
+#include "private/filament/EngineEnums.h"
+#include "private/filament/UibStructs.h"
+
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
 #include <backend/Handle.h>
 
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/bitset.h>
 #include <utils/Slice.h>
 
-#include <math/mat4.h>
-#include <math/vec2.h>
-#include <math/vec4.h>
+#include <cstdint>
+#include <cstddef>
+#include <limits>
+#include <utility>
 
 namespace filament {
-
-// The number of froxel buffer entries is determined by max UBO size (see
-// getFroxelBufferByteCount()). We also introduce the limit below because increasing the number of
-// froxels adds more pressure on the "record buffer" which stores the light indices per froxel. The
-// record buffer is limited to min(16K[ubo], 64K[uint16]) entries. In practice some froxels are not
-// used, so we can store more.
-constexpr size_t FROXEL_BUFFER_MAX_ENTRY_COUNT = 8192;
-
-// Froxel buffer UBO is an array of uvec4. Make sure that the buffer is properly aligned.
-static_assert(FROXEL_BUFFER_MAX_ENTRY_COUNT % 4 == 0u);
 
 class FEngine;
 class FCamera;
@@ -89,12 +89,12 @@ public:
 
     void terminate(backend::DriverApi& driverApi) noexcept;
 
-    // gpu buffer containing records. valid after construction.
+    // GPU buffer containing records. Valid after construction.
     backend::Handle<backend::HwBufferObject> getRecordBuffer() const noexcept {
         return mRecordsBuffer;
     }
 
-    // gpu buffer containing froxels. valid after construction.
+    // GPU buffer containing froxels. Valid after construction.
     backend::Handle<backend::HwBufferObject> getFroxelBuffer() const noexcept {
         return mFroxelsBuffer;
     }
@@ -110,10 +110,12 @@ public:
      * projection        camera projection matrix
      * projectionNear    near plane
      * projectionFar     far plane
+     * clipTransform     [debugging] the clipTransform that's already included in the projection
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope, Viewport const& viewport,
+    bool prepare(backend::DriverApi& driverApi, RootArenaScope& rootArenaScope,
+            Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar,
             math::float4 const& clipTransform) noexcept;
 
@@ -125,15 +127,19 @@ public:
 
     float getLightFar() const noexcept { return mZLightFar; }
 
-    // update Records and Froxels texture with lights data. this is thread-safe.
+    // Update Records and Froxels texture with lights data. This is thread-safe.
     void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
             const FScene::LightSoa& lightData) noexcept;
 
-    void updateUniforms(PerViewUib& s) {
+    void updateUniforms(PerViewUib& s) const {
         s.zParams = mParamsZ;
         s.fParams = mParamsF;
         s.froxelCountXY = math::float2{ mViewport.width, mViewport.height } / mFroxelDimension;
     }
+
+    static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
+
+    static size_t getFroxelRecordBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
 
     // send froxel data to GPU
     void commit(backend::DriverApi& driverApi);
@@ -144,30 +150,35 @@ public:
      */
 
     struct FroxelEntry {
-        inline FroxelEntry(uint16_t const offset, uint8_t const count) noexcept
+        FroxelEntry(uint16_t const offset, uint8_t const count) noexcept
             : u32((offset << 16) | count) { }
-        inline uint8_t count() const noexcept { return u32 & 0xFFu; }
-        inline uint16_t offset() const noexcept { return u32 >> 16u; }
+
+        uint8_t count() const noexcept { return u32 & 0xFFu; }
+        uint16_t offset() const noexcept { return u32 >> 16u; }
         uint32_t u32 = 0;
     };
     static_assert(sizeof(FroxelEntry) == 4u);
 
-    // we can't change this easily because the shader expects 16 indices per uint4
+    // We can't change this easily because the shader expects 16 indices per uint4
     using RecordBufferType = uint8_t;
 
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
-    // this is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
+    // This is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
     // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
     using LightGroupType = uint32_t;
-
-    static size_t getFroxelBufferByteCount(FEngine::DriverApi& driverApi) noexcept;
 
     View::FroxelConfigurationInfo getFroxelConfigurationInfo() const noexcept;
 
 private:
     size_t getFroxelBufferEntryCount() const noexcept {
+        // We guarantee that mFroxelBufferEntryCount is a multiple of 16. With this knowledge
+        // the compiler can do a much better job at vectorizing. For similar reasons, it's
+        // important to keep mFroxelBufferEntryCount an uint32_t (as opposed to a size_t).
+        assert_invariant((mFroxelBufferEntryCount & 0xF) == 0);
+        UTILS_ASSUME((mFroxelBufferEntryCount & 0xF) == 0);
+        UTILS_ASSUME(mFroxelBufferEntryCount >= 16);
         return mFroxelBufferEntryCount;
     }
 
@@ -205,7 +216,7 @@ private:
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
-            math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept;
+            math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) const noexcept;
 
     void froxelizeAssignRecordsCompress() noexcept;
 
@@ -244,21 +255,28 @@ private:
     LinearAllocatorArena mArena;                        // ~256 KiB
 
     // 4096 froxels fits in a 16KiB buffer, the minimum guaranteed in GLES 3.x and Vulkan 1.1
-    size_t mFroxelBufferEntryCount = 4096;
+    uint32_t mFroxelBufferEntryCount = 4096;
+
+    // 16384 entries is our minimum with a 16KiB buffer
+    uint32_t mFroxelRecordBufferEntryCount = 16384;
 
     // allocations in the private froxel arena
     float* mDistancesZ = nullptr;
     math::float4* mPlanesX = nullptr;
     math::float4* mPlanesY = nullptr;
-    math::float4* mBoundingSpheres = nullptr;           // 128 KiB w/ 8192 froxels
+    math::float4* mBoundingSpheres = nullptr;           // 64 KiB w/ 4096 froxels
 
     // allocations in the per frame arena
-    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights and 8192 froxels
-    utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
-    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/  256 lights
+    //        max |  real | size
+    //       8192 |  4096 | 512 KiB
+    //       8192 |  8192 | 768 KiB
+    //      65536 | 65536 | 6.0 MiB
+    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/  256 lights and 4096 froxels
+    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights and 8192 max froxels
 
     // allocations in the command stream
-    utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB
+    utils::Slice<FroxelEntry> mFroxelBufferUser;        //  16 KiB w/ 4096 froxels
+    utils::Slice<RecordBufferType> mRecordBufferUser;   //  16 KiB to 64 KiB
 
     uint16_t mFroxelCountX = 0;
     uint16_t mFroxelCountY = 0;
@@ -279,15 +297,21 @@ private:
     math::float4 mParamsZ = {};
     math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
+    float mFar = 0.0f;         // culling camera far
     float mZLightNear;
     float mZLightFar;
+    float mUserZLightNear;
+    float mUserZLightFar;
 
     // track if we need to update our internal state before froxelizing
     uint8_t mDirtyFlags = 0;
     enum {
         VIEWPORT_CHANGED = 0x01,
-        PROJECTION_CHANGED = 0x02
+        PROJECTION_CHANGED = 0x02,
+        OPTIONS_CHANGED = 0x04
     };
+
+    View::FroxelConfigurationInfo mFroxelConfigurationInfo{};
 };
 
 } // namespace filament

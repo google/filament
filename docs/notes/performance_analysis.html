@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Code coverage analysis - Filament</title>
+        <title>Performance analysis - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,99 +158,156 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="generating-backend-code-coverage"><a class="header" href="#generating-backend-code-coverage">Generating Backend Code Coverage</a></h1>
-<p>Code coverage analysis helps visualize which parts of the backend are exercised by backend tests.
-This guide outlines the process for generating an HTML coverage report for Filament's backend on
-macOS.</p>
-<h2 id="1-prerequisites-install-clang-and-llvm-tools"><a class="header" href="#1-prerequisites-install-clang-and-llvm-tools">1. Prerequisites: Install Clang and LLVM tools</a></h2>
-<p>You'll need a recent version of <strong>Clang</strong> and its corresponding <strong>LLVM tools</strong> for code coverage.
-You can install these using Homebrew or MacPorts.</p>
-<h3 id="using-homebrew"><a class="header" href="#using-homebrew">Using Homebrew</a></h3>
-<p>Install the <code>llvm</code> package:</p>
-<pre><code class="language-bash">brew install llvm
-</code></pre>
-<p>This typically installs the tools in a location like <code>/usr/local/opt/llvm/bin</code>. You may need to add
-this to your <code>PATH</code> environment variable.</p>
-<h3 id="using-macports"><a class="header" href="#using-macports">Using MacPorts</a></h3>
-<p>Install a specific version of Clang (e.g., version 18):</p>
-<pre><code class="language-bash">sudo port install clang-18
-</code></pre>
-<p>MacPorts often adds version suffixes to the tool names (e.g., <code>llvm-cov-mp-18</code>).</p>
-<h3 id="required-tools"><a class="header" href="#required-tools">Required Tools</a></h3>
-<p>Ensure you can locate the following tools from your installation:</p>
+                        <h1 id="performance-analysis"><a class="header" href="#performance-analysis">Performance Analysis</a></h1>
+<h2 id="android"><a class="header" href="#android">Android</a></h2>
+<h3 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h3>
 <ul>
-<li><code>clang</code> and <code>clang++</code> (The C/C++ compilers)</li>
-<li><code>llvm-profdata</code> (For merging coverage data)</li>
-<li><code>llvm-cov</code> (For generating reports)</li>
+<li>Download and install Android GPU Inspector (AGI). See https://developer.android.com/agi.</li>
 </ul>
-<p>The rest of this guide assumes your tools are in your <code>PATH</code>. If not, you'll need to use the full
-path to each executable.</p>
-<h2 id="2-build-filament-with-coverage-enabled"><a class="header" href="#2-build-filament-with-coverage-enabled">2. Build Filament with Coverage Enabled</a></h2>
-<p>Compile the <code>backend_test_mac</code> target with coverage instrumentation. This is done by setting the
-<code>CC</code> and <code>CXX</code> environment variables to point to your Clang compiler and using the <code>-V</code> flag in the
-build script.</p>
-<pre><code class="language-bash">CC=clang CXX=clang++ ./build.sh -V -p desktop debug backend_test_mac
-</code></pre>
-<p><em>If your Clang executables aren't in your <code>PATH</code> or have version suffixes, provide the full name or
-path (e.g., <code>CC=/opt/local/bin/clang CXX=/opt/local/bin/clang++</code>).</em></p>
-<h2 id="3-run-the-backend-tests"><a class="header" href="#3-run-the-backend-tests">3. Run the Backend Tests</a></h2>
-<p>Running the test suite will generate the raw coverage data needed for the report.</p>
+<hr />
+<h4 id="profiling"><a class="header" href="#profiling">Profiling</a></h4>
 <ol>
 <li>
-<p>Navigate to the build output directory:</p>
-<pre><code class="language-bash">cd out/cmake-debug/filament/backend
-</code></pre>
-</li>
-<li>
-<p>Run the tests for a specific backend (e.g., Metal):</p>
-<pre><code class="language-bash">./backend_test_mac --api metal
-</code></pre>
-</li>
-</ol>
-<p>This command creates a <code>default.profraw</code> file in the current directory, which contains the raw
-execution profile data.</p>
-<h2 id="4-generate-the-coverage-report"><a class="header" href="#4-generate-the-coverage-report">4. Generate the Coverage Report</a></h2>
-<p>Finally, process the raw data and generate an HTML report.</p>
+<p>Before profiling the application or analyzing the performance in a consistent way, ideally
+the <strong>GPU frequency on the target hardware should get locked</strong>. In order to do this, you need to do the following:</p>
 <ol>
-<li>
-<p><strong>Merge the raw profile data</strong> into a single file using <code>llvm-profdata</code>.</p>
-<pre><code class="language-bash">llvm-profdata merge -sparse default.profraw -o filament.profdata
+<li>Ensure your device is OEM unlocked. If your phone is carrier-locked, you may need
+to wait a period, such as 60 or 90 days after activation to be eligible for unlocking.
+Some phones don't support this at all. You will need to enable developer options
+(e.g. Settings &gt; About Phone and tap the Build number 7 times). You need to go to
+Settings &gt; System &gt; Developer options and toggle on "OEM unlocking".</li>
+<li>Next, you need to unlock the phone. You will need to install Android SDK Platform
+Tools on you computer, enable "USB debugging" in your phone's Settings &gt; System &gt; Developer options.</li>
+<li>Connect the phone to the computer via a USB cable and run from the command line:
+<pre><code class="language-shell">adb reboot bootloader
+# once the phone is in bootloader mode, run the following to begin the unlocking
+# process:
+fastboot flashing unlock
 </code></pre>
-<p><em>Remember to use the version-specific tool name if required (e.g., <code>llvm-profdata-mp-18</code>).</em></p>
+A warning will appear on your phone's screen. Use the volume buttons to navigate and
+the power button to select the "Unlock the bootloader" option. The phone will perform
+a factory data reset and reboot with an unlocked bootloader.</li>
+<li>You would need to flash an image to the phone with root permissions, such as a *-userdebug or *-eng
+build. One way to do this is with the <a href="https://flash.android.com/">Android Flash Tool</a>. Connect the
+tool to your device and find a build to flash ending in <code>-userdebug</code> or <code>-eng</code>. Once you have that
+selected run <code>Install build</code>.</li>
+<li>Shell into your device as root and configure the gpu frequency to be locked, e.g.:
+<pre><code class="language-shell">adb shell
+su
+# navigate to the system GPU directory. this varies on different phones. One phone might have
+# it at /sys/class/kgsl/kgsl-3d0 and another might be in something similar, maybe with "mali" instead
+# of "kgsl". At the time of writing this for the device at hand it was /sys/devices/platform/1f000000.mali
+cd /sys/devices/platform/1f000000.mali
+# get the current available GPU governors and frequencies.
+# note that some systems may have these at gpu_available_governors and gpu_available_frequencies, but
+# the system at the time of writing this had available_governors and available_frequences
+cat available_governors
+cat available_frequencies
+# depending on the governors, you may want to set it prioritize performance over other things like
+# battery. Some systems allow you to do this with something like (although, for the device used at the
+# time of writing this did not have an equivalent option):
+echo performance &gt; gpu_governor
+# finally, lock your frequency in, usually to something high like 897 MHz. Some systems may have you
+# pipe the value to gpu_min_freq and gpu_max_freq, but the system used at the time of writing this had:
+echo 940000 &gt; hint_min_freq
+echo 940000 &gt; hint_max_freq
+# you can typically verify the GPU is running at that frequency consistently by running something like
+# the following a few times over time, which should show the frequency you want to lock the device to:
+cat cur_freq
+</code></pre>
+</li>
+<li>You may need to re-apply the <code>hint_min_freq</code> just before starting the profiling trace and check before and after
+that the frequency remained at the value expected. Some systems may adjust the frequency on you, but you
+may want to ensure the frequency remains the same through the analysis.</li>
+<li>The GPU frequency settings should be undone after restarting the device, but after you have done your app profiling,
+you can revert the state of the device, such as the OS build image, back to the way you had it
+initially, as needed.</li>
+</ol>
 </li>
 <li>
-<p><strong>Generate the HTML report</strong> using <code>llvm-cov</code>. This command creates a report for the entire
-<code>backend_test_mac</code> executable.</p>
-<pre><code class="language-bash">llvm-cov show ./backend_test_mac \
-  -instr-profile=filament.profdata \
-  -format=html \
-  -show-line-counts-or-regions &gt; coverage.html
-</code></pre>
-<p><em>To view coverage for a <strong>specific source file</strong>, add its path at the end of the command:</em></p>
-<pre><code class="language-bash">llvm-cov show ./backend_test_mac \
-  -instr-profile=filament.profdata \
-  -format=html \
-  -show-line-counts-or-regions \
-  -- ../../../../filament/backend/src/metal/MetalDriver.mm &gt; coverage.html
+<p>Build a release build of Filament with the applicable backend(s) enabled
+<em>(+ any special flags for enabling sys strace. Nothing special is needed for Vulkan or WebGPU aside from
+building a release build with no flags)</em> <em>(debug builds for this are useless)</em></p>
+<pre><code class="language-shell"># the following command assumes you are in the root filament directory
+# and ANDROID_HOME is exported (and possibly also CC and CXX on linux as needed)
+#
+# NOTE: to build with WebGPU support you need to explicitly include the -W flag
+# (it doesn't get compiled in by default), e.g.:
+# ./build.sh -W -p android,desktop -i release
+#
+# Note that you can speed this up a bit (and reduce disk space usage) by limiting the target to just 
+# the ABI you plan on testing with the -q flag, e.g. -q arm64-v8a. If you do this, you
+# will need to update the android/gradle.properties file to specify the ABI(s) you are targeting
+# with the com.google.android.filament.abis property.
+# Thus, a build command that would target BOTH Vulkan AND WebGPU AND only target the ARM64 ABI would look something
+# like:
+# ./build.sh -W -q arm64-v8a -p android,desktop -i release
+./build.sh -p android,desktop -i release
 </code></pre>
 </li>
 <li>
-<p><strong>Open the report</strong> in your browser:</p>
-<pre><code class="language-bash">open coverage.html
+<p>Connect your Android device to your computer via a USB cord with USB debugging enabled and configure
+the system property to default to the desired backend, e.g.
+<em>(to determine how these numbers map to the backends, see the <code>enum class Backend</code>
+definition in <a href="../../../../filament/backend/include/backend/DriverEnums.h">filament/filament/backend/include/backend/DriverEnums.h</a>)</em>:</p>
+<pre><code class="language-shell"># to set the backend to Vulkan: 
+adb shell setprop debug.filament.backend 2
+# to set the backend to WebGPU:
+adb shell setprop debug.filament.backend 4
+# to view the current property:
+adb shell getprop debug.filament.backend
 </code></pre>
+</li>
+<li>
+<p>Build and run a sample, e.g. sample-gltf-viewer, on your Android device
+<em>(<a href="https://developer.android.com/studio">Android Studio</a> recommended)</em>.</p>
+</li>
+<li>
+<p>Run <a href="https://developer.android.com/agi">AGI</a> and follow instructions to profile the app/system
+with trace capture(s). See https://developer.android.com/agi/start for more details to
+get started.</p>
+<ul>
+<li>We typically only run "Capture System Profiler trace" <em>(not necessarily "Capture Frame Profiler trace")</em></li>
+<li>When configuring the trace:
+<ul>
+<li>For both the WebGPU and Vulkan backends configure the profiler for the Vulkan API
+<em>(since WebGPU should be using Vulkan under the hood as well)</em></li>
+<li>Running for ~1 seconds should suffice</li>
+<li>Hit the "Configure" button in Trace objects, select "Switch to advanced mode" and add:
+<pre><code>data_sources {
+  config {
+    name: "track_event"
+    track_event_config {
+      disabled_categories: "*"
+      enabled_categories: "filament/filament"
+      enabled_categories: "filament/jobsystem"
+      enabled_categories: "filament/gltfio"
+    }
+  }
+}
+</code></pre>
+</li>
+</ul>
+</li>
+<li>One you open the trace, zoom into a series of frames to get a sense of generally how long they typically take
+<em>(use <code>W</code>, <code>S</code>, <code>A</code> and <code>D</code> keys and mouse wheel for navigation)</em> and find a representative one.
+We are most interested in the performance of the
+<code>FEngine::loop</code> thread, how long it takes, overlap in activities/processes/commands, reduction in queue submissions,
+etc. Similarly, we can view GPU timeline as it relates to that. We want to see overlapping
+shader invocations and non-interrupted fragment shader runs.</li>
+</ul>
 </li>
 </ol>
-<p>In the report, code paths that were not executed during the test run will be highlighted in red.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/instruments.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/coverage.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/performance_analysis.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../notes/framegraph.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -260,11 +317,11 @@ execution profile data.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/instruments.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/coverage.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/performance_analysis.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../notes/framegraph.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

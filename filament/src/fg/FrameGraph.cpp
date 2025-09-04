@@ -547,21 +547,16 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
             // resource type so it works
             auto descriptor = static_cast<Resource<FrameGraphTexture> const*>(
                 getResource(resourceHandle))->descriptor;
-            emplace_resource_property("width",
-                utils::CString(std::to_string(descriptor.width).data()));
-            emplace_resource_property("height",
-                utils::CString(std::to_string(descriptor.height).data()));
-            emplace_resource_property("depth",
-                utils::CString(std::to_string(descriptor.depth).data()));
-            emplace_resource_property("format",
-                utils::to_string(descriptor.format));
+            emplace_resource_property("width", utils::to_string(descriptor.width));
+            emplace_resource_property("height", utils::to_string(descriptor.height));
+            emplace_resource_property("depth", utils::to_string(descriptor.depth));
+            emplace_resource_property("format", utils::to_string(descriptor.format));
 
         };
 
         if (resourceNode->getParentNode() != nullptr) {
             emplace_resource_property("is_subresource_of",
-                utils::CString(std::to_string(
-                        resourceNode->getParentHandle().index).data()));
+                    utils::to_string(resourceNode->getParentHandle().index));
         }
         emplace_resource_descriptor(resourceHandle);
         resources.emplace(resourceHandle.index, fgviewer::FrameGraphInfo::Resource(

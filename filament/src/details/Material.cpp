@@ -86,9 +86,9 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
-        std::string languageNames;
+        CString languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
-            languageNames.append(shaderLanguageToString(*it));
+            languageNames.append(CString{shaderLanguageToString(*it)});
             if (std::next(it) != languages.end()) {
                 languageNames.append(", ");
             }
@@ -686,8 +686,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
         }
     }
 
-    auto const program = driverApi.createProgram(std::move(p));
-    driverApi.setDebugTag(program.getId(), mName);
+    auto const program = driverApi.createProgram(std::move(p), mName);
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 
@@ -697,8 +696,6 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
     if (isShared) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
-            // set the tag to the default material name
-            driverApi.setDebugTag(program.getId(), mName);
             pDefaultMaterial->mCachedPrograms[variant.key] = program;
         }
     }
@@ -1054,6 +1051,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxFroxelBufferHeight =
             int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
+    int const froxelRecordBufferHeight =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
@@ -1070,6 +1070,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
             int(maxFroxelBufferHeight) });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
+            int(froxelRecordBufferHeight) });
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
             engine.debug.shadowmap.debug_directional_shadowmap });

@@ -244,16 +244,13 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     }
 
     if (stage == ShaderStage::VERTEX) {
-        CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
-        CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
+        generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
+        generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
     }
     if (stage == ShaderStage::FRAGMENT) {
-        CodeGenerator::generateDefine(out, "FILAMENT_LINEAR_FOG",
-                material.linearFog);
-        CodeGenerator:generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION",
-                material.shadowFarAttenuation);
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
-                material.userMaterialHasCustomDepth);
+        generateDefine(out, "FILAMENT_LINEAR_FOG", material.linearFog);
+        generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION", material.shadowFarAttenuation);
+        generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH", material.userMaterialHasCustomDepth);
     }
 
     if (mTargetLanguage == TargetLanguage::SPIRV ||
@@ -279,7 +276,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         }
     };
 
-    CodeGenerator::generateDefine(out, getShadingDefine(material.shading), true);
+    generateDefine(out, getShadingDefine(material.shading), true);
 
     generateQualityDefine(out, material.quality);
 
@@ -311,6 +308,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
         out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 16384;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -318,6 +316,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // the default of 1024 (16KiB) is needed for 32% of Android devices
         generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+
+        generateSpecializationConstant(out, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 16384);
     }
 
     // directional shadowmap visualization
@@ -368,20 +369,20 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // This is the minimum required value according to the OpenGL ES Shading Language Version
         // 1.00 document. glslang forbids defining symbols beginning with gl_ as const, hence the
         // #define.
-        CodeGenerator::generateDefine(out, "gl_MaxVaryingVectors", "8");
+        generateDefine(out, "gl_MaxVaryingVectors", "8");
 
-        CodeGenerator::generateDefine(out, "texture2D", "texture");
-        CodeGenerator::generateDefine(out, "texture2DProj", "textureProj");
-        CodeGenerator::generateDefine(out, "texture3D", "texture");
-        CodeGenerator::generateDefine(out, "texture3DProj", "textureProj");
-        CodeGenerator::generateDefine(out, "textureCube", "texture");
+        generateDefine(out, "texture2D", "texture");
+        generateDefine(out, "texture2DProj", "textureProj");
+        generateDefine(out, "texture3D", "texture");
+        generateDefine(out, "texture3DProj", "textureProj");
+        generateDefine(out, "textureCube", "texture");
 
         if (stage == ShaderStage::VERTEX) {
-            CodeGenerator::generateDefine(out, "texture2DLod", "textureLod");
-            CodeGenerator::generateDefine(out, "texture2DProjLod", "textureProjLod");
-            CodeGenerator::generateDefine(out, "texture3DLod", "textureLod");
-            CodeGenerator::generateDefine(out, "texture3DProjLod", "textureProjLod");
-            CodeGenerator::generateDefine(out, "textureCubeLod", "textureLod");
+            generateDefine(out, "texture2DLod", "textureLod");
+            generateDefine(out, "texture2DProjLod", "textureProjLod");
+            generateDefine(out, "texture3DLod", "textureLod");
+            generateDefine(out, "texture3DProjLod", "textureProjLod");
+            generateDefine(out, "textureCubeLod", "textureLod");
         }
     }
 

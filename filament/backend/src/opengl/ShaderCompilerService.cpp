@@ -46,7 +46,6 @@
 #include <cctype>
 #include <mutex>
 #include <memory>
-#include <string>
 #include <string_view>
 #include <thread>
 #include <utility>
@@ -67,9 +66,9 @@ constexpr uint32_t MAX_NUM_SYNCHRONOUS_PROGRAMS_PER_FRAME = 1;
 
 // ------------------------------------------------------------------------------------------------
 
-static std::string to_string(bool const b) { return b ? "true" : "false"; }
-static std::string to_string(int const i) { return std::to_string(i); }
-static std::string to_string(float const f) { return "float(" + std::to_string(f) + ")"; }
+static CString to_string(bool const b) { return CString{ b ? "true" : "false" }; }
+static CString to_string(int const i) { return utils::to_string(i); }
+static CString to_string(float const f) { return "float(" + utils::to_string(f) + ")"; }
 
 static void logCompilationError(ShaderStage shaderType, const char* name, GLuint shaderId,
         Program::ShaderBlob const& sourceCode) noexcept;
@@ -696,14 +695,14 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
         bool multiview, program_token_t const& token) noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    auto const appendSpecConstantString = +[](std::string& s, Program::SpecializationConstant const& sc) {
-        s += "#define SPIRV_CROSS_CONSTANT_ID_" + std::to_string(sc.id) + ' ';
+    auto const appendSpecConstantString = +[](CString& s, Program::SpecializationConstant const& sc) {
+        s += "#define SPIRV_CROSS_CONSTANT_ID_" + utils::to_string(sc.id) + ' ';
         s += std::visit([](auto&& arg) { return to_string(arg); }, sc.value);
         s += '\n';
         return s;
     };
 
-    std::string specializationConstantString;
+    CString specializationConstantString;
     int32_t numViews = 2;
     for (auto const& sc: specializationConstants) {
         appendSpecConstantString(specializationConstantString, sc);
@@ -766,8 +765,10 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
             }
 
             std::array<std::string_view, 5> sources = {
-                version, prolog, specializationConstantString, packingFunctions,
-                { body.data(), body.size() - 1 }// null-terminated
+                version, prolog,
+                { specializationConstantString.data(), specializationConstantString.size() },
+                packingFunctions,
+                { body.data(), body.size() - 1 } // null-terminated
             };
 
             // Some of the sources may be zero-length. Remove them as to avoid passing lengths of
@@ -966,16 +967,18 @@ UTILS_NOINLINE
         sourceCode.size() };
     size_t lc = 1;
     size_t start = 0;
-    std::string line;
+    CString line;
     while (true) {
         size_t const end = shader.find('\n', start);
-        if (end == std::string::npos) {
-            line = shader.substr(start);
+        if (end == std::string_view::npos) {
+            auto sv = shader.substr(start);
+            line = { sv.data(), sv.size() };
         } else {
-            line = shader.substr(start, end - start);
+            auto sv = shader.substr(start, end - start);
+            line = { sv.data(), sv.size() };
         }
         LOG(ERROR) << lc++ << ":   " << line.c_str();
-        if (end == std::string::npos) {
+        if (end == std::string_view::npos) {
             break;
         }
         start = end + 1;

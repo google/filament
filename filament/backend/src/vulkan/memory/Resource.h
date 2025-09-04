@@ -59,7 +59,7 @@ enum class ResourceType : uint8_t {
 template<typename D>
 ResourceType getTypeEnum() noexcept;
 
-std::string getTypeStr(ResourceType type);
+std::string_view getTypeStr(ResourceType type);
 
 inline bool isThreadSafeType(ResourceType type) {
     return type == ResourceType::FENCE || type == ResourceType::TIMER_QUERY;

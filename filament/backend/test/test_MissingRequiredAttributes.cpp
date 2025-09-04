@@ -75,7 +75,7 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
                         ShaderUniformType::None),
         });
 
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget(0));
+        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 

@@ -841,7 +841,7 @@ class MaterialSidePanel extends LitElement {
                     const shaderModel = (isMatinfo ? shaderModelSymbol[variant.shader.shaderModel] : '');
                     return html`
                         <div class="${divClass}" @click="${onClickVariant}">
-                            <div>${stage}&nbsp ${vstring} ${shaderModel} </div>
+                            <div>${stage}&nbsp; ${vstring} ${shaderModel} </div>
                         </div>
                         ${languagesDiv ?? nothing}
                     `
