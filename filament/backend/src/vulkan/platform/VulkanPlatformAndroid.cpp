@@ -408,7 +408,11 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) c
         .handleType = getFenceExportFlags(),
     };
     VkResult res = vkGetFenceFdKHR(getDevice(), &getFdInfo, fd);
-    return res == VK_SUCCESS;
+    if (res != VK_SUCCESS) {
+        LOG(ERROR) << "Failed to convert sync to fd: " << res;
+        return false;
+    }
+    return true;
 }
 
 VkExternalFenceHandleTypeFlagBits VulkanPlatformAndroid::getFenceExportFlags() const noexcept {
