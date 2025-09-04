@@ -2547,12 +2547,19 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
 // Swap chains
 // ------------------------------------------------------------------------------------------------
 
-
 void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     mPlatform.commit(sc->swapChain);
+
+    auto& fs = sc->frameScheduled;
+    if (fs.callback) {
+        scheduleCallback(fs.handler, [callback = std::move(fs.callback)]() {
+            PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
+            callback(noop);
+        });
+    }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
@@ -3746,9 +3753,12 @@ void OpenGLDriver::beginFrame(
     }
 }
 
-void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain>, CallbackHandler*,
-        FrameScheduledCallback&& /*callback*/, uint64_t /*flags*/) {
+void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t /*flags*/) {
     DEBUG_MARKER()
+    GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
+    sc->frameScheduled.handler = handler;
+    sc->frameScheduled.callback = std::move(callback);
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,

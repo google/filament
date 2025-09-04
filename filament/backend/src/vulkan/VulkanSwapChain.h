@@ -47,7 +47,7 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
 
     ~VulkanSwapChain();
 
-    void present();
+    void present(DriverBase& driver);
 
     // Acquire a new image from the swapchain. If the image is not available it would wait until it
     // is.
@@ -79,6 +79,13 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
     inline bool isProtected() noexcept {
         return mPlatform->isProtected(swapChain);
     }
+
+    inline void setFrameScheduledCallback(CallbackHandler* handler,
+            FrameScheduledCallback&& callback) noexcept {
+        frameScheduled.handler = handler;
+        frameScheduled.callback = std::move(callback);
+    }
+
 private:
 	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 
@@ -93,6 +100,12 @@ private:
     bool const mHeadless;
     bool const mFlushAndWaitOnResize;
     bool const mTransitionSwapChainImageLayoutForPresent;
+
+    // These fields store a callback to notify the client that Filament is commiting a frame.
+    struct {
+        CallbackHandler* handler = nullptr;
+        FrameScheduledCallback callback;
+    } frameScheduled;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.

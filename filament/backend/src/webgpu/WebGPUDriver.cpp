@@ -154,7 +154,8 @@ void WebGPUDriver::beginFrame(int64_t monotonic_clock_ns,
 
 void WebGPUDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch,
         CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
-
+    auto swapChain = handleCast<WebGPUSwapChain>(sch);
+    swapChain->setFrameScheduledCallback(handler, std::move(callback));
 }
 
 void WebGPUDriver::setFrameCompletedCallback(Handle<HwSwapChain> sch,
@@ -1372,7 +1373,7 @@ void WebGPUDriver::commit(Handle<HwSwapChain> swapChainHandle) {
     if (UTILS_VERY_UNLIKELY(!mCommandEncoder)) {
         // nothing to submit
         if (UTILS_LIKELY(mSwapChain)) {
-            mSwapChain->present();
+            mSwapChain->present(*this);
         }
         return;
     }
@@ -1406,7 +1407,7 @@ void WebGPUDriver::commit(Handle<HwSwapChain> swapChainHandle) {
     }
     mTextureView = nullptr;
     assert_invariant(mSwapChain);
-    mSwapChain->present();
+    mSwapChain->present(*this);
 }
 
 void WebGPUDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
