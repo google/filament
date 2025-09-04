@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.19)
 project(filament-android)
 
-set(CMAKE_CXX_STANDARD 20)
-
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 option(FILAMENT_ENABLE_FGVIEWER "Enables Frame Graph Viewer" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 option(FILAMENT_SUPPORTS_WEBGPU "Enables WebGPU on Android" OFF)
+
+set(CMAKE_CXX_STANDARD 20)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
@@ -132,6 +132,14 @@ add_library(filament-jni SHARED
     ../common/NioUtils.cpp
 )
 
+target_include_directories(filament-jni PRIVATE
+        ..
+        ${FILAMENT_DIR}/include
+        ../../filament/backend/include
+        ../../third_party/robin-map
+        ../../third_party/perfetto
+        ../../libs/utils/include)
+
 # Ordering is significant in the following list. The PRIVATE qualifier prevents transitive deps.
 target_link_libraries(filament-jni
     PRIVATE filament-generatePrefilterMipmap
@@ -146,29 +154,21 @@ target_link_libraries(filament-jni
     PRIVATE android
     PRIVATE jnigraphics
     PRIVATE utils
-    PRIVATE perfetto
-    PRIVATE abseil
+    PRIVATE perfetto    # needed only when FILAMENT_ENABLE_PERFETTO is defined
+    PRIVATE abseil      # needed only when FILAMENT_USE_ABSEIL_LOGGING is defined
     PRIVATE zstd
 
     # libgeometry is PUBLIC because gltfio uses it.
     PUBLIC geometry
 
-    $<$<STREQUAL:${FILAMENT_ENABLE_FGVIEWER},ON>:fgviewer>
-    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
-    $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:webgpu_dawn>
-    $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_FGVIEWER},ON>:fgviewer>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:matdbg>
+    PRIVATE $<$<STREQUAL:${FILAMENT_ENABLE_MATDBG},ON>:filamat>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:bluevk>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:vkshaders>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_VULKAN},ON>:smol-v>
+    PRIVATE $<$<STREQUAL:${FILAMENT_SUPPORTS_WEBGPU},ON>:webgpu_dawn>
 )
-
-target_include_directories(filament-jni PRIVATE
-        ..
-        ${FILAMENT_DIR}/include
-        ../../filament/backend/include
-        ../../third_party/robin-map
-        ../../third_party/perfetto
-        ../../libs/utils/include)
 
 # Force a relink when the version script is changed:
 set_target_properties(filament-jni PROPERTIES LINK_DEPENDS ${VERSION_SCRIPT})
