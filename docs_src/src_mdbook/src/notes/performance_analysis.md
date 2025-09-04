@@ -6,12 +6,64 @@
 
 - Download and install Android GPU Inspector (AGI). See https://developer.android.com/agi.
 
-### Android with the Vulkan Backend
-
 ---
 
 #### Profiling
 
+1. Before profiling the application or analyzing the performance in a consistent way, ideally
+   the **GPU frequency on the target hardware should get locked**. In order to do this, you need to do the following:
+   1. Ensure your device is OEM unlocked. If your phone is carrier-locked, you may need
+      to wait a period, such as 60 or 90 days after activation to be eligible for unlocking.
+      Some phones don't support this at all. You will need to enable developer options
+      (e.g. Settings > About Phone and tap the Build number 7 times). You need to go to
+      Settings > System > Developer options and toggle on "OEM unlocking".
+   1. Next, you need to unlock the phone. You will need to install Android SDK Platform
+      Tools on you computer, enable "USB debugging" in your phone's Settings > System > Developer options.
+   1. Connect the phone to the computer via a USB cable and run from the command line:
+      ```shell
+      adb reboot bootloader
+      # once the phone is in bootloader mode, run the following to begin the unlocking
+      # process:
+      fastboot flashing unlock
+      ```
+      A warning will appear on your phone's screen. Use the volume buttons to navigate and
+      the power button to select the "Unlock the bootloader" option. The phone will perform
+      a factory data reset and reboot with an unlocked bootloader.
+   1. You would need to flash an image to the phone with root permissions, such as a *-userdebug or *-eng
+      build. One way to do this is with the [Android Flash Tool](https://flash.android.com/). Connect the
+      tool to your device and find a build to flash ending in `-userdebug` or `-eng`. Once you have that
+      selected run `Install build`.
+   1. Shell into your device as root and configure the gpu frequency to be locked, e.g.:
+      ```shell
+      adb shell
+      su
+      # navigate to the system GPU directory. this varies on different phones. One phone might have
+      # it at /sys/class/kgsl/kgsl-3d0 and another might be in something similar, maybe with "mali" instead
+      # of "kgsl". At the time of writing this for the device at hand it was /sys/devices/platform/1f000000.mali
+      cd /sys/devices/platform/1f000000.mali
+      # get the current available GPU governors and frequencies.
+      # note that some systems may have these at gpu_available_governors and gpu_available_frequencies, but
+      # the system at the time of writing this had available_governors and available_frequences
+      cat available_governors
+      cat available_frequencies
+      # depending on the governors, you may want to set it prioritize performance over other things like
+      # battery. Some systems allow you to do this with something like (although, for the device used at the
+      # time of writing this did not have an equivalent option):
+      echo performance > gpu_governor
+      # finally, lock your frequency in, usually to something high like 897 MHz. Some systems may have you
+      # pipe the value to gpu_min_freq and gpu_max_freq, but the system used at the time of writing this had:
+      echo 940000 > hint_min_freq
+      echo 940000 > hint_max_freq
+      # you can typically verify the GPU is running at that frequency consistently by running something like
+      # the following a few times over time, which should show the frequency you want to lock the device to:
+      cat cur_freq
+      ```
+   1. You may need to re-apply the `hint_min_freq` just before starting the profiling trace and check before and after
+      that the frequency remained at the value expected. Some systems may adjust the frequency on you, but you
+      may want to ensure the frequency remains the same through the analysis.
+   1. The GPU frequency settings should be undone after restarting the device, but after you have done your app profiling,
+      you can revert the state of the device, such as the OS build image, back to the way you had it
+      initially, as needed.
 1. Build a release build of Filament with the applicable backend(s) enabled
    _(+ any special flags for enabling sys strace. Nothing special is needed for Vulkan or WebGPU aside from
    building a release build with no flags)_ _(debug builds for this are useless)_

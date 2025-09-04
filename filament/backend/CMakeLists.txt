@@ -494,9 +494,6 @@ else()
             -Wover-aligned -Wreorder-init-list
             -Werror
     )
-    if (CMAKE_CXX_STANDARD EQUAL 20)
-        list(APPEND FILAMENT_WARNINGS -Wno-deprecated-this-capture)
-    endif()
 endif()
 
 if (APPLE)
@@ -666,6 +663,9 @@ if (LINUX)
     add_executable(backend_test_linux test/linux_runner.cpp ${BACKEND_TEST_SRC})
     target_link_libraries(backend_test_linux PRIVATE ${BACKEND_TEST_LIBS})
     set_target_properties(backend_test_linux PROPERTIES FOLDER Tests)
+    if (FILAMENT_SUPPORTS_WEBGPU)
+        target_link_libraries(backend_test_linux PRIVATE webgpu_dawn dawncpp_headers)
+    endif()
 endif()
 
 # ==================================================================================================

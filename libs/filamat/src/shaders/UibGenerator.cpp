@@ -99,6 +99,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "eyeFromViewMatrix",      CONFIG_MAX_STEREOSCOPIC_EYES,
+                                           Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
                                            Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -277,7 +279,8 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
 BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
-            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH }})
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+                    {}, {}, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT"}})
             .build();
     return uib;
 }

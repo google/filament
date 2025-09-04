@@ -115,6 +115,7 @@ int main(int argc, char *argv[]) {
     // if we are single-threaded. But we can't create the Filament objects
     // until after we have created the engine.
     auto engine = Engine::create(kBackend);
+    kBackend = engine->getBackend();
 
     for (auto &w : windows) {
         setup_window(w, engine);

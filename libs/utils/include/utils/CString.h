@@ -20,8 +20,10 @@
 // NOTE: this header should not include STL headers
 
 #include <utils/compiler.h>
+#include <utils/StaticString.h>
 
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include <assert.h>
@@ -51,6 +53,10 @@ struct hashCStrings {
 template <size_t N>
 using StringLiteral = const char[N];
 
+namespace details {
+    template<typename T>
+    constexpr bool is_char_pointer_v = std::is_pointer_v<T> && std::is_same_v<char, std::remove_cv_t<std::remove_pointer_t<T>>>;
+} // namespace details
 
 // ------------------------------------------------------------------------------------------------
 
@@ -85,6 +91,9 @@ public:
     CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
             : CString(other, N - 1) {
     }
+
+    CString(StaticString const& other) noexcept
+        : CString(other.c_str(), other.length()) {}
 
     CString(const CString& rhs);
 
@@ -127,8 +136,7 @@ public:
 
     // replace
     template<size_t N>
-    CString& replace(size_type const pos,
-            size_type const len, const StringLiteral<N>& str) & noexcept {
+    CString& replace(size_type const pos, size_type const len, const StringLiteral<N>& str) & noexcept {
         return replace(pos, len, str, N - 1);
     }
 
@@ -136,36 +144,83 @@ public:
         return replace(pos, len, str.c_str_safe(), str.size());
     }
 
+    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString& replace(size_type pos, size_type len, T str) & noexcept {
+        if (str) {
+            return replace(pos, len, str, strlen(str));
+        }
+        return replace(pos, len, "", 0);
+    }
+
     template<size_t N>
-    CString&& replace(size_type const pos,
-            size_type const len, const StringLiteral<N>& str) && noexcept {
-        return std::move(replace(pos, len, str));
+    CString&& replace(size_type pos, size_type len, const StringLiteral<N>& str) && noexcept {
+        this->replace(pos, len, str);
+        return std::move(*this);
     }
 
     CString&& replace(size_type const pos, size_type const len, const CString& str) && noexcept {
-        return std::move(replace(pos, len, str));
+        this->replace(pos, len, str);
+        return std::move(*this);
     }
 
+    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString&& replace(size_type pos, size_type len, T str) && noexcept {
+        this->replace(pos, len, str);
+        return std::move(*this);
+    }
+
+
     // insert
+    CString& insert(size_type pos, char c) & noexcept {
+        const char s[1] = { c };
+        return replace(pos, 0, s, 1);
+    }
+
     template<size_t N>
     CString& insert(size_type const pos, const StringLiteral<N>& str) & noexcept {
-        return replace(pos, 0, str);
+        return replace(pos, 0, str, N - 1);
     }
 
     CString& insert(size_type const pos, const CString& str) & noexcept {
-        return replace(pos, 0, str);
+        return replace(pos, 0, str.c_str_safe(), str.size());
+    }
+
+    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString& insert(size_type pos, T str) & noexcept {
+        if (str) {
+            return replace(pos, 0, str, strlen(str));
+        }
+        return *this;
+    }
+
+    CString&& insert(size_type pos, char c) && noexcept {
+        this->insert(pos, c);
+        return std::move(*this);
     }
 
     template<size_t N>
-    CString&& insert(size_type const pos, const StringLiteral<N>& str) && noexcept {
-        return std::move(*this).replace(pos, 0, str);
+    CString&& insert(size_type pos, const StringLiteral<N>& str) && noexcept {
+        this->insert(pos, str);
+        return std::move(*this);
     }
 
     CString&& insert(size_type const pos, const CString& str) && noexcept {
-        return std::move(*this).replace(pos, 0, str);
+        this->insert(pos, str);
+        return std::move(*this);
     }
 
+    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString&& insert(size_type pos, T str) && noexcept {
+        this->insert(pos, str);
+        return std::move(*this);
+    }
+
+
     // append
+    CString& append(char c) & noexcept {
+        return insert(length(), c);
+    }
+
     template<size_t N>
     CString& append(const StringLiteral<N>& str) & noexcept {
         return insert(length(), str);
@@ -175,15 +230,49 @@ public:
         return insert(length(), str);
     }
 
+    template<typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString& append(T str) & noexcept {
+        return insert(length(), str);
+    }
+
+    CString&& append(char c) && noexcept {
+        this->append(c);
+        return std::move(*this);
+    }
+
     template<size_t N>
     CString&& append(const StringLiteral<N>& str) && noexcept {
-        return std::move(*this).insert(length(), str);
+        this->append(str);
+        return std::move(*this);
     }
 
     CString&& append(const CString& str) && noexcept {
-        return std::move(*this).insert(length(), str);
+        this->append(str);
+        return std::move(*this);
     }
 
+    template<typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString&& append(T str) && noexcept {
+        this->append(str);
+        return std::move(*this);
+    }
+
+    // operator+=
+    CString& operator+=(char c) & noexcept {
+        return append(c);
+    }
+
+    CString& operator+=(const CString& str) & noexcept {
+        return append(str);
+    }
+    template<size_t N>
+    CString& operator+=(const StringLiteral<N>& str) & noexcept {
+        return append(str);
+    }
+    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    CString& operator+=(T str) & noexcept {
+        return append(str);
+    }
 
     const_reference operator[](size_type const pos) const noexcept {
         assert(pos < size());
@@ -281,6 +370,32 @@ private:
         return !(lhs > rhs);
     }
 };
+
+// operator+
+inline CString operator+(CString lhs, const CString& rhs) {
+    lhs += rhs;
+    return lhs;
+}
+
+inline CString operator+(CString lhs, const char* rhs) {
+    lhs += rhs;
+    return lhs;
+}
+
+inline CString operator+(const char* lhs, CString rhs) {
+    rhs.insert(0, lhs);
+    return rhs;
+}
+
+inline CString operator+(CString lhs, char rhs) {
+    lhs += rhs;
+    return lhs;
+}
+
+inline CString operator+(char lhs, CString rhs) {
+    rhs.insert(0, lhs);
+    return rhs;
+}
 
 // Implement this for your type for automatic conversion to CString. Failing to do so leads
 // to a compile-time failure.

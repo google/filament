@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.19)
 project(filament-utils-android)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 set(IMAGEIO_DIR ../../libs/imageio)
 
