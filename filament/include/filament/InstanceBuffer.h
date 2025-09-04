@@ -124,6 +124,13 @@ public:
     void setLocalTransforms(math::mat4f const* UTILS_NONNULL localTransforms,
             size_t count, size_t offset = 0);
 
+    /**
+     * Returns the local transform for a given instance.
+     * @param index The index of the instance.
+     * @return The local transform of the instance.
+     */
+    math::mat4f const& getLocalTransform(size_t index);
+
 protected:
     // prevent heap allocation
     ~InstanceBuffer() = default;
