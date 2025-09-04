@@ -20,7 +20,6 @@
 #include <math/compiler.h>
 
 #include <cmath>            // for std:: namespace
-#include <type_traits>
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -29,26 +28,12 @@ namespace filament::math::details {
 
 template<typename U>
 inline constexpr U min(U a, U b) noexcept {
-    if (std::is_constant_evaluated()) {
-        return a < b ? a : b;
-    }
-    if constexpr (std::is_floating_point_v<U>) {
-        return std::fmin(a, b);
-    } else {
-        return a < b ? a : b;
-    }
+    return a < b ? a : b;
 }
 
 template<typename U>
 inline constexpr U max(U a, U b) noexcept {
-    if (std::is_constant_evaluated()) {
-        return a > b ? a : b;
-    }
-    if constexpr (std::is_floating_point_v<U>) {
-        return std::fmax(a, b);
-    } else {
-        return a > b ? a : b;
-    }
+    return a > b ? a : b;
 }
 
 template<typename T, typename U>
