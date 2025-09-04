@@ -67,7 +67,7 @@ public:
      * @return `true` on success, `false` on failure. The default implementation
      *         returns `false`.
      */
-    bool convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept;
+    bool convertSyncToFd(Platform::Sync* sync, int* fd) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------

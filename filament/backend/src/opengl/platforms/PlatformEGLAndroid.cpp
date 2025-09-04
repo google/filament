@@ -412,7 +412,7 @@ Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
     return new PlatformEGLAndroid::Sync(mEGLDisplay);
 }
 
-bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) noexcept {
+bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept {
     assert_invariant(sync != nullptr && fd != nullptr);
     PlatformEGLAndroid::Sync& eglSync = static_cast<PlatformEGLAndroid::Sync&>(*sync);
     *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.getSync());
