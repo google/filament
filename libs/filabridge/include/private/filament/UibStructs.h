@@ -209,12 +209,12 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float es2Reserved2;
 
     // bring PerViewUib to 2 KiB
-    math::float4 reserved[38];
+    math::float4 reserved[22];
 };
 
 // 2 KiB == 128 float4s
-static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 144,
-        "PerViewUib should be 16 x 144 bytes");
+static_assert(sizeof(PerViewUib) == sizeof(math::float4) * 128,
+        "PerViewUib should be exactly 2KiB");
 
 // ------------------------------------------------------------------------------------------------
 // MARK: -
