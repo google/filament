@@ -177,14 +177,20 @@ def main(args):
         path = choose_from_dir(path)
     elif path.suffix in ['.zip', '.aar', '.apk']:
         path = choose_from_zip(path)
+    elif path.suffix == '.a':
+        pass # It's a single file, just like a .so
 
     dsopath = Path(path)
     size = format_bytes(dsopath.stat().st_size, 2)
-    csize = format_bytes(get_compressed_size(open(dsopath, 'rb').read()), 2)
-    info = f'{size} ({csize})'
 
-    print('Scanning for resgen resources...')
-    resgen_jsons, resgen_blobs = extract_resgen(dsopath)
+    if dsopath.suffix == '.a':
+        info = f'{size}'
+        resgen_jsons, resgen_blobs = [], []
+    else:
+        csize = format_bytes(get_compressed_size(open(dsopath, 'rb').read()), 2)
+        info = f'{size} ({csize})'
+        print('Scanning for resgen resources...')
+        resgen_jsons, resgen_blobs = extract_resgen(dsopath)
 
     print('Running nm... (this might take a while)')
     os.system(f'nm -C -S {path} > {TEMPDIR}/nm.out')
