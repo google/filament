@@ -77,6 +77,11 @@ def parse_nm(input):
     noaddr_re = re.compile(r'^ + (.) (.*)$')
 
     for line in input:
+        # For static archives (.a), nm prints the object file name.
+        # e.g., "subfolder/file.cpp.o:" or just an empty line between objects.
+        if line.strip().endswith('.o:') or not line.strip():
+            continue
+
         line = line.rstrip()
         match = sym_re.match(line)
         if match:
