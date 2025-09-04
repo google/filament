@@ -389,7 +389,7 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     };
 }
 
-bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int32_t* fd) const noexcept {
+bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const noexcept {
     assert_invariant(sync && fd);
 
     VulkanPlatform::Sync& vulkanSync = static_cast<VulkanPlatform::Sync&>(*sync);
