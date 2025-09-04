@@ -126,6 +126,78 @@ public class SwapChain {
         nSetFrameCompletedCallback(getNativeObject(), handler, callback);
     }
 
+    /**
+     * FrameScheduledCallback is a callback function that notifies an application about the status
+     * of a frame after Filament has finished its processing.
+     *
+     * <p>
+     * The exact timing and semantics of this callback differ depending on the graphics backend in
+     * use.
+     * </p>
+     *
+     * <h3>Metal Backend</h3>
+     * <p>
+     * With the Metal backend, this callback signifies that Filament has completed all CPU-side
+     * processing for a frame and the frame is ready to be scheduled for presentation.
+     * </p>
+     *
+     * <p>
+     * Typically, Filament is responsible for scheduling the frame's presentation to the SwapChain.
+     * If a FrameScheduledCallback is set, however, the application bears the responsibility of
+     * scheduling the frame for presentation by calling the PresentCallable passed to the callback
+     * function. In this mode, Filament will not automatically schedule the frame for presentation.
+     * </p>
+     *
+     * <p>
+     * When using the Metal backend, if your application delays the call to the PresentCallable
+     * (e.g., by invoking it on a separate thread), you must ensure all PresentCallables have been
+     * called before shutting down the Filament Engine. You can guarantee this by calling
+     * Engine.flushAndWait() before Engine.shutdown(). This is necessary to ensure the Engine has
+     * a chance to clean up all memory related to frame presentation.
+     * </p>
+     *
+     * <h3>Other Backends (OpenGL, Vulkan, WebGPU)</h3>
+     * <p>
+     * On other backends, this callback serves as a notification that Filament has completed all
+     * CPU-side processing for a frame. Filament proceeds with its normal presentation logic
+     * automatically, and the PresentCallable passed to the callback is a no-op that can be safely
+     * ignored.
+     * </p>
+     *
+     * <h3>General Behavior</h3>
+     * <p>
+     * A FrameScheduledCallback can be set on an individual SwapChain through
+     * setFrameScheduledCallback. Each SwapChain can have only one callback set per frame. If
+     * setFrameScheduledCallback is called multiple times on the same SwapChain before
+     * Renderer.endFrame(), the most recent call effectively overwrites any previously set callback.
+     * </p>
+     *
+     * <p>
+     * The callback set by setFrameScheduledCallback is "latched" when Renderer.endFrame() is
+     * executed. At this point, the callback is fixed for the frame that was just encoded.
+     * Subsequent calls to setFrameScheduledCallback after endFrame() will apply to the next frame.
+     * </p>
+     *
+     * <p>
+     * Use setFrameScheduledCallback() (with default arguments) to unset the callback.
+     * </p>
+     *
+     * @param handler     A {@link java.util.concurrent.Executor Executor}.
+     * @param callback    The Runnable callback to invoke when frame processing is complete.
+     */
+    public void setFrameScheduledCallback(@NonNull Object handler, @NonNull Runnable callback) {
+        nSetFrameScheduledCallback(getNativeObject(), handler, callback);
+    }
+
+    /**
+     * Returns whether this SwapChain currently has a FrameScheduledCallback set.
+     *
+     * @return true, if the last call to setFrameScheduledCallback set a callback
+     */
+    public boolean isFrameScheduledCallbackSet() {
+        return nIsFrameScheduledCallbackSet(getNativeObject());
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed SwapChain");
@@ -138,6 +210,8 @@ public class SwapChain {
     }
 
     private static native void nSetFrameCompletedCallback(long nativeSwapChain, Object handler, Runnable callback);
+    private static native void nSetFrameScheduledCallback(long nativeSwapChain, Object handler, Runnable callback);
+    private static native boolean nIsFrameScheduledCallbackSet(long nativeSwapChain);
     private static native boolean nIsSRGBSwapChainSupported(long nativeEngine);
     private static native boolean nIsProtectedContentSupported(long nativeEngine);
 }
