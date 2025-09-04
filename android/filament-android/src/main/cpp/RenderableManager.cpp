@@ -450,6 +450,13 @@ Java_com_google_android_filament_RenderableManager_nGetPrimitiveCount(JNIEnv*, j
     return (jint) rm->getPrimitiveCount((RenderableManager::Instance) i);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_RenderableManager_nGetInstanceCount(JNIEnv*, jclass,
+        jlong nativeRenderableManager, jint i) {
+    RenderableManager *rm = (RenderableManager *) nativeRenderableManager;
+    return (jint) rm->getInstanceCount((RenderableManager::Instance) i);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_RenderableManager_nSetMaterialInstanceAt(JNIEnv*, jclass,
         jlong nativeRenderableManager, jint i, jint primitiveIndex, jlong nativeMaterialInstance) {
