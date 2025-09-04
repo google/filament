@@ -47,6 +47,11 @@ highp mat4 getViewFromClipMatrix() {
 }
 
 /** @public-api */
+highp mat4 getEyeFromViewMatrix() {
+    return frameUniforms.eyeFromViewMatrix[getEyeIndex()];
+}
+
+/** @public-api */
 highp mat4 getClipFromWorldMatrix() {
     return frameUniforms.clipFromWorldMatrix[getEyeIndex()];
 }

@@ -29,6 +29,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <cstddef>
+#include <cstdint>
 
 namespace filament {
 
@@ -48,11 +49,15 @@ public:
 
     void setLocalTransforms(math::mat4f const* localTransforms, size_t count, size_t offset);
 
-    void prepare(FEngine& engine, math::mat4f const& rootTransform, const PerRenderableData& ubo);
+    void prepare(
+            backend::BufferObjectHandle ubh,
+            PerRenderableData* buffer, uint32_t offset, uint32_t count,
+            math::mat4f const& rootTransform, PerRenderableData const& ubo);
 
     utils::CString const& getName() const noexcept { return mName; }
 
     backend::BufferObjectHandle getHandle() const noexcept { return mHandle; }
+    uint32_t getOffset() const noexcept { return mOffset; }
 
 private:
     friend class RenderableManager;
@@ -61,6 +66,7 @@ private:
     utils::CString mName;
     size_t mInstanceCount;
     backend::BufferObjectHandle mHandle;
+    uint32_t mOffset = 0;
 };
 
 FILAMENT_DOWNCAST(InstanceBuffer)

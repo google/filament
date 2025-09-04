@@ -75,6 +75,8 @@ function print_help {
     echo "    -S type"
     echo "        Enable stereoscopic rendering where type is one of [instanced|multiview]. This is only"
     echo "        meant for building the samples."
+    echo "    -P"
+    echo "        Enable perfetto traces on Android. Disabled by default on the Release build, enabled otherwise."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -204,6 +206,7 @@ MATOPT_GRADLE_OPTION=""
 
 ASAN_UBSAN_OPTION=""
 COVERAGE_OPTION=""
+ENABLE_PERFETTO=""
 
 BACKEND_DEBUG_FLAG_OPTION=""
 
@@ -413,6 +416,7 @@ function build_android_target {
             ${WEBGPU_OPTION} \
             ${BACKEND_DEBUG_FLAG_OPTION} \
             ${STEREOSCOPIC_OPTION} \
+            ${ENABLE_PERFETTO} \
             ../..
         ln -sf "out/cmake-android-${lc_target}-${arch}/compile_commands.json" \
            ../../compile_commands.json
@@ -806,7 +810,7 @@ function check_debug_release_build {
 
 pushd "$(dirname "$0")" > /dev/null
 
-while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
+while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:P" opt; do
     case ${opt} in
         h)
             print_help
@@ -953,6 +957,9 @@ while getopts ":hacCfgimp:q:uvWslwedtk:bVx:S:X:" opt; do
             ;;
         V)  COVERAGE_OPTION="-DFILAMENT_ENABLE_COVERAGE=ON"
             echo "Enabled coverage"
+            ;;
+        P)  ENABLE_PERFETTO="-DFILAMENT_ENABLE_PERFETTO=ON"
+            echo "Enabled perfetto"
             ;;
         x)  BACKEND_DEBUG_FLAG_OPTION="-DFILAMENT_BACKEND_DEBUG_FLAG=${OPTARG}"
             ;;

@@ -532,6 +532,15 @@ if (FILAMENT_SUPPORTS_OPENGL)
     add_definitions(-DFILAMENT_SUPPORTS_OPENGL)
 endif()
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    option(FILAMENT_ENABLE_PERFETTO "Enable perfetto SDK on Android" OFF)
+else()
+    option(FILAMENT_ENABLE_PERFETTO "Enable perfetto SDK on Android" ON)
+endif()
+if (FILAMENT_ENABLE_PERFETTO)
+    add_definitions(-DFILAMENT_ENABLE_PERFETTO)
+endif()
+
 # By default, build with Vulkan support on desktop platforms, although clients must request to use
 # it at run time.
 if (WIN32 OR WEBGL OR IOS)
@@ -633,7 +642,7 @@ endif()
 # With WebGPU, Tint does not support ClipDistance which is used in Stereo.  Mentioned in comment
 # https://github.com/google/dawn/blob/855d17b08abdf02f9142bf5a8f14d0ea088810a4/src/tint/lang/spirv/reader/ast_parser/function.cc#L4434
 if (FILAMENT_SUPPORTS_WEBGPU)
-    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu --variant-filter=skinning,stereo)
+    set(MATC_API_FLAGS ${MATC_API_FLAGS} -a webgpu --variant-filter=stereo)
 endif()
 
 # Disable ESSL 1.0 code generation.

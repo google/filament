@@ -23,6 +23,10 @@ function start_render_() {
             bash ${BUILD_COMMON_DIR}/get-mesa.sh
         fi
 
+        if [ ! -d ${GLTF_DIR} ]; then
+            cat ${RENDERDIFF_TEST_DIR}/tests/gltf_models.txt | xargs bash ${BUILD_COMMON_DIR}/get-gltf-sample-assets.sh
+        fi
+
         # Install python deps
         python3 -m venv ${VENV_DIR}
         source ${VENV_DIR}/bin/activate

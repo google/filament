@@ -46,8 +46,9 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
 
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
-    SKIP_IF(Backend::METAL, "External images aren't supported in metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in vulkan");
+    SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
+    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -58,7 +59,7 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     Shader shader = createShader(api, cleanup, sBackend);
 
     backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
-            api.createDefaultRenderTarget(0));
+            api.createDefaultRenderTarget());
 
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
@@ -109,8 +110,9 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 }
 
 TEST_F(BackendTest, RenderExternalImage) {
-    SKIP_IF(Backend::METAL, "External images aren't supported in metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in vulkan");
+    SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
+    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -122,7 +124,7 @@ TEST_F(BackendTest, RenderExternalImage) {
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
     backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
-            api.createDefaultRenderTarget(0));
+            api.createDefaultRenderTarget());
 
     // require users to create two Filament textures and have two material parameters
     // add a "plane" parameter to setExternalImage

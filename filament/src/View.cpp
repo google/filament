@@ -77,6 +77,14 @@ utils::FixedCapacityVector<Camera const*> View::getDirectionalShadowCameras() co
     return downcast(this)->getDirectionalShadowCameras();
 }
 
+void View::setFroxelVizEnabled(bool const enabled) noexcept {
+    downcast(this)->setFroxelVizEnabled(enabled);
+}
+
+View::FroxelConfigurationInfoWithAge View::getFroxelConfigurationInfo() const noexcept {
+    return downcast(this)->getFroxelConfigurationInfo();
+}
+
 void View::setShadowingEnabled(bool const enabled) noexcept {
     downcast(this)->setShadowingEnabled(enabled);
 }

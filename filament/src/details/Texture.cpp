@@ -322,12 +322,19 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         return;
     }
 
+    auto tag = builder.getName();
+    if (tag.empty()) {
+        tag = CString{"FTexture"};
+    }
+
     if (UTILS_LIKELY(!isImported)) {
         mHandle = driver.createTexture(
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
+                std::move(tag));
     } else {
         mHandle = driver.importTexture(builder->mImportedId,
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
+                std::move(tag));
     }
 
     if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
@@ -339,11 +346,6 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
 
     mHandleForSampling = mHandle;
 
-    if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    } else {
-        driver.setDebugTag(mHandle.getId(), CString{"FTexture"});
-    }
 }
 
 // frees driver resources, object becomes invalid
@@ -653,7 +655,9 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     FILAMENT_CHECK_PRECONDITION(formatMipmappable)
             << "Texture format " << (unsigned)mFormat << " is not mipmappable.";
 
-    FILAMENT_CHECK_PRECONDITION(any(mUsage & TextureUsage::GEN_MIPMAPPABLE))
+    auto const& featureFlags = downcast(engine).features.engine.debug;
+    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(any(mUsage & TextureUsage::GEN_MIPMAPPABLE),
+            featureFlags.assert_texture_can_generate_mipmap)
             << "Texture usage does not have GEN_MIPMAPPABLE set";
 
     if (mLevelCount < 2 || (mWidth == 1 && mHeight == 1)) {

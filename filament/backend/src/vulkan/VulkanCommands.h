@@ -28,6 +28,7 @@
 #include "vulkan/utils/StaticVector.h"
 
 #include <utils/Condition.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 
@@ -35,7 +36,6 @@
 
 #include <chrono>
 #include <list>
-#include <string>
 #include <utility>
 
 namespace filament::backend {
@@ -47,14 +47,14 @@ class VulkanGroupMarkers {
 public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
-    void push(std::string const& marker, Timestamp start = {}) noexcept;
-    std::pair<std::string, Timestamp> pop() noexcept;
-    std::pair<std::string, Timestamp> pop_bottom() noexcept;
-    std::pair<std::string, Timestamp> const& top() const;
+    void push(utils::CString const& marker, Timestamp start = {}) noexcept;
+    std::pair<utils::CString, Timestamp> pop() noexcept;
+    std::pair<utils::CString, Timestamp> pop_bottom() noexcept;
+    std::pair<utils::CString, Timestamp> const& top() const;
     bool empty() const noexcept;
 
 private:
-    std::list<std::pair<std::string, Timestamp>> mMarkers;
+    std::list<std::pair<utils::CString, Timestamp>> mMarkers;
 };
 
 #endif // FVK_DEBUG_GROUP_MARKERS
@@ -148,9 +148,9 @@ struct CommandBufferPool {
     void waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage);
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    std::string topMarker() const;
+    utils::CString topMarker() const;
     void pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp);
-    std::pair<std::string, VulkanGroupMarkers::Timestamp> popMarker();
+    std::pair<utils::CString, VulkanGroupMarkers::Timestamp> popMarker();
     void insertEvent(char const* marker);
 #endif
 
@@ -249,7 +249,7 @@ public:
     void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
     void popGroupMarker();
     void insertEventMarker(char const* string, uint32_t len);
-    std::string getTopGroupMarker() const;
+    utils::CString getTopGroupMarker() const;
 #endif
 
 private:

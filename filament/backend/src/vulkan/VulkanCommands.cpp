@@ -24,6 +24,7 @@
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
 
+#include <utils/CString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
@@ -57,26 +58,26 @@ VkCommandBuffer createCommandBuffer(VkDevice device, VkCommandPool pool) {
 } // anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-void VulkanGroupMarkers::push(std::string const& marker, Timestamp start) noexcept {
+void VulkanGroupMarkers::push(CString const& marker, Timestamp start) noexcept {
     mMarkers.push_back({marker,
         start.time_since_epoch().count() > 0.0
         ? start
         : std::chrono::high_resolution_clock::now()});
 }
 
-std::pair<std::string, Timestamp> VulkanGroupMarkers::pop() noexcept {
+std::pair<CString, Timestamp> VulkanGroupMarkers::pop() noexcept {
     auto ret = mMarkers.back();
     mMarkers.pop_back();
     return ret;
 }
 
-std::pair<std::string, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
+std::pair<CString, Timestamp> VulkanGroupMarkers::pop_bottom() noexcept {
     auto ret = mMarkers.front();
     mMarkers.pop_front();
     return ret;
 }
 
-std::pair<std::string, Timestamp> const& VulkanGroupMarkers::top() const {
+std::pair<CString, Timestamp> const& VulkanGroupMarkers::top() const {
     assert_invariant(!empty());
     return mMarkers.back();
 }
@@ -211,7 +212,9 @@ VkSemaphore VulkanCommandBuffer::submit() {
     FVK_LOGI << "Submitting cmdbuffer=" << mBuffer
              << " wait=(";
     for (size_t s = 0, count = mWaitSemaphores.size(); s < count; ++s) {
-        FVK_LOGI << mWaitSemaphores[s] << " ";
+        FVK_LOGI << "\tsemaphore=" << mWaitSemaphores[s] << "|stage="
+                 << mWaitSemaphoreStages[s]
+                 << (s <  mWaitSemaphores.size() - 1 ? "\n" : "");
     }
     FVK_LOGI << ") "
              << " signal=" << mSubmission
@@ -351,7 +354,7 @@ void CommandBufferPool::waitFor(VkSemaphore previousAction, VkPipelineStageFlags
 }
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-std::string CommandBufferPool::topMarker() const {
+CString CommandBufferPool::topMarker() const {
     if (!mGroupMarkers || mGroupMarkers->empty()) {
         return "";
     }
@@ -362,11 +365,11 @@ void CommandBufferPool::pushMarker(char const* marker, VulkanGroupMarkers::Times
     if (!mGroupMarkers) {
         mGroupMarkers = std::make_unique<VulkanGroupMarkers>();
     }
-    mGroupMarkers->push(marker, timestamp);
+    mGroupMarkers->push(CString{ marker }, timestamp);
     getRecording().pushMarker(marker);
 }
 
-std::pair<std::string, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker() {
+std::pair<CString, VulkanGroupMarkers::Timestamp> CommandBufferPool::popMarker() {
     assert_invariant(mGroupMarkers && !mGroupMarkers->empty());
     auto ret = mGroupMarkers->pop();
 
@@ -434,10 +437,13 @@ bool VulkanCommands::flush() {
         }
         if (lastSubmit != VK_NULL_HANDLE) {
             // Note that the stage we're waiting on is the fragment shader stage.  This assumes
-            // that the subsequent command buffer will only dependent on the fragment output of the
-            // previous buffer, allowing for vertex work to proceed (more overlapping
+            // that the subsequent command buffer will only depend on
+            //    1) fragment output of the previous command buffer
+            //    2) reading/writing of buffers (i.e. UBO) of the previous command buffer
+            // Restricting the wait stages will allow for vertex work to proceed (more overlapping
             // vertex/fragment work).
-            pool->waitFor(lastSubmit, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+            pool->waitFor(lastSubmit,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
             lastSubmit = VK_NULL_HANDLE;
         }
         dependency = pool->flush();
@@ -523,7 +529,7 @@ void VulkanCommands::insertEventMarker(char const* str, uint32_t len) {
     }
 }
 
-std::string VulkanCommands::getTopGroupMarker() const {
+CString VulkanCommands::getTopGroupMarker() const {
     if (mProtectedPool) {
         return mProtectedPool->topMarker();
     }

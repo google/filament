@@ -83,7 +83,8 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_DEBUG_FROXEL_VISUALIZATION = 7,
     CONFIG_STEREO_EYE_COUNT = 8, // don't change (hardcoded in ShaderCompilerService.cpp)
     CONFIG_SH_BANDS_COUNT = 9,
-    CONFIG_SHADOW_SAMPLING_METHOD = 10
+    CONFIG_SHADOW_SAMPLING_METHOD = 10,
+    CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 11,
     // check CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 
@@ -93,7 +94,9 @@ enum class PushConstantIds : uint8_t  {
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).
-constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
+// And it's limited by the Froxelizer's Froxel data structure, which stores
+// a light count in a uint8_t (so the count is limited to 255)
+constexpr size_t CONFIG_MAX_LIGHT_COUNT = 255;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // The number of specialization constants that Filament reserves for its own use. These are always
