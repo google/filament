@@ -11,3 +11,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - `setFrameScheduledCallback` now works on all backends (frame presentation scheduling is still only
   available on Metal). Non-Metal backends can use the callback to be notified when Filament has
   finished processing a frame on the CPU.
+- materials: added `getEyeFromViewMatrix()` for vertex shader [⚠️ **Recompile Materials**]
