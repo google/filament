@@ -49,14 +49,14 @@ public:
             fvkmemory::resource_ptr<VulkanStream> stream, bool newImage);
 
 private:
-    struct streamedTextureBinding {
+    struct StreamedTextureBinding {
         uint8_t binding = 0;
         fvkmemory::resource_ptr<VulkanTexture> image;
         fvkmemory::resource_ptr<VulkanDescriptorSet> set;
         SamplerParams samplerParams;
     };
     // keep track of all the stream bindings
-    std::vector<streamedTextureBinding> mStreamedTexturesBindings;
+    std::vector<StreamedTextureBinding> mStreamedTexturesBindings;
 
     VulkanExternalImageManager* mExternalImageManager;
     VulkanDescriptorSetCache*   mDescriptorSetCache;

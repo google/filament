@@ -47,7 +47,7 @@ void VulkanStreamedImageManager::unbindStreamedTexture(
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         uint8_t bindingPoint) {
     auto iter = std::remove_if(mStreamedTexturesBindings.begin(), mStreamedTexturesBindings.end(),
-            [&](streamedTextureBinding& binding) {
+            [&](StreamedTextureBinding& binding) {
                 return ((binding.set == set) && (binding.binding == bindingPoint));
             });
     mStreamedTexturesBindings.erase(iter, mStreamedTexturesBindings.end());
@@ -55,7 +55,7 @@ void VulkanStreamedImageManager::unbindStreamedTexture(
 
 void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
         fvkmemory::resource_ptr<VulkanStream> stream, bool newImage) {
-    for (streamedTextureBinding const& data: mStreamedTexturesBindings) {
+    for (StreamedTextureBinding const& data: mStreamedTexturesBindings) {
         if (data.image->getStream() == stream) {
             if (newImage) {
                 mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
