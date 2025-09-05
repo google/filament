@@ -452,6 +452,9 @@ Handle<HwTexture> WebGPUDriver::createTextureExternalImagePlaneS() noexcept {
 void WebGPUDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         const uint64_t flags, utils::CString tag) {
     FWGPU_SYSTRACE_SCOPE();
+
+    // TODO: support MSAA swapchain
+
     mNativeWindow = nativeWindow;
     wgpu::Surface surface = mPlatform.createSurface(nativeWindow, flags);
 

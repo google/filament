@@ -92,6 +92,14 @@ public final class SwapChainFlags {
      * The SwapChain contains protected content. Only supported when isProtectedContentSupported()
      * is true.
      */
-    public static final long CONFIG_PROTECTED_CONTENT   = 0x40;
-}
+    public static final long CONFIG_PROTECTED_CONTENT = 0x40;
 
+    /**
+     * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
+     * given sample points within each pixel.
+     *
+     * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
+     * because the swapchain MSAA settings must be configured before window creation.
+     */
+    public static final long CONFIG_MSAA_4_SAMPLES = 0x80;
+}

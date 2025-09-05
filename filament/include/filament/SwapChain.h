@@ -234,6 +234,15 @@ public:
     static constexpr uint64_t CONFIG_PROTECTED_CONTENT = backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
 
     /**
+     * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
+     * given sample points within each pixel.
+     *
+     * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
+     * because the swapchain MSAA settings must be configured before window creation.
+     */
+    static constexpr uint64_t CONFIG_MSAA_4_SAMPLES = backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
+
+    /**
      * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
      * The default implementation returns false.
      *

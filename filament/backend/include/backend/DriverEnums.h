@@ -101,6 +101,15 @@ static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CON
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
+/**
+ * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
+ * given sample points within each pixel.
+ *
+ * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
+ * because the swapchain MSAA settings must be configured before window creation.
+ */
+static constexpr uint64_t SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES      = 0x80;
+
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.

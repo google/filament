@@ -867,6 +867,8 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
     // vkCreateSwapchainKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR.
     mResourceManager.gc();
 
+    // TODO: support MSAA swapchain
+
     if ((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0 && !isSRGBSwapChainSupported()) {
         FVK_LOGW << "sRGB swapchain requested, but Platform does not support it";
         flags = flags | ~(backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE);

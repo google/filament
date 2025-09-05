@@ -448,6 +448,11 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbu
         configAttribs[EGL_RECORDABLE_ANDROID] = EGL_TRUE;
     }
 
+    if (flags & SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        configAttribs[EGL_SAMPLE_BUFFERS] = 1;
+        configAttribs[EGL_SAMPLES] = 4;
+    }
+
     if (UTILS_UNLIKELY(
             !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount))) {
         logEglError("eglChooseConfig");
