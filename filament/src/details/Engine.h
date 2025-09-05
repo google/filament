@@ -25,6 +25,7 @@
 #include "ResourceList.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
+#include "MaterialCache.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -287,6 +288,10 @@ public:
 
     std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
         return mResourceAllocatorDisposer;
+    }
+
+    MaterialCache& getMaterialCache() noexcept {
+        return mMaterialCache;
     }
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
@@ -585,6 +590,7 @@ private:
     FLightManager mLightManager;
     FCameraManager mCameraManager;
     std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
     DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;

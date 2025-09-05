@@ -260,6 +260,8 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder,
           mEngine(engine),
           mMaterialId(engine.getMaterialId()),
           mMaterialParser(std::move(materialParser)) {
+    mCacheHandle = engine.getMaterialCache().get(mMaterialId);
+
     MaterialParser* const parser = mMaterialParser.get();
 
     UTILS_UNUSED_IN_RELEASE bool const nameOk = parser->getName(&mName);
@@ -552,52 +554,76 @@ bool FMaterial::hasVariant(Variant const variant) const noexcept {
     return true;
 }
 
-void FMaterial::prepareProgramSlow(Variant const variant,
+ProgramCache::Specialization FMaterial::getSpecialization(Variant const variant) const noexcept {
+    return {
+            .variant = variant,
+            .specializationConstants = mSpecializationConstants,
+            .pushConstants = mPushConstants,
+    };
+}
+
+void FMaterial::prepareProgram(Variant const variant,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+    if (isSharedVariant(variant)) {
+        FMaterial const* const pDefaultMaterial = mEngine.getDefaultMaterial();
+        if (pDefaultMaterial) {
+            pDefaultMaterial->mCacheHandle.getValue().leak(getSpecialization(variant),
+                    *pDefaultMaterial, priorityQueue);
+            return;
+        }
+    }
+    mCacheHandle.getValue().leak(getSpecialization(variant), *this, priorityQueue);
+}
+
+backend::Handle<backend::HwProgram> FMaterial::makeProgram(
+        ProgramCache::Specialization const& specialization,
+        CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(mEngine.hasFeatureLevel(mFeatureLevel));
+
     switch (getMaterialDomain()) {
         case MaterialDomain::SURFACE:
-            getSurfaceProgramSlow(variant, priorityQueue);
-            break;
+            return makeSurfaceProgram(specialization, priorityQueue);
         case MaterialDomain::POST_PROCESS:
-            getPostProcessProgramSlow(variant, priorityQueue);
-            break;
+            return makePostProcessProgram(specialization, priorityQueue);
         case MaterialDomain::COMPUTE:
             // TODO: implement MaterialDomain::COMPUTE
-            break;
+            assert_invariant(false);
+            return {};
     }
 }
 
-void FMaterial::getSurfaceProgramSlow(Variant const variant,
+backend::Handle<backend::HwProgram> FMaterial::makeSurfaceProgram(
+        ProgramCache::Specialization const& specialization,
         CompilerPriorityQueue const priorityQueue) const noexcept {
     // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
     // if we're unlit, we don't have any bits that correspond to lit materials
-    assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
+    assert_invariant(specialization.variant ==
+            Variant::filterVariant(specialization.variant, isVariantLit()));
 
-    assert_invariant(!Variant::isReserved(variant));
+    assert_invariant(!Variant::isReserved(specialization.variant));
 
-    Variant const vertexVariant   = Variant::filterVariantVertex(variant);
-    Variant const fragmentVariant = Variant::filterVariantFragment(variant);
+    Variant const vertexVariant   = Variant::filterVariantVertex(specialization.variant);
+    Variant const fragmentVariant = Variant::filterVariantFragment(specialization.variant);
 
-    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
+    Program pb{ getProgramWithVariants(specialization, vertexVariant, fragmentVariant) };
     pb.priorityQueue(priorityQueue);
-    pb.multiview(
-            mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
-            Variant::isStereoVariant(variant));
-    createAndCacheProgram(std::move(pb), variant);
+    pb.multiview(mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
+                 Variant::isStereoVariant(specialization.variant));
+
+    return mEngine.getDriverApi().createProgram(std::move(pb), mName);
 }
 
-void FMaterial::getPostProcessProgramSlow(Variant const variant,
+backend::Handle<backend::HwProgram> FMaterial::makePostProcessProgram(
+        ProgramCache::Specialization const& specialization,
         CompilerPriorityQueue const priorityQueue) const noexcept {
-    Program pb{ getProgramWithVariants(variant, variant, variant) };
+    Program pb{ getProgramWithVariants(specialization, specialization.variant, specialization.variant) };
     pb.priorityQueue(priorityQueue);
-    createAndCacheProgram(std::move(pb), variant);
+    return mEngine.getDriverApi().createProgram(std::move(pb), mName);
 }
 
-Program FMaterial::getProgramWithVariants(
-        Variant variant,
-        Variant vertexVariant,
-        Variant fragmentVariant) const {
+Program FMaterial::getProgramWithVariants(ProgramCache::Specialization const& specialization,
+        Variant vertexVariant, Variant fragmentVariant) const {
+    Variant variant = specialization.variant;
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;
@@ -658,47 +684,17 @@ Program FMaterial::getProgramWithVariants(
             mProgramDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
     program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
             mProgramDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
-    program.specializationConstants(mSpecializationConstants);
+    program.specializationConstants(specialization.specializationConstants);
 
-    program.pushConstants(ShaderStage::VERTEX, mPushConstants[uint8_t(ShaderStage::VERTEX)]);
-    program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[uint8_t(ShaderStage::FRAGMENT)]);
+    program.pushConstants(ShaderStage::VERTEX,
+            specialization.pushConstants[uint8_t(ShaderStage::VERTEX)]);
+    program.pushConstants(ShaderStage::FRAGMENT,
+            specialization.pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
 
-    program.cacheId(hash::combine(size_t(mCacheId), variant.key));
+    program.cacheId(hash::combine(size_t(mCacheId),
+                    ProgramCache::Specialization::Hash{}(specialization)));
 
     return program;
-}
-
-void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const noexcept {
-    FEngine const& engine = mEngine;
-    DriverApi& driverApi = mEngine.getDriverApi();
-
-    bool const isShared = isSharedVariant(variant);
-
-    // Check if the default material has this program cached
-    if (isShared) {
-        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-        if (pDefaultMaterial) {
-            auto const program = pDefaultMaterial->mCachedPrograms[variant.key];
-            if (program) {
-                mCachedPrograms[variant.key] = program;
-                return;
-            }
-        }
-    }
-
-    auto const program = driverApi.createProgram(std::move(p), mName);
-    assert_invariant(program);
-    mCachedPrograms[variant.key] = program;
-
-    // If the default material doesn't already have this program cached, and all caching conditions
-    // are met (Surface Domain and no custom depth shader), cache it now.
-    // New Materials will inherit these program automatically.
-    if (isShared) {
-        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-        if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
-            pDefaultMaterial->mCachedPrograms[variant.key] = program;
-        }
-    }
 }
 
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
@@ -822,8 +818,7 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pActiveVariants) {
         }
     }
 #endif
-    assert_invariant(mCachedPrograms[variant.key]);
-    return mCachedPrograms[variant.key];
+    return mCacheHandle.getValue().peek(getSpecialization(variant));
 }
 
 void FMaterial::destroyPrograms(FEngine& engine,

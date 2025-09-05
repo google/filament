@@ -83,6 +83,7 @@ set(SRCS
         src/InstanceBuffer.cpp
         src/LightManager.cpp
         src/Material.cpp
+        src/MaterialCache.cpp
         src/MaterialInstance.cpp
         src/MaterialInstanceManager.cpp
         src/MaterialParser.cpp
@@ -160,6 +161,7 @@ set(PRIVATE_HDRS
         src/Allocators.h
         src/Bimap.h
         src/BufferPoolAllocator.h
+        src/Cache.h
         src/ColorSpaceUtils.h
         src/Culler.h
         src/DFG.h
@@ -172,6 +174,7 @@ set(PRIVATE_HDRS
         src/HwRenderPrimitiveFactory.h
         src/HwVertexBufferInfoFactory.h
         src/Intersections.h
+        src/MaterialCache.h
         src/MaterialParser.h
         src/MaterialInstanceManager.h
         src/PIDController.h

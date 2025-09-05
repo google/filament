@@ -54,6 +54,10 @@ public:
         using Type = std::variant<int32_t, float, bool>;
         uint32_t id;    // id set in glsl
         Type value;     // value and type
+
+        bool operator==(const SpecializationConstant& rhs) const noexcept {
+            return id == rhs.id && value == rhs.value;
+        }
     };
 
     struct Uniform { // For ES2 support
@@ -108,6 +112,10 @@ public:
     struct PushConstant {
         utils::CString name;
         ConstantType type;
+
+        bool operator==(const PushConstant& rhs) const noexcept {
+            return name == rhs.name && type == rhs.type;
+        }
     };
 
     Program& pushConstants(ShaderStage stage,

@@ -45,14 +45,13 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
+#include <tsl/robin_map.h>
+
 #include <array>
 #include <memory>
-#include <mutex>
-#include <new>
 #include <optional>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -132,22 +131,13 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
-        return bool(mCachedPrograms[variant.key]);
-    }
-
     void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
 
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
-            backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
-        }
-    }
+            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
 
     // getProgram returns the backend program for the material's given variant.
     // Must be called after prepareProgram().
@@ -156,8 +146,7 @@ public:
 #if FILAMENT_ENABLE_MATDBG
         return getProgramWithMATDBG(variant);
 #endif
-        assert_invariant(mCachedPrograms[variant.key]);
-        return mCachedPrograms[variant.key];
+        return mCacheHandle.getValue().peek(getSpecialization(variant));
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -253,6 +242,11 @@ public:
         return mPerViewLayoutIndex;
     }
 
+    // Called by MaterialCache.
+    backend::Handle<backend::HwProgram> makeProgram(
+            ProgramCache::Specialization const& specialization,
+            CompilerPriorityQueue const priorityQueue) const noexcept;
+
 #if FILAMENT_ENABLE_MATDBG
     void applyPendingEdits() noexcept;
 
@@ -287,13 +281,19 @@ public:
 
 private:
     bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(Variant variant,
+
+    ProgramCache::Specialization getSpecialization(Variant const variant) const noexcept;
+
+    backend::Handle<backend::HwProgram> makeSurfaceProgram(
+            ProgramCache::Specialization const& specialization,
             CompilerPriorityQueue priorityQueue) const noexcept;
-    void getSurfaceProgramSlow(Variant variant,
+
+    backend::Handle<backend::HwProgram> makePostProcessProgram(
+            ProgramCache::Specialization const& specialization,
             CompilerPriorityQueue priorityQueue) const noexcept;
-    void getPostProcessProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    backend::Program getProgramWithVariants(Variant variant,
+
+    backend::Program getProgramWithVariants(
+            ProgramCache::Specialization const& specialization,
             Variant vertexVariant, Variant fragmentVariant) const;
 
     void processBlendingMode(MaterialParser const* parser);
@@ -307,15 +307,13 @@ private:
 
     void processDescriptorSets(FEngine& engine, MaterialParser const* parser);
 
-    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
-
     inline bool isSharedVariant(Variant const variant) const {
         return (mMaterialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mHasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
 
     // try to order by frequency of use
-    mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    MaterialCache::Handle mCacheHandle;
     DescriptorSetLayout mPerViewDescriptorSetLayout;
     DescriptorSetLayout mPerViewDescriptorSetLayoutVsm;
     DescriptorSetLayout mDescriptorSetLayout;
