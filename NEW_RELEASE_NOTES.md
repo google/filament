@@ -12,3 +12,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
   available on Metal). Non-Metal backends can use the callback to be notified when Filament has
   finished processing a frame on the CPU.
 - materials: added `getEyeFromViewMatrix()` for vertex shader [⚠️ **Recompile Materials**]
+- matc: make `--workarounds=none` the default [**Recompile Materials to take effect**]

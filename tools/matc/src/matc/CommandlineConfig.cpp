@@ -146,7 +146,7 @@ static void usage(char* name) {
             "           ssr (screen-space reflections), stereo\n"
             "       This variant filter is merged with the filter from the material, if any\n\n"
             "   --workarounds, -W\n"
-            "       Workarounds to apply: all or none. (default is all).\n\n"
+            "       Workarounds to apply: all or none. (default is none).\n\n"
             "   --version, -v\n"
             "       Print the material version number\n\n"
             "Internal use and debugging only:\n"

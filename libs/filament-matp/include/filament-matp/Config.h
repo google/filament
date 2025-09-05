@@ -171,7 +171,7 @@ protected:
     StringReplacementMap mTemplateMap;
     StringReplacementMap mMaterialParameters;
     filament::UserVariantFilterMask mVariantFilter = 0;
-    Workarounds mWorkarounds = Workarounds::ALL;
+    Workarounds mWorkarounds = Workarounds::NONE;
     bool mIncludeEssl1 = true;
 };
 

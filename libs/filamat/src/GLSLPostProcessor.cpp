@@ -1051,10 +1051,25 @@ void GLSLPostProcessor::fixupClipDistance(
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer, Config const& config) {
     auto RegisterPass = [&](Optimizer::PassToken&& pass,
             MaterialBuilder::TargetApi apiFilter = MaterialBuilder::TargetApi::ALL) {
-
         // Workaround management is currently very simple, only two values are possible
         // ALL and NONE. If the value is anything but NONE, we apply all workarounds.
         if (config.workarounds != MaterialBuilderBase::Workarounds::NONE) {
+            if (!(config.targetApi & apiFilter)) {
+                return;
+            }
+        }
+
+        // FIXME: Workaround within a workaround!!! We IGNORE config.workarounds for WEBGPU
+        //        because Tint doesn't even compile with MergeReturn/Simplification pass
+        //        active:
+        //            Tint Reader Error: warning: code is unreachable
+        //            error: no matching overload for 'operator << (i32, i32)'
+        //            2 candidate operators:
+        //             • 'operator << (T  ✓ , u32  ✗ ) -> T' where:
+        //                  ✓  'T' is 'abstract-int', 'i32' or 'u32'
+        //             • 'operator << (vecN<T>  ✗ , vecN<u32>  ✗ ) -> vecN<T>' where:
+        //                  ✗  'T' is 'abstract-int', 'i32' or 'u32'
+        if (any(config.targetApi & MaterialBuilder::TargetApi::WEBGPU)) {
             if (!(config.targetApi & apiFilter)) {
                 return;
             }
