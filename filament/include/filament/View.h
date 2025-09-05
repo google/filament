@@ -185,12 +185,13 @@ public:
      *                  View.\n
      *                  The View doesn't take ownership of the Camera pointer (which
      *                  acts as a reference).
+     *                  If the camera isn't set, Renderer::render() will result in a no-op.
      *
      * @note
      *  There is no reference-counting.
      *  Make sure to dissociate a Camera from all Views before destroying it.
      */
-    void setCamera(Camera* UTILS_NONNULL camera) noexcept;
+    void setCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     /**
      * Returns whether a Camera is set.
@@ -201,13 +202,17 @@ public:
 
     /**
      * Returns the Camera currently associated with this View.
-     * @return A reference to the Camera associated to this View.
+     * Undefined behavior if hasCamera() is false.
+     * @return A reference to the Camera associated to this View if hasCamera() is true.
+     * @see hasCamera()
      */
     Camera& getCamera() noexcept;
 
     /**
      * Returns the Camera currently associated with this View.
+     * Undefined behavior if hasCamera() is false.
      * @return A reference to the Camera associated to this View.
+     * @see hasCamera()
      */
     Camera const& getCamera() const noexcept {
         return const_cast<View*>(this)->getCamera();

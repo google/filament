@@ -550,7 +550,7 @@ private:
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should always be non-null
+    FCamera* mCullingCamera = nullptr;
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
