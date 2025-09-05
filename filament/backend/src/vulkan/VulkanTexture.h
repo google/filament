@@ -38,7 +38,7 @@ struct VulkanTexture;
 
 struct VulkanStream : public HwStream, fvkmemory::Resource {
 
-    //-- These are only called from the frontend
+    //-- These methods are only called from the frontend
     void acquire(const AcquiredImage& image) {
         user_thread.mPrevious = user_thread.mAcquired;
         user_thread.mAcquired = image;
@@ -55,7 +55,7 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
     const math::mat3f& getTransform() const { return user_thread.mTransform; }
     void setTransform(const math::mat3f& transform) { user_thread.mTransform = transform; }
 
-    //-- This methods are only called from the backend thread
+    //-- These methods are only called from the backend thread
     fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
         fvkmemory::resource_ptr<VulkanTexture> frame;
         const auto& it = mTextures.find(ahb);
