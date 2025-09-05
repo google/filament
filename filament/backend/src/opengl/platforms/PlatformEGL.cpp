@@ -448,6 +448,9 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbu
         configAttribs[EGL_RECORDABLE_ANDROID] = EGL_TRUE;
     }
 
+    configAttribs[EGL_SAMPLE_BUFFERS] = 1;
+    configAttribs[EGL_SAMPLES] = 4;
+
     if (UTILS_UNLIKELY(
             !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount))) {
         logEglError("eglChooseConfig");
@@ -508,6 +511,18 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         config = mEGLConfig;
     }
 
+//    attribs[EGL_SAMPLE_BUFFERS] = 1;
+//    attribs[EGL_SAMPLES] = 4;
+    LOG(WARNING) << "@@@ createSwapChain(nativeWindow, flag), samples set";
+
+//        status =
+//        eglGetConfigAttrib(phdata->egl_display,
+//                           wdata->gles_configs[wdata->gles_config],
+//                           EGL_SAMPLE_BUFFERS, &attr_value);
+//    if (status == EGL_TRUE) {
+//        _this->gl_config.multisamplebuffers = attr_value;
+//    }
+
     EGLSurface sur = EGL_NO_SURFACE;
     if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
         sur = eglCreateWindowSurface(mEGLDisplay, config,
@@ -563,6 +578,10 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
     } else {
         config = mEGLConfig;
     }
+
+//    attribs[EGL_SAMPLE_BUFFERS] = 1;
+//    attribs[EGL_SAMPLES] = 4;
+    LOG(WARNING) << "@@@ createSwapChain(width, height, flag), samples set";
 
     EGLSurface sur = EGL_NO_SURFACE;
     if (UTILS_LIKELY(config != EGL_NO_CONFIG_KHR)) {
