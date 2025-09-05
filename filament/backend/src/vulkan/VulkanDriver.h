@@ -156,6 +156,11 @@ private:
     VulkanExternalImageManager mExternalImageManager;
     VulkanStreamedImageManager mStreamedImageManager;
 
+    // Stream transforms
+    std::unordered_map<VkBuffer, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
+    math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
+
+
     // This is necessary for us to write to push constants after binding a pipeline.
     using DescriptorSetLayoutHandleList = std::array<resource_ptr<VulkanDescriptorSetLayout>,
             VulkanDescriptorSetLayout::UNIQUE_DESCRIPTOR_SET_COUNT>;

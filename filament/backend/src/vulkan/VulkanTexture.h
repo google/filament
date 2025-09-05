@@ -37,6 +37,25 @@ namespace filament::backend {
 struct VulkanTexture;
 
 struct VulkanStream : public HwStream, fvkmemory::Resource {
+
+    //-- These are only called from the frontend
+    void acquire(const AcquiredImage& image) {
+        user_thread.mPrevious = user_thread.mAcquired;
+        user_thread.mAcquired = image;
+    }
+    bool previousNeedsRelease() const { return (user_thread.mPrevious.image != nullptr); }
+    // this function will null the previous once the caller takes it.
+    // It ensures we don't schedule for release twice.
+    AcquiredImage takePrevious() {
+        AcquiredImage previous = user_thread.mPrevious;
+        user_thread.mPrevious = { nullptr, nullptr, nullptr, nullptr };
+        return previous;
+    }
+    const AcquiredImage& getAcquired() const { return user_thread.mAcquired; }
+    const math::mat3f& getTransform() const { return user_thread.mTransform; }
+    void setTransform(const math::mat3f& transform) { user_thread.mTransform = transform; }
+
+    //-- This methods are only called from the backend thread
     fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
         fvkmemory::resource_ptr<VulkanTexture> frame;
         const auto& it = mTextures.find(ahb);
@@ -44,23 +63,15 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
         return frame;
     }
     void pushImage(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mTextures[ahb] = tex; }
-    void acquire(const AcquiredImage& image) {
-        mPrevious = mAcquired;
-        mAcquired = image;
-    }
-    bool previousNeedsRelease() const { return (mPrevious.image != nullptr); }
-    // this function will null the previous once the caller takes it.
-    // It ensures we don't schedule for release twice.
-    AcquiredImage takePrevious() {
-        AcquiredImage previous = mPrevious;
-        mPrevious = { nullptr, nullptr, nullptr, nullptr };
-        return previous;
-    }
-    const AcquiredImage& getAcquired() const { return mAcquired; }
 
 private:
+    // These are only called from the frontend
+    struct {
     AcquiredImage mAcquired;
     AcquiredImage mPrevious;
+    math::mat3f mTransform;
+    } user_thread;
+
     // #TODO b/442937292
     std::map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
 };
@@ -214,10 +225,13 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
         return mState->mSidecarMSAA;
     }
 
-    void setStream(fvkmemory::resource_ptr<VulkanStream> stream) { mState->mStream = stream;
+    void setStream(fvkmemory::resource_ptr<VulkanStream> stream) {
+        mState->mStream = stream;
     }
 
-    fvkmemory::resource_ptr<VulkanStream> getStream() const { return mState->mStream; }
+    fvkmemory::resource_ptr<VulkanStream> getStream() const {
+        return mState->mStream;
+    }
 
     bool isTransientAttachment() const {
         return mState->mUsage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;

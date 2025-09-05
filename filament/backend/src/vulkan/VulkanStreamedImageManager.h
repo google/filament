@@ -30,7 +30,7 @@ class VulkanExternalImageManager;
 class VulkanDescriptorSetCache;
 class VulkanSamplerCache;
 
-// Manages the logic of streamed and streamed images.
+// Manages the logic of streamed images.
 class VulkanStreamedImageManager {
 public:
     VulkanStreamedImageManager(
