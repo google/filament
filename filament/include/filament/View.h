@@ -185,12 +185,13 @@ public:
      *                  View.\n
      *                  The View doesn't take ownership of the Camera pointer (which
      *                  acts as a reference).
+     *                  If the camera isn't set, Renderer::render() will result in a no-op.
      *
      * @note
      *  There is no reference-counting.
      *  Make sure to dissociate a Camera from all Views before destroying it.
      */
-    void setCamera(Camera* UTILS_NONNULL camera) noexcept;
+    void setCamera(Camera* UTILS_NULLABLE camera) noexcept;
 
     /**
      * Returns whether a Camera is set.
