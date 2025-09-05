@@ -67,6 +67,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& rhs) noexcept {
         mValid = rhs.mValid;
         mSetAfterCommitWarning = rhs.mSetAfterCommitWarning;
         mSetUndefinedParameterWarning = rhs.mSetUndefinedParameterWarning;
+        mName = rhs.mName;
     }
     return *this;
 }
