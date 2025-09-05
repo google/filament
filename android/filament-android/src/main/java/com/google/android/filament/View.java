@@ -231,7 +231,7 @@ public class View {
      *
      * <p>
      * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
-     * to remove it from all assoicated Views.
+     * to remove it from all associated Views. If the camera isn't set, Renderer::render() will result in a no-op.
      * </p>
      *
      * @see #getCamera
