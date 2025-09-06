@@ -52,6 +52,12 @@ struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     std::shared_ptr<VulkanCmdFence> fence;
 };
 
+struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+    VulkanSync() {}
+    std::mutex lock;
+    std::vector<std::unique_ptr<Platform::SyncCallbackData>> conversionCallbacks;
+};
+
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
     VulkanTimerQuery(uint32_t startingIndex, uint32_t stoppingIndex)
         : mStartingQueryIndex(startingIndex),
