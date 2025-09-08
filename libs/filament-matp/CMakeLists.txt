@@ -13,7 +13,6 @@ set(PUBLIC_HDRS
 )
 
 set(SRCS
-        src/DirIncluder.h
         src/JsonishLexeme.h
         src/JsonishLexer.h
         src/JsonishParser.h
@@ -22,7 +21,6 @@ set(SRCS
         src/MaterialLexeme.h
         src/MaterialLexer.h
         src/ParametersProcessor.h
-        src/DirIncluder.cpp
         src/JsonishLexer.cpp
         src/JsonishParser.cpp
         src/MaterialLexer.cpp
@@ -56,7 +54,6 @@ project(test_matp)
 set(TARGET test_matp)
 set(SRCS
     tests/test_matp.cpp
-    tests/test_includer.cpp
     tests/TestMaterialParser.h
     tests/test_compute_material.cpp
 )
