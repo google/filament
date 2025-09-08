@@ -733,7 +733,6 @@ public:
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_material_instance_texture_descriptor_set_compatible =
                         CORRECTNESS_ASSERTION_DEFAULT;
-                bool assert_texture_format_mipmappable = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
@@ -797,9 +796,6 @@ public:
             { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
               "Assert that the textures in a material instance are compatible with descriptor set.",
               &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
-            { "engine.debug.assert_texture_format_mipmappable",
-              "Assert if a texture (with levels > 1) that the format is mipmappable.",
-              &features.engine.debug.assert_texture_format_mipmappable, false },
             { "engine.debug.assert_texture_can_generate_mipmap",
               "Assert if a texture has the correct usage set for generating mipmaps.",
               &features.engine.debug.assert_texture_can_generate_mipmap, false },
