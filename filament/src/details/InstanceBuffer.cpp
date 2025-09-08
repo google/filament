@@ -29,8 +29,6 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/Panic.h>
 #include <utils/StaticString.h>
 
@@ -89,7 +87,7 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) const {
 
 // ------------------------------------------------------------------------------------------------
 
-FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
+FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
     : mName(builder.getName()) {
     mInstanceCount = builder->mInstanceCount;
 
@@ -100,11 +98,22 @@ FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
         memcpy(mLocalTransforms.data(), builder->mLocalTransforms,
                 sizeof(math::mat4f) * mInstanceCount);
     }
+
+    // Allocate our instance buffer. We always allocate a size to match
+    // PerRenderableUib, regardless of the number of instances. This is because the buffer
+    // will get bound to the PER_RENDERABLE UBO, and we can't bind a buffer smaller than the
+    // full size of the UBO.
+    DriverApi& driver = engine.getDriverApi();
+    mHandle = driver.createBufferObject(sizeof(PerRenderableUib),
+        BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    if (auto name = mName; !name.empty()) {
+        driver.setDebugTag(mHandle.getId(), std::move(name));
+    }
 }
 
-void FInstanceBuffer::terminate(FEngine&) {
-    mHandle.clear();
-    mOffset = 0;
+void FInstanceBuffer::terminate(FEngine& engine) {
+    DriverApi& driver = engine.getDriverApi();
+    driver.destroyBufferObject(std::move(mHandle));
 }
 
 FInstanceBuffer::~FInstanceBuffer() noexcept = default;
@@ -118,23 +127,27 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-void FInstanceBuffer::prepare(
-            BufferObjectHandle ubh,
-            PerRenderableData* const UTILS_RESTRICT buffer, uint32_t const offset, uint32_t const count,
-            math::mat4f const& rootTransform, PerRenderableData const& ubo) {
+void FInstanceBuffer::prepare(DriverApi& driver, math::mat4f const& rootTransform,
+        const PerRenderableData& ubo) {
 
-    // there is a precondition check for this, so this assert really should never trigger
-    assert_invariant(count <= mInstanceCount);
-
-    for (size_t i = 0, c = count; i < c; i++) {
+    // TODO: allocate this staging buffer from a pool.
+    constexpr uint32_t stagingBufferSize = sizeof(PerRenderableUib);
+    PerRenderableData* stagingBuffer = static_cast<PerRenderableData*>(malloc(stagingBufferSize));
+    // TODO: consider using JobSystem to parallelize this.
+    for (size_t i = 0, c = mInstanceCount; i < c; i++) {
+        stagingBuffer[i] = ubo;
         math::mat4f const model = rootTransform * mLocalTransforms[i];
+        stagingBuffer[i].worldFromModelMatrix = model;
+
         math::mat3f const m = math::mat3f::getTransformForNormals(model.upperLeft());
-        buffer[offset + i] = ubo;
-        buffer[offset + i].worldFromModelMatrix = model;
-        buffer[offset + i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
+        stagingBuffer[i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
-    mHandle = ubh;
-    mOffset = offset * sizeof(PerRenderableData);
+    driver.updateBufferObject(mHandle, {
+            stagingBuffer, stagingBufferSize,
+            +[](void* buffer, size_t, void*) {
+                free(buffer);
+            }
+    }, 0);
 }
 
 } // namespace filament
