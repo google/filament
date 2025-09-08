@@ -504,7 +504,7 @@ when using textures.</p>
 This property can dramatically change the appearance of a surface. Non-metallic surfaces have
 chromatic diffuse reflection and achromatic specular reflection (reflected light does not change
 color). Metallic surfaces do not have any diffuse reflection and chromatic specular reflection
-(reflected light takes on the color of the surfaced as defined by <code>baseColor</code>). 
+(reflected light takes on the color of the surfaced as defined by <code>baseColor</code>).
 </p><p>
 The effect of <code>metallic</code> is shown in <a href="#figure_metallicproperty" target="_self">figure&nbsp;1</a> (click on the image to see a
 larger version).
@@ -597,7 +597,7 @@ indices.
 base layer described by the properties above. The sheen layer always sits below the clear coat layer
 if such a layer is present.</p>
 </p><p>
-The sheen layer can be used to represent cloth and fabric materials. Please refer to 
+The sheen layer can be used to represent cloth and fabric materials. Please refer to
 section <a href="#toc3.3" target="_self">3.3</a> for more information about cloth and fabric materials.
 </p><p>
 The effect of <code>sheenColor</code> is shown in <a href="#figure_materialsheencolor" target="_self">figure&nbsp;7</a>
@@ -1220,10 +1220,10 @@ non-shader data.</p>
       name must be a valid GLSL identifier. Entries have an optional <code>precision</code>, which can be
       one of <code>default</code> (best precision for the platform, typically <code>high</code> on desktop, <code>medium</code> on
       mobile), <code>low</code>, <code>medium</code>, <code>high</code>. The type must be one of the types described in
-      <a href="#table_materialparamstypes" target="_self">table&nbsp;14</a>. For Android external textures, entries also have an optional 
-      transformName parameter to specify the name of the material parameter that will be 
+      <a href="#table_materialparamstypes" target="_self">table&nbsp;14</a>. For Android external textures, entries also have an optional
+      transformName parameter to specify the name of the material parameter that will be
       used to expose the transform matrix associated with the external sampler. In iOS and Vulkan,
-      this will always be identity. 
+      this will always be identity.
 </p></dd></dl><div class='table'>
 <a class="target" name="table_materialparamstypes">&nbsp;</a><table class="table longtable"><tr><th  style="text-align:left"> Type </th><th  style="text-align:left"> Description </th></tr>
 <tr><td  style="text-align:left"> bool </td><td  style="text-align:left"> Single boolean </td></tr>
@@ -2361,7 +2361,10 @@ type aliases:</p>
 <tr><td  style="text-align:left"> <strong class="asterisk">getWorldFromViewMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from view/eye space to world space </td></tr>
 <tr><td  style="text-align:left"> <strong class="asterisk">getClipFromViewMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from view/eye space to clip (NDC) space </td></tr>
 <tr><td  style="text-align:left"> <strong class="asterisk">getViewFromClipMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from clip (NDC) space to view/eye space </td></tr>
+<tr><td  style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from view space to eye space </td></tr>
+<tr><td  style="text-align:left"> <strong class="asterisk">getEyeFromViewMatrix(int eyeIndex)</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from view space to eye space for the eye referred to by eyeIndex </td></tr>
 <tr><td  style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from world to clip (NDC) space </td></tr>
+<tr><td  style="text-align:left"> <strong class="asterisk">getClipFromWorldMatrix(int eyeIndex)</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from world to clip (NDC) space for the eye referred to by eyeIndex </td></tr>
 <tr><td  style="text-align:left"> <strong class="asterisk">getWorldFromClipMatrix()</strong> </td><td  style="text-align:center"> float4&times;4 </td><td  style="text-align:left"> Matrix that converts from clip (NDC) space to world space </td></tr>
 </table></div>
 </p>
@@ -2501,7 +2504,7 @@ a good compromise between runtime performance and size.</p>
 metadata in JSON format. The example below prints out the list of parameters defined in Filament's
 standard skybox material. It produces a list of 2 parameters, named <code>showSun</code> and <code>skybox</code>,
 respectively a boolean and a cubemap texture.</p>
-</p><pre class="listing backtick"><code><span class="line"></span>$ matc --reflect parameters filament/src/materials/skybox.mat 
+</p><pre class="listing backtick"><code><span class="line"></span>$ matc --reflect parameters filament/src/materials/skybox.mat
 <span class="line"></span>{
 <span class="line"></span>  &quot;parameters&quot;: [
 <span class="line"></span>    {
