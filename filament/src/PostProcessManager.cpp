@@ -2505,7 +2505,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
 
                 commitAndRender(out, material, variant, driver);
 
-                // Clear reference to LUT texture of color grading, in case it gets destroyed
+                // Clear reference to colorBuffer and LUT textures, in case they get destroyed
+                mi->clearParameter("colorBuffer");
                 mi->clearParameter("lut");
             }
     );
