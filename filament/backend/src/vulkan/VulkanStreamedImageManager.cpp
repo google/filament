@@ -56,29 +56,29 @@ void VulkanStreamedImageManager::unbindStreamedTexture(
 void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
         fvkmemory::resource_ptr<VulkanStream> stream, bool newImage) {
     for (StreamedTextureBinding const& data: mStreamedTexturesBindings) {
+        // Find the right stream
         if (data.image->getStream() == stream) {
-            if (newImage) {
-                mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
-                        data.samplerParams);
-            } else {
-                // For some reason, some of the frames coming to us, are on streams where the
-                // descriptor set isn't external...
-                if (data.set->getExternalSamplerVkSet()) {
-                    // Eventually the updateSampler and updateSamplerForExternalSamplerSet 
-                    // will call to vkUpdateDescriptorSets with a VkWriteDescriptorSet 
-                    // type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER the 
-                    // VkDescriptorImageInfo will contain the view of the new image frame.
-                    mDescriptorSetCache->updateSamplerForExternalSamplerSet(data.set, data.binding,
-                            image);
-                } else {
-                    //... In this case we just default to using the normal path and update the
-                    //sampler.
-                    VulkanSamplerCache::Params cacheParams = {
-                        .sampler = data.samplerParams,
-                    };
-                    VkSampler const vksampler = mSamplerCache->getSampler(cacheParams);
-                    mDescriptorSetCache->updateSampler(data.set, data.binding, image, vksampler);
+            // For some reason, some of the frames coming to us, are on streams where the
+            // descriptor set isn't external...
+            if (data.set->getExternalSamplerVkSet()) {
+                if (newImage) {
+                    mExternalImageManager->bindExternallySampledTexture(data.set, data.binding,
+                            image, data.samplerParams);
                 }
+                // Eventually the updateSampler and updateSamplerForExternalSamplerSet
+                // will call to vkUpdateDescriptorSets with a VkWriteDescriptorSet
+                // type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER the
+                // VkDescriptorImageInfo will contain the view of the new image frame.
+                mDescriptorSetCache->updateSamplerForExternalSamplerSet(data.set, data.binding,
+                        image);
+            } else {
+                //... In this case we just default to using the normal path and update the
+                // sampler.
+                VulkanSamplerCache::Params cacheParams = {
+                    .sampler = data.samplerParams,
+                };
+                VkSampler const vksampler = mSamplerCache->getSampler(cacheParams);
+                mDescriptorSetCache->updateSampler(data.set, data.binding, image, vksampler);
             }
         }
     }

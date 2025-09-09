@@ -48,7 +48,7 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
     // It ensures we don't schedule for release twice.
     AcquiredImage takePrevious() {
         AcquiredImage previous = user_thread.mPrevious;
-        user_thread.mPrevious = { nullptr, nullptr, nullptr, nullptr };
+        user_thread.mPrevious = {};
         return previous;
     }
     const AcquiredImage& getAcquired() const { return user_thread.mAcquired; }
@@ -114,7 +114,7 @@ private:
 
     // The texture with the sidecar owns the sidecar.
     fvkmemory::resource_ptr<VulkanTexture> mSidecarMSAA;
-    // The stream this texture is associated with (I think cleaner than HwTexture::hwStream).
+    // The stream this texture is associated with.
     fvkmemory::resource_ptr<VulkanStream> mStream;
 
     VkImage const mTextureImage;
