@@ -1385,7 +1385,7 @@ void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
         BufferObjectStreamDescriptor&& streams) {
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
-    mStreamUniformDescriptors[bo->getVkBuffer()] = std::move(streams);
+    mStreamUniformDescriptors[bo.get()] = std::move(streams);
 }
 
 // This needs to be discussed because Vulkan has different default Matrix formats
@@ -1422,7 +1422,7 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
-        auto streamDescriptors = mStreamUniformDescriptors.find(bo->getVkBuffer());
+        auto streamDescriptors = mStreamUniformDescriptors.find(bo.get());
         if (streamDescriptors != mStreamUniformDescriptors.end()) {
             for (auto const& [offset, stream, associationType]:
                     streamDescriptors->second.mStreams) {

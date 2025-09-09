@@ -157,7 +157,7 @@ private:
     VulkanStreamedImageManager mStreamedImageManager;
 
     // Stream transforms
-    std::unordered_map<VkBuffer, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
+    std::unordered_map<VulkanBufferObject*, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
     math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
 
 
