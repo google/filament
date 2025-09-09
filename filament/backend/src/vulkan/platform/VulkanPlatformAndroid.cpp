@@ -392,10 +392,10 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
 bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const noexcept {
     assert_invariant(sync && fd);
 
-    VulkanPlatform::Sync& vulkanSync = static_cast<VulkanPlatform::Sync&>(*sync);
-    assert_invariant(vulkanSync.getFenceStatus());
+    VulkanSync& vulkanSync = static_cast<VulkanSync&>(*sync);
+    assert_invariant(vulkanSync.fenceStatus);
 
-    if (vulkanSync.getFenceStatus()->getStatus() == VK_SUCCESS) {
+    if (vulkanSync.fenceStatus->getStatus() == VK_SUCCESS) {
         // We've already signaled; return -1 so that operations will proceed
         // immediately. Also, signal that fence conversion was successful.
         *fd = -1;
@@ -404,7 +404,7 @@ bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const
 
     VkFenceGetFdInfoKHR getFdInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
-        .fence = vulkanSync.getFence(),
+        .fence = vulkanSync.fence,
         .handleType = getFenceExportFlags(),
     };
     VkResult res = vkGetFenceFdKHR(getDevice(), &getFdInfo, fd);

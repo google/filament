@@ -52,12 +52,6 @@ protected:
 
     ~OpenGLPlatform() noexcept override;
 
-    class Sync : public Platform::Sync {
-    public:
-        Sync() noexcept = default;
-        virtual ~Sync() noexcept;
-    };
-
 public:
     struct ExternalTexture {
         unsigned int target; // GLenum target

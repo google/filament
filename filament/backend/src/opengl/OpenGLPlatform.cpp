@@ -45,8 +45,6 @@ Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform,
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
-OpenGLPlatform::Sync::~Sync() noexcept = default;
-
 utils::CString OpenGLPlatform::getVendorString(Driver const* driver) {
     auto const p = static_cast<OpenGLDriverBase const*>(driver);
 #if UTILS_HAS_RTTI
@@ -120,10 +118,12 @@ FenceStatus OpenGLPlatform::waitFence(
 }
 
 Platform::Sync* OpenGLPlatform::createSync() noexcept {
-    return new OpenGLPlatform::Sync();
+    return new Platform::Sync();
 }
 
 void OpenGLPlatform::destroySync(Platform::Sync* sync) noexcept {
+    // sync must be a Platform::Sync, since it was created by this platform
+    // object.
     delete sync;
 }
 

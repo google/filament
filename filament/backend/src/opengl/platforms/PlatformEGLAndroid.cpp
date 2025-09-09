@@ -398,27 +398,18 @@ void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
 }
 
-PlatformEGLAndroid::Sync::Sync(EGLDisplay eglDisplay) noexcept
-    : mEGLDisplay(eglDisplay)
-{
-    mSync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
-}
-
-PlatformEGLAndroid::Sync::~Sync() noexcept {
-    eglDestroySyncKHR(mEGLDisplay, mSync);
-}
-
 Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
-    return new PlatformEGLAndroid::Sync(mEGLDisplay);
+    auto sync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+    return new SyncEGLAndroid{.sync = sync};
 }
 
 bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept {
-    assert_invariant(sync != nullptr && fd != nullptr);
-    PlatformEGLAndroid::Sync& eglSync = static_cast<PlatformEGLAndroid::Sync&>(*sync);
-    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.getSync());
+    assert_invariant(sync && fd);
+    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.sync);
     // In the case where there was no native FD, -1 is returned. Return false
     // to indicate there was an error in this case.
-    if (*fd != EGL_NO_NATIVE_FENCE_FD_ANDROID) {
+    if (*fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
         LOG(ERROR) << "Failed to convert sync to fd: " << eglGetError();
         return false;
     }
@@ -426,6 +417,9 @@ bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept
 }
 
 void PlatformEGLAndroid::destroySync(Platform::Sync* sync) noexcept {
+    assert_invariant(sync);
+    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    eglDestroySyncKHR(mEGLDisplay, eglSync.sync);
     delete sync;
 }
 

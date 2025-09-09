@@ -43,15 +43,7 @@ public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
-
-    class Sync {
-    public:
-        virtual ~Sync();
-
-    protected:
-        // Avoid direct instantiation.
-        Sync() = default;
-    };
+    struct Sync {};
 
     using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
 

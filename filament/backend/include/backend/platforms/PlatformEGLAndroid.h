@@ -85,18 +85,8 @@ protected:
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
-    class Sync : public Platform::Sync {
-    public:
-        Sync(EGLDisplay eglDisplay) noexcept;
-        virtual ~Sync() noexcept;
-
-        inline EGLSyncKHR getSync() {
-            return mSync;
-        }
-
-    private:
-        EGLDisplay mEGLDisplay;
-        EGLSyncKHR mSync;
+    struct SyncEGLAndroid : public Platform::Sync {
+        EGLSyncKHR sync;
     };
 
     void terminate() noexcept override;

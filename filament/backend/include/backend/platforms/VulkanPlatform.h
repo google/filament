@@ -432,25 +432,9 @@ public:
     }
 
 protected:
-    class Sync : public Platform::Sync {
-    public:
-        inline Sync(VkFence fence, std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept
-            : mFence(fence),
-              mFenceStatus(fenceStatus) {}
-
-        virtual ~Sync() noexcept;
-
-        inline VkFence getFence() const noexcept {
-            return mFence;
-        }
-
-        inline const std::shared_ptr<VulkanCmdFence> getFenceStatus() const noexcept {
-            return mFenceStatus;
-        }
-
-    private:
-        VkFence mFence;
-        std::shared_ptr<VulkanCmdFence> mFenceStatus;
+    struct VulkanSync : public Platform::Sync {
+        VkFence fence;
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
 
     virtual ExtensionSet getSwapchainInstanceExtensions() const;

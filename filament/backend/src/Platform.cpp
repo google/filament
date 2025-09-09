@@ -29,10 +29,6 @@
 
 namespace filament::backend {
 
-// This needs to be explicitly written to avoid the weak vtables warning for the
-// Sync class.
-Platform::Sync::~Sync() = default;
-
 void Platform::ExternalImageHandle::incref(ExternalImage* p) noexcept {
     if (p) {
         // incrementing the ref-count doesn't acquire or release anything

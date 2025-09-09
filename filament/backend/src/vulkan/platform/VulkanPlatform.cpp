@@ -932,10 +932,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     return VulkanDriver::create(this, context, driverConfig);
 }
 
-// This is required to be explicitly written to avoid the weak vtables warning
-// for the Sync class.
-VulkanPlatform::Sync::~Sync() noexcept = default;
-
 // This needs to be explictly written for
 // utils::PrivateImplementation<VulkanPlatformPrivate>::PrivateImplementation() to be properly
 // defined.
@@ -1010,10 +1006,12 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
 
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,
         std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
-    return new VulkanPlatform::Sync(fence, fenceStatus);
+    return new VulkanSync{.fence = fence, .fenceStatus = fenceStatus};
 }
 
 void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
+    // Sync must be a VulkanSync*, since it was created by VulkanPlatform's
+    // createSync object.
     delete sync;
 }
 
