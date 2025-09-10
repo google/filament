@@ -7,9 +7,3 @@ We are chaning the way Vulkan buffers are handled. We need to switch over to a m
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
-
-- `setFrameScheduledCallback` now works on all backends (frame presentation scheduling is still only
-  available on Metal). Non-Metal backends can use the callback to be notified when Filament has
-  finished processing a frame on the CPU.
-- materials: added `getEyeFromViewMatrix()` for vertex shader [⚠️ **Recompile Materials**]
-- matc: make `--workarounds=none` the default [**Recompile Materials to take effect**]
