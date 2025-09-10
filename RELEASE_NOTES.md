@@ -7,6 +7,10 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.65.0
+
+lighting: the intermediate froxel record buffer is now dynamically sized [⚠️ **New Material Version**]
+
 ## v1.64.1
 
 - Update CMake minimum version to 3.22.1

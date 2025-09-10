@@ -22,6 +22,7 @@ GOLDEN_OUTPUT_DIR="$(pwd)/out/renderdiff/goldens"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
 MESA_DIR="$(pwd)/mesa/out/"
 VENV_DIR="$(pwd)/venv"
+GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
 os_name=$(uname -s)

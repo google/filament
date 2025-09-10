@@ -99,6 +99,8 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "worldFromViewMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromViewMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "viewFromClipMatrix",     0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
+            { "eyeFromViewMatrix",      CONFIG_MAX_STEREOSCOPIC_EYES,
+                                           Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "clipFromWorldMatrix",    CONFIG_MAX_STEREOSCOPIC_EYES,
                                            Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
             { "worldFromClipMatrix",    0, Type::MAT4,   Precision::HIGH, FeatureLevel::FEATURE_LEVEL_0 },
@@ -140,6 +142,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             { "fParams",                0, Type::UINT3                   },
             { "lightChannels",          0, Type::INT                     },
             { "froxelCountXY",          0, Type::FLOAT2                  },
+            { "enableFroxelViz",        0, Type::INT                     },
+            { "dynReserved0",           0, Type::INT                     },
+            { "dynReserved1",           0, Type::INT                     },
+            { "dynReserved2",           0, Type::INT                     },
 
             { "iblLuminance",           0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
             { "iblRoughnessOneLevel",   0, Type::FLOAT,  Precision::DEFAULT, FeatureLevel::FEATURE_LEVEL_0 },
@@ -273,7 +279,8 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
 BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
             .name(FroxelRecordUib::_name)
-            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH }})
+            .add({{ "records", 1024, BufferInterfaceBlock::Type::UINT4, Precision::HIGH, {},
+                    {}, {}, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT"}})
             .build();
     return uib;
 }

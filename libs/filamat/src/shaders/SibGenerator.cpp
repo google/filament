@@ -102,7 +102,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerRenderableSib(Variant) noexcept
             .stageFlags(backend::ShaderStageFlags::VERTEX)
             .add({  {"positions",          +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,    Type::SAMPLER_2D_ARRAY, Format::FLOAT, Precision::HIGH, FILTERABLE,  !MULTISAMPLE, ALL_STAGES },
                     {"tangents",           +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,     Type::SAMPLER_2D_ARRAY, Format::INT,   Precision::HIGH, !FILTERABLE, !MULTISAMPLE, ALL_STAGES },
-                    {"indicesAndWeights",  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, Type::SAMPLER_2D,       Format::FLOAT, Precision::HIGH, FILTERABLE,  !MULTISAMPLE, ALL_STAGES }}
+                    {"indicesAndWeights",  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, Type::SAMPLER_2D,       Format::FLOAT, Precision::HIGH, !FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
             )
             .build();
 

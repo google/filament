@@ -20,6 +20,7 @@
 #include "downcast.h"
 
 #include "Allocators.h"
+#include "BufferPoolAllocator.h"
 #include "Culler.h"
 #include "FrameHistory.h"
 #include "FrameInfo.h"
@@ -29,8 +30,6 @@
 
 #include "ds/ColorPassDescriptorSet.h"
 #include "ds/DescriptorSet.h"
-#include "ds/PostProcessDescriptorSet.h"
-#include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
 #include "components/LightManager.h"
@@ -41,10 +40,7 @@
 #include "details/RenderTarget.h"
 #include "details/Scene.h"
 
-#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
-
-#include <private/backend/DriverApi.h>
 
 #include <filament/Frustum.h>
 #include <filament/Renderer.h>
@@ -54,7 +50,6 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
 #include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -68,8 +63,8 @@ namespace filament::fgviewer {
 }
 #endif
 
-#include <math/scalar.h>
 #include <math/mat4.h>
+#include <math/vec4.h>
 
 #include <array>
 #include <memory>
@@ -240,6 +235,12 @@ public:
         return mShadowMapManager->getDirectionalShadowCameras();
     }
 
+    void setFroxelVizEnabled(bool const enabled) noexcept {
+        mFroxelVizEnabled = enabled;
+    }
+
+    FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
+
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
         assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
                 !renderTarget->hasSampleableDepth());
@@ -292,7 +293,7 @@ public:
         return mGuardBandOptions;
     }
 
-    void setColorGrading(FColorGrading* colorGrading) noexcept {
+    void setColorGrading(FColorGrading const* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
 
@@ -435,9 +436,8 @@ public:
     backend::TargetBufferFlags getRenderTargetAttachmentMask() const noexcept {
         if (mRenderTarget == nullptr) {
             return backend::TargetBufferFlags::NONE;
-        } else {
-            return mRenderTarget->getAttachmentMask();
         }
+        return mRenderTarget->getAttachmentMask();
     }
 
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
@@ -478,7 +478,7 @@ public:
         return mFogEntity;
     }
 
-    TypedUniformBuffer<PerViewUib>& getFrameUniforms() noexcept {
+    TypedUniformBuffer<PerViewUib>& getFrameUniforms() const noexcept {
         return mUniforms;
     }
 
@@ -502,7 +502,7 @@ private:
                 PickingQueryResultCallback const callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
-        static void put(FPickingQuery* pQuery) noexcept {
+        static void put(FPickingQuery const* pQuery) noexcept {
             delete pQuery;
         }
         mutable FPickingQuery* next = nullptr;
@@ -512,11 +512,16 @@ private:
         backend::CallbackHandler* const handler;
         PickingQueryResultCallback const callback;
         // picking query result
-        PickingQueryResult result;
+        PickingQueryResult result{};
     };
 
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
+
+    void updateUBOs(backend::DriverApi& driver,
+        FScene::RenderableSoa& renderableData,
+        utils::Range<uint32_t> visibleRenderables,
+        backend::Handle<backend::HwBufferObject> renderableUbh) noexcept;
 
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
@@ -552,6 +557,8 @@ private:
 
     mutable Froxelizer mFroxelizer;
     utils::JobSystem::Job* mFroxelizerSync = nullptr;
+    bool mFroxelVizEnabled = false;
+    uint32_t mFroxelConfigurationAge = 0;
 
     Viewport mViewport;
     bool mCulling = true;
@@ -611,6 +618,12 @@ private:
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
+
+    // State shared between Scene and driver callbacks.
+    struct SharedState {
+        BufferPoolAllocator<3> mBufferPoolAllocator = {};
+    };
+    std::shared_ptr<SharedState> mSharedState;
 
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
 

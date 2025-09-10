@@ -89,6 +89,7 @@ bool WebGPUPipelineLayoutCache::PipelineLayoutKeyEqual::operator()(PipelineLayou
 }
 
 void WebGPUPipelineLayoutCache::removeExpiredPipelineLayouts() {
+    FWGPU_SYSTRACE_SCOPE();
     using Iterator = decltype(mPipelineLayouts)::const_iterator;
     for (Iterator iterator{ mPipelineLayouts.begin() }; iterator != mPipelineLayouts.end();) {
         PipelineLayoutCacheEntry const& entry{ iterator.value() };

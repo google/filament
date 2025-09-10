@@ -55,6 +55,7 @@
 #include <filagui/ImGuiHelper.h>
 
 #include <filamentapp/Cube.h>
+#include <filamentapp/Grid.h>
 #include <filamentapp/NativeWindowHelper.h>
 
 #include <stb_image.h>
@@ -179,6 +180,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             .build(*mEngine);
 
     std::unique_ptr<Cube> cameraCube{ new Cube(*mEngine, mTransparentMaterial, { 1, 0, 0 }) };
+    std::unique_ptr<Grid> cameraGrid{ new Grid(*mEngine, mTransparentMaterial, { 1, 1, 0 }) };
 
     // we can't cull the light-frustum because it's not applied a rigid transform
     // and currently, filament assumes that for culling
@@ -192,20 +194,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     mScene = mEngine->createScene();
 
     window->mMainView->getView()->setVisibleLayers(0x4, 0x4);
+    window->mMainView->getView()->setFroxelVizEnabled(true);
 
     if (config.splitView) {
-        auto& rcm = mEngine->getRenderableManager();
-
-        rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()), 0x3, 0x2);
-        rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, 0x2);
-        mScene->addEntity(cameraCube->getWireFrameRenderable());
         mScene->addEntity(cameraCube->getSolidRenderable());
-
+        mScene->addEntity(cameraCube->getWireFrameRenderable());
         for (auto&& cube : lightmapCubes) {
-            rcm.setLayerMask(rcm.getInstance(cube.getSolidRenderable()), 0x3, 0x2);
-            rcm.setLayerMask(rcm.getInstance(cube.getWireFrameRenderable()), 0x3, 0x2);
-            mScene->addEntity(cube.getWireFrameRenderable());
             mScene->addEntity(cube.getSolidRenderable());
+            mScene->addEntity(cube.getWireFrameRenderable());
         }
 
         window->mDepthView->getView()->setVisibleLayers(0x4, 0x4);
@@ -217,6 +213,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         window->mGodView->getView()->setShadowingEnabled(false);
         window->mOrthoView->getView()->setShadowingEnabled(false);
     }
+
+    // froxel debug grid always added (but hidden)
+    mScene->addEntity(cameraGrid->getWireFrameRenderable());
 
     loadDirt(config);
     loadIBL(config);
@@ -467,11 +466,60 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         filament::math::float3 eye, center, up;
         window->mMainCameraMan->getLookAt(&eye, &center, &up);
         window->mMainCamera->lookAt(eye, center, up);
+
         window->mDebugCameraMan->getLookAt(&eye, &center, &up);
         window->mDebugCamera->lookAt(eye, center, up);
+        window->mDebugCamera->setExposure(
+            window->mMainCamera->getAperture(),
+            window->mMainCamera->getShutterSpeed(),
+            window->mMainCamera->getSensitivity());
+
+        window->mOrthoCamera->setExposure(
+            window->mMainCamera->getAperture(),
+            window->mMainCamera->getShutterSpeed(),
+            window->mMainCamera->getSensitivity());
+
+        auto const fci = window->mMainView->getView()->getFroxelConfigurationInfo();
+        if (UTILS_UNLIKELY(fci.age != mFroxelInfoAge)) {
+            mFroxelInfoAge = fci.age;
+            auto width = fci.info.width;
+            auto height = fci.info.height;
+            auto depth = fci.info.depth;
+            auto froxelDimension = fci.info.froxelDimension;
+            auto viewportWidth = fci.info.viewportWidth;
+            auto viewportHeight = fci.info.viewportHeight;
+            auto zLightFar = fci.info.zLightFar;
+            auto linearizer = fci.info.linearizer;
+            auto p = fci.info.p;
+            auto ct = fci.info.clipTransform;
+            cameraGrid->update(width, height, depth,
+                [=](int const i) {
+                    float x = float(2 * i * froxelDimension.x) / float(viewportWidth ) - 1.0f;
+                    x = (x - ct.z) / ct.x;
+                    return x;
+                },
+                [=](int const j) {
+                    float y =  float(2 * j * froxelDimension.y) / float(viewportHeight) - 1.0f;
+                    y = (y - ct.w) / ct.y;
+                    return y;
+                },
+                [=](int const k) {
+                    float const z_view = -zLightFar * std::exp2(float(k - depth) * linearizer);
+                    auto c = p * float4{ 0, 0, z_view, 1 };
+                    float const z_clip_dx = k == 0 ? 1.0f : c.z / c.w;
+                    float const z_clip_gl = (1 - z_clip_dx) * 2.0f - 1.0f;
+                    return z_clip_gl;
+            });
+        }
+
+        auto& rcm = mEngine->getRenderableManager();
+        if (config.splitView) {
+            rcm.setLayerMask(rcm.getInstance(cameraCube->getSolidRenderable()),     0x3, mCameraFrustumEnabled);
+            rcm.setLayerMask(rcm.getInstance(cameraCube->getWireFrameRenderable()), 0x3, mCameraFrustumEnabled);
+        }
+        rcm.setLayerMask(rcm.getInstance(cameraGrid->getWireFrameRenderable()), 0x3, mFroxelGridEnabled);
 
         // Update the cube distortion matrix used for frustum visualization.
-        auto& rcm = mEngine->getRenderableManager();
         auto const csm = window->mMainView->getView()->getDirectionalShadowCameras();
         // show/hide the cascades
         for (size_t i = 0 ; i < 4; i++) {
@@ -483,15 +531,14 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 if (csm[i]) {
                     lightmapCubes[i].mapFrustum(*mEngine, csm[i]);
                 }
-                uint8_t const layer = csm[i] ? 0x2 : 0x0;
-                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()),
-                        0x3, layer);
-                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()),
-                        0x3, layer);
+                uint8_t const layer = csm[i] ? mDirectionalShadowFrustumEnabled : 0x0;
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getSolidRenderable()), 0x3, layer);
+                rcm.setLayerMask(rcm.getInstance(lightmapCubes[i].getWireFrameRenderable()), 0x3, layer);
             }
         }
 
         cameraCube->mapFrustum(*mEngine, window->mMainCamera);
+        cameraGrid->mapFrustum(*mEngine, window->mMainCamera);
 
         // Delay rendering for roughly one monitor refresh interval
         // TODO: Use SDL_GL_SetSwapInterval for proper vsync
@@ -549,6 +596,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     cleanupCallback(mEngine, window->mMainView->getView(), mScene);
 
     cameraCube.reset();
+    cameraGrid.reset();
     lightmapCubes.clear();
     window.reset();
 
@@ -659,6 +707,30 @@ void FilamentApp::loadDirt(const Config& config) {
 
 void FilamentApp::initSDL() {
     FILAMENT_CHECK_POSTCONDITION(SDL_Init(SDL_INIT_EVENTS) == 0) << "SDL_Init Failure";
+}
+
+void FilamentApp::setCameraFrustumEnabled(bool enabled) noexcept {
+    mCameraFrustumEnabled = enabled ? 0x2 : 0x0;
+}
+
+void FilamentApp::setDirectionalShadowFrustumEnabled(bool enabled) noexcept {
+    mDirectionalShadowFrustumEnabled = enabled ? 0x2 : 0x0;
+}
+
+void FilamentApp::setFroxelGridEnabled(bool enabled) noexcept {
+    mFroxelGridEnabled = enabled ? 0x3 : 0x0;
+}
+
+bool FilamentApp::isCameraFrustumEnabled() const noexcept {
+    return !!mCameraFrustumEnabled;
+}
+
+bool FilamentApp::isDirectionalShadowFrustumEnabled() const noexcept {
+    return !!mDirectionalShadowFrustumEnabled;
+}
+
+bool FilamentApp::isFroxelGridEnabled() const noexcept {
+    return !!mFroxelGridEnabled;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -979,25 +1051,22 @@ void FilamentApp::Window::configureCamerasForWindow() {
 
     double near = mFilamentApp->mCameraNear;
     double far = mFilamentApp->mCameraFar;
-    if (mMainView->getView()->getStereoscopicOptions().enabled) {
-        mat4 projections[4];
-        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
-        projections[1] = projections[0];
-        // simulate foveated rendering
-        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, 1.0, near, far);
-        projections[3] = projections[2];
-        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
-    } else {
-        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, 1.0, near, far);
-    }
-    mDebugCamera->setProjection(45.0, double(mainWidth) / height, 0.0625, 4096, Camera::Fov::VERTICAL);
-
     auto aspectRatio = double(mainWidth) / height;
     if (mMainView->getView()->getStereoscopicOptions().enabled) {
         const int ec = mConfig.stereoscopicEyeCount;
         aspectRatio = double(mainWidth) / ec / height;
+
+        mat4 projections[4];
+        projections[0] = Camera::projection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
+        projections[1] = projections[0];
+        // simulate foveated rendering
+        projections[2] = Camera::projection(mFilamentApp->mCameraFocalLength * 2.0, aspectRatio, near, far);
+        projections[3] = projections[2];
+        mMainCamera->setCustomEyeProjection(projections, 4, projections[0], near, far);
+    } else {
+        mMainCamera->setLensProjection(mFilamentApp->mCameraFocalLength, aspectRatio, near, far);
     }
-    mMainCamera->setScaling({1.0 / aspectRatio, 1.0});
+    mDebugCamera->setProjection(45.0, aspectRatio, 0.0625, 4096, Camera::Fov::VERTICAL);
 
     // We're in split view when there are more views than just the Main and UI views.
     if (splitview) {

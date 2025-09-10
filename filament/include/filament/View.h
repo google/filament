@@ -27,6 +27,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <math/mathfwd.h>
+#include <math/mat4.h>
 
 #include <utility>
 
@@ -542,12 +543,13 @@ public:
      *                   visible -- in this case, using a larger value can improve performance.
      *                   e.g. when standing and looking straight, several meters of the ground
      *                   isn't visible and if lights are expected to shine there, there is no
-     *                   point using a short zLightNear. (Default 5m).
+     *                   point using a short zLightNear. This value is clamped between
+     *                   the camera near and far plane. (Default 5m).
      *
      * @param zLightFar Distance from the camera after which lights are not expected to be visible.
      *                  Similarly to zLightNear, setting this value properly can improve
-     *                  performance. (Default 100m).
-     *
+     *                  performance.  This value is clamped between the camera near and far plane.
+     *                  (Default 100m).
      *
      * Together zLightNear and zLightFar must be chosen so that the visible influence of lights
      * is spread between these two values.
@@ -757,6 +759,29 @@ public:
     //! debugging: returns a Camera from the point of view of *the* dominant directional light used for shadowing.
     utils::FixedCapacityVector<Camera const*> getDirectionalShadowCameras() const noexcept;
 
+    //! debugging: enable or disable froxel visualisation for this view.
+    void setFroxelVizEnabled(bool enabled) noexcept;
+
+    //! debugging: returns information about the froxel configuration
+    struct FroxelConfigurationInfo {
+        uint16_t width;
+        uint16_t height;
+        uint16_t depth;
+        uint32_t viewportWidth;
+        uint32_t viewportHeight;
+        math::uint2 froxelDimension;
+        float zLightFar;
+        float linearizer;
+        math::mat4f p;
+        math::float4 clipTransform;
+    };
+
+    struct FroxelConfigurationInfoWithAge {
+        FroxelConfigurationInfo info;
+        uint32_t age;
+    };
+
+    FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
 
     /** Result of a picking query */
     struct PickingQueryResult {

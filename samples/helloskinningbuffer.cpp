@@ -174,6 +174,7 @@ int main(int argc, char** argv) {
                 .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
                 .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
                 .normalized(VertexAttribute::COLOR)
+                .advancedSkinning(true)
                 .build(*engine);
         app.vb2->setBufferAt(*engine, 0,
                 VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));

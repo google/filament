@@ -104,7 +104,6 @@ TEST_F(BackendTest, FeedbackLoops) {
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
             "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
             "data");
-    FAIL_IF(Backend::WEBGPU, "BUG");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -127,7 +126,7 @@ TEST_F(BackendTest, FeedbackLoops) {
         TrianglePrimitive const triangle(getDriverApi());
 
         // Create a texture.
-        auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
+        auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
         Handle<HwTexture> const texture = cleanup.add(api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage));
 

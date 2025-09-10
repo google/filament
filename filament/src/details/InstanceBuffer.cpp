@@ -127,9 +127,8 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-void FInstanceBuffer::prepare(FEngine& engine, math::mat4f const& rootTransform,
+void FInstanceBuffer::prepare(DriverApi& driver, math::mat4f const& rootTransform,
         const PerRenderableData& ubo) {
-    DriverApi& driver = engine.getDriverApi();
 
     // TODO: allocate this staging buffer from a pool.
     constexpr uint32_t stagingBufferSize = sizeof(PerRenderableUib);

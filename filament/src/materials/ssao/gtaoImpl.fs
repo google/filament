@@ -24,6 +24,7 @@
 #include "../utils/geometry.fs"
 
 #define rsqrt inversesqrt
+#define SECTOR_COUNT 32u
 
 #ifndef COMPUTE_BENT_NORMAL
 #error COMPUTE_BENT_NORMAL must be set
@@ -58,6 +59,67 @@ float spatialOffsetsNoise(float2 uv) {
 	return 0.25 * float((position.y - position.x) & 3);
 }
 
+// If the new sample value is greater then the current one, update the value with some fallOff.
+// Otherwise, apply thicknessHeuristic.
+float updateHorizon(float sampleHorizonCos, float currentHorizonCos, float fallOff) {
+    return sampleHorizonCos > currentHorizonCos
+        ? mix(sampleHorizonCos, currentHorizonCos, fallOff)
+        : mix(currentHorizonCos, sampleHorizonCos, materialParams.thicknessHeuristic);
+}
+
+float calculateHorizonCos(highp vec3 sampleDelta, highp vec3 viewDir, float horizonCos) {
+    highp float sqSampleDist = dot(sampleDelta, sampleDelta);
+    float invSampleDist = rsqrt(sqSampleDist);
+
+    // Use the view space radius to calculate the fallOff
+    float fallOff = saturate(sqSampleDist * materialParams.invRadiusSquared * 2.0);
+
+    // sample horizon cos
+    float shc = dot(sampleDelta, viewDir) * invSampleDist;
+
+    return updateHorizon(shc, horizonCos, fallOff);
+}
+
+// https://cdrinmatane.github.io/posts/ssaovb-code/
+// https://github.com/cdrinmatane/SSRT3/blob/main/HDRP/Shaders/Resources/SSRTCS.compute
+uint updateSectors(float minHorizon, float maxHorizon, uint globalOccludedBitfield) {
+    uint startHorizonInt = uint(minHorizon * float(SECTOR_COUNT));
+    uint angleHorizonInt = uint(ceil(saturate(maxHorizon-minHorizon) * float(SECTOR_COUNT)));
+    uint angleHorizonBitfield = angleHorizonInt > 0u ? (0xFFFFFFFFu >> (SECTOR_COUNT-angleHorizonInt)) : 0u;
+    uint currentOccludedBitfield = angleHorizonBitfield << startHorizonInt;
+    return globalOccludedBitfield | currentOccludedBitfield;
+}
+
+// https://cdrinmatane.github.io/posts/ssaovb-code/
+// https://github.com/cdrinmatane/SSRT3/blob/main/HDRP/Shaders/Resources/SSRTCS.compute
+// The visibility bitmask method replaces the traditional two horizon angles with a bitmask
+// for each slice. This bitmask flags whether each sector is occluded or not,
+// which enables surfaces to be modeled with constant thickness, overcoming the limitation
+// of treating them as a simple height field.
+uint calculateVisibilityMask(highp vec3 deltaPos, highp vec3 viewDir, float samplingDirection,
+    uint globalOccludedBitfield, float n, highp vec3 origin) {
+    vec2 frontBackHorizon;
+    float linearThicknessMultiplier = materialConstants_linearThickness
+        ? saturate(origin.z * materialParams.invFarPlane) * 100.0
+        : 1.0;
+    vec3 deltaPosBackface = deltaPos - viewDir * materialParams.constThickness * linearThicknessMultiplier;
+
+    // Project sample onto the unit circle and compute the angle relative to V
+    frontBackHorizon.x = dot(normalize(deltaPos), viewDir);
+    frontBackHorizon.y = dot(normalize(deltaPosBackface), viewDir);
+
+    frontBackHorizon.x = acosFast(frontBackHorizon.x);
+    frontBackHorizon.y = acosFast(frontBackHorizon.y);
+
+    // Shift sample from V to normal, clamp in [0..1]
+    frontBackHorizon = clamp(((samplingDirection * -frontBackHorizon) + n + HALF_PI) / PI, 0.0, 1.0);
+
+    // Sampling direction inverts min/max angles
+    frontBackHorizon = samplingDirection >= 0.0 ? frontBackHorizon.yx : frontBackHorizon.xy;
+
+    return updateSectors(frontBackHorizon.x, frontBackHorizon.y, globalOccludedBitfield);
+}
+
 void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         highp vec2 uv, highp vec3 origin, vec3 normal) {
     vec2 uvSamplePos = uv;
@@ -84,20 +146,26 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
         vec3 direction = vec3(cosPhi, sinPhi, 0.0);
         // Project direction onto the plane orthogonal to viewDir.
         vec3 orthoDirection = normalize(direction - (dot(direction, viewDir)*viewDir));
-        // axis is orthogonal to direction and viewDir (basically the normal of the slice plane)
+        // `axis` is orthogonal to direction and viewDir (basically the normal of the slice plane)
         // Used to define projectedNormal
         vec3 axis = cross(orthoDirection, viewDir);
-        // Project the normal onto the slice plane
+        // `projNormal` is the normal projected onto the slice plane
         vec3 projNormal = normal - axis * dot(normal, axis);
 
         float signNorm = sign(dot(orthoDirection, projNormal));
         float projNormalLength = length(projNormal);
         float cosNorm = saturate(dot(projNormal, viewDir) / projNormalLength);
 
+        // `n` is the signed angle between projNormal and viewDir
         float n = signNorm * acosFast(cosNorm);
 
+        // These are only used in non-bitmask mode
         float horizonCos0 = -1.0;
         float horizonCos1 = -1.0;
+
+        // This is only used in bitmask mode
+        uint globalOccludedBitfield = 0u;
+
         for (float j = 0.0; j < materialParams.stepsPerSlice; j += 1.0) {
             // At least move 1 pixel forward in the screen-space
             vec2 sampleOffset = max((j + initialRayStep)*stepRadius, 1.0 + j) * omega;
@@ -116,33 +184,36 @@ void groundTruthAmbientOcclusion(out float obscurance, out vec3 bentNormal,
 
             highp vec3 sampleDelta0 = (samplePos0 - origin);
             highp vec3 sampleDelta1 = (samplePos1 - origin);
-            highp vec2 sqSampleDist = vec2(dot(sampleDelta0, sampleDelta0), dot(sampleDelta1, sampleDelta1));
-            vec2 invSampleDist = rsqrt(sqSampleDist);
 
-            // Use the view space radius to calculate the fallOff
-            vec2 fallOff = saturate(sqSampleDist.xy * materialParams.invRadiusSquared * 2.0);
-
-            // sample horizon cos
-            float shc0 = dot(sampleDelta0, viewDir) * invSampleDist.x;
-            float shc1 = dot(sampleDelta1, viewDir) * invSampleDist.y;
-
-            // If the new sample value is greater then the current one, update the value with some fallOff.
-            // Otherwise, apply thicknessHeuristic.
-            horizonCos0 = shc0 > horizonCos0 ? mix(shc0, horizonCos0, fallOff.x) : mix(horizonCos0, shc0, materialParams.thicknessHeuristic);
-            horizonCos1 = shc1 > horizonCos1 ? mix(shc1, horizonCos1, fallOff.y) : mix(horizonCos1, shc1, materialParams.thicknessHeuristic);
+            if (materialConstants_useVisibilityBitmasks) {
+                globalOccludedBitfield = calculateVisibilityMask(sampleDelta0, viewDir, 1.0, globalOccludedBitfield, n, origin);
+                globalOccludedBitfield = calculateVisibilityMask(sampleDelta1, viewDir, -1.0, globalOccludedBitfield, n, origin);
+            }
+            else {
+                horizonCos0 = calculateHorizonCos(sampleDelta0, viewDir, horizonCos0);
+                horizonCos1 = calculateHorizonCos(sampleDelta1, viewDir, horizonCos1);
+            }
         }
 
-        float h0 = -acosFast(horizonCos1);
-        float h1 = acosFast(horizonCos0);
-        h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
-        h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
+        if (materialConstants_useVisibilityBitmasks) {
+            // Calculate the portion of the occluded sector
+            visibility += 1.0 - float(bitCount(globalOccludedBitfield)) / float(SECTOR_COUNT);
 
-#if COMPUTE_BENT_NORMAL
-        float angle = 0.5 * (h0 + h1);
-        bentNormal += viewDir * cos(angle) - orthoDirection * sin(angle);
-#endif
+            // Note: bent normal calculation is not supported in visibility bitmasks mode
+        }
+        else {
+            float h0 = -acosFast(horizonCos1);
+            float h1 = acosFast(horizonCos0);
+            h0 = n + clamp(h0 - n, -HALF_PI, HALF_PI);
+            h1 = n + clamp(h1 - n, -HALF_PI, HALF_PI);
 
-        visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
+            #if COMPUTE_BENT_NORMAL
+                    float angle = 0.5 * (h0 + h1);
+                    bentNormal += viewDir * cos(angle) - orthoDirection * sin(angle);
+            #endif
+
+            visibility += projNormalLength * (integrateArcCosWeight(h0, n) + integrateArcCosWeight(h1, n));
+        }
     }
 
     obscurance = 1.0 - saturate(visibility * materialParams.sliceCount.y);

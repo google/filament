@@ -20,6 +20,7 @@ set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
 set(PUBLIC_HDRS
         include/filamentapp/Config.h
         include/filamentapp/Cube.h
+        include/filamentapp/Grid.h
         include/filamentapp/FilamentApp.h
         include/filamentapp/IBL.h
         include/filamentapp/IcoSphere.h
@@ -30,6 +31,7 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Cube.cpp
+        src/Grid.cpp
         src/FilamentApp.cpp
         src/IBL.cpp
         src/IcoSphere.cpp

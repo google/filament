@@ -121,7 +121,7 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
 }
 
 bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set) const {
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& info) { return info.set == set; });
     return itr != mSetBindings.end();
