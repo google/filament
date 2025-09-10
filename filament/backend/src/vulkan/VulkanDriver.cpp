@@ -1010,7 +1010,7 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
     auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
     set.dec();
 
-    if (mAppState.hasExternalSamplers() && set->getExternalSamplerVkSet() != VK_NULL_HANDLE) {
+    if (mAppState.hasExternalSamplers()) {
         mExternalImageManager.removeDescriptorSet(set);
     }
 }
