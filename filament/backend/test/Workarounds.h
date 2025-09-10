@@ -17,8 +17,7 @@
 #ifndef TNT_BACKEND_TEST_WORKAROUNDS_H
 #define TNT_BACKEND_TEST_WORKAROUNDS_H
 
-#if defined(FILAMENT_SUPPORTS_WEBGPU)
-// consider, if needed, adding (as Vulkan also has transient attachments): || defined(FILAMENT_SUPPORTS_VULKAN)
+#if defined(FILAMENT_SUPPORTS_WEBGPU) || defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
 // TODO: support TextureUsage::READ_PIXELS (or something like that)
 //        and search-and-replace TEXTURE_USAGE_READ_PIXELS with
 //       "| TextureUsage::READ_PIXELS" when it is available.
