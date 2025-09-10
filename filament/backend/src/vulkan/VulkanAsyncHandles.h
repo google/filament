@@ -20,10 +20,9 @@
 #include <bluevk/BlueVK.h>
 
 #include "DriverBase.h"
+#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
-
-#include <backend/Platform.h>
 
 #include <utils/Mutex.h>
 #include <utils/Condition.h>
