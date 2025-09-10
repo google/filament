@@ -201,8 +201,14 @@ public:
     // Note: named "GLSyncFence" to avoid confusion with the GL handle,
     // "GLsync" (lowercase S)
     struct GLSyncFence : public HwSync {
+        struct CallbackData {
+            CallbackHandler* handler;
+            Platform::SyncCallback cb;
+            Platform::Sync* sync;
+            void* userData;
+        };
         std::mutex lock;
-        std::vector<std::unique_ptr<Platform::SyncCallbackData>> conversionCallbacks;
+        std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;

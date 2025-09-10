@@ -152,8 +152,8 @@ namespace filament::backend {
 namespace {
 
 static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
-    std::unique_ptr<Platform::SyncCallbackData> cbData(
-            static_cast<Platform::SyncCallbackData*>(userData));
+    std::unique_ptr<OpenGLDriver::GLSyncFence::CallbackData> cbData(
+            static_cast<OpenGLDriver::GLSyncFence::CallbackData*>(userData));
     // This assumes the sync has not yet been destroyed. If it has, this will be
     // undefined behavior.
     cbData->cb(cbData->sync, cbData->userData);
@@ -2319,7 +2319,7 @@ void OpenGLDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
     }
 
     GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
-    auto cbData = std::make_unique<Platform::SyncCallbackData>();
+    auto cbData = std::make_unique<GLSyncFence::CallbackData>();
     cbData->handler = handler;
     cbData->cb = cb;
     cbData->userData = userData;

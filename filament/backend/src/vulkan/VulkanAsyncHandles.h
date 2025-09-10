@@ -23,6 +23,8 @@
 
 #include "vulkan/memory/Resource.h"
 
+#include <backend/Platform.h>
+
 #include <utils/Mutex.h>
 #include <utils/Condition.h>
 
@@ -53,9 +55,16 @@ struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
 };
 
 struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+    struct CallbackData {
+        CallbackHandler* handler;
+        Platform::SyncCallback cb;
+        Platform::Sync* sync;
+        void* userData;
+    };
+
     VulkanSync() {}
     std::mutex lock;
-    std::vector<std::unique_ptr<Platform::SyncCallbackData>> conversionCallbacks;
+    std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {

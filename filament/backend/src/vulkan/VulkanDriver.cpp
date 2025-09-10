@@ -137,8 +137,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
 static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
-    std::unique_ptr<Platform::SyncCallbackData> cbData(
-            static_cast<Platform::SyncCallbackData*>(userData));
+    std::unique_ptr<VulkanSync::CallbackData> cbData(
+            static_cast<VulkanSync::CallbackData*>(userData));
     // This assumes the sync has not yet been destroyed. If it has, this will be
     // undefined behavior.
     cbData->cb(cbData->sync, cbData->userData);
@@ -1125,7 +1125,7 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
 void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
         Platform::SyncCallback cb, void* userData) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
-    auto cbData = std::make_unique<Platform::SyncCallbackData>();
+    auto cbData = std::make_unique<VulkanSync::CallbackData>();
     cbData->handler = handler;
     cbData->cb = cb;
     cbData->userData = userData;

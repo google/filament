@@ -16,8 +16,6 @@
 
 #include <backend/Platform.h>
 
-#include <backend/CallbackHandler.h>
-
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 

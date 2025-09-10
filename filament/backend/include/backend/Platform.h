@@ -47,13 +47,6 @@ public:
 
     using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
 
-    struct SyncCallbackData {
-        CallbackHandler* UTILS_NULLABLE handler;
-        SyncCallback UTILS_NULLABLE cb;
-        Sync* UTILS_NULLABLE sync;
-        void* UTILS_NULLABLE userData;
-    };
-
     class ExternalImageHandle;
 
     class ExternalImage {
