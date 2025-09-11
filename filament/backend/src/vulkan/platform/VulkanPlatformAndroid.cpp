@@ -389,6 +389,37 @@ VulkanPlatform::ImageData VulkanPlatformAndroid::createVkImageFromExternal(
     };
 }
 
+bool VulkanPlatformAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) const noexcept {
+    assert_invariant(sync && fd);
+
+    VulkanSync& vulkanSync = static_cast<VulkanSync&>(*sync);
+    assert_invariant(vulkanSync.fenceStatus);
+
+    if (vulkanSync.fenceStatus->getStatus() == VK_SUCCESS) {
+        // We've already signaled; return -1 so that operations will proceed
+        // immediately. Also, signal that fence conversion was successful.
+        *fd = -1;
+        return true;
+    }
+
+    VkFenceGetFdInfoKHR getFdInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_GET_FD_INFO_KHR,
+        .fence = vulkanSync.fence,
+        .handleType = getFenceExportFlags(),
+    };
+    VkResult res = vkGetFenceFdKHR(getDevice(), &getFdInfo, fd);
+    if (res != VK_SUCCESS) {
+        LOG(ERROR) << "Failed to convert sync to fd: " << res;
+        return false;
+    }
+    return true;
+}
+
+VkExternalFenceHandleTypeFlagBits VulkanPlatformAndroid::getFenceExportFlags() const noexcept {
+    // On android, make fences that can be exported to fd's.
+    return VK_EXTERNAL_FENCE_HANDLE_TYPE_SYNC_FD_BIT;
+}
+
 VulkanPlatform::ExtensionSet VulkanPlatformAndroid::getSwapchainInstanceExtensions() const {
     return {
         VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,

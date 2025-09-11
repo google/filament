@@ -137,6 +137,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsCallback(VkDebugUtilsMessageSeverityFla
 }
 #endif // FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
 
+static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
+    std::unique_ptr<VulkanSync::CallbackData> cbData(
+            static_cast<VulkanSync::CallbackData*>(userData));
+    // This assumes the sync has not yet been destroyed. If it has, this will be
+    // undefined behavior.
+    cbData->cb(cbData->sync, cbData->userData);
+};
 
 }// anonymous namespace
 
@@ -833,6 +840,36 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::CString tag) {
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
+void VulkanDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    VkFence fence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> fenceStatus;
+    if (mCurrentRenderPass.commandBuffer) {
+        VulkanCommandBuffer* cmdBuff = mCurrentRenderPass.commandBuffer;
+        fence = cmdBuff->getVkFence();
+        fenceStatus = cmdBuff->getFenceStatus();
+        // If we're currently recording, flush so that the fence only applies
+        // to commands already issued.
+        mCommands.flush();
+    } else {
+        fence = mCommands.getMostRecentFence();
+        fenceStatus = mCommands.getMostRecentFenceStatus();
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(sync->lock);
+        sync->sync = mPlatform->createSync(fence, fenceStatus);
+    }
+
+    for (auto& cbData : sync->conversionCallbacks) {
+        cbData->sync = sync->sync;
+        scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
+    }
+
+    sync->conversionCallbacks.clear();
+    mResourceManager.associateHandle(sh.getId(), std::move(tag));
+}
+
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
         utils::CString tag) {
     FVK_SYSTRACE_SCOPE();
@@ -965,6 +1002,13 @@ Handle<HwFence> VulkanDriver::createFenceS() noexcept {
     return handle;
 }
 
+Handle<HwSync> VulkanDriver::createSyncS() noexcept {
+    auto handle = mResourceManager.allocHandle<VulkanSync>();
+    auto sync = resource_ptr<VulkanSync>::make(&mResourceManager, handle);
+    sync.inc();
+    return handle;
+}
+
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
     return mResourceManager.allocHandle<VulkanSwapChain>();
 }
@@ -1001,6 +1045,17 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+}
+
+void VulkanDriver::destroySync(Handle<HwSync> sh) {
+    if (!sh) {
+        return;
+    }
+    FVK_SYSTRACE_SCOPE();
+
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    mPlatform->destroySync(sync->sync);
+    sync.dec();
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1076,6 +1131,29 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
     //   - VK_NOT_READY: the buffer has been submitted but not yet signaled.
     //     In either case, we return TIMEOUT_EXPIRED to indicate the fence has not been signaled.
     return FenceStatus::TIMEOUT_EXPIRED;
+}
+
+void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
+    auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);
+    auto cbData = std::make_unique<VulkanSync::CallbackData>();
+    cbData->handler = handler;
+    cbData->cb = cb;
+    cbData->userData = userData;
+
+    // If we haven't already set the handle, toss the conversion callback in the
+    // back of the list.
+    {
+        std::lock_guard guard(sync->lock);
+        if (sync->sync == nullptr) {
+            sync->conversionCallbacks.push_back(std::move(cbData));
+            return;
+        }
+    }
+
+    // Otherwise, go ahead and schedule the callback now.
+    cbData->sync = sync->sync;
+    scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
@@ -1824,9 +1902,14 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
     VkOffset3D const srcOffsets[2] = { { srcLeft, srcTop, 0 }, { srcRight, srcBottom, 1 }};
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 }};
 
-    mBlitter.blit(vkfilter,
-            dstTarget->getColor0(), dstOffsets,
-            srcTarget->getColor0(), srcOffsets);
+    auto const& dstAttachment = dstTarget->getColor0();
+    auto const& srcAttachment = srcTarget->getColor0();
+
+    if (srcAttachment.texture->samples > 1) {
+        mBlitter.resolve(dstAttachment, srcAttachment);
+    } else {
+        mBlitter.blit(vkfilter, dstAttachment, dstOffsets, srcAttachment, srcOffsets);
+    }
 }
 
 void VulkanDriver::bindPipeline(PipelineState const& pipelineState) {
