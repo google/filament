@@ -231,6 +231,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
               &mDescriptorSetLayoutCache),
+      mStreamedImageManager(&mExternalImageManager, &mDescriptorSetCache, &mSamplerCache),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(driverConfig.stereoscopicType) {
 
@@ -457,6 +458,9 @@ void VulkanDriver::updateDescriptorSetTexture(
     if (UTILS_UNLIKELY(mExternalImageManager.isExternallySampledTexture(texture))) {
         mExternalImageManager.bindExternallySampledTexture(set, binding, texture, params);
         mAppState.hasBoundExternalImages = true;
+    } else if (bool(texture->getStream())) {
+        mStreamedImageManager.bindStreamedTexture(set, binding, texture, params);
+        mAppState.hasBoundExternalImages = true;
     } else {
         VulkanSamplerCache::Params cacheParams = {
             .sampler = params,
@@ -464,6 +468,7 @@ void VulkanDriver::updateDescriptorSetTexture(
         VkSampler const vksampler = mSamplerCache.getSampler(cacheParams);
         mDescriptorSetCache.updateSampler(set, binding, texture, vksampler);
         mExternalImageManager.clearTextureBinding(set, binding);
+        mStreamedImageManager.unbindStreamedTexture(set, binding);
     }
 }
 
@@ -990,6 +995,11 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+    if (!sh) {
+        return;
+    }
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream.dec();
 }
 
 void VulkanDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
@@ -1016,25 +1026,120 @@ void VulkanDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
 }
 
 Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::CString tag) {
+    FILAMENT_CHECK_PRECONDITION(false) << "createStreamNative not supported in Vulkan.";
     return {};
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired(utils::CString tag) {
-    return {};
+    FVK_SYSTRACE_SCOPE();
+    auto handle = mResourceManager.allocHandle<VulkanStream>();
+    auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
+    stream.inc();
+    return handle;
 }
 
 void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math::mat3f& transform,
         CallbackHandler* handler, StreamCallback cb, void* userData) {
+    FVK_SYSTRACE_SCOPE();
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream->acquire({ image, cb, userData, handler});
+    stream->setTransform(transform);
+    mStreamsWithPendingAcquiredImage.push_back(stream);
 }
 
 void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
+    FVK_SYSTRACE_SCOPE();
+    auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    stream->width = width;
+    stream->height = height;
 }
 
 int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
+math::mat3f VulkanDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
+    if (sh) {
+        auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+        if (stream->streamType == StreamType::NATIVE) {
+            FILAMENT_CHECK_PRECONDITION(false) << "Native Stream not supported in Vulkan.";
+        } else {
+            return stream->getTransform();
+        }
+    }
+    return math::mat3f();
+}
+
 void VulkanDriver::updateStreams(CommandStream* driver) {
+    FVK_SYSTRACE_SCOPE();
+    if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
+        for (auto& stream: mStreamsWithPendingAcquiredImage) {
+            if (stream->previousNeedsRelease()) {
+                scheduleRelease(stream->takePrevious());
+            }
+
+            // This executes on the backend thread (updateStreams is synchonous which means it
+            // executes on the user thread) Note: stream is captured by copy which is fine, this is
+            // a copy of a resource_ptr<VulkanStream>. We only need it find the associated stream
+            // inside the mStreamedImageManager texture bindings
+            driver->queueCommand([this, stream, s = stream.get(),
+                                         image = stream->getAcquired().image,
+                                         transform = stream->getTransform()]() {
+                auto texture = s->getTexture(image);
+                bool newImage = false;
+                if (!texture) {
+                    auto externalImage = mPlatform->createExternalImageFromRaw(image, false);
+                    auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
+                    auto imgData = mPlatform->createVkImageFromExternal(externalImage);
+
+                    assert_invariant(imgData.internal.valid() || imgData.external.valid());
+
+                    VkFormat vkformat = metadata.format;
+                    VkImage vkimage = VK_NULL_HANDLE;
+                    VkDeviceMemory memory = VK_NULL_HANDLE;
+                    if (imgData.internal.valid()) {
+                        metadata.externalFormat = 0;
+                        vkimage = imgData.internal.image;
+                        memory = imgData.internal.memory;
+                    } else {
+                        vkformat = VK_FORMAT_UNDEFINED;
+                        vkimage = imgData.external.image;
+                        memory = imgData.external.memory;
+                    }
+
+                    VkSamplerYcbcrConversion const conversion =
+                            mExternalImageManager.getVkSamplerYcbcrConversion(metadata);
+
+                    auto newTexture = resource_ptr<VulkanTexture>::construct(&mResourceManager,
+                            mContext, mPlatform->getDevice(), mAllocator, &mResourceManager,
+                            &mCommands, vkimage, memory, vkformat, conversion, metadata.samples,
+                            metadata.width, metadata.height, metadata.layers,
+                            metadata.filamentUsage, mStagePool);
+
+                    auto& commands = mCommands.get();
+                    // Unlike uploaded textures or swapchains, we need to explicit transition this
+                    // texture into the read layout.
+                    newTexture->transitionLayout(&commands, newTexture->getPrimaryViewRange(),
+                            VulkanLayout::FRAG_READ);
+
+                    if (imgData.external.valid()) {
+                        mExternalImageManager.addExternallySampledTexture(newTexture,
+                                externalImage);
+                        // Cache the AHB backed image.
+                        s->pushImage(image, newTexture);
+                        newImage = true;
+                    }
+
+                    newTexture.inc();
+                    texture = newTexture;
+                }
+
+                // Note that we capture the
+                mStreamedImageManager.onStreamAcquireImage(texture, stream, newImage);
+            });
+        }
+        mStreamsWithPendingAcquiredImage.clear();
+    }
 }
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
@@ -1280,7 +1385,34 @@ void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor
 
 void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
         BufferObjectStreamDescriptor&& streams) {
-    // Noop
+
+    auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
+    mStreamUniformDescriptors[bo.get()] = std::move(streams);
+}
+
+// This needs to be discussed because Vulkan has different default Matrix formats
+// right now this is following GL.
+static void copyMat3f(void* addr, size_t const offset, const math::mat3f& v) noexcept {
+    struct mat43 {
+        float v[3][4];
+    };
+
+    addr = static_cast<char*>(addr) + offset;
+    mat43& temp = *static_cast<mat43*>(addr);
+
+    temp.v[0][0] = v[0][0];
+    temp.v[0][1] = v[0][1];
+    temp.v[0][2] = v[0][2];
+
+    temp.v[1][0] = v[1][0];
+    temp.v[1][1] = v[1][1];
+    temp.v[1][2] = v[1][2];
+
+    temp.v[2][0] = v[2][0];
+    temp.v[2][1] = v[2][1];
+    temp.v[2][2] = v[2][2];
+
+    // don't store anything in temp.v[][3] because there could be uniforms packed there
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
@@ -1290,6 +1422,20 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
     bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
+
+    if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
+        auto streamDescriptors = mStreamUniformDescriptors.find(bo.get());
+        if (streamDescriptors != mStreamUniformDescriptors.end()) {
+            for (auto const& [offset, stream, associationType]:
+                    streamDescriptors->second.mStreams) {
+                if (associationType == BufferObjectStreamAssociationType::TRANSFORM_MATRIX) {
+                    auto transform = getStreamTransformMatrix(stream);
+                    copyMat3f(bd.buffer, offset, transform);
+                }
+            }
+            mStreamUniformDescriptors.erase(streamDescriptors);
+        }
+    }
 
     scheduleDestroy(std::move(bd));
 }
@@ -1356,6 +1502,12 @@ TimerQueryResult VulkanDriver::getTimerQueryValue(Handle<HwTimerQuery> tqh, uint
 }
 
 void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
+    FVK_SYSTRACE_SCOPE();
+    auto t = resource_ptr<VulkanTexture>::cast(&mResourceManager, th);
+    assert_invariant(t);
+    auto s = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    assert_invariant(s);
+    t->setStream(s);
 }
 
 void VulkanDriver::generateMipmaps(Handle<HwTexture> th) {

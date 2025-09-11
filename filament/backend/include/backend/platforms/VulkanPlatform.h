@@ -406,6 +406,9 @@ public:
     virtual ImageData createVkImageFromExternal(ExternalImageHandleRef image) const {
         return {};
     }
+    virtual ExternalImageHandle createExternalImageFromRaw(void* image, bool sRGB) noexcept {
+        return {};
+    }
 
 protected:
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
