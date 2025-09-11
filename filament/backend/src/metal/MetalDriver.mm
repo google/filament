@@ -1002,8 +1002,12 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage MetalDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::MSL;
+utils::FixedCapacityVector<ShaderLanguage> MetalDriver::getShaderLanguage(
+        PreferredShaderLanguage preferredLanguage) const noexcept {
+    if (preferredLanguage == PreferredShaderLanguage::MSL) {
+        return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
+    }
+    return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
 }
 
 Handle<HwStream> MetalDriver::createStreamNative(void* stream, utils::CString tag) {

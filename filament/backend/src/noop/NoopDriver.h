@@ -20,6 +20,7 @@
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 namespace filament::backend {
@@ -34,7 +35,8 @@ public:
 
 private:
     ShaderModel getShaderModel() const noexcept final;
-    ShaderLanguage getShaderLanguage() const noexcept final;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
+            PreferredShaderLanguage preferredLanguage) const noexcept final;
 
     uint64_t nextFakeHandle = 1;
 

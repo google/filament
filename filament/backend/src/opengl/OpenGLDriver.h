@@ -233,7 +233,8 @@ private:
     }
 
     ShaderModel getShaderModel() const noexcept override;
-    ShaderLanguage getShaderLanguage() const noexcept override;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
+            PreferredShaderLanguage preferredLanguage) const noexcept override;
 
     /*
      * OpenGLDriver interface

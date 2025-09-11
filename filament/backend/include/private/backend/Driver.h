@@ -27,6 +27,7 @@
 #include <backend/AcquiredImage.h>
 
 #include <utils/CString.h>
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include <functional>
@@ -79,7 +80,8 @@ public:
     //
     // Metal shaders can either be MSL or Metal libraries, but at time of writing, matdbg can only
     // interface with MSL.
-    virtual ShaderLanguage getShaderLanguage() const noexcept = 0;
+    virtual utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
+            PreferredShaderLanguage preferredLanguage) const noexcept = 0;
 
     // Returns the dispatcher. This is only called once during initialization of the CommandStream,
     // so it doesn't matter that it's virtual.

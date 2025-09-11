@@ -33,6 +33,7 @@
 #include "private/backend/HandleAllocator.h"
 #include <backend/DriverEnums.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include "SpdMipmapGenerator/SpdMipmapGenerator.h"
@@ -65,7 +66,8 @@ public:
 private:
     WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
-    [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
+    [[nodiscard]] utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
+            PreferredShaderLanguage preferredLanguage) const noexcept final;
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
     void setDebugTag(HandleBase::HandleId handleId, utils::CString&& tag);
