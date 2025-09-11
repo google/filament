@@ -86,6 +86,15 @@ public:
     virtual bool isSRGBSwapChainSupported() const noexcept;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES flag.
+     * The default implementation returns false.
+     *
+     * @param samples The number of samples
+     * @return true if SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
+     */
+    virtual bool isMSAASwapChainSupported(uint32_t samples) const noexcept;
+
+    /**
      * Return whether protected contexts are supported by this backend.
      * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
      * used when creating a SwapChain.
@@ -276,6 +285,26 @@ public:
      */
     virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Sync support
+
+    /**
+     * Creates a Sync. These can be used for frame synchronization externally
+     * (certain platform implementations can be exported to handles that can
+     * be used in other processes).
+     *
+     * @return A Sync object.
+     */
+    virtual Platform::Sync* UTILS_NONNULL createSync() noexcept;
+
+    /**
+     * Destroys a sync. If called with a sync not created by this platform
+     * object, this will lead to undefined behavior.
+     *
+     * @param sync The sync to destroy, that was created by this platform
+     *             instance.
+     */
+    virtual void destroySync(Platform::Sync* UTILS_NONNULL sync) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Streaming support

@@ -916,6 +916,8 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     context.mBlittableDepthStencilFormats =
             findBlittableDepthStencilFormats(mImpl->mPhysicalDevice);
 
+    context.mFenceExportFlags = getFenceExportFlags();
+
     assert_invariant(context.mDepthStencilFormats.size() > 0);
 
 #if FVK_ENABLED(FVK_DEBUG_VALIDATION)
@@ -998,6 +1000,17 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     return swapchain;
 }
 
+Platform::Sync* VulkanPlatform::createSync(VkFence fence,
+        std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
+    return new VulkanSync{.fence = fence, .fenceStatus = fenceStatus};
+}
+
+void VulkanPlatform::destroySync(Platform::Sync* sync) noexcept {
+    // Sync must be a VulkanSync*, since it was created by VulkanPlatform's
+    // createSync object.
+    delete sync;
+}
+
 VkInstance VulkanPlatform::getInstance() const noexcept {
     return mImpl->mInstance;
 }
@@ -1032,6 +1045,11 @@ uint32_t VulkanPlatform::getProtectedGraphicsQueueIndex() const noexcept {
 
 VkQueue VulkanPlatform::getProtectedGraphicsQueue() const noexcept {
     return mImpl->mProtectedGraphicsQueue;
+}
+
+VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const noexcept {
+    // By default, fences should not be exportable.
+    return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
 }
 
 ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
