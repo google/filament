@@ -153,11 +153,13 @@ void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
     FILAMENT_CHECK_PRECONDITION(DSLB::isBuffer(layout.getDescriptorType(binding)))
             << "descriptor " << +binding << "is not a buffer";
 
-    if (mDescriptors[binding].buffer.boh != boh || mDescriptors[binding].buffer.size != size) {
-        // we don't set the dirty bit if only offset changes
+    auto& buffer = mDescriptors[binding].buffer;
+    if (buffer.boh != boh ||
+        buffer.offset != offset ||
+        buffer.size != size) {
         mDirty.set(binding);
     }
-    mDescriptors[binding].buffer = { boh, offset, size };
+    buffer = { boh, offset, size };
     mValid.set(binding, bool(boh));
 }
 
