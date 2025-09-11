@@ -778,11 +778,10 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         for (uint32_t const i : merged) {
             auto const& skinning = sceneData.elementAt<FScene::SKINNING_BUFFER>(i);
             auto const& morphing = sceneData.elementAt<FScene::MORPHING_BUFFER>(i);
-            auto const& instance = sceneData.elementAt<FScene::INSTANCES>(i);
 
             // FIXME: when only one is active the UBO handle of the other is null
             //        (probably a problem on vulkan)
-            if (UTILS_UNLIKELY(skinning.handle || morphing.handle || instance.buffer)) {
+            if (UTILS_UNLIKELY(skinning.handle || morphing.handle)) {
                 auto const ci = sceneData.elementAt<FScene::RENDERABLE_INSTANCE>(i);
                 FRenderableManager& rcm = engine.getRenderableManager();
                 auto& descriptorSet = rcm.getDescriptorSet(ci);
@@ -795,10 +794,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 }
 
                 descriptorSet.setBuffer(layout,
-                        +PerRenderableBindingPoints::OBJECT_UNIFORMS,
-                        instance.buffer ? instance.buffer->getHandle() : mRenderableUbh,
-                        instance.buffer ? instance.buffer->getOffset() : 0,
-                        sizeof(PerRenderableUib));
+                        +PerRenderableBindingPoints::OBJECT_UNIFORMS, mRenderableUbh,
+                        0, sizeof(PerRenderableUib));
 
                 descriptorSet.setBuffer(layout,
                         +PerRenderableBindingPoints::BONES_UNIFORMS,
@@ -929,7 +926,7 @@ void FView::updateUBOs(
     for (uint32_t const i : visibleRenderables) {
         auto& instancesInfo = instancesData[i];
         if (instancesInfo.buffer) {
-            assert_invariant(instancesInfo.count == instancesInfo.buffer->getInstanceCount());
+            assert_invariant(instancesInfo.count <= instancesInfo.buffer->getInstanceCount());
             icount += instancesInfo.count;
         }
     }
@@ -977,7 +974,6 @@ void FView::updateUBOs(
         auto& instancesInfo = instancesData[i];
         if (instancesInfo.buffer) {
             instancesInfo.buffer->prepare(
-                    mRenderableUbh,
                     buffer,  j, instancesInfo.count,
                     worldTransformData[i], uboData[i]);
             j += instancesInfo.count;
