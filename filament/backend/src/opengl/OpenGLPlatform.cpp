@@ -76,6 +76,10 @@ bool OpenGLPlatform::isSRGBSwapChainSupported() const noexcept {
     return false;
 }
 
+bool OpenGLPlatform::isMSAASwapChainSupported(uint32_t) const noexcept {
+    return false;
+}
+
 uint32_t OpenGLPlatform::getDefaultFramebufferObject() noexcept {
     return 0;
 }

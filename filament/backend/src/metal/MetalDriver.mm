@@ -652,6 +652,8 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, utils::CString tag) {
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
         utils::CString tag) {
+    // TODO: support MSAA swapchain
+
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
@@ -1118,6 +1120,11 @@ bool MetalDriver::isAutoDepthResolveSupported() {
 
 bool MetalDriver::isSRGBSwapChainSupported() {
     // the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag is not supported
+    return false;
+}
+
+bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
+    // TODO: support MSAA swapchain
     return false;
 }
 

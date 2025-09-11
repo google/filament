@@ -86,6 +86,15 @@ public:
     virtual bool isSRGBSwapChainSupported() const noexcept;
 
     /**
+     * Return whether createSwapChain supports the SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES flag.
+     * The default implementation returns false.
+     *
+     * @param samples The number of samples
+     * @return true if SWAP_CHAIN_CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
+     */
+    virtual bool isMSAASwapChainSupported(uint32_t samples) const noexcept;
+
+    /**
      * Return whether protected contexts are supported by this backend.
      * If protected context are supported, the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag can be
      * used when creating a SwapChain.

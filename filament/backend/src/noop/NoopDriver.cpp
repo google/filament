@@ -198,6 +198,10 @@ bool NoopDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool NoopDriver::isMSAASwapChainSupported(uint32_t) {
+    return false;
+}
+
 bool NoopDriver::isProtectedContentSupported() {
     return false;
 }
