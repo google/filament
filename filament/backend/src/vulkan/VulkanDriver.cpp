@@ -1123,12 +1123,11 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                     if (imgData.external.valid()) {
                         mExternalImageManager.addExternallySampledTexture(newTexture,
                                 externalImage);
-                        // Cache the AHB backed image.
+                        // Cache the AHB backed image. Acquires the image here.
                         s->pushImage(image, newTexture);
                         newImage = true;
                     }
 
-                    newTexture.inc();
                     texture = newTexture;
                 }
 
