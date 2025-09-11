@@ -17,8 +17,9 @@
 #ifndef TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 #define TNT_FILAMENT_BACKEND_PLATFORMS_VULKANPLATFORM_H
 
-#include <backend/Platform.h>
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 #include <bluevk/BlueVK.h>
 
@@ -29,9 +30,9 @@
 
 #include <cstddef>
 #include <functional>
+#include <string>
 #include <tuple>
 #include <unordered_set>
-#include <string>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -44,6 +45,10 @@ using SwapChain = Platform::SwapChain;
  * Private implementation details for the provided vulkan platform.
  */
 struct VulkanPlatformPrivate;
+
+// Forward declare the fence status that will be maintained by the command
+// buffer manager.
+struct VulkanCmdFence;
 
 /**
  * A Platform interface that creates a Vulkan backend.
@@ -230,6 +235,25 @@ public:
             VkExtent2D extent = {0, 0});
 
     /**
+     * Creates a Platform::Sync object, which tracks a fence and its status,
+     * and allows conversion to an external sync.
+     * @param fence         The underlying VkFence to use for synchronization.
+     * @param fenceStatus   An object tracking the fence's state
+     * @return              A Platform::Sync object tracking the provided fence.
+     */
+    virtual Platform::Sync* createSync(VkFence fence,
+            std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept;
+
+    /**
+     * Destroys a sync. If called with a sync not created by this platform
+     * object, this will lead to undefined behavior.
+     *
+     * @param sync The sync to destroy, which was created by this platform
+     *             instance.
+     */
+    virtual void destroySync(Platform::Sync* sync) noexcept;
+
+    /**
      * Allows implementers to provide instance extensions that they'd like to include in the
      * instance creation.
      * @return          A set of extensions to enable for the instance.
@@ -408,11 +432,18 @@ public:
     }
 
 protected:
+    struct VulkanSync : public Platform::Sync {
+        VkFence fence;
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
+    };
+
     virtual ExtensionSet getSwapchainInstanceExtensions() const;
 
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
     virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
             uint64_t flags) const noexcept;
+
+    virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept;
 
 private:
     // Platform dependent helper methods

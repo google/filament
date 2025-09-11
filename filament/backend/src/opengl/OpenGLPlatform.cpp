@@ -117,6 +117,15 @@ FenceStatus OpenGLPlatform::waitFence(
     return FenceStatus::ERROR;
 }
 
+Platform::Sync* OpenGLPlatform::createSync() noexcept {
+    return new Platform::Sync();
+}
+
+void OpenGLPlatform::destroySync(Platform::Sync* sync) noexcept {
+    // sync must be a Platform::Sync, since it was created by this platform
+    // object.
+    delete sync;
+}
 
 Platform::Stream* OpenGLPlatform::createStream(
         UTILS_UNUSED void* nativeStream) noexcept {
