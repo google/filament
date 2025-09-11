@@ -36,13 +36,12 @@ namespace filament {
 namespace {
 
 utils::CString getRemovedFlags(uint64_t originalFlags, uint64_t modifiedFlags) {
+    const uint64_t diffFlags = originalFlags ^ modifiedFlags;
     utils::CString removed;
-    if ((originalFlags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) &&
-        !(modifiedFlags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE)) {
+    if (diffFlags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
         removed += "SRGB_COLORSPACE ";
     }
-    if ((originalFlags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) &&
-        !(modifiedFlags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT)) {
+    if (diffFlags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         removed += "PROTECTED_CONTENT ";
     }
     return removed;
