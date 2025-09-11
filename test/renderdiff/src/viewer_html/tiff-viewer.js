@@ -29,11 +29,13 @@ export class TiffViewer extends LitElement {
 
   static properties = {
     fileurl: {type: String, attribute: 'fileurl'},
+    name: {type: String, attribute: 'name'},
   };
 
   constructor() {
     super();
     this.fileurl = null;
+    this.name = null;
   }
 
   render() {
@@ -78,6 +80,15 @@ export class TiffViewer extends LitElement {
 
       const imageData = new ImageData(new Uint8ClampedArray(rgba), firstImage.width, firstImage.height);
       ctx.putImageData(imageData, 0, 0);
+
+      this.dispatchEvent(new CustomEvent('image-loaded', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          name: this.name,
+          img: imageData,
+        }
+      }));
     } catch (error) {
       console.error('Error processing TIFF file:', error);
       this._clearCanvas();
