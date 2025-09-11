@@ -40,10 +40,11 @@
 #include "details/Fence.h"
 #include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
+#include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/SkinningBuffer.h"
-#include "details/MorphTargetBuffer.h"
 #include "details/Skybox.h"
+#include "details/Sync.h"
 
 #include "private/backend/CommandBufferQueue.h"
 #include "private/backend/CommandStream.h"
@@ -122,6 +123,7 @@ class FMaterialInstance;
 class FRenderer;
 class FScene;
 class FSwapChain;
+class FSync;
 class FView;
 
 class ResourceAllocator;
@@ -331,6 +333,7 @@ public:
     FScene* createScene() noexcept;
     FView* createView() noexcept;
     FFence* createFence() noexcept;
+    FSync* createSync() noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
     FSwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept;
 
@@ -342,6 +345,7 @@ public:
     bool destroy(const FBufferObject* p);
     bool destroy(const FVertexBuffer* p);
     bool destroy(const FFence* p);
+    bool destroy(const FSync* p);
     bool destroy(const FIndexBuffer* p);
     bool destroy(const FSkinningBuffer* p);
     bool destroy(const FMorphTargetBuffer* p);
@@ -362,6 +366,7 @@ public:
     bool isValid(const FBufferObject* p) const;
     bool isValid(const FVertexBuffer* p) const;
     bool isValid(const FFence* p) const;
+    bool isValid(const FSync* p) const;
     bool isValid(const FIndexBuffer* p) const;
     bool isValid(const FSkinningBuffer* p) const;
     bool isValid(const FMorphTargetBuffer* p) const;
@@ -612,6 +617,11 @@ private:
     // the fence list is accessed from multiple threads
     utils::Mutex mFenceListLock;
     ResourceList<FFence> mFences{"Fence"};
+
+    // the sync list is accessed from multiple threads, because they are
+    // synchronization objects.
+    utils::Mutex mSyncListLock;
+    ResourceList<FSync> mSyncs{ "Sync" };
 
     mutable uint32_t mMaterialId = 0;
 

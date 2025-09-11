@@ -103,6 +103,12 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
     vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
 
     VkFenceCreateInfo fenceCreateInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+    VkExportFenceCreateInfo exportFenceCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
+        .handleTypes = context.getFenceExportFlags()
+    };
+    fenceCreateInfo.pNext = &exportFenceCreateInfo;
+
     vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
 }
 
@@ -425,6 +431,9 @@ bool VulkanCommands::flush() {
     VkSemaphore lastSubmit = mLastSubmit;
     bool hasFlushed = false;
 
+    VkFence flushedFence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> flushedFenceStatus;
+
     // Note that we've ordered it so that the non-protected commands are followed by the protected
     // commands.  This assumes that the protected commands will be that one doing the rendering into
     // the protected memory (i.e. protected render target).
@@ -446,6 +455,8 @@ bool VulkanCommands::flush() {
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
             lastSubmit = VK_NULL_HANDLE;
         }
+        flushedFence = pool->getRecording().getVkFence();
+        flushedFenceStatus = pool->getRecording().getFenceStatus();
         dependency = pool->flush();
         hasFlushed = true;
     }
@@ -453,6 +464,8 @@ bool VulkanCommands::flush() {
     if (hasFlushed) {
         mInjectedDependency = VK_NULL_HANDLE;
         mLastSubmit = dependency;
+        mLastFence = flushedFence;
+        mLastFenceStatus = flushedFenceStatus;
     }
 
     return true;

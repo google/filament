@@ -671,6 +671,12 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     mHandleAllocator.associateTagToHandle(sch.getId(), std::move(tag));
 }
 
+void MetalDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
+    // TODO: Ensure sync is active, and then invoke and clear all pending
+    // callbacks.
+    mHandleAllocator.associateTagToHandle(sh.getId(), std::move(tag));
+}
+
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::CString tag) {
     // nothing to do, timer query was constructed in createTimerQueryS
     mHandleAllocator.associateTagToHandle(tqh.getId(), std::move(tag));
@@ -814,6 +820,10 @@ Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
     return alloc_handle<MetalSwapChain>();
+}
+
+Handle<HwSync> MetalDriver::createSyncS() noexcept {
+    return alloc_handle<MetalSync>();
 }
 
 Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
@@ -1016,6 +1026,19 @@ FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
     }
     return fence->wait(0);
 }
+
+void MetalDriver::destroySync(Handle<HwSync> sh) {
+    if (sh) {
+        destruct_handle<MetalSync>(sh);
+    }
+}
+
+void MetalDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
+    // TODO: If the sync has been inserted into the command stream, execute
+    // the callback. Otherwise, enqueue it.
+}
+
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
     return MetalTexture::decidePixelFormat(mContext, format) != MTLPixelFormatInvalid;

@@ -28,6 +28,7 @@
 #include "WebGPURenderTarget.h"
 #include "WebGPUStrings.h"
 #include "WebGPUSwapChain.h"
+#include "WebGPUSync.h"
 #include "WebGPUTexture.h"
 #include "WebGPUTextureHelpers.h"
 #include "WebGPUVertexBuffer.h"
@@ -377,6 +378,10 @@ Handle<HwFence> WebGPUDriver::createFenceS() noexcept {
     return allocAndConstructHandle<WebGPUFence, HwFence>();
 }
 
+Handle<HwSync> WebGPUDriver::createSyncS() noexcept {
+    return allocHandle<WebGPUSync>();
+}
+
 Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
     return Handle<HwTimerQuery>((Handle<HwTimerQuery>::HandleId) mNextFakeHandle++);
 }
@@ -650,6 +655,12 @@ void WebGPUDriver::createFenceR(Handle<HwFence> fenceHandle, utils::CString tag)
     setDebugTag(fenceHandle.getId(), std::move(tag));
 }
 
+void WebGPUDriver::createSyncR(Handle<HwSync> syncHandle, utils::CString tag) {
+    // TODO: Ensure sync is active, and then invoke and clear all pending
+    // callbacks.
+    setDebugTag(syncHandle.getId(), std::move(tag));
+}
+
 void WebGPUDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::CString tag) {}
 
 void WebGPUDriver::createDescriptorSetLayoutR(
@@ -716,6 +727,18 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
         return FenceStatus::ERROR;
     }
     return fence->getStatus();
+}
+
+void WebGPUDriver::destroySync(Handle<HwSync> syncHandle) {
+    if (syncHandle) {
+        destructHandle<WebGPUSync>(syncHandle);
+    }
+}
+
+void WebGPUDriver::getPlatformSync(Handle<HwSync> syncHandle, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
+    // TODO: If the sync has been inserted into the command stream, execute
+    // the callback. Otherwise, enqueue it.
 }
 
 bool WebGPUDriver::isTextureFormatSupported(const TextureFormat format) {

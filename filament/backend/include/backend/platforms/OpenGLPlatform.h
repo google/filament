@@ -276,6 +276,26 @@ public:
      */
     virtual backend::FenceStatus waitFence(Fence* UTILS_NONNULL fence, uint64_t timeout) noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Sync support
+
+    /**
+     * Creates a Sync. These can be used for frame synchronization externally
+     * (certain platform implementations can be exported to handles that can
+     * be used in other processes).
+     *
+     * @return A Sync object.
+     */
+    virtual Platform::Sync* UTILS_NONNULL createSync() noexcept;
+
+    /**
+     * Destroys a sync. If called with a sync not created by this platform
+     * object, this will lead to undefined behavior.
+     *
+     * @param sync The sync to destroy, that was created by this platform
+     *             instance.
+     */
+    virtual void destroySync(Platform::Sync* UTILS_NONNULL sync) noexcept;
 
     // --------------------------------------------------------------------------------------------
     // Streaming support
