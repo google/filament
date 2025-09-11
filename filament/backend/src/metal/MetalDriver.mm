@@ -1123,6 +1123,11 @@ bool MetalDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
+    // TODO: support MSAA swapchain
+    return false;
+}
+
 bool MetalDriver::isProtectedContentSupported() {
     // the SWAP_CHAIN_CONFIG_PROTECTED_CONTENT flag is not supported
     return false;

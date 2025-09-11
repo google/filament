@@ -41,6 +41,13 @@ Java_com_google_android_filament_SwapChain_nIsSRGBSwapChainSupported(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_SwapChain_nIsMSAASwapChainSupported(
+        JNIEnv *, jclass, jlong nativeEngine, jint samples) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jboolean)SwapChain::isMSAASwapChainSupported(*engine, samples);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_SwapChain_nIsProtectedContentSupported(
         JNIEnv *, jclass, jlong nativeEngine) {
     Engine* engine = (Engine*) nativeEngine;

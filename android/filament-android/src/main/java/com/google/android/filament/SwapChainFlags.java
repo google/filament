@@ -96,7 +96,8 @@ public final class SwapChainFlags {
 
     /**
      * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
-     * given sample points within each pixel.
+     * given sample points within each pixel. Only supported when isMSAASwapChainSupported(4) is
+     * true.
      *
      * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
      * because the swapchain MSAA settings must be configured before window creation.

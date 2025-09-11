@@ -41,6 +41,9 @@ utils::CString getRemovedFlags(uint64_t originalFlags, uint64_t modifiedFlags) {
     if (diffFlags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
         removed += "SRGB_COLORSPACE ";
     }
+    if (diffFlags & backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        removed += "MSAA_4_SAMPLES ";
+    }
     if (diffFlags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
         removed += "PROTECTED_CONTENT ";
     }
@@ -78,6 +81,9 @@ uint64_t FSwapChain::initFlags(FEngine& engine, uint64_t flags) noexcept {
     if (!isSRGBSwapChainSupported(engine)) {
         flags &= ~CONFIG_SRGB_COLORSPACE;
     }
+    if (!isMSAASwapChainSupported(engine, 4)) {
+        flags &= ~CONFIG_MSAA_4_SAMPLES;
+    }
     if (!isProtectedContentSupported(engine)) {
         flags &= ~CONFIG_PROTECTED_CONTENT;
     }
@@ -112,6 +118,10 @@ void FSwapChain::setFrameCompletedCallback(
 
 bool FSwapChain::isSRGBSwapChainSupported(FEngine& engine) noexcept {
     return engine.getDriverApi().isSRGBSwapChainSupported();
+}
+
+bool FSwapChain::isMSAASwapChainSupported(FEngine& engine, uint32_t samples) noexcept {
+    return engine.getDriverApi().isMSAASwapChainSupported(samples);
 }
 
 bool FSwapChain::isProtectedContentSupported(FEngine& engine) noexcept {

@@ -2504,6 +2504,10 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isMSAASwapChainSupported(uint32_t samples) {
+    return mPlatform.isMSAASwapChainSupported(samples);
+}
+
 bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }

@@ -235,10 +235,13 @@ public:
 
     /**
      * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
-     * given sample points within each pixel.
+     * given sample points within each pixel. Only supported when isMSAASwapChainSupported(4) is
+     * true.
      *
      * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
      * because the swapchain MSAA settings must be configured before window creation.
+     *
+     * @see isMSAASwapChainSupported(4)
      */
     static constexpr uint64_t CONFIG_MSAA_4_SAMPLES = backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
 
@@ -259,6 +262,16 @@ public:
      * @return true if CONFIG_SRGB_COLORSPACE is supported, false otherwise.
      */
     static bool isSRGBSwapChainSupported(Engine& engine) noexcept;
+
+    /**
+     * Return whether createSwapChain supports the CONFIG_MSAA_*_SAMPLES flag.
+     * The default implementation returns false.
+     *
+     * @param engine A pointer to the filament Engine
+     * @param samples The number of samples
+     * @return true if CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
+     */
+    static bool isMSAASwapChainSupported(Engine& engine, uint32_t samples) noexcept;
 
     void* UTILS_NULLABLE getNativeWindow() const noexcept;
 

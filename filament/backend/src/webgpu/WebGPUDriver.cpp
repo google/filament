@@ -793,6 +793,10 @@ bool WebGPUDriver::isSRGBSwapChainSupported() {
     return false;
 }
 
+bool WebGPUDriver::isMSAASwapChainSupported(uint32_t) {
+    return false;
+}
+
 bool WebGPUDriver::isProtectedContentSupported() {
     return false;
 }
