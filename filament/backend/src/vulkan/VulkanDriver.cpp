@@ -35,6 +35,7 @@
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
 
+#include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Panic.h>
 
@@ -484,6 +485,16 @@ void VulkanDriver::finish(int dummy) {
     FVK_SYSTRACE_SCOPE();
 
     endCommandRecording();
+
+    // It's not enough to wait on the fences of the buffers submitted.  Present calls are
+    // submitted to this same queue, so the more correct option is to call vkQueueWaitIdle.
+    vkQueueWaitIdle(mPlatform->getGraphicsQueue());
+    if (auto protectedQueue = mPlatform->getProtectedGraphicsQueue();
+            UTILS_UNLIKELY(protectedQueue != VK_NULL_HANDLE)) {
+        vkQueueWaitIdle(protectedQueue);
+    }
+
+    // This wait() is still necessary to update the fence status.
     mCommands.wait();
 
     mReadPixels.runUntilComplete();
