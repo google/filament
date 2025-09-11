@@ -53,7 +53,7 @@
     #define VK_USE_PLATFORM_WAYLAND_KHR 1
     #endif
     #elif defined(__APPLE__)
-    #define VK_USE_PLATFORM_MACOS_MVK 1
+    #define VK_USE_PLATFORM_METAL_EXT 1
     #elif defined(WIN32)
     #define VK_USE_PLATFORM_WIN32_KHR 1
     #endif

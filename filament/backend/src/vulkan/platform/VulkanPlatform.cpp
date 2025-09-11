@@ -183,7 +183,6 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = 
     ExtensionSet const TARGET_EXTS = {
         // Request all cross-platform extensions.
         VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 
         // Request these if available.
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -236,9 +235,6 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
 #if defined(__APPLE__)
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
 #endif
-        VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE2_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE3_EXTENSION_NAME,
         VK_KHR_MULTIVIEW_EXTENSION_NAME,
     };
     ExtensionSet exts;
