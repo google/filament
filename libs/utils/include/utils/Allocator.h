@@ -239,7 +239,9 @@ public:
     void push(void* p) noexcept {
         assert(p);
         assert(p >= mBegin && p < mEnd);
-        Node* const head = static_cast<Node*>(p);
+        // we use placement-new to properly manage the lifetime
+        // this is noop already under O1
+        Node* const head = new (p) Node;
         head->next = mHead;
         mHead = head;
     }
@@ -308,7 +310,9 @@ public:
     void push(void* p) noexcept {
         Node* const storage = mStorage;
         assert(p && p >= storage);
-        Node* const node = static_cast<Node*>(p);
+        // we use placement-new to properly manage the lifetime
+        // this is noop already under O1
+        Node* const node = new (p) Node;
         HeadPtr currentHead = mHead.load(std::memory_order_relaxed);
         HeadPtr newHead = { int32_t(node - storage), currentHead.tag + 1 };
         do {
