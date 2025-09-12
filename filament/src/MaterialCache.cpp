@@ -26,6 +26,18 @@
 
 namespace filament {
 
+size_t MaterialCache::Key::Hash::operator()(filament::MaterialCache::Key const& x) const noexcept {
+    uint32_t r;
+    if (x.parser->getMaterialCrc32(&r)) {
+        return size_t(r);
+    }
+    return size_t(x.parser->computeCrc32());
+}
+
+bool MaterialCache::Key::operator==(Key const& rhs) const noexcept {
+    return parser == rhs.parser;
+}
+
 MaterialCache::~MaterialCache() {
     if (!mInner.empty()) {
         LOG(WARNING) << "MaterialCache was destroyed but wasn't empty";
@@ -40,18 +52,13 @@ MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
         return nullptr;
     }
 
-    uint64_t uuid;
-    if (UTILS_UNLIKELY(!parser->getCacheId(&uuid))) {
-        return nullptr;
-    }
-
-    return mInner.acquire(uuid, [&engine, parser = std::move(parser)]() mutable {
+    return mInner.acquire(Key{parser.get()}, [&engine, parser = std::move(parser)]() mutable {
         return MaterialDefinition::create(engine, std::move(parser));
     });
 }
 
-void MaterialCache::release(FEngine& engine, uint64_t uuid) noexcept {
-    mInner.release(uuid, [&engine](MaterialDefinition& definition) {
+void MaterialCache::release(FEngine& engine, MaterialParser const& parser) noexcept {
+    mInner.release(Key{&parser}, [&engine](MaterialDefinition& definition) {
         definition.terminate(engine);
     });
 }
