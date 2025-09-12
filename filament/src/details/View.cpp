@@ -1399,8 +1399,8 @@ void FView::executePickingQueries(DriverApi& driver,
             });
         } else {
             driver.readPixels(handle, x, y, 1, 1, {
-                    &pQuery->result.renderable, 4u * 4u, // 4*float
-                    PixelDataFormat::RG, PixelDataType::FLOAT,
+                    &pQuery->result.renderable, 4u * 4u, // 4*uint
+                    PixelDataFormat::RGBA_INTEGER, PixelDataType::UINT,
                     pQuery->handler, [](void*, size_t, void* user) {
                         FPickingQuery* const pQuery = static_cast<FPickingQuery*>(user);
                         // pQuery->result.renderable already contains the right value!
