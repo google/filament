@@ -65,12 +65,6 @@ void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<Vu
                     mExternalImageManager->bindExternallySampledTexture(data.set, data.binding,
                             image, data.samplerParams);
                 }
-                // Eventually the updateSampler and updateSamplerForExternalSamplerSet
-                // will call to vkUpdateDescriptorSets with a VkWriteDescriptorSet
-                // type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER the
-                // VkDescriptorImageInfo will contain the view of the new image frame.
-                mDescriptorSetCache->updateSamplerForExternalSamplerSet(data.set, data.binding,
-                        image);
             } else {
                 //... In this case we just default to using the normal path and update the
                 // sampler.
