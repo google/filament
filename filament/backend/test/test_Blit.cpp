@@ -265,8 +265,6 @@ TEST_F(BlitTest, ColorMinify) {
 
 TEST_F(BlitTest, ColorResolve) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Nothing is drawn, see b/417229577");
     auto& api = getDriverApi();
 
     constexpr int kSrcTexWidth = 256;
@@ -291,18 +289,21 @@ TEST_F(BlitTest, ColorResolve) {
             1, TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_SRC | TextureUsage::UPLOADABLE));
 
     // Create 1-sample texture.
+    // Note that BLIT_SRC usage is necessary because this texture will be read back.
     Handle<HwTexture> const dstColorTexture = mCleanup.add(api.createTexture(
             SamplerType::SAMPLER_2D, 1, kColorTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST |
+                    TextureUsage::BLIT_SRC));
+
 
     // Create a 4-sample render target with the 4-sample texture.
     Handle<HwRenderTarget> const srcRenderTarget = mCleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount, 0,
+            TargetBufferFlags::COLOR, kSrcTexWidth, kSrcTexHeight, kSampleCount, 1,
             {{ srcColorTexture }}, {}, {}));
 
     // Create a 1-sample render target with the 1-sample texture.
     Handle<HwRenderTarget> const dstRenderTarget = mCleanup.add(api.createRenderTarget(
-            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1, 0,
+            TargetBufferFlags::COLOR, kDstTexWidth, kDstTexHeight, 1, 1,
             {{ dstColorTexture }}, {}, {}));
 
     // Prep for rendering.

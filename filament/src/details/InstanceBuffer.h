@@ -52,23 +52,20 @@ public:
     math::mat4f const& getLocalTransform(size_t index) const noexcept;
 
     void prepare(
-            backend::BufferObjectHandle ubh,
-            PerRenderableData* buffer, uint32_t offset, uint32_t count,
+            PerRenderableData* buffer, uint32_t index, uint32_t count,
             math::mat4f const& rootTransform, PerRenderableData const& ubo);
 
     utils::CString const& getName() const noexcept { return mName; }
 
-    backend::BufferObjectHandle getHandle() const noexcept { return mHandle; }
-    uint32_t getOffset() const noexcept { return mOffset; }
+    uint32_t getIndex() const noexcept { return mIndex; }
 
 private:
     friend class RenderableManager;
 
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
     utils::CString mName;
-    size_t mInstanceCount;
-    backend::BufferObjectHandle mHandle;
-    uint32_t mOffset = 0;
+    uint32_t mInstanceCount;
+    uint32_t mIndex = 0;
 };
 
 FILAMENT_DOWNCAST(InstanceBuffer)

@@ -437,6 +437,10 @@ private:
     uint64_t value;
 };
 
+// TODO: Provide implementation for MetalSync.
+class MetalSync : public HwSync {
+};
+
 struct MetalTimerQuery : public HwTimerQuery {
     MetalTimerQuery() : status(std::make_shared<Status>()) {}
 

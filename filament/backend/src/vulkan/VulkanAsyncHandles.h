@@ -20,6 +20,7 @@
 #include <bluevk/BlueVK.h>
 
 #include "DriverBase.h"
+#include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 
@@ -50,6 +51,19 @@ private:
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
     std::shared_ptr<VulkanCmdFence> fence;
+};
+
+struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
+    struct CallbackData {
+        CallbackHandler* handler;
+        Platform::SyncCallback cb;
+        Platform::Sync* sync;
+        void* userData;
+    };
+
+    VulkanSync() {}
+    std::mutex lock;
+    std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
 };
 
 struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
