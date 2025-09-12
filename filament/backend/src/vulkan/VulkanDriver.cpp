@@ -818,10 +818,8 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     }
 
     auto rt = resource_ptr<VulkanRenderTarget>::cast(&mResourceManager, rth);
-    if (UTILS_UNLIKELY(rt == mDefaultRenderTarget)) {
-        // Note that this should only happen on driver shutdown.
-        mDefaultRenderTarget = {};
-    } else {
+    // Note that the default render target will be destroyed on shutdown
+    if (UTILS_LIKELY(rt != mDefaultRenderTarget)) {
         rt.dec();
     }
 }
