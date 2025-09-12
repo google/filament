@@ -34,11 +34,16 @@ class Material;
 
 /** A cache of all materials and shader programs compiled by Filament. */
 class MaterialCache {
-    // Program caches are keyed by the material UUID.
-    //
-    // We use unique_ptr here because we need these pointers to be stable.
-    // TODO: investigate using a custom allocator here?
-    using Inner = RefCountedMap<uint64_t, std::unique_ptr<MaterialDefinition>>;
+    // A newtype around a material parser used as a key for the material cache. The material file's
+    // CRC32 is used as the hash function.
+    struct Key {
+        struct Hash {
+            size_t operator()(Key const& x) const noexcept;
+        };
+        bool operator==(Key const& rhs) const noexcept;
+
+        MaterialParser const* UTILS_NONNULL parser;
+    };
 
 public:
     ~MaterialCache();
@@ -48,13 +53,16 @@ public:
             size_t size) noexcept;
 
     /** Release an entry in the cache, potentially freeing its GPU resources. */
-    void release(FEngine& engine, uint64_t uuid) noexcept;
+    void release(FEngine& engine, MaterialParser const& parser) noexcept;
 
 private:
-    Inner mInner;
+    // Program caches are keyed by the material UUID.
+    //
+    // We use unique_ptr here because we need these pointers to be stable.
+    // TODO: investigate using a custom allocator here?
+    RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mInner;
 };
 
 } // namespace filament
-
 
 #endif  // TNT_FILAMENT_MATERIALCACHE_H

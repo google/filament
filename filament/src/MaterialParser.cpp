@@ -107,6 +107,14 @@ MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept 
 
 // ------------------------------------------------------------------------------------------------
 
+bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
+    if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
+        return false;
+    }
+    return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
+            mImpl.mManagedBuffer.size());
+}
+
 template<typename T>
 bool MaterialParser::get(typename T::Container* container) const noexcept {
     auto [start, end] = mImpl.mChunkContainer.getChunkRange(T::tag);

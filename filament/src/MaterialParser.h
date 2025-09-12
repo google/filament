@@ -65,6 +65,8 @@ public:
         ERROR_OTHER
     };
 
+    bool operator==(MaterialParser const& rhs) const noexcept;
+
     ParseResult parse() noexcept;
 
     uint32_t computeCrc32() const noexcept;
