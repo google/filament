@@ -103,8 +103,7 @@ FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
 }
 
 void FInstanceBuffer::terminate(FEngine&) {
-    mHandle.clear();
-    mOffset = 0;
+    mIndex = 0;
 }
 
 FInstanceBuffer::~FInstanceBuffer() noexcept = default;
@@ -126,8 +125,7 @@ math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const noexce
 }
 
 void FInstanceBuffer::prepare(
-            BufferObjectHandle ubh,
-            PerRenderableData* const UTILS_RESTRICT buffer, uint32_t const offset, uint32_t const count,
+            PerRenderableData* const UTILS_RESTRICT buffer, uint32_t const index, uint32_t const count,
             math::mat4f const& rootTransform, PerRenderableData const& ubo) {
 
     // there is a precondition check for this, so this assert really should never trigger
@@ -136,12 +134,11 @@ void FInstanceBuffer::prepare(
     for (size_t i = 0, c = count; i < c; i++) {
         math::mat4f const model = rootTransform * mLocalTransforms[i];
         math::mat3f const m = math::mat3f::getTransformForNormals(model.upperLeft());
-        buffer[offset + i] = ubo;
-        buffer[offset + i].worldFromModelMatrix = model;
-        buffer[offset + i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
+        buffer[index + i] = ubo;
+        buffer[index + i].worldFromModelMatrix = model;
+        buffer[index + i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
     }
-    mHandle = ubh;
-    mOffset = offset * sizeof(PerRenderableData);
+    mIndex = index;
 }
 
 } // namespace filament
