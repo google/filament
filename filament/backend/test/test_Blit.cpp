@@ -22,6 +22,7 @@
 #include "SharedShaders.h"
 #include "Skip.h"
 #include "TrianglePrimitive.h"
+#include "Workarounds.h"
 
 #include <utils/Hash.h>
 #include <utils/Log.h>
@@ -172,17 +173,17 @@ TEST_F(BlitTest, ColorMagnify) {
     // Create a destination texture.
     Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
             kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST TEXTURE_USAGE_READ_PIXELS));
 
     // Create a RenderTarget for each texture's miplevel.
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
     Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {},
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 1, { srcTexture, level, 0 }, {},
                 {}));
         dstRenderTargets[level] = mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, level, 0 }, {},
+                kDstTexWidth >> level, kDstTexHeight >> level, 1, 1, { dstTexture, level, 0 }, {},
                 {}));
     }
 
@@ -236,17 +237,18 @@ TEST_F(BlitTest, ColorMinify) {
     // Create a destination texture.
     Handle<HwTexture> const dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
             kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_DST TEXTURE_USAGE_READ_PIXELS));
 
     // Create a RenderTarget for each texture's miplevel.
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
     Handle<HwRenderTarget> dstRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {},
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 1, { srcTexture, level, 0 }, {},
                 {}));
         dstRenderTargets[level] = mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kDstTexWidth >> level, kDstTexHeight >> level, 1, 0, { dstTexture, level, 0 }, {},
+                kDstTexWidth >> level, kDstTexHeight >> level, 1, 1, { dstTexture, level, 0 }, {},
                 {}));
     }
 
@@ -380,17 +382,18 @@ TEST_F(BlitTest, Blit2DTextureArray) {
     // Create a destination texture.
     Handle<HwTexture> dstTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
             kNumLevels, kDstTexFormat, 1, kDstTexWidth, kDstTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT | TextureUsage::BLIT_DST));
+            TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT |
+                    TextureUsage::BLIT_DST TEXTURE_USAGE_READ_PIXELS));
 
     // Create two RenderTargets.
     const int level = 0;
     Handle<HwRenderTarget> srcRenderTarget = mCleanup.add(
             api.createRenderTarget(TargetBufferFlags::COLOR,
-                    kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0,
+                    kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 1,
                     { srcTexture, level, kSrcTexLayer }, {}, {}));
     Handle<HwRenderTarget> dstRenderTarget = mCleanup.add(
             api.createRenderTarget(TargetBufferFlags::COLOR,
-                    kDstTexWidth >> level, kDstTexHeight >> level, 1, 0,
+                    kDstTexWidth >> level, kDstTexHeight >> level, 1, 1,
                     { dstTexture, level, kDstTexLayer }, {}, {}));
 
     // Do a blit from kSrcTexLayer of the source RT to kDstTexLayer of the destination RT.
@@ -466,10 +469,10 @@ TEST_F(BlitTest, BlitRegion) {
     // that this case is handled correctly.
     Handle<HwRenderTarget> srcRenderTarget =
             mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR, srcRect.width,
-                    srcRect.height, 1, 0, { srcTexture, kSrcLevel, 0 }, {}, {}));
+                    srcRect.height, 1, 1, { srcTexture, kSrcLevel, 0 }, {}, {}));
     Handle<HwRenderTarget> dstRenderTarget =
             mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR, kDstTexWidth >> kDstLevel,
-                    kDstTexHeight >> kDstLevel, 1, 0, { dstTexture, kDstLevel, 0 }, {}, {}));
+                    kDstTexHeight >> kDstLevel, 1, 1, { dstTexture, kDstLevel, 0 }, {}, {}));
 
     api.blitDEPRECATED(TargetBufferFlags::COLOR0, dstRenderTarget, dstRect, srcRenderTarget,
             srcRect,
@@ -492,7 +495,6 @@ TEST_F(BlitTest, BlitRegion) {
 }
 
 TEST_F(BlitTest, BlitRegionToSwapChain) {
-    FAIL_IF(Backend::VULKAN, "Crashes due to not finding color attachment, see b/417481493");
     SKIP_IF(Backend::WEBGPU, "WebGPU Crashes due to not finding color attachment");
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
@@ -511,9 +513,10 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     Handle<HwRenderTarget> dstRenderTarget = mCleanup.add(api.createDefaultRenderTarget());
 
     // Create a source texture.
-    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(
-            SamplerType::SAMPLER_2D, kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
-            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT));
+    Handle<HwTexture> srcTexture = mCleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+            kNumLevels, kSrcTexFormat, 1, kSrcTexWidth, kSrcTexHeight, 1,
+            TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE |
+                    TextureUsage::COLOR_ATTACHMENT TEXTURE_USAGE_READ_PIXELS));
     const bool flipY = sBackend == Backend::OPENGL;
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 0, float3(0.5, 0, 0), flipY);
     createBitmap(api, srcTexture, kSrcTexWidth, kSrcTexHeight, 1, float3(0, 0, 0.5), flipY);
@@ -522,7 +525,7 @@ TEST_F(BlitTest, BlitRegionToSwapChain) {
     Handle<HwRenderTarget> srcRenderTargets[kNumLevels];
     for (uint8_t level = 0; level < kNumLevels; level++) {
         srcRenderTargets[level] = mCleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR,
-                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 0, { srcTexture, level, 0 }, {},
+                kSrcTexWidth >> level, kSrcTexHeight >> level, 1, 1, { srcTexture, level, 0 }, {},
                 {}));
     }
 
