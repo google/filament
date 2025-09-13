@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_METALBUFFER_H
 
 #include "MetalContext.h"
+#include "MetalFlags.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/PlatformMetal.h>
@@ -190,6 +191,15 @@ public:
     id<MTLBuffer> getGpuBufferForDraw() noexcept;
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
+
+    void setLabel(const utils::CString& label) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (label.empty()) {
+            return;
+        }
+        mBuffer.get().label = @(label.c_str_safe());
+#endif
+    }
 
     enum Stage : uint8_t {
         VERTEX      = 1u << 0u,
