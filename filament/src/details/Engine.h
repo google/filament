@@ -25,6 +25,7 @@
 #include "ResourceList.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
+#include "MaterialCache.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -291,6 +292,10 @@ public:
         return mResourceAllocatorDisposer;
     }
 
+    MaterialCache& getMaterialCache() const noexcept {
+        return mMaterialCache;
+    }
+
     void* streamAlloc(size_t size, size_t alignment) noexcept;
 
     Epoch getEngineEpoch() const { return mEngineEpoch; }
@@ -312,7 +317,8 @@ public:
     FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
     FInstanceBuffer* createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
-    FMaterial* createMaterial(const Material::Builder& builder, std::unique_ptr<MaterialParser> materialParser) noexcept;
+    FMaterial* createMaterial(const Material::Builder& builder,
+            MaterialDefinition const& definition) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
     FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;
@@ -590,6 +596,7 @@ private:
     FLightManager mLightManager;
     FCameraManager mCameraManager;
     std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    mutable MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
     DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;
