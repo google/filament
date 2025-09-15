@@ -106,6 +106,7 @@ VkImageAspectFlags getImageAspect(VkFormat format);
 
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
+Platform::ExternalImageHandle createExternalImageFromRaw(void* image, bool sRGB);
 } // namespace fvkutils
 
 } // namespace filament::backend

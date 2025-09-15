@@ -234,6 +234,15 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
+Platform::ExternalImageHandle createExternalImageFromRaw(void* image,
+        bool sRGB) {
+#if defined(__ANDROID__)
+    return createExternalImage(reinterpret_cast<AHardwareBuffer const*>(image), sRGB);
+#else
+    return {};
+#endif
+}
+
 } // namespace filament::backend::fvkutils
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b) {

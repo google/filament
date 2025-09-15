@@ -31,6 +31,7 @@
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Conversion.h"
 #include "vulkan/utils/Definitions.h"
+#include "vulkan/utils/Image.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/VulkanPlatform.h>
@@ -1041,7 +1042,7 @@ void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
     FVK_SYSTRACE_SCOPE();
     auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
     stream->acquire({ image, cb, userData, handler});
-    stream->setTransform(transform);
+    stream->setFrontEndTransform(transform);
     mStreamsWithPendingAcquiredImage.push_back(stream);
 }
 
@@ -1062,7 +1063,9 @@ math::mat3f VulkanDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
         if (stream->streamType == StreamType::NATIVE) {
             FILAMENT_CHECK_PRECONDITION(false) << "Native Stream not supported in Vulkan.";
         } else {
-            return stream->getTransform();
+            // Backend call since getStreamTransformMatrix is called from async
+            // updateBufferObject.
+            return stream->getBackEndTransform();
         }
     }
     return math::mat3f();
@@ -1082,11 +1085,12 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
             // inside the mStreamedImageManager texture bindings
             driver->queueCommand([this, stream, s = stream.get(),
                                          image = stream->getAcquired().image,
-                                         transform = stream->getTransform()]() {
+                                         transform = stream->getFrontEndTransform()]() {
                 auto texture = s->getTexture(image);
+                s->setBackendTransform(transform);
                 bool newImage = false;
                 if (!texture) {
-                    auto externalImage = mPlatform->createExternalImageFromRaw(image, false);
+                    auto externalImage = fvkutils::createExternalImageFromRaw(image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
                     auto imgData = mPlatform->createVkImageFromExternal(externalImage);
 
