@@ -75,6 +75,9 @@ public:
     // The shader languages used for shaders for this driver in order of preference, used to inform
     // matdbg.
     //
+    // The `preferredLanguage` is only a hint. If the backend supports it, it will appear first in
+    // the list.
+    //
     // For OpenGL, this distinguishes whether the driver's shaders are powered by ESSL1 or ESSL3.
     // This information is used by matdbg to display the correct shader code to the web UI and patch
     // the correct chunk when rebuilding shaders live.
