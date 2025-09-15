@@ -132,8 +132,8 @@ ShaderModel WebGPUDriver::getShaderModel() const noexcept {
 #endif
 }
 
-utils::FixedCapacityVector<ShaderLanguage> WebGPUDriver::getShaderLanguage(
-        PreferredShaderLanguage /*preferredLanguage*/) const noexcept {
+utils::FixedCapacityVector<ShaderLanguage> WebGPUDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
     return { ShaderLanguage::WGSL };
 }
 

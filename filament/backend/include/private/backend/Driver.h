@@ -72,7 +72,8 @@ public:
 
     virtual ShaderModel getShaderModel() const noexcept = 0;
 
-    // The shader language used for shaders for this driver, used to inform matdbg.
+    // The shader languages used for shaders for this driver in order of preference, used to inform
+    // matdbg.
     //
     // For OpenGL, this distinguishes whether the driver's shaders are powered by ESSL1 or ESSL3.
     // This information is used by matdbg to display the correct shader code to the web UI and patch
@@ -80,8 +81,8 @@ public:
     //
     // Metal shaders can either be MSL or Metal libraries, but at time of writing, matdbg can only
     // interface with MSL.
-    virtual utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
-            PreferredShaderLanguage preferredLanguage) const noexcept = 0;
+    virtual utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept = 0;
 
     // Returns the dispatcher. This is only called once during initialization of the CommandStream,
     // so it doesn't matter that it's virtual.

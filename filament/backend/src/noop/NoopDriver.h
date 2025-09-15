@@ -35,8 +35,8 @@ public:
 
 private:
     ShaderModel getShaderModel() const noexcept final;
-    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
-            PreferredShaderLanguage preferredLanguage) const noexcept final;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
 
     uint64_t nextFakeHandle = 1;
 

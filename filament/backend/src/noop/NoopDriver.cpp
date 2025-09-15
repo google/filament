@@ -45,11 +45,11 @@ ShaderModel NoopDriver::getShaderModel() const noexcept {
 #endif
 }
 
-utils::FixedCapacityVector<ShaderLanguage> NoopDriver::getShaderLanguage(
-        PreferredShaderLanguage preferredLanguage) const noexcept {
+utils::FixedCapacityVector<ShaderLanguage> NoopDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
     return {
-        ShaderLanguage::ESSL1,
         ShaderLanguage::ESSL3,
+        ShaderLanguage::ESSL1,
         ShaderLanguage::SPIRV,
         ShaderLanguage::MSL,
         ShaderLanguage::METAL_LIBRARY,

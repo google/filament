@@ -368,8 +368,8 @@ ShaderModel OpenGLDriver::getShaderModel() const noexcept {
     return mContext.getShaderModel();
 }
 
-utils::FixedCapacityVector<ShaderLanguage> OpenGLDriver::getShaderLanguage(
-        PreferredShaderLanguage /*preferredLanguage*/) const noexcept {
+utils::FixedCapacityVector<ShaderLanguage> OpenGLDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
     return { mContext.isES2() ? ShaderLanguage::ESSL1 : ShaderLanguage::ESSL3 };
 }
 
