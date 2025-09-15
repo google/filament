@@ -377,20 +377,20 @@ public:
         bool disableHandleUseAfterFreeCheck = false;
 
         /*
-        * Sets a preferred shader language for Filament to use.
-        *
-        * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
-        * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
-        * used when materials contain both.
-        *
-        * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
-        * shaders if present within a material, falling back to MSL. Setting
-        * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
-        * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
-        * present.
-        *
-        * When using a non-Metal backend, setting this has no effect.
-        */
+         * Sets a preferred shader language for Filament to use.
+         *
+         * The Metal backend supports two shader languages: MSL (Metal Shading Language) and
+         * METAL_LIBRARY (precompiled .metallib). This option controls which shader language is
+         * used when materials contain both.
+         *
+         * By default, when preferredShaderLanguage is unset, Filament will prefer METAL_LIBRARY
+         * shaders if present within a material, falling back to MSL. Setting
+         * preferredShaderLanguage to ShaderLanguage::MSL will instead instruct Filament to check
+         * for the presence of MSL in a material first, falling back to METAL_LIBRARY if MSL is not
+         * present.
+         *
+         * When using a non-Metal backend, setting this has no effect.
+         */
         enum class ShaderLanguage {
             DEFAULT = 0,
             MSL = 1,
