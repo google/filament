@@ -101,8 +101,8 @@ private:
     Dispatcher getDispatcher() const noexcept final;
 
     ShaderModel getShaderModel() const noexcept final;
-    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguage(
-            PreferredShaderLanguage preferredLanguage) const noexcept final;
+    utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
 
     template<typename T>
     friend class ConcreteDispatcher;

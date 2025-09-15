@@ -310,8 +310,8 @@ ShaderModel VulkanDriver::getShaderModel() const noexcept {
 #endif
 }
 
-utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguage(
-        PreferredShaderLanguage /*prefferedLanguage*/) const noexcept {
+utils::FixedCapacityVector<ShaderLanguage> VulkanDriver::getShaderLanguages(
+        ShaderLanguage /*prefferedLanguage*/) const noexcept {
     return { ShaderLanguage::SPIRV };
 }
 
