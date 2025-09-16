@@ -78,6 +78,9 @@ struct HwBufferObject : public HwBase {
     explicit HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
+struct HwMemoryMappedBuffer : public HwBase {
+};
+
 struct HwIndexBuffer : public HwBase {
     uint32_t count : 27;
     uint32_t elementSize : 5;
@@ -211,7 +214,7 @@ public:
 protected:
     class CallbackDataDetails;
 
-    inline void scheduleDestroy(BufferDescriptor&& buffer) noexcept {
+    void scheduleDestroy(BufferDescriptor&& buffer) noexcept {
         if (buffer.hasCallback()) {
             scheduleDestroySlow(std::move(buffer));
         }

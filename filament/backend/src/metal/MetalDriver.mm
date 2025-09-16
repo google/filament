@@ -2201,6 +2201,27 @@ void MetalDriver::executeDeferredOps() noexcept {
     }
 }
 
+MemoryMappedBufferHandle MetalDriver::mapBufferS() noexcept {
+    // TODO: MetalDriver::mapBufferS
+    return {};
+}
+
+void MetalDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
+        BufferObjectHandle boh, size_t offset,
+        size_t size, MapBufferAccessFlags access, utils::CString tag) {
+    // TODO: MetalDriver::mapBufferR
+}
+
+void MetalDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+    // TODO: MetalDriver::unmapBuffer
+}
+
+void MetalDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        size_t size, BufferDescriptor&& data) {
+    // TODO: MetalDriver::copyToMemoryMappedBuffer
+}
+
+
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<MetalDriver>;
 

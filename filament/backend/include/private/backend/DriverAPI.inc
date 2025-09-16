@@ -291,6 +291,11 @@ DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetLayoutHandle, createDescriptorS
 DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetHandle, createDescriptorSet,
         backend::DescriptorSetLayoutHandle, dslh)
 
+DECL_DRIVER_API_TAGGED_R_N(backend::MemoryMappedBufferHandle, mapBuffer,
+        backend::BufferObjectHandle, boh,
+        size_t, offset,
+        size_t, size,
+        backend::MapBufferAccessFlags, access)
 
 /*
  * Destroying driver objects
@@ -312,6 +317,7 @@ DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
 DECL_DRIVER_API_N(destroySync,                  backend::SyncHandle, sh)
 DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
 DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
+DECL_DRIVER_API_N(unmapBuffer,                  backend::MemoryMappedBufferHandle, mmbh)
 
 /*
  * Synchronous APIs
@@ -440,6 +446,12 @@ DECL_DRIVER_API_N(updateDescriptorSetTexture,
         backend::TextureHandle, th,
         SamplerParams, params
 )
+
+DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
+        backend::MemoryMappedBufferHandle, mmbh,
+        size_t, offset,
+        size_t, size,
+        backend::BufferDescriptor&&, data)
 
 /*
  * Swap chain

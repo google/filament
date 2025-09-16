@@ -328,8 +328,8 @@ void NoopDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> re
 void NoopDriver::commit(Handle<HwSwapChain> sch) {
 }
 
-void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
-        backend::PushConstantVariant value) {
+void NoopDriver::setPushConstant(ShaderStage stage, uint8_t index,
+        PushConstantVariant value) {
 }
 
 void NoopDriver::insertEventMarker(char const* string) {
@@ -353,8 +353,8 @@ void NoopDriver::readPixels(Handle<HwRenderTarget> src,
     scheduleDestroy(std::move(p));
 }
 
-void NoopDriver::readBufferSubData(backend::BufferObjectHandle boh,
-        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+void NoopDriver::readBufferSubData(BufferObjectHandle boh,
+        uint32_t offset, uint32_t size, BufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
 
@@ -405,24 +405,31 @@ void NoopDriver::resetState(int) {
 }
 
 void NoopDriver::updateDescriptorSetBuffer(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_binding_t binding,
-        backend::BufferObjectHandle boh,
+        DescriptorSetHandle dsh,
+        descriptor_binding_t binding,
+        BufferObjectHandle boh,
         uint32_t offset,
         uint32_t size) {
 }
 
 void NoopDriver::updateDescriptorSetTexture(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_binding_t binding,
-        backend::TextureHandle th,
+        DescriptorSetHandle dsh,
+        descriptor_binding_t binding,
+        TextureHandle th,
         SamplerParams params) {
 }
 
 void NoopDriver::bindDescriptorSet(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_set_t set,
-        backend::DescriptorSetOffsetArray&& offsets) {
+        DescriptorSetHandle dsh,
+        descriptor_set_t set,
+        DescriptorSetOffsetArray&& offsets) {
+}
+
+void NoopDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+}
+
+void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        size_t size, BufferDescriptor&& data) {
 }
 
 } // namespace filament

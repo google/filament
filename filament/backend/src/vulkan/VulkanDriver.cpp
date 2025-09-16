@@ -476,6 +476,11 @@ void VulkanDriver::updateDescriptorSetTexture(
     }
 }
 
+void VulkanDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        size_t size, BufferDescriptor&& data) {
+    // TODO: VulkanDriver::copyToMemoryMappedBuffer
+}
+
 void VulkanDriver::flush(int) {
     FVK_SYSTRACE_SCOPE();
     endCommandRecording();
@@ -940,6 +945,13 @@ void VulkanDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
     mResourceManager.associateHandle(dsh.getId(), std::move(tag));
 }
 
+void VulkanDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
+        BufferObjectHandle boh, size_t offset,
+        size_t size, MapBufferAccessFlags access, utils::CString tag) {
+    // TODO: VulkanDriver::mapBufferR
+}
+
+
 Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBufferInfo>();
 }
@@ -1037,6 +1049,16 @@ Handle<HwDescriptorSetLayout> VulkanDriver::createDescriptorSetLayoutS() noexcep
 Handle<HwDescriptorSet> VulkanDriver::createDescriptorSetS() noexcept {
     return mResourceManager.allocHandle<VulkanDescriptorSet>();
 }
+
+MemoryMappedBufferHandle VulkanDriver::mapBufferS() noexcept {
+    // TODO: VulkanDriver::mapBufferS
+    return {};
+}
+
+void VulkanDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+    // TODO: VulkanDriver::unmapBuffer
+}
+
 
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (!sch) {
