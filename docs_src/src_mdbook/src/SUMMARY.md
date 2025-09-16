@@ -3,6 +3,7 @@
 - [Introduction](./dup/intro.md)
   - [Build](./dup/building.md)
     - [Build for Android on Windows](./build/windows_android.md)
+    - [Maven Release](./build/maven_release.md)
   - [Contribute](./dup/contributing.md)
   - [Coding Style](./dup/code_style.md)
 - [Core Concepts](./main/README.md)
