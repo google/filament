@@ -98,6 +98,19 @@ public class SwapChain {
     }
 
     /**
+     * Return whether createSwapChain supports the CONFIG_MSAA_*_SAMPLES flag.
+     * The default implementation returns false.
+     *
+     * @param engine A reference to the filament Engine
+     * @param samples The number of samples
+     * @return true if CONFIG_MSAA_*_SAMPLES is supported, false otherwise.
+     * @see SwapChainFlags#CONFIG_MSAA_*_SAMPLES
+     */
+    public static boolean isMSAASwapChainSupported(@NonNull Engine engine, int samples) {
+        return nIsMSAASwapChainSupported(engine.getNativeObject(), samples);
+    }
+
+    /**
      * @return the native <code>Object</code> this <code>SwapChain</code> was created from or null
      *         for a headless SwapChain.
      */
@@ -139,5 +152,6 @@ public class SwapChain {
 
     private static native void nSetFrameCompletedCallback(long nativeSwapChain, Object handler, Runnable callback);
     private static native boolean nIsSRGBSwapChainSupported(long nativeEngine);
+    private static native boolean nIsMSAASwapChainSupported(long nativeEngine, int samples);
     private static native boolean nIsProtectedContentSupported(long nativeEngine);
 }

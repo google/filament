@@ -652,6 +652,8 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, utils::CString tag) {
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
         utils::CString tag) {
+    // TODO: support MSAA swapchain
+
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
@@ -669,6 +671,12 @@ void MetalDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
         uint32_t width, uint32_t height, uint64_t flags, utils::CString tag) {
     construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, width, height, flags);
     mHandleAllocator.associateTagToHandle(sch.getId(), std::move(tag));
+}
+
+void MetalDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
+    // TODO: Ensure sync is active, and then invoke and clear all pending
+    // callbacks.
+    mHandleAllocator.associateTagToHandle(sh.getId(), std::move(tag));
 }
 
 void MetalDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::CString tag) {
@@ -814,6 +822,10 @@ Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
 
 Handle<HwSwapChain> MetalDriver::createSwapChainHeadlessS() noexcept {
     return alloc_handle<MetalSwapChain>();
+}
+
+Handle<HwSync> MetalDriver::createSyncS() noexcept {
+    return alloc_handle<MetalSync>();
 }
 
 Handle<HwTimerQuery> MetalDriver::createTimerQueryS() noexcept {
@@ -1017,6 +1029,19 @@ FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
     return fence->wait(0);
 }
 
+void MetalDriver::destroySync(Handle<HwSync> sh) {
+    if (sh) {
+        destruct_handle<MetalSync>(sh);
+    }
+}
+
+void MetalDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
+    // TODO: If the sync has been inserted into the command stream, execute
+    // the callback. Otherwise, enqueue it.
+}
+
+
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
     return MetalTexture::decidePixelFormat(mContext, format) != MTLPixelFormatInvalid;
 }
@@ -1095,6 +1120,11 @@ bool MetalDriver::isAutoDepthResolveSupported() {
 
 bool MetalDriver::isSRGBSwapChainSupported() {
     // the SWAP_CHAIN_CONFIG_SRGB_COLORSPACE flag is not supported
+    return false;
+}
+
+bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
+    // TODO: support MSAA swapchain
     return false;
 }
 
