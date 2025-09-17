@@ -16,7 +16,6 @@
 #ifndef TNT_FILAMENT_MATERIALCACHE_H
 #define TNT_FILAMENT_MATERIALCACHE_H
 
-#include "RefCountedMap.h"
 #include "MaterialDefinition.h"
 
 #include <private/filament/Variant.h>
@@ -27,6 +26,7 @@
 #include <backend/Program.h>
 
 #include <utils/Invocable.h>
+#include <utils/RefCountedMap.h>
 
 namespace filament {
 
@@ -60,7 +60,7 @@ private:
     //
     // We use unique_ptr here because we need these pointers to be stable.
     // TODO: investigate using a custom allocator here?
-    RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mInner;
+    utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mInner;
 };
 
 } // namespace filament

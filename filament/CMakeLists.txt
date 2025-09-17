@@ -183,7 +183,6 @@ set(PRIVATE_HDRS
         src/MaterialInstanceManager.h
         src/PIDController.h
         src/PostProcessManager.h
-        src/RefCountedMap.h
         src/RenderPass.h
         src/RenderPrimitive.h
         src/RendererUtils.h

@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef TNT_FILAMENT_REFCOUNTEDMAP_H
-#define TNT_FILAMENT_REFCOUNTEDMAP_H
+#ifndef TNT_UTILS_REFCOUNTEDMAP_H
+#define TNT_UTILS_REFCOUNTEDMAP_H
 
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -22,12 +22,23 @@
 
 #include <tsl/robin_map.h>
 
-namespace filament {
+namespace utils {
 
 namespace refcountedmap {
 
 template<typename T>
 concept IsPointer = requires(T a) { *a; };
+
+// If T is a pointer type, get the type of the value it points to; otherwise, T.
+template<typename T>
+struct PointerTraits {
+    using element_type = T;
+};
+
+template<typename T> requires IsPointer<T>
+struct PointerTraits<T> {
+    using element_type = std::pointer_traits<T>::element_type;
+};
 
 } // namespace refcountedmap
 
@@ -40,9 +51,7 @@ template<typename Key, typename T, typename Hash = std::hash<Key>>
 class RefCountedMap {
     // Use references for the key if the size of the key type is greater than the size of a pointer.
     using KeyRef = std::conditional_t<(sizeof(Key) > sizeof(void*)), const Key&, Key>;
-    // If T is a pointer type, get the type of the value it points to; otherwise, T.
-    using TValue = typename std::conditional_t<refcountedmap::IsPointer<T>,
-                                               typename std::pointer_traits<T>::element_type, T>;
+    using TValue = refcountedmap::PointerTraits<T>::element_type;
 
     struct Entry {
         uint32_t referenceCount;
@@ -52,6 +61,14 @@ class RefCountedMap {
     using Map = tsl::robin_map<Key, Entry, Hash>;
 
     static constexpr TValue& deref(T& a) {
+        if constexpr (refcountedmap::IsPointer<T>) {
+            return *a;
+        } else {
+            return a;
+        }
+    }
+
+    static constexpr TValue const& deref(T const& a) {
         if constexpr (refcountedmap::IsPointer<T>) {
             return *a;
         } else {
@@ -163,7 +180,7 @@ public:
      *
      * Panics if no entry found in map.
      */
-    T& get(KeyRef key, size_t hash) noexcept {
+    TValue& get(KeyRef key, size_t hash) noexcept {
         auto it = mMap.find(key);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         return deref(it.value().value);
@@ -188,4 +205,4 @@ private:
 
 }
 
-#endif  // TNT_FILAMENT_REFCOUNTEDMAP_H
+#endif  // TNT_UTILS_REFCOUNTEDMAP_H
