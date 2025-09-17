@@ -48,15 +48,6 @@ struct MaterialDefinition {
     using BindingUniformInfoContainer = utils::FixedCapacityVector<
         std::tuple<uint8_t, utils::CString, backend::Program::UniformInfo>>;
 
-    // Called by MaterialCache.
-    static std::unique_ptr<MaterialParser> createParser(backend::Backend const backend,
-            utils::FixedCapacityVector<backend::ShaderLanguage> languages,
-            const void* UTILS_NONNULL data, size_t size);
-
-    // Called by MaterialCache.
-    static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
-            std::unique_ptr<MaterialParser> parser);
-
     // public only due to std::make_unique().
     MaterialDefinition(FEngine& engine, std::unique_ptr<MaterialParser> parser);
 
@@ -117,6 +108,15 @@ struct MaterialDefinition {
     uint64_t cacheId = 0;
 
 private:
+    friend class MaterialCache;
+
+    static std::unique_ptr<MaterialParser> createParser(backend::Backend const backend,
+            utils::FixedCapacityVector<backend::ShaderLanguage> languages,
+            const void* UTILS_NONNULL data, size_t size);
+
+    static std::unique_ptr<MaterialDefinition> create(FEngine& engine,
+            std::unique_ptr<MaterialParser> parser);
+
     void processMain();
     void processBlendingMode();
     void processSpecializationConstants();
