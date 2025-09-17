@@ -213,7 +213,7 @@ void FMaterial::terminate(FEngine& engine) {
 #endif
 
     destroyPrograms(engine);
-    engine.getMaterialCache().release(engine, *mDefinition.materialParser);
+    engine.getMaterialCache().release(engine, mDefinition.getMaterialParser());
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
@@ -315,7 +315,7 @@ MaterialParser const& FMaterial::getMaterialParser() const noexcept {
         return *mEditedMaterialParser;
     }
 #endif
-    return *mDefinition.materialParser;
+    return mDefinition.getMaterialParser();
 }
 
 bool FMaterial::hasVariant(Variant const variant) const noexcept {
@@ -333,10 +333,10 @@ bool FMaterial::hasVariant(Variant const variant) const noexcept {
             return false;
     }
     const ShaderModel sm = mEngine.getShaderModel();
-    if (!mDefinition.materialParser->hasShader(sm, vertexVariant, ShaderStage::VERTEX)) {
+    if (!mDefinition.getMaterialParser().hasShader(sm, vertexVariant, ShaderStage::VERTEX)) {
         return false;
     }
-    if (!mDefinition.materialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
+    if (!mDefinition.getMaterialParser().hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
         return false;
     }
     return true;
@@ -798,7 +798,7 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
             +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD,
             int32_t(builder->mShadowSamplingQuality) });
     if (UTILS_UNLIKELY(
-            mDefinition.materialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
+            mDefinition.getMaterialParser().getShaderLanguage() == ShaderLanguage::ESSL1)) {
         // The actual value of this spec-constant is set in the OpenGLDriver backend.
         mSpecializationConstants.push_back({
                 +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
@@ -848,7 +848,7 @@ void FMaterial::processPushConstants(FEngine&) {
 
     CString structVarName;
     FixedCapacityVector<MaterialPushConstant> pushConstants;
-    mDefinition.materialParser->getPushConstants(&structVarName, &pushConstants);
+    mDefinition.getMaterialParser().getPushConstants(&structVarName, &pushConstants);
 
     vertexConstants.reserve(pushConstants.size());
     fragmentConstants.reserve(pushConstants.size());

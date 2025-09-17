@@ -142,7 +142,7 @@ void MaterialDefinition::terminate(FEngine& engine) {
 
 MaterialDefinition::MaterialDefinition(FEngine& engine,
         std::unique_ptr<MaterialParser> materialParser)
-        : materialParser(std::move(materialParser)) {
+        : mMaterialParser(std::move(materialParser)) {
 
     processMain();
     processBlendingMode();
@@ -151,13 +151,13 @@ MaterialDefinition::MaterialDefinition(FEngine& engine,
 }
 
 void MaterialDefinition::processMain() {
-    UTILS_UNUSED_IN_RELEASE bool const nameOk = materialParser->getName(&name);
+    UTILS_UNUSED_IN_RELEASE bool const nameOk = mMaterialParser->getName(&name);
     assert_invariant(nameOk);
 
     featureLevel = [this]() -> FeatureLevel {
         // code written this way so the IDE will complain when/if we add a FeatureLevel
         uint8_t level = 1;
-        materialParser->getFeatureLevel(&level);
+        mMaterialParser->getFeatureLevel(&level);
         assert_invariant(level <= 3);
         FeatureLevel featureLevel = FeatureLevel::FEATURE_LEVEL_1;
         switch (FeatureLevel(level)) {
@@ -173,61 +173,61 @@ void MaterialDefinition::processMain() {
 
     UTILS_UNUSED_IN_RELEASE bool success;
 
-    success = materialParser->getCacheId(&cacheId);
+    success = mMaterialParser->getCacheId(&cacheId);
     assert_invariant(success);
 
-    success = materialParser->getSIB(&samplerInterfaceBlock);
+    success = mMaterialParser->getSIB(&samplerInterfaceBlock);
     assert_invariant(success);
 
-    success = materialParser->getUIB(&uniformInterfaceBlock);
+    success = mMaterialParser->getUIB(&uniformInterfaceBlock);
     assert_invariant(success);
 
-    if (UTILS_UNLIKELY(materialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
-        success = materialParser->getAttributeInfo(&attributeInfo);
+    if (UTILS_UNLIKELY(mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1)) {
+        success = mMaterialParser->getAttributeInfo(&attributeInfo);
         assert_invariant(success);
 
-        success = materialParser->getBindingUniformInfo(&bindingUniformInfo);
+        success = mMaterialParser->getBindingUniformInfo(&bindingUniformInfo);
         assert_invariant(success);
     }
 
     // Older materials will not have a subpass chunk; this should not be an error.
-    if (!materialParser->getSubpasses(&subpassInfo)) {
+    if (!mMaterialParser->getSubpasses(&subpassInfo)) {
         subpassInfo.isValid = false;
     }
 
-    materialParser->getShading(&shading);
-    materialParser->getMaterialProperties(&materialProperties);
-    materialParser->getInterpolation(&interpolation);
-    materialParser->getVertexDomain(&vertexDomain);
-    materialParser->getMaterialDomain(&materialDomain);
-    materialParser->getMaterialVariantFilterMask(&variantFilterMask);
-    materialParser->getRequiredAttributes(&requiredAttributes);
-    materialParser->getRefractionMode(&refractionMode);
-    materialParser->getRefractionType(&refractionType);
-    materialParser->getReflectionMode(&reflectionMode);
-    materialParser->getTransparencyMode(&transparencyMode);
-    materialParser->getDoubleSided(&doubleSided);
-    materialParser->getCullingMode(&cullingMode);
+    mMaterialParser->getShading(&shading);
+    mMaterialParser->getMaterialProperties(&materialProperties);
+    mMaterialParser->getInterpolation(&interpolation);
+    mMaterialParser->getVertexDomain(&vertexDomain);
+    mMaterialParser->getMaterialDomain(&materialDomain);
+    mMaterialParser->getMaterialVariantFilterMask(&variantFilterMask);
+    mMaterialParser->getRequiredAttributes(&requiredAttributes);
+    mMaterialParser->getRefractionMode(&refractionMode);
+    mMaterialParser->getRefractionType(&refractionType);
+    mMaterialParser->getReflectionMode(&reflectionMode);
+    mMaterialParser->getTransparencyMode(&transparencyMode);
+    mMaterialParser->getDoubleSided(&doubleSided);
+    mMaterialParser->getCullingMode(&cullingMode);
 
     if (shading == Shading::UNLIT) {
-        materialParser->hasShadowMultiplier(&hasShadowMultiplier);
+        mMaterialParser->hasShadowMultiplier(&hasShadowMultiplier);
     }
 
     isVariantLit = shading != Shading::UNLIT || hasShadowMultiplier;
 
     // color write
     bool colorWrite = false;
-    materialParser->getColorWrite(&colorWrite);
+    mMaterialParser->getColorWrite(&colorWrite);
     rasterState.colorWrite = colorWrite;
 
     // depth test
     bool depthTest = false;
-    materialParser->getDepthTest(&depthTest);
+    mMaterialParser->getDepthTest(&depthTest);
     rasterState.depthFunc = depthTest ? RasterState::DepthFunc::GE : RasterState::DepthFunc::A;
 
     // if doubleSided() was called we override culling()
     bool doubleSideSet = false;
-    materialParser->getDoubleSidedSet(&doubleSideSet);
+    mMaterialParser->getDoubleSidedSet(&doubleSideSet);
     if (doubleSideSet) {
         doubleSidedCapability = true;
         rasterState.culling = doubleSided ? CullingMode::NONE : cullingMode;
@@ -236,13 +236,13 @@ void MaterialDefinition::processMain() {
     }
 
     // specular anti-aliasing
-    materialParser->hasSpecularAntiAliasing(&specularAntiAliasing);
+    mMaterialParser->hasSpecularAntiAliasing(&specularAntiAliasing);
     if (specularAntiAliasing) {
-        materialParser->getSpecularAntiAliasingVariance(&specularAntiAliasingVariance);
-        materialParser->getSpecularAntiAliasingThreshold(&specularAntiAliasingThreshold);
+        mMaterialParser->getSpecularAntiAliasingVariance(&specularAntiAliasingVariance);
+        mMaterialParser->getSpecularAntiAliasingThreshold(&specularAntiAliasingThreshold);
     }
 
-    materialParser->hasCustomDepthShader(&hasCustomDepthShader);
+    mMaterialParser->hasCustomDepthShader(&hasCustomDepthShader);
 
     bool const isLit = isVariantLit || hasShadowMultiplier;
     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
@@ -253,14 +253,14 @@ void MaterialDefinition::processMain() {
 }
 
 void MaterialDefinition::processBlendingMode() {
-    materialParser->getBlendingMode(&blendingMode);
+    mMaterialParser->getBlendingMode(&blendingMode);
 
     if (blendingMode == BlendingMode::MASKED) {
-        materialParser->getMaskThreshold(&maskThreshold);
+        mMaterialParser->getMaskThreshold(&maskThreshold);
     }
 
     if (blendingMode == BlendingMode::CUSTOM) {
-        materialParser->getCustomBlendFunction(&customBlendFunctions);
+        mMaterialParser->getCustomBlendFunction(&customBlendFunctions);
     }
 
     // blending mode
@@ -315,19 +315,19 @@ void MaterialDefinition::processBlendingMode() {
 
     // depth write
     bool depthWriteSet = false;
-    materialParser->getDepthWriteSet(&depthWriteSet);
+    mMaterialParser->getDepthWriteSet(&depthWriteSet);
     if (depthWriteSet) {
         bool depthWrite = false;
-        materialParser->getDepthWrite(&depthWrite);
+        mMaterialParser->getDepthWrite(&depthWrite);
         rasterState.depthWrite = depthWrite;
     }
 
     // alpha to coverage
     bool alphaToCoverageSet = false;
-    materialParser->getAlphaToCoverageSet(&alphaToCoverageSet);
+    mMaterialParser->getAlphaToCoverageSet(&alphaToCoverageSet);
     if (alphaToCoverageSet) {
         bool alphaToCoverage = false;
-        materialParser->getAlphaToCoverage(&alphaToCoverage);
+        mMaterialParser->getAlphaToCoverage(&alphaToCoverage);
         rasterState.alphaToCoverage = alphaToCoverage;
     } else {
         rasterState.alphaToCoverage = blendingMode == BlendingMode::MASKED;
@@ -336,7 +336,7 @@ void MaterialDefinition::processBlendingMode() {
 
 void MaterialDefinition::processSpecializationConstants() {
     // Older materials won't have a constants chunk, but that's okay.
-    materialParser->getConstants(&materialConstants);
+    mMaterialParser->getConstants(&materialConstants);
     for (size_t i = 0, c = materialConstants.size(); i < c; i++) {
         auto& item = materialConstants[i];
         // the key can be a string_view because mMaterialConstant owns the CString
@@ -348,11 +348,11 @@ void MaterialDefinition::processSpecializationConstants() {
 void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     UTILS_UNUSED_IN_RELEASE bool success;
 
-    success = materialParser->getDescriptorBindings(&programDescriptorBindings);
+    success = mMaterialParser->getDescriptorBindings(&programDescriptorBindings);
     assert_invariant(success);
 
     backend::DescriptorSetLayout descriptorSetLayout;
-    success = materialParser->getDescriptorSetLayout(&descriptorSetLayout);
+    success = mMaterialParser->getDescriptorSetLayout(&descriptorSetLayout);
     assert_invariant(success);
 
     // get the PER_VIEW descriptor binding info
