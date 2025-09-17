@@ -63,6 +63,8 @@ struct MaterialDefinition {
     // Free GPU resources owned by this MaterialDefinition.
     void terminate(FEngine& engine);
 
+    MaterialParser const& getMaterialParser() const noexcept { return *mMaterialParser; }
+
     // try to order by frequency of use
     DescriptorSetLayout perViewDescriptorSetLayout;
     DescriptorSetLayout perViewDescriptorSetLayoutVsm;
@@ -108,18 +110,19 @@ struct MaterialDefinition {
 
     // Constants defined by this Material
     utils::FixedCapacityVector<MaterialConstant> materialConstants;
-    // A map from the Constant name to the mMaterialConstant index
+    // A map from the Constant name to the materialConstants index
     std::unordered_map<std::string_view, uint32_t> specializationConstantsNameToIndex;
 
     utils::CString name;
     uint64_t cacheId = 0;
-    std::unique_ptr<MaterialParser> materialParser;
 
 private:
     void processMain();
     void processBlendingMode();
     void processSpecializationConstants();
     void processDescriptorSets(FEngine& engine);
+
+    std::unique_ptr<MaterialParser> mMaterialParser;
 };
 
 } // namespace filament
