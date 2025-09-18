@@ -102,7 +102,7 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     context->pendingCommandBuffer = [context->commandQueue commandBuffer];
     // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
     // all frames and their completion handlers finish before context is deallocated.
-    uint64_t thisCommandBufferId = context->pendingCommandBufferId;
+    const uint64_t thisCommandBufferId = context->pendingCommandBufferId;
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         context->resourceTracker.clearResources((__bridge void*) buffer);
 
@@ -117,6 +117,11 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
                                 "storage mode.";
                 context->memorylessLimitsReached = true;
             }
+        }
+
+        if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
+            LOG(ERROR) << "Filament Metal command buffer errored with code: " << errorCode << " ("
+                       << stringifyMTLCommandBufferError(errorCode) << ").";
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)
