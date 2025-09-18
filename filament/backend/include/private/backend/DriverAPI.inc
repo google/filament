@@ -108,11 +108,15 @@
     DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_TAGGED_R_N(R, N, ...) \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString, tag))
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString&&, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString&&, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
+
+#define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...) \
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString, tag))
 
 // on some compilers the ##__VA_ARGS__ hack is not supported, so we can't handle 0-parameter APIs
 // with DECL_DRIVER_API_SYNCHRONOUS_N
@@ -340,8 +344,8 @@ DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, ds
  */
 
 DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamNative, void*, stream, utils::CString, tag)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamAcquired, utils::CString, tag)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamNative, void*, stream)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamAcquired)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
