@@ -392,10 +392,6 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -480,10 +476,6 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 }
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
