@@ -17,11 +17,13 @@
 #ifndef TNT_FILABRIDGE_UIBSTRUCTS_H
 #define TNT_FILABRIDGE_UIBSTRUCTS_H
 
+#include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/vec4.h>
 
 #include <private/filament/EngineEnums.h>
 
+#include <array>
 #include <string_view>
 
 /*
@@ -38,7 +40,8 @@ struct alignas(16) vec3 : public std::array<float, 3> {};
 struct alignas(16) vec4 : public std::array<float, 4> {};
 
 struct mat33 : public std::array<vec3, 3> {
-    mat33& operator=(math::mat3f const& rhs) noexcept {
+    // passing by value informs the compiler that rhs != *this
+    mat33& operator=(math::mat3f const rhs) noexcept {
         for (int i = 0; i < 3; i++) {
             (*this)[i][0] = rhs[i][0];
             (*this)[i][1] = rhs[i][1];
@@ -49,7 +52,8 @@ struct mat33 : public std::array<vec3, 3> {
 };
 
 struct mat44 : public std::array<vec4, 4> {
-    mat44& operator=(math::mat4f const& rhs) noexcept {
+    // passing by value informs the compiler that rhs != *this
+    mat44& operator=(math::mat4f const rhs) noexcept {
         for (int i = 0; i < 4; i++) {
             (*this)[i][0] = rhs[i][0];
             (*this)[i][1] = rhs[i][1];
