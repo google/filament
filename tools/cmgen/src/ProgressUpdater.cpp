@@ -25,19 +25,18 @@ static void moveCursorUp(size_t n) {
     std::cout << "\033[" << n << "F";
 }
 
-static void showCursor() {
-    signal(SIGINT, SIG_DFL);
-    std::cout << "\033[?25h" << std::flush;
+static void showCursorSafe() {
+    write(STDOUT_FILENO, "\033[?25h", 6);
 }
 
 static void showCursorFromSignal(int) {
-    showCursor();
+    showCursorSafe();
     raise(SIGINT);
 }
 
 static void hideCursor() {
     signal(SIGINT, showCursorFromSignal);
-    std::cout << "\033[?25l" << std::flush;
+    write(STDOUT_FILENO, "\033[?25l", 6);
 }
 
 static inline void printProgress(float v, size_t width) {
