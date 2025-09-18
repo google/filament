@@ -21,12 +21,14 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
+#include <algorithm>
 #include <functional>
 #include <string_view>
 #include <utility>

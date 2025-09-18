@@ -321,7 +321,7 @@ DECL_DRIVER_API_N(bindDescriptorSet,
 DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh)
 DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
 DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
-DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, ibh)
+DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, boh)
 DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
 DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
@@ -373,7 +373,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, tqh, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 
@@ -398,16 +398,16 @@ DECL_DRIVER_API_N(updateBufferObject,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_N(registerBufferObjectStreams,
-        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectHandle, boh,
         backend::BufferObjectStreamDescriptor&&, streams)
 
 DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
-        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectHandle, boh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_N(resetBufferObject,
-        backend::BufferObjectHandle, ibh)
+        backend::BufferObjectHandle, boh)
 
 DECL_DRIVER_API_N(update3DImage,
         backend::TextureHandle, th,
@@ -436,10 +436,10 @@ DECL_DRIVER_API_0(endRenderPass)
 DECL_DRIVER_API_0(nextSubpass)
 
 DECL_DRIVER_API_N(beginTimerQuery,
-        backend::TimerQueryHandle, query)
+        backend::TimerQueryHandle, tqh)
 
 DECL_DRIVER_API_N(endTimerQuery,
-        backend::TimerQueryHandle, query)
+        backend::TimerQueryHandle, tqh)
 
 DECL_DRIVER_API_N(compilePrograms,
         backend::CompilerPriorityQueue, priority,
