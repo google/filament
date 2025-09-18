@@ -118,12 +118,12 @@ bool MaterialParser::ignoreLexeme(const MaterialLexeme&, MaterialBuilder&) const
 }
 
 static bool reflectParameters(const MaterialBuilder& builder) {
-    uint8_t const count = builder.getParameterCount();
+    size_t const count = builder.getParameterCount();
     const MaterialBuilder::ParameterList& parameters = builder.getParameters();
 
     std::cout << "{" << std::endl;
     std::cout << "  \"parameters\": [" << std::endl;
-    for (uint8_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const MaterialBuilder::Parameter& parameter = parameters[i];
         std::cout << "    {" << std::endl;
         std::cout << R"(      "name": ")" << parameter.name.c_str() << "\"," << std::endl;
