@@ -113,7 +113,7 @@ class ExpandedComparisonResult extends LitElement {
     #diffCanvas {
       width: 100%;
       height: 100%;
-      margin-top: 35px;
+      margin-top: 22px;
       margin-bottom: 5px;
     }
     .selector {
@@ -151,33 +151,9 @@ class ExpandedComparisonResult extends LitElement {
 
   _viewer(name, choices, current, viewType) {
     const url = viewType == 'rendered' ? getCompUrl(current) : getGoldenUrl(current);
-    const onSelect = (ev) => {
-      const testName = ev.target.value;
-      const test = this.tests.find((t) => t.name == testName);
-      if (name == 'left') {
-        this.left = test;
-        this.leftImageLoaded = false;
-      } else {
-        this.right = test;
-        this.rightImageLoaded = false;
-      }
-      this.showDiff = false;
-    };
-
-    const dropdown = () => {
-      if (this.disableDropdowns) {
-        return html`<div class="selector">${current.name} (${viewType})</div>`;
-      }
-      return html`
-        <select class="selector" @change=${onSelect}>
-          ${choices.map((c) => html`<option value=${c.name} ?selected=${c.name == current.name}>${c.name}</option>`)}
-        </select>
-      `;
-    }
-
     return html`
       <div style="flex: 1; margin: 0 5px;">
-        ${dropdown()}
+        <div>${current.name}</div>
         <tiff-viewer id="viewer-${name}" class="viewer"
                      name="${current.name}"
                      fileurl="${url}"></tiff-viewer>
@@ -405,6 +381,9 @@ class App extends LitElement {
     selectedTests: {type: Array},
     comparisonContent: {type: Object},
     compareMode: {type: Boolean},
+
+    // This is used to cache urls that are not found
+    missingFile: {type: Object},
   };
 
   async _init() {
@@ -420,11 +399,26 @@ class App extends LitElement {
     this.selectedTests = [];
     this.comparisonContent = null;
     this.compareMode = false;
+    this.missingFile = {
+      [getDiffUrl('undefined')]: true,
+    };
     this._init();
 
     this.addEventListener('dialog-closed', () => {
       this.dialogContent = null;
       this.comparisonContent = null;
+    });
+
+    this.addEventListener('url-hit', (ev) => {
+      delete this.missingFile[ev.detail.value];
+      this.missingFile = this.missingFile;
+      this.requestUpdate();
+    });
+
+    this.addEventListener('url-miss', (ev) => {
+      this.missingFile[ev.detail.value] = true;
+      this.missingFile = this.missingFile;
+      this.requestUpdate();
     });
   }
 
@@ -470,8 +464,24 @@ class App extends LitElement {
   }
 
   render() {
-    let passed = this.tests.filter((t) => t.result == 'ok');
-    let failed = this.tests.filter((t) => t.result != 'ok');
+    const sortFn = (a, b) => {
+      const aparts = a.name.split('.');
+      const bparts = b.name.split('.');
+      // 0 = test names
+      // 1 = backend
+      // 2 = model
+      for (let i of [0, 2, 1]) {
+        if (aparts[i] < bparts[i]) {
+          return -1;
+        }
+        if (aparts[i] > bparts[i]) {
+          return 1;
+        }
+      }
+      return 0;
+    };
+    let passed = this.tests.filter((t) => t.result == 'ok').sort(sortFn);
+    let failed = this.tests.filter((t) => t.result != 'ok').sort(sortFn);
     const singleTiff = (url) => {
       return html`<tiff-viewer style="max-width:100px" fileurl="${url}"></tiff-viewer>`;
     };
@@ -502,7 +512,8 @@ class App extends LitElement {
         [goldenUrl, 'golden'],
         [compUrl, 'rendered'],
         [diffUrl, 'diff']
-      ].map((a) => [singleTiff(a[0]), a[1]])
+      ].filter((a) => !this.missingFile[a[0]])
+       .map((a) => [singleTiff(a[0]), a[1]])
        .map((a) => wrap(...a));
       return html`
         <div class="test-item" @click="${(e)=>this._onClick(t, e)}" >
