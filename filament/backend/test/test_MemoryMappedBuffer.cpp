@@ -21,6 +21,7 @@
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "SharedShadersConstants.h"
+#include "Skip.h"
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
@@ -98,7 +99,7 @@ protected:
         });
 
         auto const ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
-                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC));
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC_BIT));
         shader.bindUniform<SimpleMaterialParams>(api, ubuffer);
         shader.uploadUniform(api, ubuffer, SimpleMaterialParams{ .color = color });
         return shader;
@@ -142,6 +143,8 @@ protected:
             size_t const copyOffset,
             const math::float4& color,
             const char* screenshotName) {
+
+        SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
         auto& api = getDriverApi();
         Cleanup cleanup(api);
@@ -201,12 +204,14 @@ protected:
 };
 
 TEST_F(MemoryMappedTest, MapCopyUnmap) {
+    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
     // Create a buffer object.
     BufferObjectHandle const bufferObject = cleanup.add(api.createBufferObject(1024,
-            BufferObjectBinding::VERTEX, BufferUsage::DYNAMIC | BufferUsage::SHARED_WRITE_BIT));
+            BufferObjectBinding::VERTEX, BufferUsage::DYNAMIC_BIT | BufferUsage::SHARED_WRITE_BIT));
 
     // Map the buffer.
     MemoryMappedBufferHandle const memoryMappedBuffer = api.mapBuffer(bufferObject, 0, 1024,
@@ -248,6 +253,8 @@ TEST_F(MemoryMappedTest, MapAndCopyWithOffsets) {
 }
 
 TEST_F(MemoryMappedTest, MultipleCopies) {
+    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -299,6 +306,8 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
 }
 
 TEST_F(MemoryMappedTest, UpdatePartial) {
+    SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -366,6 +375,9 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
         flushAndWait();
         EXPECT_EQ(callbacksExecuted, 1);
     }
+
+    // need this because render() above calls commit()
+    api.makeCurrent(swapChain, swapChain);
 
     // Second render, after update
     render(9, 1, swapChain, renderTarget, renderPrimitive, state);

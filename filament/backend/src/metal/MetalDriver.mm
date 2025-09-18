@@ -2202,25 +2202,37 @@ void MetalDriver::executeDeferredOps() noexcept {
 }
 
 MemoryMappedBufferHandle MetalDriver::mapBufferS() noexcept {
-    // TODO: MetalDriver::mapBufferS
-    return {};
+    return alloc_handle<MetalMemoryMappedBuffer>();
 }
 
 void MetalDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
         size_t size, MapBufferAccessFlags access, utils::CString tag) {
-    // TODO: MetalDriver::mapBufferR
+    construct_handle<MetalMemoryMappedBuffer>(mmbh, boh, offset, size, access);
+    mHandleAllocator.associateTagToHandle(mmbh.getId(), std::move(tag));
 }
 
 void MetalDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
-    // TODO: MetalDriver::unmapBuffer
+    if (UTILS_UNLIKELY(!mmbh)) {
+        return;
+    }
+    destruct_handle<MetalMemoryMappedBuffer>(mmbh);
 }
 
 void MetalDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
         size_t size, BufferDescriptor&& data) {
-    // TODO: MetalDriver::copyToMemoryMappedBuffer
-}
+    auto mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
 
+    assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
+    assert_invariant(size <= data.size);
+    assert_invariant(offset + size <= mmb->size);
+
+    // TODO: this isa zero-effort implementation of copyToMemoryMappedBuffer(), where we just
+    //       call updateBufferObject(). This could be a fallback implementation for when
+    //       shared memory is not available.
+    //       On UMA systems, this should just be a memcpy into the memory-mapped buffer.
+    updateBufferObject(mmb->boh, std::move(data), mmb->offset + offset);
+}
 
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<MetalDriver>;
