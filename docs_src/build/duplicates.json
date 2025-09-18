@@ -79,7 +79,10 @@
     "docs_src/README.md": {
         "dest": "dup/docs.md"
     },
-    "docs_src/test/renderdiff/README.md": {
-        "dest": "dup/renderdiff.md"
+    "test/renderdiff/README.md": {
+        "dest": "dup/renderdiff.md",
+        "link_transforms": {
+            "docs/images/": "../images/"
+        }
     }
 }
