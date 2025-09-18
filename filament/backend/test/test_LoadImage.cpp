@@ -544,13 +544,12 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
         api.bindRenderPrimitive(mTriangle.getRenderPrimitive());
         api.draw2(0, 3, 1);
         api.endRenderPass();
+
+        EXPECT_IMAGE(defaultRenderTarget,
+                ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
     }
 
-    EXPECT_IMAGE(defaultRenderTarget,
-            ScreenshotParams(kTexSize, kTexSize, "UpdateImageMipLevel", 1875922935));
-
     api.commit(swapChain);
-    api.endFrame(0);
 
     api.stopCapture();
 }
