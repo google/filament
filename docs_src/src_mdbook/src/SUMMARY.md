@@ -27,6 +27,8 @@
     - [Code coverage analysis](./notes/coverage.md)
     - [Performance analysis](./notes/performance_analysis.md)
   - [Framegraph](./notes/framegraph.md)
+  - [Tests](./notes/tests.md)
+    - [renderdiff](./dup/renderdiff.md)
   - [Libraries](./notes/libs.md)
     - [bluegl](./dup/bluegl.md)
     - [bluevk](./dup/bluevk.md)
