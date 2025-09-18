@@ -269,6 +269,10 @@ TEST_F(BlitTest, ColorResolve) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     auto& api = getDriverApi();
 
+    if (api.getFeatureLevel() < FeatureLevel::FEATURE_LEVEL_2) {
+        GTEST_SKIP() << "Skipping test because multi-sampled textures are not supported at Feature level < 2";
+    }
+
     constexpr int kSrcTexWidth = 256;
     constexpr int kSrcTexHeight = 256;
     constexpr int kDstTexWidth = 256;
