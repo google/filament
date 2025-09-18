@@ -1,0 +1,393 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Coding Style - Filament</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div style="display:flex;align-items:center;justify-content:center">
+                <img class="flogo" src="../images/filament_logo_small.png"></img>
+            </div>
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <!-- Filament: disable themes because the markdeep part does not look good for dark themes -->
+                        <!--
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        -->
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Filament</h1>
+
+                    <div class="right-buttons">
+                        <a href="https://github.com/google/filament" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="filament-code-style-and-formatting"><a class="header" href="#filament-code-style-and-formatting">Filament Code style and Formatting</a></h1>
+<p>Filament largely uses Android's code style, which is significantly different from the
+Google code style and is derived from the Java code style, but not quite.</p>
+<p>The guiding principles of the filament code style and code formatting can be resumed as:</p>
+<ul>
+<li>no nonsense</li>
+<li>use your own judgement</li>
+<li>break the rules <strong>if it makes sense</strong> e.g.: it improves readability substantially</li>
+<li>use the formatting of the file you're in, even if it breaks the rules</li>
+<li>no nonsense</li>
+</ul>
+<h2 id="formatting"><a class="header" href="#formatting">Formatting</a></h2>
+<ul>
+<li>4 spaces indent</li>
+<li>8 spaces continuation indent</li>
+<li>100 columns</li>
+<li><code>{</code> at the end of the line</li>
+<li>spaces around operators and after <code>;</code></li>
+<li>class access modifiers are not indented</li>
+<li>last line of <code>.cpp</code> or <code>.h</code> file must be an empty line</li>
+</ul>
+<pre><code>for (int i = 0; i &lt; max; i++) {
+}
+
+class Foo {
+public:
+protected:
+private:
+};
+
+</code></pre>
+<h2 id="naming-conventions"><a class="header" href="#naming-conventions">Naming Conventions</a></h2>
+<h3 id="files"><a class="header" href="#files">Files</a></h3>
+<ul>
+<li>headers use the <code>.h</code> extension</li>
+<li>implementation files use the <code>.cpp</code> extension</li>
+<li>included files use the <code>.inc</code> extension</li>
+<li>class files bear the name of the class they implement</li>
+<li><strong>no spaces</strong> in file names</li>
+<li>file names must be treated as case <strong>insensitive</strong>, i.e. it is not allowed to have several files
+with the same name but a different case</li>
+<li><code>#include</code> must use <strong>fully qualified</strong> names</li>
+<li>use <code>#include &lt; &gt;</code> for all public (exported) headers</li>
+<li>use <code>#include " "</code> for private headers</li>
+<li>all <em>public</em> include files must reside under the <code>include</code> folder</li>
+<li>all <em>source</em> files must reside under the <code>src</code> folder</li>
+<li>tests reside under the <code>test</code> folder</li>
+<li>public headers of a <code>foo</code> library must live in a folder named <code>foo</code></li>
+</ul>
+<pre><code>libfoo.so
+
+include/foo/FooBar.h
+src/FooBar.cpp
+src/data.inc
+
+#include &lt;foo/FooBar.h&gt;
+#include "FooBarPrivate.h"
+</code></pre>
+<h3 id="code"><a class="header" href="#code">Code</a></h3>
+<ul>
+<li>Everything is camel case except constants</li>
+<li><code>constants</code> are uppercase and don't have a prefix</li>
+<li><code>global</code> variables prefixed with <code>g</code></li>
+<li><code>static</code> variables prefixed with <code>s</code></li>
+<li><code>private</code> and <code>protected</code> class attributes prefixed with <code>m</code></li>
+<li><code>static</code> class attributes prefixed with <code>s</code></li>
+<li><code>public</code> class attributes <em>are not</em> prefixed</li>
+<li>class attributes and methods are lower camelcase</li>
+</ul>
+<pre><code>extern int gGlobalWarming;
+
+class FooBar {
+public:
+    void methodName();
+    int sizeInBytes;
+private:
+    int mAttributeName;
+    static int sGlobalAttribute;
+    static constexpr int FOO_COUNT = 10;
+    enum {
+        ONE, TWO, THREE
+    };
+};
+</code></pre>
+<h2 id="code-style"><a class="header" href="#code-style">Code Style</a></h2>
+<h3 id="files-1"><a class="header" href="#files-1">Files</a></h3>
+<ul>
+<li>always include the copyright notice at the top of every file</li>
+<li>make sure the date is correct</li>
+</ul>
+<pre><code>/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+</code></pre>
+<h3 id="headers"><a class="header" href="#headers">Headers</a></h3>
+<ul>
+<li><strong>always</strong> include a class' header <strong>first</strong> in the <code>.cpp</code> file</li>
+<li>other headers are sorted in reverse order of their layering, that is, lower layer headers last</li>
+<li>within a layer, headers are sorted alphabetically</li>
+<li>strive for implementing one class per file</li>
+<li><code>STL</code> limited in <strong>filament</strong> public headers to:
+<ul>
+<li><code>array</code></li>
+<li><code>initializer_list</code></li>
+<li><code>iterator</code></li>
+<li><code>limits</code></li>
+<li><code>optional</code></li>
+<li><code>type_traits</code></li>
+<li><code>utility</code></li>
+<li><code>variant</code></li>
+</ul>
+</li>
+</ul>
+<p>For <strong>libfilament</strong> the rule of thumb is that STL headers that don't generate code are allowed (e.g. <code>type_traits</code>),
+conversely containers and algorithms are not allowed. There are exceptions such as <code>array</code>. See above for the full list.</p>
+<ul>
+<li>The following <code>STL</code> headers are banned entirely, from public and private headers as well as implementation files:
+<ul>
+<li><code>iostream</code></li>
+</ul>
+</li>
+</ul>
+<p><em>Sorting the headers is important to help catching missing <code>#include</code> directives.</em></p>
+<pre><code>/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Bar.cpp
+
+#include &lt;foo/Bar.h&gt;
+
+#include "PrivateStuff.h"
+
+#include &lt;foo/Alloc.h&gt;
+#include &lt;foo/Bar.h&gt;
+
+#include &lt;utils/compiler.h&gt;
+
+#include &lt;algorithm&gt;
+#include &lt;iostream&gt;
+
+#include &lt;assert.h&gt;
+#include &lt;string.h&gt;
+</code></pre>
+<h3 id="strings"><a class="header" href="#strings">Strings</a></h3>
+<ul>
+<li>Never use <code>std::string</code> in the Filament core renderer. Prefer <code>utils::CString</code> or <code>std::string_view</code>.</li>
+<li>When using <code>std::string</code> in tools, always include the <code>std::</code> qualifier to disambiguate it
+from other string types.</li>
+</ul>
+<h3 id="misc"><a class="header" href="#misc">Misc</a></h3>
+<ul>
+<li>Use <code>auto</code> only when the type appears on the same line or with iterators and lambdas.</li>
+</ul>
+<pre><code>auto foo = new Foo();
+for (auto&amp; i : collection) { }
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../dup/contributing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../main/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../dup/contributing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../main/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
