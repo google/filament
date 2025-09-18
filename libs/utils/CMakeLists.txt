@@ -36,6 +36,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
@@ -171,6 +172,7 @@ set(TEST_SRCS
         test/test_JobSystem.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
+        test/test_RefCountedMap.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
         test/test_string.cpp
