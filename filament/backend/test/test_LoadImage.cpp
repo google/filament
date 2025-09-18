@@ -519,8 +519,6 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     PixelBufferDescriptor descriptor = checkerboardPixelBuffer(pixelFormat, pixelType, kTexSize);
     api.update3DImage(texture, /* level*/ 1, 0, 0, 0, kTexSize, kTexSize, 1, std::move(descriptor));
 
-    api.beginFrame(0, 0, 0);
-
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
     api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
