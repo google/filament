@@ -19,6 +19,7 @@
 #include "vulkan/VulkanTexture.h"
 
 #if defined(__ANDROID__)
+#include "backend/platforms/VulkanPlatformAndroid.h"
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 #endif
