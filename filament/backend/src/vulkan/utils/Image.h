@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H
 
 #include <backend/DriverEnums.h>
+#include <backend/platforms/VulkanPlatform.h>
 
 #include <utils/Log.h>
 
@@ -106,7 +107,9 @@ VkImageAspectFlags getImageAspect(VkFormat format);
 
 uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
-Platform::ExternalImageHandle createExternalImageFromRaw(void* image, bool sRGB);
+Platform::ExternalImageHandle createExternalImageFromRaw(filament::backend::VulkanPlatform* platform,
+        void* image,
+        bool sRGB);
 } // namespace fvkutils
 
 } // namespace filament::backend

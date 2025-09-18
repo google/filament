@@ -69,14 +69,14 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
 private:
     // These are only called from the frontend
     struct {
-    AcquiredImage mAcquired;
-    AcquiredImage mPrevious;
-    math::mat3f mTransform;
+        AcquiredImage mAcquired;
+        AcquiredImage mPrevious;
+        math::mat3f mTransform;
     } user_thread;
 
     // #TODO b/442937292
     math::mat3f mTransform;
-    std::map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
+    std::unordered_map<void*, fvkmemory::resource_ptr<VulkanTexture>> mTextures;
 };
 
 struct VulkanTextureState : public fvkmemory::Resource {

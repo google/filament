@@ -994,6 +994,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 }
 
 void VulkanDriver::destroyStream(Handle<HwStream> sh) {
+    FVK_SYSTRACE_SCOPE();
     if (!sh) {
         return;
     }
@@ -1090,7 +1091,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                 s->setBackendTransform(transform);
                 bool newImage = false;
                 if (!texture) {
-                    auto externalImage = fvkutils::createExternalImageFromRaw(image, false);
+                    auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
                     auto imgData = mPlatform->createVkImageFromExternal(externalImage);
 

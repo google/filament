@@ -18,6 +18,11 @@
 
 #include "vulkan/VulkanTexture.h"
 
+#if defined(__ANDROID__)
+#include <android/hardware_buffer.h>
+#include <android/native_window.h>
+#endif
+
 #include <utils/Panic.h>
 #include <utils/algorithm.h>
 #include <utils/debug.h>
@@ -234,13 +239,17 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask) {
     return mostSignificantBit((sampleCount - 1) & mask);
 }
 
-Platform::ExternalImageHandle createExternalImageFromRaw(void* image,
-        bool sRGB) {
+filament::backend::Platform::ExternalImageHandle createExternalImageFromRaw(
+        filament::backend::VulkanPlatform* platform, void* image, bool sRGB) {
+
 #if defined(__ANDROID__)
-    return createExternalImage(reinterpret_cast<AHardwareBuffer const*>(image), sRGB);
-#else
-    return {};
+    if (__builtin_available(android 26, *)) {
+        return static_cast<filament::backend::VulkanPlatformAndroid*>(platform)
+                ->createExternalImage(reinterpret_cast<AHardwareBuffer const*>(image), sRGB);
+    }
 #endif
+    return {};
+
 }
 
 } // namespace filament::backend::fvkutils
