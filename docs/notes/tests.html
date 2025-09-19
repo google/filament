@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Framegraph - Filament</title>
+        <title>Tests - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,184 +158,19 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="framegraph"><a class="header" href="#framegraph">FrameGraph</a></h1>
-<p>FrameGraph is a framework within Filament for computing resources needed to
-render a frame. The framework enables declaring dependencies between resources.</p>
-<p>For example, when rendering shadows, we would need to first compute and store the
-shadow map into a texture resource, and then the later color pass would then
-sample that texture to attenuate the final output color. That creates a
-dependency on the shadow map from the color pass. Filament uses FrameGraph to
-declare that dependency.</p>
-<h2 id="details"><a class="header" href="#details">Details</a></h2>
-<h3 id="dependency-graph"><a class="header" href="#dependency-graph">Dependency Graph</a></h3>
-<p>The core of this framework is
-<a href="https://github.com/google/filament/blob/main/libs/gltfio/src/DependencyGraph.h">a class that defines a dependency graph</a> — that is, the class
-defines nodes and connections between nodes. This class makes assumptions about
-the types of its nodes. Like many other classes within Filament, this class is
-without virtual function declaration to avoid paying the cost of virtual calls.</p>
-<p>This class has additional functions to detect whether there is a cycle in the
-graph, and it is able to cull unreachable nodes.</p>
-<h3 id="framegraph-1"><a class="header" href="#framegraph-1">FrameGraph</a></h3>
-<p>A frame graph consists of two types of nodes</p>
-<ul>
-<li>Resource
-<ul>
-<li>This represents a generic resource such as a texture</li>
-<li>90% of the time, this is a texture.</li>
-</ul>
-</li>
-<li>Pass
-<ul>
-<li>This represents a "computation/rendering process"</li>
-<li>It takes a set of resources</li>
-<li>It outputs a set of resources</li>
-</ul>
-</li>
-</ul>
-<p>Edges can be created in the following three directions:</p>
-<ul>
-<li>Resource → Pass = A read</li>
-<li>Pass → Resource = A write</li>
-<li>Resource → Resource = A resource/subresource relationship.</li>
-</ul>
-<h3 id="an-example"><a class="header" href="#an-example">An example</a></h3>
-<p>To better understand FrameGraph, we consider the following graphical
-representation of a real graph. In this graph, blue nodes denote "Resources" and
-orange nodes denote "Passes."</p>
-<p><img src="../images/framegraph.png" alt="Sample frame graph" /></p>
-<p>In this graph, we see that the "Color Pass" takes as input the "Shadowmap",
-which has edges going into it, meaning that it's a texture array. The output of
-the "Color Pass" are "viewRenderTarget" and "Depth Buffer."</p>
-<p>Note that there is an outgoing edge from "viewRenderTarget", where the color
-buffer will be used as input in the post-processing passes. But since "Depth
-Buffer" is not relevant to the rest of the rendering, it does not have an
-outgoing edge.</p>
-<p>Since the graph is guaranteed to be acyclic, we can produce a
-dependency-respecting ordering of the nodes by traversal of the graph (e.g.
-topological sort).</p>
-<h3 id="example-code"><a class="header" href="#example-code">Example code</a></h3>
-<p>We take a snippet of in production code to look through the details of building
-a graph.</p>
-<pre><code>struct StructurePassData {
-    FrameGraphId&lt;FrameGraphTexture&gt; depth;
-    FrameGraphId&lt;FrameGraphTexture&gt; picking;
-};
-
-...
-
-// generate depth pass at the requested resolution
-auto&amp; structurePass = fg.addPass&lt;StructurePassData&gt;("Structure Pass",
-        [&amp;](FrameGraph::Builder&amp; builder, auto&amp; data) {
-            bool const isES2 = mEngine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
-            data.depth = builder.createTexture("Structure Buffer", {
-                    .width = width, .height = height,
-                    .levels = uint8_t(levelCount),
-                    .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
-
-            // workaround: since we have levels, this implies SAMPLEABLE (because of the gl
-            // backend, which implements non-sampleables with renderbuffers, which don't have levels).
-            // (should the gl driver revert to textures, in that case?)
-            data.depth = builder.write(data.depth,
-                    FrameGraphTexture::Usage::DEPTH_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
-
-            if (config.picking) {
-                data.picking = builder.createTexture("Picking Buffer", {
-                        .width = width, .height = height,
-                        .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
-
-                data.picking = builder.write(data.picking,
-                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-            }
-
-            builder.declareRenderPass("Structure Target", {
-                    .attachments = { .color = { data.picking }, .depth = data.depth },
-                    .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
-            });
-        },
-        [=, renderPass = pass](FrameGraphResources const&amp; resources,
-                auto const&amp;, DriverApi&amp;) mutable {
-            Variant structureVariant(Variant::DEPTH_VARIANT);
-            structureVariant.setPicking(config.picking);
-
-            auto out = resources.getRenderPassInfo();
-            renderPass.setRenderFlags(structureRenderFlags);
-            renderPass.setVariant(structureVariant);
-            renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SSAO);
-            renderPass.sortCommands(mEngine);
-            renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
-        }
-);
-
-</code></pre>
-<p>The <code>addPass</code> method creates a node and it take in two lambda functions as its
-parameter. The first lambda sets up the resources that will be used in the
-execution of the Pass. This lambda is executed immediately and synchronously when
-<code>addPass</code> is called. The second lambda is the actual execution of the pass; it is
-executed when the graph has been completed and is traversed.</p>
-<h3 id="what-does-it-do"><a class="header" href="#what-does-it-do">What does it do?</a></h3>
-<p>In the above, we see through a graph and code what a frame graph looks like and
-how to build it. We provide here a more detailed description of what it does:</p>
-<ul>
-<li>Manages the lifetime of the resources
-<ul>
-<li>Know how the resources are allocated, when it is used, and when it can
-be freed</li>
-</ul>
-</li>
-<li>Calculates the usage bit of the texture resource
-<ul>
-<li>The usage bit is used to indicate what the resources are used for: for
-example, will it be blitted to or sampled from?</li>
-</ul>
-</li>
-<li>Calculates the load/store bits of the rendertargets within a renderpass.
-<ul>
-<li>For example, if we are rendering into a texture, we would want to mark
-it with the bit "keep" as oppose to "discard".</li>
-</ul>
-</li>
-</ul>
-<h2 id="additional-details"><a class="header" href="#additional-details">Additional details</a></h2>
-<ul>
-<li>In a previous version of FrameGraph, there were only edges between Resource
-and Pass. For example, a Pass and Pass edge would not make logical sense.
-The following iteration, allowed for edges between two Resource nodes to
-indicate that one is a subresource of another (i.e. a layer in a mip-mapped
-texture).</li>
-<li>There are two extra features of FrameGraph that are important but has a lot
-subtlety, and, incidentally, their inclusion added great complexity to the
-implementation
-<ul>
-<li>Importing/exporting resources outside of the graph
-<ul>
-<li>In most cases, the graph and its resources are "alive" for only for
-a frame.</li>
-<li>For techniques like TAA (Temporal Anti-aliasing), we need to be able
-to import past output into the current FrameGraph</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>Future Work
-<ul>
-<li>For CPU only passes, explore multi-threading and re-ordering of the Pass
-nodes</li>
-<li>A graphical debugger for online debugging session in the spirit of
-<code>matdbg</code>.</li>
-</ul>
-</li>
-<li>"RenderGraph" might be a more fitting name for this framework.</li>
-</ul>
+                        <h1 id="tests"><a class="header" href="#tests">Tests</a></h1>
+<p>Filament has a collection of tests that can be run locally. Many of them are used
+for in our Continuation Integration flow <a href="https://https://github.com/google/filament/tree/main/.github/workflows">on github</a>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/performance_analysis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/framegraph.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/tests.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/renderdiff.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -345,11 +180,11 @@ nodes</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/performance_analysis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/framegraph.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/tests.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/renderdiff.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
