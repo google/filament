@@ -194,6 +194,7 @@ private:
     } mAppState;
 
     bool const mIsSRGBSwapChainSupported;
+    bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
 
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the

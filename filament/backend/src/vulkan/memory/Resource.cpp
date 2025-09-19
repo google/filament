@@ -38,6 +38,7 @@ template ResourceType getTypeEnum<VulkanDescriptorSetLayout>() noexcept;
 template ResourceType getTypeEnum<VulkanDescriptorSet>() noexcept;
 template ResourceType getTypeEnum<VulkanFence>() noexcept;
 template ResourceType getTypeEnum<VulkanBuffer>() noexcept;
+template ResourceType getTypeEnum<VulkanSync>() noexcept;
 template ResourceType getTypeEnum<VulkanStream>() noexcept;
 
 template<typename D>
@@ -93,6 +94,9 @@ ResourceType getTypeEnum() noexcept {
     if constexpr (std::is_same_v<D, VulkanBuffer>) {
         return ResourceType::VULKAN_BUFFER;
     }
+    if constexpr (std::is_same_v<D, VulkanSync>) {
+        return ResourceType::SYNC;
+    }
     if constexpr (std::is_same_v<D, VulkanStream>) {
         return ResourceType::STREAM;
     }
@@ -135,6 +139,8 @@ std::string_view getTypeStr(ResourceType type) {
             return "Fence";
         case ResourceType::VULKAN_BUFFER:
             return "VulkanBuffer";
+        case ResourceType::SYNC:
+            return "Sync";
         case ResourceType::STREAM:
             return "VulkanStream";
         case ResourceType::UNDEFINED_TYPE:

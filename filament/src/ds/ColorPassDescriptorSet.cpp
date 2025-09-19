@@ -255,7 +255,6 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     double const f = heightFalloff;
     double const eye = userCameraPosition.y - options.height;
     double const dt = options.density * (f <= EPSILON ? 1.0 : (std::exp(-f * eye) - std::exp(-2.0 * f * eye)) / (f * eye));
-    float const fogEndLinear = float(1.0 / dt);
 
     s.fogStart             = options.distance;
     s.fogMaxOpacity        = options.maximumOpacity;
@@ -267,8 +266,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
     s.fogInscatteringSize  = options.inScatteringSize;
     s.fogColorFromIbl      = fogColorTextureHandle ? 1.0f : 0.0f;
     s.fogFromWorldMatrix   = mat3f{ cof(fogFromWorld) };
-    s.fogLinearParams       = { 1.0f / (fogEndLinear - options.distance),
-            -options.distance / (fogEndLinear - options.distance) };
+    s.fogLinearParams       = { dt, -dt * options.distance };
 }
 
 void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,

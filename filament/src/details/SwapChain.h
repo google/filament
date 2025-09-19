@@ -88,6 +88,8 @@ public:
 
     static bool isSRGBSwapChainSupported(FEngine& engine) noexcept;
 
+    static bool isMSAASwapChainSupported(FEngine& engine, uint32_t samples) noexcept;
+
     static bool isProtectedContentSupported(FEngine& engine) noexcept;
 
     // This is currently only used for debugging. This allows to recreate the HwSwapChain with

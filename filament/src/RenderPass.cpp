@@ -670,7 +670,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
 
         cmd.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmd.key |= makeField(soaVisibility[i].channel, CHANNEL_MASK, CHANNEL_SHIFT);
-        cmd.info.index = i;
+        cmd.info.index = soaInstanceInfo[i].buffer ? soaInstanceInfo[i].buffer->getIndex() : i;
         cmd.info.hasHybridInstancing = bool(soaInstanceInfo[i].buffer);
         cmd.info.instanceCount = soaInstanceInfo[i].count;
         cmd.info.hasMorphing = bool(morphing.handle);
@@ -1110,8 +1110,7 @@ void RenderPass::Executor::execute(FEngine const& engine, DriverApi& driver,
 
                 // Bind per-renderable uniform block. There is no need to attempt to skip this command
                 // because the backends already do this.
-                uint32_t const offset = info.hasHybridInstancing ?
-                                      0 : info.index * sizeof(PerRenderableData);
+                uint32_t const offset = info.index * sizeof(PerRenderableData);
 
                 assert_invariant(info.dsh);
                 driver.bindDescriptorSet(info.dsh,

@@ -28,6 +28,7 @@
 #include "ShaderCompilerService.h"
 
 #include <backend/AcquiredImage.h>
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
@@ -99,6 +100,10 @@ public:
     struct GLSwapChain : public HwSwapChain {
         using HwSwapChain::HwSwapChain;
         bool rec709 = false;
+        struct {
+            CallbackHandler* handler = nullptr;
+            FrameScheduledCallback callback;
+        } frameScheduled;
     };
 
     struct GLVertexBufferInfo : public HwVertexBufferInfo {
@@ -191,6 +196,19 @@ public:
             FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
         std::shared_ptr<State> state{ std::make_shared<State>() };
+    };
+
+    // Note: named "GLSyncFence" to avoid confusion with the GL handle,
+    // "GLsync" (lowercase S)
+    struct GLSyncFence : public HwSync {
+        struct CallbackData {
+            CallbackHandler* handler;
+            Platform::SyncCallback cb;
+            Platform::Sync* sync;
+            void* userData;
+        };
+        std::mutex lock;
+        std::vector<std::unique_ptr<CallbackData>> conversionCallbacks;
     };
 
     OpenGLDriver(OpenGLDriver const&) = delete;

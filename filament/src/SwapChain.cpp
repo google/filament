@@ -46,6 +46,10 @@ bool SwapChain::isSRGBSwapChainSupported(Engine& engine) noexcept {
     return FSwapChain::isSRGBSwapChainSupported(downcast(engine));
 }
 
+bool SwapChain::isMSAASwapChainSupported(Engine& engine, uint32_t samples) noexcept {
+    return FSwapChain::isMSAASwapChainSupported(downcast(engine), samples);
+}
+
 bool SwapChain::isProtectedContentSupported(Engine& engine) noexcept {
     return FSwapChain::isProtectedContentSupported(downcast(engine));
 }

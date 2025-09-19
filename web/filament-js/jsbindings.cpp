@@ -1100,6 +1100,7 @@ class_<RenderableManager>("RenderableManager")
 
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
+    .function("getInstanceCount", &RenderableManager::getInstanceCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
     .function("clearMaterialInstanceAt", &RenderableManager::clearMaterialInstanceAt)

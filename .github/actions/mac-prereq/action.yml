@@ -14,7 +14,7 @@ runs:
       id: brew-cache
       uses: actions/cache@v4 # Use a specific version
       with:
-        path: $HOME/Library/Caches/Homebrew
+        path: ~/Library/Caches/Homebrew
         key: ${{ runner.os }}-brew-20250424
     - name: Install Mac Prerequisites
       shell: bash

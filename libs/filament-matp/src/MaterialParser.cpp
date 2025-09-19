@@ -27,7 +27,6 @@
 #include <utils/Log.h>
 #include <utils/JobSystem.h>
 
-#include "DirIncluder.h"
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "MaterialLexeme.h"
@@ -119,12 +118,12 @@ bool MaterialParser::ignoreLexeme(const MaterialLexeme&, MaterialBuilder&) const
 }
 
 static bool reflectParameters(const MaterialBuilder& builder) {
-    uint8_t const count = builder.getParameterCount();
+    size_t const count = builder.getParameterCount();
     const MaterialBuilder::ParameterList& parameters = builder.getParameters();
 
     std::cout << "{" << std::endl;
     std::cout << "  \"parameters\": [" << std::endl;
-    for (uint8_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         const MaterialBuilder::Parameter& parameter = parameters[i];
         std::cout << "    {" << std::endl;
         std::cout << R"(      "name": ")" << parameter.name.c_str() << "\"," << std::endl;
@@ -458,11 +457,7 @@ bool MaterialParser::processTemplateSubstitutions(
 }
 
 bool MaterialParser::parse(filamat::MaterialBuilder& builder,
-        const Config& config,
-        Config::Input* input, ssize_t& size, std::unique_ptr<const char[]>& buffer) {
-
-    utils::Path const materialFilePath = utils::Path(input->getName()).getAbsolutePath();
-    assert(materialFilePath.isFile());
+        const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer) {
 
     if (builder.getFeatureLevel() > config.getFeatureLevel()) {
         std::cerr << "Material feature level (" << +builder.getFeatureLevel()
@@ -489,15 +484,9 @@ bool MaterialParser::parse(filamat::MaterialBuilder& builder,
             return reflectParameters(builder);
     }
 
-    // Set the root include directory to the directory containing the material file.
-    DirIncluder includer;
-    includer.setIncludeDirectory(materialFilePath.getParent());
-
     builder
             .noSamplerValidation(config.noSamplerValidation())
             .includeEssl1(config.includeEssl1())
-            .includeCallback(includer)
-            .fileName(materialFilePath.getName().c_str())
             .platform(config.getPlatform())
             .targetApi(config.getTargetApi())
             .optimization(config.getOptimizationLevel())

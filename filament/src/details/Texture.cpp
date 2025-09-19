@@ -246,21 +246,12 @@ Texture* Texture::Builder::build(Engine& engine) {
 
     auto const& featureFlags = downcast(engine).features.engine.debug;
 
-    bool const formatMipmappable =
+    bool const formatGenMipmappable =
             downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
-
-    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(mImpl->mLevels == 1 || formatMipmappable,
-            featureFlags.assert_texture_format_mipmappable)
-            << "Texture levels is > 1 (levels=" << +mImpl->mLevels
-            << " dim=" << mImpl->mWidth << "x" << mImpl->mHeight
-            << ", but the format ("
-            << int(mImpl->mFormat) << ") "
-            << " is not mipmppable";
-
     // TODO: This exists for backwards compatibility, but should remove when safe.
     if (!featureFlags.assert_texture_can_generate_mipmap &&
             // Guess whether GEN_MIPMAPPABLE should be added or not based the following criteria.
-            (formatMipmappable &&
+            (formatGenMipmappable &&
                     mImpl->mLevels > 1 &&
                     (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
                     !mImpl->mExternal)) {

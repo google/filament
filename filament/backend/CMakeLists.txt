@@ -297,6 +297,7 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUStrings.h
             src/webgpu/WebGPUSwapChain.cpp
             src/webgpu/WebGPUSwapChain.h
+            src/webgpu/WebGPUSync.h
             src/webgpu/WebGPUTexture.cpp
             src/webgpu/WebGPUTexture.h
             src/webgpu/WebGPUTextureHelpers.h

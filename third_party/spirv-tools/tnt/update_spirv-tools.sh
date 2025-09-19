@@ -91,6 +91,9 @@ mv "${EXTRACTED_DIR}" spirv-tools_new
 
 rsync -a --delete --exclude=tnt/ spirv-tools_new/ spirv-tools/
 
+echo "Applying Filament-specific patches..."
+python3 "${SCRIPT_DIR}/filament_changes.py"
+
 echo "Cleaning up..."
 rm -rf "${ZIP_FILE_NAME}" spirv-tools_new "${TEMP_DIR}"
 
