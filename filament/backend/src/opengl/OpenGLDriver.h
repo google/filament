@@ -28,6 +28,7 @@
 #include "ShaderCompilerService.h"
 
 #include <backend/AcquiredImage.h>
+#include <backend/CallbackHandler.h>
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 #include <backend/PipelineState.h>
@@ -99,6 +100,10 @@ public:
     struct GLSwapChain : public HwSwapChain {
         using HwSwapChain::HwSwapChain;
         bool rec709 = false;
+        struct {
+            CallbackHandler* handler = nullptr;
+            FrameScheduledCallback callback;
+        } frameScheduled;
     };
 
     struct GLVertexBufferInfo : public HwVertexBufferInfo {

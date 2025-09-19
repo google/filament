@@ -246,21 +246,12 @@ Texture* Texture::Builder::build(Engine& engine) {
 
     auto const& featureFlags = downcast(engine).features.engine.debug;
 
-    bool const formatMipmappable =
+    bool const formatGenMipmappable =
             downcast(engine).getDriverApi().isTextureFormatMipmappable(mImpl->mFormat);
-
-    FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(mImpl->mLevels == 1 || formatMipmappable,
-            featureFlags.assert_texture_format_mipmappable)
-            << "Texture levels is > 1 (levels=" << +mImpl->mLevels
-            << " dim=" << mImpl->mWidth << "x" << mImpl->mHeight
-            << ", but the format ("
-            << int(mImpl->mFormat) << ") "
-            << " is not mipmppable";
-
     // TODO: This exists for backwards compatibility, but should remove when safe.
     if (!featureFlags.assert_texture_can_generate_mipmap &&
             // Guess whether GEN_MIPMAPPABLE should be added or not based the following criteria.
-            (formatMipmappable &&
+            (formatGenMipmappable &&
                     mImpl->mLevels > 1 &&
                     (mImpl->mWidth > 1 || mImpl->mHeight > 1) &&
                     !mImpl->mExternal)) {
@@ -322,12 +313,19 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         return;
     }
 
+    auto tag = builder.getName();
+    if (tag.empty()) {
+        tag = CString{"FTexture"};
+    }
+
     if (UTILS_LIKELY(!isImported)) {
         mHandle = driver.createTexture(
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
+                std::move(tag));
     } else {
         mHandle = driver.importTexture(builder->mImportedId,
-                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+                mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage,
+                std::move(tag));
     }
 
     if (UTILS_UNLIKELY(builder->mTextureIsSwizzled)) {
@@ -339,11 +337,6 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
 
     mHandleForSampling = mHandle;
 
-    if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mHandle.getId(), std::move(name));
-    } else {
-        driver.setDebugTag(mHandle.getId(), CString{"FTexture"});
-    }
 }
 
 // frees driver resources, object becomes invalid

@@ -199,6 +199,7 @@ public:
 
     size_t getLevelCount(Instance) const noexcept { return 1u; }
     size_t getPrimitiveCount(Instance instance, uint8_t level) const noexcept;
+    size_t getInstanceCount(Instance instance) const noexcept;
     void setMaterialInstanceAt(Instance instance, uint8_t level,
             size_t primitiveIndex, FMaterialInstance const* materialInstance);
     void clearMaterialInstanceAt(Instance instance, uint8_t level, size_t primitiveIndex);

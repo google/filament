@@ -77,6 +77,11 @@ def parse_nm(input):
     noaddr_re = re.compile(r'^ + (.) (.*)$')
 
     for line in input:
+        # For static archives (.a), nm prints the object file name.
+        # e.g., "subfolder/file.cpp.o:" or just an empty line between objects.
+        if line.strip().endswith('.o:') or not line.strip():
+            continue
+
         line = line.rstrip()
         match = sym_re.match(line)
         if match:
@@ -113,7 +118,7 @@ def demangle(ident, cppfilt):
 
 class Suffix:
     def __init__(self, suffix, replacement):
-        self.pattern = '^(.*)' + suffix + '(.*)$'
+        self.pattern = r'^(.*)' + suffix + r'(.*)$'
         self.re = re.compile(self.pattern)
         self.replacement = replacement
 
@@ -121,9 +126,9 @@ class SuffixCleanup:
     """Pre-compile suffix regular expressions."""
     def __init__(self):
         self.suffixes = [
-            Suffix('\.part\.([0-9]+)',      'part'),
-            Suffix('\.constprop\.([0-9]+)', 'constprop'),
-            Suffix('\.isra\.([0-9]+)',      'isra'),
+            Suffix(r'\.part\.([0-9]+)',      'part'),
+            Suffix(r'\.constprop\.([0-9]+)', 'constprop'),
+            Suffix(r'\.isra\.([0-9]+)',      'isra'),
         ]
     def cleanup(self, ident, cppfilt):
         """Cleanup identifiers that have suffixes preventing demangling,
@@ -337,7 +342,7 @@ def dump_nm(nmfile, strip_prefix, cppfilt):
 
 def parse_objdump(input):
     """Parse objdump -h output."""
-    sec_re = re.compile('^\d+ (\S+) +([0-9a-z]+)')
+    sec_re = re.compile(r'^\d+ (\S+) +([0-9a-z]+)')
     sections = []
     debug_sections = []
 

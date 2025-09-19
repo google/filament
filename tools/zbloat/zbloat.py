@@ -23,6 +23,7 @@ import os
 import struct
 import tempfile
 import zipfile
+import subprocess
 import json
 
 from pathlib import Path
@@ -177,26 +178,40 @@ def main(args):
         path = choose_from_dir(path)
     elif path.suffix in ['.zip', '.aar', '.apk']:
         path = choose_from_zip(path)
+    elif path.suffix == '.a':
+        pass # It's a single file, just like a .so
 
     dsopath = Path(path)
     size = format_bytes(dsopath.stat().st_size, 2)
-    csize = format_bytes(get_compressed_size(open(dsopath, 'rb').read()), 2)
-    info = f'{size} ({csize})'
 
-    print('Scanning for resgen resources...')
-    resgen_jsons, resgen_blobs = extract_resgen(dsopath)
+    if dsopath.suffix == '.a':
+        info = f'{size}'
+        resgen_jsons, resgen_blobs = [], []
+    else:
+        csize = format_bytes(get_compressed_size(open(dsopath, 'rb').read()), 2)
+        info = f'{size} ({csize})'
+        print('Scanning for resgen resources...')
+        resgen_jsons, resgen_blobs = extract_resgen(dsopath)
 
     print('Running nm... (this might take a while)')
-    os.system(f'nm -C -S {path} > {TEMPDIR}/nm.out')
-    if DEBUG: os.system(f'cp {TEMPDIR}/nm.out .')
+    with open(f"{TEMPDIR}/nm.out", "w") as nm_out:
+        subprocess.run(f'nm -C -S {path}', shell=True, check=True, stdout=nm_out)
+    if DEBUG:
+        subprocess.run(f'cp {TEMPDIR}/nm.out .', shell=True)
 
     print('Running objdump...')
-    os.system(f'objdump -h {path} > {TEMPDIR}/objdump.out')
-    if DEBUG: os.system(f'cp {TEMPDIR}/objdump.out .')
+    with open(f"{TEMPDIR}/objdump.out", "w") as objdump_out:
+        subprocess.run(f'objdump -h {path}', shell=True, check=True, stdout=objdump_out)
+    if DEBUG:
+        subprocess.run(f'cp {TEMPDIR}/objdump.out .', shell=True)
 
     print('Generating treemap JSON...')
-    os.system(f'cd {TEMPDIR} ; python3 {SCRIPTDIR}/evmar_bloat.py syms > syms.json')
-    os.system(f'cd {TEMPDIR} ; python3 {SCRIPTDIR}/evmar_bloat.py sections > sections.json')
+    with open(f"{TEMPDIR}/syms.json", "w") as syms_json_out:
+        subprocess.run(f'python3 {SCRIPTDIR}/evmar_bloat.py syms', shell=True, check=True,
+                       cwd=TEMPDIR, stdout=syms_json_out)
+    with open(f"{TEMPDIR}/sections.json", "w") as sections_json_out:
+        subprocess.run(f'python3 {SCRIPTDIR}/evmar_bloat.py sections', shell=True, check=True,
+                       cwd=TEMPDIR, stdout=sections_json_out)
 
     # Splice the materials JSON into the sections JSON.
     sections_json = json.loads(open(f'{TEMPDIR}/sections.json').read())

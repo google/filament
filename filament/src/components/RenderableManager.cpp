@@ -434,6 +434,18 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
     mBoneIndicesAndWeightsCount = pairsCount; // only part of mBoneIndicesAndWeights is used for real data
 }
 
+RenderableManager::Builder& RenderableManager::Builder::instances(size_t const instanceCount) noexcept {
+    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::instances(
+        size_t const instanceCount, InstanceBuffer* instanceBuffer) noexcept {
+    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
+    mImpl->mInstanceBuffer = downcast(instanceBuffer);
+    return *this;
+}
+
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity const entity) {
     bool isEmpty = true;
 
@@ -517,18 +529,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     downcast(engine).createRenderable(*this, entity);
     return Success;
-}
-
-RenderableManager::Builder& RenderableManager::Builder::instances(size_t const instanceCount) noexcept {
-    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
-    return *this;
-}
-
-RenderableManager::Builder& RenderableManager::Builder::instances(
-        size_t const instanceCount, InstanceBuffer* instanceBuffer) noexcept {
-    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
-    mImpl->mInstanceBuffer = downcast(instanceBuffer);
-    return *this;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1004,6 +1004,15 @@ bool FRenderableManager::getLightChannel(Instance const ci, unsigned int const c
 
 size_t FRenderableManager::getPrimitiveCount(Instance const instance, uint8_t const level) const noexcept {
     return getRenderPrimitives(instance, level).size();
+}
+
+
+size_t FRenderableManager::getInstanceCount(Instance const instance) const noexcept {
+    if (instance) {
+        InstancesInfo const& info = mManager[instance].instances;
+        return info.count;
+    }
+    return 0;
 }
 
 } // namespace filament

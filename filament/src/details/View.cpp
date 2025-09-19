@@ -723,15 +723,15 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
                 VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
                 VISIBLE_RENDERABLE);
 
-        auto beginDirCastersOnly = partition(beginDirCasters, renderableData.end(),
+        auto const beginDirCastersOnly = partition(beginDirCasters, renderableData.end(),
                 VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
                 VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE);
 
-        auto endDirCastersOnly = partition(beginDirCastersOnly, renderableData.end(),
+        auto const endDirCastersOnly = partition(beginDirCastersOnly, renderableData.end(),
                 VISIBLE_RENDERABLE | VISIBLE_DIR_SHADOW_RENDERABLE,
                 VISIBLE_DIR_SHADOW_RENDERABLE);
 
-        auto endPotentialSpotCastersOnly = partition(endDirCastersOnly, renderableData.end(),
+        auto const endPotentialSpotCastersOnly = partition(endDirCastersOnly, renderableData.end(),
                 VISIBLE_DYN_SHADOW_RENDERABLE,
                 VISIBLE_DYN_SHADOW_RENDERABLE);
 
@@ -759,21 +759,8 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
         scene->prepareVisibleRenderables(merged);
 
         // update those UBOs
-        const size_t size = merged.size() * sizeof(PerRenderableData);
-        if (size) {
-            if (mRenderableUBOSize < size) {
-                // allocate 1/3 extra, with a minimum of 16 objects
-                const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
-                mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableData));
-                driver.destroyBufferObject(mRenderableUbh);
-                mRenderableUbh = driver.createBufferObject(
-                        mRenderableUBOSize + sizeof(PerRenderableUib),
-                        BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-            } else {
-                // TODO: should we shrink the underlying UBO at some point?
-            }
-            assert_invariant(mRenderableUbh);
-            updateUBOs(driver, renderableData, merged, mRenderableUbh);
+        if (!merged.empty()) {
+            updateUBOs(driver, renderableData, merged);
 
             mCommonRenderableDescriptorSet.setBuffer(
                 engine.getPerRenderableDescriptorSetLayout(),
@@ -893,65 +880,6 @@ void FView::prepare(FEngine& engine, DriverApi& driver, RootArenaScope& rootAren
     colorPassDescriptorSet.prepareMaterialGlobals(mMaterialGlobals);
 }
 
-void FView::updateUBOs(
-        FEngine::DriverApi& driver,
-        FScene::RenderableSoa& renderableData,
-        utils::Range<uint32_t> visibleRenderables,
-        Handle<HwBufferObject> renderableUbh) noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-
-    // don't allocate more than 16 KiB directly into the render stream
-    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
-    const size_t count = visibleRenderables.size();
-    PerRenderableData* buffer = [&]{
-        if (count >= MAX_STREAM_ALLOCATION_COUNT) {
-            // use the heap allocator
-            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
-            return static_cast<PerRenderableData*>(bufferPoolAllocator.get(count * sizeof(PerRenderableData)));
-        }
-        // allocate space into the command stream directly
-        return driver.allocatePod<PerRenderableData>(count);
-    }();
-
-    PerRenderableData const* const uboData = renderableData.data<FScene::UBO>();
-    mat4f const* const worldTransformData = renderableData.data<FScene::WORLD_TRANSFORM>();
-
-    // prepare each InstanceBuffer.
-    FRenderableManager::InstancesInfo const* instancesData = renderableData.data<FScene::INSTANCES>();
-    for (uint32_t const i : visibleRenderables) {
-        auto& instancesInfo = instancesData[i];
-        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
-            instancesInfo.buffer->prepare(driver, worldTransformData[i], uboData[i]);
-        }
-    }
-
-    // copy our data into the UBO for each visible renderable
-    for (uint32_t const i : visibleRenderables) {
-        buffer[i] = uboData[i];
-    }
-
-    // We capture state shared between Scene and the update buffer callback, because the Scene could
-    // be destroyed before the callback executes.
-    std::weak_ptr<SharedState>* const weakShared =
-            new (std::nothrow) std::weak_ptr(mSharedState);
-
-    // update the UBO
-    driver.resetBufferObject(renderableUbh);
-    driver.updateBufferObjectUnsynchronized(renderableUbh, {
-            buffer, count * sizeof(PerRenderableData),
-            +[](void* p, size_t const s, void* user) {
-                std::weak_ptr<SharedState> const* const weakShared =
-                        static_cast<std::weak_ptr<SharedState>*>(user);
-                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    if (auto state = weakShared->lock()) {
-                        state->mBufferPoolAllocator.put(p);
-                    }
-                }
-                delete weakShared;
-            }, weakShared
-    }, 0);
-}
-
 void FView::computeVisibilityMasks(
         uint8_t const visibleLayers,
         uint8_t const* UTILS_RESTRICT layers,
@@ -981,6 +909,101 @@ void FView::computeVisibilityMasks(
                 Type(visibleDirectionalShadowRenderable << VISIBLE_DIR_SHADOW_RENDERABLE_BIT) |
                 Type(potentialSpotShadowRenderable << VISIBLE_DYN_SHADOW_RENDERABLE_BIT);
     }
+}
+
+void FView::updateUBOs(
+        FEngine::DriverApi& driver,
+        FScene::RenderableSoa& renderableData,
+        utils::Range<uint32_t> visibleRenderables) noexcept {
+    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
+    FRenderableManager::InstancesInfo const* instancesData = renderableData.data<FScene::INSTANCES>();
+    PerRenderableData const* const uboData = renderableData.data<FScene::UBO>();
+    mat4f const* const worldTransformData = renderableData.data<FScene::WORLD_TRANSFORM>();
+
+    // regular renderables count
+    size_t const rcount = visibleRenderables.size();
+
+    // instanced renderables count
+    size_t icount = 0;
+    for (uint32_t const i : visibleRenderables) {
+        auto& instancesInfo = instancesData[i];
+        if (instancesInfo.buffer) {
+            assert_invariant(instancesInfo.count == instancesInfo.buffer->getInstanceCount());
+            icount += instancesInfo.count;
+        }
+    }
+
+    // total count of PerRenderableData slots we need
+    size_t const tcount = rcount + icount;
+
+    // resize the UBO accordingly
+    if (mRenderableUBOElementCount < tcount) {
+        // allocate 1/3 extra, with a minimum of 16 objects
+        const size_t count = std::max(size_t(16u), (4u * tcount + 2u) / 3u);
+        mRenderableUBOElementCount = count;
+        driver.destroyBufferObject(mRenderableUbh);
+        mRenderableUbh = driver.createBufferObject(
+                count * sizeof(PerRenderableData) + sizeof(PerRenderableUib),
+                BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
+    } else {
+        // TODO: should we shrink the underlying UBO at some point?
+    }
+    assert_invariant(mRenderableUbh);
+
+
+    // Allocate a staging CPU buffer:
+    // Don't allocate more than 16 KiB directly into the render stream
+    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
+    PerRenderableData* buffer = [&]{
+        if (tcount >= MAX_STREAM_ALLOCATION_COUNT) {
+            // use the heap allocator
+            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
+            return static_cast<PerRenderableData*>(bufferPoolAllocator.get(tcount * sizeof(PerRenderableData)));
+        }
+        // allocate space into the command stream directly
+        return driver.allocatePod<PerRenderableData>(tcount);
+    }();
+
+
+    // TODO: consider using JobSystem to parallelize this.
+    uint32_t j = rcount;
+    for (uint32_t const i: visibleRenderables) {
+        // even the instanced ones are copied here because we need to maintain the offsets
+        // into the buffer currently (we could skip then because it won't be used, but
+        // for now it's more trouble than it's worth)
+        buffer[i] = uboData[i];
+
+        auto& instancesInfo = instancesData[i];
+        if (instancesInfo.buffer) {
+            instancesInfo.buffer->prepare(
+                    mRenderableUbh,
+                    buffer,  j, instancesInfo.count,
+                    worldTransformData[i], uboData[i]);
+            j += instancesInfo.count;
+        }
+    }
+
+    // We capture state shared between Scene and the update buffer callback, because the Scene could
+    // be destroyed before the callback executes.
+    std::weak_ptr<SharedState>* const weakShared =
+            new (std::nothrow) std::weak_ptr<SharedState>(mSharedState);
+
+    // update the UBO
+    driver.resetBufferObject(mRenderableUbh);
+    driver.updateBufferObjectUnsynchronized(mRenderableUbh, {
+        buffer, tcount * sizeof(PerRenderableData),
+        +[](void* p, size_t const s, void* user) {
+            std::weak_ptr<SharedState> const* const weakShared =
+                    static_cast<std::weak_ptr<SharedState>*>(user);
+            if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
+                if (auto state = weakShared->lock()) {
+                    state->mBufferPoolAllocator.put(p);
+                }
+            }
+            delete weakShared;
+        }, weakShared
+    }, 0);
 }
 
 UTILS_NOINLINE

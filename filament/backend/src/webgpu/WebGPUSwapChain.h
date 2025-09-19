@@ -49,7 +49,12 @@ public:
 
     [[nodiscard]] bool isHeadless() const { return mType == SwapChainType::HEADLESS; }
 
-    void present();
+    void present(DriverBase& driver);
+
+    void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback) {
+        frameScheduled.handler = handler;
+        frameScheduled.callback = std::move(callback);
+    }
 
 private:
 
@@ -75,6 +80,11 @@ private:
     uint8_t mHeadlessBufferIndex = 0;
     std::array<wgpu::Texture, mHeadlessBufferCount> mRenderTargetTextures;
     std::array<wgpu::TextureView, mHeadlessBufferCount> mRenderTargetViews;
+
+    struct {
+        CallbackHandler* handler = nullptr;
+        FrameScheduledCallback callback;
+    } frameScheduled;
 };
 
 } // namespace filament::backend
