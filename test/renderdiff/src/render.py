@@ -22,7 +22,6 @@ import concurrent.futures
 from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
 
 import test_config
-from golden_manager import GoldenManager
 from image_diff import same_image
 from results import RESULT_OK, RESULT_FAILED
 

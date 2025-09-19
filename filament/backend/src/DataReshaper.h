@@ -63,6 +63,7 @@ public:
     static void copyImage(uint8_t* UTILS_RESTRICT dest,
                           const uint8_t* UTILS_RESTRICT src,
                           size_t srcBytesPerRow, size_t /*srcChannelCount*/,
+                          size_t /*dstRowOffset */, size_t /*dstColumnOffset */,
                           size_t dstBytesPerRow, size_t /*dstChannelCount*/,
                           size_t /*width*/, size_t height, bool /*swizzle*/) {
         if (srcBytesPerRow == dstBytesPerRow) {
@@ -79,17 +80,20 @@ public:
     template<typename dstComponentType, typename srcComponentType>
     static void reshapeImage(uint8_t* UTILS_RESTRICT dest, const uint8_t* UTILS_RESTRICT src,
             size_t srcBytesPerRow,
-            size_t srcChannelCount, size_t dstBytesPerRow, size_t dstChannelCount,
+            size_t srcChannelCount,
+            size_t dstRowOffset, size_t dstColumnOffset,
+            size_t dstBytesPerRow, size_t dstChannelCount,
             size_t width, size_t height, bool swizzle) {
         const dstComponentType dstMaxValue = getMaxValue<dstComponentType>();
         const srcComponentType srcMaxValue = getMaxValue<srcComponentType>();
         const size_t minChannelCount = math::min(srcChannelCount, dstChannelCount);
         assert_invariant(minChannelCount <= 4);
         UTILS_ASSUME(minChannelCount <= 4);
+        dest += (dstRowOffset * dstBytesPerRow);
         const int inds[4] = { swizzle ? 2 : 0, 1, swizzle ? 0 : 2, 3 };
         for (size_t row = 0; row < height; ++row) {
-            const srcComponentType* in = (const srcComponentType*)src;
-            dstComponentType* out = (dstComponentType*)dest;
+            const srcComponentType* in = (const srcComponentType*) src;
+            dstComponentType* out = (dstComponentType*)dest + (dstColumnOffset * dstChannelCount);
             for (size_t column = 0; column < width; ++column) {
                 for (size_t channel = 0; channel < minChannelCount; ++channel) {
                     if constexpr (std::is_same_v<dstComponentType, srcComponentType>) {
@@ -128,17 +132,23 @@ public:
             default: return false;
         }
         void (*reshaper)(uint8_t* dest, const uint8_t* src, size_t srcBytesPerRow,
-                size_t srcChannelCount, size_t dstBytesPerRow, size_t dstChannelCount,
+                size_t srcChannelCount,
+                size_t srcRowOffset, size_t srcColumnOffset,
+                size_t dstBytesPerRow, size_t dstChannelCount,
                 size_t width, size_t height, bool swizzle) = nullptr;
-        constexpr auto UBYTE = PixelDataType::UBYTE, FLOAT = PixelDataType::FLOAT,
-                UINT = PixelDataType::UINT, INT = PixelDataType::INT;
+        constexpr auto UBYTE = PixelDataType::UBYTE;
+        constexpr auto FLOAT = PixelDataType::FLOAT;
+        constexpr auto UINT = PixelDataType::UINT;
+        constexpr auto INT = PixelDataType::INT;
+        constexpr auto HALF = PixelDataType::HALF;
         switch (dst->type) {
             case UBYTE:
                 switch (srcType) {
                     case UBYTE:
                         reshaper = reshapeImage<uint8_t, uint8_t>;
                         if (dst->format == PixelDataFormat::RGBA &&
-                                dstChannelCount == srcChannelCount && !swizzle) {
+                                dstChannelCount == srcChannelCount && !swizzle && dst->top == 0 &&
+                                dst->left == 0) {
                             reshaper = copyImage;
                         }
                         break;
@@ -175,13 +185,20 @@ public:
                     default: return false;
                 }
                 break;
+            case HALF:
+                switch (srcType) {
+                    case HALF: reshaper = copyImage; break;
+                    default: return false;
+                }
+                break;
             default:
                 return false;
         }
         uint8_t* dstBytes = (uint8_t*) dst->buffer;
         const int dstBytesPerRow = PixelBufferDescriptor::computeDataSize(dst->format, dst->type,
                 dst->stride ? dst->stride : width, 1, dst->alignment);
-        reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount, dstBytesPerRow,
+        reshaper(dstBytes, srcBytes, srcBytesPerRow, srcChannelCount,
+                dst->top, dst->left, dstBytesPerRow,
                 dstChannelCount, width, height, swizzle);
         return true;
     }

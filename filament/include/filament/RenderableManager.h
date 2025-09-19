@@ -784,6 +784,13 @@ public:
     size_t getPrimitiveCount(Instance instance) const noexcept;
 
     /**
+     * Returns the number of instances for this renderable.
+     * @param instance Instance of the component obtained from getInstance().
+     * @return The number of instances.
+     */
+    size_t getInstanceCount(Instance instance) const noexcept;
+
+    /**
      * Changes the material instance binding for the given primitive.
      *
      * The MaterialInstance's material must have a feature level equal or lower to the engine's

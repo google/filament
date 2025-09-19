@@ -264,7 +264,7 @@ public:
         bool hasMorphing : 1;                               //              1 bit
         bool hasHybridInstancing : 1;                       //              1 bit
 
-        uint32_t rfu[2];                                    // 16 bytes
+        uint32_t rfu[2];                                    // 8 bytes
     };
     static_assert(sizeof(PrimitiveInfo) == 56);
 

@@ -149,6 +149,18 @@ using namespace utils;
 
 namespace filament::backend {
 
+namespace {
+
+static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
+    std::unique_ptr<OpenGLDriver::GLSyncFence::CallbackData> cbData(
+            static_cast<OpenGLDriver::GLSyncFence::CallbackData*>(userData));
+    // This assumes the sync has not yet been destroyed. If it has, this will be
+    // undefined behavior.
+    cbData->cb(cbData->sync, cbData->userData);
+};
+
+} // namespace
+
 Driver* OpenGLDriverFactory::create(
         OpenGLPlatform* platform,
         void* sharedGLContext,
@@ -613,6 +625,10 @@ Handle<HwRenderTarget> OpenGLDriver::createRenderTargetS() noexcept {
 
 Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
     return initHandle<GLFence>();
+}
+
+Handle<HwSync> OpenGLDriver::createSyncS() noexcept {
+    return initHandle<GLSyncFence>();
 }
 
 Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
@@ -1807,6 +1823,24 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, utils::CString tag) {
     mHandleAllocator.associateTagToHandle(fh.getId(), std::move(tag));
 }
 
+void OpenGLDriver::createSyncR(Handle<HwSync> sh, utils::CString tag) {
+    DEBUG_MARKER()
+
+    GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+    {
+        std::lock_guard<std::mutex> guard(s->lock);
+        s->sync = mPlatform.createSync();
+    }
+
+    for (auto& cbData : s->conversionCallbacks) {
+        cbData->sync = s->sync;
+        scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
+    }
+
+    s->conversionCallbacks.clear();
+    mHandleAllocator.associateTagToHandle(sh.getId(), std::move(tag));
+}
+
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
         utils::CString tag) {
     DEBUG_MARKER()
@@ -2080,6 +2114,16 @@ void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
     }
 }
 
+void OpenGLDriver::destroySync(Handle<HwSync> sh) {
+    DEBUG_MARKER()
+
+    if (sh) {
+        GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+        mPlatform.destroySync(s->sync);
+        destruct(sh, s);
+    }
+}
+
 void OpenGLDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
     DEBUG_MARKER()
 
@@ -2268,6 +2312,33 @@ FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::ERROR;
 }
 
+void OpenGLDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
+    if (!sh) {
+        return;
+    }
+
+    GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
+    auto cbData = std::make_unique<GLSyncFence::CallbackData>();
+    cbData->handler = handler;
+    cbData->cb = cb;
+    cbData->userData = userData;
+
+    // If we haven't already set the handle, toss the conversion callback in the
+    // back of the list.
+    {
+        std::lock_guard guard(s->lock);
+        if (s->sync == nullptr) {
+            s->conversionCallbacks.push_back(std::move(cbData));
+            return;
+        }
+    }
+
+    // Otherwise, go ahead and schedule the callback now.
+    cbData->sync = s->sync;
+    scheduleCallback(cbData->handler, cbData.release(), syncCallbackWrapper);
+}
+
 bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
     const auto& ext = mContext.ext;
     if (isETC2Compression(format)) {
@@ -2433,6 +2504,10 @@ bool OpenGLDriver::isSRGBSwapChainSupported() {
     return mPlatform.isSRGBSwapChainSupported();
 }
 
+bool OpenGLDriver::isMSAASwapChainSupported(uint32_t samples) {
+    return mPlatform.isMSAASwapChainSupported(samples);
+}
+
 bool OpenGLDriver::isProtectedContentSupported() {
     return mPlatform.isProtectedContextSupported();
 }
@@ -2547,12 +2622,19 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
 // Swap chains
 // ------------------------------------------------------------------------------------------------
 
-
 void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
     mPlatform.commit(sc->swapChain);
+
+    auto& fs = sc->frameScheduled;
+    if (fs.callback) {
+        scheduleCallback(fs.handler, [callback = std::move(fs.callback)]() {
+            PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
+            callback(noop);
+        });
+    }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     if (UTILS_UNLIKELY(!mFrameCompleteOps.empty())) {
@@ -3746,9 +3828,12 @@ void OpenGLDriver::beginFrame(
     }
 }
 
-void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain>, CallbackHandler*,
-        FrameScheduledCallback&& /*callback*/, uint64_t /*flags*/) {
+void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHandler* handler,
+        FrameScheduledCallback&& callback, uint64_t /*flags*/) {
     DEBUG_MARKER()
+    GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
+    sc->frameScheduled.handler = handler;
+    sc->frameScheduled.callback = std::move(callback);
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,

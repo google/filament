@@ -1006,4 +1006,13 @@ size_t FRenderableManager::getPrimitiveCount(Instance const instance, uint8_t co
     return getRenderPrimitives(instance, level).size();
 }
 
+
+size_t FRenderableManager::getInstanceCount(Instance const instance) const noexcept {
+    if (instance) {
+        InstancesInfo const& info = mManager[instance].instances;
+        return info.count;
+    }
+    return 0;
+}
+
 } // namespace filament
