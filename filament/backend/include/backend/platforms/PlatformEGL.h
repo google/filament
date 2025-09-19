@@ -28,7 +28,6 @@
 #include <utils/Invocable.h>
 
 #include <initializer_list>
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -169,9 +168,7 @@ protected:
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
     std::vector<EGLContext> mAdditionalContexts;
-    // A cache for MSAA support queries. The index of the vector corresponds to the power of 2 of
-    // the sample count. For example, index 0 is for 2 samples, 1 is for 4 samples, etc.
-    mutable std::vector<std::optional<bool>> mMSAASupport{4}; // caches for 2x, 4x, 8x, 16x
+    bool mMSAA4XSupport;
 
     // supported extensions detected at runtime
     struct {
@@ -222,6 +219,8 @@ private:
             return makeCurrent(mCurrentContext, drawSurface, readSurface);
         }
     } egl{ mEGLDisplay };
+
+    bool checkIfMSAASwapChainSupported(uint32_t samples) const noexcept;
 };
 
 } // namespace filament::backend

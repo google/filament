@@ -32,7 +32,6 @@
 #endif
 #include <utils/compiler.h>
 
-#include <utils/algorithm.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/debug.h>
@@ -108,7 +107,9 @@ void PlatformEGL::clearGlError() noexcept {
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGL::PlatformEGL() noexcept = default;
+PlatformEGL::PlatformEGL() noexcept : OpenGLPlatform() {
+    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
+}
 
 int PlatformEGL::getOSVersion() const noexcept {
     return 0;
@@ -492,60 +493,13 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
         return true;
     }
 
-    // The number of samples must be a power-of-two > 1.
-    if ((samples & (samples - 1)) != 0) {
-        LOG(INFO) << "The number of samples for MSAA is not a power of two: " << samples;
-        return false;
+    if (samples == 4) {
+        return mMSAA4XSupport;
     }
 
-    // `samples` is a power-of-two that is greater than 1 (e.g., 2, 4, 8, ...).
-    // We use this to compute an index into our cache.
-    const uint32_t power = utils::ctz(samples); // `power` is 3 if the number of samples is 8x.
-    const uint32_t index = power - 1; // The index 0 originally means 1x, which we don't count.
-                                      // So make the index 0 to indicate 2x.
-    if (mMSAASupport.size() <= index) {
-        mMSAASupport.resize(index + 1);
-    }
-
-    // Return the cached value if we have one.
-    if (mMSAASupport[index]) {
-        return *mMSAASupport[index];
-    }
-
-    // Retrieve the config to see if the given number of samples is supported. The result is cached.
-    Config configAttribs = {
-            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
-            { EGL_RED_SIZE,        8 },
-            { EGL_GREEN_SIZE,      8 },
-            { EGL_BLUE_SIZE,       8 },
-            { EGL_DEPTH_SIZE,      24 },
-            { EGL_SAMPLE_BUFFERS,  1 },
-            { EGL_SAMPLES,         (EGLint)samples },
-    };
-
-    if (!ext.egl.KHR_no_config_context) {
-        if (isOpenGL()) {
-            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
-        } else {
-            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
-            if (ext.egl.KHR_create_context) {
-                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
-            }
-        }
-    }
-
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    EGLint configsCount;
-    bool supported = false;
-    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
-        supported = false;
-    } else {
-        supported = configsCount > 0;
-    }
-
-    mMSAASupport[index] = supported;
-
-    return supported;
+    // Other sample counts are not cached, retrieve it.
+    LOG(INFO) << "MSAA sample count " << samples << " is queried, consider caching it.";
+    return checkIfMSAASwapChainSupported(samples);
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
@@ -863,6 +817,38 @@ EGLContext PlatformEGL::getContextForType(ContextType type) const noexcept {
         case ContextType::PROTECTED:
             return mEGLContextProtected;
     }
+}
+
+bool PlatformEGL::checkIfMSAASwapChainSupported(uint32_t samples) const noexcept {
+    // Retrieve the config to see if the given number of samples is supported. The result is cached.
+    Config configAttribs = {
+            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
+            { EGL_RED_SIZE,        8 },
+            { EGL_GREEN_SIZE,      8 },
+            { EGL_BLUE_SIZE,       8 },
+            { EGL_DEPTH_SIZE,      24 },
+            { EGL_SAMPLE_BUFFERS,  1 },
+            { EGL_SAMPLES,         (EGLint)samples },
+    };
+
+    if (!ext.egl.KHR_no_config_context) {
+        if (isOpenGL()) {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
+        } else {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
+            if (ext.egl.KHR_create_context) {
+                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+            }
+        }
+    }
+
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    EGLint configsCount;
+    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
+        return false;
+    }
+
+    return configsCount > 0;
 }
 
 // ---------------------------------------------------------------------------------------------
