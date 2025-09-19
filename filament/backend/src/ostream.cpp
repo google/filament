@@ -95,11 +95,7 @@ io::ostream& operator<<(io::ostream& out, ElementType type) {
 }
 
 io::ostream& operator<<(io::ostream& out, BufferUsage usage) {
-    switch (usage) {
-        CASE(BufferUsage, STATIC)
-        CASE(BufferUsage, DYNAMIC)
-    }
-    return out;
+    return out << io::hex << uint32_t(usage) << io::dec;
 }
 
 io::ostream& operator<<(io::ostream& out, CullingMode mode) {

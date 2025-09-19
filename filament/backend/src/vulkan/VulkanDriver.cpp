@@ -476,6 +476,21 @@ void VulkanDriver::updateDescriptorSetTexture(
     }
 }
 
+void VulkanDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        BufferDescriptor&& data) {
+    FVK_SYSTRACE_SCOPE();
+    auto mmb = resource_ptr<VulkanMemoryMappedBuffer>::cast(&mResourceManager, mmbh);
+
+    assert_invariant(any(mmb->access & MapBufferAccessFlags::WRITE_BIT));
+    assert_invariant(offset + data.size <= mmb->size);
+
+    // TODO: this isa zero-effort implementation of copyToMemoryMappedBuffer(), where we just
+    //       call updateBufferObject(). This could be a fallback implementation for when
+    //       shared memory is not available.
+    //       On UMA systems, this should just be a memcpy into the memory-mapped buffer.
+    updateBufferObject(mmb->boh, std::move(data), mmb->offset + offset);
+}
+
 void VulkanDriver::flush(int) {
     FVK_SYSTRACE_SCOPE();
     endCommandRecording();
@@ -940,6 +955,16 @@ void VulkanDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
     mResourceManager.associateHandle(dsh.getId(), std::move(tag));
 }
 
+void VulkanDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
+        BufferObjectHandle boh, size_t offset,
+        size_t size, MapBufferAccessFlags access, utils::CString tag) {
+    FVK_SYSTRACE_SCOPE();
+    auto mmb = resource_ptr<VulkanMemoryMappedBuffer>::make(&mResourceManager, mmbh,
+            boh, offset, size, access);
+    mmb.inc();
+    mResourceManager.associateHandle(mmbh.getId(), std::move(tag));
+}
+
 Handle<HwVertexBufferInfo> VulkanDriver::createVertexBufferInfoS() noexcept {
     return mResourceManager.allocHandle<VulkanVertexBufferInfo>();
 }
@@ -1037,6 +1062,19 @@ Handle<HwDescriptorSetLayout> VulkanDriver::createDescriptorSetLayoutS() noexcep
 Handle<HwDescriptorSet> VulkanDriver::createDescriptorSetS() noexcept {
     return mResourceManager.allocHandle<VulkanDescriptorSet>();
 }
+
+MemoryMappedBufferHandle VulkanDriver::mapBufferS() noexcept {
+    return mResourceManager.allocHandle<VulkanMemoryMappedBuffer>();
+}
+
+void VulkanDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+    if (!mmbh) {
+        return;
+    }
+    auto mmb = resource_ptr<VulkanMemoryMappedBuffer>::cast(&mResourceManager, mmbh);
+    mmb.dec();
+}
+
 
 void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (!sch) {

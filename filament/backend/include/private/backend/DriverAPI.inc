@@ -295,27 +295,11 @@ DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetLayoutHandle, createDescriptorS
 DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetHandle, createDescriptorSet,
         backend::DescriptorSetLayoutHandle, dslh)
 
-DECL_DRIVER_API_N(updateDescriptorSetBuffer,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_binding_t, binding,
+DECL_DRIVER_API_TAGGED_R_N(backend::MemoryMappedBufferHandle, mapBuffer,
         backend::BufferObjectHandle, boh,
-        uint32_t, offset,
-        uint32_t, size
-)
-
-DECL_DRIVER_API_N(updateDescriptorSetTexture,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_binding_t, binding,
-        backend::TextureHandle, th,
-        SamplerParams, params
-)
-
-DECL_DRIVER_API_N(bindDescriptorSet,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_set_t, set,
-        backend::DescriptorSetOffsetArray&&, offsets
-)
-
+        size_t, offset,
+        size_t, size,
+        backend::MapBufferAccessFlags, access)
 
 /*
  * Destroying driver objects
@@ -337,6 +321,7 @@ DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
 DECL_DRIVER_API_N(destroySync,                  backend::SyncHandle, sh)
 DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
 DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
+DECL_DRIVER_API_N(unmapBuffer,                  backend::MemoryMappedBufferHandle, mmbh)
 
 /*
  * Synchronous APIs
@@ -451,6 +436,26 @@ DECL_DRIVER_API_N(compilePrograms,
         backend::CallbackHandler::Callback, callback,
         void*, user)
 
+DECL_DRIVER_API_N(updateDescriptorSetBuffer,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_binding_t, binding,
+        backend::BufferObjectHandle, boh,
+        uint32_t, offset,
+        uint32_t, size
+)
+
+DECL_DRIVER_API_N(updateDescriptorSetTexture,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_binding_t, binding,
+        backend::TextureHandle, th,
+        SamplerParams, params
+)
+
+DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
+        backend::MemoryMappedBufferHandle, mmbh,
+        size_t, offset,
+        backend::BufferDescriptor&&, data)
+
 /*
  * Swap chain
  */
@@ -538,6 +543,12 @@ DECL_DRIVER_API_N(bindPipeline,
 
 DECL_DRIVER_API_N(bindRenderPrimitive,
         backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(bindDescriptorSet,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_set_t, set,
+        backend::DescriptorSetOffsetArray&&, offsets
+)
 
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,

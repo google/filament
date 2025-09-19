@@ -45,6 +45,7 @@ struct HwVertexBufferInfo;
 struct HwVertexBuffer;
 struct HwDescriptorSetLayout;
 struct HwDescriptorSet;
+struct HwMemoryMappedBuffer;
 
 /*
  * A handle to a backend resource. HandleBase is for internal use only.
@@ -159,6 +160,7 @@ using VertexBufferHandle        = Handle<HwVertexBuffer>;
 using VertexBufferInfoHandle    = Handle<HwVertexBufferInfo>;
 using DescriptorSetLayoutHandle = Handle<HwDescriptorSetLayout>;
 using DescriptorSetHandle       = Handle<HwDescriptorSet>;
+using MemoryMappedBufferHandle  = Handle<HwMemoryMappedBuffer>;
 
 } // namespace filament::backend
 

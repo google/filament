@@ -78,6 +78,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
             src/opengl/GLTexture.h
             src/opengl/GLUtils.cpp
             src/opengl/GLUtils.h
+            src/opengl/GLMemoryMappedBuffer.cpp
+            src/opengl/GLMemoryMappedBuffer.h
             src/opengl/OpenGLBlobCache.cpp
             src/opengl/OpenGLBlobCache.h
             src/opengl/OpenGLContext.cpp
@@ -566,6 +568,7 @@ if (APPLE OR LINUX)
         test/test_ReadPixels.cpp
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
+        test/test_MemoryMappedBuffer.cpp
         test/test_MRT.cpp
         test/test_PushConstants.cpp
         test/test_LoadImage.cpp
