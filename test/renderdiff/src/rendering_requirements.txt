@@ -1,0 +1,6 @@
+Mako==1.3.10
+MarkupSafe==3.0.2
+numpy==2.3.3
+PyYAML==6.0.2
+setuptools==80.9.0
+tifffile==2025.9.9
