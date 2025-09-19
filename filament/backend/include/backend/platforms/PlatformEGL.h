@@ -168,7 +168,7 @@ protected:
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
     std::vector<EGLContext> mAdditionalContexts;
-    bool mMSAA4XSupport;
+    bool mMSAA4XSupport = false;
 
     // supported extensions detected at runtime
     struct {

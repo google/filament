@@ -107,9 +107,7 @@ void PlatformEGL::clearGlError() noexcept {
 
 // ---------------------------------------------------------------------------------------------
 
-PlatformEGL::PlatformEGL() noexcept : OpenGLPlatform() {
-    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
-}
+PlatformEGL::PlatformEGL() noexcept = default;
 
 int PlatformEGL::getOSVersion() const noexcept {
     return 0;
@@ -324,6 +322,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
 
     mCurrentContextType = ContextType::UNPROTECTED;
     mContextAttribs = std::move(contextAttribs);
+    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
 
     initializeGlExtensions();
 
@@ -497,9 +496,7 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
         return mMSAA4XSupport;
     }
 
-    // Other sample counts are not cached, retrieve it.
-    LOG(INFO) << "MSAA sample count " << samples << " is queried, consider caching it.";
-    return checkIfMSAASwapChainSupported(samples);
+    return false;
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
