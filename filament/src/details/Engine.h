@@ -270,16 +270,37 @@ public:
 
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
-        switch (mBackend) {
-            default:
-                return { getDriver().getShaderLanguage() };
-            case Backend::METAL:
-                const auto& lang = mConfig.preferredShaderLanguage;
-                if (lang == Config::ShaderLanguage::MSL) {
-                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
+        backend::ShaderLanguage preferredLanguage;
+
+        switch (mConfig.preferredShaderLanguage) {
+            case Config::ShaderLanguage::DEFAULT:
+                switch (mBackend) {
+                    case Backend::DEFAULT:
+                    case Backend::OPENGL:
+                    case Backend::NOOP:
+                        preferredLanguage = backend::ShaderLanguage::ESSL3;
+                        break;
+                    case Backend::VULKAN:
+                        preferredLanguage = backend::ShaderLanguage::SPIRV;
+                        break;
+                    case Backend::METAL:
+                        preferredLanguage = backend::ShaderLanguage::MSL;
+                        break;
+                    case Backend::WEBGPU:
+                        preferredLanguage = backend::ShaderLanguage::WGSL;
+                        break;
                 }
-                return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
+                break;
+            case Config::ShaderLanguage::MSL:
+                preferredLanguage = backend::ShaderLanguage::MSL;
+                break;
+            case Config::ShaderLanguage::METAL_LIBRARY:
+                preferredLanguage = backend::ShaderLanguage::METAL_LIBRARY;
+                break;
         }
+
+
+        return getDriver().getShaderLanguages(preferredLanguage);
     }
 
     ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
