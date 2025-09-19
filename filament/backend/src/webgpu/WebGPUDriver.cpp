@@ -2223,7 +2223,7 @@ void WebGPUDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
 }
 
 void WebGPUDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
-        size_t size, BufferDescriptor&& data) {
+        BufferDescriptor&& data) {
     // TODO: MetalDriver::copyToMemoryMappedBuffer
 }
 

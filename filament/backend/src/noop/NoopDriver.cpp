@@ -429,7 +429,7 @@ void NoopDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
 }
 
 void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
-        size_t size, BufferDescriptor&& data) {
+        BufferDescriptor&& data) {
 }
 
 } // namespace filament

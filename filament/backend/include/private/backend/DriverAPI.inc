@@ -450,7 +450,6 @@ DECL_DRIVER_API_N(updateDescriptorSetTexture,
 DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
         backend::MemoryMappedBufferHandle, mmbh,
         size_t, offset,
-        size_t, size,
         backend::BufferDescriptor&&, data)
 
 /*

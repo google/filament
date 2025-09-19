@@ -132,20 +132,19 @@ void GLMemoryMappedBuffer::unmap(OpenGLContext& glc, HandleAllocatorGL& handleAl
 }
 
 void GLMemoryMappedBuffer::copy(OpenGLContext& glc, OpenGLDriver& gld,
-        size_t const offset, size_t const size, BufferDescriptor&& data) const {
+        size_t const offset, BufferDescriptor&& data) const {
     assert_invariant(any(access & MapBufferAccessFlags::WRITE_BIT));
-    assert_invariant(size <= data.size);
-    assert_invariant(offset + size <= gl.size);
+    assert_invariant(offset + data.size <= gl.size);
 
     if (UTILS_LIKELY(gl.vaddr)) {
-        memcpy(static_cast<char *>(gl.vaddr) + offset, data.buffer, size);
+        memcpy(static_cast<char *>(gl.vaddr) + offset, data.buffer, data.size);
     } else {
         assert_invariant(!glc.isES2());
         // we couldn't map (WebGL or error), revert to glBufferSubData. In the future we can
         // improve this by keeping around the BufferDescriptor and coalescing the calls
         // to glBufferSubData.
         glc.bindBuffer(gl.binding, gl.id);
-        glBufferSubData(gl.binding, GLintptr(gl.offset + offset), GLsizeiptr(size), data.buffer);
+        glBufferSubData(gl.binding, GLintptr(gl.offset + offset), GLsizeiptr(data.size), data.buffer);
         CHECK_GL_ERROR();
     }
 

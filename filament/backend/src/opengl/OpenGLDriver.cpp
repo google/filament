@@ -3911,9 +3911,9 @@ void OpenGLDriver::updateDescriptorSetTexture(
 }
 
 void OpenGLDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
-        size_t size, BufferDescriptor&& data) {
+        BufferDescriptor&& data) {
     GLMemoryMappedBuffer* const mmb = handle_cast<GLMemoryMappedBuffer*>(mmbh);
-    mmb->copy(mContext, *this, offset, size, std::move(data));
+    mmb->copy(mContext, *this, offset, std::move(data));
 }
 
 void OpenGLDriver::flush(int) {

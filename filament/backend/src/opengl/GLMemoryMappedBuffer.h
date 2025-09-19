@@ -58,7 +58,7 @@ struct GLMemoryMappedBuffer : public HwMemoryMappedBuffer {
     void unmap(OpenGLContext& gl, HandleAllocatorGL& handleAllocator) const;
 
     void copy(OpenGLContext& glc, OpenGLDriver& gld,
-            size_t offset, size_t size, BufferDescriptor&& data) const;
+            size_t offset, BufferDescriptor&& data) const;
 };
 
 } // namespace filament::backend
