@@ -32,6 +32,7 @@
 #endif
 #include <utils/compiler.h>
 
+#include <utils/algorithm.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
 #include <utils/debug.h>
@@ -491,6 +492,27 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
         return true;
     }
 
+    // The number of samples must be a power-of-two > 1.
+    if ((samples & (samples - 1)) != 0) {
+        LOG(INFO) << "The number of samples for MSAA is not a power of two: " << samples;
+        return false;
+    }
+
+    // `samples` is a power-of-two that is greater than 1 (e.g., 2, 4, 8, ...).
+    // We use this to compute an index into our cache.
+    const uint32_t power = utils::ctz(samples); // `power` is 3 if the number of samples is 8x.
+    const uint32_t index = power - 1; // The index 0 originally means 1x, which we don't count.
+                                      // So make the index 0 to indicate 2x.
+    if (mMSAASupport.size() <= index) {
+        mMSAASupport.resize(index + 1);
+    }
+
+    // Return the cached value if we have one.
+    if (mMSAASupport[index]) {
+        return *mMSAASupport[index];
+    }
+
+    // Retrieve the config to see if the given number of samples is supported. The result is cached.
     Config configAttribs = {
             { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
             { EGL_RED_SIZE,        8 },
@@ -498,7 +520,7 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
             { EGL_BLUE_SIZE,       8 },
             { EGL_DEPTH_SIZE,      24 },
             { EGL_SAMPLE_BUFFERS,  1 },
-            { EGL_SAMPLES,         samples },
+            { EGL_SAMPLES,         (EGLint)samples },
     };
 
     if (!ext.egl.KHR_no_config_context) {
@@ -514,11 +536,16 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
 
     EGLConfig config = EGL_NO_CONFIG_KHR;
     EGLint configsCount;
+    bool supported = false;
     if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
-        return false;
+        supported = false;
+    } else {
+        supported = configsCount > 0;
     }
 
-    return configsCount > 0;
+    mMSAASupport[index] = supported;
+
+    return supported;
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
