@@ -585,12 +585,6 @@ void FRenderer::renderStandaloneView(FView const* view) {
         // for endFrame() above. This operation in actually not too heavy, it just kicks the
         // driver thread, which is mostlikely already running.
         engine.flush();
-
-        // FIXME: This is a workaround for internal bug b/361822355.
-        //        properly address the bug and remove this workaround.
-        if (engine.getBackend() == Backend::VULKAN) {
-            engine.flushAndWait();
-        }
     }
 }
 
