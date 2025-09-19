@@ -1058,20 +1058,6 @@ int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
-math::mat3f VulkanDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
-    if (sh) {
-        auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
-        if (stream->streamType == StreamType::NATIVE) {
-            FILAMENT_CHECK_PRECONDITION(false) << "Native Stream not supported in Vulkan.";
-        } else {
-            // Backend call since getStreamTransformMatrix is called from async
-            // updateBufferObject.
-            return stream->getBackEndTransform();
-        }
-    }
-    return math::mat3f();
-}
-
 void VulkanDriver::updateStreams(CommandStream* driver) {
     FVK_SYSTRACE_SCOPE();
     if (UTILS_UNLIKELY(!mStreamsWithPendingAcquiredImage.empty())) {
@@ -1089,7 +1075,6 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                                          transform = stream->getFrontEndTransform()]() {
                 auto texture = s->getTexture(image);
                 s->setBackendTransform(transform);
-                bool newImage = false;
                 if (!texture) {
                     auto externalImage = fvkutils::createExternalImageFromRaw(mPlatform, image, false);
                     auto metadata = mPlatform->extractExternalImageMetadata(externalImage);
@@ -1130,14 +1115,13 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                                 externalImage);
                         // Cache the AHB backed image. Acquires the image here.
                         s->pushImage(image, newTexture);
-                        newImage = true;
                     }
 
                     texture = newTexture;
                 }
 
                 // Note that we capture the
-                mStreamedImageManager.onStreamAcquireImage(texture, stream, newImage);
+                mStreamedImageManager.onStreamAcquireImage(texture, stream);
             });
         }
         mStreamsWithPendingAcquiredImage.clear();
@@ -1428,10 +1412,23 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
     if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
         auto streamDescriptors = mStreamUniformDescriptors.find(bo.get());
         if (streamDescriptors != mStreamUniformDescriptors.end()) {
-            for (auto const& [offset, stream, associationType]:
+            for (auto const& [offset, streamHandle, associationType]:
                     streamDescriptors->second.mStreams) {
                 if (associationType == BufferObjectStreamAssociationType::TRANSFORM_MATRIX) {
-                    auto transform = getStreamTransformMatrix(stream);
+                    math::mat3f transform;
+                    if (streamHandle) {
+                        auto stream =
+                                resource_ptr<VulkanStream>::cast(&mResourceManager, streamHandle);
+                        if (stream->streamType == StreamType::NATIVE) {
+                            FILAMENT_CHECK_PRECONDITION(false)
+                                    << "Native Stream not supported in Vulkan.";
+                        } else {
+                            // Backend call since getStreamTransformMatrix is called from async
+                            // updateBufferObject.
+                            transform = stream->getBackEndTransform();
+                        }
+                    }
+
                     copyMat3f(bd.buffer, offset, transform);
                 }
             }

@@ -54,17 +54,15 @@ void VulkanStreamedImageManager::unbindStreamedTexture(
 }
 
 void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
-        fvkmemory::resource_ptr<VulkanStream> stream, bool newImage) {
+        fvkmemory::resource_ptr<VulkanStream> stream) {
     for (StreamedTextureBinding const& data: mStreamedTexturesBindings) {
         // Find the right stream
         if (data.image->getStream() == stream) {
             // For some reason, some of the frames coming to us, are on streams where the
             // descriptor set isn't external...
             if (data.set->getExternalSamplerVkSet()) {
-                if (newImage) {
-                    mExternalImageManager->bindExternallySampledTexture(data.set, data.binding,
-                            image, data.samplerParams);
-                }
+                mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
+                        data.samplerParams);
             } else {
                 //... In this case we just default to using the normal path and update the
                 // sampler.

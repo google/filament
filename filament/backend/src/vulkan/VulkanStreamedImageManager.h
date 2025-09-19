@@ -46,7 +46,7 @@ public:
     void unbindStreamedTexture(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             uint8_t bindingPoint);
     void onStreamAcquireImage(fvkmemory::resource_ptr<VulkanTexture> image,
-            fvkmemory::resource_ptr<VulkanStream> stream, bool newImage);
+            fvkmemory::resource_ptr<VulkanStream> stream);
 
 private:
     struct StreamedTextureBinding {
