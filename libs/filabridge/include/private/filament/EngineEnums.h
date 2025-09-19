@@ -122,10 +122,10 @@ constexpr size_t CONFIG_MAX_SHADOW_LAYERS = 64;
 // The maximum number of shadow cascades that can be used for directional lights.
 constexpr size_t CONFIG_MAX_SHADOW_CASCADES = 4;
 
-// The maximum UBO size, in bytes. This value is set to 16 KiB due to the ES3.0 spec.
+// The maximum UBO size, in bytes. This value is set to 32 KiB to support 512 bones.
 // Note that this value constrains the maximum number of skinning bones, morph targets,
 // instances, and shadow casting spotlights.
-constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 16384;
+constexpr size_t CONFIG_MINSPEC_UBO_SIZE = 32768;
 
 // The maximum number of instances that Filament automatically creates as an optimization.
 // Use a much smaller number for WebGL as a workaround for the following Chrome issues:
