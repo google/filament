@@ -153,7 +153,7 @@ private:
     Type mType = Type::NONE;
 
     static PlatformMetal* platform;
-    static std::array<uint64_t, TypeCount> aliveBuffers;
+    static std::array<std::atomic<uint64_t>, TypeCount> aliveBuffers;
 };
 
 class MetalBuffer {
