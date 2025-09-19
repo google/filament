@@ -193,7 +193,7 @@ public:
     void deleteBuffer(GLuint buffer, GLenum target) noexcept;
     void deleteVertexArray(GLuint vao) noexcept;
 
-    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept;
+    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure);
 
     // glGet*() values
     struct Gets {
@@ -498,7 +498,7 @@ public:
     } procs{};
 
     void unbindEverything() noexcept;
-    void synchronizeStateAndCache(size_t index) noexcept;
+    void synchronizeStateAndCache(size_t index);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLuint getSamplerSlow(SamplerParams sp) const noexcept;

@@ -71,7 +71,7 @@ static CString to_string(int const i) { return utils::to_string(i); }
 static CString to_string(float const f) { return "float(" + utils::to_string(f) + ")"; }
 
 static void logCompilationError(ShaderStage shaderType, const char* name, GLuint shaderId,
-        Program::ShaderBlob const& sourceCode) noexcept;
+        Program::ShaderBlob const& sourceCode);
 static void logProgramLinkError(char const* name, GLuint program) noexcept;
 
 static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context, char* source,
@@ -79,7 +79,7 @@ static void process_GOOGLE_cpp_style_line_directive(OpenGLContext const& context
 static void process_OVR_multiview2(OpenGLContext const& context, int32_t eyeCount, char* source,
         size_t len) noexcept;
 static std::string_view process_ARB_shading_language_packing(OpenGLContext& context) noexcept;
-static std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept;
+static std::array<std::string_view, 3> splitShaderSource(std::string_view source);
 
 // ------------------------------------------------------------------------------------------------
 
@@ -312,7 +312,7 @@ ShaderCompilerService::program_token_t ShaderCompilerService::createProgram(
 }
 
 void ShaderCompilerService::compileProgram(
-        program_token_t const& token, Program&& program) noexcept {
+        program_token_t const& token, Program&& program) {
     auto& gl = mDriver.getContext();
     CompilerPriorityQueue const priorityQueue = program.getPriorityQueue();
     switch (mMode) {
@@ -586,7 +586,7 @@ void ShaderCompilerService::handleCanceledTokensForThreadPool() {
 // ------------------------------------------------------------------------------------------------
 
 void ShaderCompilerService::runAtNextTick(CompilerPriorityQueue priority,
-        program_token_t const& token, Job job) noexcept {
+        program_token_t const& token, Job job) {
     // insert items in order of priority and at the end of the range
     auto& ops = mRunAtNextTickOps;
     auto const pos = std::lower_bound(ops.begin(), ops.end(), priority,
@@ -614,7 +614,7 @@ bool ShaderCompilerService::cancelTickOp(program_token_t const& token) noexcept 
     return false;
 }
 
-void ShaderCompilerService::executeTickOps() noexcept {
+void ShaderCompilerService::executeTickOps() {
     auto& ops = mRunAtNextTickOps;
     auto it = ops.begin();
     while (it != ops.end()) {
@@ -636,7 +636,7 @@ bool ShaderCompilerService::shouldCompileSynchronousProgramThisTick() const noex
                     mNumTicksUntilNextSynchronousProgram == 0);
 }
 
-void ShaderCompilerService::compilePendingSynchronousPrograms() noexcept {
+void ShaderCompilerService::compilePendingSynchronousPrograms() {
     if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
         return;
     }
@@ -655,7 +655,7 @@ void ShaderCompilerService::compilePendingSynchronousPrograms() noexcept {
 }
 
 void ShaderCompilerService::compilePendingSynchronousProgramNow(
-        program_token_t const& token) noexcept {
+        program_token_t const& token) {
     if (mDriver.getDriverConfig().disableAmortizedShaderCompile) {
         return;
     }
@@ -692,7 +692,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
 /* static */ void ShaderCompilerService::compileShaders(OpenGLContext& context,
         Program::ShaderSource shadersSource,
         FixedCapacityVector<Program::SpecializationConstant> const& specializationConstants,
-        bool multiview, program_token_t const& token) noexcept {
+        bool multiview, program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     auto const appendSpecConstantString = +[](CString& s, Program::SpecializationConstant const& sc) {
@@ -817,7 +817,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
     return true;
 }
 
-/* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) noexcept {
+/* static */ void ShaderCompilerService::checkCompileStatus(program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     UTILS_NOUNROLL
@@ -839,7 +839,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
 }
 
 /* static */ void ShaderCompilerService::linkProgram(OpenGLContext const& context,
-        program_token_t const& token) noexcept {
+        program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // Shader compilation should be completed by now. Check the status and log errors on failure.
@@ -933,7 +933,7 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
 UTILS_NOINLINE
 /* static */ void logCompilationError(ShaderStage shaderType, const char* name,
         GLuint const shaderId,
-        UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) noexcept {
+        UTILS_UNUSED_IN_RELEASE Program::ShaderBlob const& sourceCode) {
 
     // Collects the current GL error for additional context. While often redundant,
     // errors like `GL_CONTEXT_LOST` can occur asynchronously after `glCompileShader`.
@@ -1179,7 +1179,7 @@ mediump vec4 unpackSnorm4x8(highp uint v) {
 // - the version line
 // - extensions
 // - everything else
-/* static */ std::array<std::string_view, 3> splitShaderSource(std::string_view source) noexcept {
+/* static */ std::array<std::string_view, 3> splitShaderSource(std::string_view source) {
     auto const version_start = source.find("#version");
     assert_invariant(version_start != std::string_view::npos);
 

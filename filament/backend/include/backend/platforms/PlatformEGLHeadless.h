@@ -29,7 +29,7 @@ public:
     PlatformEGLHeadless() noexcept;
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const Platform::DriverConfig& driverConfig) override;
 
 protected:
     bool isOpenGL() const noexcept override;

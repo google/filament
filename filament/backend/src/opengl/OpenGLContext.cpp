@@ -277,7 +277,7 @@ void OpenGLContext::terminate() noexcept {
 }
 
 void OpenGLContext::destroyWithContext(
-        size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept {
+        size_t index, std::function<void(OpenGLContext&)> const& closure) {
     if (index == 0) {
         // Note: we only need to delay the destruction of objects on the unprotected context
         // (index 0) because the protected context is always immediately destroyed and all its
@@ -296,7 +296,7 @@ void OpenGLContext::unbindEverything() noexcept {
     //        worry about.
 }
 
-void OpenGLContext::synchronizeStateAndCache(size_t index) noexcept {
+void OpenGLContext::synchronizeStateAndCache(size_t index) {
 
     // if we're just switching back to context 0, run all the pending destructors
     if (index == 0) {
@@ -865,10 +865,12 @@ GLuint OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
     if (UTILS_UNLIKELY(buffer == 0)) {
         // we're binding the default frame buffer, resolve its actual name
         auto& defaultFboForThisContext = mDefaultFbo[contextIndex];
+
         if (UTILS_UNLIKELY(!defaultFboForThisContext.has_value())) {
             defaultFboForThisContext = GLuint(mPlatform.getDefaultFramebufferObject());
         }
-        buffer = defaultFboForThisContext.value();
+        // by construction, defaultFboForThisContext has a value. value_or() avoids a throwing call.
+        buffer = defaultFboForThisContext.value_or(0);
     }
     bindFramebufferResolved(target, buffer);
     return buffer;
