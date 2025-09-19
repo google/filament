@@ -25,18 +25,41 @@ static void moveCursorUp(size_t n) {
     std::cout << "\033[" << n << "F";
 }
 
-static void showCursorSafe() {
-    write(STDOUT_FILENO, "\033[?25h", 6);
+static void showCursor() {
+    struct sigaction sa;
+    sa.sa_handler = SIG_DFL;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+    
+    const char* show_cursor_seq = "\033[?25h";
+    write(STDOUT_FILENO, show_cursor_seq, 6);
 }
 
+
 static void showCursorFromSignal(int) {
-    showCursorSafe();
+    // Только async-signal-safe операции
+    const char* show_cursor_seq = "\033[?25h";
+    write(STDOUT_FILENO, show_cursor_seq, 6);
+    
+    struct sigaction sa;
+    sa.sa_handler = SIG_DFL;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+    
     raise(SIGINT);
 }
 
 static void hideCursor() {
-    signal(SIGINT, showCursorFromSignal);
-    write(STDOUT_FILENO, "\033[?25l", 6);
+    struct sigaction sa;
+    sa.sa_handler = showCursorFromSignal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+    
+    const char* hide_cursor_seq = "\033[?25l";
+    write(STDOUT_FILENO, hide_cursor_seq, 6);
 }
 
 static inline void printProgress(float v, size_t width) {
