@@ -59,10 +59,10 @@ struct VulkanStream : public HwStream, fvkmemory::Resource {
     void setBackendTransform(const math::mat3f& transform) { mTransform = transform; }
     const math::mat3f& getBackEndTransform() const { return mTransform; }
     fvkmemory::resource_ptr<VulkanTexture> getTexture(void* ahb) {
-        fvkmemory::resource_ptr<VulkanTexture> frame;
-        const auto& it = mTextures.find(ahb);
-        if (it != mTextures.end()) frame = it->second;
-        return frame;
+        if (auto itr = mTextures.find(ahb); itr != mTextures.end()) {
+            return itr->second;
+        }
+        return {};
     }
     void pushImage(void* ahb, fvkmemory::resource_ptr<VulkanTexture> tex) { mTextures[ahb] = tex; }
 

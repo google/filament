@@ -1104,6 +1104,7 @@ Handle<HwStream> VulkanDriver::createStreamNative(void* nativeStream, utils::CSt
 }
 
 Handle<HwStream> VulkanDriver::createStreamAcquired(utils::CString tag) {
+    // @TODO This is still not thread-safe. We might have to revisit this question.
     FVK_SYSTRACE_SCOPE();
     auto handle = mResourceManager.allocHandle<VulkanStream>();
     auto stream = resource_ptr<VulkanStream>::make(&mResourceManager, handle);
@@ -1193,7 +1194,6 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
                     texture = newTexture;
                 }
 
-                // Note that we capture the
                 mStreamedImageManager.onStreamAcquireImage(texture, stream);
             });
         }

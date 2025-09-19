@@ -263,15 +263,14 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
     auto& imageData = findImage(mImages, image);
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& binding) {
-                SamplerParams::EqualTo comparator;
-                return (binding.set == set && binding.binding == bindingPoint &&
-                        comparator(samplerParams, binding.samplerParams));
+                return (binding.set == set && binding.binding == bindingPoint);
             });
     if (itr == mSetBindings.end()) {
         mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
     } else {
         // override the image data in the binding point
         itr->image = image;
+        itr->samplerParams = samplerParams;
     }
 }
 
