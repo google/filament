@@ -313,7 +313,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         return;
     }
 
-    auto tag = builder.getName();
+    CString tag{ builder.getName() };
     if (tag.empty()) {
         tag = CString{"FTexture"};
     }
