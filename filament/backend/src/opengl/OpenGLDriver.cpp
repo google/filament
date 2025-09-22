@@ -2478,6 +2478,9 @@ bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
 
 bool OpenGLDriver::isFrameBufferFetchSupported() {
     auto& gl = mContext;
+    if (gl.bugs.disable_framebuffer_fetch_extension) {
+        return false;
+    }
     return gl.ext.EXT_shader_framebuffer_fetch;
 }
 

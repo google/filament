@@ -334,6 +334,12 @@ public:
         // those particular browsers.
         bool disable_depth_precache_for_default_material;
 
+        // On llvmpipe (mesa), enabling framebuffer fetch causes a crash in draw2
+        //   'OpenGL error 0x502 (GL_INVALID_OPERATION) in "draw2" at line 4389'
+        // This coincides with the use of framebuffer fetch (ColorGradingAsSubpass). We disable
+        // framebuffer fetch in the case of llvmpipe.
+        bool disable_framebuffer_fetch_extension;
+
     } bugs = {};
 
     // state getters -- as needed.
@@ -576,6 +582,9 @@ private:
                     ""},
             {   bugs.disable_depth_precache_for_default_material,
                     "disable_depth_precache_for_default_material",
+                    ""},
+            {   bugs.disable_framebuffer_fetch_extension,
+                    "disable_framebuffer_fetch_extension",
                     ""},
     }};
 

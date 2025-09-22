@@ -559,13 +559,22 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         }
 
         if (strstr(vendor, "Mesa")) {
-            // Seen on
-            //  [Mesa],
-            //  [llvmpipe (LLVM 17.0.6, 256 bits)],
-            //  [4.5 (Core Profile) Mesa 24.0.6-1],
-            //  [4.50]
-            // not known which version are affected
-            bugs->rebind_buffer_after_deletion = true;
+            if (strstr(renderer, "llvmpipe")) {
+                // Seen on
+                //  [Mesa],
+                //  [llvmpipe (LLVM 17.0.6, 256 bits)],
+                //  [4.5 (Core Profile) Mesa 24.0.6-1],
+                //  [4.50]
+                // not known which version are affected
+                bugs->rebind_buffer_after_deletion = true;
+
+                // Seen on
+                // [Mesa]
+                // [llvmpipe (LLVM 17.0.6, 256 bits)]
+                // [4.5 (Core Profile) Mesa 24.2.1 (git-c222f7299c)]
+                // [4.50]
+                bugs->disable_framebuffer_fetch_extension = true;
+            }
         }
     } else {
         // When running under ANGLE, it's a different set of workaround that we need.
