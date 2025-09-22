@@ -107,8 +107,11 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
         .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
         .handleTypes = context.getFenceExportFlags()
     };
-    fenceCreateInfo.pNext = &exportFenceCreateInfo;
 
+    // Necessary to guard this. Otherwise, swiftshader would throw an error.
+    if (context.getFenceExportFlags()) {
+        fenceCreateInfo.pNext = &exportFenceCreateInfo;
+    }
     vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
 }
 
