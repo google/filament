@@ -2630,8 +2630,8 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
 
     auto& fs = sc->frameScheduled;
     if (fs.callback) {
-        scheduleCallback(fs.handler, [callback = std::move(fs.callback)]() {
-            callback(PresentCallable{ PresentCallable::noopPresent, nullptr });
+        scheduleCallback(fs.handler, [callback = fs.callback]() {
+            callback->operator()(PresentCallable{ PresentCallable::noopPresent, nullptr });
         });
     }
 
@@ -3827,8 +3827,13 @@ void OpenGLDriver::setFrameScheduledCallback(Handle<HwSwapChain> sch, CallbackHa
         FrameScheduledCallback&& callback, uint64_t /*flags*/) {
     DEBUG_MARKER()
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
+    if (!callback) {
+        sc->frameScheduled.handler = nullptr;
+        sc->frameScheduled.callback.reset();
+        return;
+    }
     sc->frameScheduled.handler = handler;
-    sc->frameScheduled.callback = std::move(callback);
+    sc->frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
 }
 
 void OpenGLDriver::setFrameCompletedCallback(Handle<HwSwapChain>,
