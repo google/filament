@@ -1170,8 +1170,8 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
             // a copy of a resource_ptr<VulkanStream>. We only need it find the associated stream
             // inside the mStreamedImageManager texture bindings
             driver->queueCommand([this, stream, s = stream.get(),
-                                         image = stream->getAcquired().image,
-                                         transform = stream->getFrontEndTransform()]() {
+                                        image = stream->getAcquired().image,
+                                        transform = stream->getFrontEndTransform()]() {
                 auto texture = s->getTexture(image);
                 s->setBackendTransform(transform);
                 if (!texture) {
