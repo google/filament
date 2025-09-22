@@ -616,6 +616,8 @@ private:
     static void initProcs(Procs* procs,
             Extensions const& exts, GLint major, GLint minor) noexcept;
 
+    static void initWorkarounds(Bugs const& bugs, Extensions* ext);
+
     static FeatureLevel resolveFeatureLevel(GLint major, GLint minor,
             Extensions const& exts,
             Gets const& gets,

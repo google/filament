@@ -101,6 +101,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
     initBugs(&bugs, ext, state.major, state.minor,
             state.vendor, state.renderer, state.version, state.shader);
 
+    initWorkarounds(bugs, &ext);
+
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
     glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,  &gets.max_combined_texture_image_units);
@@ -618,6 +620,12 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     // feedback loops are allowed on GL desktop as long as writes are disabled
     bugs->allow_read_only_ancillary_feedback_loop = true;
 #endif
+}
+
+void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext) {
+    if (bugs.disable_framebuffer_fetch_extension) {
+        ext->EXT_shader_framebuffer_fetch = false;
+    }
 }
 
 FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
