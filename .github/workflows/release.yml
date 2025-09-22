@@ -31,7 +31,7 @@ on:
 jobs:
   build-linux:
     name: build-linux
-    runs-on: ubuntu-22.04-32core
+    runs-on: 'ubuntu-24.04-16core'
     if: github.event_name == 'release' || github.event.inputs.platform == 'desktop'
 
     steps:
