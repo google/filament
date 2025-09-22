@@ -26,7 +26,7 @@ jobs:
 
   build-desktop-linux:
     name: build-linux
-    runs-on: ubuntu-22.04-16core
+    runs-on: 'ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
@@ -171,7 +171,7 @@ jobs:
 
   validate-wgsl-webgpu:
     name: validate-wgsl-webgpu
-    runs-on: 'ubuntu-24.04-8core'
+    runs-on: 'ubuntu-24.04-16core'
     steps:
       - uses: actions/checkout@v4.1.6
         with:
