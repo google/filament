@@ -146,6 +146,31 @@ static CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
     cbData->cb(cbData->sync, cbData->userData);
 };
 
+// This needs to be discussed because Vulkan has different default Matrix formats
+// right now this is following GL.
+static void copyMat3f(void* addr, size_t const offset, const math::mat3f& v) noexcept {
+    struct mat43 {
+        float v[3][4];
+    };
+
+    addr = static_cast<char*>(addr) + offset;
+    mat43& temp = *static_cast<mat43*>(addr);
+
+    temp.v[0][0] = v[0][0];
+    temp.v[0][1] = v[0][1];
+    temp.v[0][2] = v[0][2];
+
+    temp.v[1][0] = v[1][0];
+    temp.v[1][1] = v[1][1];
+    temp.v[1][2] = v[1][2];
+
+    temp.v[2][0] = v[2][0];
+    temp.v[2][1] = v[2][1];
+    temp.v[2][2] = v[2][2];
+
+    // don't store anything in temp.v[][3] because there could be uniforms packed there
+}
+
 }// anonymous namespace
 
 #if FVK_ENABLED(FVK_DEBUG_DEBUG_UTILS)
@@ -1474,31 +1499,6 @@ void VulkanDriver::registerBufferObjectStreams(Handle<HwBufferObject> boh,
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     mStreamUniformDescriptors[bo.get()] = std::move(streams);
-}
-
-// This needs to be discussed because Vulkan has different default Matrix formats
-// right now this is following GL.
-static void copyMat3f(void* addr, size_t const offset, const math::mat3f& v) noexcept {
-    struct mat43 {
-        float v[3][4];
-    };
-
-    addr = static_cast<char*>(addr) + offset;
-    mat43& temp = *static_cast<mat43*>(addr);
-
-    temp.v[0][0] = v[0][0];
-    temp.v[0][1] = v[0][1];
-    temp.v[0][2] = v[0][2];
-
-    temp.v[1][0] = v[1][0];
-    temp.v[1][1] = v[1][1];
-    temp.v[1][2] = v[1][2];
-
-    temp.v[2][0] = v[2][0];
-    temp.v[2][1] = v[2][1];
-    temp.v[2][2] = v[2][2];
-
-    // don't store anything in temp.v[][3] because there could be uniforms packed there
 }
 
 void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& bd,
