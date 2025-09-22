@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Framegraph - Filament</title>
+        <title>renderdiff - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,184 +158,138 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="framegraph"><a class="header" href="#framegraph">FrameGraph</a></h1>
-<p>FrameGraph is a framework within Filament for computing resources needed to
-render a frame. The framework enables declaring dependencies between resources.</p>
-<p>For example, when rendering shadows, we would need to first compute and store the
-shadow map into a texture resource, and then the later color pass would then
-sample that texture to attenuate the final output color. That creates a
-dependency on the shadow map from the color pass. Filament uses FrameGraph to
-declare that dependency.</p>
-<h2 id="details"><a class="header" href="#details">Details</a></h2>
-<h3 id="dependency-graph"><a class="header" href="#dependency-graph">Dependency Graph</a></h3>
-<p>The core of this framework is
-<a href="https://github.com/google/filament/blob/main/libs/gltfio/src/DependencyGraph.h">a class that defines a dependency graph</a> — that is, the class
-defines nodes and connections between nodes. This class makes assumptions about
-the types of its nodes. Like many other classes within Filament, this class is
-without virtual function declaration to avoid paying the cost of virtual calls.</p>
-<p>This class has additional functions to detect whether there is a cycle in the
-graph, and it is able to cull unreachable nodes.</p>
-<h3 id="framegraph-1"><a class="header" href="#framegraph-1">FrameGraph</a></h3>
-<p>A frame graph consists of two types of nodes</p>
+                        <h1 id="rendering-difference-test"><a class="header" href="#rendering-difference-test">Rendering Difference Test</a></h1>
+<p>We created a few scripts to run <code>gltf_viewer</code> and produce headless renderings.</p>
+<p>This is mainly useful for continuous integration where GPUs are generally not available on cloud
+machines. To perform software rasterization, these scripts are centered around <a href="https://docs.mesa3d.org">Mesa</a>'s software
+rasterizers, but nothing bars us from using another rasterizer like <a href="https://github.com/google/swiftshader">SwiftShader</a>. Additionally,
+we should be able to use GPUs where available (though this is more of a future work).</p>
+<p>The script <code>render.py</code> contains the core logic for taking input parameters (such as the test
+description file) and then running gltf_viewer to produce the renderings.</p>
+<p>In the <code>test</code> directory is a list of test descriptions that are specified in json.  Please see
+<code>sample.json</code> to parse the structure.</p>
+<h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
+<p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
+renderings, do the following step</p>
 <ul>
-<li>Resource
-<ul>
-<li>This represents a generic resource such as a texture</li>
-<li>90% of the time, this is a texture.</li>
-</ul>
-</li>
-<li>Pass
-<ul>
-<li>This represents a "computation/rendering process"</li>
-<li>It takes a set of resources</li>
-<li>It outputs a set of resources</li>
-</ul>
-</li>
-</ul>
-<p>Edges can be created in the following three directions:</p>
-<ul>
-<li>Resource → Pass = A read</li>
-<li>Pass → Resource = A write</li>
-<li>Resource → Resource = A resource/subresource relationship.</li>
-</ul>
-<h3 id="an-example"><a class="header" href="#an-example">An example</a></h3>
-<p>To better understand FrameGraph, we consider the following graphical
-representation of a real graph. In this graph, blue nodes denote "Resources" and
-orange nodes denote "Passes."</p>
-<p><img src="../images/framegraph.png" alt="Sample frame graph" /></p>
-<p>In this graph, we see that the "Color Pass" takes as input the "Shadowmap",
-which has edges going into it, meaning that it's a texture array. The output of
-the "Color Pass" are "viewRenderTarget" and "Depth Buffer."</p>
-<p>Note that there is an outgoing edge from "viewRenderTarget", where the color
-buffer will be used as input in the post-processing passes. But since "Depth
-Buffer" is not relevant to the rest of the rendering, it does not have an
-outgoing edge.</p>
-<p>Since the graph is guaranteed to be acyclic, we can produce a
-dependency-respecting ordering of the nodes by traversal of the graph (e.g.
-topological sort).</p>
-<h3 id="example-code"><a class="header" href="#example-code">Example code</a></h3>
-<p>We take a snippet of in production code to look through the details of building
-a graph.</p>
-<pre><code>struct StructurePassData {
-    FrameGraphId&lt;FrameGraphTexture&gt; depth;
-    FrameGraphId&lt;FrameGraphTexture&gt; picking;
-};
-
-...
-
-// generate depth pass at the requested resolution
-auto&amp; structurePass = fg.addPass&lt;StructurePassData&gt;("Structure Pass",
-        [&amp;](FrameGraph::Builder&amp; builder, auto&amp; data) {
-            bool const isES2 = mEngine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
-            data.depth = builder.createTexture("Structure Buffer", {
-                    .width = width, .height = height,
-                    .levels = uint8_t(levelCount),
-                    .format = isES2 ? TextureFormat::DEPTH24 : TextureFormat::DEPTH32F });
-
-            // workaround: since we have levels, this implies SAMPLEABLE (because of the gl
-            // backend, which implements non-sampleables with renderbuffers, which don't have levels).
-            // (should the gl driver revert to textures, in that case?)
-            data.depth = builder.write(data.depth,
-                    FrameGraphTexture::Usage::DEPTH_ATTACHMENT | FrameGraphTexture::Usage::SAMPLEABLE);
-
-            if (config.picking) {
-                data.picking = builder.createTexture("Picking Buffer", {
-                        .width = width, .height = height,
-                        .format = isES2 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
-
-                data.picking = builder.write(data.picking,
-                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
-            }
-
-            builder.declareRenderPass("Structure Target", {
-                    .attachments = { .color = { data.picking }, .depth = data.depth },
-                    .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
-            });
-        },
-        [=, renderPass = pass](FrameGraphResources const&amp; resources,
-                auto const&amp;, DriverApi&amp;) mutable {
-            Variant structureVariant(Variant::DEPTH_VARIANT);
-            structureVariant.setPicking(config.picking);
-
-            auto out = resources.getRenderPassInfo();
-            renderPass.setRenderFlags(structureRenderFlags);
-            renderPass.setVariant(structureVariant);
-            renderPass.appendCommands(mEngine, RenderPass::CommandTypeFlags::SSAO);
-            renderPass.sortCommands(mEngine);
-            renderPass.execute(mEngine, resources.getPassName(), out.target, out.params);
-        }
-);
-
+<li>Set up a virtual environment (from the root directory)
+<pre><code>  python3 -m venv venv
+  . ./venv/bin/activate
 </code></pre>
-<p>The <code>addPass</code> method creates a node and it take in two lambda functions as its
-parameter. The first lambda sets up the resources that will be used in the
-execution of the Pass. This lambda is executed immediately and synchronously when
-<code>addPass</code> is called. The second lambda is the actual execution of the pass; it is
-executed when the graph has been completed and is traversed.</p>
-<h3 id="what-does-it-do"><a class="header" href="#what-does-it-do">What does it do?</a></h3>
-<p>In the above, we see through a graph and code what a frame graph looks like and
-how to build it. We provide here a more detailed description of what it does:</p>
-<ul>
-<li>Manages the lifetime of the resources
-<ul>
-<li>Know how the resources are allocated, when it is used, and when it can
-be freed</li>
-</ul>
 </li>
-<li>Calculates the usage bit of the texture resource
-<ul>
-<li>The usage bit is used to indicate what the resources are used for: for
-example, will it be blitted to or sampled from?</li>
-</ul>
+<li>Install the rendering dependencies
+<pre><code>  pip install -r test/renderdiff/src/rendering_requirements.txt
+</code></pre>
 </li>
-<li>Calculates the load/store bits of the rendertargets within a renderpass.
-<ul>
-<li>For example, if we are rendering into a texture, we would want to mark
-it with the bit "keep" as oppose to "discard".</li>
-</ul>
+<li>Install the viewer depdencies
+<pre><code>  pip install -r test/renderdiff/src/viewer_requirements.txt
+</code></pre>
+</li>
+<li>For the commands in the following section, do not exit the virtual environment. Once you've
+completed all your work, you can exit with
+<pre><code>  deactivate
+</code></pre>
 </li>
 </ul>
-<h2 id="additional-details"><a class="header" href="#additional-details">Additional details</a></h2>
+<h2 id="running-the-test-locally"><a class="header" href="#running-the-test-locally">Running the test locally</a></h2>
 <ul>
-<li>In a previous version of FrameGraph, there were only edges between Resource
-and Pass. For example, a Pass and Pass edge would not make logical sense.
-The following iteration, allowed for edges between two Resource nodes to
-indicate that one is a subresource of another (i.e. a layer in a mip-mapped
-texture).</li>
-<li>There are two extra features of FrameGraph that are important but has a lot
-subtlety, and, incidentally, their inclusion added great complexity to the
-implementation
-<ul>
-<li>Importing/exporting resources outside of the graph
-<ul>
-<li>In most cases, the graph and its resources are "alive" for only for
-a frame.</li>
-<li>For techniques like TAA (Temporal Anti-aliasing), we need to be able
-to import past output into the current FrameGraph</li>
-</ul>
+<li>
+<p>To run the same presbumit as <a href="presubmit-renderdiff"><code>test-renderdiff</code></a>, you can do</p>
+<pre><code>bash test/renderdiff/local_test.sh
+</code></pre>
+</li>
+<li>
+<p>This script will generate the renderings based on the current state of your repo.
+Additionally, it will also compare the generated images with corresponding images in the
+golden repo.</p>
+</li>
+<li>
+<p>To just render without running the test, you could use the following script</p>
+<pre><code>bash test/renderdiff/generate.sh
+</code></pre>
 </li>
 </ul>
-</li>
-<li>Future Work
+<h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
+<p>The golden images are stored in a github repository: https://github.com/google/filament-assets.
+Filament team members should have access to write to the repository. A typical flow for updating
+the goldens is to upload your changed images into <strong>branch</strong> of <code>filament-assets</code>. This branch is
+paired with a PR or commit on the <code>filament</code> repo.</p>
+<p>As an example, imagine I am working on a PR, and I've uploaded my change, which is in a branch
+called <code>my-pr-branch</code>, to <code>filament</code>. This PR requires updating the golden. We would do it
+in the following fashion</p>
+<h3 id="using-a-script-to-update-the-golden-repo"><a class="header" href="#using-a-script-to-update-the-golden-repo">Using a script to update the golden repo</a></h3>
 <ul>
-<li>For CPU only passes, explore multi-threading and re-ordering of the Pass
-nodes</li>
-<li>A graphical debugger for online debugging session in the spirit of
-<code>matdbg</code>.</li>
-</ul>
+<li>
+<p>Run interactive mode in the <code>update_golden.py</code> script.</p>
+<pre><code>python3 test/renderdiff/src/update_golden.py
+</code></pre>
 </li>
-<li>"RenderGraph" might be a more fitting name for this framework.</li>
+<li>
+<p>This will guide you through a series of steps to push the changes to a remote branch
+on <code>filament-assets</code>.</p>
+</li>
 </ul>
+<h3 id="manually-updating-the-golden-repo"><a class="header" href="#manually-updating-the-golden-repo">Manually updating the golden repo</a></h3>
+<ul>
+<li>
+<p>Check out the golden repo</p>
+<pre><code>git clone git@github.com:google/filament-assets.git
+</code></pre>
+</li>
+<li>
+<p>Create a branch on the golden repo</p>
+<pre><code>cd filament-assets
+git switch -c my-pr-branch-golden
+</code></pre>
+</li>
+<li>
+<p>Copy the new images to their appropriate place in <code>filament-assets</code></p>
+</li>
+<li>
+<p>Push the <code>filament-assets</code> working branch to remote</p>
+<pre><code>git push origin my-pr-branch-golden
+</code></pre>
+</li>
+<li>
+<p>In the commit message of your working branch on <code>filament</code>, add the following line</p>
+<pre><code>RDIFF_BBRANCH=my-pr-branch-golden
+</code></pre>
+</li>
+</ul>
+<p>Doing the above has multiple effects:</p>
+<ul>
+<li>The presubmit test <a href="https://github.com/google/filament/blob/e85dfe75c86106a05019e13ccdbef67e030af675/.github/workflows/presubmit.yml#L118"><code>test-renderdiff</code></a> will test against the provided
+branch of the golden repo (i.e. <code>my-pr-branch-golden</code>).</li>
+<li>If the PR is merged, then there is another workflow that will merge <code>my-pr-branch-golden</code> to
+the <code>main</code> branch of the golden repo.</li>
+</ul>
+<h2 id="viewing-test-results"><a class="header" href="#viewing-test-results">Viewing test results</a></h2>
+<p>We provide a viewer for looking at the result of a test run. The viewer is a webapp that can be used by
+pointing your browser to a localhost port. If you input the viewer with a PR or a directory, it will
+parse the test result and show the results and the rendered and/or golden images.</p>
+<p><img src="../images/renderdiff_example.png" alt="Viewer" /></p>
+<p>To run the viewer of a test output directory that has been generated locally, you would run the
+following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --diff=[test output]
+</code></pre>
+<p>where <code>[test output]</code> is a directory containing the <code>compare_results.json</code> of the test run.
+For example, it could be <code>out/renderdiff/diffs/presubmit</code> for the standard path to the
+<code>presubmit</code> test output.</p>
+<p>To see the results of a Pull Request initiated test run, you would do the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --pr_number=[PR #] --github_token=[github token]
+</code></pre>
+<p>where <code>[PR #]</code> is the numeric ID of your pull request, and the <code>[github token]</code> is an acess token
+that you (as a github user) needs to generate (<a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">reference</a>).</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../notes/performance_analysis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../notes/tests.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../notes/tests.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../notes/libs.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -345,11 +299,11 @@ nodes</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../notes/performance_analysis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../notes/tests.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../notes/tests.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../notes/libs.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

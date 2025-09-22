@@ -221,7 +221,7 @@ FRenderTarget::FRenderTarget(FEngine& engine, const Builder& builder)
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createRenderTarget(mAttachmentMask,
             builder.mImpl->mWidth, builder.mImpl->mHeight, builder.mImpl->mSamples,
-            builder.mImpl->mLayerCount, mrt, dinfo, {}, builder.getName());
+            builder.mImpl->mLayerCount, mrt, dinfo, {}, utils::CString{ builder.getName() });
 }
 
 void FRenderTarget::terminate(FEngine& engine) {
