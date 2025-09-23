@@ -7,7 +7,7 @@ highp vec4 outPicking;
 #       if MATERIAL_FEATURE_LEVEL == 0
 layout(location = 0) out highp vec4 outPicking;
 #       else
-layout(location = 0) out highp vec2 outPicking;
+layout(location = 0) out highp uvec2 outPicking;
 #       endif
 #   endif
 #else
@@ -63,8 +63,8 @@ void main() {
     outPicking.g = mod(float(object_uniforms_objectId)        , 256.0) / 255.0;
     outPicking.r = vertex_position.z / vertex_position.w;
 #else
-    outPicking.x = intBitsToFloat(object_uniforms_objectId);
-    outPicking.y = vertex_position.z / vertex_position.w;
+    outPicking.x = uint(object_uniforms_objectId);
+    outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
 #endif
 #if __VERSION__ == 100
     gl_FragData[0] = outPicking;
