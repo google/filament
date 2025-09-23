@@ -261,7 +261,17 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
         fvkmemory::resource_ptr<VulkanTexture> image, SamplerParams samplerParams) {
     // Should we do duplicate validation here?
     auto& imageData = findImage(mImages, image);
-    mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
+            [&](SetBindingInfo const& binding) {
+                return (binding.set == set && binding.binding == bindingPoint);
+            });
+    if (itr == mSetBindings.end()) {
+        mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    } else {
+        // override the image data in the binding point
+        itr->image = image;
+        itr->samplerParams = samplerParams;
+    }
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(
