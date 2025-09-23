@@ -26,12 +26,13 @@
 
 namespace filament {
 
-size_t MaterialCache::Key::Hash::operator()(filament::MaterialCache::Key const& x) const noexcept {
-    uint32_t r;
-    if (x.parser->getMaterialCrc32(&r)) {
-        return size_t(r);
+size_t MaterialCache::Key::Hash::operator()(
+        filament::MaterialCache::Key const& key) const noexcept {
+    uint32_t crc;
+    if (key.parser->getMaterialCrc32(&crc)) {
+        return size_t(crc);
     }
-    return size_t(x.parser->computeCrc32());
+    return size_t(key.parser->computeCrc32());
 }
 
 bool MaterialCache::Key::operator==(Key const& rhs) const noexcept {
@@ -39,26 +40,24 @@ bool MaterialCache::Key::operator==(Key const& rhs) const noexcept {
 }
 
 MaterialCache::~MaterialCache() {
-    if (!mInner.empty()) {
+    if (!mDefinitions.empty()) {
         LOG(WARNING) << "MaterialCache was destroyed but wasn't empty";
     }
 }
 
 MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
         const void* UTILS_NONNULL data, size_t size) noexcept {
-    std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(
-            engine.getBackend(), engine.getShaderLanguage(), data, size);
-    if (!parser) {
-        return nullptr;
-    }
+    std::unique_ptr<MaterialParser> parser = MaterialDefinition::createParser(engine.getBackend(),
+            engine.getShaderLanguage(), data, size);
+    assert_invariant(parser);
 
-    return mInner.acquire(Key{parser.get()}, [&engine, parser = std::move(parser)]() mutable {
+    return mDefinitions.acquire(Key{parser.get()}, [&engine, parser = std::move(parser)]() mutable {
         return MaterialDefinition::create(engine, std::move(parser));
     });
 }
 
 void MaterialCache::release(FEngine& engine, MaterialParser const& parser) noexcept {
-    mInner.release(Key{&parser}, [&engine](MaterialDefinition& definition) {
+    mDefinitions.release(Key{&parser}, [&engine](MaterialDefinition& definition) {
         definition.terminate(engine);
     });
 }

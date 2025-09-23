@@ -32,7 +32,6 @@ namespace filament {
 
 class Material;
 
-/** A cache of all materials and shader programs compiled by Filament. */
 class MaterialCache {
     // A newtype around a material parser used as a key for the material cache. The material file's
     // CRC32 is used as the hash function.
@@ -56,11 +55,9 @@ public:
     void release(FEngine& engine, MaterialParser const& parser) noexcept;
 
 private:
-    // Program caches are keyed by the material UUID.
-    //
     // We use unique_ptr here because we need these pointers to be stable.
     // TODO: investigate using a custom allocator here?
-    utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mInner;
+    utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mDefinitions;
 };
 
 } // namespace filament

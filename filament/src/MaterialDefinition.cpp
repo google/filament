@@ -3,6 +3,8 @@
 #include "Froxelizer.h"
 #include "MaterialParser.h"
 
+#include <backend/DriverEnums.h>
+
 #include <ds/ColorPassDescriptorSet.h>
 
 #include <details/Engine.h>
@@ -14,19 +16,6 @@ namespace filament {
 
 using namespace backend;
 using namespace utils;
-
-namespace {
-
-static const char* toString(ShaderModel model) {
-    switch (model) {
-        case ShaderModel::MOBILE:
-            return "mobile";
-        case ShaderModel::DESKTOP:
-            return "desktop";
-    }
-}
-
-} // namespace
 
 std::unique_ptr<MaterialParser> MaterialDefinition::createParser(Backend const backend,
         FixedCapacityVector<ShaderLanguage> languages, const void* data, size_t size) {
@@ -99,7 +88,7 @@ std::unique_ptr<MaterialDefinition> MaterialDefinition::create(FEngine& engine,
         char shaderModelsString[16];
         snprintf(shaderModelsString, sizeof(shaderModelsString), "%#x", shaderModels.getValue());
         LOG(ERROR) << "The material '" << name.c_str_safe() << "' was not built for "
-                   << toString(shaderModel) << ".";
+                   << to_string(shaderModel) << ".";
         LOG(ERROR) << "Compiled material contains shader models " << shaderModelsString << ".";
         return nullptr;
     }

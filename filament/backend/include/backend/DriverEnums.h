@@ -636,6 +636,15 @@ enum class ShaderModel : uint8_t {
 };
 static constexpr size_t SHADER_MODEL_COUNT = 2;
 
+constexpr std::string_view to_string(ShaderModel model) noexcept {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
+
 /**
  * Primitive types
  */
