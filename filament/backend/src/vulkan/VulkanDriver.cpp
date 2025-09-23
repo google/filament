@@ -1141,6 +1141,12 @@ void VulkanDriver::setAcquiredImage(Handle<HwStream> sh, void* image, const math
         CallbackHandler* handler, StreamCallback cb, void* userData) {
     FVK_SYSTRACE_SCOPE();
     auto stream = resource_ptr<VulkanStream>::cast(&mResourceManager, sh);
+    assert_invariant(stream->streamType == StreamType::ACQUIRED);
+    assert_invariant(image != nullptr);
+    // This covers the case where setAcquiredImage is called back to back (no updateStreams in between)
+    if (stream->previousNeedsRelease()) {
+        scheduleRelease(stream->takePrevious());
+    }
     stream->acquire({ image, cb, userData, handler});
     stream->setFrontEndTransform(transform);
     mStreamsWithPendingAcquiredImage.push_back(stream);
