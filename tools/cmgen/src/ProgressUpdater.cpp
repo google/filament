@@ -38,7 +38,6 @@ static void showCursor() {
 
 
 static void showCursorFromSignal(int) {
-    // Только async-signal-safe операции
     const char* show_cursor_seq = "\033[?25h";
     write(STDOUT_FILENO, show_cursor_seq, 6);
     
