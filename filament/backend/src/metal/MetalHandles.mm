@@ -1487,7 +1487,9 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
                                                options:MTLResourceStorageModeShared],
             TrackedMetalBuffer::Type::DESCRIPTOR_SET };
 #if FILAMENT_METAL_DEBUG_LABELS
-        buffer.get().label = @(label.c_str_safe());
+        if (!label.empty()) {
+            buffer.get().label = @(label.c_str_safe());
+        }
 #endif
     }
     [encoder setArgumentBuffer:buffer.get() offset:0];

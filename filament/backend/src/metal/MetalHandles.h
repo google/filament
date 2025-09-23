@@ -492,6 +492,9 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     void setLabel(const utils::CString& l) {
 #if FILAMENT_METAL_DEBUG_LABELS
+        if (l.empty()) {
+            return;
+        }
         label = l;
 #endif
     }
