@@ -531,6 +531,18 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 #endif
 };
 
+
+struct MetalMemoryMappedBuffer : public HwMemoryMappedBuffer {
+    MetalMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
+            size_t const size, MapBufferAccessFlags const access)
+        : boh(boh), access(access), size(size), offset(offset) {
+    }
+    BufferObjectHandle boh{};
+    MapBufferAccessFlags access{};
+    uint32_t size = 0;
+    uint32_t offset = 0;
+};
+
 } // namespace backend
 } // namespace filament
 
