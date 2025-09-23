@@ -275,22 +275,7 @@ public:
 
         switch (mConfig.preferredShaderLanguage) {
             case Config::ShaderLanguage::DEFAULT:
-                switch (mBackend) {
-                    case Backend::DEFAULT:
-                    case Backend::OPENGL:
-                    case Backend::NOOP:
-                        preferredLanguage = backend::ShaderLanguage::ESSL3;
-                        break;
-                    case Backend::VULKAN:
-                        preferredLanguage = backend::ShaderLanguage::SPIRV;
-                        break;
-                    case Backend::METAL:
-                        preferredLanguage = backend::ShaderLanguage::MSL;
-                        break;
-                    case Backend::WEBGPU:
-                        preferredLanguage = backend::ShaderLanguage::WGSL;
-                        break;
-                }
+                preferredLanguage = backend::ShaderLanguage::UNSPECIFIED;
                 break;
             case Config::ShaderLanguage::MSL:
                 preferredLanguage = backend::ShaderLanguage::MSL;
