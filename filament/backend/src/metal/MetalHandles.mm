@@ -1492,6 +1492,11 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
         buffer = { [context.device newBufferWithLength:encoder.encodedLength
                                                options:MTLResourceStorageModeShared],
             TrackedMetalBuffer::Type::DESCRIPTOR_SET };
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (!label.empty()) {
+            buffer.get().label = @(label.c_str_safe());
+        }
+#endif
     }
     [encoder setArgumentBuffer:buffer.get() offset:0];
 

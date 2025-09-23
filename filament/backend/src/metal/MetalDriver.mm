@@ -441,6 +441,7 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
     FILAMENT_CHECK_POSTCONDITION(buffer.wasAllocationSuccessful())
             << "Could not allocate Metal index buffer of size " << buffer.getSize()
             << ", tag=" << tag.c_str_safe();
+    buffer.setLabel(tag);
     mHandleAllocator.associateTagToHandle(ibh.getId(), std::move(tag));
 }
 
@@ -451,6 +452,7 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
     FILAMENT_CHECK_POSTCONDITION(bufferObject->getBuffer()->wasAllocationSuccessful())
             << "Could not allocate Metal buffer of size " << byteCount
             << ", tag=" << tag.c_str_safe();
+    bufferObject->getBuffer()->setLabel(tag);
     mHandleAllocator.associateTagToHandle(boh.getId(), std::move(tag));
 }
 
@@ -491,8 +493,11 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    mContext->textures.insert(construct_handle<MetalTexture>(
-            th, *mContext, target, levels, format, samples, width, height, depth, usage));
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, target, levels, format,
+            samples, width, height, depth, usage);
+    mContext->textures.insert(texture);
+
+    texture->setLabel(tag);
 
     DEBUG_LOG(
             "createTextureR(th = %d, target = %s, levels = %d, format = ?, samples = %d, width = "
@@ -505,8 +510,10 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
 void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount, utils::CString&& tag) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
-    mContext->textures.insert(
-            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount));
+    MetalTexture* texture =
+            construct_handle<MetalTexture>(th, *mContext, src, baseLevel, levelCount);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
@@ -514,7 +521,9 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
         backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
         backend::TextureSwizzle a, utils::CString&& tag) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a));
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, src, r, g, b, a);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
@@ -529,8 +538,10 @@ void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
 void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::SamplerType target,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, utils::CString&& tag) {
-    mContext->textures.insert(construct_handle<MetalTexture>(
-            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image));
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, format, width, height,
+            usage, (CVPixelBufferRef) image);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
     // This release matches the retain call in setupExternalImage. The MetalTexture will have
     // retained the buffer by now.
     CVPixelBufferRelease((CVPixelBufferRef)image);
@@ -540,8 +551,10 @@ void MetalDriver::createTextureExternalImageR(Handle<HwTexture> th, backend::Sam
 void MetalDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         backend::TextureFormat format, uint32_t width, uint32_t height, backend::TextureUsage usage,
         void* image, uint32_t plane, utils::CString&& tag) {
-    mContext->textures.insert(construct_handle<MetalTexture>(
-            th, *mContext, format, width, height, usage, (CVPixelBufferRef)image, plane));
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, format, width, height,
+            usage, (CVPixelBufferRef) image, plane);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
     // This release matches the retain call in setupExternalImage. The MetalTexture will have
     // retained the buffer by now.
     CVPixelBufferRelease((CVPixelBufferRef)image);
@@ -566,8 +579,10 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     FILAMENT_CHECK_PRECONDITION(metalTexture.textureType == filamentMetalType)
             << "Imported id<MTLTexture> type (" << metalTexture.textureType
             << ") != Filament texture type (" << filamentMetalType << ")";
-    mContext->textures.insert(construct_handle<MetalTexture>(th, *mContext,
-        target, levels, format, samples, width, height, depth, usage, metalTexture));
+    MetalTexture* texture = construct_handle<MetalTexture>(th, *mContext, target, levels, format,
+            samples, width, height, depth, usage, metalTexture);
+    mContext->textures.insert(texture);
+    texture->setLabel(tag);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
@@ -746,7 +761,8 @@ void MetalDriver::createDescriptorSetR(
         Handle<HwDescriptorSet> dsh, Handle<HwDescriptorSetLayout> dslh, utils::CString&& tag) {
     DEBUG_LOG("createDescriptorSetR(dsh = %d, dslh = %d)\n", dsh.getId(), dslh.getId());
     MetalDescriptorSetLayout* layout = handle_cast<MetalDescriptorSetLayout>(dslh);
-    construct_handle<MetalDescriptorSet>(dsh, layout);
+    MetalDescriptorSet* ds = construct_handle<MetalDescriptorSet>(dsh, layout);
+    ds->setLabel(tag);
     mHandleAllocator.associateTagToHandle(dsh.getId(), std::move(tag));
 }
 
