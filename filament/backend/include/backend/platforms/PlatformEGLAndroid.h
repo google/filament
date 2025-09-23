@@ -58,6 +58,17 @@ public:
 
     ExternalImageDescAndroid UTILS_PUBLIC getExternalImageDesc(ExternalImageHandle externalImage) noexcept;
 
+    /**
+     * Converts a sync to an external file descriptor, if possible. Accepts an
+     * opaque handle to a sync, as well as a pointer to where the fd should be
+     * stored.
+     * @param sync The sync to be converted to a file descriptor.
+     * @param fd   A pointer to where the file descriptor should be stored.
+     * @return `true` on success, `false` on failure. The default implementation
+     *         returns `false`.
+     */
+    bool convertSyncToFd(Platform::Sync* sync, int* fd) noexcept;
+
 protected:
     // --------------------------------------------------------------------------------------------
     // Platform Interface
@@ -74,6 +85,10 @@ protected:
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
+    struct SyncEGLAndroid : public Platform::Sync {
+        EGLSyncKHR sync;
+    };
+
     void terminate() noexcept override;
 
     void beginFrame(
@@ -89,9 +104,10 @@ protected:
      */
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept override;
 
-
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
+    Platform::Sync* createSync() noexcept override;
+    void destroySync(Platform::Sync* sync) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;

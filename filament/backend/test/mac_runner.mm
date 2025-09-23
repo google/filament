@@ -47,7 +47,7 @@ test::NativeView getNativeView() {
         nativeView.ptr = (void*) view.layer;
     }
     if (self.backend == test::Backend::VULKAN) {
-        nativeView.ptr = (void*) view;
+        nativeView.ptr = (void*) view.layer;
     }
     if (self.backend == test::Backend::WEBGPU) {
         nativeView.ptr = (void*) view.layer;

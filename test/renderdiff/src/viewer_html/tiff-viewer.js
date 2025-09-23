@@ -29,14 +29,21 @@ export class TiffViewer extends LitElement {
 
   static properties = {
     fileurl: {type: String, attribute: 'fileurl'},
+    name: {type: String, attribute: 'name'},
+    failedToFetch: {type: Boolean },
   };
 
   constructor() {
     super();
     this.fileurl = null;
+    this.name = null;
+    this.failedToFetch = false;
   }
 
   render() {
+    if (this.failedToFetch) {
+      return html``;
+    }
     return html`<canvas id="tiffCanvas"></canvas>`;
   }
 
@@ -47,7 +54,33 @@ export class TiffViewer extends LitElement {
   }
 
   async _updateImage(fileurl) {
-    const fileblob = await ((await fetch(this.fileurl)).arrayBuffer());
+    this.failedToFetch = false;
+    let fileblob = null;
+    try {
+      let res = await fetch(this.fileurl);
+      if (!res.ok) {
+        throw new Error(`Could not find ${this.fileurl}`);
+      }
+      fileblob = await res.arrayBuffer();
+    } catch (error) {
+      this.failedToFetch = true;
+    }
+    if (!fileblob) {
+      const event = new CustomEvent('url-miss', {
+        detail: { value: fileurl },
+        bubbles: true,
+        composed: true,
+      });
+      this.dispatchEvent(event);
+      return;
+    } else {
+      const event = new CustomEvent('url-hit', {
+        detail: { value: fileurl },
+        bubbles: true,
+        composed: true,
+      });
+      this.dispatchEvent(event);
+    }
     const canvas = this.shadowRoot.getElementById('tiffCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -78,6 +111,15 @@ export class TiffViewer extends LitElement {
 
       const imageData = new ImageData(new Uint8ClampedArray(rgba), firstImage.width, firstImage.height);
       ctx.putImageData(imageData, 0, 0);
+
+      this.dispatchEvent(new CustomEvent('image-loaded', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          name: this.name,
+          img: imageData,
+        }
+      }));
     } catch (error) {
       console.error('Error processing TIFF file:', error);
       this._clearCanvas();

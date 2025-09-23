@@ -7,6 +7,17 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.65.2
+
+
+## v1.65.1
+
+- `setFrameScheduledCallback` now works on all backends (frame presentation scheduling is still only
+  available on Metal). Non-Metal backends can use the callback to be notified when Filament has
+  finished processing a frame on the CPU.
+- materials: added `getEyeFromViewMatrix()` for vertex shader [⚠️ **Recompile Materials**]
+- matc: make `--workarounds=none` the default [**Recompile Materials to take effect**]
+
 ## v1.65.0
 
 lighting: the intermediate froxel record buffer is now dynamically sized [⚠️ **New Material Version**]

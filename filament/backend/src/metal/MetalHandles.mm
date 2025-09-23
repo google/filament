@@ -295,6 +295,12 @@ void MetalSwapChain::ensureDepthStencilTexture() {
 
 void MetalSwapChain::setFrameScheduledCallback(
         CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+    if (!callback) {
+        frameScheduled.handler = nullptr;
+        frameScheduled.callback.reset();
+        frameScheduled.flags = 0;
+        return;
+    }
     frameScheduled.handler = handler;
     frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     frameScheduled.flags = flags;

@@ -98,8 +98,9 @@ protected:
     void terminate() noexcept override;
 
     bool isProtectedContextSupported() const noexcept override;
-
     bool isSRGBSwapChainSupported() const noexcept override;
+    bool isMSAASwapChainSupported(uint32_t samples) const noexcept override;
+
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
@@ -167,6 +168,7 @@ protected:
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
     std::vector<EGLContext> mAdditionalContexts;
+    bool mMSAA4XSupport = false;
 
     // supported extensions detected at runtime
     struct {
@@ -217,6 +219,8 @@ private:
             return makeCurrent(mCurrentContext, drawSurface, readSurface);
         }
     } egl{ mEGLDisplay };
+
+    bool checkIfMSAASwapChainSupported(uint32_t samples) const noexcept;
 };
 
 } // namespace filament::backend

@@ -108,6 +108,10 @@ size_t RenderableManager::getPrimitiveCount(Instance const instance) const noexc
     return downcast(this)->getPrimitiveCount(instance, 0);
 }
 
+size_t RenderableManager::getInstanceCount(Instance instance) const noexcept {
+    return downcast(this)->getInstanceCount(instance);
+}
+
 void RenderableManager::setMaterialInstanceAt(Instance const instance,
         size_t const primitiveIndex, MaterialInstance const* materialInstance) {
     downcast(this)->setMaterialInstanceAt(instance, 0, primitiveIndex, downcast(materialInstance));

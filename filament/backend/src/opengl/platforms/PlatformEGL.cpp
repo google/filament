@@ -322,6 +322,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
 
     mCurrentContextType = ContextType::UNPROTECTED;
     mContextAttribs = std::move(contextAttribs);
+    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
 
     initializeGlExtensions();
 
@@ -448,6 +449,11 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbu
         configAttribs[EGL_RECORDABLE_ANDROID] = EGL_TRUE;
     }
 
+    if (flags & SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        configAttribs[EGL_SAMPLE_BUFFERS] = 1;
+        configAttribs[EGL_SAMPLES] = 4;
+    }
+
     if (UTILS_UNLIKELY(
             !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount))) {
         logEglError("eglChooseConfig");
@@ -481,11 +487,25 @@ bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
     return ext.egl.KHR_gl_colorspace;
 }
 
+bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
+    if (samples <= 1) {
+        return true;
+    }
+
+    if (samples == 4) {
+        return mMSAA4XSupport;
+    }
+
+    return false;
+}
+
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
 
     Config attribs;
-    if (ext.egl.KHR_gl_colorspace) {
+
+    // Remove flags for unsupported features.
+    if (isSRGBSwapChainSupported()) {
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
         }
@@ -493,7 +513,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
     }
 
-    if (ext.egl.EXT_protected_content) {
+    if (isProtectedContextSupported()) {
         if (flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
             attribs[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
         }
@@ -501,6 +521,13 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
+    if (flags & SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        if (!isMSAASwapChainSupported(4)) {
+            flags &= ~SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
+        }
+    }
+
+    // Retrieve a config for the given flags.
     EGLConfig config = EGL_NO_CONFIG_KHR;
     if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
         config = findSwapChainConfig(flags, true, false);
@@ -787,6 +814,38 @@ EGLContext PlatformEGL::getContextForType(ContextType type) const noexcept {
         case ContextType::PROTECTED:
             return mEGLContextProtected;
     }
+}
+
+bool PlatformEGL::checkIfMSAASwapChainSupported(uint32_t samples) const noexcept {
+    // Retrieve the config to see if the given number of samples is supported. The result is cached.
+    Config configAttribs = {
+            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
+            { EGL_RED_SIZE,        8 },
+            { EGL_GREEN_SIZE,      8 },
+            { EGL_BLUE_SIZE,       8 },
+            { EGL_DEPTH_SIZE,      24 },
+            { EGL_SAMPLE_BUFFERS,  1 },
+            { EGL_SAMPLES,         (EGLint)samples },
+    };
+
+    if (!ext.egl.KHR_no_config_context) {
+        if (isOpenGL()) {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
+        } else {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
+            if (ext.egl.KHR_create_context) {
+                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+            }
+        }
+    }
+
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    EGLint configsCount;
+    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
+        return false;
+    }
+
+    return configsCount > 0;
 }
 
 // ---------------------------------------------------------------------------------------------

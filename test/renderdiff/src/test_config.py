@@ -76,9 +76,12 @@ class TestConfig(RenderingConfig):
       given_presets = {p.name: p for p in presets}
       assert all((name in given_presets) for name in apply_presets),\
         f'used preset {name} which is not in {given_presets}'
+
+      # Note that this needs to applied in order.  Models will be overwritten.
+      # Properties will be "added" in order.
       for preset in apply_presets:
         rendering.update(given_presets[preset].rendering)
-        preset_models += given_presets[preset].models
+        preset_models = given_presets[preset].models
 
     assert 'rendering' in data
     rendering.update(data['rendering'])
