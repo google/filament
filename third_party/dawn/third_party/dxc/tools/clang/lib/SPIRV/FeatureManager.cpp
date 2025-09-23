@@ -214,6 +214,7 @@ Extension FeatureManager::getExtensionSymbol(llvm::StringRef name) {
       .Case("SPV_EXT_shader_image_int64", Extension::EXT_shader_image_int64)
       .Case("SPV_KHR_physical_storage_buffer",
             Extension::KHR_physical_storage_buffer)
+      .Case("SPV_AMDX_shader_enqueue", Extension::AMD_shader_enqueue)
       .Case("SPV_KHR_vulkan_memory_model", Extension::KHR_vulkan_memory_model)
       .Case("SPV_KHR_compute_shader_derivatives",
             Extension::KHR_compute_shader_derivatives)
@@ -226,6 +227,7 @@ Extension FeatureManager::getExtensionSymbol(llvm::StringRef name) {
       .Case("SPV_KHR_float_controls", Extension::KHR_float_controls)
       .Case("SPV_NV_shader_subgroup_partitioned",
             Extension::NV_shader_subgroup_partitioned)
+      .Case("SPV_KHR_quad_control", Extension::KHR_quad_control)
       .Default(Extension::Unknown);
 }
 
@@ -283,6 +285,8 @@ const char *FeatureManager::getExtensionName(Extension symbol) {
     return "SPV_EXT_shader_image_int64";
   case Extension::KHR_physical_storage_buffer:
     return "SPV_KHR_physical_storage_buffer";
+  case Extension::AMD_shader_enqueue:
+    return "SPV_AMDX_shader_enqueue";
   case Extension::KHR_vulkan_memory_model:
     return "SPV_KHR_vulkan_memory_model";
   case Extension::KHR_compute_shader_derivatives:
@@ -297,6 +301,8 @@ const char *FeatureManager::getExtensionName(Extension symbol) {
     return "SPV_KHR_float_controls";
   case Extension::NV_shader_subgroup_partitioned:
     return "SPV_NV_shader_subgroup_partitioned";
+  case Extension::KHR_quad_control:
+    return "SPV_KHR_quad_control";
   default:
     break;
   }

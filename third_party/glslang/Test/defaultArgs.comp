@@ -1,0 +1,12 @@
+#version 450
+
+void foo(int n, int x = 2)
+{
+}
+
+void main()
+{
+  foo(6);
+  foo(7);
+  foo(8, 3);
+}

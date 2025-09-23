@@ -116,6 +116,10 @@ using ValidateCapabilityOpenGL40 = spvtest::ValidateBase<CapTestParameter>;
 using ValidateCapabilityVulkan11 = spvtest::ValidateBase<CapTestParameter>;
 // Always assembles using Vulkan 1.2.
 using ValidateCapabilityVulkan12 = spvtest::ValidateBase<CapTestParameter>;
+// Always assembles using Vulkan 1.3.
+using ValidateCapabilityVulkan13 = spvtest::ValidateBase<CapTestParameter>;
+// Always assembles using Vulkan 1.4.
+using ValidateCapabilityVulkan14 = spvtest::ValidateBase<CapTestParameter>;
 
 TEST_F(ValidateCapability, Default) {
   const char str[] = R"(
@@ -322,6 +326,119 @@ const std::vector<std::string>& AllSpirV15Capabilities() {
     "InputAttachmentArrayNonUniformIndexing",
     "UniformTexelBufferArrayNonUniformIndexing",
     "StorageTexelBufferArrayNonUniformIndexing"};
+  return *r;
+}
+
+const std::vector<std::string>& AllSpirV16Capabilities() {
+  static const auto r = new std::vector<std::string>{
+    "",
+    "Matrix",
+    "Shader",
+    "Geometry",
+    "Tessellation",
+    "Addresses",
+    "Linkage",
+    "Kernel",
+    "Vector16",
+    "Float16Buffer",
+    "Float16",
+    "Float64",
+    "Int64",
+    "Int64Atomics",
+    "ImageBasic",
+    "ImageReadWrite",
+    "ImageMipmap",
+    "Pipes",
+    "Groups",
+    "DeviceEnqueue",
+    "LiteralSampler",
+    "AtomicStorage",
+    "Int16",
+    "TessellationPointSize",
+    "GeometryPointSize",
+    "ImageGatherExtended",
+    "StorageImageMultisample",
+    "UniformBufferArrayDynamicIndexing",
+    "SampledImageArrayDynamicIndexing",
+    "StorageBufferArrayDynamicIndexing",
+    "StorageImageArrayDynamicIndexing",
+    "ClipDistance",
+    "CullDistance",
+    "ImageCubeArray",
+    "SampleRateShading",
+    "ImageRect",
+    "SampledRect",
+    "GenericPointer",
+    "Int8",
+    "InputAttachment",
+    "SparseResidency",
+    "MinLod",
+    "Sampled1D",
+    "Image1D",
+    "SampledCubeArray",
+    "SampledBuffer",
+    "ImageBuffer",
+    "ImageMSArray",
+    "StorageImageExtendedFormats",
+    "ImageQuery",
+    "DerivativeControl",
+    "InterpolationFunction",
+    "TransformFeedback",
+    "GeometryStreams",
+    "StorageImageReadWithoutFormat",
+    "StorageImageWriteWithoutFormat",
+    "MultiViewport",
+    "SubgroupDispatch",
+    "NamedBarrier",
+    "PipeStorage",
+    "GroupNonUniform",
+    "GroupNonUniformVote",
+    "GroupNonUniformArithmetic",
+    "GroupNonUniformBallot",
+    "GroupNonUniformShuffle",
+    "GroupNonUniformShuffleRelative",
+    "GroupNonUniformClustered",
+    "GroupNonUniformQuad",
+    "DrawParameters",
+    "StorageBuffer16BitAccess",
+    "StorageUniformBufferBlock16",
+    "UniformAndStorageBuffer16BitAccess",
+    "StorageUniform16",
+    "StoragePushConstant16",
+    "StorageInputOutput16",
+    "DeviceGroup",
+    "MultiView",
+    "VariablePointersStorageBuffer",
+    "VariablePointers",
+    "DenormPreserve",
+    "DenormFlushToZero",
+    "SignedZeroInfNanPreserve",
+    "RoundingModeRTE",
+    "RoundingModeRTZ",
+    // Omitted due to extra validation requirements on memory model.
+    //"VulkanMemoryModel",
+    //"VulkanMemoryModelDeviceScope",
+    "StorageBuffer8BitAccess",
+    "UniformAndStorageBuffer8BitAccess",
+    "StoragePushConstant8",
+    "ShaderViewportIndex",
+    "ShaderLayer",
+    "PhysicalStorageBufferAddresses",
+    "RuntimeDescriptorArray",
+    "UniformTexelBufferArrayDynamicIndexing",
+    "StorageTexelBufferArrayDynamicIndexing",
+    "UniformBufferArrayNonUniformIndexing",
+    "SampledImageArrayNonUniformIndexing",
+    "StorageBufferArrayNonUniformIndexing",
+    "StorageImageArrayNonUniformIndexing",
+    "InputAttachmentArrayNonUniformIndexing",
+    "UniformTexelBufferArrayNonUniformIndexing",
+    "StorageTexelBufferArrayNonUniformIndexing",
+    "DotProduct",
+    "DotProductInputAll",
+    "DotProductInput4x8Bit",
+    "DotProductInput4x8BitPacked"
+  };
   return *r;
 }
 
@@ -583,6 +700,194 @@ const std::vector<std::string>& AllVulkan12Capabilities() {
     "InputAttachmentArrayNonUniformIndexing",
     "UniformTexelBufferArrayNonUniformIndexing",
     "StorageTexelBufferArrayNonUniformIndexing"};
+  return *r;
+}
+
+const std::vector<std::string>& AllVulkan13Capabilities() {
+  static const auto r = new std::vector<std::string>{
+    "",
+    "Matrix",
+    "Shader",
+    "InputAttachment",
+    "Sampled1D",
+    "Image1D",
+    "SampledBuffer",
+    "ImageBuffer",
+    "ImageQuery",
+    "DerivativeControl",
+    "Geometry",
+    "Tessellation",
+    "Float16",
+    "Float64",
+    "Int64",
+    "Int64Atomics",
+    "Int16",
+    "TessellationPointSize",
+    "GeometryPointSize",
+    "ImageGatherExtended",
+    "StorageImageMultisample",
+    "UniformBufferArrayDynamicIndexing",
+    "SampledImageArrayDynamicIndexing",
+    "StorageBufferArrayDynamicIndexing",
+    "StorageImageArrayDynamicIndexing",
+    "ClipDistance",
+    "CullDistance",
+    "ImageCubeArray",
+    "SampleRateShading",
+    "Int8",
+    "SparseResidency",
+    "MinLod",
+    "SampledCubeArray",
+    "ImageMSArray",
+    "StorageImageExtendedFormats",
+    "InterpolationFunction",
+    "StorageImageReadWithoutFormat",
+    "StorageImageWriteWithoutFormat",
+    "MultiViewport",
+    "GroupNonUniform",
+    "GroupNonUniformVote",
+    "GroupNonUniformArithmetic",
+    "GroupNonUniformBallot",
+    "GroupNonUniformShuffle",
+    "GroupNonUniformShuffleRelative",
+    "GroupNonUniformClustered",
+    "GroupNonUniformQuad",
+    "DrawParameters",
+    "StorageBuffer16BitAccess",
+    "StorageUniformBufferBlock16",
+    "UniformAndStorageBuffer16BitAccess",
+    "StorageUniform16",
+    "StoragePushConstant16",
+    "StorageInputOutput16",
+    "DeviceGroup",
+    "MultiView",
+    "VariablePointersStorageBuffer",
+    "VariablePointers",
+    "TransformFeedback",
+    "GeometryStreams",
+    "DenormPreserve",
+    "DenormFlushToZero",
+    "SignedZeroInfNanPreserve",
+    "RoundingModeRTE",
+    "RoundingModeRTZ",
+    "VulkanMemoryModel",
+    "VulkanMemoryModelDeviceScope",
+    "StorageBuffer8BitAccess",
+    "UniformAndStorageBuffer8BitAccess",
+    "StoragePushConstant8",
+    "ShaderViewportIndex",
+    "ShaderLayer",
+    "PhysicalStorageBufferAddresses",
+    "RuntimeDescriptorArray",
+    "UniformTexelBufferArrayDynamicIndexing",
+    "StorageTexelBufferArrayDynamicIndexing",
+    "UniformBufferArrayNonUniformIndexing",
+    "SampledImageArrayNonUniformIndexing",
+    "StorageBufferArrayNonUniformIndexing",
+    "StorageImageArrayNonUniformIndexing",
+    "InputAttachmentArrayNonUniformIndexing",
+    "UniformTexelBufferArrayNonUniformIndexing",
+    "StorageTexelBufferArrayNonUniformIndexing",
+    "DotProduct",
+    "DotProductInputAll",
+    "DotProductInput4x8Bit",
+    "DotProductInput4x8BitPacked",
+    "DemoteToHelperInvocation",
+  };
+  return *r;
+}
+
+const std::vector<std::string>& AllVulkan14Capabilities() {
+  static const auto r = new std::vector<std::string>{
+    "",
+    "Matrix",
+    "Shader",
+    "InputAttachment",
+    "Sampled1D",
+    "Image1D",
+    "SampledBuffer",
+    "ImageBuffer",
+    "ImageQuery",
+    "DerivativeControl",
+    "Geometry",
+    "Tessellation",
+    "Float16",
+    "Float64",
+    "Int64",
+    "Int64Atomics",
+    "Int16",
+    "TessellationPointSize",
+    "GeometryPointSize",
+    "ImageGatherExtended",
+    "StorageImageMultisample",
+    "UniformBufferArrayDynamicIndexing",
+    "SampledImageArrayDynamicIndexing",
+    "StorageBufferArrayDynamicIndexing",
+    "StorageImageArrayDynamicIndexing",
+    "ClipDistance",
+    "CullDistance",
+    "ImageCubeArray",
+    "SampleRateShading",
+    "Int8",
+    "SparseResidency",
+    "MinLod",
+    "SampledCubeArray",
+    "ImageMSArray",
+    "StorageImageExtendedFormats",
+    "InterpolationFunction",
+    "StorageImageReadWithoutFormat",
+    "StorageImageWriteWithoutFormat",
+    "MultiViewport",
+    "GroupNonUniform",
+    "GroupNonUniformVote",
+    "GroupNonUniformArithmetic",
+    "GroupNonUniformBallot",
+    "GroupNonUniformShuffle",
+    "GroupNonUniformShuffleRelative",
+    "GroupNonUniformClustered",
+    "GroupNonUniformQuad",
+    "DrawParameters",
+    "StorageBuffer16BitAccess",
+    "StorageUniformBufferBlock16",
+    "UniformAndStorageBuffer16BitAccess",
+    "StorageUniform16",
+    "StoragePushConstant16",
+    "StorageInputOutput16",
+    "DeviceGroup",
+    "MultiView",
+    "VariablePointersStorageBuffer",
+    "VariablePointers",
+    "TransformFeedback",
+    "GeometryStreams",
+    "DenormPreserve",
+    "DenormFlushToZero",
+    "SignedZeroInfNanPreserve",
+    "RoundingModeRTE",
+    "RoundingModeRTZ",
+    "VulkanMemoryModel",
+    "VulkanMemoryModelDeviceScope",
+    "StorageBuffer8BitAccess",
+    "UniformAndStorageBuffer8BitAccess",
+    "StoragePushConstant8",
+    "ShaderViewportIndex",
+    "ShaderLayer",
+    "PhysicalStorageBufferAddresses",
+    "RuntimeDescriptorArray",
+    "UniformTexelBufferArrayDynamicIndexing",
+    "StorageTexelBufferArrayDynamicIndexing",
+    "UniformBufferArrayNonUniformIndexing",
+    "SampledImageArrayNonUniformIndexing",
+    "StorageBufferArrayNonUniformIndexing",
+    "StorageImageArrayNonUniformIndexing",
+    "InputAttachmentArrayNonUniformIndexing",
+    "UniformTexelBufferArrayNonUniformIndexing",
+    "StorageTexelBufferArrayNonUniformIndexing",
+    "DotProduct",
+    "DotProductInputAll",
+    "DotProductInput4x8Bit",
+    "DotProductInput4x8BitPacked",
+    "DemoteToHelperInvocation",
+  };
   return *r;
 }
 
@@ -1940,6 +2245,54 @@ std::make_pair(std::string(kGLSL450MemoryModel) +
           AllVulkan12Capabilities())
 )));
 
+INSTANTIATE_TEST_SUITE_P(Capabilities, ValidateCapabilityVulkan13,
+                        Combine(
+                            // All capabilities to try.
+                            ValuesIn(AllSpirV16Capabilities()),
+                            Values(
+std::make_pair(std::string(kGLSL450MemoryModel) +
+          "OpEntryPoint Vertex %func \"shader\" %var\n" +
+          "OpDecorate %var BuiltIn PointSize\n"
+          "%float = OpTypeFloat 32\n"
+          "%ptr_output_float = OpTypePointer Output %float\n"
+          "%var = OpVariable %ptr_output_float Output\n" + std::string(kVoidFVoid),
+          AllVulkan13Capabilities()),
+std::make_pair(std::string(kGLSL450MemoryModel) +
+          "OpEntryPoint Vertex %func \"shader\" %var\n" +
+          "OpDecorate %var BuiltIn CullDistance\n"
+          "%float = OpTypeFloat 32\n"
+          "%int = OpTypeInt 32 0\n"
+          "%int_1 = OpConstant %int 1\n"
+          "%array = OpTypeArray %float %int_1\n"
+          "%ptr = OpTypePointer Output %array\n"
+          "%var = OpVariable %ptr Output\n" + std::string(kVoidFVoid),
+          AllVulkan13Capabilities())
+)));
+
+INSTANTIATE_TEST_SUITE_P(Capabilities, ValidateCapabilityVulkan14,
+                        Combine(
+                            // All capabilities to try.
+                            ValuesIn(AllSpirV16Capabilities()),
+                            Values(
+std::make_pair(std::string(kGLSL450MemoryModel) +
+          "OpEntryPoint Vertex %func \"shader\" %var\n" +
+          "OpDecorate %var BuiltIn PointSize\n"
+          "%float = OpTypeFloat 32\n"
+          "%ptr_output_float = OpTypePointer Output %float\n"
+          "%var = OpVariable %ptr_output_float Output\n" + std::string(kVoidFVoid),
+          AllVulkan14Capabilities()),
+std::make_pair(std::string(kGLSL450MemoryModel) +
+          "OpEntryPoint Vertex %func \"shader\" %var\n" +
+          "OpDecorate %var BuiltIn CullDistance\n"
+          "%float = OpTypeFloat 32\n"
+          "%int = OpTypeInt 32 0\n"
+          "%int_1 = OpConstant %int 1\n"
+          "%array = OpTypeArray %float %int_1\n"
+          "%ptr = OpTypePointer Output %array\n"
+          "%var = OpVariable %ptr Output\n" + std::string(kVoidFVoid),
+          AllVulkan14Capabilities())
+)));
+
 // TODO(umar): Selection Control
 // TODO(umar): Loop Control
 // TODO(umar): Function Control
@@ -2017,24 +2370,16 @@ INSTANTIATE_TEST_SUITE_P(
 // TODO(umar): Instruction capability checks
 
 spv_result_t spvCoreOperandTableNameLookup(spv_target_env env,
-                                           const spv_operand_table table,
                                            const spv_operand_type_t type,
                                            const char* name,
                                            const size_t nameLength) {
-  if (!table) return SPV_ERROR_INVALID_TABLE;
   if (!name) return SPV_ERROR_INVALID_POINTER;
 
-  for (uint64_t typeIndex = 0; typeIndex < table->count; ++typeIndex) {
-    const auto& group = table->types[typeIndex];
-    if (type != group.type) continue;
-    for (uint64_t index = 0; index < group.count; ++index) {
-      const auto& entry = group.entries[index];
-      // Check for min version only.
-      if (spvVersionForTargetEnv(env) >= entry.minVersion &&
-          nameLength == strlen(entry.name) &&
-          !strncmp(entry.name, name, nameLength)) {
-        return SPV_SUCCESS;
-      }
+  const spvtools::OperandDesc* entry = nullptr;
+  if (SPV_SUCCESS == spvtools::LookupOperand(type, name, nameLength, &entry)) {
+    // Check for min version only.
+    if (spvVersionForTargetEnv(env) >= entry->minVersion) {
+      return SPV_SUCCESS;
     }
   }
 
@@ -2045,8 +2390,7 @@ spv_result_t spvCoreOperandTableNameLookup(spv_target_env env,
 bool Exists(const std::string& capability, spv_target_env env) {
   ScopedContext sc(env);
   return SPV_SUCCESS ==
-         spvCoreOperandTableNameLookup(env, sc.context->operand_table,
-                                       SPV_OPERAND_TYPE_CAPABILITY,
+         spvCoreOperandTableNameLookup(env, SPV_OPERAND_TYPE_CAPABILITY,
                                        capability.c_str(), capability.size());
 }
 
@@ -2110,6 +2454,28 @@ TEST_P(ValidateCapabilityVulkan12, Capability) {
     CompileSuccessfully(test_code, SPV_ENV_VULKAN_1_2);
     ASSERT_EQ(ExpectedResult(GetParam()),
               ValidateInstructions(SPV_ENV_VULKAN_1_2))
+        << test_code;
+  }
+}
+
+TEST_P(ValidateCapabilityVulkan13, Capability) {
+  const std::string capability = Capability(GetParam());
+  if (Exists(capability, SPV_ENV_VULKAN_1_3)) {
+    const std::string test_code = MakeAssembly(GetParam());
+    CompileSuccessfully(test_code, SPV_ENV_VULKAN_1_3);
+    ASSERT_EQ(ExpectedResult(GetParam()),
+              ValidateInstructions(SPV_ENV_VULKAN_1_3))
+        << test_code;
+  }
+}
+
+TEST_P(ValidateCapabilityVulkan14, Capability) {
+  const std::string capability = Capability(GetParam());
+  if (Exists(capability, SPV_ENV_VULKAN_1_4)) {
+    const std::string test_code = MakeAssembly(GetParam());
+    CompileSuccessfully(test_code, SPV_ENV_VULKAN_1_4);
+    ASSERT_EQ(ExpectedResult(GetParam()),
+              ValidateInstructions(SPV_ENV_VULKAN_1_4))
         << test_code;
   }
 }
@@ -2252,6 +2618,26 @@ OpDecorate %intt BuiltIn PointSize
       getDiagnosticString(),
       HasSubstr("Capability DrawParameters is not allowed by Vulkan 1.0"));
 }
+
+using OpenCLFloat16CapabilityBase = spvtest::ValidateBase<spv_target_env>;
+
+TEST_P(OpenCLFloat16CapabilityBase, OpenCLFloat16Capability) {
+  const std::string spirv = R"(
+OpCapability Kernel
+OpCapability Addresses
+OpCapability Linkage
+OpCapability Float16
+OpMemoryModel Physical64 OpenCL
+%f16    = OpTypeFloat 16
+)";
+  CompileSuccessfully(spirv, GetParam());
+  EXPECT_EQ(SPV_SUCCESS, ValidateInstructions(GetParam()));
+}
+
+INSTANTIATE_TEST_SUITE_P(OpenCLFloat16Capability, OpenCLFloat16CapabilityBase,
+                         ValuesIn(std::vector<spv_target_env>{
+                             SPV_ENV_OPENCL_1_2, SPV_ENV_OPENCL_2_0,
+                             SPV_ENV_OPENCL_2_1, SPV_ENV_OPENCL_2_2}));
 
 TEST_F(ValidateCapability, NonOpenCL12FullCapability) {
   const std::string spirv = R"(
@@ -2828,7 +3214,8 @@ std::string MinimalShaderModuleWithCapability(std::string cap) {
                               : "";
   return std::string("OpCapability ") + cap + extra_cap + R"(
 OpCapability Shader
-OpMemoryModel Logical )" + mem_model + R"(
+OpMemoryModel Logical )" +
+         mem_model + R"(
 OpEntryPoint Vertex %main "main"
 %void = OpTypeVoid
 %void_fn = OpTypeFunction %void
@@ -2995,6 +3382,23 @@ OpMemoryModel Logical GLSL450
       HasSubstr(
           "If the Shader and CooperativeMatrixKHR capabilities are declared, "
           "the VulkanMemoryModel capability must also be declared"));
+}
+
+TEST_F(ValidateCapability, TileShadingQCOM) {
+  const auto spirv = R"(
+OpCapability Shader
+OpCapability TileShadingQCOM
+OpExtension "SPV_QCOM_tile_shading"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Vertex %func "main"
+)" + std::string(kVoidFVoid);
+
+  spv_target_env env = SPV_ENV_VULKAN_1_4;
+  CompileSuccessfully(spirv, env);
+  EXPECT_THAT(SPV_ERROR_INVALID_CAPABILITY, ValidateInstructions(env));
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("The TileShadingQCOM capability must not be enabled "
+                        "in any stage other than compute or fragment"));
 }
 
 }  // namespace

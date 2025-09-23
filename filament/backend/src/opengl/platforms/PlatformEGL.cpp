@@ -32,9 +32,9 @@
 #endif
 #include <utils/compiler.h>
 
-#include <utils/debug.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
+#include <utils/debug.h>
 #include <utils/ostream.h>
 
 #include <algorithm>
@@ -74,7 +74,7 @@ void PlatformEGL::logEglError(const char* name) noexcept {
 }
 
 void PlatformEGL::logEglError(const char* name, EGLint error) noexcept {
-    slog.e << name << " failed with " << getEglErrorName(error) << io::endl;
+    LOG(ERROR) << name << " failed with " << getEglErrorName(error);
 }
 
 const char* PlatformEGL::getEglErrorName(EGLint error) noexcept {
@@ -101,7 +101,7 @@ void PlatformEGL::clearGlError() noexcept {
     // clear GL error that may have been set by previous calls
     GLenum const error = glGetError();
     if (error != GL_NO_ERROR) {
-        slog.w << "Ignoring pending GL error " << io::hex << error << io::endl;
+        LOG(WARNING) << "Ignoring pending GL error " << io::hex << error;
     }
 }
 
@@ -142,7 +142,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     }
 
     if (UTILS_UNLIKELY(!initialized)) {
-        slog.e << "eglInitialize failed" << io::endl;
+        LOG(ERROR) << "eglInitialize failed";
         return nullptr;
     }
 
@@ -209,9 +209,41 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
     }
 #endif
 
+    // Configure GPU context priority level for scheduling and preemption
+    if (driverConfig.gpuContextPriority != Platform::GpuContextPriority::DEFAULT) {
+        if (extensions.has("EGL_IMG_context_priority")) {
+            EGLint priorityLevel = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+            const char* priorityName;
+            switch (driverConfig.gpuContextPriority) {
+                case Platform::GpuContextPriority::DEFAULT:
+                    assert_invariant(false);
+                    break;
+                case Platform::GpuContextPriority::LOW:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_LOW_IMG;
+                    priorityName = "LOW";
+                    break;
+                case Platform::GpuContextPriority::MEDIUM:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+                    priorityName = "MEDIUM";
+                    break;
+                case Platform::GpuContextPriority::HIGH:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_HIGH_IMG;
+                    priorityName = "HIGH";
+                    break;
+                case Platform::GpuContextPriority::REALTIME:
+                    priorityLevel = EGL_CONTEXT_PRIORITY_HIGH_IMG;
+                    priorityName = "REALTIME(=HIGH)";
+                    break;
+            }
+            contextAttribs[EGL_CONTEXT_PRIORITY_LEVEL_IMG] = priorityLevel;
+            LOG(INFO) << "EGL: Enabling GPU context priority: " << priorityName;
+        } else {
+            LOG(WARNING) << "EGL: GPU context priority requested but not supported";
+        }
+    }
+
     // config use for creating the context
     EGLConfig eglConfig = EGL_NO_CONFIG_KHR;
-
 
     if (UTILS_UNLIKELY(!ext.egl.KHR_no_config_context)) {
         // find a config we can use if we don't have "EGL_KHR_no_config_context" and that we can use
@@ -290,6 +322,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
 
     mCurrentContextType = ContextType::UNPROTECTED;
     mContextAttribs = std::move(contextAttribs);
+    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
 
     initializeGlExtensions();
 
@@ -416,6 +449,11 @@ EGLConfig PlatformEGL::findSwapChainConfig(uint64_t flags, bool window, bool pbu
         configAttribs[EGL_RECORDABLE_ANDROID] = EGL_TRUE;
     }
 
+    if (flags & SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        configAttribs[EGL_SAMPLE_BUFFERS] = 1;
+        configAttribs[EGL_SAMPLES] = 4;
+    }
+
     if (UTILS_UNLIKELY(
             !eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount))) {
         logEglError("eglChooseConfig");
@@ -449,11 +487,25 @@ bool PlatformEGL::isSRGBSwapChainSupported() const noexcept {
     return ext.egl.KHR_gl_colorspace;
 }
 
+bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
+    if (samples <= 1) {
+        return true;
+    }
+
+    if (samples == 4) {
+        return mMSAA4XSupport;
+    }
+
+    return false;
+}
+
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t flags) noexcept {
 
     Config attribs;
-    if (ext.egl.KHR_gl_colorspace) {
+
+    // Remove flags for unsupported features.
+    if (isSRGBSwapChainSupported()) {
         if (flags & SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) {
             attribs[EGL_GL_COLORSPACE_KHR] = EGL_GL_COLORSPACE_SRGB_KHR;
         }
@@ -461,7 +513,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_SRGB_COLORSPACE;
     }
 
-    if (ext.egl.EXT_protected_content) {
+    if (isProtectedContextSupported()) {
         if (flags & SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) {
             attribs[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
         }
@@ -469,6 +521,13 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         flags &= ~SWAP_CHAIN_CONFIG_PROTECTED_CONTENT;
     }
 
+    if (flags & SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES) {
+        if (!isMSAASwapChainSupported(4)) {
+            flags &= ~SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
+        }
+    }
+
+    // Retrieve a config for the given flags.
     EGLConfig config = EGL_NO_CONFIG_KHR;
     if (UTILS_LIKELY(ext.egl.KHR_no_config_context)) {
         config = findSwapChainConfig(flags, true, false);
@@ -577,18 +636,18 @@ OpenGLPlatform::ContextType PlatformEGL::getCurrentContextType() const noexcept 
 }
 
 bool PlatformEGL::makeCurrent(ContextType type,
-        SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept {
+        SwapChain* drawSwapChain, SwapChain* readSwapChain) {
     SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
     SwapChainEGL const* const rsc = static_cast<SwapChainEGL const*>(readSwapChain);
     EGLContext context = getContextForType(type);
     EGLBoolean const success = egl.makeCurrent(context, dsc->sur, rsc->sur);
-    return success == EGL_TRUE ? true : false;
+    return success == EGL_TRUE;
 }
 
 void PlatformEGL::makeCurrent(SwapChain* drawSwapChain,
         SwapChain* readSwapChain,
         Invocable<void()> preContextChange,
-        Invocable<void(size_t index)> postContextChange) noexcept {
+        Invocable<void(size_t index)> postContextChange) {
 
     assert_invariant(drawSwapChain);
     assert_invariant(readSwapChain);
@@ -757,6 +816,38 @@ EGLContext PlatformEGL::getContextForType(ContextType type) const noexcept {
     }
 }
 
+bool PlatformEGL::checkIfMSAASwapChainSupported(uint32_t samples) const noexcept {
+    // Retrieve the config to see if the given number of samples is supported. The result is cached.
+    Config configAttribs = {
+            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
+            { EGL_RED_SIZE,        8 },
+            { EGL_GREEN_SIZE,      8 },
+            { EGL_BLUE_SIZE,       8 },
+            { EGL_DEPTH_SIZE,      24 },
+            { EGL_SAMPLE_BUFFERS,  1 },
+            { EGL_SAMPLES,         (EGLint)samples },
+    };
+
+    if (!ext.egl.KHR_no_config_context) {
+        if (isOpenGL()) {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
+        } else {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
+            if (ext.egl.KHR_create_context) {
+                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+            }
+        }
+    }
+
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    EGLint configsCount;
+    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
+        return false;
+    }
+
+    return configsCount > 0;
+}
+
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGL::Config::Config() = default;
@@ -796,7 +887,7 @@ void PlatformEGL::Config::erase(EGLint name) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 EGLBoolean PlatformEGL::EGL::makeCurrent(EGLContext context, EGLSurface drawSurface,
-        EGLSurface readSurface) noexcept {
+        EGLSurface readSurface) {
     if (UTILS_UNLIKELY((
             mCurrentContext != context ||
             drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {

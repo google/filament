@@ -197,11 +197,6 @@ if (WEBGL_PTHREADS)
 endif()
 
 set(GLTFIO_WARNINGS -Wall -Werror)
-if (CMAKE_CXX_STANDARD EQUAL 20)
-    # The following things used by AssetLoader.cpp are deprecated in c++20:
-    # wstring_convert and std::codecvt_utf8<char32_t>.
-    list(APPEND GLTFIO_WARNINGS -Wno-deprecated-declarations)
-endif()
 if (NOT MSVC)
     target_compile_options(gltfio_core PRIVATE ${GLTFIO_WARNINGS})
 endif()

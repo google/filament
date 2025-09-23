@@ -31,4 +31,4 @@
 #       There is no support for Dawn targets at this time                      #
 ################################################################################
 
-build --cxxopt='-std=c++17'
+build --cxxopt='-std=c++20'

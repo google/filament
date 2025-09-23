@@ -86,7 +86,7 @@ TEST(FixedCircularBufferTest, Exceptions) {
 
     EXPECT_DEATH({
         circularBuffer.pop();  // should assert
-    }, "failed assertion");
+    }, "failed");
 
     circularBuffer.push(1);
     circularBuffer.push(2);

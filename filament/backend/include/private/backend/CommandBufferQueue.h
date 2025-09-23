@@ -33,29 +33,17 @@ namespace filament::backend {
  * A producer-consumer command queue that uses a CircularBuffer as main storage
  */
 class CommandBufferQueue {
+public:
     struct Range {
         void* begin;
         void* end;
     };
 
-    const size_t mRequiredSize;
-
-    CircularBuffer mCircularBuffer;
-
-    // space available in the circular buffer
-
-    mutable utils::Mutex mLock;
-    mutable utils::Condition mCondition;
-    mutable std::vector<Range> mCommandBuffersToExecute;
-    size_t mFreeSpace = 0;
-    size_t mHighWatermark = 0;
-    uint32_t mExitRequested = 0;
-    bool mPaused = false;
-
-    static constexpr uint32_t EXIT_REQUESTED = 0x31415926;
-
-public:
     // requiredSize: guaranteed available space after flush()
+    // bufferSize: size of the circular buffer, must be multiple of CircularBuffer::getBlockSize()
+    // requiredSize must be smaller or equal to bufferSize
+    // The implementation will enforce these constraints by rounding bufferSize up if necessary
+    // and adjusting requiredSize to be at least that.
     CommandBufferQueue(size_t requiredSize, size_t bufferSize, bool paused);
     ~CommandBufferQueue();
 
@@ -76,7 +64,7 @@ public:
 
     // all commands buffers (Slices) written to this point are returned by waitForCommand(). This
     // call blocks until the CircularBuffer has at least mRequiredSize bytes available.
-    void flush() noexcept;
+    void flush();
 
     // returns from waitForCommands() immediately.
     void requestExit();
@@ -86,6 +74,23 @@ public:
     void setPaused(bool paused);
 
     bool isExitRequested() const;
+
+private:
+    const size_t mRequiredSize;
+
+    CircularBuffer mCircularBuffer;
+
+    // space available in the circular buffer
+
+    mutable utils::Mutex mLock;
+    mutable utils::Condition mCondition;
+    mutable std::vector<Range> mCommandBuffersToExecute;
+    size_t mFreeSpace = 0;
+    size_t mHighWatermark = 0;
+    uint32_t mExitRequested = 0;
+    bool mPaused = false;
+
+    static constexpr uint32_t EXIT_REQUESTED = 0x31415926;
 };
 
 } // namespace filament::backend

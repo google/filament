@@ -49,14 +49,6 @@ class MutexTest : public ::testing::Test {
     Mutex mMutex;
 };
 
-// Simple Lock() then Unlock() test.
-TEST_F(MutexTest, SimpleLockUnlock) {
-    mMutex.Lock();
-    EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
-    mMutex.Unlock();
-    EXPECT_FALSE(mMutex.IsLockedByCurrentThread());
-}
-
 // Test AutoLock automatically locks the mutex and unlocks it when out of scope.
 TEST_F(MutexTest, AutoLock) {
     {
@@ -82,32 +74,43 @@ TEST_F(MutexTest, AutoLockAndHoldRef) {
 
 using MutexDeathTest = MutexTest;
 
-// Test that Unlock() call on unlocked mutex will cause assertion failure.
-TEST_F(MutexDeathTest, UnlockWhenNotLocked) {
-    ASSERT_DEATH_IF_SUPPORTED({ mMutex.Unlock(); }, "");
-}
-
-// Double Lock() calls should be cause assertion failure
+// Double AutoLock calls should be cause assertion failure.
 TEST_F(MutexDeathTest, DoubleLockCalls) {
-    mMutex.Lock();
+    Mutex::AutoLock autoLock1(&mMutex);
     EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
-    ASSERT_DEATH_IF_SUPPORTED({ mMutex.Lock(); }, "");
-    mMutex.Unlock();
+    ASSERT_DEATH_IF_SUPPORTED({ Mutex::AutoLock autoLock2(&mMutex); }, "");
 }
 
-// Lock() then use AutoLock should cause assertion failure.
-TEST_F(MutexDeathTest, LockThenAutoLock) {
-    mMutex.Lock();
-    EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
-    ASSERT_DEATH_IF_SUPPORTED({ Mutex::AutoLock autoLock(&mMutex); }, "");
-    mMutex.Unlock();
+class RecursiveMutexTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        // IsLockedByCurrentThread() requires DAWN_ENABLE_ASSERTS flag enabled.
+        if (!kAssertEnabled) {
+            GTEST_SKIP() << "DAWN_ENABLE_ASSERTS is not enabled";
+        }
+    }
+
+    RecursiveMutex mMutex;
+};
+
+// Test AutoLock automatically locks the mutex and unlocks it when out of scope.
+TEST_F(RecursiveMutexTest, AutoLock) {
+    {
+        RecursiveMutex::AutoLock autoLock(&mMutex);
+        EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
+    }
+    EXPECT_FALSE(mMutex.IsLockedByCurrentThread());
 }
 
-// Use AutoLock then call Lock() should cause assertion failure.
-TEST_F(MutexDeathTest, AutoLockThenLock) {
-    Mutex::AutoLock autoLock(&mMutex);
-    EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
-    ASSERT_DEATH_IF_SUPPORTED({ mMutex.Lock(); }, "");
+// Test that recursive AutoLock in same thread is valid.
+TEST_F(RecursiveMutexTest, RecursiveAutoLock) {
+    {
+        RecursiveMutex::AutoLock autoLock1(&mMutex);
+        EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
+        RecursiveMutex::AutoLock autoLock2(&mMutex);
+        EXPECT_TRUE(mMutex.IsLockedByCurrentThread());
+    }
+    EXPECT_FALSE(mMutex.IsLockedByCurrentThread());
 }
 
 }  // anonymous namespace

@@ -131,6 +131,19 @@ EncodeNumberStatus ParseAndEncodeIntegerNumber(
   return EncodeNumberStatus::kSuccess;
 }
 
+spv_fp_encoding_t DeduceEncoding(const NumberType& type) {
+  if (type.encoding != SPV_FP_ENCODING_UNKNOWN) return type.encoding;
+  switch (type.bitwidth) {
+    case 16:
+      return SPV_FP_ENCODING_IEEE754_BINARY16;
+    case 32:
+      return SPV_FP_ENCODING_IEEE754_BINARY32;
+    case 64:
+      return SPV_FP_ENCODING_IEEE754_BINARY64;
+    default:
+      return SPV_FP_ENCODING_UNKNOWN;
+  }
+}
 EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
     const char* text, const NumberType& type,
     std::function<void(uint32_t)> emit, std::string* error_msg) {
@@ -145,8 +158,35 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
   }
 
   const auto bit_width = AssumedBitWidth(type);
-  switch (bit_width) {
-    case 16: {
+  switch (DeduceEncoding(type)) {
+    case SPV_FP_ENCODING_FLOAT8_E4M3: {
+      HexFloat<FloatProxy<Float8_E4M3>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E4M3 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint16_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 16 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_FLOAT8_E5M2: {
+      HexFloat<FloatProxy<Float8_E5M2>> hVal(0);
+      if (!ParseNumber(text, &hVal)) {
+        ErrorMsgStream(error_msg) << "Invalid E5M2 float literal: " << text;
+        return EncodeNumberStatus::kInvalidText;
+      }
+      // getAsFloat will return the Float16 value, and get_value
+      // will return a uint16_t representing the bits of the float.
+      // The encoding is therefore correct from the perspective of the SPIR-V
+      // spec since the top 16 bits will be 0.
+      emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
+      return EncodeNumberStatus::kSuccess;
+    } break;
+    case SPV_FP_ENCODING_BFLOAT16:  // FIXME this likely needs separate handling
+    case SPV_FP_ENCODING_IEEE754_BINARY16: {
       HexFloat<FloatProxy<Float16>> hVal(0);
       if (!ParseNumber(text, &hVal)) {
         ErrorMsgStream(error_msg) << "Invalid 16-bit float literal: " << text;
@@ -159,7 +199,7 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
       emit(static_cast<uint32_t>(hVal.value().getAsFloat().get_value()));
       return EncodeNumberStatus::kSuccess;
     } break;
-    case 32: {
+    case SPV_FP_ENCODING_IEEE754_BINARY32: {
       HexFloat<FloatProxy<float>> fVal(0.0f);
       if (!ParseNumber(text, &fVal)) {
         ErrorMsgStream(error_msg) << "Invalid 32-bit float literal: " << text;
@@ -168,7 +208,7 @@ EncodeNumberStatus ParseAndEncodeFloatingPointNumber(
       emit(BitwiseCast<uint32_t>(fVal));
       return EncodeNumberStatus::kSuccess;
     } break;
-    case 64: {
+    case SPV_FP_ENCODING_IEEE754_BINARY64: {
       HexFloat<FloatProxy<double>> dVal(0.0);
       if (!ParseNumber(text, &dVal)) {
         ErrorMsgStream(error_msg) << "Invalid 64-bit float literal: " << text;

@@ -27,10 +27,10 @@
 #ifndef GLSLextNV_H
 #define GLSLextNV_H
 
-enum BuiltIn;
-enum Decoration;
-enum Op;
-enum Capability;
+enum class BuiltIn : unsigned;
+enum class Decoration : unsigned;
+enum class Op : unsigned;
+enum class Capability : unsigned;
 
 static const int GLSLextNVVersion = 100;
 static const int GLSLextNVRevision = 11;

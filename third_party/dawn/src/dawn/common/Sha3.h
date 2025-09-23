@@ -31,6 +31,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 namespace dawn {
 
@@ -53,6 +54,15 @@ class Sha3 {
     // APIs to stream data into the hash function chunk by chunk by calling Update repeatedly.
     // After Finalize is called, it is no longer valid to use this SHA3 object.
     void Update(const void* data, size_t size);
+
+    template <typename T>
+        requires std::is_trivially_copyable_v<T>
+    void Update(const T& data) {
+        const uint8_t* dataAsBytes = reinterpret_cast<const uint8_t*>(&data);
+        size_t size = sizeof(T);
+        Update(dataAsBytes, size);
+    }
+
     Output Finalize();
 
     // Helper function to compute the hash directly.

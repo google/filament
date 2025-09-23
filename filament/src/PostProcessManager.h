@@ -20,12 +20,14 @@
 #include "backend/DriverApiForward.h"
 
 #include "FrameHistory.h"
+#include "MaterialInstanceManager.h"
 
 #include "ds/PostProcessDescriptorSet.h"
 #include "ds/SsrPassDescriptorSet.h"
+#include "ds/StructureDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
-#include <private/filament/Variant.h>
+#include "materials/StaticMaterialInfo.h"
 
 #include <fg/FrameGraphId.h>
 #include <fg/FrameGraphResources.h>
@@ -48,10 +50,8 @@
 #include <tsl/robin_map.h>
 
 #include <array>
-#include <initializer_list>
 #include <random>
 #include <string_view>
-#include <variant>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -70,20 +70,7 @@ struct CameraInfo;
 class PostProcessManager {
 public:
 
-
-    // This is intended to be used only to hold the static material data
-    struct StaticMaterialInfo {
-        struct ConstantInfo {
-            std::string_view name;
-            std::variant<int32_t, float, bool> value;
-        };
-        std::string_view name;
-        uint8_t const* data;
-        size_t size;
-        // the life-time of objects pointed to by this initializer_list<> is extended to the
-        // life-time of the initializer_list
-        std::initializer_list<ConstantInfo> constants;
-    };
+    using StaticMaterialInfo = filament::StaticMaterialInfo;
 
     struct ColorGradingConfig {
         bool asSubpass{};
@@ -119,13 +106,15 @@ public:
             RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
             uint32_t width, uint32_t height, StructurePassConfig const& config) noexcept;
 
+    FrameGraphId<FrameGraphTexture> transparentPicking(FrameGraph& fg,
+            RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
+            uint32_t width, uint32_t height, float scale) noexcept;
+
     // reflections pass
     FrameGraphId<FrameGraphTexture> ssr(FrameGraph& fg,
             RenderPassBuilder const& passBuilder,
             FrameHistory const& frameHistory,
-            CameraInfo const& cameraInfo,
             FrameGraphId<FrameGraphTexture> structure,
-            ScreenSpaceReflectionsOptions const& options,
             FrameGraphTexture::Descriptor const& desc) noexcept;
 
     // SSAO
@@ -270,12 +259,18 @@ public:
             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
             filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept;
 
+    enum class RcasMode {
+        OPAQUE,
+        ALPHA_PASSTHROUGH,
+        BLENDED
+    };
+
     FrameGraphId<FrameGraphTexture> rcas(
             FrameGraph& fg,
             float sharpness,
             FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor const& outDesc,
-            bool translucent);
+            RcasMode mode);
 
     // color blitter using shaders
     FrameGraphId<FrameGraphTexture> blit(FrameGraph& fg, bool translucent,
@@ -350,15 +345,6 @@ public:
         FMaterial* getMaterial(FEngine& engine,
                 PostProcessVariant variant = PostProcessVariant::OPAQUE) const noexcept;
 
-        // Helper to get a MaterialInstance from a FMaterial
-        // This currently just call FMaterial::getDefaultInstance().
-        static FMaterialInstance* getMaterialInstance(FMaterial const* ma) noexcept;
-
-        // Helper to get a MaterialInstance from a PostProcessMaterial.
-        static FMaterialInstance* getMaterialInstance(FEngine& engine,
-                PostProcessMaterial const& material,
-                PostProcessVariant variant = PostProcessVariant::OPAQUE) noexcept;
-
     private:
         void loadMaterial(FEngine& engine) const noexcept;
 
@@ -406,17 +392,44 @@ public:
     FMaterialInstance* configureColorGradingMaterial(
             PostProcessMaterial& material, FColorGrading const* colorGrading,
             ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
-            uint32_t const width, uint32_t const height) noexcept;
+            uint32_t width, uint32_t height) noexcept;
+
+    StructureDescriptorSet& getStructureDescriptorSet() const noexcept { return mStructureDescriptorSet; }
+
+    void resetForRender();
 
 private:
+    static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
+
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
+
+    // Helper to get a MaterialInstance from a FMaterial
+    // This currently just call FMaterial::getDefaultInstance().
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma) {
+        return mMaterialInstanceManager.getMaterialInstance(ma);
+    }
+
+    // Helper to get a MaterialInstance from a PostProcessMaterial.
+    FMaterialInstance* getMaterialInstance(FEngine& engine, PostProcessMaterial const& material,
+            PostProcessVariant variant = PostProcessVariant::OPAQUE) {
+        FMaterial const* ma = material.getMaterial(engine, variant);
+        return getMaterialInstance(ma);
+    }
+
     backend::RenderPrimitiveHandle mFullScreenQuadRph;
     backend::VertexBufferInfoHandle mFullScreenQuadVbih;
     backend::DescriptorSetLayoutHandle mPerRenderableDslh;
+
+    // We need to have a dummy descriptor set because each post processing pass is expected to have
+    // a descriptor set bound at the renderable bind point. But the set itself contains dummy
+    // values.
+    backend::DescriptorSetHandle mDummyPerRenderableDsh;
 
     FEngine& mEngine;
 
     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
+    mutable StructureDescriptorSet mStructureDescriptorSet;
 
     struct BilateralPassConfig {
         uint8_t kernelSize = 11;
@@ -441,6 +454,14 @@ private:
             PostProcessMaterial>;
 
     MaterialRegistryMap mMaterialRegistry;
+
+    MaterialInstanceManager mMaterialInstanceManager;
+
+    struct {
+        int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
+    } mFixedMaterialInstanceIndex;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;
 

@@ -35,19 +35,6 @@ uint32_t spvOpcodeMake(uint16_t word_count, spv::Op opcode);
 void spvOpcodeSplit(const uint32_t word, uint16_t* word_count,
                     uint16_t* opcode);
 
-// Finds the named opcode in the given opcode table. On success, returns
-// SPV_SUCCESS and writes a handle of the table entry into *entry.
-spv_result_t spvOpcodeTableNameLookup(spv_target_env,
-                                      const spv_opcode_table table,
-                                      const char* name, spv_opcode_desc* entry);
-
-// Finds the opcode by enumerant in the given opcode table. On success, returns
-// SPV_SUCCESS and writes a handle of the table entry into *entry.
-spv_result_t spvOpcodeTableValueLookup(spv_target_env,
-                                       const spv_opcode_table table,
-                                       const spv::Op opcode,
-                                       spv_opcode_desc* entry);
-
 // Copies an instruction's word and fixes the endianness to host native. The
 // source instruction's stream/opcode/endianness is in the words/opcode/endian
 // parameter. The word_count parameter specifies the number of words to copy.

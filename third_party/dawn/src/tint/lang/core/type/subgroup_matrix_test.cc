@@ -28,8 +28,11 @@
 #include "src/tint/lang/core/type/helper_test.h"
 
 #include "src/tint/lang/core/type/f32.h"
+#include "src/tint/lang/core/type/i32.h"
 #include "src/tint/lang/core/type/i8.h"
+#include "src/tint/lang/core/type/manager.h"
 #include "src/tint/lang/core/type/subgroup_matrix.h"
+#include "src/tint/lang/core/type/u32.h"
 
 namespace tint::core::type {
 namespace {
@@ -37,9 +40,10 @@ namespace {
 using SubgroupMatrixTest = TestHelper;
 
 TEST_F(SubgroupMatrixTest, Creation) {
-    auto* f32 = create<F32>();
+    Manager ty;
+    auto* f32 = ty.f32();
 
-    auto* l1 = create<SubgroupMatrix>(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
+    auto* l1 = ty.subgroup_matrix(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
 
     EXPECT_EQ(l1->Type(), f32);
     EXPECT_EQ(l1->Kind(), SubgroupMatrixKind::kLeft);
@@ -74,25 +78,27 @@ TEST_F(SubgroupMatrixTest, Creation_TypeManager) {
 }
 
 TEST_F(SubgroupMatrixTest, Hash) {
-    auto* a = create<SubgroupMatrix>(SubgroupMatrixKind::kRight, create<I32>(), 3u, 4u);
-    auto* b = create<SubgroupMatrix>(SubgroupMatrixKind::kRight, create<I32>(), 3u, 4u);
+    Manager ty;
+    auto* a = ty.subgroup_matrix(SubgroupMatrixKind::kRight, ty.i32(), 3u, 4u);
+    auto* b = ty.subgroup_matrix(SubgroupMatrixKind::kRight, ty.i32(), 3u, 4u);
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(SubgroupMatrixTest, Equals) {
-    auto* f32 = create<F32>();
-    auto* i8 = create<I8>();
+    Manager ty;
+    auto* f32 = ty.f32();
+    auto* i8 = ty.i8();
 
-    auto* l1 = create<SubgroupMatrix>(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
-    auto* l2 = create<SubgroupMatrix>(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
-    auto* l3 = create<SubgroupMatrix>(SubgroupMatrixKind::kLeft, i8, 3u, 4u);
-    auto* l4 = create<SubgroupMatrix>(SubgroupMatrixKind::kLeft, f32, 4u, 3u);
+    auto* l1 = ty.subgroup_matrix(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
+    auto* l2 = ty.subgroup_matrix(SubgroupMatrixKind::kLeft, f32, 3u, 4u);
+    auto* l3 = ty.subgroup_matrix(SubgroupMatrixKind::kLeft, i8, 3u, 4u);
+    auto* l4 = ty.subgroup_matrix(SubgroupMatrixKind::kLeft, f32, 4u, 3u);
 
-    auto* r1 = create<SubgroupMatrix>(SubgroupMatrixKind::kRight, f32, 3u, 4u);
-    auto* r2 = create<SubgroupMatrix>(SubgroupMatrixKind::kRight, f32, 3u, 4u);
-    auto* res1 = create<SubgroupMatrix>(SubgroupMatrixKind::kResult, f32, 3u, 4u);
-    auto* res2 = create<SubgroupMatrix>(SubgroupMatrixKind::kResult, f32, 3u, 4u);
+    auto* r1 = ty.subgroup_matrix(SubgroupMatrixKind::kRight, f32, 3u, 4u);
+    auto* r2 = ty.subgroup_matrix(SubgroupMatrixKind::kRight, f32, 3u, 4u);
+    auto* res1 = ty.subgroup_matrix(SubgroupMatrixKind::kResult, f32, 3u, 4u);
+    auto* res2 = ty.subgroup_matrix(SubgroupMatrixKind::kResult, f32, 3u, 4u);
 
     EXPECT_EQ(l1, l2);
     EXPECT_NE(l1, l3);
@@ -125,7 +131,8 @@ TEST_F(SubgroupMatrixTest, FriendlyName_Result) {
 }
 
 TEST_F(SubgroupMatrixTest, Clone) {
-    auto* a = create<SubgroupMatrix>(SubgroupMatrixKind::kResult, create<I32>(), 3u, 4u);
+    Manager ty;
+    auto* a = ty.subgroup_matrix(SubgroupMatrixKind::kResult, ty.i32(), 3u, 4u);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

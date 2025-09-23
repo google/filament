@@ -44,7 +44,11 @@ class WireDeviceLifetimeTests : public testing::Test {
     WireDeviceLifetimeTests()
         : nativeProcs(BuildProcs()),
           wireHelper(utils::CreateWireHelper(nativeProcs, /* useWire */ true)) {
-        instance = wireHelper->CreateInstances().first;
+        static constexpr auto kMultipleDevicesPerAdapter =
+            wgpu::InstanceFeatureName::MultipleDevicesPerAdapter;
+        wgpu::InstanceDescriptor instanceDesc = {.requiredFeatureCount = 1,
+                                                 .requiredFeatures = &kMultipleDevicesPerAdapter};
+        instance = wireHelper->CreateInstances(&instanceDesc).first;
     }
 
   protected:

@@ -21,11 +21,11 @@
 #include "NonSemanticShaderDebugInfo100.h"
 #include "OpenCLDebugInfo100.h"
 #include "source/common_debug_info.h"
-#include "source/enum_string_mapping.h"
 #include "source/extensions.h"
 #include "source/latest_version_glsl_std_450_header.h"
 #include "source/latest_version_opencl_std_header.h"
 #include "source/spirv_constant.h"
+#include "source/table2.h"
 #include "source/val/instruction.h"
 #include "source/val/validate.h"
 #include "source/val/validation_state.h"
@@ -35,16 +35,15 @@ namespace spvtools {
 namespace val {
 namespace {
 
-std::string ReflectionInstructionName(ValidationState_t& _,
-                                      const Instruction* inst) {
-  spv_ext_inst_desc desc = nullptr;
-  if (_.grammar().lookupExtInst(SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
-                                inst->word(4), &desc) != SPV_SUCCESS ||
+std::string ReflectionInstructionName(const Instruction* inst) {
+  const ExtInstDesc* desc = nullptr;
+  if (LookupExtInst(SPV_EXT_INST_TYPE_NONSEMANTIC_CLSPVREFLECTION,
+                    inst->word(4), &desc) != SPV_SUCCESS ||
       !desc) {
     return std::string("Unknown ExtInst");
   }
   std::ostringstream ss;
-  ss << desc->name;
+  ss << desc->name().data();
 
   return ss.str();
 }
@@ -93,17 +92,17 @@ spv_result_t ValidateOperandForDebugInfo(
     const std::function<std::string()>& ext_inst_name) {
   auto* operand = _.FindDef(inst->word(word_index));
   if (operand->opcode() != expected_opcode) {
-    spv_opcode_desc desc = nullptr;
-    if (_.grammar().lookupOpcode(expected_opcode, &desc) != SPV_SUCCESS ||
+    const spvtools::InstructionDesc* desc = nullptr;
+    if (spvtools::LookupOpcodeForEnv(_.context()->target_env, expected_opcode,
+                                     &desc) != SPV_SUCCESS ||
         !desc) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << ext_inst_name() << ": "
              << "expected operand " << operand_name << " is invalid";
     }
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
-           << ext_inst_name() << ": "
-           << "expected operand " << operand_name << " must be a result id of "
-           << "Op" << desc->name;
+           << ext_inst_name() << ": " << "expected operand " << operand_name
+           << " must be a result id of " << "Op" << desc->name().data();
   }
   return SPV_SUCCESS;
 }
@@ -189,18 +188,17 @@ spv_result_t ValidateDebugInfoOperand(
   if (DoesDebugInfoOperandMatchExpectation(_, expectation, inst, word_index))
     return SPV_SUCCESS;
 
-  spv_ext_inst_desc desc = nullptr;
-  if (_.grammar().lookupExtInst(inst->ext_inst_type(), expected_debug_inst,
-                                &desc) != SPV_SUCCESS ||
+  const ExtInstDesc* desc = nullptr;
+  if (LookupExtInst(inst->ext_inst_type(), expected_debug_inst, &desc) !=
+          SPV_SUCCESS ||
       !desc) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << ext_inst_name() << ": "
            << "expected operand " << debug_inst_name << " is invalid";
   }
   return _.diag(SPV_ERROR_INVALID_DATA, inst)
-         << ext_inst_name() << ": "
-         << "expected operand " << debug_inst_name << " must be a result id of "
-         << desc->name;
+         << ext_inst_name() << ": " << "expected operand " << debug_inst_name
+         << " must be a result id of " << desc->name().data();
 }
 
 #define CHECK_DEBUG_OPERAND(NAME, debug_opcode, index)                         \
@@ -285,7 +283,7 @@ spv_result_t ValidateOperandDebugType(
 spv_result_t ValidateClspvReflectionKernel(ValidationState_t& _,
                                            const Instruction* inst,
                                            uint32_t version) {
-  const auto inst_name = ReflectionInstructionName(_, inst);
+  const auto inst_name = ReflectionInstructionName(inst);
   const auto kernel_id = inst->GetOperandAs<uint32_t>(4);
   const auto kernel = _.FindDef(kernel_id);
   if (kernel->opcode() != spv::Op::OpFunction) {
@@ -930,7 +928,7 @@ spv_result_t ValidateClspvReflectionInstruction(ValidationState_t& _,
   }
   if (version < required_version) {
     return _.diag(SPV_ERROR_INVALID_ID, inst)
-           << ReflectionInstructionName(_, inst) << " requires version "
+           << ReflectionInstructionName(inst) << " requires version "
            << required_version << ", but parsed version is " << version;
   }
 
@@ -1101,9 +1099,8 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
       spv_ext_inst_type_t(inst->ext_inst_type());
 
   auto ext_inst_name = [&_, ext_inst_set, ext_inst_type, ext_inst_index]() {
-    spv_ext_inst_desc desc = nullptr;
-    if (_.grammar().lookupExtInst(ext_inst_type, ext_inst_index, &desc) !=
-            SPV_SUCCESS ||
+    const ExtInstDesc* desc = nullptr;
+    if (LookupExtInst(ext_inst_type, ext_inst_index, &desc) != SPV_SUCCESS ||
         !desc) {
       return std::string("Unknown ExtInst");
     }
@@ -1114,7 +1111,7 @@ spv_result_t ValidateExtInst(ValidationState_t& _, const Instruction* inst) {
     std::ostringstream ss;
     ss << import_inst->GetOperandAs<std::string>(1);
     ss << " ";
-    ss << desc->name;
+    ss << desc->name().data();
 
     return ss.str();
   };

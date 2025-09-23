@@ -12,6 +12,7 @@
 
 #include "clang/Sema/SemaHLSL.h"
 #include "VkConstantsTables.h"
+#include "dxc/DXIL/DxilConstants.h"
 #include "dxc/DXIL/DxilFunctionProps.h"
 #include "dxc/DXIL/DxilShaderModel.h"
 #include "dxc/DXIL/DxilUtil.h"
@@ -43,6 +44,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -195,6 +197,7 @@ enum ArBasicKind {
   AR_OBJECT_VK_LITERAL,
   AR_OBJECT_VK_SPV_INTRINSIC_TYPE,
   AR_OBJECT_VK_SPV_INTRINSIC_RESULT_ID,
+  AR_OBJECT_VK_BUFFER_POINTER,
 #endif // ENABLE_SPIRV_CODEGEN
   // SPIRV change ends
 
@@ -550,6 +553,7 @@ const UINT g_uBasicKindProps[] = {
     BPROP_OBJECT,                 // AR_OBJECT_VK_LITERAL,
     BPROP_OBJECT, // AR_OBJECT_VK_SPV_INTRINSIC_TYPE use recordType
     BPROP_OBJECT, // AR_OBJECT_VK_SPV_INTRINSIC_RESULT_ID use recordType
+    BPROP_OBJECT, // AR_OBJECT_VK_BUFFER_POINTER use recordType
 #endif            // ENABLE_SPIRV_CODEGEN
     // SPIRV change ends
 
@@ -575,9 +579,9 @@ const UINT g_uBasicKindProps[] = {
     0, // AR_OBJECT_PROCEDURAL_PRIMITIVE_HIT_GROUP,
     0, // AR_OBJECT_RAYTRACING_PIPELINE_CONFIG1,
 
-    BPROP_OBJECT, // AR_OBJECT_RAY_QUERY,
-    BPROP_OBJECT, // AR_OBJECT_HEAP_RESOURCE,
-    BPROP_OBJECT, // AR_OBJECT_HEAP_SAMPLER,
+    LICOMPTYPE_RAY_QUERY, // AR_OBJECT_RAY_QUERY,
+    BPROP_OBJECT,         // AR_OBJECT_HEAP_RESOURCE,
+    BPROP_OBJECT,         // AR_OBJECT_HEAP_SAMPLER,
 
     BPROP_OBJECT | BPROP_RWBUFFER | BPROP_TEXTURE, // AR_OBJECT_RWTEXTURE2DMS
     BPROP_OBJECT | BPROP_RWBUFFER |
@@ -1130,6 +1134,17 @@ static const ArBasicKind g_ResourceCT[] = {AR_OBJECT_HEAP_RESOURCE,
 
 static const ArBasicKind g_RayDescCT[] = {AR_OBJECT_RAY_DESC, AR_BASIC_UNKNOWN};
 
+static const ArBasicKind g_RayQueryCT[] = {AR_OBJECT_RAY_QUERY,
+                                           AR_BASIC_UNKNOWN};
+
+static const ArBasicKind g_LinAlgCT[] = {
+    AR_BASIC_FLOAT32,       AR_BASIC_FLOAT32_PARTIAL_PRECISION,
+    AR_BASIC_FLOAT16,       AR_BASIC_INT32,
+    AR_BASIC_INT16,         AR_BASIC_UINT32,
+    AR_BASIC_UINT16,        AR_BASIC_INT8_4PACKED,
+    AR_BASIC_UINT8_4PACKED, AR_BASIC_NOCAST,
+    AR_BASIC_UNKNOWN};
+
 static const ArBasicKind g_AccelerationStructCT[] = {
     AR_OBJECT_ACCELERATION_STRUCT, AR_BASIC_UNKNOWN};
 
@@ -1232,6 +1247,11 @@ static const ArBasicKind g_AnyOutputRecordCT[] = {
 static const ArBasicKind g_DxHitObjectCT[] = {AR_OBJECT_HIT_OBJECT,
                                               AR_BASIC_UNKNOWN};
 
+#ifdef ENABLE_SPIRV_CODEGEN
+static const ArBasicKind g_VKBufferPointerCT[] = {AR_OBJECT_VK_BUFFER_POINTER,
+                                                  AR_BASIC_UNKNOWN};
+#endif
+
 // Basic kinds, indexed by a LEGAL_INTRINSIC_COMPTYPES value.
 const ArBasicKind *g_LegalIntrinsicCompTypes[] = {
     g_NullCT,               // LICOMPTYPE_VOID
@@ -1287,6 +1307,11 @@ const ArBasicKind *g_LegalIntrinsicCompTypes[] = {
     g_GroupNodeOutputRecordsCT,  // LICOMPTYPE_GROUP_NODE_OUTPUT_RECORDS
     g_ThreadNodeOutputRecordsCT, // LICOMPTYPE_THREAD_NODE_OUTPUT_RECORDS
     g_DxHitObjectCT,             // LICOMPTYPE_HIT_OBJECT
+    g_RayQueryCT,                // LICOMPTYPE_RAY_QUERY
+    g_LinAlgCT,                  // LICOMPTYPE_LINALG
+#ifdef ENABLE_SPIRV_CODEGEN
+    g_VKBufferPointerCT, // LICOMPTYPE_VK_BUFFER_POINTER
+#endif
 };
 static_assert(
     ARRAYSIZE(g_LegalIntrinsicCompTypes) == LICOMPTYPE_COUNT,
@@ -1345,6 +1370,7 @@ static const ArBasicKind g_ArBasicKindsAsTypes[] = {
     AR_OBJECT_VK_SPIRV_TYPE, AR_OBJECT_VK_SPIRV_OPAQUE_TYPE,
     AR_OBJECT_VK_INTEGRAL_CONSTANT, AR_OBJECT_VK_LITERAL,
     AR_OBJECT_VK_SPV_INTRINSIC_TYPE, AR_OBJECT_VK_SPV_INTRINSIC_RESULT_ID,
+    AR_OBJECT_VK_BUFFER_POINTER,
 #endif // ENABLE_SPIRV_CODEGEN
     // SPIRV change ends
 
@@ -1451,6 +1477,7 @@ static const uint8_t g_ArBasicKindsTemplateCount[] = {
     1, // AR_OBJECT_VK_LITERAL,
     1, // AR_OBJECT_VK_SPV_INTRINSIC_TYPE
     1, // AR_OBJECT_VK_SPV_INTRINSIC_RESULT_ID
+    2, // AR_OBJECT_VK_BUFFER_POINTER
 #endif // ENABLE_SPIRV_CODEGEN
     // SPIRV change ends
 
@@ -1599,6 +1626,7 @@ static const SubscriptOperatorRecord g_ArBasicKindsSubscripts[] = {
     {0, MipsFalse, SampleFalse}, // AR_OBJECT_VK_LITERAL,
     {0, MipsFalse, SampleFalse}, // AR_OBJECT_VK_SPV_INTRINSIC_TYPE
     {0, MipsFalse, SampleFalse}, // AR_OBJECT_VK_SPV_INTRINSIC_RESULT_ID
+    {0, MipsFalse, SampleFalse}, // AR_OBJECT_VK_BUFFER_POINTER
 #endif                           // ENABLE_SPIRV_CODEGEN
     // SPIRV change ends
 
@@ -1763,6 +1791,7 @@ static const char *g_ArBasicTypeNames[] = {
     "Literal",
     "ext_type",
     "ext_result_id",
+    "BufferPointer",
 #endif // ENABLE_SPIRV_CODEGEN
     // SPIRV change ends
 
@@ -1955,7 +1984,9 @@ AddHLSLIntrinsicFunction(ASTContext &context, NamespaceDecl *NS,
                          LPCSTR tableName, LPCSTR lowering,
                          const HLSL_INTRINSIC *pIntrinsic,
                          std::vector<QualType> *functionArgQualTypesVector) {
-  DeclContext *currentDeclContext = context.getTranslationUnitDecl();
+  DeclContext *currentDeclContext =
+      NS ? static_cast<DeclContext *>(NS) : context.getTranslationUnitDecl();
+
   std::vector<QualType> &functionArgQualTypes = *functionArgQualTypesVector;
   const size_t functionArgTypeCount = functionArgQualTypes.size();
   const bool isVariadic = IsVariadicIntrinsicFunction(pIntrinsic);
@@ -2003,9 +2034,6 @@ AddHLSLIntrinsicFunction(ASTContext &context, NamespaceDecl *NS,
       InlineSpecifiedFalse, HasWrittenPrototypeTrue);
   currentDeclContext->addDecl(functionDecl);
 
-  functionDecl->setLexicalDeclContext(currentDeclContext);
-  // put under hlsl namespace
-  functionDecl->setDeclContext(NS);
   // Add intrinsic attribute
   AddHLSLIntrinsicAttr(functionDecl, context, tableName, lowering, pIntrinsic);
 
@@ -2028,6 +2056,9 @@ AddHLSLIntrinsicFunction(ASTContext &context, NamespaceDecl *NS,
 
   functionDecl->setParams(paramDecls);
   functionDecl->setImplicit(true);
+
+  if (!NS)
+    functionDecl->addAttr(HLSLBuiltinCallAttr::CreateImplicit(context));
 
   return functionDecl;
 }
@@ -2981,6 +3012,7 @@ private:
 
   ClassTemplateDecl *m_vkIntegralConstantTemplateDecl;
   ClassTemplateDecl *m_vkLiteralTemplateDecl;
+  ClassTemplateDecl *m_vkBufferPointerTemplateDecl;
 
   // Declarations for Work Graph Output Record types
   ClassTemplateDecl *m_GroupNodeOutputRecordsTemplateDecl;
@@ -3486,6 +3518,25 @@ private:
         templateTypeParmDecls.push_back(templateTypeParmDecl);
         continue;
       }
+      if (pArgs[i].uTemplateId == INTRIN_TEMPLATE_FROM_FUNCTION_2) {
+        if (TInfo == nullptr) {
+          TInfo = m_sema->getASTContext().CreateTypeSourceInfo(
+              m_context->UnsignedIntTy, 0);
+        }
+        IdentifierInfo *idT = &context.Idents.get("T");
+        IdentifierInfo *idA = &context.Idents.get("A");
+        TemplateTypeParmDecl *templateTypeParmDecl =
+            TemplateTypeParmDecl::Create(context, m_vkNSDecl, NoLoc, NoLoc, 0,
+                                         0, idT, TypenameTrue,
+                                         ParameterPackFalse);
+        NonTypeTemplateParmDecl *nonTypeTemplateParmDecl =
+            NonTypeTemplateParmDecl::Create(context, m_vkNSDecl, NoLoc, NoLoc,
+                                            0, 1, idA, context.UnsignedIntTy,
+                                            ParameterPackFalse, TInfo);
+        templateTypeParmDecl->setDefaultArgument(TInfo);
+        templateTypeParmDecls.push_back(templateTypeParmDecl);
+        templateTypeParmDecls.push_back(nonTypeTemplateParmDecl);
+      }
     }
     return templateTypeParmDecls;
   }
@@ -3554,6 +3605,21 @@ private:
       case LICOMPTYPE_HIT_OBJECT:
         paramTypes.push_back(GetBasicKindType(AR_OBJECT_HIT_OBJECT));
         break;
+#ifdef ENABLE_SPIRV_CODEGEN
+      case LICOMPTYPE_VK_BUFFER_POINTER: {
+        const ArBasicKind *match =
+            std::find(g_ArBasicKindsAsTypes,
+                      &g_ArBasicKindsAsTypes[_countof(g_ArBasicKindsAsTypes)],
+                      AR_OBJECT_VK_BUFFER_POINTER);
+        DXASSERT(match !=
+                     &g_ArBasicKindsAsTypes[_countof(g_ArBasicKindsAsTypes)],
+                 "otherwise can't find constant in basic kinds");
+        size_t index = match - g_ArBasicKindsAsTypes;
+        paramTypes.push_back(
+            m_sema->getASTContext().getTypeDeclType(m_objectTypeDecls[index]));
+        break;
+      }
+#endif
       default:
         DXASSERT(false, "Argument type of intrinsic function is not "
                         "supported");
@@ -3932,6 +3998,12 @@ private:
         recordDecl = DeclareTemplateTypeWithHandleInDeclContext(
             *m_context, m_vkNSDecl, typeName, 1, nullptr);
         recordDecl->setImplicit(true);
+      } else if (kind == AR_OBJECT_VK_BUFFER_POINTER) {
+        if (!m_vkNSDecl)
+          continue;
+        recordDecl = DeclareVkBufferPointerType(*m_context, m_vkNSDecl);
+        recordDecl->setImplicit(true);
+        m_vkBufferPointerTemplateDecl = recordDecl->getDescribedClassTemplate();
       }
 #endif
       else if (templateArgCount == 0) {
@@ -4044,7 +4116,8 @@ public:
   HLSLExternalSource()
       : m_matrixTemplateDecl(nullptr), m_vectorTemplateDecl(nullptr),
         m_vkIntegralConstantTemplateDecl(nullptr),
-        m_vkLiteralTemplateDecl(nullptr), m_hlslNSDecl(nullptr),
+        m_vkLiteralTemplateDecl(nullptr),
+        m_vkBufferPointerTemplateDecl(nullptr), m_hlslNSDecl(nullptr),
         m_vkNSDecl(nullptr), m_dxNSDecl(nullptr), m_context(nullptr),
         m_sema(nullptr), m_hlslStringTypedef(nullptr) {
     memset(m_matrixTypes, 0, sizeof(m_matrixTypes));
@@ -4081,6 +4154,7 @@ public:
                               SourceLocation(), &context.Idents.get("dx"),
                               /*PrevDecl*/ nullptr);
     m_dxNSDecl->setImplicit();
+    m_dxNSDecl->setHasExternalLexicalStorage(true);
     context.getTranslationUnitDecl()->addDecl(m_dxNSDecl);
 
 #ifdef ENABLE_SPIRV_CODEGEN
@@ -4802,7 +4876,11 @@ public:
     case AR_OBJECT_NODE_OUTPUT_ARRAY:
     case AR_OBJECT_EMPTY_NODE_OUTPUT_ARRAY:
     case AR_OBJECT_THREAD_NODE_OUTPUT_RECORDS:
-    case AR_OBJECT_GROUP_NODE_OUTPUT_RECORDS: {
+    case AR_OBJECT_GROUP_NODE_OUTPUT_RECORDS:
+#ifdef ENABLE_SPIRV_CODEGEN
+    case AR_OBJECT_VK_BUFFER_POINTER:
+#endif
+    {
       const ArBasicKind *match = std::find(
           g_ArBasicKindsAsTypes,
           &g_ArBasicKindsAsTypes[_countof(g_ArBasicKindsAsTypes)], kind);
@@ -5094,7 +5172,7 @@ public:
 
   bool AddOverloadedCallCandidates(UnresolvedLookupExpr *ULE,
                                    ArrayRef<Expr *> Args,
-                                   OverloadCandidateSet &CandidateSet,
+                                   OverloadCandidateSet &CandidateSet, Scope *S,
                                    bool PartialOverloading) override {
     DXASSERT_NOMSG(ULE != nullptr);
 
@@ -5119,6 +5197,8 @@ public:
     // Exceptions:
     // - Vulkan-specific intrinsics live in the 'vk::' namespace.
     // - DirectX-specific intrinsics live in the 'dx::' namespace.
+    // - Global namespaces could just mean we have a `using` declaration... so
+    // it can be anywhere!
     if (isQualified && !isGlobalNamespace && !isVkNamespace && !isDxNamespace)
       return false;
 
@@ -5129,81 +5209,106 @@ public:
     }
 
     StringRef nameIdentifier = idInfo->getName();
-    const HLSL_INTRINSIC *table = g_Intrinsics;
-    auto tableCount = _countof(g_Intrinsics);
-    if (isDxNamespace) {
-      table = g_DxIntrinsics;
-      tableCount = _countof(g_DxIntrinsics);
-    }
-#ifdef ENABLE_SPIRV_CODEGEN
-    if (isVkNamespace) {
-      table = g_VkIntrinsics;
-      tableCount = _countof(g_VkIntrinsics);
-    }
-#endif // ENABLE_SPIRV_CODEGEN
+    using IntrinsicArray = llvm::ArrayRef<const HLSL_INTRINSIC>;
+    struct IntrinsicTableEntry {
+      IntrinsicArray Table;
+      NamespaceDecl *NS;
+    };
 
-    IntrinsicDefIter cursor = FindIntrinsicByNameAndArgCount(
-        table, tableCount, StringRef(), nameIdentifier, Args.size());
-    IntrinsicDefIter end = IntrinsicDefIter::CreateEnd(
-        table, tableCount, IntrinsicTableDefIter::CreateEnd(m_intrinsicTables));
+    llvm::SmallVector<IntrinsicTableEntry, 3> SearchTables;
 
-    for (; cursor != end; ++cursor) {
-      // If this is the intrinsic we're interested in, build up a representation
-      // of the types we need.
-      const HLSL_INTRINSIC *pIntrinsic = *cursor;
-      LPCSTR tableName = cursor.GetTableName();
-      LPCSTR lowering = cursor.GetLoweringStrategy();
-      DXASSERT(pIntrinsic->uNumArgs <= g_MaxIntrinsicParamCount + 1,
-               "otherwise g_MaxIntrinsicParamCount needs to be updated for "
-               "wider signatures");
+    bool SearchDX = isDxNamespace;
+    bool SearchVK = isVkNamespace;
+    if (isGlobalNamespace || !isQualified)
+      SearchTables.push_back(
+          IntrinsicTableEntry{IntrinsicArray(g_Intrinsics), m_hlslNSDecl});
 
-      std::vector<QualType> functionArgTypes;
-      size_t badArgIdx;
-      bool argsMatch =
-          MatchArguments(cursor, QualType(), QualType(), QualType(), Args,
-                         &functionArgTypes, badArgIdx);
-      if (!functionArgTypes.size())
-        return false;
-
-      // Get or create the overload we're interested in.
-      FunctionDecl *intrinsicFuncDecl = nullptr;
-      std::pair<UsedIntrinsicStore::iterator, bool> insertResult =
-          m_usedIntrinsics.insert(UsedIntrinsic(pIntrinsic, functionArgTypes));
-      bool insertedNewValue = insertResult.second;
-      if (insertedNewValue) {
-        NamespaceDecl *nsDecl = m_hlslNSDecl;
-        if (isVkNamespace)
-          nsDecl = m_vkNSDecl;
-        else if (isDxNamespace)
-          nsDecl = m_dxNSDecl;
-        DXASSERT(tableName,
-                 "otherwise IDxcIntrinsicTable::GetTableName() failed");
-        intrinsicFuncDecl =
-            AddHLSLIntrinsicFunction(*m_context, nsDecl, tableName, lowering,
-                                     pIntrinsic, &functionArgTypes);
-        insertResult.first->setFunctionDecl(intrinsicFuncDecl);
-      } else {
-        intrinsicFuncDecl = (*insertResult.first).getFunctionDecl();
+    if (S && !isQualified) {
+      SmallVector<const DeclContext *, 4> NSContexts;
+      m_sema->CollectNamespaceContexts(S, NSContexts);
+      for (const auto &UD : NSContexts) {
+        if (static_cast<DeclContext *>(m_dxNSDecl) == UD)
+          SearchDX = true;
+        else if (static_cast<DeclContext *>(m_vkNSDecl) == UD)
+          SearchVK = true;
       }
+    }
 
-      OverloadCandidate &candidate = CandidateSet.addCandidate(Args.size());
-      candidate.Function = intrinsicFuncDecl;
-      candidate.FoundDecl.setDecl(intrinsicFuncDecl);
-      candidate.Viable = argsMatch;
-      CandidateSet.isNewCandidate(intrinsicFuncDecl); // used to insert into set
-      if (argsMatch)
-        return true;
-      if (badArgIdx) {
-        candidate.FailureKind = ovl_fail_bad_conversion;
-        QualType ParamType =
-            intrinsicFuncDecl->getParamDecl(badArgIdx - 1)->getType();
-        candidate.Conversions[badArgIdx - 1].setBad(
-            BadConversionSequence::no_conversion, Args[badArgIdx - 1],
-            ParamType);
-      } else {
-        // A less informative error. Needed when the failure relates to the
-        // return type
-        candidate.FailureKind = ovl_fail_bad_final_conversion;
+    if (SearchDX)
+      SearchTables.push_back(
+          IntrinsicTableEntry{IntrinsicArray(g_DxIntrinsics), m_dxNSDecl});
+#ifdef ENABLE_SPIRV_CODEGEN
+    if (SearchVK)
+      SearchTables.push_back(
+          IntrinsicTableEntry{IntrinsicArray(g_VkIntrinsics), m_vkNSDecl});
+#endif
+
+    assert(!SearchTables.empty() && "Must have at least one search table!");
+
+    for (const auto &T : SearchTables) {
+
+      IntrinsicDefIter cursor = FindIntrinsicByNameAndArgCount(
+          T.Table.data(), T.Table.size(), StringRef(), nameIdentifier,
+          Args.size());
+      IntrinsicDefIter end = IntrinsicDefIter::CreateEnd(
+          T.Table.data(), T.Table.size(),
+          IntrinsicTableDefIter::CreateEnd(m_intrinsicTables));
+
+      for (; cursor != end; ++cursor) {
+        // If this is the intrinsic we're interested in, build up a
+        // representation of the types we need.
+        const HLSL_INTRINSIC *pIntrinsic = *cursor;
+        LPCSTR tableName = cursor.GetTableName();
+        LPCSTR lowering = cursor.GetLoweringStrategy();
+        DXASSERT(pIntrinsic->uNumArgs <= g_MaxIntrinsicParamCount + 1,
+                 "otherwise g_MaxIntrinsicParamCount needs to be updated for "
+                 "wider signatures");
+
+        std::vector<QualType> functionArgTypes;
+        size_t badArgIdx;
+        bool argsMatch =
+            MatchArguments(cursor, QualType(), QualType(), QualType(), Args,
+                           &functionArgTypes, badArgIdx);
+        if (!functionArgTypes.size())
+          return false;
+
+        // Get or create the overload we're interested in.
+        FunctionDecl *intrinsicFuncDecl = nullptr;
+        std::pair<UsedIntrinsicStore::iterator, bool> insertResult =
+            m_usedIntrinsics.insert(
+                UsedIntrinsic(pIntrinsic, functionArgTypes));
+        bool insertedNewValue = insertResult.second;
+        if (insertedNewValue) {
+          DXASSERT(tableName,
+                   "otherwise IDxcIntrinsicTable::GetTableName() failed");
+          intrinsicFuncDecl =
+              AddHLSLIntrinsicFunction(*m_context, T.NS, tableName, lowering,
+                                       pIntrinsic, &functionArgTypes);
+          insertResult.first->setFunctionDecl(intrinsicFuncDecl);
+        } else {
+          intrinsicFuncDecl = (*insertResult.first).getFunctionDecl();
+        }
+
+        OverloadCandidate &candidate = CandidateSet.addCandidate(Args.size());
+        candidate.Function = intrinsicFuncDecl;
+        candidate.FoundDecl.setDecl(intrinsicFuncDecl);
+        candidate.Viable = argsMatch;
+        CandidateSet.isNewCandidate(
+            intrinsicFuncDecl); // used to insert into set
+        if (argsMatch)
+          return true;
+        if (badArgIdx) {
+          candidate.FailureKind = ovl_fail_bad_conversion;
+          QualType ParamType =
+              intrinsicFuncDecl->getParamDecl(badArgIdx - 1)->getType();
+          candidate.Conversions[badArgIdx - 1].setBad(
+              BadConversionSequence::no_conversion, Args[badArgIdx - 1],
+              ParamType);
+        } else {
+          // A less informative error. Needed when the failure relates to the
+          // return type
+          candidate.FailureKind = ovl_fail_bad_final_conversion;
+        }
       }
     }
 
@@ -5213,12 +5318,16 @@ public:
   bool Initialize(ASTContext &context) {
     m_context = &context;
 
-    m_hlslNSDecl =
-        NamespaceDecl::Create(context, context.getTranslationUnitDecl(),
-                              /*Inline*/ false, SourceLocation(),
-                              SourceLocation(), &context.Idents.get("hlsl"),
-                              /*PrevDecl*/ nullptr);
-    m_hlslNSDecl->setImplicit();
+    // The HLSL namespace is disabled here pending a decision on
+    // https://github.com/microsoft/hlsl-specs/issues/484.
+    if (false && context.getLangOpts().HLSLVersion >= hlsl::LangStd::v202x) {
+      m_hlslNSDecl =
+          NamespaceDecl::Create(context, context.getTranslationUnitDecl(),
+                                /*Inline*/ false, SourceLocation(),
+                                SourceLocation(), &context.Idents.get("hlsl"),
+                                /*PrevDecl*/ nullptr);
+      m_hlslNSDecl->setImplicit();
+    }
     AddBaseTypes();
     AddHLSLScalarTypes();
     AddHLSLStringType();
@@ -5318,12 +5427,26 @@ public:
               << type << GetMatrixOrVectorElementType(type);
         }
         return valid;
+#ifdef ENABLE_SPIRV_CODEGEN
+      } else if (hlsl::IsVKBufferPointerType(qt)) {
+        return true;
+#endif
       } else if (qt->isStructureOrClassType()) {
         const RecordType *recordType = qt->getAs<RecordType>();
         objectKind = ClassifyRecordType(recordType);
         switch (objectKind) {
         case AR_TOBJ_OBJECT:
-          m_sema->Diag(argLoc, diag::err_hlsl_objectintemplateargument) << type;
+#ifdef ENABLE_SPIRV_CODEGEN
+          if (const auto *namespaceDecl = dyn_cast<NamespaceDecl>(
+                  recordType->getDecl()->getDeclContext());
+              namespaceDecl && namespaceDecl->getName().equals("vk") &&
+              (recordType->getDecl()->getName().equals("SpirvType") ||
+               recordType->getDecl()->getName().equals("SpirvOpaqueType"))) {
+            return true;
+          }
+#endif
+          m_sema->Diag(argLoc, diag::err_hlsl_unsupported_object_context)
+              << type << static_cast<unsigned>(TypeDiagContext::TypeParameter);
           return false;
         case AR_TOBJ_COMPOUND: {
           const RecordDecl *recordDecl = recordType->getDecl();
@@ -5462,14 +5585,27 @@ public:
         m_sema->RequireCompleteType(argSrcLoc, argType,
                                     diag::err_typecheck_decl_incomplete_type);
 
-        if (containsLongVector(argType)) {
-          const unsigned ConstantBuffersOrTextureBuffersIdx = 0;
-          m_sema->Diag(argSrcLoc, diag::err_hlsl_unsupported_long_vector)
-              << ConstantBuffersOrTextureBuffersIdx;
+        TypeDiagContext DiagContext =
+            TypeDiagContext::ConstantBuffersOrTextureBuffers;
+        if (DiagnoseTypeElements(*m_sema, argSrcLoc, argType, DiagContext,
+                                 DiagContext))
           return true;
-        }
       }
       return false;
+    } else if (ResAttr && DXIL::IsStructuredBuffer(ResAttr->getResKind())) {
+      if (TemplateArgList.size() == 1) {
+        const TemplateArgumentLoc &ArgLoc = TemplateArgList[0];
+        const TemplateArgument &Arg = ArgLoc.getArgument();
+        if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
+          QualType ArgType = Arg.getAsType();
+          SourceLocation ArgSrcLoc = ArgLoc.getLocation();
+          if (DiagnoseTypeElements(
+                  *m_sema, ArgSrcLoc, ArgType,
+                  TypeDiagContext::StructuredBuffers /*ObjDiagContext*/,
+                  TypeDiagContext::Valid /*LongVecDiagContext*/))
+            return true;
+        }
+      }
 
     } else if (Template->getTemplatedDecl()->hasAttr<HLSLNodeObjectAttr>()) {
 
@@ -5570,13 +5706,10 @@ public:
       CXXRecordDecl *Decl = arg.getAsType()->getAsCXXRecordDecl();
       if (Decl && !Decl->isCompleteDefinition())
         return true;
-      if (containsLongVector(arg.getAsType())) {
-        const unsigned TessellationPatchesIDx = 1;
-        m_sema->Diag(argLoc.getLocation(),
-                     diag::err_hlsl_unsupported_long_vector)
-            << TessellationPatchesIDx;
+      const TypeDiagContext DiagContext = TypeDiagContext::TessellationPatches;
+      if (DiagnoseTypeElements(*m_sema, argLoc.getLocation(), arg.getAsType(),
+                               DiagContext, DiagContext))
         return true;
-      }
     } else if (Template->getTemplatedDecl()->hasAttr<HLSLStreamOutputAttr>()) {
       DXASSERT(TemplateArgList.size() > 0,
                "Geometry streams should have at least one template args");
@@ -5589,13 +5722,10 @@ public:
       CXXRecordDecl *Decl = arg.getAsType()->getAsCXXRecordDecl();
       if (Decl && !Decl->isCompleteDefinition())
         return true;
-      if (containsLongVector(arg.getAsType())) {
-        const unsigned GeometryStreamsIdx = 2;
-        m_sema->Diag(argLoc.getLocation(),
-                     diag::err_hlsl_unsupported_long_vector)
-            << GeometryStreamsIdx;
+      const TypeDiagContext DiagContext = TypeDiagContext::GeometryStreams;
+      if (DiagnoseTypeElements(*m_sema, argLoc.getLocation(), arg.getAsType(),
+                               DiagContext, DiagContext))
         return true;
-      }
     }
 
     bool isMatrix = Template->getCanonicalDecl() ==
@@ -5874,6 +6004,8 @@ public:
              "otherwise caller didn't initialize - there should be at least a "
              "void return type");
 
+    const bool IsStatic = IsStaticMember(intrinsic);
+
     // Create the template arguments.
     SmallVector<TemplateArgument, g_MaxIntrinsicParamCount + 1> templateArgs;
     for (size_t i = 0; i < parameterTypeCount; i++) {
@@ -5939,15 +6071,19 @@ public:
 
     SmallVector<ParmVarDecl *, g_MaxIntrinsicParamCount> Params;
     for (unsigned int i = 1; i < parameterTypeCount; i++) {
+      // The first parameter in the HLSL intrinsic record is just the intrinsic
+      // name and aliases with the 'this' pointer for non-static members. Skip
+      // this first parameter for static functions.
+      unsigned ParamIdx = IsStatic ? i : i - 1;
       IdentifierInfo *id =
-          &m_context->Idents.get(StringRef(intrinsic->pArgs[i - 1].pName));
+          &m_context->Idents.get(StringRef(intrinsic->pArgs[ParamIdx].pName));
       ParmVarDecl *paramDecl = ParmVarDecl::Create(
           *m_context, nullptr, NoLoc, NoLoc, id, parameterTypes[i], nullptr,
           StorageClass::SC_None, nullptr, paramMods[i - 1]);
       Params.push_back(paramDecl);
     }
 
-    StorageClass SC = IsStaticMember(intrinsic) ? SC_Static : SC_Extern;
+    StorageClass SC = IsStatic ? SC_Static : SC_Extern;
     QualType T = TInfo->getType();
     DeclarationNameInfo NameInfo(FunctionTemplate->getDeclName(), NoLoc);
     CXXMethodDecl *method = CXXMethodDecl::Create(
@@ -6539,8 +6675,10 @@ bool HLSLExternalSource::MatchArguments(
   argTypes.clear();
   const bool isVariadic = IsVariadicIntrinsicFunction(pIntrinsic);
 
-  static const UINT UnusedSize = 0xFF;
-  static const BYTE MaxIntrinsicArgs = g_MaxIntrinsicParamCount + 1;
+  static const uint32_t UnusedSize = std::numeric_limits<uint32_t>::max();
+  static const uint32_t MaxIntrinsicArgs = g_MaxIntrinsicParamCount + 1;
+  assert(MaxIntrinsicArgs < std::numeric_limits<uint8_t>::max() &&
+         "This should be a pretty small number");
 #define CAB(cond, arg)                                                         \
   {                                                                            \
     if (!(cond)) {                                                             \
@@ -6555,7 +6693,7 @@ bool HLSLExternalSource::MatchArguments(
   ArBasicKind
       ComponentType[MaxIntrinsicArgs]; // Component type for each argument,
                                        // AR_BASIC_UNKNOWN if unspecified.
-  UINT uSpecialSize[IA_SPECIAL_SLOTS]; // row/col matching types, UNUSED_INDEX32
+  UINT uSpecialSize[IA_SPECIAL_SLOTS]; // row/col matching types, UnusedSize
                                        // if unspecified.
   badArgIdx = MaxIntrinsicArgs;
 
@@ -6658,8 +6796,8 @@ bool HLSLExternalSource::MatchArguments(
           (iArg != retArgIdx && retTypeIdx == pIntrinsicArg->uComponentTypeId);
       // For literal arg which don't affect return type, find concrete type.
       // For literal arg affect return type,
-      //   TryEvalIntrinsic in CGHLSLMS.cpp will take care of cases
-      //     where all argumentss are literal.
+      //   TryEvalIntrinsic in CGHLSLMSFinishCodeGen.cpp will take care of
+      //     cases where all arguments are literal.
       //   CombineBasicTypes will cover the rest cases.
       if (!affectRetType) {
         TypeInfoEltKind =
@@ -6790,6 +6928,7 @@ bool HLSLExternalSource::MatchArguments(
   if (pIntrinsic->pArgs[0].qwUsage &&
       pIntrinsic->pArgs[0].uTemplateId != INTRIN_TEMPLATE_FROM_TYPE &&
       pIntrinsic->pArgs[0].uTemplateId != INTRIN_TEMPLATE_FROM_FUNCTION &&
+      pIntrinsic->pArgs[0].uTemplateId != INTRIN_TEMPLATE_FROM_FUNCTION_2 &&
       pIntrinsic->pArgs[0].uComponentTypeId !=
           INTRIN_COMPTYPE_FROM_NODEOUTPUT) {
     CAB(pIntrinsic->pArgs[0].uTemplateId < MaxIntrinsicArgs, 0);
@@ -6830,7 +6969,8 @@ bool HLSLExternalSource::MatchArguments(
 
     // Check template.
     if (pArgument->uTemplateId == INTRIN_TEMPLATE_FROM_TYPE ||
-        pArgument->uTemplateId == INTRIN_TEMPLATE_FROM_FUNCTION) {
+        pArgument->uTemplateId == INTRIN_TEMPLATE_FROM_FUNCTION ||
+        pArgument->uTemplateId == INTRIN_TEMPLATE_FROM_FUNCTION_2) {
       continue; // Already verified that this is available.
     }
     if (pArgument->uLegalComponentTypes == LICOMPTYPE_USER_DEFINED_TYPE) {
@@ -6998,6 +7138,14 @@ bool HLSLExternalSource::MatchArguments(
         }
       } else {
         pNewType = functionTemplateTypeArg;
+      }
+    } else if (pArgument->uTemplateId == INTRIN_TEMPLATE_FROM_FUNCTION_2) {
+      if (i == 0 &&
+          (builtinOp == hlsl::IntrinsicOp::IOP_Vkreinterpret_pointer_cast ||
+           builtinOp == hlsl::IntrinsicOp::IOP_Vkstatic_pointer_cast)) {
+        pNewType = Args[0]->getType();
+      } else {
+        badArgIdx = std::min(badArgIdx, i);
       }
     } else if (pArgument->uLegalComponentTypes ==
                LICOMPTYPE_USER_DEFINED_TYPE) {
@@ -9685,6 +9833,13 @@ bool HLSLExternalSource::CanConvert(SourceLocation loc, Expr *sourceExpr,
     return false;
   }
 
+#ifdef ENABLE_SPIRV_CODEGEN
+  // Cast vk::BufferPointer to pointer address.
+  if (SourceInfo.EltKind == AR_OBJECT_VK_BUFFER_POINTER) {
+    return TargetInfo.EltKind == AR_BASIC_UINT64;
+  }
+#endif
+
   // Cast cbuffer to its result value.
   if ((SourceInfo.EltKind == AR_OBJECT_CONSTANT_BUFFER ||
        SourceInfo.EltKind == AR_OBJECT_TEXTURE_BUFFER) &&
@@ -10680,6 +10835,26 @@ HLSLExternalSource::ApplyTypeSpecSignToParsedType(clang::QualType &type,
   }
 }
 
+bool CheckIntersectionAttributeArg(Sema &S, Expr *E) {
+  SourceLocation Loc = E->getExprLoc();
+  QualType Ty = E->getType();
+
+  // Identify problematic fields first (high diagnostic accuracy, may miss some
+  // invalid cases)
+  const TypeDiagContext DiagContext = TypeDiagContext::Attributes;
+  if (DiagnoseTypeElements(S, Loc, Ty, DiagContext, DiagContext))
+    return true;
+
+  // Must be a UDT (low diagnostic accuracy, catches remaining invalid cases)
+  if (Ty.isNull() || !hlsl::IsHLSLCopyableAnnotatableRecord(Ty)) {
+    S.Diag(Loc, diag::err_payload_attrs_must_be_udt)
+        << /*payload|attributes|callable*/ 1 << /*parameter %2|type*/ 1;
+    return true;
+  }
+
+  return false;
+}
+
 Sema::TemplateDeductionResult
 HLSLExternalSource::DeduceTemplateArgumentsForHLSL(
     FunctionTemplateDecl *FunctionTemplate,
@@ -10802,27 +10977,37 @@ HLSLExternalSource::DeduceTemplateArgumentsForHLSL(
       IsBABLoad = intrinsicOp == (UINT)IntrinsicOp::MOP_Load;
       IsBABStore = intrinsicOp == (UINT)IntrinsicOp::MOP_Store;
     }
-    if (ExplicitTemplateArgs && ExplicitTemplateArgs->size() > 0) {
-      bool isLegalTemplate = false;
+    if (ExplicitTemplateArgs && ExplicitTemplateArgs->size() >= 1) {
       SourceLocation Loc = ExplicitTemplateArgs->getLAngleLoc();
-      auto TemplateDiag = diag::err_hlsl_intrinsic_template_arg_unsupported;
-      if (ExplicitTemplateArgs->size() >= 1 && (IsBABLoad || IsBABStore)) {
-        TemplateDiag = diag::err_hlsl_intrinsic_template_arg_requires_2018;
-        Loc = (*ExplicitTemplateArgs)[0].getLocation();
-        if (Is2018) {
-          TemplateDiag = diag::err_hlsl_intrinsic_template_arg_numeric;
-          if (ExplicitTemplateArgs->size() == 1 &&
-              !functionTemplateTypeArg.isNull() &&
-              hlsl::IsHLSLNumericOrAggregateOfNumericType(
-                  functionTemplateTypeArg)) {
-            isLegalTemplate = true;
-          }
-        }
+      if (!IsBABLoad && !IsBABStore) {
+        getSema()->Diag(Loc, diag::err_hlsl_intrinsic_template_arg_unsupported)
+            << intrinsicName;
+        return Sema::TemplateDeductionResult::TDK_Invalid;
+      }
+      Loc = (*ExplicitTemplateArgs)[0].getLocation();
+      if (!Is2018) {
+        getSema()->Diag(Loc,
+                        diag::err_hlsl_intrinsic_template_arg_requires_2018)
+            << intrinsicName;
+        return Sema::TemplateDeductionResult::TDK_Invalid;
       }
 
-      if (!isLegalTemplate) {
-        getSema()->Diag(Loc, TemplateDiag) << intrinsicName;
-        return Sema::TemplateDeductionResult::TDK_Invalid;
+      if (IsBABLoad || IsBABStore) {
+        const bool IsNull = functionTemplateTypeArg.isNull();
+        // Incomplete type is diagnosed elsewhere, so just fail if incomplete.
+        if (!IsNull &&
+            getSema()->RequireCompleteType(Loc, functionTemplateTypeArg, 0))
+          return Sema::TemplateDeductionResult::TDK_Invalid;
+        if (IsNull || !hlsl::IsHLSLNumericOrAggregateOfNumericType(
+                          functionTemplateTypeArg)) {
+          getSema()->Diag(Loc, diag::err_hlsl_intrinsic_template_arg_numeric)
+              << intrinsicName;
+          DiagnoseTypeElements(
+              *getSema(), Loc, functionTemplateTypeArg,
+              TypeDiagContext::TypeParameter /*ObjDiagContext*/,
+              TypeDiagContext::Valid /*LongVecDiagContext*/);
+          return Sema::TemplateDeductionResult::TDK_Invalid;
+        }
       }
     } else if (IsBABStore) {
       // Prior to HLSL 2018, Store operation only stored scalar uint.
@@ -11490,7 +11675,8 @@ static bool CheckFinishedCrossGroupSharingCall(Sema &S, CXXMethodDecl *MD,
   return false;
 }
 
-static bool CheckBarrierCall(Sema &S, FunctionDecl *FD, CallExpr *CE) {
+static bool CheckBarrierCall(Sema &S, FunctionDecl *FD, CallExpr *CE,
+                             const hlsl::ShaderModel *SM) {
   DXASSERT(FD->getNumParams() == 2, "otherwise, unknown Barrier overload");
 
   // Emit error when MemoryTypeFlags are known to be invalid.
@@ -11520,12 +11706,18 @@ static bool CheckBarrierCall(Sema &S, FunctionDecl *FD, CallExpr *CE) {
   llvm::APSInt SemanticFlagsVal;
   if (SemanticFlagsExpr->isIntegerConstantExpr(SemanticFlagsVal, S.Context)) {
     SemanticFlags = SemanticFlagsVal.getLimitedValue();
-    if ((uint32_t)SemanticFlags &
-        ~(uint32_t)DXIL::BarrierSemanticFlag::ValidMask) {
+    uint32_t ValidMask = 0U;
+    if (SM->IsSM69Plus()) {
+      ValidMask =
+          static_cast<unsigned>(hlsl::DXIL::BarrierSemanticFlag::ValidMask);
+    } else {
+      ValidMask =
+          static_cast<unsigned>(hlsl::DXIL::BarrierSemanticFlag::LegacyFlags);
+    }
+    if ((uint32_t)SemanticFlags & ~ValidMask) {
       S.Diags.Report(SemanticFlagsExpr->getExprLoc(),
                      diag::err_hlsl_barrier_invalid_semantic_flags)
-          << (uint32_t)SemanticFlags
-          << (uint32_t)DXIL::BarrierSemanticFlag::ValidMask;
+          << SM->IsSM69Plus();
       return true;
     }
   }
@@ -11533,14 +11725,643 @@ static bool CheckBarrierCall(Sema &S, FunctionDecl *FD, CallExpr *CE) {
   return false;
 }
 
+// MatVec Ops
+static const unsigned kMatVecMulOutputVectorIdx = 0;
+static const unsigned kMatVecMulOutputIsUnsignedIdx = 1;
+static const unsigned kMatVecMulInputVectorIdx = 2;
+static const unsigned kMatVecMulIsInputUnsignedIdx = 3;
+static const unsigned kMatVecMulInputInterpretationIdx = 4;
+// static const unsigned kMatVecMulMatrixBufferIdx = 5;
+// static const unsigned kMatVecMulMatrixOffsetIdx = 6;
+static const unsigned kMatVecMulMatrixInterpretationIdx = 7;
+static const unsigned kMatVecMulMatrixMIdx = 8;
+static const unsigned kMatVecMulMatrixKIdx = 9;
+static const unsigned kMatVecMulMatrixLayoutIdx = 10;
+static const unsigned kMatVecMulMatrixTransposeIdx = 11;
+static const unsigned kMatVecMulMatrixStrideIdx = 12;
+
+// MatVecAdd
+const unsigned kMatVecMulAddBiasInterpretation = 15;
+
+static bool IsValidMatrixLayoutForMulAndMulAddOps(unsigned Layout) {
+  return Layout <=
+         static_cast<unsigned>(DXIL::LinalgMatrixLayout::OuterProductOptimal);
+}
+
+static bool IsOptimalTypeMatrixLayout(unsigned Layout) {
+  return (
+      Layout == (static_cast<unsigned>(DXIL::LinalgMatrixLayout::MulOptimal)) ||
+      (Layout ==
+       (static_cast<unsigned>(DXIL::LinalgMatrixLayout::OuterProductOptimal))));
+}
+
+static bool IsValidTransposeForMatrixLayout(unsigned Layout, bool Transposed) {
+  switch (static_cast<DXIL::LinalgMatrixLayout>(Layout)) {
+  case DXIL::LinalgMatrixLayout::RowMajor:
+  case DXIL::LinalgMatrixLayout::ColumnMajor:
+    return !Transposed;
+
+  default:
+    return true;
+  }
+}
+
+static bool IsPackedType(unsigned type) {
+  return (type == static_cast<unsigned>(DXIL::ComponentType::PackedS8x32) ||
+          type == static_cast<unsigned>(DXIL::ComponentType::PackedU8x32));
+}
+
+static bool IsValidLinalgTypeInterpretation(uint32_t Input, bool InRegister) {
+
+  switch (static_cast<DXIL::ComponentType>(Input)) {
+  case DXIL::ComponentType::I16:
+  case DXIL::ComponentType::U16:
+  case DXIL::ComponentType::I32:
+  case DXIL::ComponentType::U32:
+  case DXIL::ComponentType::F16:
+  case DXIL::ComponentType::F32:
+  case DXIL::ComponentType::U8:
+  case DXIL::ComponentType::I8:
+  case DXIL::ComponentType::F8_E4M3:
+  case DXIL::ComponentType::F8_E5M2:
+    return true;
+  case DXIL::ComponentType::PackedS8x32:
+  case DXIL::ComponentType::PackedU8x32:
+    return InRegister;
+  default:
+    return false;
+  }
+}
+
+static bool IsValidVectorAndMatrixDimensions(Sema &S, CallExpr *CE,
+                                             unsigned InputVectorSize,
+                                             unsigned OutputVectorSize,
+                                             unsigned MatrixK, unsigned MatrixM,
+                                             bool isInputPacked) {
+  // Check if output vector size equals to matrix dimension M
+  if (OutputVectorSize != MatrixM) {
+    Expr *OutputVector = CE->getArg(kMatVecMulOutputVectorIdx);
+    S.Diags.Report(
+        OutputVector->getExprLoc(),
+        diag::
+            err_hlsl_linalg_mul_muladd_output_vector_size_not_equal_to_matrix_M);
+    return false;
+  }
+
+  // Check if input vector size equals to matrix dimension K in the unpacked
+  // case.
+  // Check if input vector size equals the smallest number that can hold
+  // matrix dimension K values
+  const unsigned PackingFactor = isInputPacked ? 4 : 1;
+  unsigned MinInputVectorSize = (MatrixK + PackingFactor - 1) / PackingFactor;
+  if (InputVectorSize != MinInputVectorSize) {
+    Expr *InputVector = CE->getArg(kMatVecMulInputVectorIdx);
+    if (isInputPacked) {
+      S.Diags.Report(
+          InputVector->getExprLoc(),
+          diag::err_hlsl_linalg_mul_muladd_packed_input_vector_size_incorrect);
+      return false;
+    } else {
+      S.Diags.Report(
+          InputVector->getExprLoc(),
+          diag::
+              err_hlsl_linalg_mul_muladd_unpacked_input_vector_size_not_equal_to_matrix_K);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static void CheckCommonMulAndMulAddParameters(Sema &S, CallExpr *CE,
+                                              const hlsl::ShaderModel *SM) {
+  // Check if IsOutputUnsigned is a const parameter
+  bool IsOutputUnsignedFlagValue = false;
+  Expr *IsOutputUnsignedExpr = CE->getArg(kMatVecMulOutputIsUnsignedIdx);
+  llvm::APSInt IsOutputUnsignedExprVal;
+  if (IsOutputUnsignedExpr->isIntegerConstantExpr(IsOutputUnsignedExprVal,
+                                                  S.Context)) {
+    IsOutputUnsignedFlagValue = IsOutputUnsignedExprVal.getBoolValue();
+  } else {
+    S.Diags.Report(IsOutputUnsignedExpr->getExprLoc(), diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  Expr *OutputVectorExpr = CE->getArg(kMatVecMulOutputVectorIdx);
+  unsigned OutputVectorSizeValue = 0;
+  if (IsHLSLVecType(OutputVectorExpr->getType())) {
+    OutputVectorSizeValue = GetHLSLVecSize(OutputVectorExpr->getType());
+    QualType OutputVectorType =
+        GetHLSLVecElementType(OutputVectorExpr->getType());
+    const Type *OutputVectorTypePtr = OutputVectorType.getTypePtr();
+
+    // Check if IsOutputUnsigned flag matches output vector type.
+    // Must be true for unsigned int outputs, false for signed int/float
+    // outputs.
+    if (IsOutputUnsignedFlagValue &&
+        !OutputVectorTypePtr->isUnsignedIntegerType()) {
+      DXASSERT_NOMSG(OutputVectorTypePtr->isSignedIntegerType() ||
+                     OutputVectorTypePtr->isFloatingType());
+      S.Diags.Report(IsOutputUnsignedExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_isunsigned_incorrect_for_given_type)
+          << "IsOuputUnsigned" << false
+          << (OutputVectorTypePtr->isSignedIntegerType() ? 1 : 0);
+      return;
+    } else if (!IsOutputUnsignedFlagValue &&
+               OutputVectorTypePtr->isUnsignedIntegerType()) {
+      S.Diags.Report(IsOutputUnsignedExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_isunsigned_incorrect_for_given_type)
+          << "IsOuputUnsigned" << true << 2;
+      return;
+    }
+  }
+
+  // Check if isInputUnsigned parameter is a constant
+  bool IsInputUnsignedFlagValue = false;
+  Expr *IsInputUnsignedExpr = CE->getArg(kMatVecMulIsInputUnsignedIdx);
+  llvm::APSInt IsInputUnsignedExprVal;
+  if (IsInputUnsignedExpr->isIntegerConstantExpr(IsInputUnsignedExprVal,
+                                                 S.Context)) {
+    IsInputUnsignedFlagValue = IsInputUnsignedExprVal.getBoolValue();
+  } else {
+    S.Diags.Report(IsInputUnsignedExpr->getExprLoc(), diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  // Get InputInterpretation, check if it is constant
+  Expr *InputInterpretationExpr = CE->getArg(kMatVecMulInputInterpretationIdx);
+  llvm::APSInt InputInterpretationExprVal;
+  unsigned InputInterpretationValue = 0;
+  if (InputInterpretationExpr->isIntegerConstantExpr(InputInterpretationExprVal,
+                                                     S.Context)) {
+    InputInterpretationValue = InputInterpretationExprVal.getLimitedValue();
+    const bool InRegisterInterpretation = true;
+    if (!IsValidLinalgTypeInterpretation(InputInterpretationValue,
+                                         InRegisterInterpretation)) {
+      S.Diags.Report(InputInterpretationExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_interpretation_value_incorrect)
+          << std::to_string(InputInterpretationValue)
+          << InRegisterInterpretation;
+      return;
+    }
+  } else {
+    S.Diags.Report(InputInterpretationExpr->getExprLoc(),
+                   diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  bool IsInputVectorPacked = IsPackedType(InputInterpretationValue);
+
+  // For packed types input vector type must be uint and isUnsigned must be
+  // true. The signedness is determined from the InputInterpretation
+  Expr *InputVectorExpr = CE->getArg(kMatVecMulInputVectorIdx);
+  unsigned InputVectorSizeValue = 0;
+  if (IsHLSLVecType(InputVectorExpr->getType())) {
+    InputVectorSizeValue = GetHLSLVecSize(InputVectorExpr->getType());
+    QualType InputVectorType =
+        GetHLSLVecElementType(InputVectorExpr->getType());
+    unsigned BitWidth = S.Context.getTypeSize(InputVectorType);
+    bool Is32Bit = (BitWidth == 32);
+    const Type *InputVectorTypePtr = InputVectorType.getTypePtr();
+
+    // Check if the isUnsigned flag setting
+    if (IsInputVectorPacked) {
+      // Check that the input vector element type is "32bit"
+      if (!Is32Bit) {
+        S.Diags.Report(
+            InputVectorExpr->getExprLoc(),
+            diag::err_hlsl_linalg_mul_muladd_packed_input_vector_must_be_uint);
+        return;
+      }
+
+      // Check that the input vector element type is an unsigned int
+      if (!InputVectorTypePtr->isUnsignedIntegerType()) {
+        S.Diags.Report(
+            InputVectorExpr->getExprLoc(),
+            diag::err_hlsl_linalg_mul_muladd_packed_input_vector_must_be_uint);
+        return;
+      }
+
+      // Check that isInputUnsigned is always true
+      // Actual signedness is inferred from the InputInterpretation
+      if (!IsInputUnsignedFlagValue) {
+        S.Diags.Report(
+            IsInputUnsignedExpr->getExprLoc(),
+            diag::
+                err_hlsl_linalg_mul_muladd_isUnsigned_for_packed_input_must_be_true);
+        return;
+      }
+    } else {
+      if (IsInputUnsignedFlagValue &&
+          !InputVectorTypePtr->isUnsignedIntegerType()) {
+        DXASSERT_NOMSG(InputVectorTypePtr->isSignedIntegerType() ||
+                       InputVectorTypePtr->isFloatingType());
+        S.Diags.Report(
+            IsInputUnsignedExpr->getExprLoc(),
+            diag::err_hlsl_linalg_isunsigned_incorrect_for_given_type)
+            << "IsInputUnsigned" << false
+            << (InputVectorTypePtr->isSignedIntegerType() ? 1 : 0);
+        return;
+      } else if (!IsInputUnsignedFlagValue &&
+                 InputVectorTypePtr->isUnsignedIntegerType()) {
+        S.Diags.Report(
+            IsInputUnsignedExpr->getExprLoc(),
+            diag::err_hlsl_linalg_isunsigned_incorrect_for_given_type)
+            << "IsInputUnsigned" << true << 2;
+        return;
+      }
+    }
+  }
+
+  // Get Matrix Dimensions M and K, check if they are constants
+  Expr *MatrixKExpr = CE->getArg(kMatVecMulMatrixKIdx);
+  llvm::APSInt MatrixKExprVal;
+  unsigned MatrixKValue = 0;
+  if (MatrixKExpr->isIntegerConstantExpr(MatrixKExprVal, S.Context)) {
+    MatrixKValue = MatrixKExprVal.getLimitedValue();
+  } else {
+    S.Diags.Report(MatrixKExpr->getExprLoc(), diag::err_expr_not_ice) << 0;
+    return;
+  }
+
+  Expr *MatrixMExpr = CE->getArg(kMatVecMulMatrixMIdx);
+  llvm::APSInt MatrixMExprVal;
+  unsigned MatrixMValue = 0;
+  if (MatrixMExpr->isIntegerConstantExpr(MatrixMExprVal, S.Context)) {
+    MatrixMValue = MatrixMExprVal.getLimitedValue();
+  } else {
+    S.Diags.Report(MatrixMExpr->getExprLoc(), diag::err_expr_not_ice) << 0;
+    return;
+  }
+
+  // Check MatrixM and MatrixK values are non-zero
+  if (MatrixMValue == 0) {
+    S.Diags.Report(MatrixMExpr->getExprLoc(),
+                   diag::err_hlsl_linalg_matrix_dim_must_be_greater_than_zero)
+        << std::to_string(DXIL::kSM69MaxVectorLength);
+    return;
+  }
+
+  if (MatrixKValue == 0) {
+    S.Diags.Report(MatrixKExpr->getExprLoc(),
+                   diag::err_hlsl_linalg_matrix_dim_must_be_greater_than_zero)
+        << std::to_string(DXIL::kSM69MaxVectorLength);
+    return;
+  }
+
+  // Check MatrixM and MatrixK values are less than max
+  // Matrix dimension cannot exceed largest vector length in a Mul/MulAdd
+  // operation.
+  if (MatrixMValue > DXIL::kSM69MaxVectorLength) {
+    S.Diags.Report(MatrixMExpr->getExprLoc(),
+                   diag::err_hlsl_linalg_mul_muladd_invalid_dim)
+        << 0 << std::to_string(DXIL::kSM69MaxVectorLength);
+    return;
+  }
+
+  // For packed input vectors 4 values are packed in a uint, so max Matrix K
+  // can be 4096
+  if (IsInputVectorPacked) {
+    const unsigned PackingFactor =
+        4; // Only supported packed formats: DATA_TYPE_(U)SINT8_T4_PACKED
+    if (MatrixKValue > DXIL::kSM69MaxVectorLength * PackingFactor) {
+      S.Diags.Report(MatrixKExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_mul_muladd_invalid_dim)
+          << 2 << std::to_string(DXIL::kSM69MaxVectorLength * PackingFactor);
+      return;
+    }
+  } else {
+    if (MatrixKValue > DXIL::kSM69MaxVectorLength) {
+      S.Diags.Report(MatrixKExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_mul_muladd_invalid_dim)
+          << 1 << std::to_string(DXIL::kSM69MaxVectorLength);
+      return;
+    }
+  }
+
+  if (!IsValidVectorAndMatrixDimensions(S, CE, InputVectorSizeValue,
+                                        OutputVectorSizeValue, MatrixKValue,
+                                        MatrixMValue, IsInputVectorPacked)) {
+    return;
+  }
+
+  // Get MatrixInterpretation, check if it is constant
+  // Make sure it is a valid value
+  Expr *MatrixInterpretationExpr =
+      CE->getArg(kMatVecMulMatrixInterpretationIdx);
+  llvm::APSInt MatrixInterpretationExprVal;
+  unsigned MatrixInterpretationValue = 0;
+  if (MatrixInterpretationExpr->isIntegerConstantExpr(
+          MatrixInterpretationExprVal, S.Context)) {
+    MatrixInterpretationValue = MatrixInterpretationExprVal.getLimitedValue();
+    const bool InRegisterInterpretation = false;
+    if (!IsValidLinalgTypeInterpretation(MatrixInterpretationValue,
+                                         InRegisterInterpretation)) {
+      S.Diags.Report(MatrixInterpretationExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_interpretation_value_incorrect)
+          << std::to_string(MatrixInterpretationValue)
+          << InRegisterInterpretation;
+      return;
+    }
+  } else {
+    S.Diags.Report(MatrixInterpretationExpr->getExprLoc(),
+                   diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  // Get MatrixLayout, check if it is constant and valid value
+  Expr *MatrixLayoutExpr = CE->getArg(kMatVecMulMatrixLayoutIdx);
+  llvm::APSInt MatrixLayoutExprVal;
+  unsigned MatrixLayoutValue = 0;
+  if (MatrixLayoutExpr->isIntegerConstantExpr(MatrixLayoutExprVal, S.Context)) {
+    MatrixLayoutValue = MatrixLayoutExprVal.getLimitedValue();
+    if (!IsValidMatrixLayoutForMulAndMulAddOps(MatrixLayoutValue)) {
+      S.Diags.Report(MatrixLayoutExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_matrix_layout_invalid)
+          << std::to_string(MatrixLayoutValue)
+          << std::to_string(
+                 static_cast<unsigned>(DXIL::LinalgMatrixLayout::RowMajor))
+          << std::to_string(static_cast<unsigned>(
+                 DXIL::LinalgMatrixLayout::OuterProductOptimal));
+      return;
+    }
+  } else {
+    S.Diags.Report(MatrixLayoutExpr->getExprLoc(), diag::err_expr_not_ice) << 0;
+    return;
+  }
+
+  // Get MatrixTranspose, check if it is constant
+  Expr *MatrixTransposeExpr = CE->getArg(kMatVecMulMatrixTransposeIdx);
+  llvm::APSInt MatrixTransposeExprVal;
+  unsigned MatrixTransposeValue = 0;
+  if (MatrixTransposeExpr->isIntegerConstantExpr(MatrixTransposeExprVal,
+                                                 S.Context)) {
+    MatrixTransposeValue = MatrixTransposeExprVal.getBoolValue();
+    if (!IsValidTransposeForMatrixLayout(MatrixLayoutValue,
+                                         MatrixTransposeValue)) {
+
+      S.Diags.Report(MatrixTransposeExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_matrix_layout_is_not_transposable);
+      return;
+    }
+  } else {
+    S.Diags.Report(MatrixTransposeExpr->getExprLoc(), diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  // Get MatrixStride, check if it is constant, if yes it should be zero
+  // for optimal layouts
+  Expr *MatrixStrideExpr = CE->getArg(kMatVecMulMatrixStrideIdx);
+  llvm::APSInt MatrixStrideExprVal;
+  unsigned MatrixStrideValue = 0;
+  if (MatrixStrideExpr->isIntegerConstantExpr(MatrixStrideExprVal, S.Context)) {
+    MatrixStrideValue = MatrixStrideExprVal.getLimitedValue();
+    if (IsOptimalTypeMatrixLayout(MatrixLayoutValue) &&
+        MatrixStrideValue != 0) {
+      S.Diags.Report(
+          MatrixStrideExpr->getExprLoc(),
+          diag::
+              err_hlsl_linalg_optimal_matrix_layout_matrix_stride_must_be_zero);
+      return;
+    }
+  }
+}
+
+static void CheckMulCall(Sema &S, FunctionDecl *FD, CallExpr *CE,
+                         const hlsl::ShaderModel *SM) {
+  CheckCommonMulAndMulAddParameters(S, CE, SM);
+}
+
+static void CheckMulAddCall(Sema &S, FunctionDecl *FD, CallExpr *CE,
+                            const hlsl::ShaderModel *SM) {
+  CheckCommonMulAndMulAddParameters(S, CE, SM);
+
+  // Check if BiasInterpretation is constant and a valid value
+  Expr *BiasInterpretationExpr = CE->getArg(kMatVecMulAddBiasInterpretation);
+  llvm::APSInt BiasInterpretationExprVal;
+  unsigned BiasInterpretationValue = 0;
+  if (BiasInterpretationExpr->isIntegerConstantExpr(BiasInterpretationExprVal,
+                                                    S.Context)) {
+    BiasInterpretationValue = BiasInterpretationExprVal.getLimitedValue();
+    const bool InRegisterInterpretation = false;
+    if (!IsValidLinalgTypeInterpretation(BiasInterpretationValue,
+                                         InRegisterInterpretation)) {
+      S.Diags.Report(BiasInterpretationExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_interpretation_value_incorrect)
+          << std::to_string(BiasInterpretationValue)
+          << InRegisterInterpretation;
+      return;
+    }
+  } else {
+    S.Diags.Report(BiasInterpretationExpr->getExprLoc(), diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+}
+
+// Linalg Outer Product Accumulate
+// OuterProductAccumulate builtin function parameters
+static const unsigned kOuterProdAccInputVector1Idx = 0;
+static const unsigned kOuterProdAccInputVector2Idx = 1;
+// static const unsigned kOuterProdAccMatrixBufferIdx = 2;
+// static const unsigned kOuterProdAccMatrixOffsetIdx = 3;
+static const unsigned kOuterProdAccMatrixInterpretationIdx = 4;
+static const unsigned kOuterProdAccMatrixLayoutIdx = 5;
+static const unsigned kOuterProdAccMatrixStrideIdx = 6;
+
+static void CheckOuterProductAccumulateCall(Sema &S, FunctionDecl *FD,
+                                            CallExpr *CE) {
+  // Check InputVector1 and InputVector2 are the same type
+  const Expr *InputVector1Expr = CE->getArg(kOuterProdAccInputVector1Idx);
+  const Expr *InputVector2Expr = CE->getArg(kOuterProdAccInputVector2Idx);
+  QualType InputVector1Type = InputVector1Expr->getType();
+  QualType InputVector2Type = InputVector2Expr->getType();
+
+  // Get the element types of the vectors
+  const QualType InputVector1ElementType =
+      GetHLSLVecElementType(InputVector1Type);
+  const QualType InputVector2ElementType =
+      GetHLSLVecElementType(InputVector2Type);
+
+  if (!S.Context.hasSameType(InputVector1ElementType,
+                             InputVector2ElementType)) {
+    S.Diags.Report(InputVector2Expr->getExprLoc(),
+                   diag::err_hlsl_linalg_outer_prod_acc_vector_type_mismatch);
+    return;
+  }
+
+  // Check Matrix Interpretation is a constant and a valid value
+  Expr *MatrixInterpretationExpr =
+      CE->getArg(kOuterProdAccMatrixInterpretationIdx);
+  llvm::APSInt MatrixInterpretationExprVal;
+  unsigned MatrixInterpretationValue = 0;
+  if (MatrixInterpretationExpr->isIntegerConstantExpr(
+          MatrixInterpretationExprVal, S.Context)) {
+    MatrixInterpretationValue = MatrixInterpretationExprVal.getLimitedValue();
+    const bool InRegisterInterpretation = false;
+    if (!IsValidLinalgTypeInterpretation(MatrixInterpretationValue,
+                                         InRegisterInterpretation)) {
+      S.Diags.Report(MatrixInterpretationExpr->getExprLoc(),
+                     diag::err_hlsl_linalg_interpretation_value_incorrect)
+          << std::to_string(MatrixInterpretationValue)
+          << InRegisterInterpretation;
+      return;
+    }
+  } else {
+    S.Diags.Report(MatrixInterpretationExpr->getExprLoc(),
+                   diag::err_expr_not_ice)
+        << 0;
+    return;
+  }
+
+  // Check Matrix Layout must be a constant and Training Optimal
+  Expr *MatrixLayoutExpr = CE->getArg(kOuterProdAccMatrixLayoutIdx);
+  llvm::APSInt MatrixLayoutExprVal;
+  unsigned MatrixLayoutValue = 0;
+  if (MatrixLayoutExpr->isIntegerConstantExpr(MatrixLayoutExprVal, S.Context)) {
+    MatrixLayoutValue = MatrixLayoutExprVal.getLimitedValue();
+    if (MatrixLayoutValue !=
+        static_cast<unsigned>(DXIL::LinalgMatrixLayout::OuterProductOptimal)) {
+      S.Diags.Report(
+          MatrixLayoutExpr->getExprLoc(),
+          diag::
+              err_hlsl_linalg_outer_prod_acc_matrix_layout_must_be_outer_prod_acc_optimal)
+          << std::to_string(static_cast<unsigned>(
+                 DXIL::LinalgMatrixLayout::OuterProductOptimal));
+      return;
+    }
+  } else {
+    S.Diags.Report(MatrixLayoutExpr->getExprLoc(), diag::err_expr_not_ice) << 0;
+    return;
+  }
+
+  // Matrix Stride must be zero (Training Optimal matrix layout)
+  Expr *MatrixStrideExpr = CE->getArg(kOuterProdAccMatrixStrideIdx);
+  llvm::APSInt MatrixStrideExprVal;
+  unsigned MatrixStrideValue = 0;
+  if (MatrixStrideExpr->isIntegerConstantExpr(MatrixStrideExprVal, S.Context)) {
+    MatrixStrideValue = MatrixStrideExprVal.getLimitedValue();
+    if (MatrixStrideValue != 0) {
+      S.Diags.Report(
+          MatrixStrideExpr->getExprLoc(),
+          diag::
+              err_hlsl_linalg_optimal_matrix_layout_matrix_stride_must_be_zero);
+      return;
+    }
+  }
+}
+
+#ifdef ENABLE_SPIRV_CODEGEN
+static bool CheckVKBufferPointerCast(Sema &S, FunctionDecl *FD, CallExpr *CE,
+                                     bool isStatic) {
+  const Expr *argExpr = CE->getArg(0);
+  QualType srcType = argExpr->getType();
+  QualType destType = CE->getType();
+  QualType srcTypeArg = hlsl::GetVKBufferPointerBufferType(srcType);
+  QualType destTypeArg = hlsl::GetVKBufferPointerBufferType(destType);
+
+  if (isStatic && srcTypeArg != destTypeArg &&
+      !S.IsDerivedFrom(srcTypeArg, destTypeArg)) {
+    S.Diags.Report(CE->getExprLoc(),
+                   diag::err_hlsl_vk_static_pointer_cast_type);
+    return true;
+  }
+
+  if (hlsl::GetVKBufferPointerAlignment(destType) >
+      hlsl::GetVKBufferPointerAlignment(srcType)) {
+    S.Diags.Report(CE->getExprLoc(), diag::err_hlsl_vk_pointer_cast_alignment);
+    return true;
+  }
+
+  return false;
+}
+#endif
+
+static bool isRelatedDeclMarkedNointerpolation(Expr *E) {
+  if (!E)
+    return false;
+  E = E->IgnoreCasts();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl()->hasAttr<HLSLNoInterpolationAttr>();
+
+  if (auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl()->hasAttr<HLSLNoInterpolationAttr>() ||
+           isRelatedDeclMarkedNointerpolation(ME->getBase());
+
+  if (auto *HVE = dyn_cast<HLSLVectorElementExpr>(E))
+    return isRelatedDeclMarkedNointerpolation(HVE->getBase());
+
+  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    return isRelatedDeclMarkedNointerpolation(ASE->getBase());
+
+  return false;
+}
+
+static bool CheckIntrinsicGetAttributeAtVertex(Sema &S, FunctionDecl *FDecl,
+                                               CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 0);
+  auto argument = TheCall->getArg(0)->IgnoreCasts();
+
+  if (!isRelatedDeclMarkedNointerpolation(argument)) {
+    S.Diag(argument->getExprLoc(), diag::err_hlsl_parameter_requires_attribute)
+        << 0 << FDecl->getName() << "nointerpolation";
+    return true;
+  }
+
+  return false;
+}
+
+static bool CheckNoInterpolationParams(Sema &S, FunctionDecl *FDecl,
+                                       CallExpr *TheCall) {
+  // See #hlsl-specs/issues/181. Feature is broken. For SPIR-V we want
+  // to limit the scope, and fail gracefully in some cases.
+  if (!S.getLangOpts().SPIRV)
+    return false;
+
+  bool error = false;
+  for (unsigned i = 0; i < FDecl->getNumParams(); i++) {
+    assert(i < TheCall->getNumArgs());
+
+    if (!FDecl->getParamDecl(i)->hasAttr<HLSLNoInterpolationAttr>())
+      continue;
+
+    if (!isRelatedDeclMarkedNointerpolation(TheCall->getArg(i))) {
+      S.Diag(TheCall->getArg(i)->getExprLoc(),
+             diag::err_hlsl_parameter_requires_attribute)
+          << i << FDecl->getName() << "nointerpolation";
+      error = true;
+    }
+  }
+
+  return error;
+}
+
+// Verify that user-defined intrinsic struct args contain no long vectors
+static bool CheckUDTIntrinsicArg(Sema &S, Expr *Arg) {
+  const TypeDiagContext DiagContext =
+      TypeDiagContext::UserDefinedStructParameter;
+  return DiagnoseTypeElements(S, Arg->getExprLoc(), Arg->getType(), DiagContext,
+                              DiagContext);
+}
+
 // Check HLSL call constraints, not fatal to creating the AST.
-void Sema::CheckHLSLFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
-                                 const FunctionProtoType *Proto) {
+void Sema::CheckHLSLFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall) {
+  if (CheckNoInterpolationParams(*this, FDecl, TheCall))
+    return;
+
   HLSLIntrinsicAttr *IntrinsicAttr = FDecl->getAttr<HLSLIntrinsicAttr>();
   if (!IntrinsicAttr)
     return;
   if (!IsBuiltinTable(IntrinsicAttr->getGroup()))
     return;
+
+  const auto *SM =
+      hlsl::ShaderModel::GetByName(getLangOpts().HLSLProfile.c_str());
 
   hlsl::IntrinsicOp opCode = (hlsl::IntrinsicOp)IntrinsicAttr->getOpcode();
   switch (opCode) {
@@ -11549,8 +12370,47 @@ void Sema::CheckHLSLFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                                        TheCall->getLocStart());
     break;
   case hlsl::IntrinsicOp::IOP_Barrier:
-    CheckBarrierCall(*this, FDecl, TheCall);
+    CheckBarrierCall(*this, FDecl, TheCall, SM);
     break;
+  case hlsl::IntrinsicOp::IOP___builtin_MatVecMul:
+    CheckMulCall(*this, FDecl, TheCall, SM);
+    break;
+  case hlsl::IntrinsicOp::IOP___builtin_MatVecMulAdd:
+    CheckMulAddCall(*this, FDecl, TheCall, SM);
+    break;
+  case hlsl::IntrinsicOp::IOP___builtin_OuterProductAccumulate:
+    CheckOuterProductAccumulateCall(*this, FDecl, TheCall);
+    break;
+  case hlsl::IntrinsicOp::IOP_GetAttributeAtVertex:
+    // See #hlsl-specs/issues/181. Feature is broken. For SPIR-V we want
+    // to limit the scope, and fail gracefully in some cases.
+    if (!getLangOpts().SPIRV)
+      return;
+    CheckIntrinsicGetAttributeAtVertex(*this, FDecl, TheCall);
+    break;
+  case hlsl::IntrinsicOp::IOP_DispatchMesh:
+    CheckUDTIntrinsicArg(*this, TheCall->getArg(3)->IgnoreCasts());
+    break;
+  case hlsl::IntrinsicOp::IOP_CallShader:
+    CheckUDTIntrinsicArg(*this, TheCall->getArg(1)->IgnoreCasts());
+    break;
+  case hlsl::IntrinsicOp::IOP_TraceRay:
+    CheckUDTIntrinsicArg(*this, TheCall->getArg(7)->IgnoreCasts());
+    break;
+  case hlsl::IntrinsicOp::IOP_ReportHit:
+    CheckIntersectionAttributeArg(*this, TheCall->getArg(2)->IgnoreCasts());
+    break;
+  case hlsl::IntrinsicOp::MOP_DxHitObject_GetAttributes:
+    CheckIntersectionAttributeArg(*this, TheCall->getArg(0)->IgnoreCasts());
+    break;
+#ifdef ENABLE_SPIRV_CODEGEN
+  case hlsl::IntrinsicOp::IOP_Vkreinterpret_pointer_cast:
+    CheckVKBufferPointerCast(*this, FDecl, TheCall, false);
+    break;
+  case hlsl::IntrinsicOp::IOP_Vkstatic_pointer_cast:
+    CheckVKBufferPointerCast(*this, FDecl, TheCall, true);
+    break;
+#endif
   default:
     break;
   }
@@ -11932,7 +12792,11 @@ void Sema::DiagnoseReachableHLSLCall(CallExpr *CE, const hlsl::ShaderModel *SM,
   case hlsl::IntrinsicOp::MOP_TraceRayInline:
     DiagnoseTraceRayInline(*this, CE);
     break;
+  case hlsl::IntrinsicOp::MOP_DxHitObject_FromRayQuery:
+  case hlsl::IntrinsicOp::MOP_DxHitObject_Invoke:
+  case hlsl::IntrinsicOp::MOP_DxHitObject_MakeMiss:
   case hlsl::IntrinsicOp::MOP_DxHitObject_MakeNop:
+  case hlsl::IntrinsicOp::MOP_DxHitObject_TraceRay:
     DiagnoseReachableSERCall(*this, CE, EntrySK, EntryDecl, false);
     break;
   case hlsl::IntrinsicOp::IOP_DxMaybeReorderThread:
@@ -11945,34 +12809,73 @@ void Sema::DiagnoseReachableHLSLCall(CallExpr *CE, const hlsl::ShaderModel *SM,
 
 /////////////////////////////////////////////////////////////////////////////
 
-bool hlsl::DiagnoseNodeStructArgument(Sema *self, TemplateArgumentLoc ArgLoc,
-                                      QualType ArgTy, bool &Empty,
-                                      const FieldDecl *FD) {
-  DXASSERT_NOMSG(!ArgTy.isNull());
+static bool AllowObjectInContext(QualType Ty, TypeDiagContext DiagContext) {
+  // Disallow all object in template type parameters (former
+  // err_hlsl_objectintemplateargument)
+  if (DiagContext == TypeDiagContext::TypeParameter)
+    return false;
+  // Disallow all objects in node records (former
+  // err_hlsl_node_record_object)
+  if (DiagContext == TypeDiagContext::NodeRecords)
+    return false;
+  // TODO: Extend this list for other object types.
+  if (IsHLSLHitObjectType(Ty))
+    return false;
+  return true;
+}
 
-  HLSLExternalSource *source = HLSLExternalSource::FromSema(self);
-  ArTypeObjectKind shapeKind = source->GetTypeObjectKind(ArgTy);
-  switch (shapeKind) {
+// Determine if `Ty` is valid in this `DiagContext` and/or an empty type.  If
+// invalid returns false and Sema `S`, location `Loc`, error index
+// `DiagContext`, and FieldDecl `FD` are used to emit diagnostics. If
+// `CheckLongVec` is set, errors are produced if `Ty` is a long vector. If the
+// type is not empty, `Empty` is set to false. `CheckedDecls` is used to prevent
+// redundant recursive type checks.
+static bool
+DiagnoseElementTypes(Sema &S, SourceLocation Loc, QualType Ty, bool &Empty,
+                     TypeDiagContext ObjDiagContext,
+                     TypeDiagContext LongVecDiagContext,
+                     llvm::SmallPtrSet<const RecordDecl *, 8> &CheckedDecls,
+                     const clang::FieldDecl *FD) {
+  if (Ty.isNull() || Ty->isDependentType())
+    return false;
+
+  const bool CheckLongVec = LongVecDiagContext != TypeDiagContext::Valid;
+  const bool CheckObjects = ObjDiagContext != TypeDiagContext::Valid;
+
+  while (const ArrayType *Arr = Ty->getAsArrayTypeUnsafe())
+    Ty = Arr->getElementType();
+
+  const int ObjDiagContextIdx = static_cast<int>(ObjDiagContext);
+  const int LongVecDiagContextIdx = static_cast<int>(LongVecDiagContext);
+  DXASSERT_NOMSG(
+      LongVecDiagContext == TypeDiagContext::Valid ||
+      (0 <= LongVecDiagContextIdx &&
+       LongVecDiagContextIdx <=
+           static_cast<int>(TypeDiagContext::LongVecDiagMaxSelectIndex)));
+
+  HLSLExternalSource *Source = HLSLExternalSource::FromSema(&S);
+  ArTypeObjectKind ShapeKind = Source->GetTypeObjectKind(Ty);
+  switch (ShapeKind) {
   case AR_TOBJ_VECTOR:
-    if (GetHLSLVecSize(ArgTy) > DXIL::kDefaultMaxVectorLength) {
-      const unsigned NodeRecordsIdx = 3;
-      self->Diag(ArgLoc.getLocation(), diag::err_hlsl_unsupported_long_vector)
-          << NodeRecordsIdx;
+    if (CheckLongVec && GetHLSLVecSize(Ty) > DXIL::kDefaultMaxVectorLength) {
+      S.Diag(Loc, diag::err_hlsl_unsupported_long_vector)
+          << LongVecDiagContextIdx;
       Empty = false;
       return false;
     }
     LLVM_FALLTHROUGH;
-  case AR_TOBJ_ARRAY:
   case AR_TOBJ_BASIC:
   case AR_TOBJ_MATRIX:
     Empty = false;
     return false;
   case AR_TOBJ_OBJECT:
     Empty = false;
-    self->Diag(ArgLoc.getLocation(), diag::err_hlsl_node_record_object)
-        << ArgTy << ArgLoc.getSourceRange();
+    if (!CheckObjects || AllowObjectInContext(Ty, ObjDiagContext))
+      return false;
+    S.Diag(Loc, diag::err_hlsl_unsupported_object_context)
+        << Ty << ObjDiagContextIdx;
     if (FD)
-      self->Diag(FD->getLocation(), diag::note_field_declared_here)
+      S.Diag(FD->getLocation(), diag::note_field_declared_here)
           << FD->getType() << FD->getSourceRange();
     return true;
   case AR_TOBJ_DEPENDENT:
@@ -11981,23 +12884,53 @@ bool hlsl::DiagnoseNodeStructArgument(Sema *self, TemplateArgumentLoc ArgLoc,
     return true;
   case AR_TOBJ_COMPOUND: {
     bool ErrorFound = false;
-    const RecordDecl *RD = ArgTy->getAs<RecordType>()->getDecl();
+    const RecordDecl *RD = Ty->getAs<RecordType>()->getDecl();
+    // Never recurse redundantly into related subtypes that have already been
+    // checked.
+    if (!CheckedDecls.insert(RD).second)
+      return false;
+
     // Check the fields of the RecordDecl
-    for (auto *FD : RD->fields())
+    for (auto *ElemFD : RD->fields()) {
       ErrorFound |=
-          DiagnoseNodeStructArgument(self, ArgLoc, FD->getType(), Empty, FD);
-    if (RD->isCompleteDefinition())
-      if (auto *Child = dyn_cast<CXXRecordDecl>(RD))
-        // Walk up the inheritance chain and check base class fields
-        for (auto &B : Child->bases())
-          ErrorFound |=
-              DiagnoseNodeStructArgument(self, ArgLoc, B.getType(), Empty);
+          DiagnoseElementTypes(S, Loc, ElemFD->getType(), Empty, ObjDiagContext,
+                               LongVecDiagContext, CheckedDecls, ElemFD);
+    }
+    if (!RD->isCompleteDefinition())
+      return ErrorFound;
+
+    if (auto *Child = dyn_cast<CXXRecordDecl>(RD))
+      // Walk up the inheritance chain and check base class fields
+      for (auto &B : Child->bases())
+        ErrorFound |=
+            DiagnoseElementTypes(S, Loc, B.getType(), Empty, ObjDiagContext,
+                                 LongVecDiagContext, CheckedDecls, nullptr);
     return ErrorFound;
   }
   default:
-    DXASSERT(false, "unreachable");
+    // Not a recursive type, no element types to check here
+    Empty = false;
     return false;
   }
+}
+
+bool hlsl::DiagnoseTypeElements(Sema &S, SourceLocation Loc, QualType Ty,
+                                TypeDiagContext ObjDiagContext,
+                                TypeDiagContext LongVecDiagContext,
+                                const clang::FieldDecl *FD) {
+  bool Empty = false;
+  llvm::SmallPtrSet<const RecordDecl *, 8> CheckedDecls;
+  return DiagnoseElementTypes(S, Loc, Ty, Empty, ObjDiagContext,
+                              LongVecDiagContext, CheckedDecls, FD);
+}
+
+bool hlsl::DiagnoseNodeStructArgument(Sema *self, TemplateArgumentLoc ArgLoc,
+                                      QualType ArgTy, bool &Empty,
+                                      const FieldDecl *FD) {
+  llvm::SmallPtrSet<const RecordDecl *, 8> CheckedDecls;
+  return DiagnoseElementTypes(*self, ArgLoc.getLocation(), ArgTy, Empty,
+                              TypeDiagContext::NodeRecords,
+                              TypeDiagContext::NodeRecords, CheckedDecls, FD);
 }
 
 // This function diagnoses whether or not all entry-point attributes
@@ -12424,21 +13357,6 @@ bool hlsl::ShouldSkipNRVO(clang::Sema &sema, clang::QualType returnType,
     }
   }
 
-  return false;
-}
-
-bool hlsl::containsLongVector(QualType qt) {
-  if (qt.isNull() || qt->isDependentType())
-    return false;
-
-  while (const ArrayType *Arr = qt->getAsArrayTypeUnsafe())
-    qt = Arr->getElementType();
-
-  if (CXXRecordDecl *Decl = qt->getAsCXXRecordDecl()) {
-    if (!Decl->isCompleteDefinition())
-      return false;
-    return Decl->hasHLSLLongVector();
-  }
   return false;
 }
 
@@ -13554,8 +14472,9 @@ ValidateMaxRecordsSharedWithAttributes(Sema &S, Decl *D,
 
 void Sema::DiagnoseHLSLDeclAttr(const Decl *D, const Attr *A) {
   HLSLExternalSource *ExtSource = HLSLExternalSource::FromSema(this);
-  if (const HLSLGloballyCoherentAttr *HLSLGCAttr =
-          dyn_cast<HLSLGloballyCoherentAttr>(A)) {
+  const bool IsGCAttr = isa<HLSLGloballyCoherentAttr>(A);
+  const bool IsRCAttr = isa<HLSLReorderCoherentAttr>(A);
+  if (IsGCAttr || IsRCAttr) {
     const ValueDecl *TD = cast<ValueDecl>(D);
     if (TD->getType()->isDependentType())
       return;
@@ -13564,23 +14483,25 @@ void Sema::DiagnoseHLSLDeclAttr(const Decl *D, const Attr *A) {
       DeclType = FD->getReturnType();
     while (DeclType->isArrayType())
       DeclType = QualType(DeclType->getArrayElementTypeNoTypeQual(), 0);
+    const bool IsAllowedNodeIO =
+        IsGCAttr &&
+        GetNodeIOType(DeclType) == DXIL::NodeIOKind::RWDispatchNodeInputRecord;
+    const bool IsUAV =
+        hlsl::GetResourceClassForType(getASTContext(), DeclType) ==
+        hlsl::DXIL::ResourceClass::UAV;
     if (ExtSource->GetTypeObjectKind(DeclType) != AR_TOBJ_OBJECT ||
-        (hlsl::GetResourceClassForType(getASTContext(), DeclType) !=
-             hlsl::DXIL::ResourceClass::UAV &&
-         GetNodeIOType(DeclType) !=
-             DXIL::NodeIOKind::RWDispatchNodeInputRecord)) {
+        (!IsUAV && !IsAllowedNodeIO)) {
       Diag(A->getLocation(), diag::err_hlsl_varmodifierna_decltype)
           << A << DeclType->getCanonicalTypeUnqualified() << A->getRange();
-      Diag(A->getLocation(), diag::note_hlsl_globallycoherent_applies_to)
-          << A << A->getRange();
+      Diag(A->getLocation(), diag::note_hlsl_coherence_applies_to)
+          << (int)IsGCAttr << A << A->getRange();
     }
     return;
   }
 }
 
-void Sema::DiagnoseGloballyCoherentMismatch(const Expr *SrcExpr,
-                                            QualType TargetType,
-                                            SourceLocation Loc) {
+void Sema::DiagnoseCoherenceMismatch(const Expr *SrcExpr, QualType TargetType,
+                                     SourceLocation Loc) {
   QualType SrcTy = SrcExpr->getType();
   QualType DstTy = TargetType;
   if (SrcTy->isArrayType() && DstTy->isArrayType()) {
@@ -13592,9 +14513,39 @@ void Sema::DiagnoseGloballyCoherentMismatch(const Expr *SrcExpr,
       GetNodeIOType(DstTy) == DXIL::NodeIOKind::RWDispatchNodeInputRecord) {
     bool SrcGL = hlsl::HasHLSLGloballyCoherent(SrcTy);
     bool DstGL = hlsl::HasHLSLGloballyCoherent(DstTy);
-    if (SrcGL != DstGL)
-      Diag(Loc, diag::warn_hlsl_impcast_glc_mismatch)
-          << SrcExpr->getType() << TargetType << /*loses|adds*/ DstGL;
+    // 'reordercoherent' attribute dropped earlier in presence of
+    // 'globallycoherent'
+    bool SrcRD = hlsl::HasHLSLReorderCoherent(SrcTy);
+    bool DstRD = hlsl::HasHLSLReorderCoherent(DstTy);
+
+    enum {
+      NoMismatch = -1,
+      DemoteToRD = 0,
+      PromoteToGL = 1,
+      LosesRD = 2,
+      LosesGL = 3,
+      AddsRD = 4,
+      AddsGL = 5
+    } MismatchType = NoMismatch;
+
+    if (SrcGL && DstRD)
+      MismatchType = DemoteToRD;
+    else if (SrcRD && DstGL)
+      MismatchType = PromoteToGL;
+    else if (SrcRD && !DstRD)
+      MismatchType = LosesRD;
+    else if (SrcGL && !DstGL)
+      MismatchType = LosesGL;
+    else if (!SrcRD && DstRD)
+      MismatchType = AddsRD;
+    else if (!SrcGL && DstGL)
+      MismatchType = AddsGL;
+
+    if (MismatchType == NoMismatch)
+      return;
+
+    Diag(Loc, diag::warn_hlsl_impcast_coherence_mismatch)
+        << SrcExpr->getType() << TargetType << MismatchType;
   }
 }
 
@@ -13743,6 +14694,10 @@ void hlsl::HandleDeclAttributeForHLSL(Sema &S, Decl *D, const AttributeList &A,
     declAttr = ::new (S.Context) HLSLGloballyCoherentAttr(
         A.getRange(), S.Context, A.getAttributeSpellingListIndex());
     break;
+  case AttributeList::AT_HLSLReorderCoherent:
+    declAttr = ::new (S.Context) HLSLReorderCoherentAttr(
+        A.getRange(), S.Context, A.getAttributeSpellingListIndex());
+    break;
   case AttributeList::AT_HLSLIndices:
     declAttr = ::new (S.Context) HLSLIndicesAttr(
         A.getRange(), S.Context, A.getAttributeSpellingListIndex());
@@ -13801,6 +14756,10 @@ void hlsl::HandleDeclAttributeForHLSL(Sema &S, Decl *D, const AttributeList &A,
         A.getRange(), S.Context, A.getAttributeSpellingListIndex());
     break;
   // SPIRV Change Starts
+  case AttributeList::AT_VKAliasedPointer: {
+    declAttr = ::new (S.Context) VKAliasedPointerAttr(
+        A.getRange(), S.Context, A.getAttributeSpellingListIndex());
+  } break;
   case AttributeList::AT_VKDecorateIdExt: {
     if (A.getNumArgs() == 0 || !A.getArg(0).is<clang::Expr *>()) {
       Handled = false;
@@ -14803,6 +15762,7 @@ bool Sema::DiagnoseHLSLDecl(Declarator &D, DeclContext *DC, Expr *BitWidth,
       }
       break;
     case AttributeList::AT_HLSLGloballyCoherent: // Handled elsewhere
+    case AttributeList::AT_HLSLReorderCoherent:  // Handled elsewhere
       break;
     case AttributeList::AT_HLSLUniform:
       if (!(isGlobal || isParameter)) {
@@ -15070,8 +16030,8 @@ bool Sema::DiagnoseHLSLDecl(Declarator &D, DeclContext *DC, Expr *BitWidth,
     result = false;
   }
 
-  // Disallow long vecs from $Global cbuffers.
-  if (isGlobal && !isStatic && !isGroupShared) {
+  // Disallow intangible HLSL objects in the global scope.
+  if (isGlobal) {
     // Suppress actual emitting of errors for incompletable types here
     // They are redundant to those produced in ActOnUninitializedDecl.
     struct SilentDiagnoser : public TypeDiagnoser {
@@ -15079,12 +16039,22 @@ bool Sema::DiagnoseHLSLDecl(Declarator &D, DeclContext *DC, Expr *BitWidth,
       virtual void diagnose(Sema &S, SourceLocation Loc, QualType T) {}
     } SD;
     RequireCompleteType(D.getLocStart(), qt, SD);
-    if (containsLongVector(qt)) {
-      unsigned CbuffersOrTbuffersIdx = 4;
-      Diag(D.getLocStart(), diag::err_hlsl_unsupported_long_vector)
-          << CbuffersOrTbuffersIdx;
+
+    // Disallow objects in the global context
+    TypeDiagContext ObjDiagContext = TypeDiagContext::CBuffersOrTBuffers;
+    if (isGroupShared)
+      ObjDiagContext = TypeDiagContext::GroupShared;
+    else if (isStatic)
+      ObjDiagContext = TypeDiagContext::GlobalVariables;
+
+    TypeDiagContext LongVecDiagContext = TypeDiagContext::Valid;
+
+    // Disallow long vecs from $Global cbuffers.
+    if (!isStatic && !isGroupShared && !IS_BASIC_OBJECT(basicKind))
+      LongVecDiagContext = TypeDiagContext::CBuffersOrTBuffers;
+    if (DiagnoseTypeElements(*this, D.getLocStart(), qt, ObjDiagContext,
+                             LongVecDiagContext))
       result = false;
-    }
   }
 
   // SPIRV change starts
@@ -15198,15 +16168,17 @@ static QualType getUnderlyingType(QualType Type) {
 void hlsl::GetHLSLAttributedTypes(
     clang::Sema *self, clang::QualType type,
     const clang::AttributedType **ppMatrixOrientation,
-    const clang::AttributedType **ppNorm, const clang::AttributedType **ppGLC) {
+    const clang::AttributedType **ppNorm, const clang::AttributedType **ppGLC,
+    const clang::AttributedType **ppRDC) {
   AssignOpt<const clang::AttributedType *>(nullptr, ppMatrixOrientation);
   AssignOpt<const clang::AttributedType *>(nullptr, ppNorm);
   AssignOpt<const clang::AttributedType *>(nullptr, ppGLC);
+  AssignOpt<const clang::AttributedType *>(nullptr, ppRDC);
 
   // Note: we clear output pointers once set so we can stop searching
   QualType Desugared = getUnderlyingType(type);
   const AttributedType *AT = dyn_cast<AttributedType>(Desugared);
-  while (AT && (ppMatrixOrientation || ppNorm || ppGLC)) {
+  while (AT && (ppMatrixOrientation || ppNorm || ppGLC || ppRDC)) {
     AttributedType::Kind Kind = AT->getAttrKind();
 
     if (Kind == AttributedType::attr_hlsl_row_major ||
@@ -15225,6 +16197,11 @@ void hlsl::GetHLSLAttributedTypes(
       if (ppGLC) {
         *ppGLC = AT;
         ppGLC = nullptr;
+      }
+    } else if (Kind == AttributedType::attr_hlsl_reordercoherent) {
+      if (ppRDC) {
+        *ppRDC = AT;
+        ppRDC = nullptr;
       }
     }
 
@@ -15610,6 +16587,10 @@ void hlsl::CustomPrintHLSLAttr(const clang::Attr *A, llvm::raw_ostream &Out,
     Out << "globallycoherent ";
     break;
 
+  case clang::attr::HLSLReorderCoherent:
+    Out << "reordercoherent ";
+    break;
+
   case clang::attr::HLSLIndices:
     Out << "indices ";
     break;
@@ -15817,6 +16798,7 @@ bool hlsl::IsHLSLAttr(clang::attr::Kind AttrKind) {
   case clang::attr::HLSLNodeLocalRootArgumentsTableIndex:
   case clang::attr::HLSLNodeShareInputOf:
   case clang::attr::HLSLNodeTrackRWInputSharing:
+  case clang::attr::HLSLReorderCoherent:
   case clang::attr::VKBinding:
   case clang::attr::VKBuiltIn:
   case clang::attr::VKConstantId:
@@ -15953,121 +16935,6 @@ QualType Sema::getHLSLDefaultSpecialization(TemplateDecl *Decl) {
                                Decl->getSourceRange().getEnd(), EmptyArgs);
   }
   return QualType();
-}
-
-static bool isRelatedDeclMarkedNointerpolation(Expr *E) {
-  if (!E)
-    return false;
-  E = E->IgnoreCasts();
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl()->hasAttr<HLSLNoInterpolationAttr>();
-
-  if (auto *ME = dyn_cast<MemberExpr>(E))
-    return ME->getMemberDecl()->hasAttr<HLSLNoInterpolationAttr>() ||
-           isRelatedDeclMarkedNointerpolation(ME->getBase());
-
-  if (auto *HVE = dyn_cast<HLSLVectorElementExpr>(E))
-    return isRelatedDeclMarkedNointerpolation(HVE->getBase());
-
-  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return isRelatedDeclMarkedNointerpolation(ASE->getBase());
-
-  return false;
-}
-
-// Verify that user-defined intrinsic struct args contain no long vectors
-static bool CheckUDTIntrinsicArg(Sema *S, Expr *Arg) {
-  if (containsLongVector(Arg->getType())) {
-    const unsigned UserDefinedStructParameterIdx = 5;
-    S->Diag(Arg->getExprLoc(), diag::err_hlsl_unsupported_long_vector)
-        << UserDefinedStructParameterIdx;
-    return true;
-  }
-  return false;
-}
-
-static bool CheckIntrinsicGetAttributeAtVertex(Sema *S, FunctionDecl *FDecl,
-                                               CallExpr *TheCall) {
-  assert(TheCall->getNumArgs() > 0);
-  auto argument = TheCall->getArg(0)->IgnoreCasts();
-
-  if (!isRelatedDeclMarkedNointerpolation(argument)) {
-    S->Diag(argument->getExprLoc(), diag::err_hlsl_parameter_requires_attribute)
-        << 0 << FDecl->getName() << "nointerpolation";
-    return true;
-  }
-
-  return false;
-}
-
-bool Sema::CheckHLSLIntrinsicCall(FunctionDecl *FDecl, CallExpr *TheCall) {
-  auto attr = FDecl->getAttr<HLSLIntrinsicAttr>();
-
-  if (!attr)
-    return false;
-
-  if (!IsBuiltinTable(attr->getGroup()))
-    return false;
-
-  switch (hlsl::IntrinsicOp(attr->getOpcode())) {
-  case hlsl::IntrinsicOp::IOP_GetAttributeAtVertex:
-    // See #hlsl-specs/issues/181. Feature is broken. For SPIR-V we want
-    // to limit the scope, and fail gracefully in some cases.
-    if (!getLangOpts().SPIRV)
-      return false;
-    // This should never happen for SPIR-V. But on the DXIL side, extension can
-    // be added by inserting new intrinsics, meaning opcodes can collide with
-    // existing ones. See the ExtensionTest.EvalAttributeCollision test.
-    assert(FDecl->getName() == "GetAttributeAtVertex");
-    return CheckIntrinsicGetAttributeAtVertex(this, FDecl, TheCall);
-  case hlsl::IntrinsicOp::IOP_DispatchMesh:
-    assert(TheCall->getNumArgs() > 3);
-    assert(FDecl->getName() == "DispatchMesh");
-    return CheckUDTIntrinsicArg(this, TheCall->getArg(3)->IgnoreCasts());
-  case hlsl::IntrinsicOp::IOP_CallShader:
-    assert(TheCall->getNumArgs() > 1);
-    assert(FDecl->getName() == "CallShader");
-    return CheckUDTIntrinsicArg(this, TheCall->getArg(1)->IgnoreCasts());
-  case hlsl::IntrinsicOp::IOP_TraceRay:
-    assert(TheCall->getNumArgs() > 7);
-    assert(FDecl->getName() == "TraceRay");
-    return CheckUDTIntrinsicArg(this, TheCall->getArg(7)->IgnoreCasts());
-  case hlsl::IntrinsicOp::IOP_ReportHit:
-    assert(TheCall->getNumArgs() > 2);
-    assert(FDecl->getName() == "ReportHit");
-    return CheckUDTIntrinsicArg(this, TheCall->getArg(2)->IgnoreCasts());
-  default:
-    break;
-  }
-
-  return false;
-}
-
-bool Sema::CheckHLSLFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall) {
-  if (hlsl::IsIntrinsicOp(FDecl) && CheckHLSLIntrinsicCall(FDecl, TheCall))
-    return true;
-
-  // See #hlsl-specs/issues/181. Feature is broken. For SPIR-V we want
-  // to limit the scope, and fail gracefully in some cases.
-  if (!getLangOpts().SPIRV)
-    return false;
-
-  bool error = false;
-  for (unsigned i = 0; i < FDecl->getNumParams(); i++) {
-    assert(i < TheCall->getNumArgs());
-
-    if (!FDecl->getParamDecl(i)->hasAttr<HLSLNoInterpolationAttr>())
-      continue;
-
-    if (!isRelatedDeclMarkedNointerpolation(TheCall->getArg(i))) {
-      Diag(TheCall->getArg(i)->getExprLoc(),
-           diag::err_hlsl_parameter_requires_attribute)
-          << i << FDecl->getName() << "nointerpolation";
-      error = true;
-    }
-  }
-
-  return error;
 }
 
 namespace hlsl {
@@ -16293,6 +17160,10 @@ void DiagnoseNodeEntry(Sema &S, FunctionDecl *FD, llvm::StringRef StageName,
   DXIL::ShaderKind shaderKind = ShaderModel::KindFromFullName(StageName);
   if (shaderKind == DXIL::ShaderKind::Node) {
     NodeLoc = pAttr->getLocation();
+    // SPIR-V node shader support is experimental
+    if (S.getLangOpts().SPIRV) {
+      S.Diag(NodeLoc, diag::warn_spirv_node_shaders_experimental);
+    }
   }
   if (NodeLoc.isInvalid()) {
     return;
@@ -16720,18 +17591,15 @@ void DiagnoseEntry(Sema &S, FunctionDecl *FD) {
   // Would be nice to check for resources here as they crash the compiler now.
   // See issue #7186.
   for (const auto *param : FD->params()) {
-    if (containsLongVector(param->getType())) {
-      const unsigned EntryFunctionParametersIdx = 6;
-      S.Diag(param->getLocation(), diag::err_hlsl_unsupported_long_vector)
-          << EntryFunctionParametersIdx;
-    }
+    const TypeDiagContext DiagContext =
+        TypeDiagContext::EntryFunctionParameters;
+    hlsl::DiagnoseTypeElements(S, param->getLocation(), param->getType(),
+                               DiagContext, DiagContext);
   }
 
-  if (containsLongVector(FD->getReturnType())) {
-    const unsigned EntryFunctionReturnIdx = 7;
-    S.Diag(FD->getLocation(), diag::err_hlsl_unsupported_long_vector)
-        << EntryFunctionReturnIdx;
-  }
+  const TypeDiagContext DiagContext = TypeDiagContext::EntryFunctionReturnType;
+  DiagnoseTypeElements(S, FD->getLocation(), FD->getReturnType(), DiagContext,
+                       DiagContext);
 
   DXIL::ShaderKind Stage =
       ShaderModel::KindFromFullName(shaderAttr->getStage());

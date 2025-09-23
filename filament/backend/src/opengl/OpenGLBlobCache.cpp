@@ -23,6 +23,8 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/Logger.h>
+
 namespace filament::backend {
 
 struct OpenGLBlobCache::Blob {
@@ -72,8 +74,20 @@ GLuint OpenGLBlobCache::retrieve(BlobCacheKey* outKey, Platform& platform,
             glProgramBinary(programId, blob->format, blob->data, programBinarySize);
         }
 
-        if (UTILS_UNLIKELY(glGetError() != GL_NO_ERROR)) {
-            // glProgramBinary can fail if for instance the driver has been updated
+        // Verify the program retrieved from the blob cache. `glProgramBinary` can succeed but
+        // result in an unlinked program, so we must check both `glGetError()` and the
+        // `GL_LINK_STATUS`. This can happen if, for instance, the graphics driver has been updated.
+        // If loading fails, we return 0 to fall back to a normal compilation and link.
+        GLenum glError = glGetError();
+        GLint linkStatus = GL_FALSE;
+        if (glError == GL_NO_ERROR) {
+            glGetProgramiv(programId, GL_LINK_STATUS, &linkStatus);
+        }
+
+        if (UTILS_UNLIKELY(glError != GL_NO_ERROR || linkStatus != GL_TRUE)) {
+            LOG(WARNING) << "Failed to load program binary, name=" << program.getName().c_str_safe()
+                         << ", size=" << blobSize << ", format=" << blob->format
+                         << ", glError=" << glError << ", linkStatus=" << linkStatus;
             glDeleteProgram(programId);
             programId = 0;
         }

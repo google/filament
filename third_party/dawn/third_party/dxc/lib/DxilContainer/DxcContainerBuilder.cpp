@@ -146,18 +146,14 @@ DxcContainerBuilder::SerializeContainer(IDxcOperationResult **ppResult) {
     // Combine existing warnings and errors from validation
     CComPtr<IDxcBlobEncoding> pErrorBlob;
     CDxcMallocHeapPtr<char> errorHeap(m_pMalloc);
-    SIZE_T warningLength = m_warning ? strlen(m_warning) : 0;
-    SIZE_T valErrorLength =
+    SIZE_T totalErrorLength =
         pValErrorUtf8 ? pValErrorUtf8->GetStringLength() : 0;
-    SIZE_T totalErrorLength = warningLength + valErrorLength;
     if (totalErrorLength) {
       SIZE_T errorSizeInBytes = totalErrorLength + 1;
       errorHeap.AllocateBytes(errorSizeInBytes);
-      if (warningLength)
-        memcpy(errorHeap.m_pData, m_warning, warningLength);
-      if (valErrorLength)
-        memcpy(errorHeap.m_pData + warningLength,
-               pValErrorUtf8->GetStringPointer(), valErrorLength);
+
+      memcpy(errorHeap.m_pData, pValErrorUtf8->GetStringPointer(),
+             totalErrorLength);
       errorHeap.m_pData[totalErrorLength] = L'\0';
       IFT(hlsl::DxcCreateBlobWithEncodingOnMalloc(errorHeap.m_pData, m_pMalloc,
                                                   errorSizeInBytes, DXC_CP_UTF8,

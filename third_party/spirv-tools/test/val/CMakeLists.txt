@@ -38,6 +38,7 @@ add_spvtools_unittest(TARGET val_abcde
        val_derivatives_test.cpp
        val_entry_point_test.cpp
        val_explicit_reserved_test.cpp
+       val_invalid_type_test.cpp
        val_extensions_test.cpp
        val_extension_spv_khr_expect_assume_test.cpp
        val_extension_spv_khr_linkonce_odr_test.cpp
@@ -99,6 +100,7 @@ add_spvtools_unittest(TARGET val_rstuvw
        val_ssa_test.cpp
        val_state_test.cpp
        val_storage_test.cpp
+       val_tensor_test.cpp
        val_type_unique_test.cpp
        val_validation_state_test.cpp
        val_version_test.cpp

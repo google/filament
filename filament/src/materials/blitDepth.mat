@@ -4,7 +4,8 @@ material {
         {
             type : sampler2d,
             name : depth,
-            precision: medium
+            precision: medium,
+            filterable: false
         },
         {
             type : float4,
@@ -18,7 +19,7 @@ material {
             target : depth,
             type : float
         }
-    ],    
+    ],
     variables : [
         vertex
     ],

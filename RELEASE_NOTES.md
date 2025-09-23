@@ -7,6 +7,72 @@ A new header is inserted each time a *tag* is created.
 Instead, if you are authoring a PR for the main branch, add your release note to
 [NEW_RELEASE_NOTES.md](./NEW_RELEASE_NOTES.md).
 
+## v1.65.2
+
+
+## v1.65.1
+
+- `setFrameScheduledCallback` now works on all backends (frame presentation scheduling is still only
+  available on Metal). Non-Metal backends can use the callback to be notified when Filament has
+  finished processing a frame on the CPU.
+- materials: added `getEyeFromViewMatrix()` for vertex shader [⚠️ **Recompile Materials**]
+- matc: make `--workarounds=none` the default [**Recompile Materials to take effect**]
+
+## v1.65.0
+
+lighting: the intermediate froxel record buffer is now dynamically sized [⚠️ **New Material Version**]
+
+## v1.64.1
+
+- Update CMake minimum version to 3.22.1
+- material: Add a material parameter to control shadow far attenuation (b/436680157)
+
+## v1.64.0
+
+- engine: add a `linearFog` material parameter. [⚠️ **New Material Version**]
+- opengl: When `Material::compile()` is called on a platform which doesn't support parallel compilation, shaders are automatically compiled over a number of frames
+- engine: Added `useDefaultDepthVariant` material parameter to force Filament to use its default variant for
+  depth-only passes. [**Requires recompiling materials**]
+- material: fix specularFactor in `LOW_QUALITY` mode. [**Requires recompiling materials**] to take effect.
+- material: Add CRC32 validation for material packages [⚠️ **New Material Version**]
+- material: Improve LineDictionary compression [⚠️ **New Material Version**]
+- Filament is now targeting c++20 (was previously c++17)
+
+## v1.63.1
+
+
+## v1.63.0
+
+- Rename `sampler` parameter `unfilterable` to `filterable` [⚠️ **New Material Version**]
+- Added `Renderer::shouldRenderFrame()`
+
+## v1.62.2
+
+- Metal: fix, respect alpha to coverage rasterization
+- engine: removed `Texture::generatePrefilterMipmap`, a new `libfilament-generatePrefilterMipmap` library can be used in its stead [⚠️ **API BREAKAGE**]
+
+## v1.62.1
+
+- Add new shader define `VARIANT_DEPTH`, defined when a material is compiled for depth variants
+  (e.g., shadows) [**Requires recompiling materials**]
+
+## v1.62.0
+
+- Add new `unfilterable` field to Filament Material's `sampler` [⚠️ **New Material Version**]
+
+## v1.61.2
+
+- samples: samples now have a CLI to select backend api
+
+## v1.61.1
+
+
+## v1.61.0
+
+- materials: sampler now export their type in the material binary [⚠️ **New Material Version**]
+- samples/texturedquad.cpp now has CLI to select backend api
+- samples/hellopbr.cpp CLI now allows for selecting webgpu
+
 ## v1.60.1
 
 

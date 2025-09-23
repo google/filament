@@ -67,6 +67,12 @@ BackendTestConfig NullBackend(std::initializer_list<const char*> forceEnabledWor
                              forceDisabledWorkarounds);
 }
 
+BackendTestConfig WebGPUBackend(std::initializer_list<const char*> forceEnabledWorkarounds,
+                                std::initializer_list<const char*> forceDisabledWorkarounds) {
+    return BackendTestConfig(wgpu::BackendType::WebGPU, forceEnabledWorkarounds,
+                             forceDisabledWorkarounds);
+}
+
 BackendTestConfig OpenGLBackend(std::initializer_list<const char*> forceEnabledWorkarounds,
                                 std::initializer_list<const char*> forceDisabledWorkarounds) {
     return BackendTestConfig(wgpu::BackendType::OpenGL, forceEnabledWorkarounds,
@@ -115,6 +121,8 @@ std::string TestAdapterProperties::ParamName() const {
             return "OpenGLES";
         case wgpu::BackendType::Vulkan:
             return "Vulkan";
+        case wgpu::BackendType::WebGPU:
+            return "WebGPU";
         case wgpu::BackendType::Undefined:
         default:
             DAWN_UNREACHABLE();

@@ -74,73 +74,16 @@ class SubgroupsAdapterInfoTestBase : public DawnTestWithParams<Params> {
 
     // Checks valid values for min and max subgroup sizes, per spec.
     void CheckValidSizes(uint32_t subgroupMinSize, uint32_t subgroupMaxSize) {
-        EXPECT_GE(subgroupMinSize, 4u) << subgroupMinSize;
+        EXPECT_GE(subgroupMinSize, kDefaultSubgroupMinSize) << subgroupMinSize;
         EXPECT_TRUE(IsPowerOfTwo(subgroupMinSize)) << subgroupMinSize;
 
-        EXPECT_LE(subgroupMaxSize, 128u) << subgroupMaxSize;
+        EXPECT_LE(subgroupMaxSize, kDefaultSubgroupMaxSize) << subgroupMaxSize;
         EXPECT_TRUE(IsPowerOfTwo(subgroupMaxSize));
 
         EXPECT_LE(subgroupMinSize, subgroupMaxSize)
             << subgroupMinSize << " should be less equal than " << subgroupMaxSize;
     }
 };
-
-using SubgroupsPropertiesTests = SubgroupsAdapterInfoTestBase<SubgroupsAdapterInfoParams>;
-
-// Test that subgroupMinSize and subgroupMaxSize in wgpu::AdapterPropertiesSubgroups are valid.
-TEST_P(SubgroupsPropertiesTests, FromAdapter) {
-    wgpu::AdapterPropertiesSubgroups subgroup_properties;
-
-    // Write invalid values to start with, to make sure they are overwritten.
-    subgroup_properties.subgroupMinSize = 3;
-    subgroup_properties.subgroupMaxSize = 443;
-
-    wgpu::AdapterInfo info;
-    info.nextInChain = &subgroup_properties;
-
-    adapter.GetInfo(&info);
-
-    // Check the integrity of the struct.
-    EXPECT_EQ(subgroup_properties.sType, wgpu::SType::AdapterPropertiesSubgroups);
-    EXPECT_EQ(subgroup_properties.nextInChain, nullptr);
-
-    CheckValidSizes(subgroup_properties.subgroupMinSize, subgroup_properties.subgroupMaxSize);
-}
-
-// Test that subgroupMinSize and subgroupMaxSize in wgpu::AdapterPropertiesSubgroups are valid.
-TEST_P(SubgroupsPropertiesTests, FromDevice) {
-    wgpu::AdapterPropertiesSubgroups subgroup_properties;
-    wgpu::AdapterInfo info;
-    info.nextInChain = &subgroup_properties;
-
-    device.GetAdapterInfo(&info);
-
-    CheckValidSizes(subgroup_properties.subgroupMinSize, subgroup_properties.subgroupMaxSize);
-}
-
-// Test that subgroupMinSize and subgroupMaxSize in wgpu::AdapterPropertiesSubgroups are the same
-// between adapter and device.
-TEST_P(SubgroupsPropertiesTests, DeviceAndAdapterAgree) {
-    wgpu::AdapterPropertiesSubgroups adapter_subgroup_properties;
-    wgpu::AdapterInfo adapter_info;
-    adapter_info.nextInChain = &adapter_subgroup_properties;
-    adapter.GetInfo(&adapter_info);
-
-    wgpu::AdapterPropertiesSubgroups device_subgroup_properties;
-    wgpu::AdapterInfo device_info;
-    device_info.nextInChain = &device_subgroup_properties;
-    device.GetAdapterInfo(&device_info);
-
-    EXPECT_EQ(device_subgroup_properties.subgroupMinSize,
-              adapter_subgroup_properties.subgroupMinSize);
-    EXPECT_EQ(device_subgroup_properties.subgroupMaxSize,
-              adapter_subgroup_properties.subgroupMaxSize);
-}
-
-DAWN_INSTANTIATE_TEST_P(SubgroupsPropertiesTests,
-                        {D3D12Backend(), D3D12Backend({}, {"use_dxc"}), MetalBackend(),
-                         VulkanBackend()},
-                        {RequestSubgroups::WhenAvailable, RequestSubgroups::Never});
 
 using SubgroupsAdapterInfoTests = SubgroupsAdapterInfoTestBase<SubgroupsAdapterInfoParams>;
 
@@ -196,16 +139,6 @@ class SubgroupsTestsBase : public DawnTestWithParams<Params> {
             mRequiredSubgroupsFeature = true;
             requiredFeatures.push_back(wgpu::FeatureName::Subgroups);
         }
-        if (SupportsFeatures({wgpu::FeatureName::SubgroupsF16})) {
-            // SubgroupsF16 feature could be supported only if ShaderF16 and Subgroups features
-            // are also supported.
-            DAWN_ASSERT(mRequiredShaderF16Feature && mRequiredSubgroupsFeature);
-            mRequiredSubgroupsF16Feature = true;
-            requiredFeatures.push_back(wgpu::FeatureName::SubgroupsF16);
-        }
-
-        mSubgroupsF16SupportedByBackend = SupportsFeatures({wgpu::FeatureName::SubgroupsF16});
-
         return requiredFeatures;
     }
 
@@ -217,23 +150,15 @@ class SubgroupsTestsBase : public DawnTestWithParams<Params> {
         if (mRequiredSubgroupsFeature) {
             code << "enable subgroups;";
         }
-        if (mRequiredSubgroupsF16Feature) {
-            code << "enable subgroups_f16;";
-        }
         return code;
     }
 
     bool IsShaderF16EnabledInWGSL() const { return mRequiredShaderF16Feature; }
     bool IsSubgroupsEnabledInWGSL() const { return mRequiredSubgroupsFeature; }
-    bool IsSubgroupsF16EnabledInWGSL() const { return mRequiredSubgroupsF16Feature; }
-    bool IsSubgroupsF16SupportedByBackend() const { return mSubgroupsF16SupportedByBackend; }
 
   private:
     bool mRequiredShaderF16Feature = false;
     bool mRequiredSubgroupsFeature = false;
-    bool mRequiredSubgroupsF16Feature = false;
-    // Indicates that backend actually supports using subgroups functions with f16 types.
-    bool mSubgroupsF16SupportedByBackend = false;
 };
 
 class SubgroupsShaderTests : public SubgroupsTestsBase<AdapterTestParam> {
@@ -312,7 +237,7 @@ fn main(
                     // subgroup_size should be at least 1
                     (1 <= outputSubgroupSizeAt0) &&
                     // subgroup_size should be no larger than 128
-                    (outputSubgroupSizeAt0 <= 128) &&
+                    (outputSubgroupSizeAt0 <= kDefaultSubgroupMaxSize) &&
                     // subgroup_size should be a power of 2
                     ((outputSubgroupSizeAt0 & (outputSubgroupSizeAt0 - 1)) == 0))) {
                 testing::AssertionResult result = testing::AssertionFailure()
@@ -444,7 +369,7 @@ class SubgroupsShaderTestsFragment : public SubgroupsTestsBase<AdapterTestParam>
                     // subgroup_size should be at least 1
                     (1 <= outputSubgroupSizeAt0) &&
                     // subgroup_size should be no larger than 128
-                    (outputSubgroupSizeAt0 <= 128) &&
+                    (outputSubgroupSizeAt0 <= kDefaultSubgroupMaxSize) &&
                     // subgroup_size should be a power of 2
                     (IsPowerOfTwo(outputSubgroupSizeAt0)))) {
                 testing::AssertionResult result = testing::AssertionFailure()
@@ -714,12 +639,9 @@ fn main(
 // and 256. Note that although we assume invocation 0 of the workgroup has a subgroup_id of 0 in its
 // subgroup, we don't assume any other particular subgroups layout property.
 TEST_P(SubgroupsBroadcastTests, SubgroupBroadcast) {
+    DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
     if (GetParam().mBroadcastType == BroadcastType::F16) {
-        DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsF16SupportedByBackend());
-        DAWN_ASSERT(IsShaderF16EnabledInWGSL() && IsSubgroupsEnabledInWGSL() &&
-                    IsSubgroupsF16EnabledInWGSL());
-    } else {
-        DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
+        DAWN_TEST_UNSUPPORTED_IF(!IsShaderF16EnabledInWGSL());
     }
 
     for (uint32_t workgroupSize : {1, 2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256}) {
@@ -907,8 +829,9 @@ fn main(
 };
 
 TEST_P(SubgroupsShaderInclusiveTest, InclusiveExecution) {
+    DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
     if (GetParam().mSubgroupOpDataType == SubgroupOpDataType::F16) {
-        DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsF16SupportedByBackend());
+        DAWN_TEST_UNSUPPORTED_IF(!IsShaderF16EnabledInWGSL());
 
         // TODO(361330160): The f16 implementation does not seem produce correct values in
         // execution. It is not clear if this is due to something wrong with the polyfill or the
@@ -919,11 +842,6 @@ TEST_P(SubgroupsShaderInclusiveTest, InclusiveExecution) {
         // TODO(361330160): Also fails on MacBookPro16,1 with AMD Radeon Pro 5300M
         DAWN_SUPPRESS_TEST_IF(gpu_info::IsAMDRDNA1(GetParam().adapterProperties.vendorID,
                                                    GetParam().adapterProperties.deviceID));
-
-        DAWN_ASSERT(IsShaderF16EnabledInWGSL() && IsSubgroupsEnabledInWGSL() &&
-                    IsSubgroupsF16EnabledInWGSL());
-    } else {
-        DAWN_TEST_UNSUPPORTED_IF(!IsSubgroupsEnabledInWGSL());
     }
 
     for (uint32_t workgroupSize : {1, 2, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256}) {

@@ -261,6 +261,7 @@ bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& 
         break;                                                                                     \
     }
 
+namespace utils::io {
 utils::io::ostream& operator<<(utils::io::ostream& out,
         const filament::backend::VulkanLayout& layout) {
     switch (layout) {
@@ -278,5 +279,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out,
     }
     return out;
 }
+} // namespace utils::io
+
 #undef CASE
 #endif

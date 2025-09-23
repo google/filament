@@ -203,6 +203,7 @@ TEST(WsiTests, Win32GetPhysicalDeviceSurfaceSupportKHR) {
     for (uint32_t pd = 0; pd < max_device_count; ++pd) {
         VkBool32 supported = VK_FALSE;
         ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(phys_devs[pd], 0, surface, &supported));
+        ASSERT_EQ(VK_TRUE, supported);
     }
 
     env.vulkan_functions.vkDestroySurfaceKHR(instance.inst, surface, nullptr);
@@ -386,6 +387,7 @@ TEST(WsiTests, XcbGetPhysicalDeviceSurfaceSupportKHR) {
     for (uint32_t pd = 0; pd < max_device_count; ++pd) {
         VkBool32 supported = VK_FALSE;
         ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(phys_devs[pd], 0, surface, &supported));
+        ASSERT_EQ(VK_TRUE, supported);
     }
 
     env.vulkan_functions.vkDestroySurfaceKHR(instance.inst, surface, nullptr);
@@ -569,6 +571,7 @@ TEST(WsiTests, XlibGetPhysicalDeviceSurfaceSupportKHR) {
     for (uint32_t pd = 0; pd < max_device_count; ++pd) {
         VkBool32 supported = VK_FALSE;
         ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(phys_devs[pd], 0, surface, &supported));
+        ASSERT_EQ(VK_TRUE, supported);
     }
 
     env.vulkan_functions.vkDestroySurfaceKHR(instance.inst, surface, nullptr);
@@ -752,6 +755,7 @@ TEST(WsiTests, WaylandGetPhysicalDeviceSurfaceSupportKHR) {
     for (uint32_t pd = 0; pd < max_device_count; ++pd) {
         VkBool32 supported = VK_FALSE;
         ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(phys_devs[pd], 0, surface, &supported));
+        ASSERT_EQ(VK_TRUE, supported);
     }
 
     env.vulkan_functions.vkDestroySurfaceKHR(instance.inst, surface, nullptr);
@@ -1036,3 +1040,113 @@ TEST(WsiTests, EXTSurfaceMaintenance1) {
         }
     }
 }
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)
+TEST(WsiTests, MultiPlatformGetPhysicalDeviceSurfaceSupportKHR) {
+    FrameworkEnvironment env{};
+
+    const char* xcb_device_name = "XCB";
+    env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2))
+        .setup_WSI("VK_USE_PLATFORM_XCB_KHR")
+        .add_physical_device(PhysicalDevice{}
+                                 .set_deviceName(xcb_device_name)
+                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true})
+                                 .finish());
+    const char* wayland_device_name = "WAYLAND";
+    env.add_icd(TestICDDetails(TEST_ICD_PATH_VERSION_2))
+        .setup_WSI("VK_USE_PLATFORM_WAYLAND_KHR")
+        .add_physical_device(PhysicalDevice{}
+                                 .set_deviceName(wayland_device_name)
+                                 .add_queue_family_properties({{VK_QUEUE_GRAPHICS_BIT, 1, 0, {1, 1, 1}}, true})
+                                 .finish());
+
+    {
+        // Create instance with only XCB support
+        InstWrapper inst{env.vulkan_functions};
+        inst.create_info.add_extensions({VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_XCB_SURFACE_EXTENSION_NAME});
+        inst.CheckCreate();
+
+        auto phys_devs = inst.GetPhysDevs();
+        // Physical devices are enumerated in reverse order to the ICD order
+        VkPhysicalDevice xcb_physical_device = phys_devs[1];
+        VkPhysicalDevice wayland_physical_device = phys_devs[0];
+        VkPhysicalDeviceProperties props0{};
+        inst->vkGetPhysicalDeviceProperties(wayland_physical_device, &props0);
+        ASSERT_TRUE(string_eq(props0.deviceName, wayland_device_name));
+
+        VkPhysicalDeviceProperties props1{};
+        inst->vkGetPhysicalDeviceProperties(xcb_physical_device, &props1);
+        ASSERT_TRUE(string_eq(props1.deviceName, xcb_device_name));
+
+        VkXcbSurfaceCreateInfoKHR xcb_createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
+
+        VkSurfaceKHR surface0{VK_NULL_HANDLE};
+        ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkCreateXcbSurfaceKHR(inst, &xcb_createInfo, nullptr, &surface0));
+        ASSERT_TRUE(surface0 != VK_NULL_HANDLE);
+        WrappedHandle<VkSurfaceKHR, VkInstance, PFN_vkDestroySurfaceKHR> wrapped_surface{surface0, inst.inst,
+                                                                                         env.vulkan_functions.vkDestroySurfaceKHR};
+
+        VkWaylandSurfaceCreateInfoKHR wayland_createInfo{VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
+
+        VkSurfaceKHR surface1{VK_NULL_HANDLE};
+        ASSERT_EQ(VK_ERROR_EXTENSION_NOT_PRESENT,
+                  env.vulkan_functions.vkCreateWaylandSurfaceKHR(inst, &wayland_createInfo, nullptr, &surface1));
+
+        // Use the successful surface
+
+        VkBool32 supported0 = VK_FALSE;
+        ASSERT_EQ(VK_SUCCESS,
+                  env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(xcb_physical_device, 0, surface0, &supported0));
+        ASSERT_EQ(VK_TRUE, supported0);
+
+        VkBool32 supported1 = VK_FALSE;
+        ASSERT_EQ(VK_SUCCESS,
+                  env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(wayland_physical_device, 0, surface0, &supported1));
+        ASSERT_EQ(VK_FALSE, supported1);
+    }
+
+    {
+        // Create instance with only WAYLAND support
+
+        InstWrapper inst{env.vulkan_functions};
+        inst.create_info.add_extensions({VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME});
+        inst.CheckCreate();
+
+        auto phys_devs = inst.GetPhysDevs();
+        // Physical devices are enumerated in reverse order to the ICD order
+        VkPhysicalDevice xcb_physical_device = phys_devs[1];
+        VkPhysicalDevice wayland_physical_device = phys_devs[0];
+        VkPhysicalDeviceProperties props0{};
+        inst->vkGetPhysicalDeviceProperties(wayland_physical_device, &props0);
+        ASSERT_TRUE(string_eq(props0.deviceName, wayland_device_name));
+
+        VkPhysicalDeviceProperties props1{};
+        inst->vkGetPhysicalDeviceProperties(xcb_physical_device, &props1);
+        ASSERT_TRUE(string_eq(props1.deviceName, xcb_device_name));
+
+        VkXcbSurfaceCreateInfoKHR xcb_createInfo{VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR};
+
+        VkSurfaceKHR surface0{VK_NULL_HANDLE};
+        ASSERT_EQ(VK_ERROR_EXTENSION_NOT_PRESENT,
+                  env.vulkan_functions.vkCreateXcbSurfaceKHR(inst, &xcb_createInfo, nullptr, &surface0));
+
+        VkWaylandSurfaceCreateInfoKHR wayland_createInfo{VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
+
+        VkSurfaceKHR surface1{VK_NULL_HANDLE};
+        ASSERT_EQ(VK_SUCCESS, env.vulkan_functions.vkCreateWaylandSurfaceKHR(inst, &wayland_createInfo, nullptr, &surface1));
+        ASSERT_TRUE(surface1 != VK_NULL_HANDLE);
+        WrappedHandle<VkSurfaceKHR, VkInstance, PFN_vkDestroySurfaceKHR> wrapped_surface{surface1, inst.inst,
+                                                                                         env.vulkan_functions.vkDestroySurfaceKHR};
+        // Use the successful surface
+
+        VkBool32 supported0 = VK_FALSE;
+        ASSERT_EQ(VK_SUCCESS,
+                  env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(xcb_physical_device, 0, surface1, &supported0));
+        ASSERT_EQ(VK_FALSE, supported0);
+
+        VkBool32 supported1 = VK_FALSE;
+        ASSERT_EQ(VK_SUCCESS,
+                  env.vulkan_functions.vkGetPhysicalDeviceSurfaceSupportKHR(wayland_physical_device, 0, surface1, &supported1));
+        ASSERT_EQ(VK_TRUE, supported1);
+    }
+}
+#endif  // defined(VK_USE_PLATFORM_WAYLAND_KHR) && defined(VK_USE_PLATFORM_XCB_KHR)

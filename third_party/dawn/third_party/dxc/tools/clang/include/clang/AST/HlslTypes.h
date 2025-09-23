@@ -31,6 +31,7 @@
 namespace clang {
 class ASTContext;
 class AttributeList;
+class CXXConstructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
 class ClassTemplateDecl;
@@ -402,6 +403,10 @@ DeclareNodeOrRecordType(clang::ASTContext &Ctx, DXIL::NodeIOKind Type,
                         bool IsCompleteType = false);
 
 #ifdef ENABLE_SPIRV_CODEGEN
+clang::CXXRecordDecl *
+DeclareVkBufferPointerType(clang::ASTContext &context,
+                           clang::DeclContext *declContext);
+
 clang::CXXRecordDecl *DeclareInlineSpirvType(clang::ASTContext &context,
                                              clang::DeclContext *declContext,
                                              llvm::StringRef typeName,
@@ -427,7 +432,7 @@ clang::VarDecl *DeclareBuiltinGlobal(llvm::StringRef name, clang::QualType Ty,
 /// method.</summary> <param name="context">AST context in which to
 /// work.</param> <param name="recordDecl">Class in which the function template
 /// is declared.</param> <param name="functionDecl">Function for which a
-/// template is created.</params> <param
+/// template is created.</param> <param
 /// name="templateParamNamedDecls">Declarations for templates to the
 /// function.</param> <param name="templateParamNamedDeclsCount">Count of
 /// template declarations.</param> <returns>A new function template declaration
@@ -462,6 +467,7 @@ bool IsHLSLUnsigned(clang::QualType type);
 bool IsHLSLMinPrecision(clang::QualType type);
 bool HasHLSLUNormSNorm(clang::QualType type, bool *pIsSNorm = nullptr);
 bool HasHLSLGloballyCoherent(clang::QualType type);
+bool HasHLSLReorderCoherent(clang::QualType type);
 bool IsHLSLInputPatchType(clang::QualType type);
 bool IsHLSLOutputPatchType(clang::QualType type);
 bool IsHLSLPointStreamType(clang::QualType type);
@@ -479,17 +485,21 @@ bool IsHLSLObjectWithImplicitMemberAccess(clang::QualType type);
 bool IsHLSLObjectWithImplicitROMemberAccess(clang::QualType type);
 bool IsHLSLRWNodeInputRecordType(clang::QualType type);
 bool IsHLSLRONodeInputRecordType(clang::QualType type);
+bool IsHLSLDispatchNodeInputRecordType(clang::QualType type);
+bool IsHLSLNodeRecordArrayType(clang::QualType type);
 bool IsHLSLNodeOutputType(clang::QualType type);
+bool IsHLSLEmptyNodeRecordType(clang::QualType type);
 
 DXIL::NodeIOKind GetNodeIOType(clang::QualType type);
 
 bool IsHLSLStructuredBufferType(clang::QualType type);
 bool IsHLSLNumericOrAggregateOfNumericType(clang::QualType type);
-bool IsHLSLNumericUserDefinedType(clang::QualType type);
 bool IsHLSLCopyableAnnotatableRecord(clang::QualType QT);
 bool IsHLSLBuiltinRayAttributeStruct(clang::QualType QT);
 bool IsHLSLAggregateType(clang::QualType type);
 clang::QualType GetHLSLResourceResultType(clang::QualType type);
+clang::QualType GetHLSLNodeIOResultType(clang::ASTContext &astContext,
+                                        clang::QualType type);
 unsigned GetHLSLResourceTemplateUInt(clang::QualType type);
 bool IsIncompleteHLSLResourceArrayType(clang::ASTContext &context,
                                        clang::QualType type);
@@ -532,6 +542,29 @@ bool DoesTypeDefineOverloadedOperator(clang::QualType typeWithOperator,
                                       clang::OverloadedOperatorKind opc,
                                       clang::QualType paramType);
 bool IsPatchConstantFunctionDecl(const clang::FunctionDecl *FD);
+
+#ifdef ENABLE_SPIRV_CODEGEN
+bool IsVKBufferPointerType(clang::QualType type);
+clang::QualType GetVKBufferPointerBufferType(clang::QualType type);
+unsigned GetVKBufferPointerAlignment(clang::QualType type);
+#endif
+
+/// <summary>Adds a constructor declaration to the specified class
+/// record.</summary> <param name="context">ASTContext that owns
+/// declarations.</param> <param name="recordDecl">Record declaration in which
+/// to add constructor.</param> <param name="resultType">Result type for
+/// constructor.</param> <param name="paramTypes">Types for constructor
+/// parameters.</param> <param name="paramNames">Names for constructor
+/// parameters.</param> <param name="declarationName">Name for
+/// constructor.</param> <param name="isConst">Whether the constructor is a
+/// const function.</param> <returns>The method declaration for the
+/// constructor.</returns>
+clang::CXXConstructorDecl *CreateConstructorDeclarationWithParams(
+    clang::ASTContext &context, clang::CXXRecordDecl *recordDecl,
+    clang::QualType resultType, llvm::ArrayRef<clang::QualType> paramTypes,
+    llvm::ArrayRef<clang::StringRef> paramNames,
+    clang::DeclarationName declarationName, bool isConst,
+    bool isTemplateFunction = false);
 
 /// <summary>Adds a function declaration to the specified class
 /// record.</summary> <param name="context">ASTContext that owns

@@ -28,6 +28,7 @@
 #include <atomic>
 #include <mutex>
 #include <utility>
+#include <vector>
 
 #include "absl/strings/str_format.h"
 #include "dawn/native/Adapter.h"
@@ -73,16 +74,31 @@ bool ApiObjectList::Untrack(ApiObjectBase* object) {
 }
 
 void ApiObjectList::Destroy() {
-    LinkedList<ApiObjectBase> objects;
-    mObjects.Use([&objects, this](auto lockedObjects) {
+    std::vector<ApiObjectBase*> objectsToDestroy;
+    mObjects.Use([&objectsToDestroy, this](auto lockedObjects) {
         mMarkedDestroyed.store(true, std::memory_order_release);
-        lockedObjects->MoveInto(&objects);
+
+        // Try to acquire a reference to all objects to ensure they aren't deleted on another thread
+        // before DestroyImpl() runs below. If the object already has zero refs then another thread
+        // is about to delete it, the object is left in the list so it gets deleted+destroyed on the
+        // other thread.
+        for (auto* node = lockedObjects->head(); node != lockedObjects->end();) {
+            auto* next = node->next();
+
+            if (ApiObjectBase* object = node->value(); object->TryAddRef()) {
+                objectsToDestroy.push_back(object);
+                bool removed = node->RemoveFromList();
+                DAWN_ASSERT(removed);
+            }
+
+            node = next;
+        }
     });
-    while (!objects.empty()) {
-        auto* head = objects.head();
-        bool removed = head->RemoveFromList();
-        DAWN_ASSERT(removed);
-        head->value()->DestroyImpl();
+
+    for (ApiObjectBase* object : objectsToDestroy) {
+        object->DestroyImpl();
+        // `object` may be deleted here if last real reference was dropped on another thread.
+        object->Release();
     }
 }
 
@@ -135,7 +151,7 @@ void ApiObjectBase::DeleteThis() {
 }
 
 void ApiObjectBase::LockAndDeleteThis() {
-    auto deviceLock(GetDevice()->GetScopedLockSafeForDelete());
+    auto deviceGuard = GetDevice()->GetGuardForDelete();
     DeleteThis();
 }
 

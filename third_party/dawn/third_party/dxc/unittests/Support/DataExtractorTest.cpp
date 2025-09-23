@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/DataExtractor.h"
+#include "gtest/gtest.h"
+#include <limits>
 using namespace llvm;
 
 namespace {
@@ -20,7 +21,8 @@ const char bigleb128data[] = "\xAA\xA9\xFF\xAA\xFF\xAA\xFF\x4A";
 
 TEST(DataExtractorTest, OffsetOverflow) {
   DataExtractor DE(StringRef(numberData, sizeof(numberData)-1), false, 8);
-  EXPECT_FALSE(DE.isValidOffsetForDataOfSize(-2U, 5));
+  EXPECT_FALSE(DE.isValidOffsetForDataOfSize(
+      std::numeric_limits<uint32_t>::max() - 1, 5));
 }
 
 TEST(DataExtractorTest, UnsignedNumbers) {

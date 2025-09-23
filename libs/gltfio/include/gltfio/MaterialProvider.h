@@ -21,6 +21,7 @@
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include <array>
@@ -196,6 +197,7 @@ void processShaderString(std::string* shader, const UvMap& uvmap,
  * Creates a material provider that builds materials on the fly, composing GLSL at run time.
  *
  * @param optimizeShaders Optimizes shaders, but at significant cost to construction time.
+ * @param variantFilters  Filter out variants that are not required.
  * @return New material provider that can build materials at run time.
  *
  * Requires \c libfilamat to be linked in. Not available in \c libgltfio_core.
@@ -203,7 +205,8 @@ void processShaderString(std::string* shader, const UvMap& uvmap,
  * @see createUbershaderProvider
  */
 UTILS_PUBLIC
-MaterialProvider* createJitShaderProvider(Engine* engine, bool optimizeShaders = false);
+MaterialProvider* createJitShaderProvider(Engine* engine, bool optimizeShaders = false,
+        utils::FixedCapacityVector<char const*> const& variantFilters = {});
 
 /**
  * Creates a material provider that loads a small set of pre-built materials.

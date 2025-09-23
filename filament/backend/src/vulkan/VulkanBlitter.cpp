@@ -37,10 +37,16 @@ inline void blitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, V
         const VkOffset3D srcRect[2], const VkOffset3D dstRect[2]) {
     VkCommandBuffer const cmdbuf = commands->buffer();
     if constexpr (FVK_ENABLED(FVK_DEBUG_BLITTER)) {
-        FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
-                      << " layout=" << src.getLayout()
-                      << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
-                      << " layout=" << dst.getLayout() << utils::io::endl;
+        FVK_LOGE << "Fast blit from=" << src.texture->getVkImage() << ", level=" << (int) src.level
+                      << ", layer=" << (int) src.layer
+                      << ", layout=" << src.getLayout()
+                      << ", src-rect=(" << srcRect[0].x << "," << srcRect[0].y << "," << srcRect[0].z << ")"
+                      << "->(" << srcRect[1].x << "," << srcRect[1].y << "," << srcRect[1].z << ")"
+                      << " to=" << dst.texture->getVkImage() << ", level=" << (int) dst.level
+                      << ", layer=" << (int) dst.layer
+                      << ", layout=" << dst.getLayout()
+                      << ", dst-rect=(" << dstRect[0].x << "," << dstRect[0].y << "," << dstRect[0].z << ")"
+                      << "->(" << dstRect[1].x << "," << dstRect[1].y << "," << dstRect[1].z << ")";
     }
 
     VkImageSubresourceRange const srcRange = src.getSubresourceRange();
@@ -69,6 +75,7 @@ inline void blitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, V
     if (oldDstLayout == VulkanLayout::UNDEFINED) {
         oldDstLayout = dst.texture->getDefaultLayout();
     }
+
     src.texture->transitionLayout(commands, srcRange, oldSrcLayout);
     dst.texture->transitionLayout(commands, dstRange, oldDstLayout);
 }
@@ -80,7 +87,7 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
         FVK_LOGD << "Fast blit from=" << src.texture->getVkImage() << ",level=" << (int) src.level
                       << " layout=" << src.getLayout()
                       << " to=" << dst.texture->getVkImage() << ",level=" << (int) dst.level
-                      << " layout=" << dst.getLayout() << utils::io::endl;
+                      << " layout=" << dst.getLayout();
     }
 
     VkImageSubresourceRange const srcRange = src.getSubresourceRange();
@@ -89,7 +96,6 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();
 
-    src.texture->transitionLayout(commands, srcRange, VulkanLayout::TRANSFER_SRC);
     dst.texture->transitionLayout(commands, dstRange, VulkanLayout::TRANSFER_DST);
 
     assert_invariant(
@@ -102,10 +108,9 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
             .extent = { src.getExtent2D().width, src.getExtent2D().height, 1 },
     }};
     vkCmdResolveImage(cmdbuffer,
-            src.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            src.getImage(), fvkutils::getVkLayout(src.getLayout()),
             dst.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, resolveRegions);
-
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
         oldSrcLayout = src.texture->getDefaultLayout();
     }

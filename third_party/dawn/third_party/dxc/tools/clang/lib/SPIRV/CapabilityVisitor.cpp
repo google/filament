@@ -122,6 +122,12 @@ void CapabilityVisitor::addCapabilityForType(const SpirvType *type,
     }
     addCapabilityForType(raType->getElementType(), loc, sc);
   }
+  // Node payload array also requires additional capability.
+  else if (const auto *npaType = dyn_cast<NodePayloadArrayType>(type)) {
+    addExtension(Extension::AMD_shader_enqueue, "Vulkan 1.3", loc);
+    addCapability(spv::Capability::ShaderEnqueueAMDX, loc);
+    addCapabilityForType(npaType->getElementType(), loc, sc);
+  }
   // Image types
   else if (const auto *imageType = dyn_cast<ImageType>(type)) {
     switch (imageType->getDimension()) {
@@ -200,8 +206,10 @@ void CapabilityVisitor::addCapabilityForType(const SpirvType *type,
   }
   // Pointer type
   else if (const auto *ptrType = dyn_cast<SpirvPointerType>(type)) {
-    addCapabilityForType(ptrType->getPointeeType(), loc, sc);
-    if (sc == spv::StorageClass::PhysicalStorageBuffer) {
+    addCapabilityForType(ptrType->getPointeeType(), loc,
+                         ptrType->getStorageClass());
+    if (ptrType->getStorageClass() ==
+        spv::StorageClass::PhysicalStorageBuffer) {
       addExtension(Extension::KHR_physical_storage_buffer,
                    "SPV_KHR_physical_storage_buffer", loc);
       addCapability(spv::Capability::PhysicalStorageBufferAddresses);
@@ -250,6 +258,19 @@ bool CapabilityVisitor::visit(SpirvDecoration *decor) {
     addExtension(Extension::KHR_fragment_shader_barycentric, "PerVertexKHR",
                  loc);
     addCapability(spv::Capability::FragmentBarycentricKHR);
+    break;
+  }
+  case spv::Decoration::NodeSharesPayloadLimitsWithAMDX:
+  case spv::Decoration::NodeMaxPayloadsAMDX:
+  case spv::Decoration::TrackFinishWritingAMDX:
+  case spv::Decoration::PayloadNodeNameAMDX:
+  case spv::Decoration::PayloadNodeBaseIndexAMDX:
+  case spv::Decoration::PayloadNodeSparseArrayAMDX:
+  case spv::Decoration::PayloadNodeArraySizeAMDX:
+  case spv::Decoration::PayloadDispatchIndirectAMDX: {
+    featureManager.requestTargetEnv(SPV_ENV_VULKAN_1_3, "WorkGraphs", loc);
+    addCapability(spv::Capability::ShaderEnqueueAMDX, loc);
+    addExtension(Extension::AMD_shader_enqueue, "Vulkan 1.3", loc);
     break;
   }
   // Capabilities needed for built-ins
@@ -530,8 +551,14 @@ bool CapabilityVisitor::visitInstruction(SpirvInstruction *instr) {
     addCapability(spv::Capability::GroupNonUniformQuad);
     break;
   case spv::Op::OpVariable: {
-    if (spvOptions.enableReflect &&
-        !cast<SpirvVariable>(instr)->getHlslUserType().empty()) {
+    auto var = cast<SpirvVariable>(instr);
+    auto storage = var->getStorageClass();
+    if (storage == spv::StorageClass::NodePayloadAMDX) {
+      featureManager.requestTargetEnv(SPV_ENV_VULKAN_1_3, "WorkGraphs", loc);
+      addCapability(spv::Capability::ShaderEnqueueAMDX, loc);
+      addExtension(Extension::AMD_shader_enqueue, "Vulkan 1.3", loc);
+    }
+    if (spvOptions.enableReflect && !var->getHlslUserType().empty()) {
       addExtension(Extension::GOOGLE_user_type, "HLSL User Type", loc);
       addExtension(Extension::GOOGLE_hlsl_functionality1, "HLSL User Type",
                    loc);
@@ -572,6 +599,28 @@ bool CapabilityVisitor::visitInstruction(SpirvInstruction *instr) {
       featureManager.requestTargetEnv(SPV_ENV_UNIVERSAL_1_4, "MeshShader", {});
       addCapability(spv::Capability::MeshShadingEXT);
       addExtension(Extension::EXT_mesh_shader, "SPV_EXT_mesh_shader", {});
+    }
+    break;
+  }
+  case spv::Op::OpConstantStringAMDX:
+  case spv::Op::OpSpecConstantStringAMDX:
+  case spv::Op::OpAllocateNodePayloadsAMDX:
+  case spv::Op::OpEnqueueNodePayloadsAMDX:
+  case spv::Op::OpIsNodePayloadValidAMDX:
+  case spv::Op::OpFinishWritingNodePayloadAMDX: {
+    featureManager.requestTargetEnv(SPV_ENV_VULKAN_1_3, "WorkGraphs", loc);
+    addCapability(spv::Capability::ShaderEnqueueAMDX, loc);
+    addExtension(Extension::AMD_shader_enqueue, "Vulkan 1.3", loc);
+    break;
+  }
+  case spv::Op::OpControlBarrier:
+  case spv::Op::OpMemoryBarrier: {
+    auto barrier = cast<SpirvBarrier>(instr);
+    if ((bool)(barrier->getMemorySemantics() &
+               spv::MemorySemanticsMask::OutputMemoryKHR)) {
+      featureManager.requestTargetEnv(SPV_ENV_VULKAN_1_3, "NODE_OUTPUT_MEMORY",
+                                      loc);
+      addCapability(spv::Capability::VulkanMemoryModel, loc);
     }
     break;
   }
@@ -634,12 +683,25 @@ bool CapabilityVisitor::visit(SpirvEntryPoint *entryPoint) {
   return true;
 }
 
-bool CapabilityVisitor::visit(SpirvExecutionMode *execMode) {
+bool CapabilityVisitor::visit(SpirvExecutionModeBase *execMode) {
   spv::ExecutionMode executionMode = execMode->getExecutionMode();
   SourceLocation execModeSourceLocation = execMode->getSourceLocation();
   SourceLocation entryPointSourceLocation =
       execMode->getEntryPoint()->getSourceLocation();
   switch (executionMode) {
+  case spv::ExecutionMode::CoalescingAMDX:
+  case spv::ExecutionMode::MaxNodeRecursionAMDX:
+  case spv::ExecutionMode::StaticNumWorkgroupsAMDX:
+  case spv::ExecutionMode::MaxNumWorkgroupsAMDX:
+    featureManager.requestTargetEnv(SPV_ENV_VULKAN_1_3, "WorkGraphs",
+                                    execModeSourceLocation);
+    addCapability(spv::Capability::ShaderEnqueueAMDX, execModeSourceLocation);
+    addExtension(Extension::AMD_shader_enqueue, "Vulkan 1.3",
+                 execModeSourceLocation);
+    break;
+  case spv::ExecutionMode::SubgroupSize:
+    addCapability(spv::Capability::SubgroupDispatch, execModeSourceLocation);
+    break;
   case spv::ExecutionMode::PostDepthCoverage:
     addCapability(spv::Capability::SampleMaskPostDepthCoverage,
                   entryPointSourceLocation);
@@ -881,6 +943,9 @@ bool CapabilityVisitor::visit(SpirvModule *, Visitor::Phase phase) {
       {spv::Capability::GroupNonUniformPartitionedNV});
 
   addCapability(spv::Capability::InterpolationFunction);
+
+  addExtensionAndCapabilitiesIfEnabled(Extension::KHR_quad_control,
+                                       {spv::Capability::QuadControlKHR});
 
   return true;
 }

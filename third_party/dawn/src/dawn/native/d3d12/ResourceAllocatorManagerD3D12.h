@@ -105,7 +105,7 @@ class ResourceAllocatorManager {
         const D3D12_CLEAR_VALUE* optimizedClearValue,
         D3D12_RESOURCE_STATES initialUsage);
 
-    void DestroyPool();
+    void FreeRecycledAllocations();
 
     raw_ptr<Device> mDevice;
 

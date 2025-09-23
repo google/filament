@@ -130,7 +130,7 @@ public:
      *
      * @param engine Reference to the filament::Engine associated with this BufferObject.
      * @param buffer A BufferDescriptor representing the data used to initialize the BufferObject.
-     * @param byteOffset Offset in bytes into the BufferObject
+     * @param byteOffset Offset in bytes into the BufferObject. Must be multiple of 4.
      */
     void setBuffer(Engine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 

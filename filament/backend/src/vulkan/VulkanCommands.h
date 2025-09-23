@@ -23,10 +23,12 @@
 
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
+#include "VulkanContext.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
 
 #include <utils/Condition.h>
+#include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Mutex.h>
 
@@ -34,28 +36,25 @@
 
 #include <chrono>
 #include <list>
-#include <string>
 #include <utility>
 
 namespace filament::backend {
 
 using namespace fvkmemory;
 
-struct VulkanContext;
-
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
 class VulkanGroupMarkers {
 public:
     using Timestamp = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
-    void push(std::string const& marker, Timestamp start = {}) noexcept;
-    std::pair<std::string, Timestamp> pop() noexcept;
-    std::pair<std::string, Timestamp> pop_bottom() noexcept;
-    std::pair<std::string, Timestamp> const& top() const;
+    void push(utils::CString const& marker, Timestamp start = {}) noexcept;
+    std::pair<utils::CString, Timestamp> pop() noexcept;
+    std::pair<utils::CString, Timestamp> pop_bottom() noexcept;
+    std::pair<utils::CString, Timestamp> const& top() const;
     bool empty() const noexcept;
 
 private:
-    std::list<std::pair<std::string, Timestamp>> mMarkers;
+    std::list<std::pair<utils::CString, Timestamp>> mMarkers;
 };
 
 #endif // FVK_DEBUG_GROUP_MARKERS
@@ -64,7 +63,7 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext* mContext,
+    VulkanCommandBuffer(VulkanContext const& mContext,
             VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
@@ -78,8 +77,9 @@ struct VulkanCommandBuffer {
 
     void reset() noexcept;
 
-    inline void insertWait(VkSemaphore sem) {
+    inline void insertWait(VkSemaphore sem, VkPipelineStageFlags waitStage) {
         mWaitSemaphores.push_back(sem);
+        mWaitSemaphoreStages.push_back(waitStage);
     }
 
     void pushMarker(char const* marker) noexcept;
@@ -109,25 +109,33 @@ struct VulkanCommandBuffer {
         return mBuffer;
     }
 
+    uint32_t age() const {
+        return mAge;
+    }
+
 private:
-    VulkanContext* mContext;
+    static uint32_t sAgeCounter;
+
+    VulkanContext const& mContext;
     uint8_t mMarkerCount;
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
+    fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
     VkSemaphore mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
+    uint32_t mAge;
 };
 
 struct CommandBufferPool {
     using ActiveBuffers = utils::bitset64;
     static constexpr int8_t INVALID = -1;
 
-    CommandBufferPool(VulkanContext* context, VkDevice device, VkQueue queue,
+    CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
             uint8_t queueFamilyIndex, bool isProtected);
     ~CommandBufferPool();
 
@@ -137,12 +145,12 @@ struct CommandBufferPool {
     void update();
     VkSemaphore flush();
     void wait();
-    void waitFor(VkSemaphore previousAction);
+    void waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage);
 
 #if FVK_ENABLED(FVK_DEBUG_GROUP_MARKERS)
-    std::string topMarker() const;
+    utils::CString topMarker() const;
     void pushMarker(char const* marker, VulkanGroupMarkers::Timestamp timestamp);
-    std::pair<std::string, VulkanGroupMarkers::Timestamp> popMarker();
+    std::pair<utils::CString, VulkanGroupMarkers::Timestamp> popMarker();
     void insertEvent(char const* marker);
 #endif
 
@@ -195,7 +203,8 @@ private:
 class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext* context);
+            VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
+            VulkanContext const& context);
 
     void terminate();
 
@@ -214,15 +223,25 @@ public:
     // it from the existing dependency chain. This is especially useful for setting up
     // vkQueuePresentKHR.
     VkSemaphore acquireFinishedSignal() {
-        VkSemaphore ret= mLastSubmit;
+        VkSemaphore ret = mLastSubmit;
         mLastSubmit = VK_NULL_HANDLE;
         return ret;
     }
 
+    VkFence getMostRecentFence() {
+        return mLastFence;
+    }
+
+    std::shared_ptr<VulkanCmdFence> getMostRecentFenceStatus() {
+        return mLastFenceStatus;
+    }
+
     // Takes a semaphore that signals when the next flush can occur. Only one injected
     // semaphore is allowed per flush. Useful after calling vkAcquireNextImageKHR.
-    void injectDependency(VkSemaphore next) {
+    // waitStage
+    void injectDependency(VkSemaphore next, VkPipelineStageFlags waitStage) {
         mInjectedDependency = next;
+        mInjectedDependencyWaitStage = waitStage;
     }
 
     // Destroys all command buffers that are no longer in use.
@@ -238,7 +257,7 @@ public:
     void pushGroupMarker(char const* str, VulkanGroupMarkers::Timestamp timestamp = {});
     void popGroupMarker();
     void insertEventMarker(char const* string, uint32_t len);
-    std::string getTopGroupMarker() const;
+    utils::CString getTopGroupMarker() const;
 #endif
 
 private:
@@ -246,13 +265,18 @@ private:
     VkQueue const mProtectedQueue;
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
-    VulkanContext* mContext;
+    VulkanContext const& mContext;
 
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
     VkSemaphore mLastSubmit = VK_NULL_HANDLE;
+
+    VkFence mLastFence = VK_NULL_HANDLE;
+    std::shared_ptr<VulkanCmdFence> mLastFenceStatus;
+
+    VkPipelineStageFlags mInjectedDependencyWaitStage = 0;
 };
 
 } // namespace filament::backend

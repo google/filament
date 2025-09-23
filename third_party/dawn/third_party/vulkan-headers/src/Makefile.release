@@ -1,4 +1,4 @@
-# Copyright 2024 The Khronos Group Inc.
+# Copyright 2024-2025 The Khronos Group Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # Makefile.release - update external files generated in Vulkan spec
@@ -12,16 +12,22 @@ REVISION = 999
 # Location of other repository clones
 GIT	 = ..
 SPEC	 = $(GIT)/Vulkan-Docs
-HPP	 = $(GIT)/Vulkan-Hpp
+# As of 1.4.322 spec update, the build process has been changed to use a
+# Vulkan-Hpp located underneath Vulkan-Docs (not a submodule).
+# If you are using one located elsewhere then override HPP.
+HPP	 = $(SPEC)/Vulkan-Hpp
 REGISTRY = $(GIT)/registry/vulkan
 
-update: version-check create-branch update-files push-branch
+update: revision-check create-branch update-files push-branch
+	echo "Verify that Vulkan-Headers is on a branch with the new header updates."
+	echo "Then push them to github and create an MR there with:"
+	echo "    make -f Makefile.release REVISION=$(REVISION) push-branch"
 
 # Working branch for the update, and a test if it exists
 BRANCH = update-$(REVISION)
 
 # Switch to new branch which will contain the update
-create-branch: version-check
+create-branch: revision-check
 	git switch -q main
 	git pull -q
 	# If branch already exists, do nothing
@@ -35,6 +41,19 @@ create-branch: version-check
 
 # Update headers and scripts in the new branch
 update-files: remove-files update-headers update-scripts
+
+# To ensure updates are caught, old versions of installed files are
+# removed.
+# Files in include/ to keep
+HEADERS_KEEP = \
+    include/vulkan/vk_icd.h \
+    include/vulkan/vk_layer.h
+
+remove-files:
+	rm -rf $(filter-out $(HEADERS_KEEP), $(wildcard include/vulkan/*))
+	rm -rf include/vk_video
+	rm -rf registry
+	mkdir include/vk_video registry registry/profiles registry/spec_tools
 
 # Vulkan SC Vulkan-Hpp headers not published in the Vulkan-Headers repository
 SCHPPFILES = \
@@ -84,27 +103,41 @@ update-scripts:
 	cp $(PROFILES) registry/profiles/
 	cp $(SCRIPT_TOOLS) registry/spec_tools/
 
-# To ensure updates are caught, old versions of installed files are
-# removed.
+# Once the branch is updated, push it to upstream and create an MR
+# This should be used cautiously after verifying the branch contents are
+# indeed correct and updates.
+push-branch: revision-check
+	git switch $(BRANCH)
+	git add -u
+	echo "Detect new files and add them. This may not always succeed."
+	echo "Adding new files:" `git diff --name-only main`
+	git add `git diff --name-only main`
+	git commit -m "Update for Vulkan-Docs 1.4.$(REVISION)"
+	# Ideally we could automatically create the github PR.
+	# This will require additional software, see e.g.
+	#   https://medium.com/@ravipatel.it/creating-a-git-pull-request-using-the-command-line-a-detailed-guide-4ef1ea017fe2
+	#   https://gist.github.com/devinschumacher/bc66c162d9c6c167952f1943d0e6419c
+	# Gitlab supports this via 'git push' options e.g.
+	#   -o merge_request.create -o merge_request.target=main -o merge_request.remove_source_branch \
+	#   -o merge_request.title="Update for Vulkan-Docs 1.4.$(REVISION)" \
+	#   -o merge_request.assign=oddhack
+	# But for github we must manually create a PR after pushing
+	git push --set-upstream origin $(BRANCH)
+	git switch main
+	git branch -d $(BRANCH)
+	echo "Now create a pull request by going to the URL:"
+	echo "  https://github.com/KhronosGroup/Vulkan-Headers/pull/new/$(BRANCH)"
+	echo "After accepting this PR, continue with:"
+	echo "    make -f Makefile.release REVISION=$(REVISION) tag-branch"
 
-# Files in include/ to keep
-HEADERS_KEEP = \
-    include/vulkan/vk_icd.h \
-    include/vulkan/vk_layer.h
+# Tag main for the update after accepting the update PR
+TAG = v1.4.$(REVISION)
+tag-branch:
+	git switch main
+	git pull
+	git tag -a $(TAG) -m "Update for Vulkan-Docs 1.4.$(REVISION)"
+	git push origin $(TAG)
+	echo "Now continue with Step 12 of the process (update public registry) from the wiki, until more scripting is done"
 
-remove-files:
-	rm -rf $(filter-out $(HEADERS_KEEP), $(wildcard include/vulkan/*))
-	rm -rf include/vk_video
-	rm -rf registry
-	mkdir include/vk_video registry registry/profiles registry/spec_tools
-
-# Once the branch is updated, push it to upstream
-# This does not actually push it for safety reasons
-push-branch:
-	@echo Verify that all new files are 'git add'ed and obsolete files removed, then:
-	@echo git commit -m \"Update for Vulkan-Docs 1.3.$(REVISION)\"
-	@echo git push --set-upstream origin $(BRANCH)
-	@echo git switch main
-
-version-check:
+revision-check:
 	@if test $(REVISION) = 999 ; then echo "Must specify explicit REVISION= in make invocation" ; exit 1 ; fi

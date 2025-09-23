@@ -57,7 +57,7 @@ namespace clang {
   /// convert an argument to a parameter's type. The enumerator values
   /// match with Table 9 of (C++ 13.3.3.1.1) and are listed such that
   /// better conversion kinds have smaller values.
-  enum ImplicitConversionKind {
+  enum ImplicitConversionKind : unsigned int {
     ICK_Identity = 0,          ///< Identity conversion (no conversion)
     ICK_Lvalue_To_Rvalue,      ///< Lvalue-to-rvalue conversion (C++ 4.1)
     ICK_Array_To_Pointer,      ///< Array-to-pointer conversion (C++ 4.2)
@@ -79,27 +79,28 @@ namespace clang {
     ICK_Vector_Conversion,     ///< Vector conversions
     ICK_Vector_Splat,          ///< A vector splat from an arithmetic type
     ICK_Complex_Real,          ///< Complex-real conversions (C99 6.3.1.7)
-    ICK_Block_Pointer_Conversion,    ///< Block Pointer conversions 
+    ICK_Block_Pointer_Conversion,   ///< Block Pointer conversions
     ICK_TransparentUnionConversion, ///< Transparent Union Conversions
-    ICK_Writeback_Conversion,  ///< Objective-C ARC writeback conversion
+    ICK_Writeback_Conversion,       ///< Objective-C ARC writeback conversion
     ICK_Zero_Event_Conversion, ///< Zero constant to event (OpenCL1.2 6.12.10)
 
     // HLSL Change Starts
-    // The following conversion types also imply a potential followup 
+    // The following conversion types also imply a potential followup
     // ComponentConversion.
     // List is roughly ordered to preserve the property:
     //   "better conversion kinds have smaller values"
-    // Unfortunately, this property isn't really possible to preserve due 
+    // Unfortunately, this property isn't really possible to preserve due
     // to potential additional component conversion.
     ICK_HLSLVector_Scalar,     ///< HLSLVector/Matrix to scalar
     ICK_HLSLVector_Conversion, ///< HLSLVector/Matrix conversion
-    ICK_Flat_Conversion,       ///< Flat assignment conversion for HLSL (inline conversion, straddled)
+    ICK_Flat_Conversion,       ///< Flat assignment conversion for HLSL (inline
+                               ///< conversion, straddled)
     ICK_HLSLVector_Splat,      ///< HLSLVector/Matrix splat
     ICK_HLSLVector_Truncation, ///< HLSLVector/Matrix truncation
     ICK_HLSL_Derived_To_Base,  ///< HLSL Derived-to-base
     // HLSL Change Ends
 
-    ICK_Num_Conversion_Kinds   ///< The number of conversion kinds
+    ICK_Num_Conversion_Kinds ///< The number of conversion kinds
   };
 
   /// ImplicitConversionRank - The rank of an implicit conversion

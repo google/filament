@@ -59,7 +59,8 @@ glslang_set_link_args(glslang-standalone)
 
 set(LIBRARIES
     glslang
-    glslang-default-resource-limits)
+    glslang-default-resource-limits
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>)
 
 if(WIN32)
     set(LIBRARIES ${LIBRARIES} psapi)

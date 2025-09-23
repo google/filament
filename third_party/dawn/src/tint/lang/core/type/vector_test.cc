@@ -25,8 +25,13 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/vector.h"
+#include "src/tint/lang/core/type/f32.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/u32.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -34,12 +39,13 @@ namespace {
 using VectorTest = TestHelper;
 
 TEST_F(VectorTest, Creation) {
-    auto* a = create<Vector>(create<I32>(), 2u);
-    auto* b = create<Vector>(create<I32>(), 2u);
-    auto* c = create<Vector>(create<F32>(), 2u);
-    auto* d = create<Vector>(create<F32>(), 3u);
+    Manager ty;
+    auto* a = ty.vec2(ty.i32());
+    auto* b = ty.vec2(ty.i32());
+    auto* c = ty.vec2(ty.f32());
+    auto* d = ty.vec3(ty.f32());
 
-    EXPECT_EQ(a->Type(), create<I32>());
+    EXPECT_EQ(a->Type(), ty.i32());
     EXPECT_EQ(a->Width(), 2u);
 
     EXPECT_EQ(a, b);
@@ -48,13 +54,14 @@ TEST_F(VectorTest, Creation) {
 }
 
 TEST_F(VectorTest, Creation_Packed) {
-    auto* v = create<Vector>(create<F32>(), 3u);
-    auto* p1 = create<Vector>(create<F32>(), 3u, true);
-    auto* p2 = create<Vector>(create<F32>(), 3u, true);
+    Manager ty;
+    auto* v = ty.vec3(ty.f32());
+    auto* p1 = ty.Get<Vector>(ty.f32(), 3u, true);
+    auto* p2 = ty.Get<Vector>(ty.f32(), 3u, true);
 
     EXPECT_FALSE(v->Packed());
 
-    EXPECT_EQ(p1->Type(), create<F32>());
+    EXPECT_EQ(p1->Type(), ty.f32());
     EXPECT_EQ(p1->Width(), 3u);
     EXPECT_TRUE(p1->Packed());
 
@@ -63,17 +70,19 @@ TEST_F(VectorTest, Creation_Packed) {
 }
 
 TEST_F(VectorTest, Hash) {
-    auto* a = create<Vector>(create<I32>(), 2u);
-    auto* b = create<Vector>(create<I32>(), 2u);
+    Manager ty;
+    auto* a = ty.vec2(ty.i32());
+    auto* b = ty.vec2(ty.i32());
 
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(VectorTest, Equals) {
-    auto* a = create<Vector>(create<I32>(), 2u);
-    auto* b = create<Vector>(create<I32>(), 2u);
-    auto* c = create<Vector>(create<F32>(), 2u);
-    auto* d = create<Vector>(create<F32>(), 3u);
+    Manager ty;
+    auto* a = ty.vec2(ty.i32());
+    auto* b = ty.vec2(ty.i32());
+    auto* c = ty.vec2(ty.f32());
+    auto* d = ty.vec3(ty.f32());
 
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(*c));
@@ -82,19 +91,22 @@ TEST_F(VectorTest, Equals) {
 }
 
 TEST_F(VectorTest, FriendlyName) {
-    auto* f32 = create<F32>();
-    auto* v = create<Vector>(f32, 3u);
+    Manager ty;
+    auto* f32 = ty.f32();
+    auto* v = ty.vec3(f32);
     EXPECT_EQ(v->FriendlyName(), "vec3<f32>");
 }
 
 TEST_F(VectorTest, FriendlyName_Packed) {
-    auto* f32 = create<F32>();
-    auto* v = create<Vector>(f32, 3u, true);
+    Manager ty;
+    auto* f32 = ty.f32();
+    auto* v = ty.Get<Vector>(f32, 3u, true);
     EXPECT_EQ(v->FriendlyName(), "__packed_vec3<f32>");
 }
 
 TEST_F(VectorTest, Clone) {
-    auto* a = create<Vector>(create<I32>(), 2u);
+    Manager ty;
+    auto* a = ty.vec2(ty.i32());
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};
@@ -106,7 +118,8 @@ TEST_F(VectorTest, Clone) {
 }
 
 TEST_F(VectorTest, Clone_Packed) {
-    auto* a = create<Vector>(create<I32>(), 3u, true);
+    Manager ty;
+    auto* a = ty.Get<Vector>(ty.i32(), 3u, true);
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

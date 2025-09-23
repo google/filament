@@ -77,3 +77,8 @@ TEST(DirIncluder, DISABLED_IncludeFileFromIncluder) {
 
     EXPECT_STREQ((root + "Dir/Bar.h").c_str(), result.name.c_str());
 }
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}

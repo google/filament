@@ -76,8 +76,6 @@ cc_library(
     "//src/tint/lang/core/type",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
-    "//src/tint/lang/wgsl/common",
-    "//src/tint/lang/wgsl/features",
     "//src/tint/lang/wgsl/intrinsic",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
@@ -125,6 +123,7 @@ cc_library(
     "symbols_test.cc",
   ],
   deps = [
+    "//src/tint/api/common",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/type",

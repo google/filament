@@ -9,7 +9,7 @@ import (
 )
 
 // GenTestList queries the CTS for the newline delimited list of test names
-func GenTestList(ctx context.Context, ctsDir, node string) (string, error) {
+func GenTestList(ctx context.Context, ctsDir, node string, testQuery string) (string, error) {
 	// Run 'src/common/runtime/cmdline.ts' to obtain the full test list
 	cmd := exec.CommandContext(ctx, node,
 		"-e", "require('./src/common/tools/setup-ts-in-node.js');require('./src/common/runtime/cmdline.ts');",
@@ -19,7 +19,7 @@ func GenTestList(ctx context.Context, ctsDir, node string) (string, error) {
 		// start at 1, so just inject a placeholder argument.
 		"placeholder-arg",
 		"--list",
-		"webgpu:*",
+		testQuery,
 	)
 	cmd.Dir = ctsDir
 

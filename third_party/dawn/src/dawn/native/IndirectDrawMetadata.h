@@ -142,7 +142,7 @@ class IndirectDrawMetadata : public NonCopyable {
         DrawType drawType;
 
         bool operator<(const IndexedIndirectConfig& other) const;
-        bool operator==(const IndexedIndirectConfig& other) const;
+        bool operator==(const IndexedIndirectConfig& other) const = default;
     };
 
     using IndexedIndirectBufferValidationInfoMap =

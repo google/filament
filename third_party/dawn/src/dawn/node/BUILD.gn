@@ -56,25 +56,11 @@ run_built_binary_script =
     "$dawn_root/third_party/gn/dxc/build/run_built_binary.py"
 
 config("common_config") {
-  warning_flags = []
-  if (is_clang) {
-    warning_flags += [
-      "-Wno-error",  # TODO(amaiorano): For now, allow warnings
-      "-Wno-extra-semi",
-      "-Wno-shadow",
-      "-Wno-unused-variable",
-      "-Wno-implicit-fallthrough",
-      "-Wno-unused-but-set-variable",
-    ]
-  } else {
-    # MSVC
-    warning_flags += [
-      "/W0",  # Suppress most warnings
-    ]
-  }
-
-  cflags_c = warning_flags
-  cflags_cc = warning_flags
+  # Add include paths for Node API headers.
+  include_dirs = [
+    "${dawn_node_addon_api_dir}",
+    "${dawn_node_api_headers_dir}/include",
+  ]
 }
 
 template("idlgen") {
@@ -140,12 +126,9 @@ static_library("dawn_node_interop") {
     "$interop_gen_dir/WebGPU.h",
     "interop/Core.cpp",
     "interop/Core.h",
+    "interop/NodeAPI.h",
   ]
-  include_dirs = [
-    "${dawn_node_addon_api_dir}",
-    "${dawn_node_api_headers_dir}/include",
-    "${dawn_node_gen_dir}",
-  ]
+  include_dirs = [ "${dawn_node_gen_dir}" ]
   deps = [
     ":idlgen_webgpu_cpp",
     ":idlgen_webgpu_h",
@@ -166,6 +149,8 @@ static_library("dawn_node_binding") {
     "binding/Converter.h",
     "binding/Errors.cpp",
     "binding/Errors.h",
+    "binding/EventTarget.cpp",
+    "binding/EventTarget.h",
     "binding/Flags.cpp",
     "binding/Flags.h",
     "binding/GPU.cpp",
@@ -222,14 +207,11 @@ static_library("dawn_node_binding") {
     "binding/TogglesLoader.cpp",
     "binding/TogglesLoader.h",
   ]
-  include_dirs = [
-    "${dawn_node_addon_api_dir}",
-    "${dawn_node_api_headers_dir}/include",
-    "${dawn_node_gen_dir}",
-  ]
+  include_dirs = [ "${dawn_node_gen_dir}" ]
   deps = [
     ":dawn_node_interop",
     "$dawn_root/src/dawn/native:native",
+    "$dawn_root/src/dawn/utils:wgpu_utils",
   ]
 }
 
@@ -277,7 +259,12 @@ shared_library("dawn_node") {
   output_name = "dawn"
   output_extension = "node"
   output_prefix_override = true  # dawn.node, not libdawn.node
-  sources = [ "Module.cpp" ]
+  public_configs = [ ":common_config" ]
+  sources = [
+    "ManualConstructors.cpp",
+    "ManualConstructors.h",
+    "Module.cpp",
+  ]
   deps = [
     ":copy_cts_js",
     ":copy_index_js",
@@ -301,9 +288,5 @@ shared_library("dawn_node") {
     }
     sources += [ "NapiSymbols.cpp" ]
   }
-  include_dirs = [
-    "${dawn_node_addon_api_dir}",
-    "${dawn_node_api_headers_dir}/include",
-    "${dawn_node_gen_dir}",
-  ]
+  include_dirs = [ "${dawn_node_gen_dir}" ]
 }

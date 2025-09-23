@@ -31,10 +31,8 @@
 #include <array>
 #include <optional>
 #include <utility>
-#include <vector>
 
-#include "src/tint/lang/wgsl/ast/diagnostic_control.h"
-#include "src/tint/lang/wgsl/ast/variable.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/sem/call.h"
 #include "src/tint/utils/containers/unique_vector.h"
 #include "src/tint/utils/containers/vector.h"
@@ -73,10 +71,6 @@ class Function final : public Castable<Function, CallTarget> {
     /// Sets the function's return location
     /// @param return_location the location value
     void SetReturnLocation(uint32_t return_location) { return_location_ = return_location; }
-
-    // Sets the function's return index
-    /// @param return_index the index value
-    void SetReturnIndex(uint32_t return_index) { return_index_ = return_index; }
 
     /// @returns the ast::Function declaration
     const ast::Function* Declaration() const { return declaration_; }
@@ -188,16 +182,6 @@ class Function final : public Castable<Function, CallTarget> {
         call_graph_entry_points_.Push(entry_point);
     }
 
-    /// Retrieves any referenced location variables
-    /// @returns the <variable, attribute> pair.
-    std::vector<std::pair<const Variable*, const ast::LocationAttribute*>>
-    TransitivelyReferencedLocationVariables() const;
-
-    /// Retrieves any referenced builtin variables
-    /// @returns the <variable, attribute> pair.
-    std::vector<std::pair<const Variable*, const ast::BuiltinAttribute*>>
-    TransitivelyReferencedBuiltinVariables() const;
-
     /// Checks if the given entry point has the function in its call graph
     /// @param sym the entry point symbol
     /// @returns true if `sym` has the function in its call graph
@@ -224,9 +208,6 @@ class Function final : public Castable<Function, CallTarget> {
     /// @return the location for the return, if provided
     std::optional<uint32_t> ReturnLocation() const { return return_location_; }
 
-    /// @return the index for the return, if provided
-    std::optional<uint32_t> ReturnIndex() const { return return_index_; }
-
     /// Modifies the severity of a specific diagnostic rule for this function.
     /// @param rule the diagnostic rule
     /// @param severity the new diagnostic severity
@@ -248,7 +229,6 @@ class Function final : public Castable<Function, CallTarget> {
     UniqueVector<const GlobalVariable*, 8> transitively_referenced_globals_;
     UniqueVector<const Function*, 8> transitively_called_functions_;
     UniqueVector<const BuiltinFn*, 4> directly_called_builtins_;
-    UniqueVector<VariablePair, 8> texture_sampler_pairs_;
     Vector<const Call*, 1> direct_calls_;
     Vector<const Call*, 1> callsites_;
     Vector<const Function*, 1> call_graph_entry_points_;
@@ -259,7 +239,6 @@ class Function final : public Castable<Function, CallTarget> {
     std::optional<const Source*> directly_used_subgroup_matrix_ = std::nullopt;
 
     std::optional<uint32_t> return_location_;
-    std::optional<uint32_t> return_index_;
 };
 
 }  // namespace tint::sem

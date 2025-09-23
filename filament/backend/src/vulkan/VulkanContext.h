@@ -71,23 +71,23 @@ struct VulkanRenderPass {
 struct VulkanContext {
 public:
     static uint32_t selectMemoryType(VkPhysicalDeviceMemoryProperties const& memoryProperties,
-            uint32_t flags, VkFlags reqs) {
+            uint32_t types, VkFlags reqs) {
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
-            if (flags & 1) {
+            if (types & 1) {
                 if ((memoryProperties.memoryTypes[i].propertyFlags & reqs) == reqs) {
                     return i;
                 }
             }
-            flags >>= 1;
+            types >>= 1;
         }
         return (uint32_t) VK_MAX_MEMORY_TYPES;
     }
 
-    inline uint32_t selectMemoryType(uint32_t flags, VkFlags reqs) const {
+    inline uint32_t selectMemoryType(uint32_t types, VkFlags reqs) const {
         if ((reqs & VK_MEMORY_PROPERTY_PROTECTED_BIT) != 0) {
             assert_invariant(isProtectedMemorySupported());
         }
-        return selectMemoryType(mMemoryProperties, flags, reqs);
+        return selectMemoryType(mMemoryProperties, types, reqs);
     }
 
     inline fvkutils::VkFormatList const& getAttachmentDepthStencilFormats() const {
@@ -104,6 +104,10 @@ public:
 
     inline uint32_t getPhysicalDeviceVendorId() const noexcept {
         return mPhysicalDeviceProperties.properties.vendorID;
+    }
+
+    inline VkExternalFenceHandleTypeFlags getFenceExportFlags() const noexcept {
+        return mFenceExportFlags;
     }
 
     inline bool isImageCubeArraySupported() const noexcept {
@@ -146,6 +150,10 @@ public:
         return mIsUnifiedMemoryArchitecture;
     }
 
+    inline bool stagingBufferBypassEnabled() const noexcept {
+        return mStagingBufferBypassEnabled;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties mMemoryProperties = {};
     VkPhysicalDeviceProperties2 mPhysicalDeviceProperties = {
@@ -164,11 +172,15 @@ private:
         // non-conformant vulkan implementation).
         .imageView2DOn3DImage = VK_TRUE,
     };
+
+    VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
+
     bool mDebugMarkersSupported = false;
     bool mDebugUtilsSupported = false;
     bool mLazilyAllocatedMemorySupported = false;
     bool mProtectedMemorySupported = false;
     bool mIsUnifiedMemoryArchitecture = false;
+    bool mStagingBufferBypassEnabled = false;
 
     fvkutils::VkFormatList mDepthStencilFormats;
     fvkutils::VkFormatList mBlittableDepthStencilFormats;

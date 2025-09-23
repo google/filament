@@ -53,11 +53,6 @@ alias(
 )
 
 alias(
-  name = "tint_build_ir_fuzzer",
-  actual = "//src/tint:tint_build_ir_fuzzer_true",
-)
-
-alias(
   name = "tint_build_msl_writer",
   actual = "//src/tint:tint_build_msl_writer_true",
 )
@@ -78,10 +73,10 @@ alias(
 )
 
 selects.config_setting_group(
-    name = "tint_build_ir_binary_and_tint_build_ir_fuzzer",
+    name = "tint_build_ir_binary_and_tint_build_wgsl_reader",
     match_all = [
         ":tint_build_ir_binary",
-        ":tint_build_ir_fuzzer",
+        ":tint_build_wgsl_reader",
     ],
 )
 

@@ -207,6 +207,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       } else if (IsTypeInst(opcode)) {
         module_->AddType(std::move(spv_inst));
       } else if (IsConstantInst(opcode) || opcode == spv::Op::OpVariable ||
+                 opcode == spv::Op::OpUntypedVariableKHR ||
                  opcode == spv::Op::OpUndef) {
         module_->AddGlobalValue(std::move(spv_inst));
       } else if (spvIsExtendedInstruction(opcode) &&

@@ -56,21 +56,21 @@ namespace dawn::wire::client {
 }  // namespace dawn::wire::client
 
 //* Implementation of the client API functions.
-{% for type in by_category["object"] %}
+{% for (type, methods) in c_methods_sorted_by_parent %}
     {%- set Type = "dawn::wire::client::" + type.name.CamelCase() -%}
     {%- set cType = as_cType(type.name) -%}
 
-    {% for method in type.methods %}
+    {% for method in methods %}
         {% set Suffix = as_MethodSuffix(type.name, method.name) %}
 
-        DAWN_WIRE_EXPORT {{as_cType(method.return_type.name)}} {{as_cMethodNamespaced(type.name, method.name, Name('dawn wire client'))}}(
+        DAWN_WIRE_EXPORT {{as_annotated_cType(method.returns)}} {{as_cMethodNamespaced(type.name, method.name, Name('dawn wire client'))}}(
             {{-cType}} cSelf
             {%- for arg in method.arguments -%}
                 , {{as_annotated_cType(arg)}}
             {%- endfor -%}
         ) {
-            auto self = reinterpret_cast<dawn::wire::client::{{as_wireType(type)}}>(cSelf);
             {% if Suffix not in client_handwritten_commands %}
+                auto self = reinterpret_cast<dawn::wire::client::{{as_wireType(type)}}>(cSelf);
                 dawn::wire::{{Suffix}}Cmd cmd;
 
                 //* Create the structure going on the wire on the stack and fill it with the value
@@ -78,8 +78,8 @@ namespace dawn::wire::client {
                 cmd.self = cSelf;
 
                 //* For object creation, store the object ID the client will use for the result.
-                {% if method.return_type.category == "object" %}
-                    {% set ReturnObj = "dawn::wire::client::" + method.return_type.name.CamelCase() %}
+                {% if method.returns and method.returns.type.category == "object" %}
+                    {% set ReturnObj = "dawn::wire::client::" + method.returns.type.name.CamelCase() %}
                     {{ReturnObj}}* returnObject = dawn::wire::client::Create<dawn::wire::client::{{as_wireType(type)}}, {{ReturnObj}}>(self
                         {%- for arg in method.arguments -%}
                                 , {{as_varName(arg.name)}}
@@ -97,27 +97,20 @@ namespace dawn::wire::client {
                 //* Allocate space to send the command and copy the value args over.
                 self->GetClient()->SerializeCommand(cmd);
 
-                {% if method.return_type.category == "object" %}
+                {% if method.returns and method.returns.type.category == "object" %}
                     return ToAPI(returnObject);
                 {% endif %}
-            {% else %}
-                return self->{{method.name.CamelCase()}}(
+            {% elif type.category == "object" %}
+                auto self = reinterpret_cast<dawn::wire::client::{{as_wireType(type)}}>(cSelf);
+                return self->API{{method.name.CamelCase()}}(
                     {%- for arg in method.arguments -%}
                         {%if not loop.first %}, {% endif %} {{as_varName(arg.name)}}
                     {%- endfor -%});
+            {% elif type.category == "structure" %}
+                return dawn::wire::client::API{{method.name.CamelCase()}}(cSelf);
             {% endif %}
         }
     {% endfor %}
-
-    //* When an object's refcount reaches 0, notify the server side of it and delete it.
-    DAWN_WIRE_EXPORT void {{as_cMethodNamespaced(type.name, Name("release"), Name('dawn wire client'))}}({{cType}} cObj) {
-        {{Type}}* obj = reinterpret_cast<{{Type}}*>(cObj);
-        obj->APIRelease();
-    }
-
-    DAWN_WIRE_EXPORT void {{as_cMethodNamespaced(type.name, Name("add ref"), Name('dawn wire client'))}}({{cType}} cObj) {
-        reinterpret_cast<{{Type}}*>(cObj)->APIAddRef();
-    }
 
 {% endfor %}
 
@@ -180,8 +173,8 @@ namespace dawn::wire::client {
         {% for function in by_category["function"] %}
             procs.{{as_varName(function.name)}} = {{as_cMethodNamespaced(None, function.name, Name('dawn wire client'))}};
         {% endfor %}
-        {% for type in by_category["object"] %}
-            {% for method in c_methods(type) %}
+        {% for (type, methods) in c_methods_sorted_by_parent %}
+            {% for method in methods %}
                 procs.{{as_varName(type.name, method.name)}} = {{as_cMethodNamespaced(type.name, method.name, Name('dawn wire client'))}};
             {% endfor %}
         {% endfor %}

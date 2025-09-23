@@ -72,7 +72,7 @@ void Run(ir::Module& ir, const std::unordered_map<BindingPoint, BindingPoint>& b
 Result<SuccessType> BindingRemapper(
     Module& ir,
     const std::unordered_map<BindingPoint, BindingPoint>& binding_points) {
-    auto result = ValidateAndDumpIfNeeded(ir, "core.BindingRemapper");
+    auto result = ValidateAndDumpIfNeeded(ir, "core.BindingRemapper", kBindingRemapperCapabilities);
     if (result != Success) {
         return result;
     }

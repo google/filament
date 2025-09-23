@@ -18,7 +18,6 @@
 #define TNT_UTILS_ALLOCATOR_H
 
 #include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
 
@@ -36,22 +35,22 @@ namespace utils {
 
 namespace pointermath {
 
-template <typename P, typename T>
-static inline P* add(P* a, T b) noexcept {
-    return (P*)(uintptr_t(a) + uintptr_t(b));
+template<typename P, typename T>
+static P* add(P* a, T b) noexcept {
+    return (P*) (uintptr_t(a) + uintptr_t(b));
 }
 
-template <typename P>
-static inline P* align(P* p, size_t alignment) noexcept {
+template<typename P>
+static P* align(P* p, size_t alignment) noexcept {
     // alignment must be a power-of-two
-    assert_invariant(alignment && !(alignment & alignment-1));
-    return (P*)((uintptr_t(p) + alignment - 1) & ~(alignment - 1));
+    assert(alignment && !(alignment & alignment-1));
+    return (P*) ((uintptr_t(p) + alignment - 1) & ~(alignment - 1));
 }
 
-template <typename P>
-static inline P* align(P* p, size_t alignment, size_t offset) noexcept {
+template<typename P>
+static P* align(P* p, size_t alignment, size_t offset) noexcept {
     P* const r = align(add(p, offset), alignment);
-    assert_invariant(r >= add(p, offset));
+    assert(r >= add(p, offset));
     return r;
 }
 
@@ -102,7 +101,7 @@ public:
 
     // free memory back to the specified point
     void rewind(void* p) UTILS_RESTRICT noexcept {
-        assert_invariant(p >= mBegin && p < end());
+        assert(p >= mBegin && p < end());
         set_current(p);
     }
 
@@ -233,14 +232,16 @@ public:
         Node* const head = mHead;
         mHead = head ? head->next : nullptr;
         // this could indicate a use after free
-        assert_invariant(!mHead || mHead >= mBegin && mHead < mEnd);
+        assert(!mHead || mHead >= mBegin && mHead < mEnd);
         return head;
     }
 
     void push(void* p) noexcept {
-        assert_invariant(p);
-        assert_invariant(p >= mBegin && p < mEnd);
-        Node* const head = static_cast<Node*>(p);
+        assert(p);
+        assert(p >= mBegin && p < mEnd);
+        // we use placement-new to properly manage the lifetime
+        // this is noop already under O1
+        Node* const head = new (p) Node;
         head->next = mHead;
         mHead = head;
     }
@@ -297,19 +298,21 @@ public:
                 // This assert needs to occur after we have validated that there was no race condition
                 // Otherwise, next might already contain application data, if another thread
                 // raced ahead of us after we loaded mHead, but before we loaded mHead->next.
-                assert_invariant(!pNext || pNext >= pStorage);
+                assert(!pNext || pNext >= pStorage);
                 break;
             }
         }
         void* p = (currentHead.offset >= 0) ? (pStorage + currentHead.offset) : nullptr;
-        assert_invariant(!p || p >= pStorage);
+        assert(!p || p >= pStorage);
         return p;
     }
 
     void push(void* p) noexcept {
         Node* const storage = mStorage;
-        assert_invariant(p && p >= storage);
-        Node* const node = static_cast<Node*>(p);
+        assert(p && p >= storage);
+        // we use placement-new to properly manage the lifetime
+        // this is noop already under O1
+        Node* const node = new (p) Node;
         HeadPtr currentHead = mHead.load(std::memory_order_relaxed);
         HeadPtr newHead = { int32_t(node - storage), currentHead.tag + 1 };
         do {
@@ -381,9 +384,9 @@ public:
     // our allocator concept
     void* alloc(size_t size = ELEMENT_SIZE,
                 size_t alignment = ALIGNMENT, size_t offset = OFFSET) noexcept {
-        assert_invariant(size <= ELEMENT_SIZE);
-        assert_invariant(alignment <= ALIGNMENT);
-        assert_invariant(offset == OFFSET);
+        assert(size <= ELEMENT_SIZE);
+        assert(alignment <= ALIGNMENT);
+        assert(offset == OFFSET);
         return mFreeList.pop();
     }
 
@@ -461,7 +464,7 @@ public:
         if (UTILS_UNLIKELY(!p)) {
             p = HeapAllocator::alloc(size, alignment);
         }
-        assert_invariant(p);
+        assert(p);
         return p;
     }
 
@@ -942,7 +945,7 @@ public:
 
     TYPE* allocate(std::size_t n) {
         auto p = static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
-        assert_invariant(p);
+        assert(p);
         return p;
     }
 

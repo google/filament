@@ -1,3 +1,6 @@
+# Copyright (c) 2015-2024 The Khronos Group Inc.
+# SPDX-License-Identifier: MIT
+
 cmake_minimum_required(VERSION 3.14)
 
 project(TEST_FIND_PACKAGE LANGUAGES CXX)

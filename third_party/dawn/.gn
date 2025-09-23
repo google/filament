@@ -49,6 +49,13 @@ default_args = {
   use_fuzztest_wrapper = false
   use_sysroot = true
   enable_js_protobuf = false
+
+  # Needed only for std::atomic_ref<T> for large Ts http://crbug.com/402171653
+  # Disable it to avoid the need to add the compiler-rt third_party dependency.
+  use_llvm_libatomic = false
+
+  # Chromium defaults to minimum 15 at least.
+  mac_sdk_min = "12"
 }
 
 # Export compile_commands.json to build dir for all generated targets.

@@ -33,14 +33,14 @@
 #include "src/tint/lang/spirv/reader/ast_lower/decompose_strided_array.h"
 #include "src/tint/lang/spirv/reader/ast_lower/decompose_strided_matrix.h"
 #include "src/tint/lang/spirv/reader/ast_lower/fold_trivial_lets.h"
+#include "src/tint/lang/spirv/reader/ast_lower/manager.h"
 #include "src/tint/lang/spirv/reader/ast_lower/pass_workgroup_id_as_argument.h"
+#include "src/tint/lang/spirv/reader/ast_lower/remove_unreachable_statements.h"
+#include "src/tint/lang/spirv/reader/ast_lower/simplify_pointers.h"
 #include "src/tint/lang/spirv/reader/ast_lower/transpose_row_major.h"
+#include "src/tint/lang/spirv/reader/ast_lower/unshadow.h"
 #include "src/tint/lang/spirv/reader/ast_parser/ast_parser.h"
-#include "src/tint/lang/wgsl/ast/transform/manager.h"
-#include "src/tint/lang/wgsl/ast/transform/remove_unreachable_statements.h"
-#include "src/tint/lang/wgsl/ast/transform/simplify_pointers.h"
-#include "src/tint/lang/wgsl/ast/transform/unshadow.h"
-#include "src/tint/lang/wgsl/extension.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/program/clone_context.h"
 #include "src/tint/lang/wgsl/resolver/resolve.h"
 
@@ -123,7 +123,7 @@ Program Parse(const std::vector<uint32_t>& input, const Options& options) {
     manager.Add<TransposeRowMajor>();
     manager.Add<DecomposeStridedMatrix>();
     manager.Add<DecomposeStridedArray>();
-    manager.Add<ast::transform::RemoveUnreachableStatements>();
+    manager.Add<RemoveUnreachableStatements>();
     manager.Add<Atomics>();
     manager.Add<ReenableUniformityAnalysis>();
     return manager.Run(program, {}, outputs);

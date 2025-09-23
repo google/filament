@@ -9,7 +9,8 @@ material {
         {
             type : sampler2d,
             name : depth,
-            precision: high
+            precision: high,
+            filterable: false
         },
         {
             type : float4,
@@ -77,4 +78,3 @@ fragment {
         postProcess.color = color;
     }
 }
-

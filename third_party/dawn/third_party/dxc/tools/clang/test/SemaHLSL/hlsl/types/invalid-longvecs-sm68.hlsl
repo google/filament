@@ -3,6 +3,8 @@
 #define TYPE float
 #define NUM 5
 
+StructuredBuffer<vector<TYPE,NUM> > sbuf; // expected-error{{invalid value, valid range is between 1 and 4 inclusive}}
+
 struct LongVec {
   float4 f;
   vector<TYPE,NUM> vec; // expected-error{{invalid value, valid range is between 1 and 4 inclusive}}

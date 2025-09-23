@@ -21,6 +21,8 @@
 
 #include <string_view>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 

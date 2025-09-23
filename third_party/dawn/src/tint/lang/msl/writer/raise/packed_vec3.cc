@@ -155,7 +155,16 @@ struct State {
                 },
                 [&](const core::type::Vector* vec) {
                     if (vec->Width() == 3) {
-                        return ty.packed_vec(vec->Type(), 3);
+                        auto* el_ty = vec->Type();
+
+                        // The packed_bool* types are reserved in MSL and cause issues in some
+                        // drivers (see crbug.com/424772881), so use packed_uint3 instead. We then
+                        // convert between `bool` and `u32` when we load or store the values.
+                        if (el_ty->Is<core::type::Bool>()) {
+                            el_ty = ty.u32();
+                        }
+
+                        return ty.packed_vec(el_ty, 3);
                     }
                     return vec;
                 },
@@ -302,15 +311,31 @@ struct State {
                 });
                 load->Destroy();
             },
-            [&](core::ir::LoadVectorElement*) {
-                // Nothing to do - packed vectors support component access.
+            [&](core::ir::LoadVectorElement* lve) {
+                // Packed vectors support component access so there is usually nothing to do.
+                // For vectors that were originally booleans we need to convert the u32 that we load
+                // to a bool.
+                if (unpacked_type->UnwrapPtr()->IsBoolVector()) {
+                    auto* u32_load = b.InstructionResult<u32>();
+                    auto* converted_to_bool = b.ConvertWithResult(lve->DetachResult(), u32_load);
+                    converted_to_bool->InsertAfter(lve);
+                    lve->SetResult(u32_load);
+                }
             },
             [&](core::ir::Store* store) {
                 b.InsertBefore(store, [&] { StoreUnpackedToPacked(store->To(), store->From()); });
                 store->Destroy();
             },
-            [&](core::ir::StoreVectorElement*) {
-                // Nothing to do - packed vectors support component access.
+            [&](core::ir::StoreVectorElement* sve) {
+                // Packed vectors support component access so there is usually nothing to do.
+                // For vectors that were originally booleans we need to convert the bool to a u32
+                // before we store it.
+                if (unpacked_type->UnwrapPtr()->IsBoolVector()) {
+                    auto* converted_to_u32 = b.Convert<u32>(sve->Value());
+                    converted_to_u32->InsertBefore(sve);
+                    sve->SetOperand(core::ir::StoreVectorElement::kValueOperandOffset,
+                                    converted_to_u32->Result());
+                }
             },
             [&](core::ir::UserCall*) {
                 // Nothing to do - pass the packed type to the function, which will be rewritten.
@@ -398,12 +423,22 @@ struct State {
             [&](const core::type::Struct* str) {
                 return b.Call(LoadPackedStructHelper(str, packed_ptr), from)->Result();
             },
-            [&](const core::type::Vector*) {
+            [&](const core::type::Vector* vec) {
                 // Load the packed vector and convert it to the unpacked equivalent.
-                return b
-                    .Call<msl::ir::BuiltinCall>(unpacked_type, msl::BuiltinFn::kConvert,
-                                                b.Load(from))
-                    ->Result();
+                auto* load = b.Load(from)->Result(0);
+                if (vec->Type()->Is<core::type::Bool>()) {
+                    // The vector was originally a vec3<bool>, which will have been rewritten as a
+                    // vec3<u32>. We need to unpack the packed_vec3<u32> to a vec3<u32> and then
+                    // convert it to a vec3<bool>.
+                    auto* unpacked =
+                        b.Call<msl::ir::BuiltinCall>(ty.vec3<u32>(), msl::BuiltinFn::kConvert, load)
+                            ->Result();
+                    return b.Convert<vec3<bool>>(unpacked)->Result();
+                } else {
+                    return b
+                        .Call<msl::ir::BuiltinCall>(unpacked_type, msl::BuiltinFn::kConvert, load)
+                        ->Result();
+                }
             },
             TINT_ICE_ON_NO_MATCH);
     }
@@ -539,8 +574,13 @@ struct State {
             [&](const core::type::Struct* str) {
                 b.Call(StorePackedStructHelper(str, packed_ptr), to, value)->Result();
             },
-            [&](const core::type::Vector*) {  //
+            [&](const core::type::Vector* vec) {  //
                 // Convert the vector to the packed equivalent and store it.
+                // For vectors that were originally booleans we need to convert the value to a
+                // vec3<u32> before storing it.
+                if (vec->Type()->Is<core::type::Bool>()) {
+                    value = b.Convert<vec3<u32>>(value)->Result();
+                }
                 b.Store(to,
                         b.Call<msl::ir::BuiltinCall>(packed_type, msl::BuiltinFn::kConvert, value)
                             ->Result());
@@ -640,7 +680,12 @@ struct State {
 }  // namespace
 
 Result<SuccessType> PackedVec3(core::ir::Module& ir) {
-    auto result = ValidateAndDumpIfNeeded(ir, "msl.PackedVec3");
+    auto result = ValidateAndDumpIfNeeded(ir, "msl.PackedVec3",
+                                          tint::core::ir::Capabilities{
+                                              core::ir::Capability::kAllow8BitIntegers,
+                                              tint::core::ir::Capability::kAllowDuplicateBindings,
+                                              core::ir::Capability::kAllowNonCoreTypes,
+                                          });
     if (result != Success) {
         return result.Failure();
     }

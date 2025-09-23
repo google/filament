@@ -3110,6 +3110,13 @@ void DxilExtraPropertyHelper::EmitUAVProperties(
         DxilMDHelper::kDxilAtomic64UseTag, m_Ctx));
     MDVals.emplace_back(DxilMDHelper::Uint32ToConstMD((unsigned)true, m_Ctx));
   }
+  // Whether resource is reordercoherent.
+  if (DXIL::CompareVersions(m_ValMajor, m_ValMinor, 1, 9) >= 0 &&
+      UAV.IsReorderCoherent()) {
+    MDVals.emplace_back(DxilMDHelper::Uint32ToConstMD(
+        DxilMDHelper::kDxilReorderCoherentTag, m_Ctx));
+    MDVals.emplace_back(DxilMDHelper::BoolToConstMD(true, m_Ctx));
+  }
 }
 
 void DxilExtraPropertyHelper::LoadUAVProperties(const MDOperand &MDO,
@@ -3146,6 +3153,9 @@ void DxilExtraPropertyHelper::LoadUAVProperties(const MDOperand &MDO,
       break;
     case DxilMDHelper::kDxilAtomic64UseTag:
       UAV.SetHasAtomic64Use(DxilMDHelper::ConstMDToBool(MDO));
+      break;
+    case DxilMDHelper::kDxilReorderCoherentTag:
+      UAV.SetReorderCoherent(DxilMDHelper::ConstMDToBool(MDO));
       break;
     default:
       DXASSERT(false, "Unknown resource record tag");

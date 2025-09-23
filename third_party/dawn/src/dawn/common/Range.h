@@ -28,9 +28,6 @@
 #ifndef SRC_DAWN_COMMON_RANGE_H_
 #define SRC_DAWN_COMMON_RANGE_H_
 
-#include <type_traits>
-#include <utility>
-
 namespace dawn {
 
 // An iterator over a range of numbers. Simplified version of Python's range() iterator that works
@@ -51,8 +48,7 @@ class BeginEndRange {
     class Iterator final {
       public:
         explicit Iterator(Integer value) : mValue(value) {}
-        bool operator==(const Iterator& other) const { return other.mValue == mValue; }
-        bool operator!=(const Iterator& other) const { return !(*this == other); }
+        bool operator==(const Iterator& other) const = default;
         Iterator& operator++() {
             mValue++;
             return *this;

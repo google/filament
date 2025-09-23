@@ -173,9 +173,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         case TargetApi::METAL:
             out << "#define TARGET_METAL_ENVIRONMENT\n";
             break;
-        // TODO: Handle webgpu here
         case TargetApi::WEBGPU:
-            //For now, no differences so inherit the same changes.
             out << "#define TARGET_WEBGPU_ENVIRONMENT\n";
             break;
         case TargetApi::ALL:
@@ -246,12 +244,13 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
     }
 
     if (stage == ShaderStage::VERTEX) {
-        CodeGenerator::generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
-        CodeGenerator::generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
+        generateDefine(out, "FLIP_UV_ATTRIBUTE", material.flipUV);
+        generateDefine(out, "LEGACY_MORPHING", material.useLegacyMorphing);
     }
     if (stage == ShaderStage::FRAGMENT) {
-        CodeGenerator::generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH",
-                material.userMaterialHasCustomDepth);
+        generateDefine(out, "FILAMENT_LINEAR_FOG", material.linearFog);
+        generateDefine(out, "FILAMENT_SHADOW_FAR_ATTENUATION", material.shadowFarAttenuation);
+        generateDefine(out, "MATERIAL_HAS_CUSTOM_DEPTH", material.userMaterialHasCustomDepth);
     }
 
     if (mTargetLanguage == TargetLanguage::SPIRV ||
@@ -277,7 +276,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         }
     };
 
-    CodeGenerator::generateDefine(out, getShadingDefine(material.shading), true);
+    generateDefine(out, getShadingDefine(material.shading), true);
 
     generateQualityDefine(out, material.quality);
 
@@ -309,6 +308,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // More information at https://github.com/gpuweb/gpuweb/issues/572#issuecomment-649760005
         out << "const int CONFIG_MAX_INSTANCES = " << (int)CONFIG_MAX_INSTANCES << ";\n";
         out << "const int CONFIG_FROXEL_BUFFER_HEIGHT = 2048;\n";
+        out << "const int CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 16384;\n";
     } else {
         generateSpecializationConstant(out, "CONFIG_MAX_INSTANCES",
                 +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES, (int)CONFIG_MAX_INSTANCES);
@@ -316,6 +316,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // the default of 1024 (16KiB) is needed for 32% of Android devices
         generateSpecializationConstant(out, "CONFIG_FROXEL_BUFFER_HEIGHT",
                 +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT, 1024);
+
+        generateSpecializationConstant(out, "CONFIG_FROXEL_RECORD_BUFFER_HEIGHT",
+                +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT, 16384);
     }
 
     // directional shadowmap visualization
@@ -366,20 +369,20 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
         // This is the minimum required value according to the OpenGL ES Shading Language Version
         // 1.00 document. glslang forbids defining symbols beginning with gl_ as const, hence the
         // #define.
-        CodeGenerator::generateDefine(out, "gl_MaxVaryingVectors", "8");
+        generateDefine(out, "gl_MaxVaryingVectors", "8");
 
-        CodeGenerator::generateDefine(out, "texture2D", "texture");
-        CodeGenerator::generateDefine(out, "texture2DProj", "textureProj");
-        CodeGenerator::generateDefine(out, "texture3D", "texture");
-        CodeGenerator::generateDefine(out, "texture3DProj", "textureProj");
-        CodeGenerator::generateDefine(out, "textureCube", "texture");
+        generateDefine(out, "texture2D", "texture");
+        generateDefine(out, "texture2DProj", "textureProj");
+        generateDefine(out, "texture3D", "texture");
+        generateDefine(out, "texture3DProj", "textureProj");
+        generateDefine(out, "textureCube", "texture");
 
         if (stage == ShaderStage::VERTEX) {
-            CodeGenerator::generateDefine(out, "texture2DLod", "textureLod");
-            CodeGenerator::generateDefine(out, "texture2DProjLod", "textureProjLod");
-            CodeGenerator::generateDefine(out, "texture3DLod", "textureLod");
-            CodeGenerator::generateDefine(out, "texture3DProjLod", "textureProjLod");
-            CodeGenerator::generateDefine(out, "textureCubeLod", "textureLod");
+            generateDefine(out, "texture2DLod", "textureLod");
+            generateDefine(out, "texture2DProjLod", "textureProjLod");
+            generateDefine(out, "texture3DLod", "textureLod");
+            generateDefine(out, "texture3DProjLod", "textureProjLod");
+            generateDefine(out, "textureCubeLod", "textureLod");
         }
     }
 
@@ -539,13 +542,14 @@ io::sstream& CodeGenerator::generateOutput(io::sstream& out, ShaderStage stage,
 
     const char* swizzleString = "";
 
-    // Metal doesn't support some 3-component texture formats, so the backend uses 4-component
+    // Metal and WebGPU don't support some 3-component texture formats, so the backend uses 4-component
     // formats behind the scenes. It's an error to output fewer components than the attachment
     // needs, so we always output a float4 instead of a float3. It's never an error to output extra
     // components.
     //
     // Meanwhile, ESSL 1.0 must always write to gl_FragColor, a vec4.
-    if (mTargetApi == TargetApi::METAL || mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
+    if (mTargetApi == TargetApi::METAL || mTargetApi == TargetApi::WEBGPU ||
+            mFeatureLevel == FeatureLevel::FEATURE_LEVEL_0) {
         if (outputType == MaterialBuilder::OutputType::FLOAT3) {
             outputType = MaterialBuilder::OutputType::FLOAT4;
             swizzleString = ".rgb";
@@ -727,7 +731,6 @@ io::sstream& CodeGenerator::generateBufferInterfaceBlock(io::sstream& out, Shade
                 // in the GLSL 4.5 / ESSL 3.1 case, the set is not used and binding is unique
                 out << "binding = " << +binding << ", ";
                 break;
-            // TODO: Handle webgpu here
             case TargetApi::WEBGPU:
                 out << "set = " << +set << ", binding = " << +binding << ", ";
             break;
@@ -817,7 +820,6 @@ io::sstream& CodeGenerator::generateCommonSamplers(utils::io::sstream& out,
                     // GLSL 4.5 / ESSL 3.1 require the 'binding' layout qualifier
                     out << "layout(binding = " << getUniqueSamplerBindingPoint() << ") ";
                     break;
-                // TODO: Handle webgpu here
                 case TargetApi::WEBGPU:
                     out << "layout(binding = " << +info.binding << ", set = " << +set << ") ";
                 break;
@@ -937,11 +939,11 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
     static const char* types[] = { "int", "float", "bool" };
 
     // Spec constants aren't fully supported in Tint,
-    //  workaround until https://issues.chromium.org/issues/42250586 is resolved
+    // workaround until https://issues.chromium.org/issues/42250586 is resolved
     if (mTargetApi == TargetApi::WEBGPU) {
-        out << "layout (constant_id = " << id << ") const "
-                << types[value.index()] << " " << name << "_hack = " << constantString << ";\n"
-                << types[value.index()] << " " << name << " = " << name << "_hack;\n";
+        std::string const variableName = "FILAMENT_SPEC_CONST_" + std::to_string(id) + "_" + name;
+        out << " const " << types[value.index()] << " " << variableName << " = " << constantString << ";\n";
+        out << types[value.index()] << " " << name << " =  " << variableName << ";\n";
         return out;
     }
     if (mTargetLanguage == MaterialBuilderBase::TargetLanguage::SPIRV) {
@@ -959,10 +961,11 @@ utils::io::sstream& CodeGenerator::generateSpecializationConstant(utils::io::sst
 
 utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out,
         MaterialBuilder::PushConstantList const& pushConstants, size_t const layoutLocation) const {
+    if (UTILS_UNLIKELY(pushConstants.empty())) {
+        return out;
+    }
     static constexpr char const* STRUCT_NAME = "Constants";
 
-    bool const outputSpirv =
-            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     auto const getType = [](ConstantType const& type) {
         switch (type) {
             case ConstantType::BOOL:
@@ -973,6 +976,30 @@ utils::io::sstream& CodeGenerator::generatePushConstants(utils::io::sstream& out
                 return "float";
         }
     };
+    // This is a workaround for WebGPU not supporting push constants for skinning.
+    // We replace the push constant with a regular constant struct initialized to 0.
+    if (mTargetApi == TargetApi::WEBGPU) {
+        assert_invariant(
+                pushConstants.size() == 1 &&
+                "The current workaround for WebGPU push constants assumes for now that only 1");
+        assert_invariant(pushConstants[0].name == CString("morphingBufferOffset") &&
+                         "The current workaround for WebGPU push constants assumes only the "
+                         "morphingBufferOffset constant is present.");
+        assert_invariant(pushConstants[0].type == ConstantType::INT &&
+                         "The current workaround for WebGPU push constants assumes "
+                         "morphingBufferOffset is an integer type.");
+        out << "struct " << STRUCT_NAME << " {\n";
+        for (auto const& constant: pushConstants) {
+            out << "    " << getType(constant.type) << " " << constant.name.c_str() << ";\n";
+        }
+        out << "};\n";
+        out << "const " << STRUCT_NAME << " " << PUSH_CONSTANT_STRUCT_VAR_NAME << " = "
+            << STRUCT_NAME << "(0);\n";
+        return out;
+    }
+
+    bool const outputSpirv =
+            mTargetLanguage == TargetLanguage::SPIRV && mTargetApi != TargetApi::OPENGL;
     if (outputSpirv) {
         out << "layout(push_constant) uniform " << STRUCT_NAME << " {\n ";
     } else {

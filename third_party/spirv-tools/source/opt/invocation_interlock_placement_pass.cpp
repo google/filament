@@ -26,10 +26,10 @@
 #include <vector>
 
 #include "source/enum_set.h"
-#include "source/enum_string_mapping.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/reflect.h"
 #include "source/spirv_target_env.h"
+#include "source/table2.h"
 #include "source/util/string_utils.h"
 
 namespace spvtools {

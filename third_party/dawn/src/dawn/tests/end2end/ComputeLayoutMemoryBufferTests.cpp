@@ -109,7 +109,7 @@ size_t ScalarTypeSize(ScalarType scalarType) {
 //   2. "Data": Add `size` bytes of data bytes into buffer;
 //   3. "Padding": Add `size` bytes of padding bytes into buffer;
 //   4. "FillingFixed": Fill all `size` given (fixed) bytes into the memory buffer.
-// Note that data bytes and padding bytes are generated seperatedly and designed to
+// Note that data bytes and padding bytes are generated separately and designed to
 // be distinguishable, i.e. data bytes have the second most significant bit set to 0 while padding
 // bytes 1.
 // We don't want testing data includes NaN or Inf, because according to WGSL spec an implementation
@@ -165,7 +165,7 @@ class MemoryDataBuilder {
     }
 
     // Apply all recorded operations, one by one, on a given memory buffer.
-    // dataXorKey and paddingXorKey controls the generated data and padding bytes seperatedly, make
+    // dataXorKey and paddingXorKey controls the generated data and padding bytes separately, make
     // it possible to, for example, generate two buffers that have different data bytes but
     // identical padding bytes, thus can be used as initializer and expectation bytes of the copy
     // destination buffer, expecting data bytes are changed while padding bytes are left unchanged.

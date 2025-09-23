@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/resolver/dependency_graph.h"
 #include "src/tint/lang/wgsl/sem/builtin_enum_expression.h"

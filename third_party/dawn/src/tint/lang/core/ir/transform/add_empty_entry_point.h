@@ -41,7 +41,7 @@ namespace tint::core::ir::transform {
 /// The capabilities that the transform can support.
 const core::ir::Capabilities kAddEmptyEntryPointCapabilities{
     core::ir::Capability::kAllowHandleVarsWithoutBindings,
-};
+    core::ir::Capability::kAllowDuplicateBindings};
 
 /// Add an empty entry point to the module, if no other entry points exist.
 /// @param module the module to transform

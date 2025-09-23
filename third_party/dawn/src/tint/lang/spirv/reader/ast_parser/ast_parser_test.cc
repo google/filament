@@ -324,7 +324,7 @@ TEST_F(SpirvASTParserTest, BlendSrc) {
     auto errs = program.Diagnostics().Str();
     EXPECT_TRUE(program.IsValid()) << errs;
     EXPECT_EQ(program.Diagnostics().Count(), 0u) << errs;
-    auto result = wgsl::writer::Generate(program, {});
+    auto result = wgsl::writer::Generate(program);
     EXPECT_EQ(result, Success);
     EXPECT_EQ("\n" + result->wgsl, R"(
 enable dual_source_blending;
@@ -428,7 +428,7 @@ TEST_F(SpirvASTParserTest, ClipDistances_ArraySize_1) {
     auto errs = program.Diagnostics().Str();
     EXPECT_TRUE(program.IsValid()) << errs;
     EXPECT_EQ(program.Diagnostics().Count(), 0u) << errs;
-    auto result = wgsl::writer::Generate(program, {});
+    auto result = wgsl::writer::Generate(program);
     EXPECT_EQ(result, Success);
     EXPECT_EQ("\n" + result->wgsl, R"(
 enable clip_distances;
@@ -528,7 +528,7 @@ TEST_F(SpirvASTParserTest, ClipDistances_ArraySize_4) {
     auto errs = program.Diagnostics().Str();
     EXPECT_TRUE(program.IsValid()) << errs;
     EXPECT_EQ(program.Diagnostics().Count(), 0u) << errs;
-    auto result = wgsl::writer::Generate(program, {});
+    auto result = wgsl::writer::Generate(program);
     EXPECT_EQ(result, Success);
     EXPECT_EQ("\n" + result->wgsl, R"(
 enable clip_distances;

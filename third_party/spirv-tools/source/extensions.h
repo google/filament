@@ -15,25 +15,19 @@
 #ifndef SOURCE_EXTENSIONS_H_
 #define SOURCE_EXTENSIONS_H_
 
-#include <cstdint>
 #include <string>
 
 #include "source/enum_set.h"
-#include "spirv-tools/libspirv.h"
+#include "source/table2.h"
 
 namespace spvtools {
 
-// The known SPIR-V extensions.
-enum Extension : uint32_t {
-#include "extension_enum.inc"
-};
-
 using ExtensionSet = EnumSet<Extension>;
 
-// Returns literal string operand of OpExtension instruction.
+// Returns the literal string operand of OpExtension instruction.
 std::string GetExtensionString(const spv_parsed_instruction_t* inst);
 
-// Returns text string listing |extensions| separated by whitespace.
+// Returns a text string listing |extensions| separated by whitespace.
 std::string ExtensionSetToString(const ExtensionSet& extensions);
 
 }  // namespace spvtools

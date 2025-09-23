@@ -237,6 +237,8 @@ class QueryInternalShaderTests : public DawnTest {
 //   timestamp period (here use GPU frequency (HZ) on Intel D3D12 to calculate the period in
 //   ns for testing).
 TEST_P(QueryInternalShaderTests, TimestampComputeShaderMultiplication) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
     constexpr std::array<float, 5> kPeriodsToTest = {
         1,
         7,
@@ -264,6 +266,7 @@ TEST_P(QueryInternalShaderTests, TimestampComputeShaderMultiplication) {
 }
 
 TEST_P(QueryInternalShaderTests, TimestampComputeShaderQuantization) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
     DAWN_TEST_UNSUPPORTED_IF(!HasToggleEnabled("timestamp_quantization"));
 
     constexpr std::array<uint32_t, 3> kQuantizationMasksToTest = {

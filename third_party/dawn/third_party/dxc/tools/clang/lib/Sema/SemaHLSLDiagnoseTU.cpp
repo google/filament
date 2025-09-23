@@ -709,20 +709,18 @@ void hlsl::DiagnoseTranslationUnit(clang::Sema *self) {
               << hullPatchCount.value();
         }
       }
-      for (const auto *param : pPatchFnDecl->params())
-        if (containsLongVector(param->getType())) {
-          const unsigned PatchConstantFunctionParametersIdx = 8;
-          self->Diag(param->getLocation(),
-                     diag::err_hlsl_unsupported_long_vector)
-              << PatchConstantFunctionParametersIdx;
-        }
-
-      if (containsLongVector(pPatchFnDecl->getReturnType())) {
-        const unsigned PatchConstantFunctionReturnIdx = 9;
-        self->Diag(pPatchFnDecl->getLocation(),
-                   diag::err_hlsl_unsupported_long_vector)
-            << PatchConstantFunctionReturnIdx;
+      for (const auto *param : pPatchFnDecl->params()) {
+        const TypeDiagContext ParamDiagContext =
+            TypeDiagContext::PatchConstantFunctionParameters;
+        DiagnoseTypeElements(*self, param->getLocation(), param->getType(),
+                             ParamDiagContext, ParamDiagContext);
       }
+
+      const TypeDiagContext ReturnDiagContext =
+          TypeDiagContext::PatchConstantFunctionReturnType;
+      DiagnoseTypeElements(*self, pPatchFnDecl->getLocation(),
+                           pPatchFnDecl->getReturnType(), ReturnDiagContext,
+                           ReturnDiagContext);
     }
     DXIL::ShaderKind EntrySK = shaderModel->GetKind();
     DXIL::NodeLaunchType NodeLaunchTy = DXIL::NodeLaunchType::Invalid;

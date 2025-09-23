@@ -116,6 +116,10 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                 return 13;
             case core::BuiltinValue::kClipDistances:
                 return 14;
+            case core::BuiltinValue::kPrimitiveId:
+                return 15;
+            case core::BuiltinValue::kBarycentricCoord:
+                return 16;
             case core::BuiltinValue::kSubgroupInvocationId:
             case core::BuiltinValue::kSubgroupSize:
                 // These are sorted, but don't actually end up as members. Value doesn't really
@@ -424,6 +428,14 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
                 ->Result();
         }
         if (num_workgroups_index == idx) {
+            if (config.num_workgroups_start_offset.has_value()) {
+                auto* immediate_data = config.immediate_data_layout.var;
+                auto num_workgroup_idx = u32(config.immediate_data_layout.IndexOf(
+                    config.num_workgroups_start_offset.value()));
+                auto* load = builder.Load(
+                    builder.Access<ptr<immediate, vec3<u32>>>(immediate_data, num_workgroup_idx));
+                return load->Result();
+            }
             return GetInputForNumWorkgroups(builder);
         }
 
@@ -452,6 +464,22 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
             auto* instance_index_offset =
                 builder.Access(ty.ptr<uniform, u32>(), tint_first_index_offset, 1_u);
             v = builder.Add<u32>(v, builder.Load(instance_index_offset))->Result();
+        } else if (config.first_index_offset.has_value() &&
+                   inputs[idx].attributes.builtin == core::BuiltinValue::kVertexIndex) {
+            auto* immediate_data = config.immediate_data_layout.var;
+            auto first_index_offset_idx =
+                u32(config.immediate_data_layout.IndexOf(config.first_index_offset.value()));
+            auto first_index_offset =
+                builder.Access<ptr<immediate, u32>>(immediate_data, first_index_offset_idx);
+            v = builder.Add<u32>(v, builder.Load(first_index_offset))->Result();
+        } else if (config.first_instance_offset.has_value() &&
+                   inputs[idx].attributes.builtin == core::BuiltinValue::kInstanceIndex) {
+            auto* immediate_data = config.immediate_data_layout.var;
+            auto first_instance_offset_idx =
+                u32(config.immediate_data_layout.IndexOf(config.first_instance_offset.value()));
+            auto first_instance_offset =
+                builder.Access<ptr<immediate, u32>>(immediate_data, first_instance_offset_idx);
+            v = builder.Add<u32>(v, builder.Load(first_instance_offset))->Result();
         }
 
         return v;
@@ -523,7 +551,8 @@ struct StateImpl : core::ir::transform::ShaderIOBackendState {
 }  // namespace
 
 Result<SuccessType> ShaderIO(core::ir::Module& ir, const ShaderIOConfig& config) {
-    auto result = ValidateAndDumpIfNeeded(ir, "hlsl.ShaderIO");
+    auto result = ValidateAndDumpIfNeeded(
+        ir, "hlsl.ShaderIO", core::ir::Capabilities{core::ir::Capability::kAllowDuplicateBindings});
     if (result != Success) {
         return result;
     }

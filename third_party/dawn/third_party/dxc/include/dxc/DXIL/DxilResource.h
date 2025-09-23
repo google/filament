@@ -63,6 +63,8 @@ public:
 
   bool IsGloballyCoherent() const;
   void SetGloballyCoherent(bool b);
+  bool IsReorderCoherent() const;
+  void SetReorderCoherent(bool b);
   bool HasCounter() const;
   void SetHasCounter(bool b);
 
@@ -97,6 +99,7 @@ private:
   CompType m_CompType;
   DXIL::SamplerFeedbackType m_SamplerFeedbackType;
   bool m_bGloballyCoherent;
+  bool m_bReorderCoherent;
   bool m_bHasCounter;
   bool m_bROV;
   bool m_bHasAtomic64Use;

@@ -241,8 +241,8 @@ uint32_t ComputeExtraArraySizeForIntelGen12(uint32_t width,
 
     // Texture should be aligned on both tile width (512 bytes) and tile height (128 rows) on Intel
     // Gen12 GPU
-    uint32_t mainTileCols = Align(totalWidth, tileWidth) / tileWidth;
-    uint32_t mainTileRows = Align(totalHeight, tileHeight) / tileHeight;
+    uint64_t mainTileCols = Align(totalWidth, tileWidth) / tileWidth;
+    uint64_t mainTileRows = Align(totalHeight, tileHeight) / tileHeight;
     uint64_t mainTileCount = mainTileCols * mainTileRows;
 
     // There is a bug in Intel old drivers to compute the auxiliary memory size (auxSize) of the
@@ -321,7 +321,7 @@ ResourceAllocatorManager::~ResourceAllocatorManager() {
         mSubAllocatedResourceAllocators[i] = nullptr;
     }
 
-    DestroyPool();
+    FreeRecycledAllocations();
 
     DAWN_ASSERT(mAllocationsToDelete.Empty());
     DAWN_ASSERT(mHeapsToDelete.Empty());
@@ -467,7 +467,8 @@ ResultOrError<ResourceHeapAllocation> ResourceAllocatorManager::CreatePlacedReso
 
     ResourceMemoryAllocation allocation;
     DAWN_TRY_ASSIGN(allocation,
-                    allocator->Allocate(resourceInfo.SizeInBytes, resourceInfo.Alignment));
+                    allocator->Allocate(resourceInfo.SizeInBytes, resourceInfo.Alignment,
+                                        /*isLazyMemoryType=*/false));
     if (allocation.GetInfo().mMethod == AllocationMethod::kInvalid) {
         return ResourceHeapAllocation{};  // invalid
     }
@@ -567,9 +568,9 @@ ResultOrError<ResourceHeapAllocation> ResourceAllocatorManager::CreateCommittedR
                                   resourceHeapKind};
 }
 
-void ResourceAllocatorManager::DestroyPool() {
+void ResourceAllocatorManager::FreeRecycledAllocations() {
     for (auto& alloc : mPooledHeapAllocators) {
-        alloc->DestroyPool();
+        alloc->FreeRecycledAllocations();
     }
 }
 

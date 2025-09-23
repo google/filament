@@ -27,7 +27,7 @@
 
 #include "src/tint/lang/spirv/reader/ast_lower/pass_workgroup_id_as_argument.h"
 
-#include "src/tint/lang/wgsl/ast/transform/helper_test.h"
+#include "src/tint/lang/spirv/reader/ast_lower/helper_test.h"
 
 namespace tint::spirv::reader {
 namespace {
@@ -396,6 +396,174 @@ fn inner(tint_wgid : vec3i) {
 fn main(@builtin(workgroup_id) wgid_param : vec3u) {
   let tint_wgid_bitcast = bitcast<vec3i>(wgid_param);
   inner(tint_wgid_bitcast);
+}
+)";
+
+    auto got = Run<PassWorkgroupIdAsArgument>(src);
+
+    EXPECT_EQ(expect, str(got));
+}
+
+TEST_F(PassWorkgroupIdAsArgumentTest, TwoEntryPoints_UsedInBoth) {
+    auto* src = R"(
+enable chromium_disable_uniformity_analysis;
+
+var<private> wgid : vec3u;
+
+fn inner() {
+  if (wgid.x == 0u) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  inner();
+}
+
+fn other_inner() {
+  if (wgid.x == 2u) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  other_inner();
+}
+)";
+
+    auto* expect = R"(
+enable chromium_disable_uniformity_analysis;
+
+fn inner(tint_wgid : vec3u) {
+  if ((tint_wgid.x == 0u)) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  inner(wgid_param);
+}
+
+fn other_inner(tint_wgid_1 : vec3u) {
+  if ((tint_wgid_1.x == 2u)) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  other_inner(wgid_param);
+}
+)";
+
+    auto got = Run<PassWorkgroupIdAsArgument>(src);
+
+    EXPECT_EQ(expect, str(got));
+}
+
+TEST_F(PassWorkgroupIdAsArgumentTest, TwoEntryPoints_UsedInCommon) {
+    auto* src = R"(
+enable chromium_disable_uniformity_analysis;
+
+var<private> wgid : vec3u;
+
+fn inner() {
+  if (wgid.x == 0u) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  inner();
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  inner();
+}
+)";
+
+    auto* expect = R"(
+enable chromium_disable_uniformity_analysis;
+
+fn inner(tint_wgid : vec3u) {
+  if ((tint_wgid.x == 0u)) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  inner(wgid_param);
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  inner(wgid_param);
+}
+)";
+
+    auto got = Run<PassWorkgroupIdAsArgument>(src);
+
+    EXPECT_EQ(expect, str(got));
+}
+
+TEST_F(PassWorkgroupIdAsArgumentTest, TwoEntryPoints_UsedInOnlyOne) {
+    auto* src = R"(
+enable chromium_disable_uniformity_analysis;
+
+var<private> wgid : vec3u;
+
+fn inner() {
+  if (wgid.x == 0u) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  inner();
+}
+
+fn other_inner() {
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  wgid = wgid_param;
+  other_inner();
+}
+)";
+
+    auto* expect = R"(
+enable chromium_disable_uniformity_analysis;
+
+fn inner(tint_wgid : vec3u) {
+  if ((tint_wgid.x == 0u)) {
+    workgroupBarrier();
+  }
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(workgroup_id) wgid_param : vec3u) {
+  inner(wgid_param);
+}
+
+fn other_inner() {
+}
+
+@compute @workgroup_size(64)
+fn other(@builtin(workgroup_id) wgid_param : vec3u) {
+  other_inner();
 }
 )";
 

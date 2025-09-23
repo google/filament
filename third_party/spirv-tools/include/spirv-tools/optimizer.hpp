@@ -1022,6 +1022,16 @@ Optimizer::PassToken CreateSplitCombinedImageSamplerPass();
 // This pass assumes binding numbers are not applid via decoration groups
 // (OpDecorationGroup).
 Optimizer::PassToken CreateResolveBindingConflictsPass();
+
+// Create a pass to canonicalize IDs to improve compression of SPIR-V binary
+// files. The resulting modules have an increased ID range (IDs are not as
+// tightly packed around zero), but will compress better when multiple modules
+// are compressed together, since the compressor's dictionary can find better
+// cross module commonality. This pass should be run after most optimization
+// passes except for
+// --strip-debug because this pass will use OpName to canonicalize IDs. i.e. Run
+// --strip-debug after this pass.
+Optimizer::PassToken CreateCanonicalizeIdsPass();
 }  // namespace spvtools
 
 #endif  // INCLUDE_SPIRV_TOOLS_OPTIMIZER_HPP_

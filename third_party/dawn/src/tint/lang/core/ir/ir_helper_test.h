@@ -56,7 +56,7 @@ class IRTestHelperBase : public BASE {
     CloneContext clone_ctx{mod};
 
     /// @returns the module as a disassembled string
-    std::string str() { return "\n" + ir::Disassembler(mod).Plain(); }
+    std::string str() const { return "\n" + ir::Disassembler(mod).Plain(); }
 };
 
 using IRTestHelper = IRTestHelperBase<testing::Test>;

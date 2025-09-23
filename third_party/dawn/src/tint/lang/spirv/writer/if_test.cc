@@ -78,7 +78,10 @@ TEST_F(SpirvWriterTest, If_FalseEmpty) {
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %5
           %6 = OpLabel
-          %9 = OpIAdd %int %int_1 %int_1
+         %10 = OpBitcast %uint %int_1
+         %13 = OpBitcast %uint %int_1
+         %14 = OpIAdd %uint %10 %13
+         %15 = OpBitcast %int %14
                OpBranch %5
           %5 = OpLabel
                OpReturn
@@ -102,10 +105,14 @@ TEST_F(SpirvWriterTest, If_TrueEmpty) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+          %4 = OpLabel
                OpSelectionMerge %5 None
                OpBranchConditional %true %5 %6
           %6 = OpLabel
-          %9 = OpIAdd %int %int_1 %int_1
+         %10 = OpBitcast %uint %int_1
+         %13 = OpBitcast %uint %int_1
+         %14 = OpIAdd %uint %10 %13
+         %15 = OpBitcast %int %14
                OpBranch %5
           %5 = OpLabel
                OpReturn
@@ -154,6 +161,7 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+          %4 = OpLabel
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %7
           %6 = OpLabel
@@ -182,7 +190,7 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_TrueReturn) {
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("%18 = OpUndef %int");
+    EXPECT_INST("%16 = OpUndef %int");
     EXPECT_INST(R"(
                OpSelectionMerge %12 None
                OpBranchConditional %true %13 %14
@@ -193,16 +201,16 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_TrueReturn) {
          %14 = OpLabel
                OpBranch %12
          %12 = OpLabel
-         %17 = OpPhi %int %18 %13 %int_20 %14
-         %20 = OpLoad %bool %continue_execution None
-               OpSelectionMerge %21 None
-               OpBranchConditional %20 %22 %21
-         %22 = OpLabel
-               OpStore %return_value %17 None
-               OpBranch %21
-         %21 = OpLabel
-         %23 = OpLoad %int %return_value None
-               OpReturnValue %23
+         %15 = OpPhi %int %16 %13 %int_20 %14
+         %18 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %19 None
+               OpBranchConditional %18 %20 %19
+         %20 = OpLabel
+               OpStore %return_value %15 None
+               OpBranch %19
+         %19 = OpLabel
+         %21 = OpLoad %int %return_value None
+               OpReturnValue %21
                OpFunctionEnd
 )");
 }
@@ -222,7 +230,7 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_FalseReturn) {
     });
 
     ASSERT_TRUE(Generate()) << Error() << output_;
-    EXPECT_INST("%19 = OpUndef %int");
+    EXPECT_INST("%17 = OpUndef %int");
     EXPECT_INST(R"(
                OpSelectionMerge %12 None
                OpBranchConditional %true %13 %14
@@ -233,16 +241,16 @@ TEST_F(SpirvWriterTest, If_Phi_SingleValue_FalseReturn) {
                OpStore %return_value %int_42 None
                OpBranch %12
          %12 = OpLabel
-         %17 = OpPhi %int %int_10 %13 %19 %14
-         %20 = OpLoad %bool %continue_execution None
-               OpSelectionMerge %21 None
-               OpBranchConditional %20 %22 %21
-         %22 = OpLabel
-               OpStore %return_value %17 None
-               OpBranch %21
-         %21 = OpLabel
-         %23 = OpLoad %int %return_value None
-               OpReturnValue %23
+         %15 = OpPhi %int %int_10 %13 %17 %14
+         %18 = OpLoad %bool %continue_execution None
+               OpSelectionMerge %19 None
+               OpBranchConditional %18 %20 %19
+         %20 = OpLabel
+               OpStore %return_value %15 None
+               OpBranch %19
+         %19 = OpLabel
+         %21 = OpLoad %int %return_value None
+               OpReturnValue %21
                OpFunctionEnd
 )");
 }
@@ -291,6 +299,7 @@ TEST_F(SpirvWriterTest, If_Phi_MultipleValue_0) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+          %4 = OpLabel
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %7
           %6 = OpLabel
@@ -321,6 +330,7 @@ TEST_F(SpirvWriterTest, If_Phi_MultipleValue_1) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+          %4 = OpLabel
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %7
           %6 = OpLabel
@@ -359,23 +369,25 @@ TEST_F(SpirvWriterTest, If_Phi_Nested) {
 
     ASSERT_TRUE(Generate()) << Error() << output_;
     EXPECT_INST(R"(
+          %4 = OpLabel
                OpSelectionMerge %5 None
                OpBranchConditional %true %6 %7
           %6 = OpLabel
                OpSelectionMerge %10 None
-               OpBranchConditional %true %11 %12
-         %11 = OpLabel
+               OpBranchConditional %true %14 %15
+         %14 = OpLabel
                OpBranch %10
-         %12 = OpLabel
+         %15 = OpLabel
                OpBranch %10
          %10 = OpLabel
-         %13 = OpPhi %int %int_10 %11 %int_20 %12
+         %13 = OpPhi %int %int_10 %14 %int_20 %15
                OpBranch %5
           %7 = OpLabel
                OpBranch %5
           %5 = OpLabel
-         %16 = OpPhi %int %int_30 %7 %13 %10
-               OpReturnValue %16
+         %11 = OpPhi %int %int_30 %7 %13 %10
+               OpReturnValue %11
+               OpFunctionEnd
 )");
 }
 

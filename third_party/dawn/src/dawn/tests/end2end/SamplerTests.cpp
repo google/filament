@@ -316,6 +316,8 @@ class StaticSamplerTest : public SamplerTest {
 // Test drawing a rect with a checkerboard texture using a static sampler with different address
 // modes.
 TEST_P(StaticSamplerTest, AddressMode) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
     for (auto u : addressModes) {
         for (auto v : addressModes) {
             for (auto w : addressModes) {
@@ -333,6 +335,8 @@ TEST_P(StaticSamplerTest, AddressMode) {
 // Test that passing texture and static sampler objects through user-defined functions works
 // correctly.
 TEST_P(StaticSamplerTest, PassThroughUserFunctionParameters) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
     for (auto u : addressModes) {
         for (auto v : addressModes) {
             for (auto w : addressModes) {

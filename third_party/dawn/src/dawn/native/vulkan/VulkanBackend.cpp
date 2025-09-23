@@ -80,7 +80,7 @@ ExternalImageExportInfoAHardwareBuffer::ExternalImageExportInfoAHardwareBuffer()
 
 WGPUTexture WrapVulkanImage(WGPUDevice device, const ExternalImageDescriptorVk* descriptor) {
     Device* backendDevice = ToBackend(FromAPI(device));
-    auto deviceLock(backendDevice->GetScopedLock());
+    auto deviceGuard = backendDevice->GetGuard();
     switch (descriptor->GetType()) {
 #if DAWN_PLATFORM_IS(ANDROID)
         case ExternalImageType::AHardwareBuffer: {
@@ -114,7 +114,7 @@ bool ExportVulkanImage(WGPUTexture texture,
     }
     Texture* backendTexture = ToBackend(FromAPI(texture));
     Device* device = ToBackend(backendTexture->GetDevice());
-    auto deviceLock(device->GetScopedLock());
+    auto deviceGuard = device->GetGuard();
 #if DAWN_PLATFORM_IS(ANDROID) || DAWN_PLATFORM_IS(LINUX)
     switch (info->GetType()) {
         case ExternalImageType::AHardwareBuffer:

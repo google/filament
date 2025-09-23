@@ -588,7 +588,6 @@ func (r *resolver) lookupNamed(s *scope, a ast.TemplatedName) (sem.Named, error)
 		params = target.TemplateParams
 	case *sem.TypeMatcher:
 		ty = target
-		params = target.TemplateParams
 	case sem.TemplateParam:
 		if len(a.TemplateArgs) != 0 {
 			return nil, fmt.Errorf("%v '%v' template parameters do not accept template arguments", a.Source, a.Name)

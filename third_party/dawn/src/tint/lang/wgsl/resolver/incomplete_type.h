@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/builtin_type.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/type.h"
 
 namespace tint::resolver {

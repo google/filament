@@ -18,8 +18,10 @@
 #define TNT_FILAMENT_BUFFERPOOLALLOCATOR_H
 
 #include <utils/Allocator.h>
+#include <utils/compiler.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <memory>
 #include <utility>
 
 #include <stdint.h>
@@ -110,7 +112,7 @@ void* BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>:
     if (UTILS_UNLIKELY(size > mSize)) {
         clearInternal(); // free all buffers
         // round to 4K allocations to help cutting down on calling malloc.
-        size_t roundedSize = ((size + sizeof(Header)) + (ALLOCATION_ROUNDING - 1)) & ~(ALLOCATION_ROUNDING - 1);
+        size_t const roundedSize = ((size + sizeof(Header)) + (ALLOCATION_ROUNDING - 1)) & ~(ALLOCATION_ROUNDING - 1);
         mSize = roundedSize - sizeof(Header); // record the new buffer size
         assert_invariant(mSize >= size);
     }
@@ -119,7 +121,7 @@ void* BufferPoolAllocator<POOL_SIZE, ALIGNMENT, AllocatorPolicy, LockingPolicy>:
     // larger than the requested size).
     if (UTILS_UNLIKELY(mEntries.empty())) {
         ++mOutstandingBuffers;
-        Header* p = (Header*)mAllocator.alloc(mSize + sizeof(Header), ALIGNMENT);
+        Header* p = static_cast<Header*>(mAllocator.alloc(mSize + sizeof(Header), ALIGNMENT));
         p->size = mSize;
         return p + 1;
     }

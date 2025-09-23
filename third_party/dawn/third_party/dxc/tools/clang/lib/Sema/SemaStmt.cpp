@@ -3184,7 +3184,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
 
   // HLSL Change begin - Diagnose mismatched globallycoherent attrs on return.
   if (RetValExp)
-    DiagnoseGloballyCoherentMismatch(RetValExp, FnRetType, ReturnLoc);
+    DiagnoseCoherenceMismatch(RetValExp, FnRetType, ReturnLoc);
   // HLSL Change end
 
   bool HasDependentReturnType = FnRetType->isDependentType();

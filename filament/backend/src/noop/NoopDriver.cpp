@@ -16,11 +16,10 @@
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <backend/Platform.h>
 
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
-
-#include <backend/Handle.h>
 
 #include <stdint.h>
 
@@ -116,6 +115,9 @@ void NoopDriver::destroySwapChain(Handle<HwSwapChain> sch) {
 void NoopDriver::destroyStream(Handle<HwStream> sh) {
 }
 
+void NoopDriver::destroySync(Handle<HwSync> sh) {
+}
+
 void NoopDriver::destroyTimerQuery(Handle<HwTimerQuery> tqh) {
 }
 
@@ -125,11 +127,11 @@ void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
 void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
-Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream) {
+Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::CString tag) {
     return {};
 }
 
-Handle<HwStream> NoopDriver::createStreamAcquired() {
+Handle<HwStream> NoopDriver::createStreamAcquired(utils::CString tag) {
     return {};
 }
 
@@ -145,6 +147,10 @@ int64_t NoopDriver::getStreamTimestamp(Handle<HwStream> sh) {
 }
 
 void NoopDriver::updateStreams(CommandStream* driver) {
+}
+
+void NoopDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
+        Platform::SyncCallback cb, void* userData) {
 }
 
 void NoopDriver::destroyFence(Handle<HwFence> fh) {
@@ -189,6 +195,10 @@ bool NoopDriver::isAutoDepthResolveSupported() {
 }
 
 bool NoopDriver::isSRGBSwapChainSupported() {
+    return false;
+}
+
+bool NoopDriver::isMSAASwapChainSupported(uint32_t) {
     return false;
 }
 
@@ -413,9 +423,6 @@ void NoopDriver::bindDescriptorSet(
         backend::DescriptorSetHandle dsh,
         backend::descriptor_set_t set,
         backend::DescriptorSetOffsetArray&& offsets) {
-}
-
-void NoopDriver::setDebugTag(HandleBase::HandleId handleId, utils::CString tag) {
 }
 
 } // namespace filament

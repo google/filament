@@ -121,7 +121,7 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
 }
 
 bool VulkanExternalImageManager::hasExternalSampler(
-        fvkmemory::resource_ptr<VulkanDescriptorSet> set) {
+        fvkmemory::resource_ptr<VulkanDescriptorSet> set) const {
     auto itr = std::find_if(mSetBindings.begin(), mSetBindings.end(),
             [&](SetBindingInfo const& info) { return info.set == set; });
     return itr != mSetBindings.end();
@@ -191,9 +191,11 @@ void VulkanExternalImageManager::updateSetAndLayout(
         VkDescriptorSet const srcSet = oldSet != VK_NULL_HANDLE ? oldSet : set->getVkSet();
         copySet(mPlatform->getDevice(), srcSet, newSet, copyBindings);
 
-        set->setExternalSamplerVkSet(newSet, [&](VulkanDescriptorSet*) {
-            mDescriptorSetCache->manualRecycle(layout->count, newLayout, newSet);
-        });
+        set->setExternalSamplerVkSet(newSet,
+                [&descriptorSetCache = mDescriptorSetCache, layoutCount = layout->count, newLayout,
+                        newSet](VulkanDescriptorSet*) {
+                    descriptorSetCache->manualRecycle(layoutCount, newLayout, newSet);
+                });
         if (oldLayout != newLayout) {
             layout->setExternalSamplerVkLayout(newLayout);
         }

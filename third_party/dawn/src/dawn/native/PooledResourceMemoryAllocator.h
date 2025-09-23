@@ -51,7 +51,7 @@ class PooledResourceMemoryAllocator : public ResourceHeapAllocator {
     ResultOrError<std::unique_ptr<ResourceHeapBase>> AllocateResourceHeap(uint64_t size) override;
     void DeallocateResourceHeap(std::unique_ptr<ResourceHeapBase> allocation) override;
 
-    void DestroyPool();
+    void FreeRecycledAllocations();
 
     // For testing purposes.
     uint64_t GetPoolSizeForTesting() const;

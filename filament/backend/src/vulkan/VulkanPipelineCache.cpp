@@ -218,8 +218,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
 
     #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
         FVK_LOGD << "vkCreateGraphicsPipelines with shaders = ("
-                 << shaderStages[0].module << ", " << shaderStages[1].module << ")"
-                 << utils::io::endl;
+                 << shaderStages[0].module << ", " << shaderStages[1].module << ")";
     #endif
     PipelineCacheEntry cacheEntry = {
         .lastUsed = mCurrentTime,
@@ -228,7 +227,7 @@ VulkanPipelineCache::PipelineCacheEntry* VulkanPipelineCache::createPipeline() n
             VKALLOC, &cacheEntry.handle);
     assert_invariant(error == VK_SUCCESS);
     if (error != VK_SUCCESS) {
-        FVK_LOGE << "vkCreateGraphicsPipelines error " << error << utils::io::endl;
+        FVK_LOGE << "vkCreateGraphicsPipelines error " << error;
         return nullptr;
     }
     return &mPipelines.emplace(mPipelineRequirements, cacheEntry).first.value();
@@ -242,7 +241,7 @@ void VulkanPipelineCache::bindProgram(fvkmemory::resource_ptr<VulkanProgram> pro
 #if FVK_ENABLED(FVK_DEBUG_SHADER_MODULE)
     if (mPipelineRequirements.shaders[0] == VK_NULL_HANDLE ||
             mPipelineRequirements.shaders[1] == VK_NULL_HANDLE) {
-        FVK_LOGE << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
+        FVK_LOGE << "Binding missing shader: " << program->name.c_str();
     }
 #endif
 }
@@ -274,12 +273,16 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
     }
 }
 
+void VulkanPipelineCache::resetBoundPipeline() {
+    mBoundPipeline = {};
+}
+
 void VulkanPipelineCache::terminate() noexcept {
     for (auto& iter : mPipelines) {
         vkDestroyPipeline(mDevice, iter.second.handle, VKALLOC);
     }
     mPipelines.clear();
-    mBoundPipeline = {};
+    resetBoundPipeline();
 
     vkDestroyPipelineCache(mDevice, mPipelineCache, VKALLOC);
 }
@@ -293,7 +296,7 @@ void VulkanPipelineCache::gc() noexcept {
 
     // The Vulkan spec says: "When a command buffer begins recording, all state in that command
     // buffer is undefined." Therefore, we need to clear all bindings at this time.
-    mBoundPipeline = {};
+    resetBoundPipeline();
 
     // NOTE: Due to robin_map restrictions, we cannot use auto or range-based loops.
 

@@ -20,9 +20,10 @@ targetTemplates:
         settings:
             base:
                 OTHER_LDFLAGS: ["-lfilament", "-lbackend", "-lfilaflat", "-lktxreader",
-                                "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl"]
+                                "-lfilabridge", "-lutils", "-lsmol-v", "-lgeometry", "-libl",
+                                "-labseil", "-lzstd"]
                 ENABLE_BITCODE: NO
-                CLANG_CXX_LANGUAGE_STANDARD: gnu++17
+                CLANG_CXX_LANGUAGE_STANDARD: c++20
                 # This allows users to not have to specify a unique bundle ID when building the sample apps.
                 SAMPLE_CODE_DISAMBIGUATOR: ${DEVELOPMENT_TEAM}
             configs:

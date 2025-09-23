@@ -23,6 +23,7 @@
 #include <math/norm.h>
 #include <math/quat.h>
 
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 #include <unordered_map>

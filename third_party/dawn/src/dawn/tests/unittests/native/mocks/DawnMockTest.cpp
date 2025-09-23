@@ -69,8 +69,7 @@ void DawnMockTest::DropDevice() {
         return;
     }
 
-    EXPECT_CALL(mDeviceLostCallback,
-                Call(CHandleIs(device.Get()), wgpu::DeviceLostReason::Destroyed, _))
+    EXPECT_CALL(mDeviceLostCallback, Call(CHandleIs(nullptr), wgpu::DeviceLostReason::Destroyed, _))
         .Times(AtMost(1));
 
     // Since the device owns the instance in these tests, we need to explicitly verify that the

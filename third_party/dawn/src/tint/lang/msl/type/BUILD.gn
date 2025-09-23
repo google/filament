@@ -54,6 +54,7 @@ libtint_source_set("type") {
   ]
   deps = [
     "${dawn_root}/src/utils:utils",
+    "${tint_src_dir}/api/common",
     "${tint_src_dir}/lang/core",
     "${tint_src_dir}/lang/core/type",
     "${tint_src_dir}/utils",

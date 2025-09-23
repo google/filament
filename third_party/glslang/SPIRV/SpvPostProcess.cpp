@@ -44,7 +44,8 @@
 #include <algorithm>
 
 #include "SpvBuilder.h"
-#include "spirv.hpp"
+#include "spirv.hpp11"
+#include "spvUtil.h"
 
 namespace spv {
     #include "GLSL.std.450.h"
@@ -64,137 +65,137 @@ namespace spv {
 void Builder::postProcessType(const Instruction& inst, Id typeId)
 {
     // Characterize the type being questioned
-    Id basicTypeOp = getMostBasicTypeClass(typeId);
+    Op basicTypeOp = getMostBasicTypeClass(typeId);
     int width = 0;
-    if (basicTypeOp == OpTypeFloat || basicTypeOp == OpTypeInt)
+    if (basicTypeOp == Op::OpTypeFloat || basicTypeOp == Op::OpTypeInt)
         width = getScalarTypeWidth(typeId);
 
     // Do opcode-specific checks
     switch (inst.getOpCode()) {
-    case OpLoad:
-    case OpStore:
-        if (basicTypeOp == OpTypeStruct) {
-            if (containsType(typeId, OpTypeInt, 8))
-                addCapability(CapabilityInt8);
-            if (containsType(typeId, OpTypeInt, 16))
-                addCapability(CapabilityInt16);
-            if (containsType(typeId, OpTypeFloat, 16))
-                addCapability(CapabilityFloat16);
+    case Op::OpLoad:
+    case Op::OpStore:
+        if (basicTypeOp == Op::OpTypeStruct) {
+            if (containsType(typeId, Op::OpTypeInt, 8))
+                addCapability(Capability::Int8);
+            if (containsType(typeId, Op::OpTypeInt, 16))
+                addCapability(Capability::Int16);
+            if (containsType(typeId, Op::OpTypeFloat, 16))
+                addCapability(Capability::Float16);
         } else {
             StorageClass storageClass = getStorageClass(inst.getIdOperand(0));
             if (width == 8) {
                 switch (storageClass) {
-                case StorageClassPhysicalStorageBufferEXT:
-                case StorageClassUniform:
-                case StorageClassStorageBuffer:
-                case StorageClassPushConstant:
+                case StorageClass::PhysicalStorageBufferEXT:
+                case StorageClass::Uniform:
+                case StorageClass::StorageBuffer:
+                case StorageClass::PushConstant:
                     break;
                 default:
-                    addCapability(CapabilityInt8);
+                    addCapability(Capability::Int8);
                     break;
                 }
             } else if (width == 16) {
                 switch (storageClass) {
-                case StorageClassPhysicalStorageBufferEXT:
-                case StorageClassUniform:
-                case StorageClassStorageBuffer:
-                case StorageClassPushConstant:
-                case StorageClassInput:
-                case StorageClassOutput:
+                case StorageClass::PhysicalStorageBufferEXT:
+                case StorageClass::Uniform:
+                case StorageClass::StorageBuffer:
+                case StorageClass::PushConstant:
+                case StorageClass::Input:
+                case StorageClass::Output:
                     break;
                 default:
-                    if (basicTypeOp == OpTypeInt)
-                        addCapability(CapabilityInt16);
-                    if (basicTypeOp == OpTypeFloat)
-                        addCapability(CapabilityFloat16);
+                    if (basicTypeOp == Op::OpTypeInt)
+                        addCapability(Capability::Int16);
+                    if (basicTypeOp == Op::OpTypeFloat)
+                        addCapability(Capability::Float16);
                     break;
                 }
             }
         }
         break;
-    case OpCopyObject:
+    case Op::OpCopyObject:
         break;
-    case OpFConvert:
-    case OpSConvert:
-    case OpUConvert:
+    case Op::OpFConvert:
+    case Op::OpSConvert:
+    case Op::OpUConvert:
         // Look for any 8/16-bit storage capabilities. If there are none, assume that
         // the convert instruction requires the Float16/Int8/16 capability.
-        if (containsType(typeId, OpTypeFloat, 16) || containsType(typeId, OpTypeInt, 16)) {
+        if (containsType(typeId, Op::OpTypeFloat, 16) || containsType(typeId, Op::OpTypeInt, 16)) {
             bool foundStorage = false;
             for (auto it = capabilities.begin(); it != capabilities.end(); ++it) {
                 spv::Capability cap = *it;
-                if (cap == spv::CapabilityStorageInputOutput16 ||
-                    cap == spv::CapabilityStoragePushConstant16 ||
-                    cap == spv::CapabilityStorageUniformBufferBlock16 ||
-                    cap == spv::CapabilityStorageUniform16) {
+                if (cap == spv::Capability::StorageInputOutput16 ||
+                    cap == spv::Capability::StoragePushConstant16 ||
+                    cap == spv::Capability::StorageUniformBufferBlock16 ||
+                    cap == spv::Capability::StorageUniform16) {
                     foundStorage = true;
                     break;
                 }
             }
             if (!foundStorage) {
-                if (containsType(typeId, OpTypeFloat, 16))
-                    addCapability(CapabilityFloat16);
-                if (containsType(typeId, OpTypeInt, 16))
-                    addCapability(CapabilityInt16);
+                if (containsType(typeId, Op::OpTypeFloat, 16))
+                    addCapability(Capability::Float16);
+                if (containsType(typeId, Op::OpTypeInt, 16))
+                    addCapability(Capability::Int16);
             }
         }
-        if (containsType(typeId, OpTypeInt, 8)) {
+        if (containsType(typeId, Op::OpTypeInt, 8)) {
             bool foundStorage = false;
             for (auto it = capabilities.begin(); it != capabilities.end(); ++it) {
                 spv::Capability cap = *it;
-                if (cap == spv::CapabilityStoragePushConstant8 ||
-                    cap == spv::CapabilityUniformAndStorageBuffer8BitAccess ||
-                    cap == spv::CapabilityStorageBuffer8BitAccess) {
+                if (cap == spv::Capability::StoragePushConstant8 ||
+                    cap == spv::Capability::UniformAndStorageBuffer8BitAccess ||
+                    cap == spv::Capability::StorageBuffer8BitAccess) {
                     foundStorage = true;
                     break;
                 }
             }
             if (!foundStorage) {
-                addCapability(CapabilityInt8);
+                addCapability(Capability::Int8);
             }
         }
         break;
-    case OpExtInst:
+    case Op::OpExtInst:
         switch (inst.getImmediateOperand(1)) {
         case GLSLstd450Frexp:
         case GLSLstd450FrexpStruct:
-            if (getSpvVersion() < spv::Spv_1_3 && containsType(typeId, OpTypeInt, 16))
+            if (getSpvVersion() < spv::Spv_1_3 && containsType(typeId, Op::OpTypeInt, 16))
                 addExtension(spv::E_SPV_AMD_gpu_shader_int16);
             break;
         case GLSLstd450InterpolateAtCentroid:
         case GLSLstd450InterpolateAtSample:
         case GLSLstd450InterpolateAtOffset:
-            if (getSpvVersion() < spv::Spv_1_3 && containsType(typeId, OpTypeFloat, 16))
+            if (getSpvVersion() < spv::Spv_1_3 && containsType(typeId, Op::OpTypeFloat, 16))
                 addExtension(spv::E_SPV_AMD_gpu_shader_half_float);
             break;
         default:
             break;
         }
         break;
-    case OpAccessChain:
-    case OpPtrAccessChain:
+    case Op::OpAccessChain:
+    case Op::OpPtrAccessChain:
         if (isPointerType(typeId))
             break;
-        if (basicTypeOp == OpTypeInt) {
+        if (basicTypeOp == Op::OpTypeInt) {
             if (width == 16)
-                addCapability(CapabilityInt16);
+                addCapability(Capability::Int16);
             else if (width == 8)
-                addCapability(CapabilityInt8);
+                addCapability(Capability::Int8);
         }
         break;
     default:
-        if (basicTypeOp == OpTypeInt) {
+        if (basicTypeOp == Op::OpTypeInt) {
             if (width == 16)
-                addCapability(CapabilityInt16);
+                addCapability(Capability::Int16);
             else if (width == 8)
-                addCapability(CapabilityInt8);
+                addCapability(Capability::Int8);
             else if (width == 64)
-                addCapability(CapabilityInt64);
-        } else if (basicTypeOp == OpTypeFloat) {
+                addCapability(Capability::Int64);
+        } else if (basicTypeOp == Op::OpTypeFloat) {
             if (width == 16)
-                addCapability(CapabilityFloat16);
+                addCapability(Capability::Float16);
             else if (width == 64)
-                addCapability(CapabilityFloat64);
+                addCapability(Capability::Float64);
         }
         break;
     }
@@ -205,41 +206,41 @@ void Builder::postProcess(Instruction& inst)
 {
     // Add capabilities based simply on the opcode.
     switch (inst.getOpCode()) {
-    case OpExtInst:
+    case Op::OpExtInst:
         switch (inst.getImmediateOperand(1)) {
         case GLSLstd450InterpolateAtCentroid:
         case GLSLstd450InterpolateAtSample:
         case GLSLstd450InterpolateAtOffset:
-            addCapability(CapabilityInterpolationFunction);
+            addCapability(Capability::InterpolationFunction);
             break;
         default:
             break;
         }
         break;
-    case OpDPdxFine:
-    case OpDPdyFine:
-    case OpFwidthFine:
-    case OpDPdxCoarse:
-    case OpDPdyCoarse:
-    case OpFwidthCoarse:
-        addCapability(CapabilityDerivativeControl);
+    case Op::OpDPdxFine:
+    case Op::OpDPdyFine:
+    case Op::OpFwidthFine:
+    case Op::OpDPdxCoarse:
+    case Op::OpDPdyCoarse:
+    case Op::OpFwidthCoarse:
+        addCapability(Capability::DerivativeControl);
         break;
 
-    case OpImageQueryLod:
-    case OpImageQuerySize:
-    case OpImageQuerySizeLod:
-    case OpImageQuerySamples:
-    case OpImageQueryLevels:
-        addCapability(CapabilityImageQuery);
+    case Op::OpImageQueryLod:
+    case Op::OpImageQuerySize:
+    case Op::OpImageQuerySizeLod:
+    case Op::OpImageQuerySamples:
+    case Op::OpImageQueryLevels:
+        addCapability(Capability::ImageQuery);
         break;
 
-    case OpGroupNonUniformPartitionNV:
+    case Op::OpGroupNonUniformPartitionNV:
         addExtension(E_SPV_NV_shader_subgroup_partitioned);
-        addCapability(CapabilityGroupNonUniformPartitionedNV);
+        addCapability(Capability::GroupNonUniformPartitionedNV);
         break;
 
-    case OpLoad:
-    case OpStore:
+    case Op::OpLoad:
+    case Op::OpStore:
         {
             // For any load/store to a PhysicalStorageBufferEXT, walk the accesschain
             // index list to compute the misalignment. The pre-existing alignment value
@@ -247,13 +248,13 @@ void Builder::postProcess(Instruction& inst)
             // the reference type and any scalar component selection in the accesschain,
             // and this function computes the rest from the SPIR-V Offset decorations.
             Instruction *accessChain = module.getInstruction(inst.getIdOperand(0));
-            if (accessChain->getOpCode() == OpAccessChain) {
+            if (accessChain->getOpCode() == Op::OpAccessChain) {
                 Instruction *base = module.getInstruction(accessChain->getIdOperand(0));
                 // Get the type of the base of the access chain. It must be a pointer type.
                 Id typeId = base->getTypeId();
                 Instruction *type = module.getInstruction(typeId);
-                assert(type->getOpCode() == OpTypePointer);
-                if (type->getImmediateOperand(0) != StorageClassPhysicalStorageBufferEXT) {
+                assert(type->getOpCode() == Op::OpTypePointer);
+                if (type->getImmediateOperand(0) != StorageClass::PhysicalStorageBufferEXT) {
                     break;
                 }
                 // Get the pointee type.
@@ -266,16 +267,16 @@ void Builder::postProcess(Instruction& inst)
                 int alignment = 0;
                 for (int i = 1; i < accessChain->getNumOperands(); ++i) {
                     Instruction *idx = module.getInstruction(accessChain->getIdOperand(i));
-                    if (type->getOpCode() == OpTypeStruct) {
-                        assert(idx->getOpCode() == OpConstant);
+                    if (type->getOpCode() == Op::OpTypeStruct) {
+                        assert(idx->getOpCode() == Op::OpConstant);
                         unsigned int c = idx->getImmediateOperand(0);
 
                         const auto function = [&](const std::unique_ptr<Instruction>& decoration) {
-                            if (decoration.get()->getOpCode() == OpMemberDecorate &&
+                            if (decoration.get()->getOpCode() == Op::OpMemberDecorate &&
                                 decoration.get()->getIdOperand(0) == typeId &&
                                 decoration.get()->getImmediateOperand(1) == c &&
-                                (decoration.get()->getImmediateOperand(2) == DecorationOffset ||
-                                 decoration.get()->getImmediateOperand(2) == DecorationMatrixStride)) {
+                                (decoration.get()->getImmediateOperand(2) == Decoration::Offset ||
+                                 decoration.get()->getImmediateOperand(2) == Decoration::MatrixStride)) {
                                 alignment |= decoration.get()->getImmediateOperand(3);
                             }
                         };
@@ -283,12 +284,12 @@ void Builder::postProcess(Instruction& inst)
                         // get the next member type
                         typeId = type->getIdOperand(c);
                         type = module.getInstruction(typeId);
-                    } else if (type->getOpCode() == OpTypeArray ||
-                               type->getOpCode() == OpTypeRuntimeArray) {
+                    } else if (type->getOpCode() == Op::OpTypeArray ||
+                               type->getOpCode() == Op::OpTypeRuntimeArray) {
                         const auto function = [&](const std::unique_ptr<Instruction>& decoration) {
-                            if (decoration.get()->getOpCode() == OpDecorate &&
+                            if (decoration.get()->getOpCode() == Op::OpDecorate &&
                                 decoration.get()->getIdOperand(0) == typeId &&
-                                decoration.get()->getImmediateOperand(1) == DecorationArrayStride) {
+                                decoration.get()->getImmediateOperand(1) == Decoration::ArrayStride) {
                                 alignment |= decoration.get()->getImmediateOperand(2);
                             }
                         };
@@ -302,12 +303,12 @@ void Builder::postProcess(Instruction& inst)
                     }
                 }
                 assert(inst.getNumOperands() >= 3);
-                unsigned int memoryAccess = inst.getImmediateOperand((inst.getOpCode() == OpStore) ? 2 : 1);
-                assert(memoryAccess & MemoryAccessAlignedMask);
+                auto const memoryAccess = (MemoryAccessMask)inst.getImmediateOperand((inst.getOpCode() == Op::OpStore) ? 2 : 1);
+                assert(anySet(memoryAccess, MemoryAccessMask::Aligned));
                 static_cast<void>(memoryAccess);
                 // Compute the index of the alignment operand.
                 int alignmentIdx = 2;
-                if (inst.getOpCode() == OpStore)
+                if (inst.getOpCode() == Op::OpStore)
                     alignmentIdx++;
                 // Merge new and old (mis)alignment
                 alignment |= inst.getImmediateOperand(alignmentIdx);
@@ -404,17 +405,17 @@ void Builder::postProcessFeatures() {
     // Look for any 8/16 bit type in physical storage buffer class, and set the
     // appropriate capability. This happens in createSpvVariable for other storage
     // classes, but there isn't always a variable for physical storage buffer.
-    for (int t = 0; t < (int)groupedTypes[OpTypePointer].size(); ++t) {
-        Instruction* type = groupedTypes[OpTypePointer][t];
-        if (type->getImmediateOperand(0) == (unsigned)StorageClassPhysicalStorageBufferEXT) {
-            if (containsType(type->getIdOperand(1), OpTypeInt, 8)) {
+    for (int t = 0; t < (int)groupedTypes[enumCast(Op::OpTypePointer)].size(); ++t) {
+        Instruction* type = groupedTypes[enumCast(Op::OpTypePointer)][t];
+        if (type->getImmediateOperand(0) == (unsigned)StorageClass::PhysicalStorageBufferEXT) {
+            if (containsType(type->getIdOperand(1), Op::OpTypeInt, 8)) {
                 addIncorporatedExtension(spv::E_SPV_KHR_8bit_storage, spv::Spv_1_5);
-                addCapability(spv::CapabilityStorageBuffer8BitAccess);
+                addCapability(spv::Capability::StorageBuffer8BitAccess);
             }
-            if (containsType(type->getIdOperand(1), OpTypeInt, 16) ||
-                containsType(type->getIdOperand(1), OpTypeFloat, 16)) {
+            if (containsType(type->getIdOperand(1), Op::OpTypeInt, 16) ||
+                containsType(type->getIdOperand(1), Op::OpTypeFloat, 16)) {
                 addIncorporatedExtension(spv::E_SPV_KHR_16bit_storage, spv::Spv_1_3);
-                addCapability(spv::CapabilityStorageBuffer16BitAccess);
+                addCapability(spv::Capability::StorageBuffer16BitAccess);
             }
         }
     }
@@ -437,15 +438,15 @@ void Builder::postProcessFeatures() {
                     bool foundDecoration = false;
                     const auto function = [&](const std::unique_ptr<Instruction>& decoration) {
                         if (decoration.get()->getIdOperand(0) == resultId &&
-                            decoration.get()->getOpCode() == OpDecorate &&
-                            (decoration.get()->getImmediateOperand(1) == spv::DecorationAliasedPointerEXT ||
-                             decoration.get()->getImmediateOperand(1) == spv::DecorationRestrictPointerEXT)) {
+                            decoration.get()->getOpCode() == Op::OpDecorate &&
+                            (decoration.get()->getImmediateOperand(1) == spv::Decoration::AliasedPointerEXT ||
+                             decoration.get()->getImmediateOperand(1) == spv::Decoration::RestrictPointerEXT)) {
                             foundDecoration = true;
                         }
                     };
                     std::for_each(decorations.begin(), decorations.end(), function);
                     if (!foundDecoration) {
-                        addDecoration(resultId, spv::DecorationAliasedPointerEXT);
+                        addDecoration(resultId, spv::Decoration::AliasedPointerEXT);
                     }
                 }
             }
@@ -454,13 +455,13 @@ void Builder::postProcessFeatures() {
 
     // If any Vulkan memory model-specific functionality is used, update the
     // OpMemoryModel to match.
-    if (capabilities.find(spv::CapabilityVulkanMemoryModelKHR) != capabilities.end()) {
-        memoryModel = spv::MemoryModelVulkanKHR;
+    if (capabilities.find(spv::Capability::VulkanMemoryModelKHR) != capabilities.end()) {
+        memoryModel = spv::MemoryModel::VulkanKHR;
         addIncorporatedExtension(spv::E_SPV_KHR_vulkan_memory_model, spv::Spv_1_5);
     }
 
     // Add Aliased decoration if there's more than one Workgroup Block variable.
-    if (capabilities.find(spv::CapabilityWorkgroupMemoryExplicitLayoutKHR) != capabilities.end()) {
+    if (capabilities.find(spv::Capability::WorkgroupMemoryExplicitLayoutKHR) != capabilities.end()) {
         assert(entryPoints.size() == 1);
         auto &ep = entryPoints[0];
 
@@ -471,16 +472,16 @@ void Builder::postProcessFeatures() {
 
             const Id id = ep->getIdOperand(i);
             const Instruction *instr = module.getInstruction(id);
-            if (instr->getOpCode() != spv::OpVariable)
+            if (instr->getOpCode() != spv::Op::OpVariable)
                 continue;
 
-            if (instr->getImmediateOperand(0) == spv::StorageClassWorkgroup)
+            if (instr->getImmediateOperand(0) == spv::StorageClass::Workgroup)
                 workgroup_variables.push_back(id);
         }
 
         if (workgroup_variables.size() > 1) {
             for (size_t i = 0; i < workgroup_variables.size(); i++)
-                addDecoration(workgroup_variables[i], spv::DecorationAliased);
+                addDecoration(workgroup_variables[i], spv::Decoration::Aliased);
         }
     }
 }
@@ -497,7 +498,7 @@ void Builder::postProcessSamplers()
     for (auto f: module.getFunctions()) {
 	for (auto b: f->getBlocks()) {
 	    for (auto &i: b->getInstructions()) {
-		if (i->getOpCode() == spv::OpSampledImage) {
+        if (i->getOpCode() == spv::Op::OpSampledImage) {
 		    sampledImageInstrs[i->getResultId()] = i.get();
 		}
 	    }
@@ -518,7 +519,7 @@ void Builder::postProcessSamplers()
                         if (i->getBlock() != opSampImg->getBlock()) {
                             Instruction *newInstr = new Instruction(getUniqueId(),
                                                                     opSampImg->getTypeId(),
-                                                                    spv::OpSampledImage);
+                                                                    spv::Op::OpSampledImage);
                             newInstr->addIdOperand(opSampImg->getIdOperand(0));
                             newInstr->addIdOperand(opSampImg->getIdOperand(1));
                             newInstr->setBlock(b);

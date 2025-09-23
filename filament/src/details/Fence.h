@@ -37,7 +37,7 @@ public:
 
     void terminate(FEngine& engine) noexcept;
 
-    FenceStatus wait(Mode mode, uint64_t timeout) noexcept;
+    FenceStatus wait(Mode mode, uint64_t timeout);
 
     static FenceStatus waitAndDestroy(FFence* fence, Mode mode) noexcept;
 

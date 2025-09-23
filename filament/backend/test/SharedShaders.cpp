@@ -47,7 +47,7 @@ layout(location = 0) in vec4 mesh_position;
 void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };
@@ -64,7 +64,7 @@ void main() {
             params.scaleMinusOne.z + 1.0,
             1.0);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };
@@ -80,7 +80,7 @@ void main() {
     gl_Position = vec4(mesh_position.xy, 0.0, 1.0);
     uv = (mesh_position.xy * 0.5 + 0.5);
 #if defined(TARGET_VULKAN_ENVIRONMENT)
-    // In Vulkan, clip space is Y-down. In OpenGL and Metal, clip space is Y-up.
+    // In Vulkan, clip space is Y-down. In OpenGL, Metal and WebGPU, clip space is Y-up.
     gl_Position.y = -gl_Position.y;
 #endif
 })" };
@@ -215,18 +215,20 @@ Shader SharedShaders::makeShader(filament::backend::DriverApi& api, Cleanup& cle
     std::optional<ShaderText> fragment;
     std::optional<std::string> uniform;
     if (getShaderLanguage(BackendTest::sBackend) != ShaderLanguage::GLSL) {
-        // TODO: If any shaders need backend/shader language specific shaders rather than transpiled
-        // versions of the GLSL shader, check environment.
+        // TODO(b/422803382): If any shaders need backend/shader language specific shaders rather
+        //  than transpiled versions of the GLSL shader, check here and create a shader with that
+        //  config instead
     }
     vertex = GetGlslVertexShader(request.mVertexType);
     fragment = GetGlslFragmentShader(request.mFragmentType);
     uniform = GetGlslUniform(request.mUniformType);
     if (vertex.has_value() && fragment.has_value() && uniform.has_value()) {
-        return Shader(
-                api, cleanup, ShaderConfig{
-                        vertex->withUniform(*uniform), fragment->withUniform(*uniform),
-                        GetUniformConfig(request.mUniformType)}
-        );
+        return Shader(api, cleanup,
+                ShaderConfig{ .vertexLanguage = filament::backend::ShaderLanguage::ESSL3,
+                    .vertexShader = vertex->withUniform(*uniform),
+                    .fragmentLanguage = filament::backend::ShaderLanguage::ESSL3,
+                    .fragmentShader = fragment->withUniform(*uniform),
+                    .uniforms = GetUniformConfig(request.mUniformType) });
     }
     abort();
 }

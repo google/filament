@@ -45,6 +45,7 @@ if (TNT_DEV)
             filament_AtlasAllocator_test.cpp
             filament_test_exposure.cpp
             filament_rendering_test.cpp
+            filament_bimap_test.cpp
             filament_framegraph_test.cpp
             filament_test.cpp)
 

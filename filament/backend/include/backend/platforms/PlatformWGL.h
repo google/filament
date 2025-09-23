@@ -53,7 +53,7 @@ protected:
     SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
     SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
-    bool makeCurrent(ContextType type, SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
+    bool makeCurrent(ContextType type, SwapChain* drawSwapChain, SwapChain* readSwapChain) override;
     void commit(SwapChain* swapChain) noexcept override;
 
 protected:

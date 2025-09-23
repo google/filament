@@ -16,10 +16,13 @@
 
 # Sets up the environment for scripts in test/renderdiff/
 
-OUTPUT_DIR="$(pwd)/out/renderdiff_tests"
+RENDER_OUTPUT_DIR="$(pwd)/out/renderdiff/renders"
+DIFF_OUTPUT_DIR="$(pwd)/out/renderdiff/diffs"
+GOLDEN_OUTPUT_DIR="$(pwd)/out/renderdiff/goldens"
 RENDERDIFF_TEST_DIR="$(pwd)/test/renderdiff"
 MESA_DIR="$(pwd)/mesa/out/"
 VENV_DIR="$(pwd)/venv"
+GLTF_DIR="$(pwd)/gltf/Models"
 BUILD_COMMON_DIR="$(pwd)/build/common"
 
 os_name=$(uname -s)
@@ -27,12 +30,14 @@ if [[ "$os_name" == "Linux" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
 elif [[ "$os_name" == "Darwin" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"
 else
     echo "Unsupported platform for renderdiff tests"
     exit 1
 fi
 
 function start_() {
+    mkdir -p ${RENDER_OUTPUT_DIR} ${DIFF_OUTPUT_DIR} ${GOLDEN_OUTPUT_DIR}
     if [[ "$GITHUB_WORKFLOW" ]]; then
         set -ex
     fi

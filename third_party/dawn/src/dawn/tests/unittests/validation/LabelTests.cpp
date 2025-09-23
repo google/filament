@@ -519,11 +519,11 @@ TEST_F(LabelTest, TextureView) {
 
     wgpu::Texture texture = device.CreateTexture(&descriptor);
 
-    // The label should be empty if one was not set.
+    // The label should be generated if no one was not set.
     {
         wgpu::TextureView textureView = texture.CreateView();
         std::string readbackLabel = native::GetObjectLabelForTesting(textureView.Get());
-        ASSERT_TRUE(readbackLabel.empty());
+        ASSERT_EQ(readbackLabel.rfind("defaulted from [Texture (unlabeled", 0), 0U);
     }
 
     // Test setting a label through API

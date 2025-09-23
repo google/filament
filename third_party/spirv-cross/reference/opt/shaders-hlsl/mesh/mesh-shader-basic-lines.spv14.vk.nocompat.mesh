@@ -51,7 +51,7 @@ struct gl_MeshPerPrimitiveEXT
 
 groupshared float shared_float[16];
 
-void mesh_main(inout gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], inout gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
+void mesh_main(out gl_MeshPerVertexEXT gl_MeshVerticesEXT[24], out gl_MeshPerPrimitiveEXT gl_MeshPrimitivesEXT[22], TaskPayload _payload, inout uint2 gl_PrimitiveLineIndicesEXT[22])
 {
     SetMeshOutputCounts(24u, 22u);
     float3 _173 = float3(gl_GlobalInvocationID);

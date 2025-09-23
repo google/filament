@@ -176,6 +176,36 @@ public class Engine {
     };
 
     /**
+     * This controls the priority level for GPU work scheduling, which helps prioritize the
+     * submitted GPU work and enables preemption.
+     */
+    public enum GpuContextPriority {
+        /**
+         * Backend default GPU context priority (typically MEDIUM)
+         */
+        DEFAULT,
+        /**
+         * For non-interactive, deferrable workloads. This should not interfere with standard
+         * applications.
+         */
+        LOW,
+        /**
+         * The default priority level for standard applications.
+         */
+        MEDIUM,
+        /**
+         * For high-priority, latency-sensitive workloads that are more important than standard
+         * applications.
+         */
+        HIGH,
+        /**
+         * The highest priority, intended for system-critical, real-time applications where missing
+         * deadlines is unacceptable (e.g., VR/AR compositors or other system-critical tasks).
+         */
+        REALTIME,
+    };
+
+    /**
      * Constructs <code>Engine</code> objects using a builder pattern.
      */
     public static class Builder {
@@ -233,7 +263,8 @@ public class Engine {
                     config.resourceAllocatorCacheSizeMB, config.resourceAllocatorCacheMaxAge,
                     config.disableHandleUseAfterFreeCheck,
                     config.preferredShaderLanguage.ordinal(),
-                    config.forceGLES2Context, config.assertNativeWindowIsValid);
+                    config.forceGLES2Context, config.assertNativeWindowIsValid,
+                    config.gpuContextPriority.ordinal());
             return this;
         }
 
@@ -489,6 +520,11 @@ public class Engine {
          * @Deprecated use "backend.opengl.assert_native_window_is_valid" feature flag instead
          */
         public boolean assertNativeWindowIsValid = false;
+
+        /**
+         * GPU context priority level. Controls GPU work scheduling and preemption.
+         */
+        public GpuContextPriority gpuContextPriority = GpuContextPriority.DEFAULT;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1492,7 +1528,8 @@ public class Engine {
             long resourceAllocatorCacheSizeMB, long resourceAllocatorCacheMaxAge,
             boolean disableHandleUseAfterFreeCheck,
             int preferredShaderLanguage,
-            boolean forceGLES2Context, boolean assertNativeWindowIsValid);
+            boolean forceGLES2Context, boolean assertNativeWindowIsValid,
+            int gpuContextPriority);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);

@@ -46,7 +46,6 @@
 #include "src/tint/lang/core/type/vector.h"
 #include "src/tint/lang/msl/barrier_type.h"
 #include "src/tint/lang/msl/builtin_fn.h"
-#include "src/tint/lang/msl/ir/binary.h"
 #include "src/tint/lang/msl/ir/builtin_call.h"
 #include "src/tint/lang/msl/ir/component.h"
 #include "src/tint/lang/msl/ir/member_builtin_call.h"
@@ -861,7 +860,12 @@ struct State {
                 tex_type->Dim() == core::type::TextureDimension::kCubeArray) {
                 lod_idx = 3;
             }
-            args[lod_idx] = b.Construct(ty.Get<msl::type::Level>(), args[lod_idx])->Result();
+            if (tex_type->Dim() == core::type::TextureDimension::k1d) {
+                // Remove level for 1d.
+                args.Resize(args.Length() - 1);
+            } else {
+                args[lod_idx] = b.Construct(ty.Get<msl::type::Level>(), args[lod_idx])->Result();
+            }
             // Call the `sample()` member function.
             auto* call = b.MemberCallWithResult<msl::ir::MemberBuiltinCall>(
                 builtin->DetachResult(), msl::BuiltinFn::kSample, tex, std::move(args));
@@ -888,6 +892,12 @@ struct State {
         }
 
         b.InsertBefore(builtin, [&] {
+            // If we are writing to a read-write texture, add a fence to ensure that any prior reads
+            // to the texture from the same thread have completed before we write any values.
+            if (tex_type->Access() == core::Access::kReadWrite) {
+                b.MemberCall<msl::ir::MemberBuiltinCall>(ty.void_(), msl::BuiltinFn::kFence, tex);
+            }
+
             // Convert the coordinates to unsigned integers if necessary.
             if (coords->Type()->IsSignedIntegerScalarOrVector()) {
                 coords = b.Convert(ty.MatchWidth(ty.u32(), coords->Type()), coords)->Result();
@@ -1062,9 +1072,12 @@ Result<SuccessType> BuiltinPolyfill(core::ir::Module& ir) {
     auto result =
         ValidateAndDumpIfNeeded(ir, "msl.BuiltinPolyfill",
                                 core::ir::Capabilities{
+                                    core::ir::Capability::kAllow8BitIntegers,
                                     core::ir::Capability::kAllowPointersAndHandlesInStructures,
                                     core::ir::Capability::kAllowPrivateVarsInFunctions,
                                     core::ir::Capability::kAllowAnyLetType,
+                                    core::ir::Capability::kAllowNonCoreTypes,
+                                    core::ir::Capability::kAllowWorkspacePointerInputToEntryPoint,
                                 });
     if (result != Success) {
         return result.Failure();

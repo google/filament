@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -35,6 +37,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <string>// for printing usage/help
 
 
 #include "generated/resources/resources.h"
@@ -76,16 +79,15 @@ static void printUsage(char* name) {
             "Options:\n"
             "   --help, -h\n"
             "       Prints this message\n\n"
-            "   --api, -a\n"
-            "       Specify the backend API: opengl, vulkan, metal, or webgpu\n"
-            "       (note: webgpu is a no-op for now, printing backend\n"
-            "        component info if FILAMENT_BACKEND_DEBUG_FLAG, \n"
-            "        set at build time, includes the \n"
-            "        FWGPU_PRINT_SYSTEM bit flag 0x2)\n"
+            "API_USAGE"
     );
     const std::string from("HELLOTRIANGLE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
+    }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }
@@ -107,19 +109,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else if (arg == "webgpu") {
-                    app->config.backend = Engine::Backend::WEBGPU;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be "
-                                 "'opengl'|'vulkan'|'metal'|'webgpu'.\n";
-                    exit(1);
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
         }
     }

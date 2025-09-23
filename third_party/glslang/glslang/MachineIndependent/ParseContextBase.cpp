@@ -424,7 +424,7 @@ const TFunction* TParseContextBase::selectFunction(
         // to even be a potential match, number of arguments must be >= the number of
         // fixed (non-default) parameters, and <= the total (including parameter with defaults).
         if (call.getParamCount() < candidate.getFixedParamCount() ||
-            call.getParamCount() > candidate.getParamCount())
+            (call.getParamCount() > candidate.getParamCount() && !candidate.isVariadic()))
             continue;
 
         // see if arguments are convertible
@@ -463,7 +463,8 @@ const TFunction* TParseContextBase::selectFunction(
     const auto betterParam = [&call, &better](const TFunction& can1, const TFunction& can2) -> bool {
         // is call -> can2 better than call -> can1 for any parameter
         bool hasBetterParam = false;
-        for (int param = 0; param < call.getParamCount(); ++param) {
+        const int paramCount = std::min({call.getParamCount(), can1.getParamCount(), can2.getParamCount()});
+        for (int param = 0; param < paramCount; ++param) {
             if (better(*call[param].type, *can1[param].type, *can2[param].type)) {
                 hasBetterParam = true;
                 break;
@@ -474,7 +475,8 @@ const TFunction* TParseContextBase::selectFunction(
 
     const auto equivalentParams = [&call, &better](const TFunction& can1, const TFunction& can2) -> bool {
         // is call -> can2 equivalent to call -> can1 for all the call parameters?
-        for (int param = 0; param < call.getParamCount(); ++param) {
+        const int paramCount = std::min({call.getParamCount(), can1.getParamCount(), can2.getParamCount()});
+        for (int param = 0; param < paramCount; ++param) {
             if (better(*call[param].type, *can1[param].type, *can2[param].type) ||
                 better(*call[param].type, *can2[param].type, *can1[param].type))
                 return false;

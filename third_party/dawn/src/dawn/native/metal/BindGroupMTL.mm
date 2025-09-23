@@ -27,8 +27,13 @@
 
 #include "dawn/native/metal/BindGroupMTL.h"
 
+#include "dawn/common/MatchVariant.h"
+#include "dawn/common/Range.h"
 #include "dawn/native/metal/BindGroupLayoutMTL.h"
+#include "dawn/native/metal/BufferMTL.h"
 #include "dawn/native/metal/DeviceMTL.h"
+#include "dawn/native/metal/SamplerMTL.h"
+#include "dawn/native/metal/TextureMTL.h"
 
 namespace dawn::native::metal {
 
@@ -47,6 +52,59 @@ BindGroup::BindGroup(Device* device, const BindGroupDescriptor* descriptor)
 BindGroup::~BindGroup() = default;
 
 MaybeError BindGroup::InitializeImpl() {
+    auto* device = ToBackend(GetDevice());
+    if (!device->IsToggleEnabled(Toggle::MetalUseArgumentBuffers)) {
+        return {};
+    }
+
+    // TODO(crbug.com/363031535): The argument buffers should probably work in some kind of pool
+    // instead of being allocated here
+
+    auto layout = ToBackend(GetLayout());
+
+    auto encoder = layout->GetArgumentEncoder();
+    NSUInteger argumentBufferLength = [*encoder encodedLength];
+
+    mArgumentBuffer = AcquireNSPRef([device->GetMTLDevice() newBufferWithLength:argumentBufferLength
+                                                                        options:0]);
+    [*encoder setArgumentBuffer:*mArgumentBuffer offset:0];
+
+    for (BindingIndex bindingIndex : Range(layout->GetBindingCount())) {
+        const BindingInfo& bindingInfo = layout->GetBindingInfo(bindingIndex);
+        uint32_t dstBinding = uint32_t(bindingIndex - bindingInfo.indexInArray);
+
+        auto HandleTextureBinding = [&]() {
+            auto textureView = ToBackend(GetBindingAsTextureView(bindingIndex));
+            id<MTLTexture> texture = textureView->GetMTLTexture();
+            [*encoder setTexture:texture atIndex:dstBinding];
+        };
+
+        // TODO(crbug.com/363031535): The buffers, samplers and textures in the MatchVariant need to
+        // have resource usage tracking added.
+        MatchVariant(
+            bindingInfo.bindingLayout,
+            [&](const BufferBindingInfo& layout) {
+                const BufferBinding& binding = GetBindingAsBufferBinding(bindingIndex);
+
+                const id<MTLBuffer> buffer = ToBackend(binding.buffer)->GetMTLBuffer();
+                [*encoder setBuffer:buffer offset:binding.offset atIndex:dstBinding];
+            },
+            [&](const SamplerBindingInfo&) {
+                auto sampler = ToBackend(GetBindingAsSampler(bindingIndex));
+                id<MTLSamplerState> samplerState = sampler->GetMTLSamplerState();
+                [*encoder setSamplerState:samplerState atIndex:dstBinding];
+            },
+            [&](const StaticSamplerBindingInfo&) {
+                // Static samplers are handled in the frontend.
+                // TODO(crbug.com/dawn/2482): Implement static samplers in the
+                // Metal backend.
+                DAWN_CHECK(false);
+            },
+            [&](const TextureBindingInfo&) { HandleTextureBinding(); },
+            [&](const StorageTextureBindingInfo&) { HandleTextureBinding(); },
+            [](const InputAttachmentBindingInfo&) { DAWN_CHECK(false); });
+    }
+
     return {};
 }
 
@@ -57,6 +115,10 @@ void BindGroup::DeleteThis() {
     Ref<BindGroupLayout> layout = ToBackend(GetLayout());
     BindGroupBase::DeleteThis();
     layout->DeallocateBindGroup(this);
+}
+
+NSPRef<id<MTLBuffer>> BindGroup::GetArgumentBuffer() const {
+    return mArgumentBuffer;
 }
 
 }  // namespace dawn::native::metal

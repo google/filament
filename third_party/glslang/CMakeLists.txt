@@ -45,7 +45,6 @@ include(CMakePackageConfigHelpers)
 # Needed for cmake_dependent_option macro
 include(CMakeDependentOption)
 
-option(BUILD_SHARED_LIBS "Build Shared Libraries")
 option(BUILD_EXTERNAL "Build external dependencies in /External" ON)
 option(BUILD_WERROR "Enable warnings as errors (default is OFF)" OFF)
 
@@ -141,7 +140,7 @@ endif()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     add_compile_options(-Wall -Wmaybe-uninitialized -Wuninitialized -Wunused -Wunused-local-typedefs -Wimplicit-fallthrough
-                        -Wunused-parameter -Wunused-value  -Wunused-variable -Wunused-but-set-parameter -Wunused-but-set-variable -fno-exceptions)
+                        -Wunused-parameter -Wunused-value  -Wunused-variable -Wunused-but-set-parameter -Wunused-but-set-variable)
     if(NOT ENABLE_RTTI)
         add_compile_options(-fno-rtti)
     endif()

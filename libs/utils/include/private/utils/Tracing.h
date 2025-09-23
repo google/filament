@@ -30,9 +30,9 @@
 #   define FILAMENT_APPLE_SYSTRACE 0
 #endif
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && FILAMENT_TRACING_ENABLED
 #    include <private/utils/android/Tracing.h>
-#elif defined(__APPLE__) && FILAMENT_APPLE_SYSTRACE
+#elif defined(__APPLE__) && FILAMENT_APPLE_SYSTRACE && FILAMENT_TRACING_ENABLED
 #    include <private/utils/darwin/Tracing.h>
 #else
 

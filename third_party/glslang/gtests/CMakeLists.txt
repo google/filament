@@ -53,6 +53,7 @@ if(GLSLANG_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/Hlsl.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Link.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Link.FromFile.Vk.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/LiveTraverser.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Pp.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/Spv.FromFile.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/VkRelaxed.FromFile.cpp
@@ -88,7 +89,8 @@ if(GLSLANG_TESTS)
         endif()
 
         set(LIBRARIES
-            glslang glslang-default-resource-limits)
+            glslang glslang-default-resource-limits
+            $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:stdc++fs>)
 
         if(ENABLE_SPVREMAPPER)
             set(LIBRARIES ${LIBRARIES} SPVRemapper)

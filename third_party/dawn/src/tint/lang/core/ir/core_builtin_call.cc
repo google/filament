@@ -121,6 +121,7 @@ tint::core::ir::Instruction::Accesses CoreBuiltinCall::GetSideEffects() const {
         case BuiltinFn::kStorageBarrier:
         case BuiltinFn::kWorkgroupBarrier:
         case BuiltinFn::kTextureBarrier:
+        case BuiltinFn::kPrint:
             return Accesses{Access::kLoad, Access::kStore};
 
         case BuiltinFn::kAbs:

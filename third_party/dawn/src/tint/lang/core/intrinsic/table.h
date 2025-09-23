@@ -33,11 +33,10 @@
 #include <utility>
 
 #include "src/tint/lang/core/binary_op.h"
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/evaluation_stage.h"
 #include "src/tint/lang/core/intrinsic/ctor_conv.h"
 #include "src/tint/lang/core/intrinsic/table_data.h"
-#include "src/tint/lang/core/parameter_usage.h"
 #include "src/tint/lang/core/unary_op.h"
 #include "src/tint/utils/containers/vector.h"
 #include "src/tint/utils/text/string.h"

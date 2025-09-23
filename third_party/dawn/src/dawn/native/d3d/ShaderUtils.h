@@ -30,6 +30,7 @@
 
 #include <bitset>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "dawn/native/Blob.h"
@@ -51,7 +52,18 @@ class Device;
 // information used to emulate vertex/instance index starts. It also holds the `hlslSource` for the
 // shader compilation, which is only transiently available during Compile, and cleared before it
 // returns. It is not written to or loaded from the cache unless Toggle dump_shaders is true.
-DAWN_SERIALIZABLE(struct, CompiledShader, COMPILED_SHADER_MEMBERS){};
+// clang-format off
+DAWN_SERIALIZABLE(struct, CompiledShader, COMPILED_SHADER_MEMBERS) {
+    static ResultOrError<CompiledShader> FromValidatedBlob(Blob blob) {
+        CompiledShader result;
+        DAWN_TRY_ASSIGN(result, FromBlob(std::move(blob)));
+        // Only confirm there's a shader blob, the hlslSource is not necessarily preserved.
+        DAWN_INVALID_IF(result.shaderBlob.Empty(),
+                        "Cached CompiledShader result has empty shader blob");
+        return result;
+    }
+};
+// clang-format on
 #undef COMPILED_SHADER_MEMBERS
 
 std::string CompileFlagsToString(uint32_t compileFlags);

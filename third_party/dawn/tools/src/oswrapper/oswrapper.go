@@ -30,11 +30,20 @@
 package oswrapper
 
 import (
+	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/spf13/afero"
 )
+
+// File is an interface that abstracts file operations, combining standard io interfaces.
+// This allows for mocking and using different file implementations (real vs. in-memory).
+type File interface {
+	io.Reader
+	io.Writer
+	io.Seeker
+	io.Closer
+	Stat() (os.FileInfo, error)
+}
 
 // OSWrapper is a wrapper around all filesystem and environment-related os functions.
 type OSWrapper interface {
@@ -44,9 +53,13 @@ type OSWrapper interface {
 
 // EnvironProvider is a wrapper around environment-related os functions.
 type EnvironProvider interface {
+	// Environ returns the environment variables as a sorted slice of "key=value" strings.
 	Environ() []string
+	// Getenv retrieves the value of the environment variable named by the key.
 	Getenv(key string) string
+	// Getwd returns a rooted path name corresponding to the current directory.
 	Getwd() (string, error)
+	// UserHomeDir returns the current user's home directory.
 	UserHomeDir() (string, error)
 }
 
@@ -58,21 +71,36 @@ type FilesystemReaderWriter interface {
 
 // FilesystemReader is a wrapper around the read-related filesystem os functions.
 type FilesystemReader interface {
-	Open(name string) (afero.File, error)
-	OpenFile(name string, flag int, perm os.FileMode) (afero.File, error)
+	// Open opens the named file for reading.
+	Open(name string) (File, error)
+	// OpenFile is the generalized open call.
+	OpenFile(name string, flag int, perm os.FileMode) (File, error)
+	// ReadFile reads the file named by filename and returns the contents.
 	ReadFile(name string) ([]byte, error)
+	// ReadDir reads the named directory, returning all its directory entries.
+	ReadDir(name string) ([]os.DirEntry, error)
+	// Stat returns a FileInfo describing the named file.
 	Stat(name string) (os.FileInfo, error)
+	// Walk walks the file tree rooted at root, calling fn for each file or directory.
 	Walk(root string, fn filepath.WalkFunc) error
 }
 
-// FilesystemWriter is a wrapper around the read-related filesystem os functions.
+// FilesystemWriter is a wrapper around the write-related filesystem os functions.
 type FilesystemWriter interface {
-	Create(name string) (afero.File, error)
+	// Create creates the named file.
+	Create(name string) (File, error)
+	// Mkdir creates a new directory with the specified name and permission bits.
 	Mkdir(path string, perm os.FileMode) error
+	// MkdirAll creates a directory named path, along with any necessary parents.
 	MkdirAll(path string, perm os.FileMode) error
+	// MkdirTemp creates a new temporary directory in the directory dir.
 	MkdirTemp(dir, pattern string) (string, error)
+	// Remove removes the named file
 	Remove(name string) error
+	// RemoveAll removes path and any children it contains.
 	RemoveAll(path string) error
+	// Symlink creates newname as a symbolic link to oldname.
 	Symlink(oldname, newname string) error
+	// WriteFile writes data to a file named by filename.
 	WriteFile(name string, data []byte, perm os.FileMode) error
 }

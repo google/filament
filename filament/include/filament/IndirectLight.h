@@ -339,13 +339,24 @@ public:
     static math::float4 getColorEstimate(const math::float3 sh[UTILS_NONNULL 9],
             math::float3 direction) noexcept;
 
-
-    /** @deprecated use static versions instead */
-    UTILS_DEPRECATED
+    /**
+     * Helper to estimate the direction of the dominant light in the environment represented by
+     * spherical harmonics.
+     * Spherical harmonics must be set in the Builder or the result is undefined.
+     * @see getDirectionEstimate(const math::float3)
+     * @see Builder::irradiance(uint8_t, math::float3 const*)
+     * @see Builder::radiance(uint8_t, math::float3 const*)
+     */
     math::float3 getDirectionEstimate() const noexcept;
 
-    /** @deprecated use static versions instead */
-    UTILS_DEPRECATED
+    /**
+     * Helper to estimate the color and relative intensity of the environment represented by
+     * spherical harmonics in a given direction.
+     * Spherical harmonics must be set in the Builder or the result is undefined.
+     * @see getColorEstimate(const math::float3, math::float3)
+     * @see Builder::irradiance(uint8_t, math::float3 const*)
+     * @see Builder::radiance(uint8_t, math::float3 const*)
+     */
     math::float4 getColorEstimate(math::float3 direction) const noexcept;
 
 protected:

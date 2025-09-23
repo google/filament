@@ -5,8 +5,8 @@
       "opname" : "SwizzleInvocationsAMD",
       "opcode" : 1,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'data'" },
-        { "kind" : "IdRef", "name" : "'offset'" }
+        { "kind" : "IdRef", "name" : "data" },
+        { "kind" : "IdRef", "name" : "offset" }
       ],
       "extensions" : [ "SPV_AMD_shader_ballot" ]
     },
@@ -14,8 +14,8 @@
       "opname" : "SwizzleInvocationsMaskedAMD",
       "opcode" : 2,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'data'" },
-        { "kind" : "IdRef", "name" : "'mask'" }
+        { "kind" : "IdRef", "name" : "data" },
+        { "kind" : "IdRef", "name" : "mask" }
       ],
       "extensions" : [ "SPV_AMD_shader_ballot" ]
     },
@@ -23,9 +23,9 @@
       "opname" : "WriteInvocationAMD",
       "opcode" : 3,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'inputValue'" },
-        { "kind" : "IdRef", "name" : "'writeValue'" },
-        { "kind" : "IdRef", "name" : "'invocationIndex'" }
+        { "kind" : "IdRef", "name" : "inputValue" },
+        { "kind" : "IdRef", "name" : "writeValue" },
+        { "kind" : "IdRef", "name" : "invocationIndex" }
       ],
       "extensions" : [ "SPV_AMD_shader_ballot" ]
     },
@@ -33,7 +33,7 @@
       "opname" : "MbcntAMD",
       "opcode" : 4,
       "operands" : [
-        { "kind" : "IdRef", "name" : "'mask'" }
+        { "kind" : "IdRef", "name" : "mask" }
       ],
       "extensions" : [ "SPV_AMD_shader_ballot" ]
     }

@@ -16,6 +16,7 @@
 
 #include "DependencyGraph.h"
 
+#include <utils/debug.h>
 #include <utils/Panic.h>
 
 using namespace filament;

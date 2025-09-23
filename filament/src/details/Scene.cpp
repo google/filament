@@ -16,27 +16,50 @@
 
 #include "details/Scene.h"
 
+#include "Allocators.h"
+
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
+#include "components/TransformManager.h"
+
+#include "details/Engine.h"
+#include "details/Skybox.h"
+
+#include <backend/Handle.h>
 
 #include <private/filament/UibStructs.h>
 
-#include "details/Engine.h"
-#include "details/IndirectLight.h"
-#include "details/InstanceBuffer.h"
-#include "details/Skybox.h"
-
-#include "BufferPoolAllocator.h"
-
 #include <private/utils/Tracing.h>
 
+#include <filament/Box.h>
+#include <filament/TransformManager.h>
+#include <filament/RenderableManager.h>
+#include <filament/LightManager.h>
+
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/vec2.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
+#include <utils/Allocator.h>
 #include <utils/compiler.h>
+#include <utils/debug.h>
 #include <utils/EntityManager.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/Invocable.h>
+#include <utils/JobSystem.h>
 #include <utils/Range.h>
 
-#include <math/quat.h>
-
 #include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <functional>
+#include <memory>
+#include <utility>
+#include <new>
+
+#include <cstddef>
 
 using namespace filament::backend;
 using namespace filament::math;
@@ -47,7 +70,7 @@ namespace filament {
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-        mEngine(engine), mSharedState(std::make_shared<SharedState>()) {
+        mEngine(engine) {
 }
 
 FScene::~FScene() noexcept = default;
@@ -65,7 +88,7 @@ void FScene::prepare(JobSystem& js,
     FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
     // This will reset the allocator upon exiting
-    ArenaScope<RootArenaScope::Arena> localArenaScope(rootArenaScope.getArena());
+    ArenaScope localArenaScope(rootArenaScope.getArena());
 
     FEngine& engine = mEngine;
     EntityManager const& em = engine.getEntityManager();
@@ -139,7 +162,7 @@ void FScene::prepare(JobSystem& js,
 
     // The light data list will always contain at least one entry for the
     // dominating directional light, even if there are no entities.
-    // we need the capacity to be multiple of 16 for SIMD loops
+    // We need the capacity to be multiple of 16 for SIMD loops
     size_t lightDataCapacity = std::max<size_t>(DIRECTIONAL_LIGHTS_COUNT, entities.size());
     lightDataCapacity = (lightDataCapacity + 0xFu) & ~0xFu;
 
@@ -314,7 +337,7 @@ void FScene::prepare(JobSystem& js,
 
     // Purely for the benefit of MSAN, we can avoid uninitialized reads by zeroing out the
     // unused scene elements between the end of the array and the rounded-up count.
-    if (UTILS_HAS_SANITIZE_MEMORY) {
+    if constexpr (UTILS_HAS_SANITIZE_MEMORY) {
         for (size_t i = sceneData.size(), e = sceneData.capacity(); i < e; i++) {
             sceneData.data<LAYERS>()[i] = 0;
             sceneData.data<VISIBLE_MASK>()[i] = 0;
@@ -383,65 +406,6 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables) noexc
     }
 }
 
-void FScene::updateUBOs(
-        Range<uint32_t> visibleRenderables,
-        Handle<HwBufferObject> renderableUbh) noexcept {
-    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
-    FEngine::DriverApi& driver = mEngine.getDriverApi();
-
-    // don't allocate more than 16 KiB directly into the render stream
-    static constexpr size_t MAX_STREAM_ALLOCATION_COUNT = 64;   // 16 KiB
-    const size_t count = visibleRenderables.size();
-    PerRenderableData* buffer = [&]{
-        if (count >= MAX_STREAM_ALLOCATION_COUNT) {
-            // use the heap allocator
-            auto& bufferPoolAllocator = mSharedState->mBufferPoolAllocator;
-            return (PerRenderableData*)bufferPoolAllocator.get(count * sizeof(PerRenderableData));
-        } else {
-            // allocate space into the command stream directly
-            return driver.allocatePod<PerRenderableData>(count);
-        }
-    }();
-
-    PerRenderableData const* const uboData = mRenderableData.data<UBO>();
-    mat4f const* const worldTransformData = mRenderableData.data<WORLD_TRANSFORM>();
-
-    // prepare each InstanceBuffer.
-    FRenderableManager::InstancesInfo const* instancesData = mRenderableData.data<INSTANCES>();
-    for (uint32_t const i : visibleRenderables) {
-        auto& instancesInfo = instancesData[i];
-        if (UTILS_UNLIKELY(instancesInfo.buffer)) {
-            instancesInfo.buffer->prepare(
-                    mEngine, worldTransformData[i], uboData[i], instancesInfo.handle);
-        }
-    }
-
-    // copy our data into the UBO for each visible renderable
-    for (uint32_t const i : visibleRenderables) {
-        buffer[i] = uboData[i];
-    }
-
-    // We capture state shared between Scene and the update buffer callback, because the Scene could
-    // be destroyed before the callback executes.
-    std::weak_ptr<SharedState>* const weakShared = new std::weak_ptr<SharedState>(mSharedState);
-
-    // update the UBO
-    driver.resetBufferObject(renderableUbh);
-    driver.updateBufferObjectUnsynchronized(renderableUbh, {
-            buffer, count * sizeof(PerRenderableData),
-            +[](void* p, size_t const s, void* user) {
-                std::weak_ptr<SharedState>* const weakShared =
-                        static_cast<std::weak_ptr<SharedState>*>(user);
-                if (s >= MAX_STREAM_ALLOCATION_COUNT * sizeof(PerRenderableData)) {
-                    if (auto state = weakShared->lock()) {
-                        state->mBufferPoolAllocator.put(p);
-                    }
-                }
-                delete weakShared;
-            }, weakShared
-    }, 0);
-}
-
 void FScene::terminate(FEngine&) {
 }
 
@@ -473,7 +437,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera,
     auto const* UTILS_RESTRICT shadowInfo       = lightData.data<SHADOW_INFO>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = size; i < c; ++i) {
         const size_t gpuIndex = i - DIRECTIONAL_LIGHTS_COUNT;
-        auto li = instances[i];
+        auto const li = instances[i];
         lp[gpuIndex].positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp[gpuIndex].direction            = directions[i];
         lp[gpuIndex].reserved1            = {};
@@ -603,7 +567,7 @@ bool FScene::hasContactShadows() const noexcept {
 
     // find out if at least one light has contact-shadow enabled
     // TODO: we could cache the result of this Loop in the LightManager
-    auto& lcm = mEngine.getLightManager();
+    auto const& lcm = mEngine.getLightManager();
     const auto *pFirst = mLightData.begin<LIGHT_INSTANCE>();
     const auto *pLast = mLightData.end<LIGHT_INSTANCE>();
     while (pFirst != pLast) {

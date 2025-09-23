@@ -16,6 +16,17 @@
 
 #include "UniformBuffer.h"
 
+#include <utils/Allocator.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
+
+#include <math/mat3.h>
+
+#include <utility>
+
+#include <stdint.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -94,7 +105,11 @@ void UniformBuffer::free(void* addr, size_t) noexcept {
 
 template<size_t Size>
 void UniformBuffer::setUniformUntyped(size_t const offset, void const* UTILS_RESTRICT v) noexcept{
-    setUniformUntyped<Size>(invalidateUniforms(offset, Size), 0ul, v);
+    if (UTILS_LIKELY(invalidateNeeded<Size>(offset, v))) {
+        void* const addr = getUniformAddress(offset);
+        setUniformUntyped<Size>(addr, v);
+        invalidateUniforms(offset, Size);
+    }
 }
 
 template
@@ -111,11 +126,8 @@ void UniformBuffer::setUniformUntyped<64ul>(size_t offset, void const* UTILS_RES
 template<size_t Size>
 void UniformBuffer::setUniformArrayUntyped(size_t const offset, void const* UTILS_RESTRICT begin, size_t const count) noexcept {
     constexpr size_t stride = (Size + 0xFu) & ~0xFu;
-    size_t arraySize = stride * count - stride + Size;
-    void* UTILS_RESTRICT p = invalidateUniforms(offset, arraySize);
     for (size_t i = 0; i < count; i++) {
-        setUniformUntyped<Size>(p, 0ul, static_cast<const char *>(begin) + i * Size);
-        p = utils::pointermath::add(p, stride);
+        setUniformUntyped<Size>(offset + i * stride, static_cast<const char *>(begin) + i * Size);
     }
 }
 
@@ -129,37 +141,6 @@ template
 void UniformBuffer::setUniformArrayUntyped<16ul>(size_t offset, void const* UTILS_RESTRICT begin, size_t count) noexcept;
 template
 void UniformBuffer::setUniformArrayUntyped<64ul>(size_t offset, void const* UTILS_RESTRICT begin, size_t count) noexcept;
-
-// specialization for mat3f (which has a different alignment, see std140 layout rules)
-template<>
-UTILS_NOINLINE
-void UniformBuffer::setUniform(void* addr, size_t const offset, const mat3f& v) noexcept {
-    struct mat43 {
-        float v[3][4];
-    };
-
-    addr = static_cast<char*>(addr) + offset;
-    mat43& temp = *static_cast<mat43*>(addr);
-
-    temp.v[0][0] = v[0][0];
-    temp.v[0][1] = v[0][1];
-    temp.v[0][2] = v[0][2];
-
-    temp.v[1][0] = v[1][0];
-    temp.v[1][1] = v[1][1];
-    temp.v[1][2] = v[1][2];
-
-    temp.v[2][0] = v[2][0];
-    temp.v[2][1] = v[2][1];
-    temp.v[2][2] = v[2][2];
-
-    // don't store anything in temp.v[][3] because there could be uniforms packed there
-}
-
-template<>
-void UniformBuffer::setUniform(size_t const offset, const mat3f& v) noexcept {
-    setUniform(invalidateUniforms(offset, sizeof(v)), 0, v);
-}
 
 #if !defined(NDEBUG)
 

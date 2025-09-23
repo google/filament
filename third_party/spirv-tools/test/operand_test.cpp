@@ -19,24 +19,7 @@
 namespace spvtools {
 namespace {
 
-using GetTargetTest = ::testing::TestWithParam<spv_target_env>;
 using ::testing::ValuesIn;
-
-TEST_P(GetTargetTest, Default) {
-  spv_operand_table table;
-  ASSERT_EQ(SPV_SUCCESS, spvOperandTableGet(&table, GetParam()));
-  ASSERT_NE(0u, table->count);
-  ASSERT_NE(nullptr, table->types);
-}
-
-TEST_P(GetTargetTest, InvalidPointerTable) {
-  ASSERT_EQ(SPV_ERROR_INVALID_POINTER, spvOperandTableGet(nullptr, GetParam()));
-}
-
-INSTANTIATE_TEST_SUITE_P(OperandTableGet, GetTargetTest,
-                         ValuesIn(std::vector<spv_target_env>{
-                             SPV_ENV_UNIVERSAL_1_0, SPV_ENV_UNIVERSAL_1_1,
-                             SPV_ENV_VULKAN_1_0}));
 
 TEST(OperandString, AllAreDefinedExceptVariable) {
   // None has no string, so don't test it.

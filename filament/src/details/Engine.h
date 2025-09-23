@@ -40,10 +40,11 @@
 #include "details/Fence.h"
 #include "details/IndexBuffer.h"
 #include "details/InstanceBuffer.h"
+#include "details/MorphTargetBuffer.h"
 #include "details/RenderTarget.h"
 #include "details/SkinningBuffer.h"
-#include "details/MorphTargetBuffer.h"
 #include "details/Skybox.h"
+#include "details/Sync.h"
 
 #include "private/backend/CommandBufferQueue.h"
 #include "private/backend/CommandStream.h"
@@ -98,6 +99,14 @@ namespace filament::fgviewer {
 } // namespace filament::fgviewer
 #endif
 
+// We have added correctness assertions that breaks clients' projects. We add this define to allow
+// for the client's to address these assertions at a more gradual pace.
+#if defined(FILAMENT_RELAXED_CORRECTNESS_ASSERTIONS)
+#define CORRECTNESS_ASSERTION_DEFAULT false
+#else
+#define CORRECTNESS_ASSERTION_DEFAULT true
+#endif
+
 namespace filament {
 
 class Renderer;
@@ -114,6 +123,7 @@ class FMaterialInstance;
 class FRenderer;
 class FScene;
 class FSwapChain;
+class FSync;
 class FView;
 
 class ResourceAllocator;
@@ -323,6 +333,7 @@ public:
     FScene* createScene() noexcept;
     FView* createView() noexcept;
     FFence* createFence() noexcept;
+    FSync* createSync() noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
     FSwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept;
 
@@ -334,6 +345,7 @@ public:
     bool destroy(const FBufferObject* p);
     bool destroy(const FVertexBuffer* p);
     bool destroy(const FFence* p);
+    bool destroy(const FSync* p);
     bool destroy(const FIndexBuffer* p);
     bool destroy(const FSkinningBuffer* p);
     bool destroy(const FMorphTargetBuffer* p);
@@ -354,6 +366,7 @@ public:
     bool isValid(const FBufferObject* p) const;
     bool isValid(const FVertexBuffer* p) const;
     bool isValid(const FFence* p) const;
+    bool isValid(const FSync* p) const;
     bool isValid(const FIndexBuffer* p) const;
     bool isValid(const FSkinningBuffer* p) const;
     bool isValid(const FMorphTargetBuffer* p) const;
@@ -605,6 +618,11 @@ private:
     utils::Mutex mFenceListLock;
     ResourceList<FFence> mFences{"Fence"};
 
+    // the sync list is accessed from multiple threads, because they are
+    // synchronization objects.
+    utils::Mutex mSyncListLock;
+    ResourceList<FSync> mSyncs{ "Sync" };
+
     mutable uint32_t mMaterialId = 0;
 
     // FMaterialInstance are handled directly by FMaterial
@@ -715,25 +733,46 @@ public:
                 bool use_shadow_atlas = false;
             } shadows;
             struct {
-                // TODO: default the following two flags to true.
-                bool assert_material_instance_in_use = false;
-                bool assert_destroy_material_before_material_instance = false;
+                // TODO: clean-up the following flags (equivalent to setting them to true) when
+                // clients have addressed their usages.
+                bool assert_material_instance_in_use = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_destroy_material_before_material_instance =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_attribute_stride_mult_of_4 =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_material_instance_texture_descriptor_set_compatible =
+                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
         } engine;
         struct {
             struct {
                 bool assert_native_window_is_valid = false;
             } opengl;
+            struct {
+                // On Unified Memory Architecture device, it is possible to bypass using the staging
+                // buffer. This is an experimental feature that still needs to be implemented fully
+                // before it can be fully enabled.
+                bool enable_staging_buffer_bypass = false;
+            } vulkan;
             bool disable_parallel_shader_compile = false;
+            bool disable_amortized_shader_compile = true;
             bool disable_handle_use_after_free_check = false;
             bool disable_heap_handle_tags = true; // FIXME: this should be false
         } backend;
+        struct {
+            bool check_crc32_after_loading = false;
+        } material;
     } features;
 
     std::array<FeatureFlag, sizeof(features)> const mFeatures{{
             { "backend.disable_parallel_shader_compile",
               "Disable parallel shader compilation in GL and Metal backends.",
               &features.backend.disable_parallel_shader_compile, true },
+            { "backend.disable_amortized_shader_compile",
+              "Disable amortized shader compilation in GL backend.",
+              &features.backend.disable_amortized_shader_compile, true },
             { "backend.disable_handle_use_after_free_check",
               "Disable Handle<> use-after-free checks.",
               &features.backend.disable_handle_use_after_free_check, true },
@@ -749,12 +788,30 @@ public:
             { "engine.shadows.use_shadow_atlas",
               "Uses an array of atlases to store shadow maps.",
               &features.engine.shadows.use_shadow_atlas, false },
-            { "features.engine.debug.assert_material_instance_in_use",
+            { "engine.debug.assert_material_instance_in_use",
               "Assert when a MaterialInstance is destroyed while it is in use by RenderableManager.",
               &features.engine.debug.assert_material_instance_in_use, false },
-            { "features.engine.debug.assert_destroy_material_before_material_instance",
+            { "engine.debug.assert_destroy_material_before_material_instance",
               "Assert when a Material is destroyed but its instances are still alive.",
               &features.engine.debug.assert_destroy_material_before_material_instance, false },
+            { "engine.debug.assert_vertex_buffer_count_exceeds_8",
+              "Assert when a client's number of buffers for a VertexBuffer exceeds 8.",
+              &features.engine.debug.assert_vertex_buffer_count_exceeds_8, false },
+            { "engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4",
+              "Assert that the attribute stride of a vertex buffer is a multiple of 4.",
+              &features.engine.debug.assert_vertex_buffer_attribute_stride_mult_of_4, false },
+            { "backend.vulkan.enable_staging_buffer_bypass",
+              "vulkan: enable a staging bypass logic for unified memory architecture.",
+              &features.backend.vulkan.enable_staging_buffer_bypass, false },
+            { "engine.debug.assert_material_instance_texture_descriptor_set_compatible",
+              "Assert that the textures in a material instance are compatible with descriptor set.",
+              &features.engine.debug.assert_material_instance_texture_descriptor_set_compatible, false },
+            { "engine.debug.assert_texture_can_generate_mipmap",
+              "Assert if a texture has the correct usage set for generating mipmaps.",
+              &features.engine.debug.assert_texture_can_generate_mipmap, false },
+            { "material.check_crc32_after_loading",
+              "Verify the checksum of package data when a material is loaded.",
+              &features.material.check_crc32_after_loading, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

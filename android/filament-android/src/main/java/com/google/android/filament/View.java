@@ -231,7 +231,7 @@ public class View {
      *
      * <p>
      * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
-     * to remove it from all assoicated Views.
+     * to remove it from all associated Views. If the camera isn't set, Renderer::render() will result in a no-op.
      * </p>
      *
      * @see #getCamera
@@ -1390,8 +1390,8 @@ public class View {
      *
      * \note
      * Dynamic resolution is only supported on platforms where the time to render
-     * a frame can be measured accurately. Dynamic resolution is currently only
-     * supported on Android.
+     * a frame can be measured accurately. On platforms where this is not supported,
+     * Dynamic Resolution can't be enabled unless minScale == maxScale.
      *
      * @see Renderer::FrameRateOptions
      *
@@ -1423,9 +1423,12 @@ public class View {
          * MEDIUM: Qualcomm Snapdragon Game Super Resolution (SGSR) 1.0
          * HIGH:   AMD FidelityFX FSR1 w/ mobile optimizations
          * ULTRA:  AMD FidelityFX FSR1
-         *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
+         *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene.
+         *      Avoid FXAA and dithering.
          *
          * The default upscaling quality is set to LOW.
+         *
+         * caveat: currently, 'quality' is always set to LOW if the View is TRANSLUCENT.
          */
         @NonNull
         public QualityLevel quality = QualityLevel.LOW;
@@ -1561,7 +1564,9 @@ public class View {
     }
 
     /**
-     * Options to control large-scale fog in the scene
+     * Options to control large-scale fog in the scene. Materials can enable the `linearFog` property,
+     * which uses a simplified, linear equation for fog calculation; in this mode, the heightFalloff
+     * is ignored as well as the mipmap selection in IBL or skyColor mode.
      */
     public static class FogOptions {
         /**
@@ -1578,7 +1583,7 @@ public class View {
          */
         public float cutOffDistance = Float.POSITIVE_INFINITY;
         /**
-         * fog's maximum opacity between 0 and 1
+         * fog's maximum opacity between 0 and 1. Ignored in `linearFog` mode.
          */
         public float maximumOpacity = 1.0f;
         /**
@@ -1586,12 +1591,15 @@ public class View {
          */
         public float height = 0.0f;
         /**
-         * How fast the fog dissipates with altitude. heightFalloff has a unit of [1/m].
+         * How fast the fog dissipates with the altitude. heightFalloff has a unit of [1/m].
          * It can be expressed as 1/H, where H is the altitude change in world units [m] that causes a
          * factor 2.78 (e) change in fog density.
          *
          * A falloff of 0 means the fog density is constant everywhere and may result is slightly
          * faster computations.
+         *
+         * In `linearFog` mode, only use to compute the slope of the linear equation. Completely
+         * ignored if set to 0.
          */
         public float heightFalloff = 1.0f;
         /**
@@ -1612,7 +1620,7 @@ public class View {
         @NonNull @Size(min = 3)
         public float[] color = {1.0f, 1.0f, 1.0f};
         /**
-         * Extinction factor in [1/m] at altitude 'height'. The extinction factor controls how much
+         * Extinction factor in [1/m] at an altitude 'height'. The extinction factor controls how much
          * light is absorbed and out-scattered per unit of distance. Each unit of extinction reduces
          * the incoming light to 37% of its original value.
          *
@@ -1621,10 +1629,15 @@ public class View {
          * the composition of the fog/atmosphere.
          *
          * For historical reason this parameter is called `density`.
+         *
+         * In `linearFog` mode this is the slope of the linear equation if heightFalloff is set to 0.
+         * Otherwise, heightFalloff affects the slope calculation such that it matches the slope of
+         * the standard equation at the camera height.
          */
         public float density = 0.1f;
         /**
          * Distance in world units [m] from the camera where the Sun in-scattering starts.
+         * Ignored in `linearFog` mode.
          */
         public float inScatteringStart = 0.0f;
         /**
@@ -1632,6 +1645,7 @@ public class View {
          * is scattered (by the fog) towards the camera.
          * Size of the Sun in-scattering (>0 to activate). Good values are >> 1 (e.g. ~10 - 100).
          * Smaller values result is a larger scattering size.
+         * Ignored in `linearFog` mode.
          */
         public float inScatteringSize = -1.0f;
         /**
@@ -1657,6 +1671,8 @@ public class View {
          *
          * `fogColorFromIbl` is ignored when skyTexture is specified.
          *
+         * In `linearFog` mode mipmap level 0 is always used.
+         *
          * @see Texture
          * @see fogColorFromIbl
          */
@@ -1671,7 +1687,7 @@ public class View {
     /**
      * Options to control Depth of Field (DoF) effect in the scene.
      *
-     * cocScale can be used to set the depth of field blur independently from the camera
+     * cocScale can be used to set the depth of field blur independently of the camera
      * aperture, e.g. for artistic reasons. This can be achieved by setting:
      *      cocScale = cameraAperture / desiredDoFAperture
      *
@@ -1933,6 +1949,18 @@ public class View {
          * Ground Truth-base Ambient Occlusion (GTAO) options
          */
         public float gtaoThicknessHeuristic = 0.004f;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public boolean gtaoUseVisibilityBitmasks = false;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public float gtaoConstThickness = 0.5f;
+        /**
+         * Ground Truth-base Ambient Occlusion (GTAO) options
+         */
+        public boolean gtaoLinearThickness = false;
 
     }
 

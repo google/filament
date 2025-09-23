@@ -221,7 +221,7 @@ public:
      *               index \p bufferIndex. BufferDescriptor points to raw, untyped data that will
      *               be copied as-is into the buffer.
      * @param byteOffset Offset in *bytes* into the buffer at index \p bufferIndex of this vertex
-     *                   buffer set.
+     *                   buffer set.  Must be multiple of 4.
      */
     void setBufferAt(Engine& engine, uint8_t bufferIndex, BufferDescriptor&& buffer,
             uint32_t byteOffset = 0);

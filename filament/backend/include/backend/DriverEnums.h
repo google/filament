@@ -101,6 +101,16 @@ static constexpr uint64_t SWAP_CHAIN_HAS_STENCIL_BUFFER         = SWAP_CHAIN_CON
  */
 static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
 
+/**
+ * Indicates that the SwapChain is configured to use Multi-Sample Anti-Aliasing (MSAA) with the
+ * given sample points within each pixel. Only supported when isMSAASwapChainSupported(4) is
+ * true.
+ *
+ * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
+ * because the swapchain MSAA settings must be configured before window creation.
+ */
+static constexpr uint64_t SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES      = 0x80;
+
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
 static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
@@ -119,8 +129,8 @@ static constexpr struct {
     const size_t MAX_FRAGMENT_SAMPLER_COUNT;
 } FEATURE_LEVEL_CAPS[4] = {
         {  0,  0 }, // do not use
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
-        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan and Metal
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
+        { 16, 16 }, // guaranteed by OpenGL ES, Vulkan, Metal And WebGPU
         { 31, 31 }, // guaranteed by Metal
 };
 
@@ -285,6 +295,14 @@ constexpr std::string_view to_string(TextureType type) noexcept {
      SAMPLER_3D_INT,
      SAMPLER_3D_UINT,
 
+     SAMPLER_2D_MS_FLOAT,
+     SAMPLER_2D_MS_INT,
+     SAMPLER_2D_MS_UINT,
+
+     SAMPLER_2D_MS_ARRAY_FLOAT,
+     SAMPLER_2D_MS_ARRAY_INT,
+     SAMPLER_2D_MS_ARRAY_UINT,
+
      SAMPLER_EXTERNAL,
      UNIFORM_BUFFER,
      SHADER_STORAGE_BUFFER,
@@ -292,29 +310,140 @@ constexpr std::string_view to_string(TextureType type) noexcept {
  };
 
 constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
-     switch (type) {
-         case DescriptorType::SAMPLER_2D_DEPTH:
-         case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
-         case DescriptorType::SAMPLER_CUBE_DEPTH:
-         case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
-             return true;
-         default: ;
-     }
-     return false;
- }
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
 
 constexpr bool isFloatDescriptor(DescriptorType const type) noexcept {
-     switch (type) {
-         case DescriptorType::SAMPLER_2D_FLOAT:
-         case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
-         case DescriptorType::SAMPLER_CUBE_FLOAT:
-         case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
-         case DescriptorType::SAMPLER_3D_FLOAT:
-             return true;
-         default: ;
-     }
-     return false;
- }
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isUnsignedIntDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_3D_UINT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is3dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_3D_FLOAT:
+        case DescriptorType::SAMPLER_3D_INT:
+        case DescriptorType::SAMPLER_3D_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_FLOAT:
+        case DescriptorType::SAMPLER_2D_INT:
+        case DescriptorType::SAMPLER_2D_UINT:
+        case DescriptorType::SAMPLER_2D_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool is2dArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_ARRAY_UINT:
+        case DescriptorType::SAMPLER_2D_ARRAY_DEPTH:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_INT:
+        case DescriptorType::SAMPLER_CUBE_UINT:
+        case DescriptorType::SAMPLER_CUBE_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isCubeArrayTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_CUBE_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_INT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_UINT:
+        case DescriptorType::SAMPLER_CUBE_ARRAY_DEPTH:
+            return true;
+        default: ;
+    }
+    return false;
+}
+
+constexpr bool isMultiSampledTypeDescriptor(DescriptorType const type) noexcept {
+    switch (type) {
+        case DescriptorType::SAMPLER_2D_MS_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_INT:
+        case DescriptorType::SAMPLER_2D_MS_UINT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_FLOAT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_INT:
+        case DescriptorType::SAMPLER_2D_MS_ARRAY_UINT:
+            return true;
+        default: ;
+    }
+    return false;
+}
 
 constexpr std::string_view to_string(DescriptorType type) noexcept {
     #define DESCRIPTOR_TYPE_CASE(TYPE)  case DescriptorType::TYPE: return #TYPE;
@@ -338,6 +467,12 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_FLOAT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_INT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_3D_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_UINT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_FLOAT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_INT)
+        DESCRIPTOR_TYPE_CASE(SAMPLER_2D_MS_ARRAY_UINT)
         DESCRIPTOR_TYPE_CASE(SAMPLER_EXTERNAL)
         DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
         DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
@@ -349,7 +484,12 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
 
 enum class DescriptorFlags : uint8_t {
     NONE = 0x00,
-    DYNAMIC_OFFSET = 0x01
+
+    // Indicate a UNIFORM_BUFFER will have dynamic offsets.
+    DYNAMIC_OFFSET = 0x01,
+
+    // To indicate a texture/sampler type should be unfiltered.
+    UNFILTERABLE = 0x02,
 };
 
 using descriptor_set_t = uint8_t;
@@ -370,18 +510,12 @@ struct DescriptorSetLayoutBinding {
     DescriptorFlags flags = DescriptorFlags::NONE;
     uint16_t count = 0;
 
-    //  TODO: uncomment when needed.  Note that this class is used as hash key.  We need to ensure
-    //  no uninitialized padding bytes.
-    //    uint8_t externalSamplerDataIndex = EXTERNAL_SAMPLER_DATA_INDEX_UNUSED;
-
     friend bool operator==(DescriptorSetLayoutBinding const& lhs,
             DescriptorSetLayoutBinding const& rhs) noexcept {
         return lhs.type == rhs.type &&
                lhs.flags == rhs.flags &&
                lhs.count == rhs.count &&
                lhs.stageFlags == rhs.stageFlags;
-//               lhs.stageFlags == rhs.stageFlags &&
-//               lhs.externalSamplerDataIndex == rhs.externalSamplerDataIndex;
     }
 };
 
@@ -505,6 +639,18 @@ enum class PrimitiveType : uint8_t {
     TRIANGLE_STRIP = 5     //!< triangle strip
 };
 
+[[nodiscard]] constexpr bool isStripPrimitiveType(const PrimitiveType type) {
+    switch (type) {
+        case PrimitiveType::POINTS:
+        case PrimitiveType::LINES:
+        case PrimitiveType::TRIANGLES:
+            return false;
+        case PrimitiveType::LINE_STRIP:
+        case PrimitiveType::TRIANGLE_STRIP:
+            return true;
+    }
+}
+
 /**
  * Supported uniform types
  */
@@ -548,9 +694,21 @@ enum class Precision : uint8_t {
 
 /**
  * Shader compiler priority queue
+ *
+ * On platforms which support parallel shader compilation, compilation requests will be processed in
+ * order of priority, then insertion order. See Material::compile().
  */
 enum class CompilerPriorityQueue : uint8_t {
+    /** We need this program NOW.
+     *
+     * When passed as an argument to Material::compile(), if the platform doesn't support parallel
+     * compilation, but does support amortized shader compilation, the given shader program will be
+     * synchronously compiled.
+     */
+    CRITICAL,
+    /** We will need this program soon. */
     HIGH,
+    /** We will need this program eventually. */
     LOW
 };
 
@@ -647,6 +805,15 @@ enum class BufferObjectBinding : uint8_t {
     UNIFORM,
     SHADER_STORAGE
 };
+
+constexpr std::string_view to_string(BufferObjectBinding type) noexcept {
+    switch (type) {
+        case BufferObjectBinding::VERTEX:           return "VERTEX";
+        case BufferObjectBinding::UNIFORM:          return "UNIFORM";
+        case BufferObjectBinding::SHADER_STORAGE:   return "SHADER_STORAGE";
+    }
+    return "UNKNOWN";
+}
 
 //! Face culling Mode
 enum class CullingMode : uint8_t {
@@ -923,6 +1090,7 @@ enum class TextureUsage : uint16_t {
     BLIT_SRC            = 0x0040,            //!< Texture can be used the source of a blit()
     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
+    GEN_MIPMAPPABLE     = 0x0200,            //!< Texture can be used with generateMipmaps()
     DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
     ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
 };
@@ -1120,26 +1288,6 @@ enum class SamplerCompareFunc : uint8_t {
     N           //!< Never. The depth / stencil test always fails.
 };
 
-//! this API is copied from (and only applies to) the Vulkan spec.
-//! These specify YUV to RGB conversions.
-enum class SamplerYcbcrModelConversion : uint8_t {
-    RGB_IDENTITY = 0,
-    YCBCR_IDENTITY = 1,
-    YCBCR_709 = 2,
-    YCBCR_601 = 3,
-    YCBCR_2020 = 4,
-};
-
-enum class SamplerYcbcrRange : uint8_t {
-    ITU_FULL = 0,
-    ITU_NARROW = 1,
-};
-
-enum class ChromaLocation : uint8_t {
-    COSITED_EVEN = 0,
-    MIDPOINT = 1,
-};
-
 //! Sampler parameters
 struct SamplerParams {             // NOLINT
     SamplerMagFilter filterMag      : 1;    //!< magnification filter (NEAREST)
@@ -1181,7 +1329,7 @@ struct SamplerParams {             // NOLINT
             assert_invariant(lhs.padding2 == 0);
             auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
             auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
+            return *pLhs < *pRhs;
         }
     };
 
@@ -1208,94 +1356,9 @@ static_assert(sizeof(SamplerParams) == 4);
 static_assert(sizeof(SamplerParams) <= sizeof(uint64_t),
         "SamplerParams must be no more than 64 bits");
 
-//! Sampler parameters
-struct SamplerYcbcrConversion {// NOLINT
-    SamplerYcbcrModelConversion ycbcrModel : 4;
-    TextureSwizzle r : 4;
-    TextureSwizzle g : 4;
-    TextureSwizzle b : 4;
-    TextureSwizzle a : 4;
-    SamplerYcbcrRange ycbcrRange : 1;
-    ChromaLocation xChromaOffset : 1;
-    ChromaLocation yChromaOffset : 1;
-    SamplerMagFilter chromaFilter : 1;
-    uint8_t padding;
-
-    struct Hasher {
-        size_t operator()(const SamplerYcbcrConversion p) const noexcept {
-            // we don't use std::hash<> here, so we don't have to include <functional>
-            return *reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&p));
-        }
-    };
-
-    struct EqualTo {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
-            assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs == *pRhs;
-        }
-    };
-
-    struct LessThan {
-        bool operator()(SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs) const noexcept {
-            assert_invariant(lhs.padding == 0);
-            auto* pLhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&lhs));
-            auto* pRhs = reinterpret_cast<uint32_t const*>(reinterpret_cast<char const*>(&rhs));
-            return *pLhs < *pRhs;
-        }
-    };
-
-private:
-    friend bool operator == (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
-    }
-    friend bool operator != (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return  !SamplerYcbcrConversion::EqualTo{}(lhs, rhs);
-    }
-    friend bool operator < (SamplerYcbcrConversion lhs, SamplerYcbcrConversion rhs)
-            noexcept {
-        return SamplerYcbcrConversion::LessThan{}(lhs, rhs);
-    }
-};
-
-static_assert(sizeof(SamplerYcbcrConversion) == 4);
-
-static_assert(sizeof(SamplerYcbcrConversion) <= sizeof(uint64_t),
-        "SamplerYcbcrConversion must be no more than 64 bits");
-
-struct ExternalSamplerDatum {
-    ExternalSamplerDatum(SamplerYcbcrConversion ycbcr, SamplerParams spm, uint32_t extFmt)
-        : YcbcrConversion(ycbcr),
-          samplerParams(spm),
-          externalFormat(extFmt) {}
-    bool operator==(ExternalSamplerDatum const& rhs) const {
-        return (YcbcrConversion == rhs.YcbcrConversion && samplerParams == rhs.samplerParams &&
-                externalFormat == rhs.externalFormat);
-    }
-    struct EqualTo {
-        bool operator()(const ExternalSamplerDatum& lhs,
-                const ExternalSamplerDatum& rhs) const noexcept {
-            return (lhs.YcbcrConversion == rhs.YcbcrConversion &&
-                lhs.samplerParams == rhs.samplerParams &&
-                lhs.externalFormat == rhs.externalFormat);
-        }
-    };
-    SamplerYcbcrConversion YcbcrConversion;
-    SamplerParams samplerParams;
-    uint32_t externalFormat;
-};
-// No implicit padding allowed due to it being a hash key.
-static_assert(sizeof(ExternalSamplerDatum) == 12);
-
 struct DescriptorSetLayout {
     std::variant<utils::StaticString, utils::CString, std::monostate> label;
     utils::FixedCapacityVector<DescriptorSetLayoutBinding> bindings;
-
-//  TODO: uncomment when needed
-//    utils::FixedCapacityVector<ExternalSamplerDatum> externalSamplerData;
 };
 
 //! blending equation function

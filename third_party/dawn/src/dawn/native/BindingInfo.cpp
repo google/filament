@@ -27,6 +27,8 @@
 
 #include "dawn/native/BindingInfo.h"
 
+#include <algorithm>
+
 #include "dawn/common/MatchVariant.h"
 #include "dawn/native/Adapter.h"
 #include "dawn/native/ChainUtils.h"
@@ -54,22 +56,24 @@ BindingInfoType GetBindingInfoType(const BindingInfo& info) {
 
 void IncrementBindingCounts(BindingCounts* bindingCounts,
                             const UnpackedPtr<BindGroupLayoutEntry>& entry) {
-    bindingCounts->totalCount += 1;
+    uint32_t arraySize = std::max(1u, entry->bindingArraySize);
+
+    bindingCounts->totalCount += arraySize;
 
     uint32_t PerStageBindingCounts::*perStageBindingCountMember = nullptr;
 
     if (entry->buffer.type != wgpu::BufferBindingType::BindingNotUsed) {
-        ++bindingCounts->bufferCount;
+        bindingCounts->bufferCount += arraySize;
         const BufferBindingLayout& buffer = entry->buffer;
 
         if (buffer.minBindingSize == 0) {
-            ++bindingCounts->unverifiedBufferCount;
+            bindingCounts->unverifiedBufferCount += arraySize;
         }
 
         switch (buffer.type) {
             case wgpu::BufferBindingType::Uniform:
                 if (buffer.hasDynamicOffset) {
-                    ++bindingCounts->dynamicUniformBufferCount;
+                    bindingCounts->dynamicUniformBufferCount += arraySize;
                 }
                 perStageBindingCountMember = &PerStageBindingCounts::uniformBufferCount;
                 break;
@@ -79,7 +83,7 @@ void IncrementBindingCounts(BindingCounts* bindingCounts,
             case kInternalReadOnlyStorageBufferBinding:
             case wgpu::BufferBindingType::ReadOnlyStorage:
                 if (buffer.hasDynamicOffset) {
-                    ++bindingCounts->dynamicStorageBufferCount;
+                    bindingCounts->dynamicStorageBufferCount += arraySize;
                 }
                 perStageBindingCountMember = &PerStageBindingCounts::storageBufferCount;
                 break;
@@ -110,7 +114,7 @@ void IncrementBindingCounts(BindingCounts* bindingCounts,
 
     DAWN_ASSERT(perStageBindingCountMember != nullptr);
     for (SingleShaderStage stage : IterateStages(entry->visibility)) {
-        ++(bindingCounts->perStage[stage].*perStageBindingCountMember);
+        (bindingCounts->perStage[stage].*perStageBindingCountMember) += arraySize;
     }
 }
 
@@ -162,12 +166,12 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
 
     uint32_t maxSampledTexturesPerShaderStage = limits.v1.maxSampledTexturesPerShaderStage;
     uint32_t maxSamplersPerShaderStage = limits.v1.maxSamplersPerShaderStage;
-    uint32_t maxStorageBuffersInFragmentStage = limits.v1.maxStorageBuffersInFragmentStage;
-    uint32_t maxStorageBuffersInVertexStage = limits.v1.maxStorageBuffersInVertexStage;
+    uint32_t maxStorageBuffersInFragmentStage = limits.compat.maxStorageBuffersInFragmentStage;
+    uint32_t maxStorageBuffersInVertexStage = limits.compat.maxStorageBuffersInVertexStage;
     uint32_t maxStorageBuffersPerShaderStage = limits.v1.maxStorageBuffersPerShaderStage;
     uint32_t maxUniformBuffersPerShaderStage = limits.v1.maxUniformBuffersPerShaderStage;
-    uint32_t maxStorageTexturesInFragmentStage = limits.v1.maxStorageTexturesInFragmentStage;
-    uint32_t maxStorageTexturesInVertexStage = limits.v1.maxStorageTexturesInVertexStage;
+    uint32_t maxStorageTexturesInFragmentStage = limits.compat.maxStorageTexturesInFragmentStage;
+    uint32_t maxStorageTexturesInVertexStage = limits.compat.maxStorageTexturesInVertexStage;
     uint32_t maxStorageTexturesPerShaderStage = limits.v1.maxStorageTexturesPerShaderStage;
     for (SingleShaderStage stage : IterateStages(kAllStages)) {
         uint32_t sampledTextureCount = bindingCounts.perStage[stage].sampledTextureCount;
@@ -257,14 +261,14 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
                                 "number of storage buffers used in fragment stage (%u) exceeds "
                                 "maxStorageBuffersInFragmentStage (%u).%s",
                                 storageBufferCount, maxStorageBuffersInFragmentStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().compat,
                                                             maxStorageBuffersInFragmentStage,
                                                             storageBufferCount));
                 DAWN_INVALID_IF(storageTextureCount > maxStorageTexturesInFragmentStage,
                                 "number of storage textures used in fragment stage (%u) exceeds "
                                 "maxStorageTexturesInFragmentStage (%u).%s",
                                 storageTextureCount, maxStorageTexturesInFragmentStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().compat,
                                                             maxStorageTexturesInFragmentStage,
                                                             storageTextureCount));
                 break;
@@ -273,14 +277,14 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
                                 "number of storage buffers used in vertex stage (%u) exceeds "
                                 "maxStorageBuffersInVertexStage (%u).%s",
                                 storageBufferCount, maxStorageBuffersInVertexStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().compat,
                                                             maxStorageBuffersInVertexStage,
                                                             storageBufferCount));
                 DAWN_INVALID_IF(storageTextureCount > maxStorageTexturesInVertexStage,
                                 "number of storage textures used in vertex stage (%u) exceeds "
                                 "maxStorageTexturesInVertexStage (%u).%s",
                                 storageTextureCount, maxStorageTexturesInVertexStage,
-                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().v1,
+                                DAWN_INCREASE_LIMIT_MESSAGE(adapter->GetLimits().compat,
                                                             maxStorageTexturesInVertexStage,
                                                             storageTextureCount));
                 break;
@@ -292,37 +296,62 @@ MaybeError ValidateBindingCounts(const CombinedLimits& limits,
     return {};
 }
 
-BufferBindingInfo::BufferBindingInfo() = default;
+// BufferBindingInfo
 
-BufferBindingInfo::BufferBindingInfo(const BufferBindingLayout& apiLayout)
-    : type(apiLayout.type),
-      minBindingSize(apiLayout.minBindingSize),
-      hasDynamicOffset(apiLayout.hasDynamicOffset) {}
+// static
+BufferBindingInfo BufferBindingInfo::From(const BufferBindingLayout& layout) {
+    BufferBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    return {{
+        .type = defaultedLayout.type,
+        .minBindingSize = defaultedLayout.minBindingSize,
+        .hasDynamicOffset = defaultedLayout.hasDynamicOffset,
+    }};
+}
 
-TextureBindingInfo::TextureBindingInfo() {}
+// TextureBindingInfo
 
-TextureBindingInfo::TextureBindingInfo(const TextureBindingLayout& apiLayout)
-    : sampleType(apiLayout.sampleType),
-      viewDimension(apiLayout.viewDimension),
-      multisampled(apiLayout.multisampled) {}
+// static
+TextureBindingInfo TextureBindingInfo::From(const TextureBindingLayout& layout) {
+    TextureBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    return {{
+        .sampleType = defaultedLayout.sampleType,
+        .viewDimension = defaultedLayout.viewDimension,
+        .multisampled = defaultedLayout.multisampled,
+    }};
+}
 
-StorageTextureBindingInfo::StorageTextureBindingInfo() = default;
+// StorageTextureBindingInfo
 
-StorageTextureBindingInfo::StorageTextureBindingInfo(const StorageTextureBindingLayout& apiLayout)
-    : format(apiLayout.format), viewDimension(apiLayout.viewDimension), access(apiLayout.access) {}
+// static
+StorageTextureBindingInfo StorageTextureBindingInfo::From(
+    const StorageTextureBindingLayout& layout) {
+    StorageTextureBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    return {{
+        .format = defaultedLayout.format,
+        .viewDimension = defaultedLayout.viewDimension,
+        .access = defaultedLayout.access,
+    }};
+}
 
-SamplerBindingInfo::SamplerBindingInfo() = default;
+// SamplerBindingInfo
 
-SamplerBindingInfo::SamplerBindingInfo(const SamplerBindingLayout& apiLayout)
-    : type(apiLayout.type) {}
+// static
+SamplerBindingInfo SamplerBindingInfo::From(const SamplerBindingLayout& layout) {
+    SamplerBindingLayout defaultedLayout = layout.WithTrivialFrontendDefaults();
+    return {{
+        .type = defaultedLayout.type,
+    }};
+}
 
-StaticSamplerBindingInfo::StaticSamplerBindingInfo(const StaticSamplerBindingLayout& apiLayout)
-    : sampler(apiLayout.sampler),
-      sampledTextureBinding(BindingNumber{apiLayout.sampledTextureBinding}),
-      isUsedForSingleTextureBinding(apiLayout.sampledTextureBinding < WGPU_LIMIT_U32_UNDEFINED) {}
+// SamplerBindingInfo
 
-InputAttachmentBindingInfo::InputAttachmentBindingInfo() = default;
-InputAttachmentBindingInfo::InputAttachmentBindingInfo(wgpu::TextureSampleType sampleType)
-    : sampleType(sampleType) {}
+// static
+StaticSamplerBindingInfo StaticSamplerBindingInfo::From(const StaticSamplerBindingLayout& layout) {
+    return {
+        .sampler = layout.sampler,
+        .sampledTextureBinding = BindingNumber{layout.sampledTextureBinding},
+        .isUsedForSingleTextureBinding = layout.sampledTextureBinding < WGPU_LIMIT_U32_UNDEFINED,
+    };
+}
 
 }  // namespace dawn::native

@@ -110,6 +110,28 @@ struct JsonWriter {
         output += std::string(value ? "true" : "false");
     }
 
+    void AddKeyedNumber(std::string const& key, double number) {
+        CommaAndNewLine();
+        Indent();
+        output += "\"" + key + "\": " + std::to_string(number);
+    }
+    void AddNumber(double number) {
+        CommaAndNewLine();
+        Indent();
+        output += std::to_string(number);
+    }
+
+    void AddKeyedInteger(std::string const& key, int64_t number) {
+        CommaAndNewLine();
+        Indent();
+        output += "\"" + key + "\": " + std::to_string(number);
+    }
+    void AddInteger(int64_t number) {
+        CommaAndNewLine();
+        Indent();
+        output += std::to_string(number);
+    }
+
     // Json doesn't allow `\` in strings, it must be escaped. Thus we have to convert '\\' to '\\\\' in strings
     static std::string escape(std::string const& in_path) {
         std::string out;

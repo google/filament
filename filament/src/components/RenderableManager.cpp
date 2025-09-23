@@ -39,14 +39,15 @@
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
-#include <utils/compiler.h>
-#include <utils/debug.h>
 #include <utils/EntityManager.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Log.h>
-#include <utils/ostream.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/Slice.h>
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <math/mat4.h>
 #include <math/scalar.h>
@@ -396,10 +397,11 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
                 }
 #ifndef NDEBUG
                 else {
-                    slog.w << "Warning of skinning: [entity=%" << entity.getId()
-                        << ", primitive @ %" << primitiveIndex
-                        << "] sum of bone weights of vertex=" << iVertex << " is " << boneWeightsSum
-                        << ", it should be one. Weights will be normalized." << io::endl;
+                    LOG(WARNING) << "Warning of skinning: [entity=%" << entity.getId()
+                                 << ", primitive @ %" << primitiveIndex
+                                 << "] sum of bone weights of vertex=" << iVertex << " is "
+                                 << boneWeightsSum
+                                 << ", it should be one. Weights will be normalized.";
                 }
 #endif
 
@@ -430,6 +432,18 @@ void RenderableManager::BuilderDetails::processBoneIndicesAndWights(Engine& engi
         } // for all primitives
     }
     mBoneIndicesAndWeightsCount = pairsCount; // only part of mBoneIndicesAndWeights is used for real data
+}
+
+RenderableManager::Builder& RenderableManager::Builder::instances(size_t const instanceCount) noexcept {
+    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
+    return *this;
+}
+
+RenderableManager::Builder& RenderableManager::Builder::instances(
+        size_t const instanceCount, InstanceBuffer* instanceBuffer) noexcept {
+    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
+    mImpl->mInstanceBuffer = downcast(instanceBuffer);
+    return *this;
 }
 
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity const entity) {
@@ -498,9 +512,9 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         AttributeBitset const declared = downcast(entry.vertices)->getDeclaredAttributes();
         AttributeBitset const required = material->getRequiredAttributes();
         if ((declared & required) != required) {
-            slog.w << "[entity=" << entity.getId() << ", primitive @ " << i
-                   << "] missing required attributes ("
-                   << required << "), declared=" << declared << io::endl;
+            LOG(WARNING) << "[entity=" << entity.getId() << ", primitive @ " << i
+                         << "] missing required attributes (" << required
+                         << "), declared=" << declared;
         }
 
         // we have at least one valid primitive
@@ -515,18 +529,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
 
     downcast(engine).createRenderable(*this, entity);
     return Success;
-}
-
-RenderableManager::Builder& RenderableManager::Builder::instances(size_t const instanceCount) noexcept {
-    mImpl->mInstanceCount = clamp((unsigned int)instanceCount, 1u, 32767u);
-    return *this;
-}
-
-RenderableManager::Builder& RenderableManager::Builder::instances(
-        size_t const instanceCount, InstanceBuffer* instanceBuffer) noexcept {
-    mImpl->mInstanceCount = clamp(instanceCount, (size_t)1, CONFIG_MAX_INSTANCES);
-    mImpl->mInstanceBuffer = downcast(instanceBuffer);
-    return *this;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -583,17 +585,6 @@ void FRenderableManager::create(
         InstancesInfo& instances = manager[ci].instances;
         instances.count = builder->mInstanceCount;
         instances.buffer = builder->mInstanceBuffer;
-        if (instances.buffer) {
-            // Allocate our instance buffer for this Renderable. We always allocate a size to match
-            // PerRenderableUib, regardless of the number of instances. This is because the buffer
-            // will get bound to the PER_RENDERABLE UBO, and we can't bind a buffer smaller than the
-            // full size of the UBO.
-            instances.handle = driver.createBufferObject(sizeof(PerRenderableUib),
-                    BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-            if (auto name = instances.buffer->getName(); !name.empty()) {
-                driver.setDebugTag(instances.handle.getId(), std::move(name));
-            }
-        }
 
         const uint32_t boneCount = builder->mSkinningBoneCount;
         const uint32_t targetCount = builder->mMorphTargetCount;
@@ -726,10 +717,8 @@ void FRenderableManager::destroy(Entity const e) noexcept {
 void FRenderableManager::terminate() noexcept {
     auto& manager = mManager;
     if (!manager.empty()) {
-#ifndef NDEBUG
-        slog.d << "cleaning up " << manager.getComponentCount()
-               << " leaked Renderable components" << io::endl;
-#endif
+        DLOG(INFO) << "cleaning up " << manager.getComponentCount()
+                   << " leaked Renderable components";
         while (!manager.empty()) {
             Instance const ci = manager.end() - 1;
             destroyComponent(ci);
@@ -774,11 +763,6 @@ void FRenderableManager::destroyComponent(Instance const ci) noexcept {
     if (morphWeights.handle) {
         driver.destroyBufferObject(morphWeights.handle);
     }
-
-    InstancesInfo const& instances = manager[ci].instances;
-    if (instances.handle) {
-        driver.destroyBufferObject(instances.handle);
-    }
 }
 
 void FRenderableManager::destroyComponentPrimitives(
@@ -811,9 +795,9 @@ void FRenderableManager::setMaterialInstanceAt(Instance const instance, uint8_t 
             // emitting many invalid warnings as the `declared` bitset is not populated yet.
             bool const isPrimitiveInitialized = !!primitives[primitiveIndex].getHwHandle();
             if (UTILS_UNLIKELY(isPrimitiveInitialized && (declared & required) != required)) {
-                slog.w << "[instance=" << instance.asValue() << ", primitive @ " << primitiveIndex
-                       << "] missing required attributes ("
-                       << required << "), declared=" << declared << io::endl;
+                LOG(WARNING) << "[instance=" << instance.asValue() << ", primitive @ "
+                             << primitiveIndex << "] missing required attributes (" << required
+                             << "), declared=" << declared;
             }
         }
     }
@@ -1020,6 +1004,15 @@ bool FRenderableManager::getLightChannel(Instance const ci, unsigned int const c
 
 size_t FRenderableManager::getPrimitiveCount(Instance const instance, uint8_t const level) const noexcept {
     return getRenderPrimitives(instance, level).size();
+}
+
+
+size_t FRenderableManager::getInstanceCount(Instance const instance) const noexcept {
+    if (instance) {
+        InstancesInfo const& info = mManager[instance].instances;
+        return info.count;
+    }
+    return 0;
 }
 
 } // namespace filament

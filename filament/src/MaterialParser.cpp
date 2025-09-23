@@ -363,6 +363,10 @@ bool MaterialParser::getStereoscopicType(StereoscopicType* value) const noexcept
     return mImpl.getFromSimpleChunk(MaterialStereoscopicType, reinterpret_cast<uint8_t*>(value));
 }
 
+bool MaterialParser::getMaterialCrc32(uint32_t* value) const noexcept {
+    return mImpl.getFromSimpleChunk(MaterialCrc32, value);
+}
+
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
     if (!mImpl.getFromSimpleChunk(MaterialRequiredAttributes, &rawAttributes)) {
@@ -481,6 +485,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
         uint8_t fieldType = 0;
         uint8_t fieldFormat = 0;
         uint8_t fieldPrecision = 0;
+        bool fieldFilterable = false;
         bool fieldMultisample = false;
 
         if (!unflattener.read(&fieldName)) {
@@ -503,6 +508,10 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (!unflattener.read(&fieldFilterable)) {
+            return false;
+        }
+
         if (!unflattener.read(&fieldMultisample)) {
             return false;
         }
@@ -512,6 +521,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
                 SamplerInterfaceBlock::Type(fieldType),
                 SamplerInterfaceBlock::Format(fieldFormat),
                 SamplerInterfaceBlock::Precision(fieldPrecision),
+                fieldFilterable,
                 fieldMultisample);
     }
 

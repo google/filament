@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.19)
 project(filamat-android)
 
+set(CMAKE_CXX_STANDARD 20)
+
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include "common/arguments.h"
+#include "common/configuration.h"
+
 #include <filamentapp/Config.h>
 #include <filamentapp/FilamentApp.h>
 #include <filamentapp/IBL.h>
@@ -155,19 +158,7 @@ static void printUsage(char* name) {
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
-        "   --api, -a\n"
-        "       Specify the backend API: "
-
-// Matches logic in filament/backend/src/PlatformFactory.cpp for Backend::DEFAULT
-#if defined(FILAMENT_IOS) || defined(__APPLE__)
-        "opengl, vulkan, or metal (default)"
-#elif defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        "opengl, vulkan (default), or metal"
-#else
-        "opengl (default), vulkan, or metal"
-#endif
-        "\n\n"
-
+        "API_USAGE"
         "   --feature-level=<1|2|3>, -f <1|2|3>\n"
         "       Specify the feature level to use. The default is the highest supported feature level.\n\n"
         "   --batch=<path to JSON file or 'default'>, -b\n"
@@ -205,11 +196,17 @@ static void printUsage(char* name) {
         "       a substring to match against the device name\n\n"
         "   --screenshot-as-ppm, -d\n"
         "       export PPM as oppose to TIFF screenshots\n\n"
-
+        "   --webgpu-backend=<backend>, -w\n"
+        "       You can force WebGPU to select a backend of your choice. Provided that the platform\n"
+        "       supports this backend. (See -a for argument options).\n\n"
     );
     const std::string from("SHOWCASE");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
+    }
+    const std::string apiUsage("API_USAGE");
+    for (size_t pos = usage.find(apiUsage); pos != std::string::npos; pos = usage.find(apiUsage, pos)) {
+        usage.replace(pos, apiUsage.length(), samples::getBackendAPIArgumentsUsage());
     }
     std::cout << usage;
 }
@@ -220,7 +217,7 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:b:evg:d";
+    static constexpr const char* OPTSTR = "ha:f:i:usc:rt:y:b:evg:dw:";
     static const struct option OPTIONS[] = {
         { "help",              no_argument,          nullptr, 'h' },
         { "api",               required_argument,    nullptr, 'a' },
@@ -237,6 +234,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
         { "split-view",        no_argument,          nullptr, 'v' },
         { "vulkan-gpu-hint",   required_argument,    nullptr, 'g' },
         { "screenshot-as-ppm", no_argument,          nullptr, 'd' },
+        { "webgpu-backend",    required_argument,    nullptr, 'w' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -249,15 +247,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 'a':
-                if (arg == "opengl") {
-                    app->config.backend = Engine::Backend::OPENGL;
-                } else if (arg == "vulkan") {
-                    app->config.backend = Engine::Backend::VULKAN;
-                } else if (arg == "metal") {
-                    app->config.backend = Engine::Backend::METAL;
-                } else {
-                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'|'metal'.\n";
-                }
+                app->config.backend = samples::parseArgumentsForBackend(arg);
                 break;
             case 'f':
                 if (arg == "1") {
@@ -324,6 +314,10 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             }
             case 'd': {
                 app->screenshotAsPPM = true;
+                break;
+            }
+            case 'w': {
+                app->config.forcedWebGPUBackend = samples::parseArgumentsForBackend(arg);
                 break;
             }
         }
@@ -792,11 +786,13 @@ int main(int argc, char** argv) {
             }
         }
 
-        app.materials = (app.materialSource == JITSHADER) ?
-                createJitShaderProvider(engine, OPTIMIZE_MATERIALS) :
-                createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA, UBERARCHIVE_DEFAULT_SIZE);
+        app.materials = (app.materialSource == JITSHADER)
+                                ? createJitShaderProvider(engine, OPTIMIZE_MATERIALS,
+                                          samples::getJitMaterialVariantFilter(app.config.backend))
+                                : createUbershaderProvider(engine, UBERARCHIVE_DEFAULT_DATA,
+                                          UBERARCHIVE_DEFAULT_SIZE);
 
-        app.assetLoader = AssetLoader::create({engine, app.materials, app.names });
+        app.assetLoader = AssetLoader::create({ engine, app.materials, app.names });
         app.mainCamera = &view->getCamera();
         if (filename.isEmpty()) {
             app.asset = app.assetLoader->createAsset(
@@ -953,12 +949,22 @@ int main(int argc, char** argv) {
                                     "d.shadowmap.display_shadow_texture_channel"), 0, 3);
                     ImGui::Unindent();
                 }
+
+                bool cameraFrustum = FilamentApp::get().isCameraFrustumEnabled();
+                ImGui::Checkbox("Show Camera Frustum", &cameraFrustum);
+                FilamentApp::get().setCameraFrustumEnabled(cameraFrustum);
+
+                bool shadowFrustum = FilamentApp::get().isDirectionalShadowFrustumEnabled();
+                ImGui::Checkbox("Show Shadow Frustum", &shadowFrustum);
+                FilamentApp::get().setDirectionalShadowFrustumEnabled(shadowFrustum);
+
                 bool debugFroxelVisualization;
                 if (debug.getProperty("d.lighting.debug_froxel_visualization",
                         &debugFroxelVisualization)) {
                     ImGui::Checkbox("Froxel Visualization", &debugFroxelVisualization);
                     debug.setProperty("d.lighting.debug_froxel_visualization",
                             debugFroxelVisualization);
+                    FilamentApp::get().setFroxelGridEnabled(debugFroxelVisualization);
                 }
 
                 auto dataSource = debug.getDataSource("d.view.frame_info");

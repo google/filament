@@ -236,32 +236,47 @@ inline MTLPixelFormat getMetalFormatLinear(MTLPixelFormat format) {
     return format;
 }
 
-constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+constexpr inline bool isMetalFormatUnsignedInteger(MTLPixelFormat format) {
     switch (format) {
         case MTLPixelFormatR8Uint:
-        case MTLPixelFormatR8Sint:
         case MTLPixelFormatR16Uint:
-        case MTLPixelFormatR16Sint:
         case MTLPixelFormatRG8Uint:
-        case MTLPixelFormatRG8Sint:
         case MTLPixelFormatR32Uint:
-        case MTLPixelFormatR32Sint:
         case MTLPixelFormatRG16Uint:
-        case MTLPixelFormatRG16Sint:
         case MTLPixelFormatRGBA8Uint:
-        case MTLPixelFormatRGBA8Sint:
         case MTLPixelFormatRGB10A2Uint:
         case MTLPixelFormatRG32Uint:
-        case MTLPixelFormatRG32Sint:
         case MTLPixelFormatRGBA16Uint:
-        case MTLPixelFormatRGBA16Sint:
         case MTLPixelFormatRGBA32Uint:
+            return true;
+
+        default:
+            return false;
+    }
+    return false;
+}
+
+constexpr inline bool isMetalFormatSignedInteger(MTLPixelFormat format) {
+    switch (format) {
+        case MTLPixelFormatR8Sint:
+        case MTLPixelFormatR16Sint:
+        case MTLPixelFormatRG8Sint:
+        case MTLPixelFormatR32Sint:
+        case MTLPixelFormatRG16Sint:
+        case MTLPixelFormatRGBA8Sint:
+        case MTLPixelFormatRG32Sint:
+        case MTLPixelFormatRGBA16Sint:
         case MTLPixelFormatRGBA32Sint:
             return true;
 
         default:
             return false;
     }
+    return false;
+}
+
+constexpr inline bool isMetalFormatInteger(MTLPixelFormat format) {
+    return isMetalFormatUnsignedInteger(format) || isMetalFormatSignedInteger(format);
 }
 
 constexpr inline bool isMetalFormatStencil(MTLPixelFormat format) {
@@ -434,6 +449,38 @@ inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwi
         TextureSwizzle a) {
     return MTLTextureSwizzleChannelsMake(getSwizzle(r), getSwizzle(g), getSwizzle(b),
             getSwizzle(a));
+}
+
+inline const char* stringifyMTLCommandBufferError(MTLCommandBufferError error) {
+#if !defined(FILAMENT_IOS)
+    if (error == MTLCommandBufferErrorDeviceRemoved) {
+        return "MTLCommandBufferErrorDeviceRemoved";
+    }
+#endif
+    switch (error) {
+        case MTLCommandBufferErrorNone:
+            return "MTLCommandBufferErrorNone";
+        case MTLCommandBufferErrorInternal:
+            return "MTLCommandBufferErrorInternal";
+        case MTLCommandBufferErrorTimeout:
+            return "MTLCommandBufferErrorTimeout";
+        case MTLCommandBufferErrorPageFault:
+            return "MTLCommandBufferErrorPageFault";
+        case MTLCommandBufferErrorAccessRevoked:
+            return "MTLCommandBufferErrorAccessRevoked";
+        case MTLCommandBufferErrorNotPermitted:
+            return "MTLCommandBufferErrorNotPermitted";
+        case MTLCommandBufferErrorOutOfMemory:
+            return "MTLCommandBufferErrorOutOfMemory";
+        case MTLCommandBufferErrorInvalidResource:
+            return "MTLCommandBufferErrorInvalidResource";
+        case MTLCommandBufferErrorMemoryless:
+            return "MTLCommandBufferErrorMemoryless";
+        case MTLCommandBufferErrorStackOverflow:
+            return "MTLCommandBufferErrorStackOverflow";
+        default:
+            return "Unknown";
+    }
 }
 
 } // namespace backend

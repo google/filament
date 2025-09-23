@@ -31,7 +31,9 @@ struct UniformConfig {
 
 // All describing a shader that should be created.
 struct ShaderConfig {
+    filament::backend::ShaderLanguage vertexLanguage;
     std::string vertexShader;
+    filament::backend::ShaderLanguage fragmentLanguage;
     std::string fragmentShader;
     std::vector<UniformConfig> uniforms;
 };
@@ -89,6 +91,8 @@ public:
 
     filament::backend::ProgramHandle getProgram() const;
     filament::backend::DescriptorSetLayoutHandle getDescriptorSetLayout() const;
+
+    void addProgramToPipelineState(filament::backend::PipelineState& state) const;
 
     filament::backend::DescriptorSetHandle createDescriptorSet(
             filament::backend::DriverApi& api) const;

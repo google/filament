@@ -46,8 +46,8 @@ fun loadTexture(engine: Engine, resources: Resources, resourceId: Int, type: Tex
             .height(bitmap.height)
             .sampler(Texture.Sampler.SAMPLER_2D)
             .format(internalFormat(type))
-            // This tells Filament to figure out the number of mip levels
-            .levels(0xff)
+            .levels(0xff)  // This tells Filament to figure out the number of mip levels
+            .usage(Texture.Usage.DEFAULT or Texture.Usage.GEN_MIPMAPPABLE)
             .build(engine)
 
     // TextureHelper offers a method that skips the copy of the bitmap into a ByteBuffer

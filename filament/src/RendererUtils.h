@@ -26,17 +26,18 @@
 #include <filament/Viewport.h>
 
 #include <backend/DriverEnums.h>
-#include <backend/PixelBufferDescriptor.h>
+#include <backend/Handle.h>
 
 #include <math/vec2.h>
 #include <math/vec4.h>
 
 #include <stdint.h>
 
-#include <optional>
-#include <utility>
-
 namespace filament {
+
+namespace backend {
+class PixelBufferDescriptor;
+}
 
 class FRenderTarget;
 class FrameGraph;
@@ -64,16 +65,12 @@ public:
         math::float4 clearColor = {};
         // Clear stencil
         uint8_t clearStencil = 0u;
-        // Lod offset for the SSR passes
-        float ssrLodOffset;
         // Contact shadow enabled?
         bool hasContactShadows;
         // Screen space reflections enabled
         bool hasScreenSpaceReflectionsOrRefractions;
         // Use a depth format with a stencil component.
         bool enabledStencilBuffer;
-        // whether the screenspace reflections history buffer is initialized
-        bool screenSpaceReflectionHistoryNotReady;
     };
 
     struct ColorPassInput {
@@ -99,18 +96,20 @@ public:
             PostProcessManager::ColorGradingConfig colorGradingConfig,
             RenderPass::Executor passExecutor) noexcept;
 
-    static std::optional<ColorPassOutput> refractionPass(
+    static ColorPassOutput refractionPass(
             FrameGraph& fg, FEngine& engine, FView const& view,
             ColorPassInput colorPassInput,
             ColorPassConfig config,
             PostProcessManager::ScreenSpaceRefConfig const& ssrConfig,
             PostProcessManager::ColorGradingConfig colorGradingConfig,
-            RenderPass const& pass) noexcept;
+            RenderPass const& pass, RenderPass::Command const* firstRefractionCommand) noexcept;
 
     static void readPixels(backend::DriverApi& driver,
             backend::Handle<backend::HwRenderTarget> renderTargetHandle,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             backend::PixelBufferDescriptor&& buffer);
+
+    static RenderPass::Command const* getFirstRefractionCommand(RenderPass const& pass) noexcept;
 };
 
 } // namespace filament

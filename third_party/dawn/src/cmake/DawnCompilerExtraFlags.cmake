@@ -30,6 +30,13 @@ if (${DAWN_ENABLE_TSAN})
   add_link_options(-stdlib=libc++)
 endif ()
 
+# Don't warn about C++20 only constructs, since Dawn requires C++20
+if (("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") OR
+    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang") OR
+    ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
+    add_compile_options(-Wno-c++20-compat)
+endif()
+
 ################################################################################
 # common_compile_options - sets compiler and linker options common for dawn
 ################################################################################
@@ -44,6 +51,7 @@ function(common_compile_options target)
         "-Wno-deprecated-builtins"
         "-Wno-unknown-warning-option"
         "-Wno-switch-default"
+        "-Wno-nrvo"
     )
     if (${DAWN_WERROR})
       target_compile_options(${target}
@@ -53,7 +61,26 @@ function(common_compile_options target)
 
   if (MSVC)
     target_compile_options(${target}
-      PUBLIC "/utf-8")
+      PUBLIC
+        "/utf-8"
+        "/Zc:preprocessor" # Ask for standard-conformant preprocessor.
+    )
+  endif ()
+
+  # Abseil headers can cause warnings when included that will cause failures
+  # with -Werror.
+  # Needs to be PUBLIC to propagate to targets that depend indirectly on abseil
+  # via this target.
+  if (NOT MSVC)
+    get_target_property(deps ${target} LINK_LIBRARIES)
+    if (deps MATCHES "absl")
+      target_compile_options(${target} PUBLIC
+              "-Wno-gcc-compat"
+              "-Wno-unreachable-code-break"
+              "-Wno-nullability-extension"
+              "-Wno-shadow"
+      )
+    endif ()
   endif ()
 
   if (COMPILER_IS_LIKE_GNU)
@@ -100,3 +127,4 @@ function(common_compile_options target)
     endif ()
   endif ()
 endfunction()
+

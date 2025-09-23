@@ -2798,30 +2798,7 @@ spv_result_t Differ::Output() {
   src_id_to_.inst_map_.resize(id_map_.SrcToDstMap().IdBound(), nullptr);
   dst_id_to_.inst_map_.resize(id_map_.DstToSrcMap().IdBound(), nullptr);
 
-  const spv_target_env target_env = SPV_ENV_UNIVERSAL_1_6;
-  spv_opcode_table opcode_table;
-  spv_operand_table operand_table;
-  spv_ext_inst_table ext_inst_table;
-  spv_result_t result;
-
-  result = spvOpcodeTableGet(&opcode_table, target_env);
-  if (result != SPV_SUCCESS) return result;
-
-  result = spvOperandTableGet(&operand_table, target_env);
-  if (result != SPV_SUCCESS) return result;
-
-  result = spvExtInstTableGet(&ext_inst_table, target_env);
-  if (result != SPV_SUCCESS) return result;
-
-  spv_context_t context{
-      target_env,
-      opcode_table,
-      operand_table,
-      ext_inst_table,
-  };
-
-  const AssemblyGrammar grammar(&context);
-  if (!grammar.isValid()) return SPV_ERROR_INVALID_TABLE;
+  spv_context_t context{SPV_ENV_UNIVERSAL_1_6, nullptr};
 
   uint32_t disassembly_options = SPV_BINARY_TO_TEXT_OPTION_PRINT;
   if (options_.indent) {
@@ -2829,7 +2806,7 @@ spv_result_t Differ::Output() {
   }
 
   NameMapper name_mapper = GetTrivialNameMapper();
-  disassemble::InstructionDisassembler dis(grammar, out_, disassembly_options,
+  disassemble::InstructionDisassembler dis(out_, disassembly_options,
                                            name_mapper);
 
   if (!options_.no_header) {

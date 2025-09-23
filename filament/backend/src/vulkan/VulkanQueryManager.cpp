@@ -42,21 +42,17 @@ fvkmemory::resource_ptr<VulkanTimerQuery> VulkanQueryManager::getNextQuery(
         fvkmemory::ResourceManager* resourceManager) {
     auto unused = ~mUsed;
     if (unused.empty()) {
-        FVK_LOGE << "More than " << mUsed.size() << " timers are not supported." << utils::io::endl;
+        FVK_LOGE << "More than " << mUsed.size() << " timers are not supported.";
         return {};
     }
 
-    bool found = false;
     std::pair<uint32_t, uint32_t> queryIndices;
-    unused.forEachSetBit([&](size_t index) {
-        if (found) {
-            return;
-        }
+    size_t const firstUnused = unused.firstSetBit();
+    {
         std::unique_lock<utils::Mutex> lock(mMutex);
-        mUsed.set(index);
-        found = true;
-        queryIndices = std::make_pair(index * 2, index * 2 + 1);
-    });
+        mUsed.set(firstUnused);
+        queryIndices = { firstUnused * 2, firstUnused * 2 + 1 };
+    }
     return fvkmemory::resource_ptr<VulkanTimerQuery>::construct(resourceManager, queryIndices.first,
             queryIndices.second);
 }

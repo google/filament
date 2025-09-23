@@ -29,6 +29,7 @@
 #include <bluevk/BlueVK.h>
 #include <utils/FixedCapacityVector.h>
 
+#include <memory>
 
 using namespace bluevk;
 
@@ -47,7 +48,7 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
 
     ~VulkanSwapChain();
 
-    void present();
+    void present(DriverBase& driver);
 
     // Acquire a new image from the swapchain. If the image is not available it would wait until it
     // is.
@@ -79,6 +80,18 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
     inline bool isProtected() noexcept {
         return mPlatform->isProtected(swapChain);
     }
+
+    inline void setFrameScheduledCallback(CallbackHandler* handler,
+            FrameScheduledCallback&& callback) noexcept {
+        if (!callback) {
+            frameScheduled.handler = nullptr;
+            frameScheduled.callback.reset();
+            return;
+        }
+        frameScheduled.handler = handler;
+        frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
+
 private:
 	static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
 
@@ -93,6 +106,12 @@ private:
     bool const mHeadless;
     bool const mFlushAndWaitOnResize;
     bool const mTransitionSwapChainImageLayoutForPresent;
+
+    // These fields store a callback to notify the client that Filament is commiting a frame.
+    struct {
+        CallbackHandler* handler = nullptr;
+        std::shared_ptr<FrameScheduledCallback> callback = nullptr;
+    } frameScheduled;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.

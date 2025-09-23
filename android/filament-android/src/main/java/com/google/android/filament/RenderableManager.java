@@ -852,6 +852,14 @@ public class RenderableManager {
     }
 
     /**
+     * Gets the immutable number of instances in the given renderable.
+     */
+    @IntRange(from = 0)
+    public int getInstanceCount(@EntityInstance int i) {
+        return nGetInstanceCount(mNativeObject, i);
+    }
+
+    /**
      * Changes the material instance binding for the given primitive.
      *
      * @see Builder#material
@@ -1018,6 +1026,7 @@ public class RenderableManager {
     private static native boolean nIsShadowReceiver(long nativeRenderableManager, int i);
     private static native void nGetAxisAlignedBoundingBox(long nativeRenderableManager, int i, float[] center, float[] halfExtent);
     private static native int nGetPrimitiveCount(long nativeRenderableManager, int i);
+    private static native int nGetInstanceCount(long nativeRenderableManager, int i);
     private static native void nSetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex, long nativeMaterialInstance);
     private static native void nClearMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);
     private static native long nGetMaterialInstanceAt(long nativeRenderableManager, int i, int primitiveIndex);

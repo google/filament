@@ -25,8 +25,10 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "src/tint/lang/core/type/f16.h"
 #include "src/tint/lang/core/type/helper_test.h"
-#include "src/tint/lang/core/type/texture.h"
+#include "src/tint/lang/core/type/manager.h"
+#include "src/tint/lang/core/type/void.h"
 
 namespace tint::core::type {
 namespace {
@@ -34,20 +36,23 @@ namespace {
 using F16Test = TestHelper;
 
 TEST_F(F16Test, Creation) {
-    auto* a = create<F16>();
-    auto* b = create<F16>();
+    Manager ty;
+    auto* a = ty.f16();
+    auto* b = ty.f16();
     EXPECT_EQ(a, b);
 }
 
 TEST_F(F16Test, Hash) {
-    auto* a = create<F16>();
-    auto* b = create<F16>();
+    Manager ty;
+    auto* a = ty.f16();
+    auto* b = ty.f16();
     EXPECT_EQ(a->unique_hash, b->unique_hash);
 }
 
 TEST_F(F16Test, Equals) {
-    auto* a = create<F16>();
-    auto* b = create<F16>();
+    Manager ty;
+    auto* a = ty.f16();
+    auto* b = ty.f16();
     EXPECT_TRUE(a->Equals(*b));
     EXPECT_FALSE(a->Equals(Void{}));
 }
@@ -58,7 +63,8 @@ TEST_F(F16Test, FriendlyName) {
 }
 
 TEST_F(F16Test, Clone) {
-    auto* a = create<F16>();
+    Manager ty;
+    auto* a = ty.f16();
 
     core::type::Manager mgr;
     core::type::CloneContext ctx{{nullptr}, {nullptr, &mgr}};

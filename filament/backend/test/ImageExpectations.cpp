@@ -36,12 +36,14 @@
 namespace test {
 
 ScreenshotParams::ScreenshotParams(int width, int height, std::string fileName,
-        uint32_t expectedHash, bool isSrgb)
+        uint32_t expectedHash, bool isSrgb, int numAllowedDeviations, int pixelMatchThreshold)
     : mWidth(width),
       mHeight(height),
       mIsSrgb(isSrgb),
       mExpectedPixelHash(expectedHash),
-      mFileName(std::move(fileName)) {}
+      mFileName(std::move(fileName)),
+      mAllowedPixelDeviations(numAllowedDeviations),
+      mPixelMatchThreshold(pixelMatchThreshold) {}
 
 int ScreenshotParams::width() const {
     return mWidth;
@@ -59,32 +61,54 @@ uint32_t ScreenshotParams::expectedHash() const {
     return mExpectedPixelHash;
 }
 
-std::string ScreenshotParams::actualDirectoryPath() {
-    return "images/actual_images";
+std::filesystem::path ScreenshotParams::actualDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/actual_images");
 }
 
 std::string ScreenshotParams::actualFileName() const {
     return absl::StrFormat("%s_actual.png", mFileName);
 }
 
-std::string ScreenshotParams::actualFilePath() const {
-    return absl::StrFormat("%s/%s", actualDirectoryPath(), actualFileName());
+std::filesystem::path ScreenshotParams::actualFilePath() const {
+    return actualDirectoryPath().append(actualFileName());
 }
 
-std::string ScreenshotParams::expectedDirectoryPath() {
-    return "images/expected_images";
+std::filesystem::path ScreenshotParams::expectedDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/expected_images");
 }
 
 std::string ScreenshotParams::expectedFileName() const {
     return absl::StrFormat("%s.png", mFileName);
 }
 
-std::string ScreenshotParams::expectedFilePath() const {
-    return absl::StrFormat("%s/%s", expectedDirectoryPath(), expectedFileName());
+std::filesystem::path ScreenshotParams::expectedFilePath() const {
+    return expectedDirectoryPath().append(expectedFileName());
+}
+
+std::filesystem::path ScreenshotParams::diffFilePath() const {
+    return diffDirectoryPath().append(diffFileName());
+}
+
+std::filesystem::path ScreenshotParams::diffDirectoryPath() {
+    return BackendTest::binaryDirectory().append("images/diff_images");
+}
+
+std::string ScreenshotParams::diffFileName() const {
+    return absl::StrFormat("%s_diff.png", mFileName);
 }
 
 const std::string ScreenshotParams::filePrefix() const {
+    // TODO(b/422804941): If there are platform specific goldens, when on those platforms append a
+    //  unique platform identifying string to this.
     return mFileName;
+}
+
+int ScreenshotParams::allowedPixelDeviations() const {
+    return mAllowedPixelDeviations;
+}
+
+int ScreenshotParams::pixelMatchThreshold() const {
+    return mPixelMatchThreshold;
 }
 
 ImageExpectation::ImageExpectation(const char* fileName, int lineNumber,
@@ -114,21 +138,55 @@ void ImageExpectation::compareImage() const {
     EXPECT_THAT(bytesFilled, testing::IsTrue())
                         << "Render target wasn't copied to the buffer for " << mFileName;
     if (bytesFilled) {
-        // Rather than directly compare the two images compare their hashes because comparing very
-        // large arrays generates way too much debug output to be useful.
-        uint32_t actualHash = mResult.hash();
 #ifndef FILAMENT_IOS
         LoadedPng loadedImage(mParams.expectedFilePath());
-        uint32_t loadedImageHash = loadedImage.hash();
-        auto compareToImageMatcher = testing::Eq(loadedImageHash);
-        if (!testing::Matches(compareToImageMatcher)(actualHash)) {
+        if (loadedImage.bytes().size() != mResult.bytes().size()) {
+            // Something is wrong with the size of the expected result, which usually means the file
+            // is missing. Fail the test and early return so later steps can assume the image is
+            // there.
             BackendTest::markImageAsFailure(mParams.filePrefix());
+            return;
         }
-        EXPECT_THAT(actualHash, compareToImageMatcher) << mParams.expectedFileName();
-#endif
+
+        // Initialize the vector to full saturation on all channels, bad pixels will have
+        // color channels but not alpha set to 0 to produce highly contrasting black pixels.
+        std::vector<unsigned char> imageDiff( loadedImage.bytes().size(), 255 );
+        int pixelDeviations = 0;
+        for (int i = 0; i < mResult.bytes().size(); i += 4) {
+            // In order to handle color channels propoerly for the output, stride 4 bytes at a time.
+            // A failure of any byte in a pixel counts as a failure of the whole pixel.
+            for (int j = 0; j < 4; ++j) {
+                if( std::abs( mResult.bytes()[i+j] - loadedImage.bytes()[i+j] ) >
+                    mParams.pixelMatchThreshold() ) {
+                    pixelDeviations++;
+                    imageDiff[i] = 0;
+                    imageDiff[i+1] = 0;
+                    imageDiff[i+2] = 0;
+                    break;
+                }
+            }
+        }
+        EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
+        if (pixelDeviations > mParams.allowedPixelDeviations()) {
+            BackendTest::markImageAsFailure(mParams.filePrefix());
+            image::LinearImage image;
+            image = image::toLinearWithAlpha<uint8_t>(
+                    mParams.width(), mParams.height(),
+                    mParams.width() * 4, (uint8_t *)imageDiff.data(),
+                    [](uint8_t value) -> float { return value; },
+                    [](filament::math::float4 rgba) -> filament::math::float4 { return rgba; });
+            std::string filePath = mParams.diffFilePath();
+            std::ofstream pngStream(filePath, std::ios::binary | std::ios::trunc);
+            // To avoid going from linear -> sRGB -> linear save the PNG as linear.
+            image::ImageEncoder::encode(pngStream, image::ImageEncoder::Format::PNG_LINEAR, image, "",
+                    filePath);
+        }
+        EXPECT_LE(pixelDeviations, mParams.allowedPixelDeviations());
+#else
         // For builds that can't load PNGs (currently iOS only) use the expected hash.
+        uint32_t actualHash = mResult.hash();
         EXPECT_THAT(actualHash, testing::Eq(mParams.expectedHash())) << mParams.expectedFileName();
-        // TODO: Add better debug output, such as generating a diff image.
+#endif
     }
 }
 

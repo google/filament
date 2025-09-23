@@ -25,8 +25,7 @@ using namespace filament::backend;
 namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
-    SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
-    SKIP_IF(Backend::VULKAN, "Frame callbacks are unsupported in Vulkan, see b/417254479");
+    SKIP_IF(Backend::WEBGPU, "Frame callbacks are unsupported in WebGPU");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
@@ -67,7 +66,18 @@ TEST_F(BackendTest, FrameScheduledCallback) {
         callbackCountB++;
     }, 0);
 
-    // Render one final frame.
+    // Render another frame.
+    api.makeCurrent(swapChain, swapChain);
+    api.beginFrame(0, 0, 0);
+    api.beginRenderPass(renderTarget, {});
+    api.endRenderPass(0);
+    api.commit(swapChain);
+    api.endFrame(0);
+
+    // Now, unset the callback
+    api.setFrameScheduledCallback(swapChain, nullptr, {}, 0);
+
+    // Render a final frame. This time no callback should be called.
     api.makeCurrent(swapChain, swapChain);
     api.beginFrame(0, 0, 0);
     api.beginRenderPass(renderTarget, {});
@@ -87,6 +97,7 @@ TEST_F(BackendTest, FrameScheduledCallback) {
 TEST_F(BackendTest, FrameCompletedCallback) {
     SKIP_IF(Backend::OPENGL, "Frame callbacks are unsupported in OpenGL");
     SKIP_IF(Backend::VULKAN, "Frame callbacks are unsupported in Vulkan, see b/417254479");
+    SKIP_IF(Backend::WEBGPU, "Frame callbacks are unsupported in WebGPU");
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);

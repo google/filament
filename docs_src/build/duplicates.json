@@ -2,9 +2,14 @@
     "README.md": {
         "dest": "dup/intro.md",
         "link_transforms": {
-            "BUILDING.md": "building.md",
+            "/BUILDING.md#running-the-native-samples": "building.md#running-the-native-samples",
+            "/BUILDING.md": "building.md",
             "/CONTRIBUTING.md": "contributing.md",
             "/CODE_STYLE.md": "code_style.md",
+            "/LICENSE": "https://github.com/google/filament/blob/main/LICENSE",
+            "https://google.github.io/filament/Filament.html": "../main/filament.md",
+            "https://google.github.io/filament/Materials.html": "../main/materials.md",
+            "https://google.github.io/filament/notes/material_properties.html": "../notes/material_properties.md",
             "docs/images/samples": "../images/samples"
         }
     },
@@ -12,7 +17,10 @@
         "dest": "dup/building.md"
     },
     "CONTRIBUTING.md": {
-        "dest": "dup/contributing.md"
+        "dest": "dup/contributing.md",
+        "link_transforms": {
+            "/CODE_STYLE.md": "code_style.md"
+        }
     },
     "CODE_STYLE.md": {
         "dest": "dup/code_style.md"
@@ -70,5 +78,11 @@
     },
     "docs_src/README.md": {
         "dest": "dup/docs.md"
+    },
+    "test/renderdiff/README.md": {
+        "dest": "dup/renderdiff.md",
+        "link_transforms": {
+            "docs/images/": "../images/"
+        }
     }
 }

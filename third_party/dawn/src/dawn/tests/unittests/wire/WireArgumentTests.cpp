@@ -343,27 +343,22 @@ TEST_F(WireArgumentTests, StructureOfObjectArrayArgument) {
 TEST_F(WireArgumentTests, StructureOfStructureArrayArgument) {
     static constexpr int NUM_BINDINGS = 3;
     wgpu::BindGroupLayoutEntry entries[NUM_BINDINGS]{
-        {nullptr,
-         0,
-         wgpu::ShaderStage::Vertex,
-         {},
-         {nullptr, wgpu::SamplerBindingType::Filtering},
-         {},
-         {}},
-        {nullptr,
-         1,
-         wgpu::ShaderStage::Vertex,
-         {},
-         {},
-         {nullptr, wgpu::TextureSampleType::Float, wgpu::TextureViewDimension::e2D, false},
-         {}},
-        {nullptr,
-         2,
-         wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment,
-         {nullptr, wgpu::BufferBindingType::Uniform, false, 0},
-         {},
-         {},
-         {}},
+        {
+            .binding = 0,
+            .visibility = wgpu::ShaderStage::Vertex,
+            .sampler = {nullptr, wgpu::SamplerBindingType::Filtering},
+        },
+        {
+            .binding = 1,
+            .visibility = wgpu::ShaderStage::Vertex,
+            .texture = {nullptr, wgpu::TextureSampleType::Float, wgpu::TextureViewDimension::e2D,
+                        false},
+        },
+        {
+            .binding = 2,
+            .visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment,
+            .buffer = {nullptr, wgpu::BufferBindingType::Uniform, false, 0},
+        },
     };
     wgpu::BindGroupLayoutDescriptor bglDescriptor = {};
     bglDescriptor.entryCount = NUM_BINDINGS;

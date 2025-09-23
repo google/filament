@@ -16,7 +16,7 @@
 
 #include "private/backend/CircularBuffer.h"
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/architecture.h>
 #include <utils/ashmem.h>
@@ -37,6 +37,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(WIN32)
+#    include <windows.h> // for VirtualAlloc, VirtualProtect, VirtualFree
+#    include <utils/unwindows.h>
+#endif
 
 using namespace utils;
 
@@ -65,7 +70,7 @@ CircularBuffer::~CircularBuffer() noexcept {
 // to each others and a special case in circularize()
 
 UTILS_NOINLINE
-void* CircularBuffer::alloc(size_t size) noexcept {
+void* CircularBuffer::alloc(size_t size) {
 #if HAS_MMAP
     void* data = nullptr;
     void* vaddr = MAP_FAILED;
@@ -127,12 +132,27 @@ void* CircularBuffer::alloc(size_t size) noexcept {
                 "couldn't allocate " << (size * 2 / 1024) <<
                 " KiB of virtual address space for the command buffer";
 
-        slog.w << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)" << io::endl;
+        LOG(WARNING) << "Using 'soft' CircularBuffer (" << (size * 2 / 1024) << " KiB)";
 
         // guard page at the end
         void* guard = (void*)(uintptr_t(data) + size * 2);
         mprotect(guard, BLOCK_SIZE, PROT_NONE);
     }
+    return data;
+#elif defined(WIN32)
+    size_t const BLOCK_SIZE = getBlockSize();
+    // On Windows, use VirtualAlloc instead of malloc to allocate virtual memory.
+    // This allows us to set page protection by VirtualProtect.
+    void* data = VirtualAlloc(nullptr, size * 2 + BLOCK_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    FILAMENT_CHECK_POSTCONDITION(data != nullptr)
+            << "couldn't allocate " << (size * 2 / 1024)
+            << " KiB of virtual address space for the command buffer";
+
+    // guard page at the end
+    void* guard = (void*)(uintptr_t(data) + size * 2);
+    DWORD oldProtect = 0;
+    BOOL ok = VirtualProtect(guard, BLOCK_SIZE, PAGE_NOACCESS, &oldProtect);
+    FILAMENT_CHECK_POSTCONDITION(ok) << "VirtualProtect failed to set guard page";
     return data;
 #else
     return ::malloc(2 * size);
@@ -149,6 +169,10 @@ void CircularBuffer::dealloc() noexcept {
             close(mAshmemFd);
             mAshmemFd = -1;
         }
+    }
+#elif defined(WIN32)
+    if (mData) {
+        VirtualFree(mData, 0, MEM_RELEASE);
     }
 #else
     ::free(mData);

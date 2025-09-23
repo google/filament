@@ -37,6 +37,8 @@ Program::Program() noexcept {  // NOLINT(modernize-use-equals-default)
 
 Program::Program(Program&& rhs) noexcept = default;
 
+Program& Program::operator=(Program&& rhs) noexcept = default;
+
 Program::~Program() noexcept = default;
 
 Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {
@@ -45,7 +47,7 @@ Program& Program::priorityQueue(CompilerPriorityQueue priorityQueue) noexcept {
 }
 
 Program& Program::diagnostics(CString const& name,
-        Invocable<io::ostream&(io::ostream&)>&& logger) {
+        Invocable<io::ostream&(utils::CString const& name, io::ostream&)>&& logger) {
     mName = name;
     mLogger = std::move(logger);
     return *this;
@@ -103,7 +105,7 @@ Program& Program::multiview(bool multiview) noexcept {
 
 io::ostream& operator<<(io::ostream& out, const Program& builder) {
     out << "Program{";
-    builder.mLogger(out);
+    builder.mLogger(builder.mName, out);
     out << "}";
     return out;
 }

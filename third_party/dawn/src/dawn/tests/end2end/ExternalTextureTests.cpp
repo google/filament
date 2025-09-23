@@ -359,6 +359,8 @@ TEST_P(ExternalTextureTests, SampleTextureView) {
 // Tests that textureDimensions WGSL built-in function works when a texture view is used for an
 // externalTexture binding.
 TEST_P(ExternalTextureTests, TextureDimensionsWithTextureView) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());  // Flaky on WARP
+
     wgpu::TextureDescriptor descriptor;
     descriptor.size = {kWidth, kHeight, 1};
     descriptor.mipLevelCount = 2;

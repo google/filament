@@ -57,7 +57,8 @@ class UTILS_PUBLIC MaterialInstance : public FilamentAPI {
 
 public:
     using CullingMode = backend::CullingMode;
-    using TransparencyMode = TransparencyMode;
+    // ReSharper disable once CppRedundantQualifier
+    using TransparencyMode = filament::TransparencyMode;
     using DepthFunc = backend::SamplerCompareFunc;
     using StencilCompareFunc = backend::SamplerCompareFunc;
     using StencilOperation = backend::StencilOperation;

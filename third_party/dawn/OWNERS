@@ -5,6 +5,7 @@ dsinclair@chromium.org
 geofflang@chromium.org
 jiawei.shao@intel.com
 jrprice@google.com
+kainino@chromium.org
 
 per-file DEPS=*
 per-file .gitignore=*
@@ -52,5 +53,6 @@ per-file third_party/vulkan-tools/src=*
 per-file third_party/vulkan-utility-libraries/src=*
 per-file third_party/vulkan-validation-layers/src=*
 per-file third_party/webgpu-cts=*
+per-file third_party/webgpu-headers/src=*
 per-file third_party/zlib=*
 per-file tools/clang=*

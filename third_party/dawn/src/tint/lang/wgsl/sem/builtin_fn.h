@@ -31,9 +31,7 @@
 #include <string>
 #include <vector>
 
-#include "src/tint/lang/wgsl/builtin_fn.h"
-#include "src/tint/lang/wgsl/extension.h"
-#include "src/tint/lang/wgsl/features/language_feature.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/lang/wgsl/sem/call_target.h"
 #include "src/tint/lang/wgsl/sem/pipeline_stage_set.h"
 #include "src/tint/utils/math/hash.h"
@@ -118,6 +116,9 @@ class BuiltinFn final : public Castable<BuiltinFn, CallTarget> {
 
     /// @returns true if builtin is a quadSwap builtin
     bool IsQuadSwap() const;
+
+    /// @returns true if builtin is a texel buffer builtin
+    bool IsTexelBuffer() const;
 
     /// @returns true if intrinsic may have side-effects (i.e. writes to at least
     /// one of its inputs)

@@ -1,0 +1,8 @@
+void main()
+{
+    float1 f1;
+    f1.x = 0.5;
+
+    // This is not implemented
+    // f1.xx = float2(0.6, 0.7);
+}

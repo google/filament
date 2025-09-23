@@ -220,18 +220,15 @@ std::string LimitsToString(const wgpu::Limits& limits, const std::string& indent
 }
 
 void DumpAdapterInfo(const wgpu::Adapter& adapter) {
-    wgpu::AdapterPropertiesSubgroups subgroup_props{};
-
     wgpu::DawnAdapterPropertiesPowerPreference power_props{};
-    power_props.nextInChain = &subgroup_props;
 
     wgpu::AdapterInfo info{};
     info.nextInChain = &power_props;
 
     adapter.GetInfo(&info);
     std::cout << AdapterInfoToString(info);
-    std::cout << "Subgroup min size: " << subgroup_props.subgroupMinSize << "\n";
-    std::cout << "Subgroup max size: " << subgroup_props.subgroupMaxSize << "\n";
+    std::cout << "Subgroup min size: " << info.subgroupMinSize << "\n";
+    std::cout << "Subgroup max size: " << info.subgroupMaxSize << "\n";
     std::cout << "Power: " << PowerPreferenceToString(power_props) << "\n";
     std::cout << "\n";
 }

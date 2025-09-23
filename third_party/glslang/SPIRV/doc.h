@@ -38,7 +38,7 @@
 
 #pragma once
 
-#include "spirv.hpp"
+#include "spirv.hpp11"
 
 #include <vector>
 

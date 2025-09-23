@@ -39,6 +39,8 @@
 # Kind:      lib
 ################################################################################
 tint_add_target(tint_lang_core_ir_analysis lib
+  lang/core/ir/analysis/for_loop_analysis.cc
+  lang/core/ir/analysis/for_loop_analysis.h
   lang/core/ir/analysis/integer_range_analysis.cc
   lang/core/ir/analysis/integer_range_analysis.h
   lang/core/ir/analysis/loop_analysis.cc
@@ -49,10 +51,12 @@ tint_target_add_dependencies(tint_lang_core_ir_analysis lib
   tint_api_common
   tint_lang_core
   tint_lang_core_constant
+  tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_type
   tint_utils
   tint_utils_containers
+  tint_utils_diagnostic
   tint_utils_ice
   tint_utils_macros
   tint_utils_math
@@ -71,6 +75,7 @@ tint_target_add_external_dependencies(tint_lang_core_ir_analysis lib
 # Kind:      test
 ################################################################################
 tint_add_target(tint_lang_core_ir_analysis_test test
+  lang/core/ir/analysis/for_loop_analysis_test.cc
   lang/core/ir/analysis/integer_range_analysis_test.cc
   lang/core/ir/analysis/loop_analysis_test.cc
 )
@@ -82,6 +87,7 @@ tint_target_add_dependencies(tint_lang_core_ir_analysis_test test
   tint_lang_core_intrinsic
   tint_lang_core_ir
   tint_lang_core_ir_analysis
+  tint_lang_core_ir_transform
   tint_lang_core_ir_test
   tint_lang_core_type
   tint_utils

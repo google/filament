@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_CONVERSION_H
 #define TNT_FILAMENT_BACKEND_VULKAN_UTILS_CONVERSION_H
 
+#include "Definitions.h"
+
 #include <backend/DriverEnums.h>
 
 #include <private/backend/BackendUtils.h>  // for getFormatSize()
@@ -46,6 +48,9 @@ VkFormat getVkFormatLinear(VkFormat format);
 // See also FTexture::computeTextureDataSize, which takes a public-facing Texture format rather
 // than a driver-level Texture format, and can account for a specified byte alignment.
 uint32_t getBytesPerPixel(TextureFormat format);
+
+// Required for aligning textures in staging buffers.
+uint8_t getTexelBlockSize(VkFormat format);
 
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);

@@ -103,6 +103,7 @@ public:
   TEST_METHOD(CompileCSWaveSizeRange_CheckPSV0)
   TEST_METHOD(CompileWhenOkThenCheckRDAT)
   TEST_METHOD(CompileWhenOkThenCheckRDAT2)
+  TEST_METHOD(CompileWhenOkThenCheckRDATSM69)
   TEST_METHOD(CompileWhenOkThenCheckReflection1)
   TEST_METHOD(DxcUtils_CreateReflection)
   TEST_METHOD(CheckReflectionQueryInterface)
@@ -1576,6 +1577,150 @@ TEST_F(DxilContainerTest, CompileWhenOkThenCheckRDAT) {
         }
       }
       VERIFY_ARE_EQUAL(resTable.Count(), 8U);
+    }
+  }
+  IFTBOOLMSG(blobFound, E_FAIL, "failed to find RDAT blob after compiling");
+}
+
+TEST_F(DxilContainerTest, CompileWhenOkThenCheckRDATSM69) {
+  if (m_ver.SkipDxilVersion(1, 9))
+    return;
+  const char *shader =
+      "float c_buf;"
+      "RWTexture1D<int4> tex : register(u5);"
+      "Texture1D<float4> tex2 : register(t0);"
+      "RWByteAddressBuffer b_buf;"
+      "struct Foo { float2 f2; int2 i2; };"
+      "AppendStructuredBuffer<Foo> append_buf;"
+      "ConsumeStructuredBuffer<Foo> consume_buf;"
+      "RasterizerOrderedByteAddressBuffer rov_buf;"
+      "globallycoherent RWByteAddressBuffer gc_buf;"
+      "reordercoherent RWByteAddressBuffer rc_buf;"
+      "float function_import(float x);"
+      "export float function0(min16float x) { "
+      "  return x + 1 + tex[0].x; }"
+      "export float function1(float x, min12int i) {"
+      "  return x + c_buf + b_buf.Load(x) + tex2[i].x; }"
+      "export float function2(float x) { return x + function_import(x); }"
+      "export void function3(int i) {"
+      "  Foo f = consume_buf.Consume();"
+      "  f.f2 += 0.5; append_buf.Append(f);"
+      "  rov_buf.Store(i, f.i2.x);"
+      "  gc_buf.Store(i, f.i2.y);"
+      "  rc_buf.Store(i, f.i2.y);"
+      "  b_buf.Store(i, f.i2.x + f.i2.y); }";
+  CComPtr<IDxcCompiler> pCompiler;
+  CComPtr<IDxcBlobEncoding> pSource;
+  CComPtr<IDxcBlob> pProgram;
+  CComPtr<IDxcBlobEncoding> pDisassembly;
+  CComPtr<IDxcOperationResult> pResult;
+
+  struct CheckResFlagInfo {
+    std::string name;
+    hlsl::DXIL::ResourceKind kind;
+    hlsl::RDAT::DxilResourceFlag flag;
+  };
+  const unsigned numResFlagCheck = 6;
+  CheckResFlagInfo resFlags[numResFlagCheck] = {
+      {"b_buf", hlsl::DXIL::ResourceKind::RawBuffer,
+       hlsl::RDAT::DxilResourceFlag::None},
+      {"append_buf", hlsl::DXIL::ResourceKind::StructuredBuffer,
+       hlsl::RDAT::DxilResourceFlag::UAVCounter},
+      {"consume_buf", hlsl::DXIL::ResourceKind::StructuredBuffer,
+       hlsl::RDAT::DxilResourceFlag::UAVCounter},
+      {"gc_buf", hlsl::DXIL::ResourceKind::RawBuffer,
+       hlsl::RDAT::DxilResourceFlag::UAVGloballyCoherent},
+      {"rc_buf", hlsl::DXIL::ResourceKind::RawBuffer,
+       hlsl::RDAT::DxilResourceFlag::UAVReorderCoherent},
+      {"rov_buf", hlsl::DXIL::ResourceKind::RawBuffer,
+       hlsl::RDAT::DxilResourceFlag::UAVRasterizerOrderedView}};
+
+  VERIFY_SUCCEEDED(CreateCompiler(&pCompiler));
+  CreateBlobFromText(shader, &pSource);
+  VERIFY_SUCCEEDED(pCompiler->Compile(pSource, L"hlsl.hlsl", L"main",
+                                      L"lib_6_9", nullptr, 0, nullptr, 0,
+                                      nullptr, &pResult));
+  HRESULT hrStatus;
+  VERIFY_SUCCEEDED(pResult->GetStatus(&hrStatus));
+  VERIFY_SUCCEEDED(hrStatus);
+  VERIFY_SUCCEEDED(pResult->GetResult(&pProgram));
+  CComPtr<IDxcContainerReflection> containerReflection;
+  uint32_t partCount;
+  IFT(m_dllSupport.CreateInstance(CLSID_DxcContainerReflection,
+                                  &containerReflection));
+  IFT(containerReflection->Load(pProgram));
+  IFT(containerReflection->GetPartCount(&partCount));
+  bool blobFound = false;
+  for (uint32_t i = 0; i < partCount; ++i) {
+    uint32_t kind;
+    IFT(containerReflection->GetPartKind(i, &kind));
+    if (kind == (uint32_t)hlsl::DxilFourCC::DFCC_RuntimeData) {
+      blobFound = true;
+      using namespace hlsl::RDAT;
+      CComPtr<IDxcBlob> pBlob;
+      IFT(containerReflection->GetPartContent(i, &pBlob));
+      // Validate using DxilRuntimeData
+      DxilRuntimeData context;
+      context.InitFromRDAT((char *)pBlob->GetBufferPointer(),
+                           pBlob->GetBufferSize());
+      auto funcTable = context.GetFunctionTable();
+      auto resTable = context.GetResourceTable();
+      VERIFY_ARE_EQUAL(funcTable.Count(), 4U);
+      std::string str("function");
+      for (uint32_t j = 0; j < funcTable.Count(); ++j) {
+        auto funcReader = funcTable[j];
+        std::string funcName(funcReader.getUnmangledName());
+        VERIFY_IS_TRUE(str.compare(funcName.substr(0, 8)) == 0);
+        std::string cur_str = str;
+        cur_str.push_back('0' + j);
+        if (cur_str.compare("function0") == 0) {
+          VERIFY_ARE_EQUAL(funcReader.getResources().Count(), 1U);
+          hlsl::ShaderFlags flag;
+          flag.SetUAVLoadAdditionalFormats(true);
+          flag.SetLowPrecisionPresent(true);
+          uint64_t rawFlag = flag.GetFeatureInfo();
+          VERIFY_ARE_EQUAL(funcReader.GetFeatureFlags(), rawFlag);
+          auto resReader = funcReader.getResources()[0];
+          VERIFY_ARE_EQUAL(resReader.getClass(),
+                           hlsl::DXIL::ResourceClass::UAV);
+          VERIFY_ARE_EQUAL(resReader.getKind(),
+                           hlsl::DXIL::ResourceKind::Texture1D);
+        } else if (cur_str.compare("function1") == 0) {
+          hlsl::ShaderFlags flag;
+          flag.SetLowPrecisionPresent(true);
+          uint64_t rawFlag = flag.GetFeatureInfo();
+          VERIFY_ARE_EQUAL(funcReader.GetFeatureFlags(), rawFlag);
+          VERIFY_ARE_EQUAL(funcReader.getResources().Count(), 3U);
+        } else if (cur_str.compare("function2") == 0) {
+          VERIFY_ARE_EQUAL(funcReader.GetFeatureFlags() & 0xffffffffffffffff,
+                           0U);
+          VERIFY_ARE_EQUAL(funcReader.getResources().Count(), 0U);
+          std::string dependency = funcReader.getFunctionDependencies()[0];
+          VERIFY_IS_TRUE(dependency.find("function_import") !=
+                         std::string::npos);
+        } else if (cur_str.compare("function3") == 0) {
+          VERIFY_ARE_EQUAL(funcReader.GetFeatureFlags() & 0xffffffffffffffff,
+                           0U);
+          VERIFY_ARE_EQUAL(funcReader.getResources().Count(), numResFlagCheck);
+          for (unsigned i = 0; i < funcReader.getResources().Count(); ++i) {
+            auto resReader = funcReader.getResources()[0];
+            VERIFY_ARE_EQUAL(resReader.getClass(),
+                             hlsl::DXIL::ResourceClass::UAV);
+            unsigned j = 0;
+            for (; j < numResFlagCheck; ++j) {
+              if (resFlags[j].name.compare(resReader.getName()) == 0)
+                break;
+            }
+            VERIFY_IS_LESS_THAN(j, numResFlagCheck);
+            VERIFY_ARE_EQUAL(resReader.getKind(), resFlags[j].kind);
+            VERIFY_ARE_EQUAL(resReader.getFlags(),
+                             static_cast<uint32_t>(resFlags[j].flag));
+          }
+        } else {
+          IFTBOOLMSG(false, E_FAIL, "unknown function name");
+        }
+      }
+      VERIFY_ARE_EQUAL(resTable.Count(), 9U);
     }
   }
   IFTBOOLMSG(blobFound, E_FAIL, "failed to find RDAT blob after compiling");

@@ -190,6 +190,7 @@ DxilResourceProperties loadPropsFromResourceBase(const DxilResourceBase *Res) {
     RP.Basic.IsUAV = true;
     RP.Basic.ResourceKind = (uint8_t)Res->GetKind();
     RP.Basic.IsGloballyCoherent = UAV->IsGloballyCoherent();
+    RP.Basic.IsReorderCoherent = UAV->IsReorderCoherent();
     RP.Basic.SamplerCmpOrHasCounter = UAV->HasCounter();
     RP.Basic.IsROV = UAV->IsROV();
     SetResProperties(*UAV);
@@ -234,6 +235,8 @@ DxilResourceProperties tryMergeProps(DxilResourceProperties curProps,
         prevProps.Basic.IsGloballyCoherent) {
       curProps.Basic.IsGloballyCoherent = prevProps.Basic.IsGloballyCoherent;
     }
+    if (curProps.Basic.IsReorderCoherent != prevProps.Basic.IsReorderCoherent)
+      curProps.Basic.IsReorderCoherent = prevProps.Basic.IsReorderCoherent;
   }
 
   if (curProps.Basic.ResourceKind == (uint8_t)DXIL::ResourceKind::CBuffer) {

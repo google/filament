@@ -264,11 +264,15 @@ spv_result_t ConversionPass(ValidationState_t& _, const Instruction* inst) {
                  << spvOpcodeString(opcode);
       }
 
-      if (_.GetBitWidth(result_type) == _.GetBitWidth(input_type))
+      // Scalar type
+      const uint32_t resScalarType = _.GetComponentType(result_type);
+      const uint32_t inputScalartype = _.GetComponentType(input_type);
+      if (resScalarType == inputScalartype) {
         return _.diag(SPV_ERROR_INVALID_DATA, inst)
-               << "Expected input to have different bit width from Result "
-                  "Type: "
+               << "Expected component type of Value to be different from "
+                  "component type of Result Type: "
                << spvOpcodeString(opcode);
+      }
       break;
     }
 

@@ -625,6 +625,18 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpConstructBMat4x2: out.debug << "Construct bmat4x2"; break;
     case EOpConstructBMat4x3: out.debug << "Construct bmat4x3"; break;
     case EOpConstructBMat4x4: out.debug << "Construct bmat4";   break;
+    case EOpConstructBFloat16:  out.debug << "Construct bfloat16_t"; break;
+    case EOpConstructBF16Vec2:  out.debug << "Construct bf16vec2";   break;
+    case EOpConstructBF16Vec3:  out.debug << "Construct bf16vec3";   break;
+    case EOpConstructBF16Vec4:  out.debug << "Construct bf16vec4";   break;
+    case EOpConstructFloatE5M2:  out.debug << "Construct floate5m2_t"; break;
+    case EOpConstructFloatE5M2Vec2:  out.debug << "Construct fe5m2vec2";   break;
+    case EOpConstructFloatE5M2Vec3:  out.debug << "Construct fe5m2vec3";   break;
+    case EOpConstructFloatE5M2Vec4:  out.debug << "Construct fe5m2vec4";   break;
+    case EOpConstructFloatE4M3:  out.debug << "Construct floate4m3_t"; break;
+    case EOpConstructFloatE4M3Vec2:  out.debug << "Construct fe4m3vec2";   break;
+    case EOpConstructFloatE4M3Vec3:  out.debug << "Construct fe4m3vec3";   break;
+    case EOpConstructFloatE4M3Vec4:  out.debug << "Construct fe4m3vec4";   break;
     case EOpConstructFloat16:   out.debug << "Construct float16_t"; break;
     case EOpConstructF16Vec2:   out.debug << "Construct f16vec2";   break;
     case EOpConstructF16Vec3:   out.debug << "Construct f16vec3";   break;
@@ -971,6 +983,10 @@ bool TOutputTraverser::visitAggregate(TVisit /* visit */, TIntermAggregate* node
     case EOpCooperativeVectorOuterProductAccumulateNV: out.debug << "Cooperative vector outer product accumulate NV"; break;
     case EOpCooperativeVectorReduceSumAccumulateNV: out.debug << "Cooperative vector reduce sum accumulate NV"; break;
 
+    case EOpTensorReadARM:   out.debug << "Read from tensor";  break;
+    case EOpTensorWriteARM:  out.debug << "Write to tensor";  break;
+    case EOpTensorSizeARM:   out.debug << "Get tensor size";  break;
+
     case EOpIsHelperInvocation: out.debug << "IsHelperInvocation"; break;
     case EOpDebugPrintf:  out.debug << "Debug printf";  break;
 
@@ -1159,6 +1175,9 @@ static void OutputConstantUnion(TInfoSink& out, const TIntermTyped* node, const 
         case EbtFloat:
         case EbtDouble:
         case EbtFloat16:
+        case EbtBFloat16:
+        case EbtFloatE5M2:
+        case EbtFloatE4M3:
             OutputDouble(out, constUnion[i].getDConst(), extra);
             out.debug << "\n";
             break;
@@ -1442,6 +1461,8 @@ void TIntermediate::output(TInfoSink& infoSink, bool tree)
             infoSink.debug << "using non_coherent_depth_attachment_readEXT\n";
         if (nonCoherentStencilAttachmentReadEXT)
             infoSink.debug << "using non_coherent_stencil_attachment_readEXT\n";
+        if (nonCoherentTileAttachmentReadQCOM)
+            infoSink.debug << "using non_coherent_attachment_readQCOM\n";
         if (depthLayout != EldNone)
             infoSink.debug << "using " << TQualifier::getLayoutDepthString(depthLayout) << "\n";
         if (blendEquations != 0) {
@@ -1475,6 +1496,13 @@ void TIntermediate::output(TInfoSink& infoSink, bool tree)
                     localSizeSpecId[1] << ", " <<
                     localSizeSpecId[2] << ")\n";
             }
+        }
+        if (nonCoherentTileAttachmentReadQCOM)
+            infoSink.debug << "using non_coherent_attachment_readQCOM\n";
+        if (isTileShadingRateQCOMSet()) {
+            infoSink.debug << "shading_rateQCOM = (" << tileShadingRateQCOM[0] << ", "
+                                                     << tileShadingRateQCOM[1] << ", "
+                                                     << tileShadingRateQCOM[2] << ")\n";
         }
         break;
 

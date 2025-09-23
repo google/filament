@@ -12,8 +12,8 @@ enum Number {
 };
 
 //CHECK:      %a = OpVariable %_ptr_Private_int Private
-//CHECK-NEXT: %b = OpVariable %_ptr_Workgroup_int Workgroup
-//CHECK-NEXT: %c = OpVariable %_ptr_Uniform_type_AppendStructuredBuffer_ Uniform
+//CHECK: %b = OpVariable %_ptr_Workgroup_int Workgroup
+//CHECK: %c = OpVariable %_ptr_Uniform_type_AppendStructuredBuffer_ Uniform
 
 //CHECK:      [[second:%[0-9]+]] = OpLoad %int %Second
 //CHECK-NEXT:                   OpStore %a [[second]]

@@ -27,7 +27,11 @@
 
 package common
 
+import (
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
+)
+
 // Config holds common command information
 type Config struct {
-	// Currently empty
+	OsWrapper oswrapper.OSWrapper
 }

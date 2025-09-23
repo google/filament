@@ -18,8 +18,9 @@
 
 #include "MetalHandles.h"
 
-#include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Logger.h>
+#include <utils/debug.h>
 
 #include <utility>
 
@@ -101,7 +102,7 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     context->pendingCommandBuffer = [context->commandQueue commandBuffer];
     // It's safe for this block to capture the context variable. MetalDriver::terminate will ensure
     // all frames and their completion handlers finish before context is deallocated.
-    uint64_t thisCommandBufferId = context->pendingCommandBufferId;
+    const uint64_t thisCommandBufferId = context->pendingCommandBufferId;
     [context->pendingCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         context->resourceTracker.clearResources((__bridge void*) buffer);
 
@@ -112,10 +113,15 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
         auto errorCode = (MTLCommandBufferError)buffer.error.code;
         if (@available(macOS 11.0, *)) {
             if (errorCode == MTLCommandBufferErrorMemoryless) {
-                utils::slog.w << "Metal: memoryless geometry limit reached. "
-                        "Continuing with private storage mode." << utils::io::endl;
+                LOG(WARNING) << "Metal: memoryless geometry limit reached. Continuing with private "
+                                "storage mode.";
                 context->memorylessLimitsReached = true;
             }
+        }
+
+        if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
+            LOG(ERROR) << "Filament Metal command buffer errored with code: " << errorCode << " ("
+                       << stringifyMTLCommandBufferError(errorCode) << ").";
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)

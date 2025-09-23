@@ -18,12 +18,11 @@
 #ifndef TNT_UTILS_FIXEDCIRCULARBUFFER_H
 #define TNT_UTILS_FIXEDCIRCULARBUFFER_H
 
-#include <utils/debug.h>
-
 #include <memory>
 #include <optional>
 #include <type_traits>
 
+#include <assert.h>
 #include <stddef.h>
 
 namespace utils {
@@ -31,7 +30,7 @@ namespace utils {
 template<typename T>
 class FixedCircularBuffer {
 public:
-    explicit FixedCircularBuffer(size_t capacity)
+    explicit FixedCircularBuffer(size_t const capacity)
         : mData(std::make_unique<T[]>(capacity)), mCapacity(capacity) {}
 
     size_t size() const noexcept { return mSize; }
@@ -57,7 +56,7 @@ public:
     }
 
     T pop() noexcept {
-        assert_invariant(mSize > 0);
+        assert(mSize > 0);
         T result = mData[mBegin];
         mBegin = (mBegin + 1) % mCapacity;
         mSize--;

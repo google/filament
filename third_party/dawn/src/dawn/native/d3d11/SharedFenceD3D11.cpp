@@ -42,8 +42,7 @@ bool IsSameHandle(DeviceBase* device, HANDLE handle, HANDLE other) {
         return true;
     }
 
-    auto deviceD3D11 = ToBackend(device);
-    return deviceD3D11->GetFunctions()->compareObjectHandles(handle, other);
+    return ::CompareObjectHandles(handle, other);
 }
 }  // namespace
 

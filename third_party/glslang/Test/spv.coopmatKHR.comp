@@ -1,0 +1,121 @@
+#version 450 core
+#extension GL_KHR_memory_scope_semantics : enable
+#extension GL_KHR_cooperative_matrix : enable
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+#extension GL_EXT_buffer_reference : enable
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+const int X = 8;
+layout(constant_id = 0) const int Y = 2;
+const int Z = X*Y;
+
+coopmat<float16_t, gl_ScopeSubgroup, Z, 8, gl_MatrixUseAccumulator> mC;
+coopmat<float16_t, gl_ScopeSubgroup, Z, 8, gl_MatrixUseAccumulator> mC2[3];
+
+layout(constant_id = 1) const float F = 3.0;
+
+const coopmat<float, gl_ScopeSubgroup, Z, 8, gl_MatrixUseAccumulator> mD = coopmat<float, gl_ScopeSubgroup, Z, 8, gl_MatrixUseAccumulator>(0.0);
+const coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> mD2 = coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator>(1);
+
+struct S { int a; int b; int c; };
+
+const S s = S(12, 23, 34);
+
+layout(set = 0, binding = 0, buffer_reference) coherent buffer Block {
+    float y[1024*1024];
+    float x[];
+} block;
+
+layout(set = 0, binding = 0) coherent buffer Block16 {
+    float16_t y[1024*1024];
+    float16_t x[];
+
+    Block b;
+} block16;
+
+coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> f16(coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> m) { return -m; }
+coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> f32(coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> m) { return -m; }
+
+layout(constant_id = 2) const int SC = 1;
+coopmat<float16_t, gl_ScopeSubgroup, SC, SC, gl_MatrixUseAccumulator> scm[SC][SC];
+
+// sized for coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator>
+shared uvec4 shmatrix[16*16*2/16];
+
+void main()
+{
+    coopmat<float, gl_ScopeSubgroup, 16, (2>1?8:4), gl_MatrixUseAccumulator> m = coopmat<float, gl_ScopeSubgroup, 16, (2>1?8:4), gl_MatrixUseAccumulator>(0.0);
+
+    m = m + m;
+    m = m - m;
+    m = -m;
+    m = 2.0*m;
+    m = m*2.0;
+
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> m2 = coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator>(m);
+
+    float x = m[1];
+    m[0] = x;
+
+    coopMatLoad(m, block.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m, block.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatLoad(m2, block16.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m2, block16.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatLoad(m, block16.b.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m, block16.b.x, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseA> A;
+    coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseB> B;
+    coopmat<float, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> C;
+    coopmat<float, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> D;
+    D = coopMatMulAdd(A, B, C);
+
+    int l = D.length();
+
+    coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> E;
+
+    coopmat<float16_t, gl_ScopeSubgroup, Z, Z, gl_MatrixUseAccumulator> F = coopmat<float16_t, gl_ScopeSubgroup, Z, Z, gl_MatrixUseAccumulator>(0.0);
+
+    coopmat<float, gl_ScopeSubgroup, 16, (2>1?8:4), gl_MatrixUseAccumulator> a[5];
+    a[3][0] = 1.0;
+
+    float md1 = mD[1];
+
+    md1 += (m += m)[1234];
+
+    mC2[1] = mC2[2];
+
+    coopMatLoad(m, block.y, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m, block.y, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatLoad(m2, block16.y, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(m2, block16.y, 16, 128, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> p1;
+    coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> p2;
+
+    p1 = f16(p1);
+    p2 = f32(p2);
+
+    p1 = coopmat<float16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator>(0.0);
+    p2 = coopmat<float, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator>(0.0);
+
+    p1 /= p1;
+
+    p1 *= float16_t(2.0);
+    p2 *= 4.0;
+
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 8, gl_MatrixUseAccumulator> ms;
+    coopMatLoad(ms, shmatrix, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+    coopMatStore(ms, shmatrix, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+
+    coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> ms8A;
+    coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseB> ms8B;
+    coopmat<int8_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseAccumulator> ms8C;
+    coopMatMulAdd(ms8A, ms8B, ms8C);
+    coopMatMulAdd(ms8A, ms8B, ms8C, 0);
+    coopMatMulAdd(ms8A, ms8B, ms8C, gl_MatrixOperandsSaturatingAccumulation);
+
+    coopmat<int16_t, gl_ScopeSubgroup, 8, 8, gl_MatrixUseA> m16;
+    coopMatStore(m16, shmatrix, 1, 2, gl_CooperativeMatrixLayoutRowMajor);
+}

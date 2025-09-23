@@ -26,6 +26,46 @@ function(pop_variable var)
     set(${var} ${val} PARENT_SCOPE)
 endfunction()
 
+if (DEFINED mimalloc_SOURCE_DIR)
+  # This allows flexible position of the mimalloc repo.
+  set(MIMALLOC_DIR ${mimalloc_SOURCE_DIR})
+else()
+  if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/mimalloc)
+    set(MIMALLOC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/mimalloc)
+  endif()
+endif()
+
+# Used on Windows by default, but allow opt-in on other platforms
+if (WIN32)
+  set(SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE ON)
+else()
+  set(SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE OFF)
+endif()
+
+# To avoid unexpected side effects on users of the static library, mimalloc
+# may only be used when building executables and shared libraries.
+include(CMakeDependentOption)
+cmake_dependent_option(SPIRV_TOOLS_USE_MIMALLOC
+  "Executables and shared libraries use mimalloc instead of the default allocator"
+  ${SPIRV_TOOLS_USE_MIMALLOC_DEFAULT_VALUE} "MIMALLOC_DIR" OFF)
+
+if (SPIRV_TOOLS_USE_MIMALLOC)
+  if (NOT WIN32)
+    push_variable(MI_OVERRIDE 0)
+  endif()
+  push_variable(MI_BUILD_TESTS 0)
+
+  add_subdirectory(${MIMALLOC_DIR} ${CMAKE_BINARY_DIR}/external/mimalloc EXCLUDE_FROM_ALL)
+  if (${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
+    target_compile_options(mimalloc-static PRIVATE -Wno-int-conversion)
+  endif()
+
+  if (NOT WIN32)
+    pop_variable(MI_OVERRIDE)
+  endif()
+  pop_variable(MI_BUILD_TESTS)
+endif()
+
 if (DEFINED SPIRV-Headers_SOURCE_DIR)
   # This allows flexible position of the SPIRV-Headers repo.
   set(SPIRV_HEADER_DIR ${SPIRV-Headers_SOURCE_DIR})

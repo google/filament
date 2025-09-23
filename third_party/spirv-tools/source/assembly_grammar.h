@@ -19,6 +19,7 @@
 #include "source/latest_version_spirv_header.h"
 #include "source/operand.h"
 #include "source/table.h"
+#include "source/util/span.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -28,54 +29,28 @@ namespace spvtools {
 class AssemblyGrammar {
  public:
   explicit AssemblyGrammar(const spv_const_context context)
-      : target_env_(context->target_env),
-        operandTable_(context->operand_table),
-        opcodeTable_(context->opcode_table),
-        extInstTable_(context->ext_inst_table) {}
-
-  // Returns true if the internal tables have been initialized with valid data.
-  bool isValid() const;
+      : target_env_(context->target_env) {}
 
   // Returns the SPIR-V target environment.
   spv_target_env target_env() const { return target_env_; }
 
   // Removes capabilities not available in the current target environment and
   // returns the rest.
+  // TODO(crbug.com/266223071) Remove this.
   CapabilitySet filterCapsAgainstTargetEnv(const spv::Capability* cap_array,
                                            uint32_t count) const;
-
-  // Fills in the desc parameter with the information about the opcode
-  // of the given name. Returns SPV_SUCCESS if the opcode was found, and
-  // SPV_ERROR_INVALID_LOOKUP if the opcode does not exist.
-  spv_result_t lookupOpcode(const char* name, spv_opcode_desc* desc) const;
-
-  // Fills in the desc parameter with the information about the opcode
-  // of the valid. Returns SPV_SUCCESS if the opcode was found, and
-  // SPV_ERROR_INVALID_LOOKUP if the opcode does not exist.
-  spv_result_t lookupOpcode(spv::Op opcode, spv_opcode_desc* desc) const;
-
-  // Fills in the desc parameter with the information about the given
-  // operand. Returns SPV_SUCCESS if the operand was found, and
-  // SPV_ERROR_INVALID_LOOKUP otherwise.
-  spv_result_t lookupOperand(spv_operand_type_t type, const char* name,
-                             size_t name_len, spv_operand_desc* desc) const;
-
-  // Fills in the desc parameter with the information about the given
-  // operand. Returns SPV_SUCCESS if the operand was found, and
-  // SPV_ERROR_INVALID_LOOKUP otherwise.
-  spv_result_t lookupOperand(spv_operand_type_t type, uint32_t operand,
-                             spv_operand_desc* desc) const;
+  // Removes capabilities not available in the current target environment and
+  // returns the rest.
+  CapabilitySet filterCapsAgainstTargetEnv(
+      const spvtools::utils::Span<const spv::Capability>& caps) const {
+    return filterCapsAgainstTargetEnv(caps.begin(),
+                                      static_cast<uint32_t>(caps.size()));
+  }
 
   // Finds operand entry in the grammar table and returns its name.
   // Returns "Unknown" if not found.
   const char* lookupOperandName(spv_operand_type_t type,
-                                uint32_t operand) const {
-    spv_operand_desc desc = nullptr;
-    if (lookupOperand(type, operand, &desc) != SPV_SUCCESS || !desc) {
-      return "Unknown";
-    }
-    return desc->name;
-  }
+                                uint32_t operand) const;
 
   // Finds the opcode for the given OpSpecConstantOp opcode name. The name
   // should not have the "Op" prefix.  For example, "IAdd" corresponds to
@@ -101,18 +76,6 @@ class AssemblyGrammar {
   spv_result_t parseMaskOperand(const spv_operand_type_t type,
                                 const char* textValue, uint32_t* pValue) const;
 
-  // Writes the extended operand with the given type and text to the *extInst
-  // parameter.
-  // Returns SPV_SUCCESS if the value could be found.
-  spv_result_t lookupExtInst(spv_ext_inst_type_t type, const char* textValue,
-                             spv_ext_inst_desc* extInst) const;
-
-  // Writes the extended operand with the given type and first encoded word
-  // to the *extInst parameter.
-  // Returns SPV_SUCCESS if the value could be found.
-  spv_result_t lookupExtInst(spv_ext_inst_type_t type, uint32_t firstWord,
-                             spv_ext_inst_desc* extInst) const;
-
   // Inserts the operands expected after the given typed mask onto the end
   // of the given pattern.
   //
@@ -129,9 +92,6 @@ class AssemblyGrammar {
 
  private:
   const spv_target_env target_env_;
-  const spv_operand_table operandTable_;
-  const spv_opcode_table opcodeTable_;
-  const spv_ext_inst_table extInstTable_;
 };
 
 }  // namespace spvtools

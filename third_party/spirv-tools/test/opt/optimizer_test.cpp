@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "spirv-tools/optimizer.hpp"
+
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "spirv-tools/libspirv.hpp"
-#include "spirv-tools/optimizer.hpp"
 #include "test/opt/pass_fixture.h"
 
 namespace spvtools {
@@ -504,6 +506,95 @@ OpFunctionEnd)";
   }
 
   EXPECT_EQ(test_disassembly, default_disassembly);
+}
+
+TEST(Optimizer, KeepDebugBuildIdentifierAfterDCE) {
+  // Test that DebugBuildIdentifier is not removed after DCE.
+  const std::string before = R"(
+OpCapability Shader
+OpExtension "SPV_KHR_non_semantic_info"
+%1 = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+OpMemoryModel Logical GLSL450
+OpEntryPoint GLCompute %main "main"
+OpExecutionMode %main LocalSize 8 8 1
+%4 = OpString "8937d8f571cf7b58d86d9d66196024f5d04e3186"
+%7 = OpString ""
+%9 = OpString ""
+OpSource Slang 1
+%19 = OpString ""
+%24 = OpString ""
+%25 = OpString ""
+OpName %main "main"
+%void = OpTypeVoid
+%uint = OpTypeInt 32 0
+%uint_0 = OpConstant %uint 0
+%uint_11 = OpConstant %uint 11
+%uint_5 = OpConstant %uint 5
+%uint_100 = OpConstant %uint 100
+%15 = OpTypeFunction %void
+%uint_6 = OpConstant %uint 6
+%uint_7 = OpConstant %uint 7
+%uint_1 = OpConstant %uint 1
+%uint_2 = OpConstant %uint 2
+%3 = OpExtInst %void %1 DebugBuildIdentifier %4 %uint_0
+%8 = OpExtInst %void %1 DebugSource %9 %7
+%13 = OpExtInst %void %1 DebugCompilationUnit %uint_100 %uint_5 %8 %uint_11
+%17 = OpExtInst %void %1 DebugTypeFunction %uint_0 %void
+%18 = OpExtInst %void %1 DebugFunction %19 %17 %8 %uint_5 %uint_6 %13 %19 %uint_0 %uint_5
+%23 = OpExtInst %void %1 DebugEntryPoint %18 %13 %24 %25
+%main = OpFunction %void None %15
+%16 = OpLabel
+%21 = OpExtInst %void %1 DebugFunctionDefinition %18 %main
+%32 = OpExtInst %void %1 DebugScope %18
+%26 = OpExtInst %void %1 DebugLine %8 %uint_7 %uint_7 %uint_1 %uint_2
+OpReturn
+%33 = OpExtInst %void %1 DebugNoScope
+OpFunctionEnd
+  )";
+
+  std::vector<uint32_t> binary;
+  SpirvTools tools(SPV_ENV_VULKAN_1_3);
+  tools.Assemble(before, &binary,
+                 SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+
+  Optimizer opt(SPV_ENV_VULKAN_1_3);
+  opt.RegisterPerformancePasses().RegisterPass(CreateAggressiveDCEPass());
+
+  std::vector<uint32_t> optimized;
+  ASSERT_TRUE(opt.Run(binary.data(), binary.size(), &optimized))
+      << before << "\n";
+
+  std::string after;
+  tools.Disassemble(optimized.data(), optimized.size(), &after,
+                    SPV_BINARY_TO_TEXT_OPTION_NO_HEADER);
+
+  // Test that the DebugBuildIdentifier is not removed after DCE.
+  size_t dbi_pos = after.find("DebugBuildIdentifier");
+  EXPECT_NE(dbi_pos, std::string::npos)
+      << "Was expecting the DebugBuildIdentifier to have been kept.";
+  std::string string_id;
+  std::string flags_id;
+  if (dbi_pos != std::string::npos) {
+    std::stringstream ss(after.substr(dbi_pos));
+    std::string temp;
+    char percent;
+    ss >> temp;  // Consume "DebugBuildIdentifier"
+    ss >> percent >> string_id;
+    ss >> percent >> flags_id;
+  }
+
+  EXPECT_FALSE(string_id.empty())
+      << "Could not find string id for DebugBuildIdentifier.";
+  EXPECT_FALSE(flags_id.empty())
+      << "Could not find flags id for DebugBuildIdentifier.";
+
+  bool found =
+      (after.find("%" + string_id + " = OpString") != std::string::npos);
+  EXPECT_TRUE(found)
+      << "Was expecting the DebugBuildIdentifier string to have been kept.";
+  found = (after.find("%" + flags_id + " = OpConstant") != std::string::npos);
+  EXPECT_TRUE(found)
+      << "Was expecting the DebugBuildIdentifier constant to have been kept.";
 }
 
 }  // namespace

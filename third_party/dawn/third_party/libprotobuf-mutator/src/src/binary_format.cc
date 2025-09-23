@@ -43,8 +43,8 @@ size_t SaveMessageAsBinary(const Message& message, uint8_t* data,
 }
 
 std::string SaveMessageAsBinary(const protobuf::Message& message) {
-  String tmp;
-  if (!message.SerializePartialToString(&tmp)) return {};
+  std::string tmp;
+  if (!message.SerializePartialToString(&tmp)) tmp.clear();
   return tmp;
 }
 

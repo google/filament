@@ -101,6 +101,9 @@ public:
     void bindVertexArray(VkVertexInputAttributeDescription const* attribDesc,
             VkVertexInputBindingDescription const* bufferDesc, uint8_t count);
 
+    // Set the current bindings for the pipeline and descriptor sets back to empty.
+    void resetBoundPipeline();
+
     // Destroys all managed Vulkan objects. This should be called before changing the VkDevice.
     void terminate() noexcept;
     void gc() noexcept;

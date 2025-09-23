@@ -33,22 +33,24 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"dawn.googlesource.com/dawn/tools/src/fileutils"
+	"dawn.googlesource.com/dawn/tools/src/oswrapper"
 )
 
+// TODO(crbug.com/344014313): Add unittest coverage assuming responses to HTTP
+// requests can be reasonably checked for correctness.
 // StartServer starts a localhost http server to display the coverage data.
 // Calls started() when the server is started, and then blocks until the context is cancelled.
-func StartServer(ctx context.Context, port int, covData []byte, started func() error) error {
+func StartServer(ctx context.Context, port int, covData []byte, started func() error, fsReader oswrapper.FilesystemReader) error {
 	ctx, stop := context.WithCancel(ctx)
 
 	url := fmt.Sprintf("http://localhost:%v/index.html", port)
 	handler := http.NewServeMux()
 	handler.HandleFunc("/index.html", func(w http.ResponseWriter, r *http.Request) {
-		f, err := os.Open(filepath.Join(fileutils.DawnRoot(), "tools/src/cov/view-coverage.html"))
+		f, err := fsReader.Open(filepath.Join(fileutils.DawnRoot(fsReader), "tools", "src", "cov", "view-coverage.html"))
 		if err != nil {
 			fmt.Fprint(w, "file not found")
 			w.WriteHeader(http.StatusNotFound)
@@ -71,7 +73,7 @@ func StartServer(ctx context.Context, port int, covData []byte, started func() e
 			fmt.Fprint(w, "file path must not contain '..'")
 			return
 		}
-		f, err := os.Open(filepath.Join(fileutils.DawnRoot(), r.URL.Path))
+		f, err := fsReader.Open(filepath.Join(fileutils.DawnRoot(fsReader), r.URL.Path))
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "file '%v' not found", r.URL.Path)

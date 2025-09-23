@@ -27,13 +27,13 @@ namespace filament {
 class VirtualMachineEnv {
 public:
     // must be called before VirtualMachineEnv::get() from a thread that is attached to the JavaVM
-    static jint JNI_OnLoad(JavaVM* vm) noexcept;
+    static jint JNI_OnLoad(JavaVM* vm);
 
     // must be called on backend thread
     static VirtualMachineEnv& get() noexcept;
 
     // can be called from any thread that already has a JniEnv
-    static JNIEnv* getThreadEnvironment() noexcept;
+    static JNIEnv* getThreadEnvironment();
 
     // must be called from the backend thread
     JNIEnv* getEnvironment() noexcept {
@@ -49,7 +49,7 @@ public:
 private:
     explicit VirtualMachineEnv(JavaVM* vm) noexcept;
     ~VirtualMachineEnv() noexcept;
-    JNIEnv* getEnvironmentSlow() noexcept;
+    JNIEnv* getEnvironmentSlow();
 
     static utils::Mutex sLock;
     static JavaVM* sVirtualMachine;

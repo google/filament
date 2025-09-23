@@ -47,7 +47,11 @@ if "%RUNNING_LOCALLY%" == "1" (
     set "PATH=%PATH%;C:\Program Files\7-Zip"
 )
 
-call "C:\Program Files (x86)\Microsoft Visual Studio\2019\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+:: Outdated windows-2019 pattern
+:: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+
+call "C:\Program Files\Microsoft Visual Studio\2022\%VISUAL_STUDIO_VERSION%\VC\Auxiliary\Build\vcvars64.bat"
+echo Passed vcvars64.bat
 if errorlevel 1 exit /b %errorlevel%
 
 msbuild /version
@@ -107,7 +111,7 @@ cd out\cmake-%variant%
 if errorlevel 1 exit /b %errorlevel%
 
 cmake ..\.. ^
-    -G "Visual Studio 16 2019" ^
+    -G "Visual Studio 17 2022" ^
     -A x64 ^
     %flag% ^
     -DCMAKE_INSTALL_PREFIX=..\%variant% ^

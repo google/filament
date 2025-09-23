@@ -204,23 +204,15 @@ public:
                 }, new T(std::forward<T>(functor))
         };
     }
-
-    // --------------------------------------------------------------------------------------------
-
     /**
-     * Computes the size in bytes needed to fit an image of given dimensions and format
+     * Computes the size in bytes for a pixel of given dimensions and format
      *
      * @param format    Format of the image pixels
      * @param type      Type of the image pixels
-     * @param stride    Stride of a row in pixels
-     * @param height    Height of the image in rows
-     * @param alignment Alignment in bytes of pixel rows
-     * @return The buffer size needed to fit this image in bytes
+     * @return The size of the specified pixel in bytes
      */
-    static constexpr size_t computeDataSize(PixelDataFormat format, PixelDataType type,
-            size_t stride, size_t height, size_t alignment) noexcept {
-        assert_invariant(alignment);
 
+    static constexpr size_t computePixelSize(PixelDataFormat format, PixelDataType type) noexcept {
         if (type == PixelDataType::COMPRESSED) {
             return 0;
         }
@@ -242,7 +234,7 @@ public:
             case PixelDataFormat::RGB_INTEGER:
                 n = 3;
                 break;
-            case PixelDataFormat::UNUSED: // shouldn't happen (used to be rgbm)
+            case PixelDataFormat::UNUSED:// shouldn't happen (used to be rgbm)
             case PixelDataFormat::RGBA:
             case PixelDataFormat::RGBA_INTEGER:
                 n = 4;
@@ -251,7 +243,7 @@ public:
 
         size_t bpp = n;
         switch (type) {
-            case PixelDataType::COMPRESSED: // Impossible -- to squash the IDE warnings
+            case PixelDataType::COMPRESSED:// Impossible -- to squash the IDE warnings
             case PixelDataType::UBYTE:
             case PixelDataType::BYTE:
                 // nothing to do
@@ -282,16 +274,35 @@ public:
                 bpp = 2;
                 break;
         }
+        return bpp;
+    }
 
+    // --------------------------------------------------------------------------------------------
+
+    /**
+     * Computes the size in bytes needed to fit an image of given dimensions and format
+     *
+     * @param format    Format of the image pixels
+     * @param type      Type of the image pixels
+     * @param stride    Stride of a row in pixels
+     * @param height    Height of the image in rows
+     * @param alignment Alignment in bytes of pixel rows
+     * @return The buffer size needed to fit this image in bytes
+     */
+    static constexpr size_t computeDataSize(PixelDataFormat format, PixelDataType type,
+            size_t stride, size_t height, size_t alignment) noexcept {
+        assert_invariant(alignment);
+
+        size_t bpp = computePixelSize(format, type);
         size_t const bpr = bpp * stride;
         size_t const bprAligned = (bpr + (alignment - 1)) & (~alignment + 1);
         return bprAligned * height;
     }
 
     //! left coordinate in pixels
-    uint32_t left   = 0;
+    uint32_t left = 0;
     //! top coordinate in pixels
-    uint32_t top    = 0;
+    uint32_t top = 0;
     union {
         struct {
             //! stride in pixels

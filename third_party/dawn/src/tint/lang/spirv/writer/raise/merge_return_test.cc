@@ -213,9 +213,7 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_OneSideReturns) {
 
 TEST_F(SpirvWriter_MergeReturnTest, NoModify_EntryPoint_IfElse_OneSideReturns) {
     auto* cond = b.FunctionParam(ty.u32());
-    core::IOAttributes attr;
-    attr.location = 0;
-    cond->SetAttributes(attr);
+    cond->SetLocation(0);
     auto* func = b.ComputeFunction("entrypointfunction", 2_u, 3_u, 4_u);
     func->SetParams({cond});
     b.Append(func->Block(), [&] {
@@ -673,17 +671,27 @@ TEST_F(SpirvWriter_MergeReturnTest, IfElse_BothSidesReturn_NestedInLoop) {
     auto* expect = R"(
 %foo = func(%2:bool):void {
   $B1: {
+    %continue_execution:ptr<function, bool, read_write> = var true
     loop [b: $B2] {  # loop_1
       $B2: {  # body
         if %2 [t: $B3, f: $B4] {  # if_1
           $B3: {  # true
+            store %continue_execution, false
             exit_if  # if_1
           }
           $B4: {  # false
+            store %continue_execution, false
             exit_if  # if_1
           }
         }
-        exit_loop  # loop_1
+        %4:bool = load %continue_execution
+        %5:bool = not %4
+        if %5 [t: $B5] {  # if_2
+          $B5: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        unreachable
       }
     }
     ret
@@ -846,7 +854,7 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
-TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested) {
+TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_ReturnAtAllLevels) {
     auto* global = b.Var(ty.ptr<private_, i32>());
     mod.root_block->Append(global);
 
@@ -992,7 +1000,149 @@ $B1: {  # root
     EXPECT_EQ(expect, str());
 }
 
-TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_TrivialMerge) {
+TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_ReturnOnlyInner) {
+    auto* global = b.Var(ty.ptr<private_, i32>());
+    mod.root_block->Append(global);
+
+    auto* func = b.Function("foo", ty.i32());
+    auto* condA = b.FunctionParam("condA", ty.bool_());
+    auto* condB = b.FunctionParam("condB", ty.bool_());
+    auto* condC = b.FunctionParam("condC", ty.bool_());
+    func->SetParams({condA, condB, condC});
+
+    b.Append(func->Block(), [&] {
+        auto* ifelse_outer = b.If(condA);
+        b.Append(ifelse_outer->True(), [&] { b.ExitIf(ifelse_outer); });
+        b.Append(ifelse_outer->False(), [&] {
+            auto* ifelse_middle = b.If(condB);
+            b.Append(ifelse_middle->True(), [&] {
+                auto* ifelse_inner = b.If(condC);
+                b.Append(ifelse_inner->True(), [&] { b.Return(func, 1_i); });
+                b.Append(ifelse_inner->False(), [&] { b.ExitIf(ifelse_inner); });
+
+                b.Store(global, 1_i);
+                b.ExitIf(ifelse_middle);
+            });
+            b.Append(ifelse_middle->False(), [&] { b.ExitIf(ifelse_middle); });
+            b.Store(global, 2_i);
+            b.ExitIf(ifelse_outer);
+        });
+        b.Store(global, 3_i);
+        b.Return(func, b.Add(ty.i32(), 5_i, 6_i));
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %1:ptr<private, i32, read_write> = var undef
+}
+
+%foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
+  $B2: {
+    if %condA [t: $B3, f: $B4] {  # if_1
+      $B3: {  # true
+        exit_if  # if_1
+      }
+      $B4: {  # false
+        if %condB [t: $B5, f: $B6] {  # if_2
+          $B5: {  # true
+            if %condC [t: $B7, f: $B8] {  # if_3
+              $B7: {  # true
+                ret 1i
+              }
+              $B8: {  # false
+                exit_if  # if_3
+              }
+            }
+            store %1, 1i
+            exit_if  # if_2
+          }
+          $B6: {  # false
+            exit_if  # if_2
+          }
+        }
+        store %1, 2i
+        exit_if  # if_1
+      }
+    }
+    store %1, 3i
+    %6:i32 = add 5i, 6i
+    ret %6
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %1:ptr<private, i32, read_write> = var undef
+}
+
+%foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
+  $B2: {
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
+    if %condA [t: $B3, f: $B4] {  # if_1
+      $B3: {  # true
+        exit_if  # if_1
+      }
+      $B4: {  # false
+        if %condB [t: $B5, f: $B6] {  # if_2
+          $B5: {  # true
+            if %condC [t: $B7, f: $B8] {  # if_3
+              $B7: {  # true
+                store %continue_execution, false
+                store %return_value, 1i
+                exit_if  # if_3
+              }
+              $B8: {  # false
+                exit_if  # if_3
+              }
+            }
+            %8:bool = load %continue_execution
+            if %8 [t: $B9] {  # if_4
+              $B9: {  # true
+                store %1, 1i
+                exit_if  # if_4
+              }
+            }
+            exit_if  # if_2
+          }
+          $B6: {  # false
+            exit_if  # if_2
+          }
+        }
+        %9:bool = load %continue_execution
+        if %9 [t: $B10] {  # if_5
+          $B10: {  # true
+            store %1, 2i
+            exit_if  # if_5
+          }
+        }
+        exit_if  # if_1
+      }
+    }
+    %10:bool = load %continue_execution
+    if %10 [t: $B11] {  # if_6
+      $B11: {  # true
+        store %1, 3i
+        %11:i32 = add 5i, 6i
+        store %return_value, %11
+        exit_if  # if_6
+      }
+    }
+    %12:i32 = load %return_value
+    ret %12
+  }
+}
+)";
+
+    Run(MergeReturn);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_ReturnAllLevels_TrivialMerge) {
     auto* global = b.Var(ty.ptr<private_, i32>());
     mod.root_block->Append(global);
 
@@ -1099,6 +1249,116 @@ $B1: {  # root
     if %8 [t: $B9] {  # if_4
       $B9: {  # true
         store %return_value, 3i
+        exit_if  # if_4
+      }
+    }
+    %9:i32 = load %return_value
+    ret %9
+  }
+}
+)";
+
+    Run(MergeReturn);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(SpirvWriter_MergeReturnTest, IfElse_Nested_ReturnOnlyInner_TrivialMerge) {
+    auto* func = b.Function("foo", ty.i32());
+    auto* condA = b.FunctionParam("condA", ty.bool_());
+    auto* condB = b.FunctionParam("condB", ty.bool_());
+    auto* condC = b.FunctionParam("condC", ty.bool_());
+    func->SetParams({condA, condB, condC});
+
+    b.Append(func->Block(), [&] {
+        auto* ifelse_outer = b.If(condA);
+        b.Append(ifelse_outer->True(), [&] { b.ExitIf(ifelse_outer); });
+        b.Append(ifelse_outer->False(), [&] {
+            auto* ifelse_middle = b.If(condB);
+            b.Append(ifelse_middle->True(), [&] {
+                auto* ifelse_inner = b.If(condC);
+                b.Append(ifelse_inner->True(), [&] { b.Return(func, 1_i); });
+                b.Append(ifelse_inner->False(), [&] { b.ExitIf(ifelse_inner); });
+
+                b.ExitIf(ifelse_middle);
+            });
+            b.Append(ifelse_middle->False(), [&] { b.ExitIf(ifelse_middle); });
+            b.ExitIf(ifelse_outer);
+        });
+        b.Return(func, b.Add(ty.i32(), 5_i, 6_i));
+    });
+
+    auto* src = R"(
+%foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
+  $B1: {
+    if %condA [t: $B2, f: $B3] {  # if_1
+      $B2: {  # true
+        exit_if  # if_1
+      }
+      $B3: {  # false
+        if %condB [t: $B4, f: $B5] {  # if_2
+          $B4: {  # true
+            if %condC [t: $B6, f: $B7] {  # if_3
+              $B6: {  # true
+                ret 1i
+              }
+              $B7: {  # false
+                exit_if  # if_3
+              }
+            }
+            exit_if  # if_2
+          }
+          $B5: {  # false
+            exit_if  # if_2
+          }
+        }
+        exit_if  # if_1
+      }
+    }
+    %5:i32 = add 5i, 6i
+    ret %5
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%condA:bool, %condB:bool, %condC:bool):i32 {
+  $B1: {
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
+    if %condA [t: $B2, f: $B3] {  # if_1
+      $B2: {  # true
+        exit_if  # if_1
+      }
+      $B3: {  # false
+        if %condB [t: $B4, f: $B5] {  # if_2
+          $B4: {  # true
+            if %condC [t: $B6, f: $B7] {  # if_3
+              $B6: {  # true
+                store %continue_execution, false
+                store %return_value, 1i
+                exit_if  # if_3
+              }
+              $B7: {  # false
+                exit_if  # if_3
+              }
+            }
+            exit_if  # if_2
+          }
+          $B5: {  # false
+            exit_if  # if_2
+          }
+        }
+        exit_if  # if_1
+      }
+    }
+    %7:bool = load %continue_execution
+    if %7 [t: $B8] {  # if_4
+      $B8: {  # true
+        %8:i32 = add 5i, 6i
+        store %return_value, %8
         exit_if  # if_4
       }
     }
@@ -1879,29 +2139,30 @@ $B1: {  # root
           }
         }
         %6:bool = load %continue_execution
-        if %6 [t: $B7] {  # if_2
+        %7:bool = not %6
+        if %7 [t: $B7] {  # if_2
           $B7: {  # true
-            store %1, 2i
-            continue  # -> $B4
+            exit_loop  # loop_1
           }
         }
-        exit_loop  # loop_1
+        store %1, 2i
+        continue  # -> $B4
       }
       $B4: {  # continuing
         store %1, 1i
         break_if true  # -> [t: exit_loop loop_1, f: $B3]
       }
     }
-    %7:bool = load %continue_execution
-    if %7 [t: $B8] {  # if_3
+    %8:bool = load %continue_execution
+    if %8 [t: $B8] {  # if_3
       $B8: {  # true
         store %1, 3i
         store %return_value, 43i
         exit_if  # if_3
       }
     }
-    %8:i32 = load %return_value
-    ret %8
+    %9:i32 = load %return_value
+    ret %9
   }
 }
 )";
@@ -1992,21 +2253,22 @@ $B1: {  # root
           }
         }
         %6:bool = load %continue_execution
-        if %6 [t: $B7] {  # if_2
+        %7:bool = not %6
+        if %7 [t: $B7] {  # if_2
           $B7: {  # true
-            store %1, 2i
-            continue  # -> $B4
+            exit_loop  # loop_1
           }
         }
-        exit_loop  # loop_1
+        store %1, 2i
+        continue  # -> $B4
       }
       $B4: {  # continuing
         store %1, 1i
         next_iteration  # -> $B3
       }
     }
-    %7:i32 = load %return_value
-    ret %7
+    %8:i32 = load %return_value
+    ret %8
   }
 }
 )";
@@ -2121,6 +2383,251 @@ TEST_F(SpirvWriter_MergeReturnTest, DISABLED_Loop_WithBasicBlockArgumentsOnMerge
     }
     %9:i32 = load %return_value
     ret %9
+  }
+}
+)";
+
+    Run(MergeReturn);
+
+    EXPECT_EQ(expect, str());
+}
+
+// Make sure that we do not conditionalize a declaration in a loop body that needs to be in scope in
+// the loop continuing block. See crbug.com/420345727.
+TEST_F(SpirvWriter_MergeReturnTest, Loop_ConditionalReturnInBody_ThenVarDeclUsedInContinuing) {
+    auto* cond = b.FunctionParam(ty.bool_());
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams({cond});
+
+    b.Append(func->Block(), [&] {
+        auto* loop = b.Loop();
+        b.Append(loop->Body(), [&] {
+            auto* ifelse = b.If(cond);
+            b.Append(ifelse->True(), [&] { b.Return(func, 42_i); });
+            b.Append(ifelse->False(), [&] { b.ExitIf(ifelse); });
+
+            auto* decl = b.Var<function, i32>();
+            b.Continue(loop);
+
+            b.Append(loop->Continuing(), [&] {
+                b.Store(decl, 1_i);
+                b.BreakIf(loop, true);
+            });
+        });
+
+        b.Return(func, 43_i);
+    });
+
+    auto* src = R"(
+%foo = func(%2:bool):i32 {
+  $B1: {
+    loop [b: $B2, c: $B3] {  # loop_1
+      $B2: {  # body
+        if %2 [t: $B4, f: $B5] {  # if_1
+          $B4: {  # true
+            ret 42i
+          }
+          $B5: {  # false
+            exit_if  # if_1
+          }
+        }
+        %3:ptr<function, i32, read_write> = var undef
+        continue  # -> $B3
+      }
+      $B3: {  # continuing
+        store %3, 1i
+        break_if true  # -> [t: exit_loop loop_1, f: $B2]
+      }
+    }
+    ret 43i
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%2:bool):i32 {
+  $B1: {
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
+    loop [b: $B2, c: $B3] {  # loop_1
+      $B2: {  # body
+        if %2 [t: $B4, f: $B5] {  # if_1
+          $B4: {  # true
+            store %continue_execution, false
+            store %return_value, 42i
+            exit_if  # if_1
+          }
+          $B5: {  # false
+            exit_if  # if_1
+          }
+        }
+        %5:bool = load %continue_execution
+        %6:bool = not %5
+        if %6 [t: $B6] {  # if_2
+          $B6: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        %7:ptr<function, i32, read_write> = var undef
+        continue  # -> $B3
+      }
+      $B3: {  # continuing
+        store %7, 1i
+        break_if true  # -> [t: exit_loop loop_1, f: $B2]
+      }
+    }
+    %8:bool = load %continue_execution
+    if %8 [t: $B7] {  # if_3
+      $B7: {  # true
+        store %return_value, 43i
+        exit_if  # if_3
+      }
+    }
+    %9:i32 = load %return_value
+    ret %9
+  }
+}
+)";
+
+    Run(MergeReturn);
+
+    EXPECT_EQ(expect, str());
+}
+
+// Make sure that we do not conditionalize a declaration in a loop body that needs to be in scope in
+// the loop continuing block. See crbug.com/420345727.
+TEST_F(SpirvWriter_MergeReturnTest,
+       Loop_ConditionalReturnInBody_ThenVarDeclUsedInContinuing_Nested) {
+    auto* cond = b.FunctionParam(ty.bool_());
+    auto* func = b.Function("foo", ty.i32());
+    func->SetParams({cond});
+
+    b.Append(func->Block(), [&] {
+        auto* outer_loop = b.Loop();
+        b.Append(outer_loop->Body(), [&] {
+            auto* inner_loop = b.Loop();
+            b.Append(inner_loop->Body(), [&] {
+                auto* ifelse = b.If(cond);
+                b.Append(ifelse->True(), [&] { b.Return(func, 42_i); });
+                b.Append(ifelse->False(), [&] { b.ExitIf(ifelse); });
+
+                auto* decl = b.Var<function, i32>();
+                b.Continue(inner_loop);
+
+                b.Append(inner_loop->Continuing(), [&] {
+                    b.Store(decl, 1_i);
+                    b.BreakIf(inner_loop, true);
+                });
+            });
+
+            auto* decl = b.Var<function, i32>();
+            b.Continue(outer_loop);
+
+            b.Append(outer_loop->Continuing(), [&] {
+                b.Store(decl, 1_i);
+                b.BreakIf(outer_loop, true);
+            });
+        });
+
+        b.Return(func, 43_i);
+    });
+
+    auto* src = R"(
+%foo = func(%2:bool):i32 {
+  $B1: {
+    loop [b: $B2, c: $B3] {  # loop_1
+      $B2: {  # body
+        loop [b: $B4, c: $B5] {  # loop_2
+          $B4: {  # body
+            if %2 [t: $B6, f: $B7] {  # if_1
+              $B6: {  # true
+                ret 42i
+              }
+              $B7: {  # false
+                exit_if  # if_1
+              }
+            }
+            %3:ptr<function, i32, read_write> = var undef
+            continue  # -> $B5
+          }
+          $B5: {  # continuing
+            store %3, 1i
+            break_if true  # -> [t: exit_loop loop_2, f: $B4]
+          }
+        }
+        %4:ptr<function, i32, read_write> = var undef
+        continue  # -> $B3
+      }
+      $B3: {  # continuing
+        store %4, 1i
+        break_if true  # -> [t: exit_loop loop_1, f: $B2]
+      }
+    }
+    ret 43i
+  }
+}
+)";
+    ASSERT_EQ(src, str());
+
+    auto* expect = R"(
+%foo = func(%2:bool):i32 {
+  $B1: {
+    %return_value:ptr<function, i32, read_write> = var undef
+    %continue_execution:ptr<function, bool, read_write> = var true
+    loop [b: $B2, c: $B3] {  # loop_1
+      $B2: {  # body
+        loop [b: $B4, c: $B5] {  # loop_2
+          $B4: {  # body
+            if %2 [t: $B6, f: $B7] {  # if_1
+              $B6: {  # true
+                store %continue_execution, false
+                store %return_value, 42i
+                exit_if  # if_1
+              }
+              $B7: {  # false
+                exit_if  # if_1
+              }
+            }
+            %5:bool = load %continue_execution
+            %6:bool = not %5
+            if %6 [t: $B8] {  # if_2
+              $B8: {  # true
+                exit_loop  # loop_2
+              }
+            }
+            %7:ptr<function, i32, read_write> = var undef
+            continue  # -> $B5
+          }
+          $B5: {  # continuing
+            store %7, 1i
+            break_if true  # -> [t: exit_loop loop_2, f: $B4]
+          }
+        }
+        %8:bool = load %continue_execution
+        %9:bool = not %8
+        if %9 [t: $B9] {  # if_3
+          $B9: {  # true
+            exit_loop  # loop_1
+          }
+        }
+        %10:ptr<function, i32, read_write> = var undef
+        continue  # -> $B3
+      }
+      $B3: {  # continuing
+        store %10, 1i
+        break_if true  # -> [t: exit_loop loop_1, f: $B2]
+      }
+    }
+    %11:bool = load %continue_execution
+    if %11 [t: $B10] {  # if_4
+      $B10: {  # true
+        store %return_value, 43i
+        exit_if  # if_4
+      }
+    }
+    %12:i32 = load %return_value
+    ret %12
   }
 }
 )";
@@ -2272,27 +2779,28 @@ $B1: {  # root
           }
         }
         %7:bool = load %continue_execution
-        if %7 [t: $B7] {  # if_2
+        %8:bool = not %7
+        if %8 [t: $B7] {  # if_2
           $B7: {  # true
-            store %1, 2i
             exit_switch  # switch_1
           }
         }
+        store %1, 2i
         exit_switch  # switch_1
       }
       $B4: {  # case
         exit_switch  # switch_1
       }
     }
-    %8:bool = load %continue_execution
-    if %8 [t: $B8] {  # if_3
+    %9:bool = load %continue_execution
+    if %9 [t: $B8] {  # if_3
       $B8: {  # true
         store %return_value, 0i
         exit_if  # if_3
       }
     }
-    %9:i32 = load %return_value
-    ret %9
+    %10:i32 = load %return_value
+    ret %10
   }
 }
 )";
@@ -2426,12 +2934,13 @@ TEST_F(SpirvWriter_MergeReturnTest, LoopIfReturnThenContinue) {
           }
         }
         %3:bool = load %continue_execution
-        if %3 [t: $B4] {  # if_2
+        %4:bool = not %3
+        if %4 [t: $B4] {  # if_2
           $B4: {  # true
-            continue  # -> $B5
+            exit_loop  # loop_1
           }
         }
-        exit_loop  # loop_1
+        continue  # -> $B5
       }
     }
     ret

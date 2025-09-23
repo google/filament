@@ -21,7 +21,11 @@
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverApiForward.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
+#include <utils/debug.h>
+
+#include <utility>
 
 #include <stddef.h>
 
@@ -31,7 +35,14 @@ template<typename T, size_t N = 1>
 class TypedUniformBuffer {
 public:
 
+    TypedUniformBuffer() noexcept = default;
+
     explicit TypedUniformBuffer(backend::DriverApi& driver) noexcept {
+        init(driver);
+    }
+
+    void init(backend::DriverApi& driver) noexcept {
+        assert_invariant(!mUboHandle);
         mUboHandle = driver.createBufferObject(
                 mTypedBuffer.getSize(),
                 backend::BufferObjectBinding::UNIFORM,
@@ -39,7 +50,12 @@ public:
     }
 
     void terminate(backend::DriverApi& driver) noexcept {
-        driver.destroyBufferObject(mUboHandle);
+        assert_invariant(mUboHandle);
+        driver.destroyBufferObject(std::move(mUboHandle));
+    }
+
+    ~TypedUniformBuffer() noexcept {
+        assert_invariant(!mUboHandle);
     }
 
     TypedBuffer<T,N>& getTypedBuffer() noexcept {

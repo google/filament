@@ -647,6 +647,9 @@ TEST_P(TextureZeroInitTest, IndependentDepthStencilLoadAfterDiscard) {
     // TODO(dawn:1549) Fails on Qualcomm-based Android devices.
     DAWN_SUPPRESS_TEST_IF(IsAndroid() && IsQualcomm());
 
+    // TODO(42242119): fail on Qualcomm Adreno X1.
+    DAWN_SUPPRESS_TEST_IF(IsD3D11() && IsQualcomm());
+
     wgpu::TextureDescriptor depthStencilDescriptor = CreateTextureDescriptor(
         1, 1, wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopySrc,
         kDepthStencilFormat);
@@ -2067,6 +2070,8 @@ TEST_P(CompressedTextureZeroInitTest, HalfCopyBufferToTexture) {
 // Test that 0 lazy clear count happens when we copy buffer to texture to a nonzero mip level
 // (with physical size different from the virtual mip size)
 TEST_P(CompressedTextureZeroInitTest, FullCopyToNonZeroMipLevel) {
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
+
     wgpu::TextureDescriptor textureDescriptor;
     textureDescriptor.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst |
                               wgpu::TextureUsage::TextureBinding;
@@ -2091,6 +2096,7 @@ TEST_P(CompressedTextureZeroInitTest, FullCopyToNonZeroMipLevel) {
 TEST_P(CompressedTextureZeroInitTest, HalfCopyToNonZeroMipLevel) {
     // TODO(crbug.com/346264229): diagnose this failure on ANGLE/D3D11
     DAWN_SUPPRESS_TEST_IF(IsANGLED3D11());
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
 
     wgpu::TextureDescriptor textureDescriptor;
     textureDescriptor.usage = wgpu::TextureUsage::CopySrc | wgpu::TextureUsage::CopyDst |
@@ -2205,7 +2211,7 @@ TEST_P(CompressedTextureZeroInitTest, FullCopyTextureToTextureMipLevel) {
 // half copy texture to texture, lazy clears are needed for noncopied half
 TEST_P(CompressedTextureZeroInitTest, HalfCopyTextureToTextureMipLevel) {
     // Compatibility mode does not support compressed texture-to-texture copies.
-    DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode());
+    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
 
     // create srcTexture with data
     wgpu::TextureDescriptor srcDescriptor =
@@ -2258,7 +2264,8 @@ TEST_P(CompressedTextureZeroInitTest, HalfCopyTextureToTextureMipLevel) {
 // stride between images.
 TEST_P(CompressedTextureZeroInitTest, Copy2DArrayCompressedB2T2B) {
     // Compatibility mode does not support compressed texture-to-buffer copies.
-    DAWN_SUPPRESS_TEST_IF(IsCompatibilityMode());
+    DAWN_TEST_UNSUPPORTED_IF(IsCompatibilityMode());
+    DAWN_SUPPRESS_TEST_IF(IsWARP());
 
     // create srcTexture with data
     wgpu::TextureDescriptor textureDescriptor = CreateTextureDescriptor(

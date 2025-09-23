@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -67,6 +68,7 @@ namespace wgpu::interop {
 // Primitive JavaScript types
 ////////////////////////////////////////////////////////////////////////////////
 using Object = Napi::Object;
+using Event = Napi::Object;
 using ArrayBuffer = Napi::ArrayBuffer;
 using Int8Array = Napi::TypedArrayOf<int8_t>;
 using Int16Array = Napi::TypedArrayOf<int16_t>;
@@ -88,9 +90,8 @@ using FrozenArray = std::vector<T>;
 // A wrapper class for integers that's as transparent as possible and is used to distinguish
 // that the type is tagged with the [Clamp] WebIDL attribute.
 template <typename T>
+    requires std::integral<T>
 struct ClampedInteger {
-    static_assert(std::is_integral_v<T>);
-
     using IntegerType = T;
     ClampedInteger() : value(0) {}
     // NOLINTNEXTLINE(runtime/explicit)
@@ -102,9 +103,8 @@ struct ClampedInteger {
 // A wrapper class for integers that's as transparent as possible and is used to distinguish
 // that the type is tagged with the [EnforceRange] WebIDL attribute.
 template <typename T>
+    requires std::integral<T>
 struct EnforceRangeInteger {
-    static_assert(std::is_integral_v<T>);
-
     using IntegerType = T;
     EnforceRangeInteger() : value(0) {}
     // NOLINTNEXTLINE(runtime/explicit)
@@ -392,6 +392,19 @@ class Converter<Napi::TypedArrayOf<T>> {
 };
 
 template <>
+class Converter<Napi::Function> {
+  public:
+    static inline Result FromJS(Napi::Env, Napi::Value value, Napi::Function& out) {
+        if (value.IsFunction()) {
+            out = value.As<Napi::Function>();
+            return Success;
+        }
+        return Error("value is not a Function");
+    }
+    static inline Napi::Value ToJS(Napi::Env, Napi::Function value) { return value; }
+};
+
+template <>
 class Converter<std::string> {
   public:
     static Result FromJS(Napi::Env, Napi::Value, std::string&);
@@ -656,16 +669,16 @@ class Converter<std::unordered_map<K, V>> {
         std::unordered_map<K, V> map(keys.Length());
         for (uint32_t i = 0; i < static_cast<uint32_t>(keys.Length()); i++) {
             K key{};
-            V value{};
+            V val{};
             auto key_res = Converter<K>::FromJS(env, keys[i], key);
             if (!key_res) {
                 return key_res.Append("for object key");
             }
-            auto value_res = Converter<V>::FromJS(env, obj.Get(keys[i]), value);
+            auto value_res = Converter<V>::FromJS(env, obj.Get(keys[i]), val);
             if (!value_res) {
                 return value_res.Append("for object value of key: ", key);
             }
-            map[key] = value;
+            map[key] = val;
         }
         out = std::move(map);
         return Success;
@@ -828,6 +841,8 @@ Napi::Value CatchExceptionIntoPromise(Napi::Env env, F&& f) {
     deferred.Reject(error.Value());
     return deferred.Promise();
 }
+
+void ChainPrototype(Napi::Value baseClassValue, Napi::Function derivedClassConstructor);
 
 }  // namespace wgpu::interop
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,17 +64,17 @@ public:
 
     void terminate(backend::DriverApi& driver) noexcept;
 
-    // Returns false if we need to skip this frame, because the GPU is running behind the CPU;
-    // In that case, don't call render endFrame()
-    // Returns true if rendering can proceed. Always call endFrame() when done.
-    bool beginFrame(backend::DriverApi& driver) noexcept;
+    // Returns false if we should skip this frame because the GPU is running behind the CPU.
+    // In that case, don't call submitFrame().
+    // Returns true if rendering can proceed. Always call submitFrame() when done.
+    bool shouldRenderFrame(backend::DriverApi& driver) const noexcept;
 
-    void endFrame(backend::DriverApi& driver) noexcept;
+    void submitFrame(backend::DriverApi& driver) noexcept;
 
 private:
     using Container = std::array<backend::Handle<backend::HwFence>, MAX_FRAME_LATENCY>;
-    mutable Container mDelayedFences{};
-    uint8_t const mLast;
+    Container mDelayedFences{};
+    uint8_t const mLatency;
 };
 
 } // namespace filament

@@ -229,6 +229,14 @@ struct State {
             while (!to_replace.IsEmpty()) {
                 auto* inst = to_replace.Pop();
                 for (auto usage : inst->Result()->UsagesUnsorted()) {
+                    // This is an edge case where we have to specifically verify bounds access for
+                    // these new arrays for all usages.
+                    if (NeedsEval(usage->instruction)) {
+                        auto r = eval::Eval(b, usage->instruction);
+                        if (r != Success) {
+                            return r.Failure();
+                        }
+                    }
                     if (!usage->instruction->Is<core::ir::Let>()) {
                         continue;
                     }

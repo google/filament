@@ -56,9 +56,6 @@ class StringStream {
                                       std::is_same_v<SetFillRetTy, std::decay_t<T>>;
 
   public:
-    /// @see tint::traits::IsOStream
-    static constexpr bool IsStreamWriter = true;
-
     /// Constructor
     StringStream();
     /// Copy constructor

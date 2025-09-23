@@ -767,8 +767,6 @@ void main(float in_var_color : COLOR) {
         %101 = OpExtInst %void %1 DebugScope %22
                OpLine %5 13 7
                OpStore %100 %31
-               OpNoLine
-        %102 = OpExtInst %void %1 DebugNoScope
          %36 = OpExtInst %void %1 DebugDeclare %25 %100 %13
                OpReturn
                OpFunctionEnd

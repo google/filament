@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19519,6 +19519,14 @@ _bluegl_glVideoCaptureStreamParameterdvNV:
 _bluegl_glFramebufferTextureMultiviewOVR:
 	adrp	x16, ___blue_glCore_glFramebufferTextureMultiviewOVR@GOTPAGE
 	ldr	x16, [x16, ___blue_glCore_glFramebufferTextureMultiviewOVR@GOTPAGEOFF]
+	ldr	x16, [x16]
+	br	x16
+
+.private_extern _bluegl_glFramebufferTextureMultisampleMultiviewOVR
+	.align	2
+_bluegl_glFramebufferTextureMultisampleMultiviewOVR:
+	adrp	x16, ___blue_glCore_glFramebufferTextureMultisampleMultiviewOVR@GOTPAGE
+	ldr	x16, [x16, ___blue_glCore_glFramebufferTextureMultisampleMultiviewOVR@GOTPAGEOFF]
 	ldr	x16, [x16]
 	br	x16
 

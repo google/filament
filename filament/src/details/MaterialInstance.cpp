@@ -35,12 +35,12 @@
 #include <backend/Handle.h>
 
 #include <utils/BitmaskEnum.h>
+#include <utils/CString.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
-#include <utils/CString.h>
 #include <utils/ostream.h>
-#include <utils/Panic.h>
-#include <utils/Log.h>
 
 #include <math/scalar.h>
 
@@ -80,9 +80,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
     // expected by the per-material descriptor-set layout
     size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
     mUniforms = UniformBuffer(uboSize);
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::STATIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+            BufferUsage::STATIC, utils::CString{ material->getName() });
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
@@ -147,11 +146,9 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
     FEngine::DriverApi& driver = engine.getDriverApi();
     FMaterial const* const material = other->getMaterial();
 
-    size_t const uboSize = std::max(size_t(16), material->getUniformInterfaceBlock().getSize());
-    mUniforms = UniformBuffer(uboSize);
-    mUbHandle = driver.createBufferObject(mUniforms.getSize(),
-            BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC);
-    driver.setDebugTag(mUbHandle.getId(), material->getName());
+    mUniforms.setUniforms(other->getUniformBuffer());
+    mUbHandle = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
+            BufferUsage::DYNAMIC, CString{ material->getName() });
 
     // set the UBO, always descriptor 0
     mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(),
@@ -223,6 +220,7 @@ void FMaterialInstance::commit(FEngine& engine) const {
 void FMaterialInstance::commit(DriverApi& driver) const {
     // update uniforms if needed
     if (mUniforms.isDirty() || mHasStreamUniformAssociations) {
+        mUniforms.clean();
         driver.updateBufferObject(mUbHandle, mUniforms.toBufferDescriptor(driver), 0);
     }
     if (!mTextureParameters.empty()) {
@@ -285,11 +283,15 @@ void FMaterialInstance::setParameterImpl(std::string_view const name,
         auto const& descriptorSetLayout = mMaterial->getDescriptorSetLayout();
         DescriptorType const descriptorType = descriptorSetLayout.getDescriptorType(binding);
         TextureType const textureType = texture->getTextureType();
-
-        FILAMENT_CHECK_PRECONDITION(
-                DescriptorSet::isTextureCompatibleWithDescriptor(textureType, descriptorType))
+        SamplerType const samplerType = texture->getTarget();
+        auto const& featureFlags = mMaterial->getEngine().features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(
+                DescriptorSet::isTextureCompatibleWithDescriptor(
+                        textureType, samplerType, descriptorType),
+                featureFlags.assert_material_instance_texture_descriptor_set_compatible)
                 << "Texture format " << int(texture->getFormat())
                 << " of type " << to_string(textureType)
+                << " with sampler type " << to_string(samplerType)
                 << " is not compatible with material \"" << getMaterial()->getName().c_str() << "\""
                 << " parameter \"" << name << "\""
                 << " of type " << to_string(descriptorType);
@@ -341,7 +343,7 @@ float FMaterialInstance::getSpecularAntiAliasingThreshold() const noexcept {
 
 void FMaterialInstance::setDoubleSided(bool const doubleSided) noexcept {
     if (UTILS_UNLIKELY(!mMaterial->hasDoubleSidedCapability())) {
-        slog.w << "Parent material does not have double-sided capability." << io::endl;
+        LOG(WARNING) << "Parent material does not have double-sided capability.";
         return;
     }
     setParameter("_doubleSided", doubleSided);
@@ -379,26 +381,31 @@ const char* FMaterialInstance::getName() const noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void FMaterialInstance::use(FEngine::DriverApi& driver) const {
+void FMaterialInstance::use(FEngine::DriverApi& driver, Variant variant) const {
 
     if (UTILS_UNLIKELY(mMissingSamplerDescriptors.any())) {
         std::call_once(mMissingSamplersFlag, [this] {
             auto const& list = mMaterial->getSamplerInterfaceBlock().getSamplerInfoList();
-            slog.w << "sampler parameters not set in MaterialInstance \""
-                   << mName.c_str_safe() << "\" or Material \""
-                   << mMaterial->getName().c_str_safe() << "\":\n";
+            LOG(WARNING) << "sampler parameters not set in MaterialInstance \""
+                         << mName.c_str_safe() << "\" or Material \""
+                         << mMaterial->getName().c_str_safe() << "\":";
             mMissingSamplerDescriptors.forEachSetBit([&list](descriptor_binding_t binding) {
                 auto const pos = std::find_if(list.begin(), list.end(), [binding](const auto& item) {
                     return item.binding == binding;
                 });
                 // just safety-check, should never fail
                 if (UTILS_LIKELY(pos != list.end())) {
-                    slog.w << "[" << +binding << "] " << pos->name.c_str() << '\n';
+                    LOG(WARNING) << "[" << +binding << "] " << pos->name.c_str();
                 }
             });
-            flush(slog.w);
         });
         mMissingSamplerDescriptors.clear();
+    }
+
+    // Checks if this variant is shared. If so, FMaterial takes responsibility for binding the
+    // descriptor sets.
+    if (mMaterial->useShared(driver, variant)) {
+        return;
     }
 
     mDescriptorSet.bind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
@@ -430,7 +437,7 @@ void FMaterialInstance::fixMissingSamplers() const {
                 FEngine const& engine = mMaterial->getEngine();
                 filament::DescriptorSetLayout const& layout = mMaterial->getDescriptorSetLayout();
 
-                if (pos->format != SamplerFormat::FLOAT) {
+                if (pos->format == SamplerFormat::FLOAT) {
                     // TODO: we only handle missing samplers that are FLOAT
                     switch (pos->type) {
                         case SamplerType::SAMPLER_2D:

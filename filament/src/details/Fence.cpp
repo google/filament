@@ -20,8 +20,18 @@
 
 #include <filament/Fence.h>
 
+#include <backend/DriverEnums.h>
+
+#include <utils/compiler.h>
 #include <utils/Panic.h>
 #include <utils/debug.h>
+
+#include <condition_variable>
+#include <chrono>
+#include <memory>
+#include <mutex>
+
+#include <stdint.h>
 
 namespace filament {
 
@@ -30,7 +40,7 @@ using namespace backend;
 utils::Mutex FFence::sLock;
 utils::Condition FFence::sCondition;
 
-static const constexpr uint64_t PUMP_INTERVAL_MILLISECONDS = 1;
+static constexpr uint64_t PUMP_INTERVAL_MILLISECONDS = 1;
 
 using ms = std::chrono::milliseconds;
 using ns = std::chrono::nanoseconds;
@@ -60,7 +70,7 @@ FenceStatus FFence::waitAndDestroy(FFence* fence, Mode const mode) noexcept {
 }
 
 UTILS_NOINLINE
-FenceStatus FFence::wait(Mode const mode, uint64_t const timeout) noexcept {
+FenceStatus FFence::wait(Mode const mode, uint64_t const timeout) {
     FILAMENT_CHECK_PRECONDITION(UTILS_HAS_THREADING || timeout == 0)
             << "Non-zero timeout requires threads.";
 
@@ -103,18 +113,15 @@ FenceStatus FFence::wait(Mode const mode, uint64_t const timeout) noexcept {
 
 UTILS_NOINLINE
 void FFence::FenceSignal::signal(State const s) noexcept {
-    std::lock_guard<utils::Mutex> const lock(sLock);
+    std::lock_guard const lock(sLock);
     mState = s;
     sCondition.notify_all();
 }
 
 UTILS_NOINLINE
 Fence::FenceStatus FFence::FenceSignal::wait(uint64_t const timeout) noexcept {
-    std::unique_lock<utils::Mutex> lock(sLock);
+    std::unique_lock lock(sLock);
     while (mState == UNSIGNALED) {
-        if (mState == DESTROYED) {
-            return FenceStatus::ERROR;
-        }
         if (timeout == FENCE_WAIT_FOR_EVER) {
             sCondition.wait(lock);
         } else {
@@ -123,6 +130,9 @@ Fence::FenceStatus FFence::FenceSignal::wait(uint64_t const timeout) noexcept {
                 return FenceStatus::TIMEOUT_EXPIRED;
             }
         }
+    }
+    if (mState == DESTROYED) {
+        return FenceStatus::ERROR;
     }
     return FenceStatus::CONDITION_SATISFIED;
 }

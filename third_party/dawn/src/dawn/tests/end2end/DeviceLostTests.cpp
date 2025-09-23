@@ -32,6 +32,7 @@
 #include "dawn/native/DawnNative.h"
 #include "dawn/tests/DawnTest.h"
 #include "dawn/tests/MockCallback.h"
+#include "dawn/tests/StringViewMatchers.h"
 #include "dawn/utils/ComboRenderPipelineDescriptor.h"
 #include "dawn/utils/WGPUHelpers.h"
 #include "gmock/gmock.h"
@@ -40,6 +41,7 @@ namespace dawn {
 namespace {
 
 using testing::_;
+using testing::EmptySizedString;
 using testing::Exactly;
 using testing::HasSubstr;
 using testing::MockCppCallback;
@@ -49,12 +51,11 @@ using MockQueueWorkDoneCallback = MockCppCallback<wgpu::QueueWorkDoneCallback<vo
 
 class DeviceLostTest : public DawnTest {
   protected:
-    wgpu::Limits GetRequiredLimits(const wgpu::Limits& supported) override {
+    void GetRequiredLimits(const dawn::utils::ComboLimits& supported,
+                           dawn::utils::ComboLimits& required) override {
         // TODO(crbug.com/383593270): Enable all the limits.
-        wgpu::Limits required = {};
         required.maxStorageBuffersInFragmentStage = supported.maxStorageBuffersInFragmentStage;
         required.maxStorageBuffersPerShaderStage = supported.maxStorageBuffersPerShaderStage;
-        return required;
     }
 
     void SetUp() override { DawnTest::SetUp(); }
@@ -104,6 +105,9 @@ TEST_P(DeviceLostTest, CreateBindGroupLayoutFails) {
 
 // Test that GetBindGroupLayout fails when device is lost
 TEST_P(DeviceLostTest, GetBindGroupLayoutFails) {
+    // TODO(crbug.com/413053623): implement webgpu::Pipeline
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     wgpu::ShaderModule csModule = utils::CreateShaderModule(device, R"(
         struct UniformBuffer {
             pos : vec4f
@@ -178,6 +182,9 @@ TEST_P(DeviceLostTest, CreateRenderBundleEncoderFails) {
 
 // Tests that CreateComputePipeline fails when device is lost
 TEST_P(DeviceLostTest, CreateComputePipelineFails) {
+    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     wgpu::ShaderModule shader = utils::CreateShaderModule(device, "");
 
     WaitABit();
@@ -191,6 +198,9 @@ TEST_P(DeviceLostTest, CreateComputePipelineFails) {
 
 // Tests that CreateRenderPipeline fails when device is lost
 TEST_P(DeviceLostTest, CreateRenderPipelineFails) {
+    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     wgpu::ShaderModule shader = utils::CreateShaderModule(device, "");
 
     WaitABit();
@@ -296,7 +306,7 @@ TEST_P(DeviceLostTest, BufferUnmapAfterDeviceLost) {
 TEST_P(DeviceLostTest, CreateBuffer) {
     // Fails on TSAN due to allowing too much memory. TSAN max is `0x10000000000` and the test
     // allocates `0x8000000000000000`
-    DAWN_SUPPRESS_TEST_IF(IsTsan());
+    DAWN_TEST_UNSUPPORTED_IF(IsTsan());
 
     uint64_t kStupidLarge = uint64_t(1) << uint64_t(63);
     LoseDeviceForTesting();
@@ -474,7 +484,7 @@ TEST_P(DeviceLostTest, QueueOnSubmittedWorkDoneAfterDeviceLost) {
     LoseDeviceForTesting();
 
     // Callback should have success status
-    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success));
+    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success, EmptySizedString()));
     queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents, mWorkDoneCb.Callback());
     WaitABit();
 }
@@ -482,7 +492,7 @@ TEST_P(DeviceLostTest, QueueOnSubmittedWorkDoneAfterDeviceLost) {
 // Test QueueOnSubmittedWorkDone when the device is lost after calling OnSubmittedWorkDone
 TEST_P(DeviceLostTest, QueueOnSubmittedWorkDoneBeforeLossFails) {
     // Callback should have success status
-    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success));
+    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success, EmptySizedString()));
     queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents, mWorkDoneCb.Callback());
 
     LoseDeviceForTesting();
@@ -508,6 +518,9 @@ TEST_P(DeviceLostTest, DeviceLostDoesntCallUncapturedError) {
 // Test that WGPUCreatePipelineAsyncStatus_Success is returned when device is lost
 // before the callback of Create*PipelineAsync() is called.
 TEST_P(DeviceLostTest, DeviceLostBeforeCreatePipelineAsyncCallback) {
+    // TODO(crbug.com/413053623): implement webgpu::ShaderModule
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     wgpu::ShaderModule csModule = utils::CreateShaderModule(device, R"(
         @compute @workgroup_size(1) fn main() {
         })");
@@ -530,7 +543,10 @@ TEST_P(DeviceLostTest, DeviceLostBeforeCreatePipelineAsyncCallback) {
 // references to bind group layouts such that the cache was non-empty at the end
 // of shut down.
 TEST_P(DeviceLostTest, FreeBindGroupAfterDeviceLossWithPendingCommands) {
-    DAWN_SUPPRESS_TEST_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
+    // TODO(crbug.com/413053623): implement webgpu::BindGroup
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
+    DAWN_TEST_UNSUPPORTED_IF(GetSupportedLimits().maxStorageBuffersInFragmentStage < 1);
 
     wgpu::BindGroupLayout bgl = utils::MakeBindGroupLayout(
         device, {{0, wgpu::ShaderStage::Fragment, wgpu::BufferBindingType::Storage}});
@@ -567,6 +583,9 @@ TEST_P(DeviceLostTest, FreeBindGroupAfterDeviceLossWithPendingCommands) {
 // This is a regression test for crbug.com/1365011 where ending a render pass with an indirect draw
 // in it after the device is lost would cause render commands to be leaked.
 TEST_P(DeviceLostTest, DeviceLostInRenderPassWithDrawIndirect) {
+    // TODO(crbug.com/413053623): implement webgpu::Pipeline, etc.
+    DAWN_SUPPRESS_TEST_IF(IsWebGPUOnWebGPU());
+
     utils::BasicRenderPass renderPass = utils::CreateBasicRenderPass(device, 4u, 4u);
     utils::ComboRenderPipelineDescriptor desc;
     desc.vertex.module = utils::CreateShaderModule(device, R"(
@@ -613,7 +632,8 @@ DAWN_INSTANTIATE_TEST(DeviceLostTest,
                       NullBackend(),
                       OpenGLBackend(),
                       OpenGLESBackend(),
-                      VulkanBackend());
+                      VulkanBackend(),
+                      WebGPUBackend());
 
 }  // anonymous namespace
 }  // namespace dawn

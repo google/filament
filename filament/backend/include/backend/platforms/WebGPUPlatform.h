@@ -19,9 +19,20 @@
 
 #include <backend/Platform.h>
 
+#if defined(__linux__) && defined(FILAMENT_SUPPORTS_X11)
+// Resolve the conflicts between webgpu_cpp.h and X11 defines
+#undef Always
+#undef Success
+#undef None
+#undef True
+#undef False
+#undef Status
+#undef Bool
+#endif
 #include <webgpu/webgpu_cpp.h>
 
 #include <cstdint>
+#include <vector>
 
 namespace filament::backend {
 
@@ -29,7 +40,7 @@ namespace filament::backend {
  * A Platform interface, handling the environment-specific concerns, e.g. OS, for creating a WebGPU
  * driver (backend).
  */
-class WebGPUPlatform final : public Platform {
+class WebGPUPlatform : public Platform {
 public:
     WebGPUPlatform();
     ~WebGPUPlatform() override = default;
@@ -51,11 +62,23 @@ public:
     // either returns a valid device or panics
     [[nodiscard]] wgpu::Device requestDevice(wgpu::Adapter const& adapter);
 
+    struct Configuration {
+        wgpu::BackendType forceBackendType =  wgpu::BackendType::Undefined;
+    };
+
+    [[nodiscard]] virtual Configuration getConfiguration() const noexcept {
+        return {};
+    }
+
 protected:
     [[nodiscard]] Driver* createDriver(void* sharedContext,
             const Platform::DriverConfig& driverConfig) noexcept override;
 
 private:
+    // returns adapter request option variations applicable for the particular
+    // platform
+    [[nodiscard]] static std::vector<wgpu::RequestAdapterOptions> getAdapterOptions();
+
     // we may consider having the driver own this in the future
     wgpu::Instance mInstance;
 };

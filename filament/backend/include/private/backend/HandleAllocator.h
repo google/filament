@@ -116,7 +116,7 @@ public:
      * Destroys the object D at Handle<B> and construct a new D in its place
      * e.g.:
      *  Handle<ConcreteTexture> h = allocateAndConstruct(w, h);
-     *  ConcreteTexture* p = reconstruct(h, w, h);
+     *  ConcreteTexture* p = destroyAndConstruct(h, w, h);
      */
     template<typename D, typename B, typename ... ARGS>
     std::enable_if_t<std::is_base_of_v<B, D>, D>*
@@ -204,7 +204,7 @@ public:
         } else {
             // check for heap handle use-after-free
             if (UTILS_UNLIKELY(!mUseAfterFreeCheckDisabled)) {
-                uint8_t const index = (handle.getId() & HANDLE_INDEX_MASK);
+                HandleBase::HandleId const index = (handle.getId() & HANDLE_INDEX_MASK);
                 // if we've already handed out this handle index before, it's definitely a
                 // use-after-free, otherwise it's probably just a corrupted handle
                 if (index < mId) {
@@ -249,8 +249,9 @@ public:
     }
 
     void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
-        // TODO: for now, only pool handles check for use-after-free, so we only keep tags for
-        // those
+        if (tag.empty()) {
+            return;
+        }
         uint32_t key = id;
         if (UTILS_LIKELY(isPoolHandle(id))) {
             // Truncate the age to get the debug tag

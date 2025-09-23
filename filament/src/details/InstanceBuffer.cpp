@@ -16,15 +16,33 @@
 
 #include "details/InstanceBuffer.h"
 
-#include <details/Engine.h>
-#include <private/filament/UibStructs.h>
+#include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
 
+#include <private/filament/UibStructs.h>
+
+#include <filament/FilamentAPI.h>
+#include <filament/Engine.h>
+#include <filament/InstanceBuffer.h>
+
+#include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
+#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Panic.h>
 #include <utils/StaticString.h>
 
 #include <math/mat3.h>
-#include <math/vec3.h>
+#include <math/mat4.h>
+
+#include <utility>
+
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cstddef>
 
 namespace filament {
 
@@ -60,7 +78,7 @@ InstanceBuffer::Builder& InstanceBuffer::Builder::name(utils::StaticString const
     return BuilderNameMixin::name(name);
 }
 
-InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
+InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) const {
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount >= 1) << "instanceCount must be >= 1.";
     FILAMENT_CHECK_PRECONDITION(mImpl->mInstanceCount <= engine.getMaxAutomaticInstances())
             << "instanceCount is " << mImpl->mInstanceCount
@@ -71,7 +89,7 @@ InstanceBuffer* InstanceBuffer::Builder::build(Engine& engine) {
 
 // ------------------------------------------------------------------------------------------------
 
-FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
+FInstanceBuffer::FInstanceBuffer(FEngine&, const Builder& builder)
     : mName(builder.getName()) {
     mInstanceCount = builder->mInstanceCount;
 
@@ -84,6 +102,12 @@ FInstanceBuffer::FInstanceBuffer(FEngine& engine, const Builder& builder)
     }
 }
 
+void FInstanceBuffer::terminate(FEngine&) {
+    mIndex = 0;
+}
+
+FInstanceBuffer::~FInstanceBuffer() noexcept = default;
+
 void FInstanceBuffer::setLocalTransforms(
         math::mat4f const* localTransforms, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mInstanceCount)
@@ -93,31 +117,28 @@ void FInstanceBuffer::setLocalTransforms(
     memcpy(mLocalTransforms.data() + offset, localTransforms, sizeof(math::mat4f) * count);
 }
 
-void FInstanceBuffer::prepare(FEngine& engine, math::mat4f rootTransform,
-        const PerRenderableData& ubo, Handle<HwBufferObject> handle) {
-    DriverApi& driver = engine.getDriverApi();
-
-    // TODO: allocate this staging buffer from a pool.
-    uint32_t stagingBufferSize = sizeof(PerRenderableUib);
-    PerRenderableData* stagingBuffer = (PerRenderableData*)malloc(stagingBufferSize);
-    // TODO: consider using JobSystem to parallelize this.
-    for (size_t i = 0, c = mInstanceCount; i < c; i++) {
-        stagingBuffer[i] = ubo;
-        math::mat4f model = rootTransform * mLocalTransforms[i];
-        stagingBuffer[i].worldFromModelMatrix = model;
-
-        math::mat3f m = math::mat3f::getTransformForNormals(model.upperLeft());
-        stagingBuffer[i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
-    }
-    driver.updateBufferObject(handle, {
-            stagingBuffer, stagingBufferSize,
-            +[](void* buffer, size_t, void*) {
-                free(buffer);
-            }
-    }, 0);
+math::mat4f const& FInstanceBuffer::getLocalTransform(size_t index) const noexcept {
+    FILAMENT_CHECK_PRECONDITION(index < mInstanceCount)
+            << "getLocalTransform overflow: 'index (" << index
+            << ") must be < getInstanceCount() ("<< mInstanceCount << ").";
+    return mLocalTransforms[index];
 }
 
-void FInstanceBuffer::terminate(FEngine& engine) {
+void FInstanceBuffer::prepare(
+            PerRenderableData* const UTILS_RESTRICT buffer, uint32_t const index, uint32_t const count,
+            math::mat4f const& rootTransform, PerRenderableData const& ubo) {
+
+    // there is a precondition check for this, so this assert really should never trigger
+    assert_invariant(count <= mInstanceCount);
+
+    for (size_t i = 0, c = count; i < c; i++) {
+        math::mat4f const model = rootTransform * mLocalTransforms[i];
+        math::mat3f const m = math::mat3f::getTransformForNormals(model.upperLeft());
+        buffer[index + i] = ubo;
+        buffer[index + i].worldFromModelMatrix = model;
+        buffer[index + i].worldFromModelNormalMatrix = math::prescaleForNormals(m);
+    }
+    mIndex = index;
 }
 
 } // namespace filament

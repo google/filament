@@ -1,5 +1,5 @@
 ;
-; Copyright (C) 2023 The Android Open Source Project
+; Copyright (C) 2025 The Android Open Source Project
 ;
 ; Licensed under the Apache License, Version 2.0 (the "License");
 ; you may not use this file except in compliance with the License.
@@ -14646,6 +14646,12 @@ bluegl_glFramebufferTextureMultiviewOVR proc
     mov r11, __blue_glCore_glFramebufferTextureMultiviewOVR
     jmp r11
 bluegl_glFramebufferTextureMultiviewOVR endp
+
+extrn __blue_glCore_glFramebufferTextureMultisampleMultiviewOVR: qword
+bluegl_glFramebufferTextureMultisampleMultiviewOVR proc
+    mov r11, __blue_glCore_glFramebufferTextureMultisampleMultiviewOVR
+    jmp r11
+bluegl_glFramebufferTextureMultisampleMultiviewOVR endp
 
 extrn __blue_glCore_glHintPGI: qword
 bluegl_glHintPGI proc

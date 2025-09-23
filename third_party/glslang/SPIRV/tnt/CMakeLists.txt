@@ -10,7 +10,8 @@ set(SOURCES
 
 set(HEADERS
         ../bitutils.h
-        ../spirv.hpp
+        ../spirv.hpp11
+        ../spvUtil.h
         ../GLSL.std.450.h
         ../GLSL.ext.EXT.h
         ../GLSL.ext.KHR.h

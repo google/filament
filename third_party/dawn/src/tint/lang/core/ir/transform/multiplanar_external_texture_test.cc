@@ -29,8 +29,8 @@
 
 #include <utility>
 
-#include "src/tint/lang/core/common/multiplanar_options.h"
 #include "src/tint/lang/core/ir/transform/helper_test.h"
+#include "src/tint/lang/core/ir/transform/multiplanar_options.h"
 #include "src/tint/lang/core/type/external_texture.h"
 
 namespace tint::core::ir::transform {
@@ -58,7 +58,7 @@ TEST_F(IR_MultiplanarExternalTextureTest, NoRootBlock) {
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, DeclWithNoUses) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -129,7 +129,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, LoadWithNoUses) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -205,7 +205,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, TextureDimensions) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -286,7 +286,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, TextureLoad) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -447,7 +447,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, TextureLoad_SignedCoords) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -609,7 +609,7 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, TextureSampleBaseClampToEdge) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
@@ -770,13 +770,13 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, ViaUserFunctionParameter) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
     auto* foo = b.Function("foo", ty.vec4<f32>());
     {
-        auto* texture = b.FunctionParam("texture", ty.Get<core::type::ExternalTexture>());
+        auto* texture = b.FunctionParam("texture", ty.external_texture());
         auto* sampler = b.FunctionParam("sampler", ty.sampler());
         auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
         foo->SetParams({texture, sampler, coords});
@@ -958,13 +958,13 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, MultipleUses) {
-    auto* var = b.Var("texture", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var = b.Var("texture", ty.ptr(handle, ty.external_texture()));
     var->SetBindingPoint(1, 2);
     mod.root_block->Append(var);
 
     auto* foo = b.Function("foo", ty.vec4<f32>());
     {
-        auto* texture = b.FunctionParam("texture", ty.Get<core::type::ExternalTexture>());
+        auto* texture = b.FunctionParam("texture", ty.external_texture());
         auto* sampler = b.FunctionParam("sampler", ty.sampler());
         auto* coords = b.FunctionParam("coords", ty.vec2<f32>());
         foo->SetParams({texture, sampler, coords});
@@ -1179,15 +1179,15 @@ $B1: {  # root
 }
 
 TEST_F(IR_MultiplanarExternalTextureTest, MultipleTextures) {
-    auto* var_a = b.Var("texture_a", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var_a = b.Var("texture_a", ty.ptr(handle, ty.external_texture()));
     var_a->SetBindingPoint(1, 2);
     mod.root_block->Append(var_a);
 
-    auto* var_b = b.Var("texture_b", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var_b = b.Var("texture_b", ty.ptr(handle, ty.external_texture()));
     var_b->SetBindingPoint(2, 2);
     mod.root_block->Append(var_b);
 
-    auto* var_c = b.Var("texture_c", ty.ptr(handle, ty.Get<core::type::ExternalTexture>()));
+    auto* var_c = b.Var("texture_c", ty.ptr(handle, ty.external_texture()));
     var_c->SetBindingPoint(3, 2);
     mod.root_block->Append(var_c);
 

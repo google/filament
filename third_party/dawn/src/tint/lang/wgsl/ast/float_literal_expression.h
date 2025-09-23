@@ -77,7 +77,8 @@ std::string_view ToString(FloatLiteralExpression::Suffix suffix);
 /// @param out the stream to write to
 /// @param suffix the suffix to write
 /// @returns out so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, FloatLiteralExpression::Suffix suffix) {
     return out << ToString(suffix);
 }

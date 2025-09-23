@@ -1,0 +1,13 @@
+#version 450
+
+#extension GL_EXT_expect_assume: enable
+
+layout (local_size_x = 8) in;
+
+readonly buffer roblock {
+  int i;
+} ro;
+
+void main() {
+  assumeEXT(ro.i > 42);
+}

@@ -100,17 +100,25 @@ Instruction* MemPass::GetPtr(uint32_t ptrId, uint32_t* varId) {
   Instruction* ptrInst = get_def_use_mgr()->GetDef(*varId);
   Instruction* varInst;
 
-  if (ptrInst->opcode() == spv::Op::OpConstantNull) {
-    *varId = 0;
-    return ptrInst;
+  switch (ptrInst->opcode()) {
+    case spv::Op::OpVariable:
+    case spv::Op::OpFunctionParameter:
+      varInst = ptrInst;
+      break;
+    case spv::Op::OpAccessChain:
+    case spv::Op::OpInBoundsAccessChain:
+    case spv::Op::OpPtrAccessChain:
+    case spv::Op::OpInBoundsPtrAccessChain:
+    case spv::Op::OpImageTexelPointer:
+    case spv::Op::OpCopyObject:
+      varInst = ptrInst->GetBaseAddress();
+      break;
+    default:
+      *varId = 0;
+      return ptrInst;
+      break;
   }
 
-  if (ptrInst->opcode() != spv::Op::OpVariable &&
-      ptrInst->opcode() != spv::Op::OpFunctionParameter) {
-    varInst = ptrInst->GetBaseAddress();
-  } else {
-    varInst = ptrInst;
-  }
   if (varInst->opcode() == spv::Op::OpVariable) {
     *varId = varInst->result_id();
   } else {

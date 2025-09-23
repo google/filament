@@ -22,10 +22,13 @@
 #include <utils/CallStack.h>
 #endif
 
-#include <utils/compiler.h>
-#include <utils/Log.h>
-#include <utils/ostream.h>
+#include <private/utils/Tracing.h>
+
+#include <utils/Logger.h>
 #include <utils/Profiler.h>
+#include <utils/compiler.h>
+#include <utils/ostream.h>
+#include <utils/sstream.h>
 
 #include <cstddef>
 #include <functional>
@@ -54,7 +57,7 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
     printParameterPack(out, rest...);
 }
 
-static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& command) noexcept {
+static UTILS_NOINLINE UTILS_UNUSED std::string_view extractMethodName(std::string_view command) noexcept {
     constexpr const char startPattern[] = "::Command<&filament::backend::Driver::";
     auto pos = command.rfind(startPattern);
     auto end = command.rfind('(');
@@ -94,11 +97,13 @@ void CommandStream::execute(void* buffer) {
         }
     }
 
-    mDriver.execute([this, buffer]() {
-        Driver& UTILS_RESTRICT driver = mDriver;
-        CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
-        while (UTILS_LIKELY(base)) {
-            base = base->execute(driver);
+    Driver& UTILS_RESTRICT driver = mDriver;
+    CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
+    mDriver.execute([&driver, base] {
+        auto& d = driver;
+        auto p = base;
+        while (UTILS_LIKELY(p)) {
+            p = p->execute(d);
         }
     });
 
@@ -128,10 +133,11 @@ template<std::size_t... I>
 void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log(std::index_sequence<I...>) noexcept  {
 #if DEBUG_COMMAND_STREAM
     static_assert(UTILS_HAS_RTTI, "DEBUG_COMMAND_STREAM can only be used with RTTI");
-    std::string command = utils::CallStack::demangleTypeName(typeid(Command).name()).c_str();
-    slog.d << extractMethodName(command) << " : size=" << sizeof(Command) << "\n\t";
-    printParameterPack(slog.d, std::get<I>(mArgs)...);
-    slog.d << io::endl;
+    CString command = CallStack::demangleTypeName(typeid(Command).name());
+    DLOG(INFO) << extractMethodName({command.data(), command.size()}) << " : size=" << sizeof(Command);
+    io::sstream parameterPack;
+    printParameterPack(parameterPack, std::get<I>(mArgs)...);
+    DLOG(INFO) << "\t" << parameterPack.c_str();
 #endif
 }
 
@@ -158,7 +164,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 // ------------------------------------------------------------------------------------------------
 
 void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) {
-    *next = CustomCommand::align(sizeof(CustomCommand));
+    *next = align(sizeof(CustomCommand));
     static_cast<CustomCommand*>(base)->mCommand();
     static_cast<CustomCommand*>(base)->~CustomCommand();
 }

@@ -9,7 +9,8 @@ material {
         {
             type : sampler2d,
             name : depth,
-            precision: medium
+            precision: medium,
+            filterable: false
         },
         {
             type : float2,

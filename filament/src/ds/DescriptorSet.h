@@ -62,6 +62,9 @@ public:
     void bind(backend::DriverApi& driver, DescriptorSetBindingPoints set,
             backend::DescriptorSetOffsetArray dynamicOffsets) const noexcept;
 
+    // unbind the descriptor set
+    static void unbind(backend::DriverApi& driver, DescriptorSetBindingPoints set) noexcept;
+
     // sets a ubo/ssbo descriptor
     void setBuffer(DescriptorSetLayout const& layout,
             backend::descriptor_binding_t binding,
@@ -86,7 +89,8 @@ public:
     }
 
     static bool isTextureCompatibleWithDescriptor(
-        backend::TextureType t, backend::DescriptorType d) noexcept;
+            backend::TextureType t, backend::SamplerType s,
+            backend::DescriptorType d) noexcept;
 
 private:
     struct Desc {
@@ -110,6 +114,7 @@ private:
     mutable utils::bitset64 mValid;                         //  8
     backend::DescriptorSetHandle mDescriptorSetHandle;      //  4
     mutable bool mSetAfterCommitWarning = false;            //  1
+    mutable bool mSetUndefinedParameterWarning = false;     //  1
     utils::StaticString mName;                              // 16
 };
 

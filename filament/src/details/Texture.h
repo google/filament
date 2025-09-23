@@ -65,10 +65,6 @@ public:
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const;
 
-    void generatePrefilterMipmap(FEngine& engine,
-            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
-            PrefilterOptions const* options);
-
     void setExternalImage(FEngine& engine, ExternalImageHandleRef image) noexcept;
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalImage(FEngine& engine, void* image, size_t plane) noexcept;
@@ -76,9 +72,6 @@ public:
 
     void generateMipmaps(FEngine& engine) const noexcept;
 
-    void setSampleCount(size_t const sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
-    size_t getSampleCount() const noexcept { return mSampleCount; }
-    bool isMultisample() const noexcept { return mSampleCount > 1; }
     bool isCompressed() const noexcept { return isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
@@ -94,6 +87,9 @@ public:
 
     // Synchronous call to the backend. Returns whether a backend supports mipmapping of a particular format.
     static bool isTextureFormatMipmappable(FEngine& engine, InternalFormat format) noexcept;
+
+    // Returns whether particular format is compressed
+    static bool isTextureFormatCompressed(InternalFormat format) noexcept;
 
     // Synchronous call to the backend. Returns whether a backend supports protected textures.
     static bool isProtectedTexturesSupported(FEngine& engine) noexcept;

@@ -65,5 +65,5 @@ if (MSVC AND NOT COMPILER_IS_CLANG_CL)
 endif ()
 
 if (TARGET_MACOS)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version" FORCE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
 endif ()

@@ -105,7 +105,7 @@ TEST_F(IR_ValidatorTest, Discard_RootBlock) {
 )")) << res.Failure();
 }
 
-TEST_F(IR_ValidatorTest, Discard_NotInFragment) {
+TEST_F(IR_ValidatorTest, Discard_NotInFragmentViaFunction) {
     auto* func = b.Function("foo", ty.void_());
     b.Append(func->Block(), [&] {
         b.Discard();
@@ -123,7 +123,25 @@ TEST_F(IR_ValidatorTest, Discard_NotInFragment) {
     ASSERT_NE(res, Success);
     EXPECT_THAT(
         res.Failure().reason,
-        testing::HasSubstr(R"(:3:5 error: discard: cannot be called in non-fragment end point
+        testing::HasSubstr(R"(:3:5 error: discard: cannot be called in non-fragment entry point
+    discard
+    ^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Discard_NotInFragmentViaEntryPoint) {
+    auto* ep = ComputeEntryPoint("ep");
+
+    b.Append(ep->Block(), [&] {
+        b.Discard();
+        b.Return(ep);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(
+        res.Failure().reason,
+        testing::HasSubstr(R"(:3:5 error: discard: cannot be called in non-fragment entry point
     discard
     ^^^^^^^
 )")) << res.Failure();
@@ -323,6 +341,46 @@ TEST_F(IR_ValidatorTest, Loop_EmptyBody) {
                 testing::HasSubstr(R"(:4:7 error: block does not end in a terminator instruction
       $B2: {  # body
       ^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Loop_NullResult) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    auto* loop = b.Loop();
+    loop->Body()->Append(b.Return(f));
+
+    loop->SetResults(Vector<InstructionResult*, 1>{nullptr});
+
+    f->Block()->Append(loop);
+    f->Block()->Append(b.Return(f));
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason, testing::HasSubstr(R"(:3:5 error: loop: result is undefined
+    undef = loop [b: $B2] {  # loop_1
+    ^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Loop_TooManyOperands) {
+    auto* f = b.Function("my_func", ty.void_());
+
+    b.Append(f->Block(), [&] {
+        auto* loop = b.Loop();
+        loop->SetOperands(Vector{b.Value(42_i)});
+        b.Append(loop->Body(), [&] {  //
+            b.Return(f);
+        });
+        b.Return(f);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: loop: expected exactly 0 operands, got 1
+    loop [b: $B2] {  # loop_1
+    ^^^^^^^^^^^^^
 )")) << res.Failure();
 }
 
@@ -1846,6 +1904,21 @@ TEST_F(IR_ValidatorTest, Return_UnexpectedValue) {
                 testing::HasSubstr(R"(:3:5 error: return: unexpected return value
     ret 42i
     ^^^^^^^
+)")) << res.Failure();
+}
+
+TEST_F(IR_ValidatorTest, Return_UnexpectedValue_NullValue_WithVoid) {
+    auto* f = b.Function("my_func", ty.void_());
+    b.Append(f->Block(), [&] {  //
+        b.Return(f, nullptr);
+    });
+
+    auto res = ir::Validate(mod);
+    ASSERT_NE(res, Success);
+    EXPECT_THAT(res.Failure().reason,
+                testing::HasSubstr(R"(:3:5 error: return: unexpected return value
+    ret undef
+    ^^^^^^^^^
 )")) << res.Failure();
 }
 

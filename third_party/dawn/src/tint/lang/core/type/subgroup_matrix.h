@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include "src/tint/lang/core/subgroup_matrix_kind.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/type/clone_context.h"
 #include "src/tint/lang/core/type/type.h"
 

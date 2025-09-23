@@ -396,7 +396,12 @@ const unsigned kAnnotateHandleResourceTypeOpIdx = 3;
 
 // TraceRay.
 const unsigned kTraceRayRayDescOpIdx = 7;
-const unsigned kTraceRayPayLoadOpIdx = 8;
+// kTraceRayPayloadPreOpIdx is before flattening the RayDesc
+const unsigned kTraceRayPayloadPreOpIdx = 8;
+// kTraceRayPayloadOpIdx is after flattening the RayDesc
+const unsigned kTraceRayPayloadOpIdx = 11;
+const unsigned kTraceRay_PreNumOp = 9;
+const unsigned kTraceRay_NumOp = 12;
 
 // AllocateRayQuery
 const unsigned kAllocateRayQueryRayFlagsIdx = 1;
@@ -407,6 +412,10 @@ const unsigned kCallShaderPayloadOpIdx = 2;
 
 // TraceRayInline.
 const unsigned kTraceRayInlineRayDescOpIdx = 5;
+// kTraceRayInlinePayloadPreOpIdx is before flattening the RayDesc
+const unsigned kTraceRayInlinePayloadPreOpIdx = 6;
+// kTraceRayInlinePayloadOpIdx is after flattening the RayDesc
+const unsigned kTraceRayInlinePayloadOpIdx = 9;
 
 // ReportIntersection.
 const unsigned kReportIntersectionAttributeOpIdx = 3;
@@ -433,6 +442,77 @@ const unsigned kNodeHandleToResCastOpIdx = 1;
 const unsigned kAnnotateNodeHandleNodePropIdx = 2;
 const unsigned kAnnotateNodeRecordHandleNodeRecordPropIdx = 2;
 
+// HitObject::MakeMiss
+const unsigned kHitObjectMakeMiss_NumOp = 8;
+const unsigned kHitObjectMakeMiss_RayDescOpIdx = 4;
+
+// HitObject::TraceRay
+const unsigned kHitObjectTraceRay_RayDescOpIdx = 8;
+// kHitObjectTraceRay_PayloadPreOpIdx is before flattening the RayDesc
+const unsigned kHitObjectTraceRay_PayloadPreOpIdx = 9;
+// kHitObjectTraceRay_PayloadOpIdx is after flattening the RayDesc
+const unsigned kHitObjectTraceRay_PayloadOpIdx = 12;
+const unsigned kHitObjectTraceRay_PreNumOp = 10;
+const unsigned kHitObjectTraceRay_NumOp = 13;
+
+// HitObject::Invoke
+const unsigned kHitObjectInvoke_PayloadOpIdx = 2;
+
+// HitObject::FromRayQuery
+const unsigned kHitObjectFromRayQuery_WithAttrs_AttributeOpIdx = 4;
+const unsigned kHitObjectFromRayQuery_WithAttrs_NumOp = 5;
+
+// HitObject::GetAttributes
+const unsigned kHitObjectGetAttributes_AttributeOpIdx = 2;
+
+// Linear Algebra Operations
+
+// MatVecMul
+const unsigned kMatVecMulOutputVectorIdx = 1;
+const unsigned kMatVecMulIsOutputUnsignedIdx = 2;
+const unsigned kMatVecMulInputVectorIdx = 3;
+const unsigned kMatVecMulIsInputUnsignedIdx = 4;
+const unsigned kMatVecMulInputInterpretationIdx = 5;
+const unsigned kMatVecMulMatrixBufferIdx = 6;
+const unsigned kMatVecMulMatrixOffsetIdx = 7;
+const unsigned kMatVecMulMatrixInterpretationIdx = 8;
+const unsigned kMatVecMulMatrixMIdx = 9;
+const unsigned kMatVecMulMatrixKIdx = 10;
+const unsigned kMatVecMulMatrixLayoutIdx = 11;
+const unsigned kMatVecMulMatrixTransposeIdx = 12;
+const unsigned kMatVecMulMatrixStrideIdx = 13;
+
+// MatVecMulAdd
+const unsigned kMatVecMulAddOutputVectorIdx = 1;
+const unsigned kMatVecMulAddIsOutputUnsignedIdx = 2;
+const unsigned kMatVecMulAddInputVectorIdx = 3;
+const unsigned kMatVecMulAddIsInputUnsignedIdx = 4;
+const unsigned kMatVecMulAddInputInterpretationIdx = 5;
+const unsigned kMatVecMulAddMatrixBufferIdx = 6;
+const unsigned kMatVecMulAddMatrixOffsetIdx = 7;
+const unsigned kMatVecMulAddMatrixInterpretationIdx = 8;
+const unsigned kMatVecMulAddMatrixMIdx = 9;
+const unsigned kMatVecMulAddMatrixKIdx = 10;
+const unsigned kMatVecMulAddMatrixLayoutIdx = 11;
+const unsigned kMatVecMulAddMatrixTransposeIdx = 12;
+const unsigned kMatVecMulAddMatrixStrideIdx = 13;
+const unsigned kMatVecMulAddBiasBufferIdx = 14;
+const unsigned kMatVecMulAddBiasOffsetIdx = 15;
+const unsigned kMatVecMulAddBiasInterpretationIdx = 16;
+
+// OuterProductAccumulate
+const unsigned kOuterProdAccInputVec1Idx = 1;
+const unsigned kOuterProdAccInputVec2Idx = 2;
+const unsigned kOuterProdAccMatrixIdx = 3;
+const unsigned kOuterProdAccMatrixOffsetIdx = 4;
+const unsigned kOuterProdAccMatrixInterpretationIdx = 5;
+const unsigned kOuterProdAccMatrixLayoutIdx = 6;
+const unsigned kOuterProdAccMatrixStrideIdx = 7;
+
+// Vector Accumulate
+const unsigned kVectorAccInputVecIdx = 1;
+const unsigned kVectorAccMatrixIdx = 2;
+const unsigned kVectorAccMatrixOffsetIdx = 3;
 } // namespace HLOperandIndex
 
 llvm::Function *GetOrCreateHLFunction(llvm::Module &M,

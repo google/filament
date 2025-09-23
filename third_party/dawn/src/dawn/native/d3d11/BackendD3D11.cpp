@@ -86,7 +86,7 @@ Backend::Backend(InstanceBase* instance) : Base(instance, wgpu::BackendType::D3D
 
 MaybeError Backend::Initialize() {
     auto functions = std::make_unique<PlatformFunctions>();
-    DAWN_TRY(functions->LoadFunctions());
+    DAWN_TRY(functions->Initialize(GetInstance()->GetRuntimeSearchPaths()));
 
     DAWN_TRY(Base::Initialize(std::move(functions)));
 

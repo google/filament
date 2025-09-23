@@ -17,8 +17,6 @@
 #ifndef TNT_UTILS_QUADTREE_H
 #define TNT_UTILS_QUADTREE_H
 
-#include <utils/debug.h>
-
 #include <array>
 #include <type_traits>
 
@@ -70,7 +68,7 @@ static inline constexpr size_t index(size_t l, size_t code) noexcept {
  * @return      index in the QuadTreeArray of this node's parent
  */
 static inline constexpr size_t parent(size_t l, size_t code) noexcept {
-    assert_invariant(l > 0);
+    assert(l > 0);
     return index(l - 1u, code >> 2u);
 }
 
@@ -104,11 +102,11 @@ class QuadTreeArray : public std::array<T, QuadTreeUtils::size(HEIGHT)> {
     public:
         bool empty() const noexcept { return mSize == 0; }
         void push(TYPE const& v) noexcept {
-            assert_invariant(mSize < CAPACITY);
+            assert(mSize < CAPACITY);
             mElements[mSize++] = v;
         }
         void pop() noexcept {
-            assert_invariant(mSize > 0);
+            assert(mSize > 0);
             --mSize;
         }
         const TYPE& back() const noexcept {
@@ -150,7 +148,7 @@ public:
             typename = std::enable_if_t<
                     std::is_invocable_r_v<TraversalResult, Process, NodeId>>>
     static void traverse(int8_t l, code_t code, size_t maxHeight, Process&& process) noexcept {
-        assert_invariant(maxHeight < height());
+        assert(maxHeight < height());
         const int8_t h = int8_t(maxHeight);
         stack<NodeId, 4 * height()> stack;
         stack.push({ l, code });

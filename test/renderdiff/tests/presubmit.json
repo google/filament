@@ -1,26 +1,30 @@
 {
     "name": "presubmit",
-    "backends": ["opengl"],
-    "model_search_paths": ["third_party/models"],
+    "backends": ["opengl", "vulkan", "webgpu"],
+    "model_search_paths": ["third_party/models", "gltf"],
     "presets": [
         {
             "name": "base",
-            "models": ["lucy", "DamagedHelmet"],
+            "models": ["Box", "BoxTextured", "Duck", "lucy", "FlightHelmet"],
             "rendering": {
                 "viewer.cameraFocusDistance": 0,
                 "view.postProcessingEnabled": true,
                 "view.dithering": "NONE"
             }
+        },
+        {
+            "name": "helmet_only",
+            "models": ["DamagedHelmet"],
+            "rendering": {}
         }
     ],
     "tests": [
         {
-            "name": "BloomFlare",
-            "description": "Testing bloom and flare",
-            "apply_presets": ["base"],
+            "name": "Bloom",
+            "description": "Testing bloom",
+            "apply_presets": ["base", "helmet_only"],
             "rendering": {
-                "view.bloom.enabled": true,
-                "view.bloom.lensFlare": true
+                "view.bloom.enabled": true
             }
         },
         {

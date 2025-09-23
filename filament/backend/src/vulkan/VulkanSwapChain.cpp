@@ -93,7 +93,7 @@ void VulkanSwapChain::update() {
     mLayerCount = bundle.layerCount;
 }
 
-void VulkanSwapChain::present() {
+void VulkanSwapChain::present(DriverBase& driver) {
     if (!mHeadless && mTransitionSwapChainImageLayoutForPresent) {
         VulkanCommandBuffer& commands = mCommands->get();
         VkImageSubresourceRange const subresources{
@@ -120,6 +120,14 @@ void VulkanSwapChain::present() {
     // We presented the last acquired buffer.
     mAcquired = false;
     mIsFirstRenderPass = true;
+
+    if (frameScheduled.callback) {
+        driver.scheduleCallback(frameScheduled.handler,
+                [callback = frameScheduled.callback]() {
+                    PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
+                    callback->operator()(noop);
+                });
+    }
 }
 
 void VulkanSwapChain::acquire(bool& resized) {
@@ -144,7 +152,8 @@ void VulkanSwapChain::acquire(bool& resized) {
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)
             << "Cannot acquire in swapchain. error=" << static_cast<int32_t>(result);
     if (imageSyncData.imageReadySemaphore != VK_NULL_HANDLE) {
-        mCommands->injectDependency(imageSyncData.imageReadySemaphore);
+        mCommands->injectDependency(imageSyncData.imageReadySemaphore,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
     mAcquired = true;
 }

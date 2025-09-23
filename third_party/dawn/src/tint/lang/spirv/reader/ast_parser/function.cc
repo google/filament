@@ -30,8 +30,7 @@
 #include <algorithm>
 #include <array>
 
-#include "src/tint/lang/core/builtin_fn.h"
-#include "src/tint/lang/core/builtin_value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/type/depth_texture.h"
 #include "src/tint/lang/core/type/sampled_texture.h"
@@ -156,7 +155,6 @@
 
 using namespace tint::core::number_suffixes;  // NOLINT
 using namespace tint::core::fluent_types;     // NOLINT
-
 
 namespace tint::spirv::reader::ast_parser {
 namespace {
@@ -1482,8 +1480,8 @@ bool FunctionEmitter::IsHandleObj(const spvtools::opt::Instruction& obj) {
     TINT_ASSERT(obj.type_id() != 0u);
     auto* spirv_type = type_mgr_->GetType(obj.type_id());
     TINT_ASSERT(spirv_type);
-    return spirv_type->AsImage() || spirv_type->AsSampler() ||
-           (spirv_type->AsPointer() &&
+    return (spirv_type->AsImage() != nullptr) || (spirv_type->AsSampler() != nullptr) ||
+           ((spirv_type->AsPointer() != nullptr) &&
             (static_cast<spv::StorageClass>(spirv_type->AsPointer()->storage_class()) ==
              spv::StorageClass::UniformConstant));
 }
@@ -2316,7 +2314,7 @@ bool FunctionEmitter::ClassifyCFGEdges() {
                     return Fail() << "Fallthrough not permitted in WGSL";
                 }
             }  // end forward edge
-        }      // end successor
+        }  // end successor
 
         if (num_backedges > 1) {
             return Fail() << "Block " << src << " has too many backedges: " << num_backedges;

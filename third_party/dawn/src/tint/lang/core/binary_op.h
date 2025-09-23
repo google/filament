@@ -61,7 +61,8 @@ std::string_view ToString(BinaryOp value);
 /// @param out the stream to write to
 /// @param value the BinaryOp
 /// @returns @p out so calls can be chained
-template <typename STREAM, typename = traits::EnableIfIsOStream<STREAM>>
+template <typename STREAM>
+    requires(traits::IsOStream<STREAM>)
 auto& operator<<(STREAM& out, BinaryOp value) {
     return out << ToString(value);
 }

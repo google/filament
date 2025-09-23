@@ -159,6 +159,7 @@ def generate_header(args):
 
 namespace tint::bench {
 
+[[clang::no_destroy]]
 const std::unordered_map<std::string, std::string> kBenchmarkInputs = {''',
               file=output)
 

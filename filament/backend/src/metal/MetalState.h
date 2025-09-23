@@ -265,7 +265,8 @@ struct MetalPipelineState {
     NSUInteger sampleCount = 1;                                                // 8 bytes
     BlendState blendState;                                                     // 56 bytes
     bool colorWrite = true;                                                    // 1 byte
-    char padding[7] = { 0 };                                                   // 7 bytes
+    bool alphaToCoverage = false;                                              // 1 byte
+    char padding[6] = { 0 };                                                   // 6 bytes
 
     bool operator==(const MetalPipelineState& rhs) const noexcept {
         return (
@@ -278,7 +279,8 @@ struct MetalPipelineState {
                 this->stencilAttachmentPixelFormat == rhs.stencilAttachmentPixelFormat &&
                 this->sampleCount == rhs.sampleCount &&
                 this->blendState == rhs.blendState &&
-                this->colorWrite == rhs.colorWrite
+                this->colorWrite == rhs.colorWrite &&
+                this->alphaToCoverage == rhs.alphaToCoverage
         );
     }
 

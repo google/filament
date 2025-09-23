@@ -280,9 +280,23 @@ public:
     void skipFrame(uint64_t vsyncSteadyClockTimeNano = 0u);
 
     /**
-     * Set-up a frame for this Renderer.
+     * Returns true if the current frame should be rendered.
      *
-     * beginFrame() manages frame pacing, and returns whether or not a frame should be drawn. The
+     * This is a convenience method that returns the same value as beginFrame().
+     *
+     * @return
+     *      *false* the current frame should be skipped,
+     *      *true* the current frame can be rendered
+     *
+     * @see
+     * beginFrame()
+     */
+    bool shouldRenderFrame() const noexcept;
+
+    /**
+     * Set up a frame for this Renderer.
+     *
+     * beginFrame() manages frame-pacing, and returns whether a frame should be drawn. The
      * goal of this is to skip frames when the GPU falls behind in order to keep the frame
      * latency low.
      *

@@ -16,7 +16,7 @@
 
 #include <string>
 
-#include "source/enum_string_mapping.h"
+#include "source/table2.h"
 
 namespace spvtools {
 namespace opt {
@@ -54,11 +54,12 @@ void FeatureManager::AddCapability(spv::Capability cap) {
 
   capabilities_.insert(cap);
 
-  spv_operand_desc desc = {};
-  if (SPV_SUCCESS == grammar_.lookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
-                                            uint32_t(cap), &desc)) {
+  const spvtools::OperandDesc* desc = nullptr;
+  if (SPV_SUCCESS == spvtools::LookupOperand(SPV_OPERAND_TYPE_CAPABILITY,
+                                             uint32_t(cap), &desc)) {
     for (auto capability :
-         CapabilitySet(desc->numCapabilities, desc->capabilities)) {
+         CapabilitySet(static_cast<uint32_t>(desc->capabilities().size()),
+                       desc->capabilities().data())) {
       AddCapability(capability);
     }
   }

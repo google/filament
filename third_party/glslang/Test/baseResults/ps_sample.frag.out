@@ -1,0 +1,47 @@
+ps_sample.frag
+ERROR: 0:5: 'location' : the aliases sharing the location 1 must be the same basic type and interpolation qualification
+ERROR: 1 compilation errors.  No code generated.
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+ERROR: node is still EOpNull!
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:12    Sequence
+0:12      Sequence
+0:12        move second child to first child ( temp 4-component vector of float)
+0:12          'result' ( temp 4-component vector of float)
+0:12          'gs_fs' ( smooth in 4-component vector of float)
+0:16      move second child to first child ( temp 4-component vector of float)
+0:16        'fs_out' ( out 4-component vector of float)
+0:16        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'gohan' (layout( location=1 component=0) flat in uint)
+0:?     'goten' (layout( location=1 component=2) flat sample in 2-component vector of uint)
+0:?     'gs_fs' ( smooth in 4-component vector of float)
+0:?     'fs_out' ( out 4-component vector of float)
+
+
+Linked fragment stage:
+
+
+Shader version: 430
+Requested GL_ARB_enhanced_layouts
+ERROR: node is still EOpNull!
+0:10  Function Definition: main( ( global void)
+0:10    Function Parameters: 
+0:12    Sequence
+0:12      Sequence
+0:12        move second child to first child ( temp 4-component vector of float)
+0:12          'result' ( temp 4-component vector of float)
+0:12          'gs_fs' ( smooth in 4-component vector of float)
+0:16      move second child to first child ( temp 4-component vector of float)
+0:16        'fs_out' ( out 4-component vector of float)
+0:16        'result' ( temp 4-component vector of float)
+0:?   Linker Objects
+0:?     'gohan' (layout( location=1 component=0) flat in uint)
+0:?     'goten' (layout( location=1 component=2) flat sample in 2-component vector of uint)
+0:?     'gs_fs' ( smooth in 4-component vector of float)
+0:?     'fs_out' ( out 4-component vector of float)
+

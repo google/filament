@@ -70,8 +70,30 @@ class Bimap {
 
 public:
     Bimap() = default;
+
     explicit Bimap(Allocator&& allocator)
             : mAllocator(std::forward<Allocator>(allocator)) {
+    }
+
+    ~Bimap() noexcept {
+        clear();
+    }
+
+    Bimap(Bimap const&) = delete;
+    Bimap& operator=(Bimap const&) = delete;
+    Bimap(Bimap&&) = delete;
+    Bimap& operator=(Bimap&&) = delete;
+
+    void clear() noexcept {
+        // We only need to iterate one map, as they both point to the same keys.
+        for (auto& pair : mForwardMap) {
+            // Manually call the destructor on the key...
+            pair.first.pKey->~Key();
+            // ...then deallocate the memory.
+            mAllocator.deallocate(const_cast<Key*>(pair.first.pKey), 1);
+        }
+        mForwardMap.clear();
+        mBackwardMap.clear();
     }
 
     void reserve(size_t capacity) {
@@ -83,15 +105,26 @@ public:
         return mForwardMap.empty() && mBackwardMap.empty();
     }
 
-    // insert a new key/value pair
+    // insert a new key/value pair. duplicate are not allowed.
     void insert(Key const& key, Value const& value) noexcept {
+        assert_invariant(find(key) == end() && findValue(value) == mBackwardMap.end());
         Key* pKey = mAllocator.allocate(1); // allocate storage for the key
-        new((void*)pKey) Key{ key }; // copy-construct the key
+        new(static_cast<void*>(pKey)) Key{ key }; // copy-construct the key
+        // TODO: we can leak the Key if the calls below throw
         mForwardMap.insert({{ pKey }, value });
         mBackwardMap.insert({ value, { pKey }});
     }
 
+    typename ForwardMap::iterator begin() { return mForwardMap.begin(); }
+    typename ForwardMap::const_iterator begin() const { return mForwardMap.begin(); }
+    typename ForwardMap::const_iterator cbegin() const { return mForwardMap.cbegin(); }
+
     typename ForwardMap::iterator end() { return mForwardMap.end(); }
+    typename ForwardMap::const_iterator end() const { return mForwardMap.end(); }
+    typename ForwardMap::const_iterator cend() const { return mForwardMap.cend(); }
+
+    typename BackwardMap::iterator endValue() { return mBackwardMap.end(); }
+    typename BackwardMap::const_iterator endValue() const { return mBackwardMap.end(); }
 
     // Find the value iterator from the key in O(1)
     typename ForwardMap::const_iterator find(Key const& key) const {
@@ -102,28 +135,57 @@ public:
     }
 
     // Find the key iterator from the value in O(1). precondition, the value must exist.
-    typename BackwardMap::const_iterator find(Value const& value) const {
-        auto pos = mBackwardMap.find(value);
-        assert_invariant( pos != mBackwardMap.end() );
-        return pos;
+    typename BackwardMap::const_iterator findValue(Value const& value) const {
+        return mBackwardMap.find(value);
     }
-    typename BackwardMap::iterator find(Value& value) const {
+    typename BackwardMap::iterator findValue(Value& value) {
         return mBackwardMap.find(value);
     }
 
-    // erase a key/value pair using an iterator to the value
+    // Erase by key
+    bool erase(Key const& key) {
+        auto forward_it = find(key);
+        if (forward_it != end()) {
+            erase(forward_it);
+            return true;
+        }
+        return false;
+    }
+
+    // Erase by forward map iterator
+    void erase(typename ForwardMap::const_iterator it) {
+        // Get a stable pointer to the key object before erasing.
+        Key const* const pKey = const_cast<Key*>(it->first.pKey);
+
+        // Find the corresponding entry in the backward map.
+        auto backward_it = findValue(it->second);
+        assert_invariant(backward_it != mBackwardMap.end());
+
+        // Erase from both maps while the key is still valid.
+        mBackwardMap.erase(backward_it);
+        mForwardMap.erase(it);
+
+        // Now that no map refers to the key, safely destroy and deallocate it.
+        pKey->~Key();
+        mAllocator.deallocate(const_cast<Key*>(pKey), 1);
+    }
+
+    // erase by backward map iterator
     void erase(typename BackwardMap::const_iterator it) {
-        // find the key
-        Key const& key = *(it->second.pKey);
-        // and its iterator
-        auto pos = find(key);
-        // destroy the key
-        it->second.pKey->~Key();
-        // free its memory
-        mAllocator.deallocate(const_cast<Key *>(it->second.pKey), 1);
-        // remove the entries from both maps
-        mForwardMap.erase(pos);
+        // Get a stable pointer to the key object.
+        Key const* const pKey = it->second.pKey;
+
+        // Find the corresponding iterator in the forward map before erasing.
+        auto forward_it = find(*pKey);
+        assert_invariant(forward_it != end());
+
+        // Erase from both maps while the key object is still valid.
+        mForwardMap.erase(forward_it);
         mBackwardMap.erase(it);
+
+        // Now that no map refers to the key, we can safely destroy and deallocate it.
+        pKey->~Key();
+        mAllocator.deallocate(const_cast<Key*>(pKey), 1);
     }
 };
 

@@ -35,9 +35,8 @@ namespace wgpu::binding {
 // wgpu::bindings::GPUSupportedLimits
 ////////////////////////////////////////////////////////////////////////////////
 
-GPUSupportedLimits::GPUSupportedLimits(wgpu::Limits limits) : limits_(std::move(limits)) {
-    // Clear to prevent using invalid pointer.
-    limits_.nextInChain = nullptr;
+GPUSupportedLimits::GPUSupportedLimits(const dawn::utils::ComboLimits& limits) {
+    limits.UnlinkedCopyTo(&limits_);
 }
 
 uint32_t GPUSupportedLimits::getMaxTextureDimension1D(Napi::Env) {
@@ -164,25 +163,20 @@ uint32_t GPUSupportedLimits::getMaxComputeWorkgroupsPerDimension(Napi::Env) {
     return limits_.maxComputeWorkgroupsPerDimension;
 }
 
-std::variant<uint32_t, interop::UndefinedType>
-GPUSupportedLimits::getMaxStorageBuffersInFragmentStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageBuffersInFragmentStage);
+uint32_t GPUSupportedLimits::getMaxStorageBuffersInFragmentStage(Napi::Env) {
+    return limits_.maxStorageBuffersInFragmentStage;
 }
 
-std::variant<uint32_t, interop::UndefinedType>
-GPUSupportedLimits::getMaxStorageTexturesInFragmentStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(
-        limits_.maxStorageTexturesInFragmentStage);
+uint32_t GPUSupportedLimits::getMaxStorageTexturesInFragmentStage(Napi::Env) {
+    return limits_.maxStorageTexturesInFragmentStage;
 }
 
-std::variant<uint32_t, interop::UndefinedType>
-GPUSupportedLimits::getMaxStorageBuffersInVertexStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageBuffersInVertexStage);
+uint32_t GPUSupportedLimits::getMaxStorageBuffersInVertexStage(Napi::Env) {
+    return limits_.maxStorageBuffersInVertexStage;
 }
 
-std::variant<uint32_t, interop::UndefinedType>
-GPUSupportedLimits::getMaxStorageTexturesInVertexStage(Napi::Env) {
-    return std::variant<uint32_t, interop::UndefinedType>(limits_.maxStorageTexturesInVertexStage);
+uint32_t GPUSupportedLimits::getMaxStorageTexturesInVertexStage(Napi::Env) {
+    return limits_.maxStorageTexturesInVertexStage;
 }
 
 }  // namespace wgpu::binding

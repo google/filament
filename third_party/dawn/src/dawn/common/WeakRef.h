@@ -38,23 +38,26 @@ namespace dawn {
 template <typename T>
 class WeakRef;
 
+// GetWeakRef is a less verbose method of calling of WeakRef<typename>::Get(obj);
 template <
     typename T,
     typename = typename std::enable_if<std::is_base_of_v<detail::WeakRefSupportBase, T>>::type>
 WeakRef<T> GetWeakRef(T* obj) {
-    return WeakRef<T>(obj);
+    return WeakRef<T>::Get(obj);
 }
 
 template <
     typename T,
     typename = typename std::enable_if<std::is_base_of_v<detail::WeakRefSupportBase, T>>::type>
 WeakRef<T> GetWeakRef(const Ref<T>& obj) {
-    return GetWeakRef(obj.Get());
+    return WeakRef<T>::Get(obj.Get());
 }
 
 template <typename T>
 class WeakRef {
   public:
+    static WeakRef<T> Get(T* obj) { return WeakRef<T>(obj); }
+
     WeakRef() {}
 
     // Constructors from nullptr.
@@ -83,6 +86,9 @@ class WeakRef {
     // NOLINTNEXTLINE(runtime/explicit)
     WeakRef(WeakRefSupport<T>* support) : mData(support->mData) {}
 
+    // Comparison operators.
+    bool operator==(const WeakRef<T>& other) const = default;
+
     // Promotes a WeakRef to a Ref. Access to the raw pointer is not allowed because a raw pointer
     // could become invalid after being retrieved.
     Ref<T> Promote() const {
@@ -102,9 +108,6 @@ class WeakRef {
         return nullptr;
     }
 
-    friend WeakRef GetWeakRef<>(T* obj);
-    friend WeakRef GetWeakRef<>(const Ref<T>& obj);
-
   private:
     // Friend is needed so that we can access the data ref in conversions.
     template <typename U>
@@ -112,12 +115,20 @@ class WeakRef {
     // Friend is needed to access the private constructor.
     template <typename U>
     friend class Ref;
+    // Friend is needed so that hashing can access the mData pointer which is always valid.
+    template <typename U, typename H>
+    friend H AbslHashValue(H h, const WeakRef<U>& v);
 
     // Constructor from data should only be allowed via the GetWeakRef function.
     explicit WeakRef(detail::WeakRefSupportBase* data) : mData(data->mData) {}
 
     Ref<detail::WeakRefData> mData = nullptr;
 };
+
+template <typename T, typename H>
+H AbslHashValue(H h, const WeakRef<T>& v) {
+    return H::combine(std::move(h), v.mData.Get());
+}
 
 }  // namespace dawn
 

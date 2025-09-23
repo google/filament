@@ -19,7 +19,6 @@
 #include "dxc/Support/dxcfilesystem.h"
 #include "dxc/Support/microcom.h"
 #include "dxcutil.h"
-#include "dxillib.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LLVMContext.h"

@@ -40,8 +40,7 @@ namespace dawn::utils {
 struct RGBA8 {
     constexpr RGBA8() : RGBA8(0, 0, 0, 0) {}
     constexpr RGBA8(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
-    bool operator==(const RGBA8& other) const;
-    bool operator!=(const RGBA8& other) const;
+    bool operator==(const RGBA8& other) const = default;
     bool operator<=(const RGBA8& other) const;
     bool operator>=(const RGBA8& other) const;
 

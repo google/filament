@@ -35,9 +35,9 @@
 
 #include "src/tint/lang/core/evaluation_stage.h"
 #include "src/tint/lang/core/type/input_attachment.h"
+#include "src/tint/lang/wgsl/allowed_features.h"
 #include "src/tint/lang/wgsl/ast/input_attachment_index_attribute.h"
 #include "src/tint/lang/wgsl/ast/pipeline_stage.h"
-#include "src/tint/lang/wgsl/common/allowed_features.h"
 #include "src/tint/lang/wgsl/program/program_builder.h"
 #include "src/tint/lang/wgsl/resolver/sem_helper.h"
 #include "src/tint/utils/containers/hashmap.h"
@@ -163,16 +163,8 @@ class Validator {
     bool IsPlain(const core::type::Type* type) const;
 
     /// @param type the given type
-    /// @returns true if the given type is a fixed-footprint type
-    bool IsFixedFootprint(const core::type::Type* type) const;
-
-    /// @param type the given type
     /// @returns true if the given type is storable
     bool IsStorable(const core::type::Type* type) const;
-
-    /// @param type the given type
-    /// @returns true if the given type is host-shareable
-    bool IsHostShareable(const core::type::Type* type) const;
 
     /// Validates the enabled extensions
     /// @param enables the extension enables
@@ -251,13 +243,11 @@ class Validator {
     /// @param storage_type the attribute storage type
     /// @param stage the current pipeline stage
     /// @param is_input true if this is an input attribute
-    /// @param ignore_clip_distances_type_validation true if ignore type check on clip_distances
     /// @returns true on success, false otherwise.
     bool BuiltinAttribute(const ast::BuiltinAttribute* attr,
                           const core::type::Type* storage_type,
                           ast::PipelineStage stage,
-                          const bool is_input,
-                          const bool ignore_clip_distances_type_validation = false) const;
+                          const bool is_input) const;
 
     /// Validates a continue statement
     /// @param stmt the continue statement to validate
@@ -440,6 +430,12 @@ class Validator {
     /// @returns true on success, false otherwise
     bool StorageTexture(const core::type::StorageTexture* t, const Source& source) const;
 
+    /// Validates a texel buffer
+    /// @param t the texel buffer to validate
+    /// @param source the source of the texel buffer
+    /// @returns true on success, false otherwise
+    bool TexelBuffer(const core::type::TexelBuffer* t, const Source& source) const;
+
     /// Validates a sampled texture
     /// @param t the texture to validate
     /// @param source the source of the texture
@@ -558,11 +554,6 @@ class Validator {
     /// @returns true on success, false otherwise
     bool TextureBuiltinFn(const sem::Call* call) const;
 
-    /// Validates a workgroupUniformLoad builtin function
-    /// @param call the builtin call to validate
-    /// @returns true on success, false otherwise
-    bool WorkgroupUniformLoad(const sem::Call* call) const;
-
     /// Validates a subgroupBroadcast builtin function
     /// @param call the builtin call to validate
     /// @returns true on success, false otherwise
@@ -582,6 +573,18 @@ class Validator {
     /// @param source the source of the f16 usage
     /// @returns true on success, false otherwise
     bool CheckF16Enabled(const Source& source) const;
+
+    /// Validates that 'chromium_experimental_subgroup_matrix' extension is enabled for i8 usage at
+    /// @p source
+    /// @param source the source of the i8 usage
+    /// @returns true on success, false otherwise
+    bool CheckI8Enabled(const Source& source) const;
+
+    /// Validates that 'chromium_experimental_subgroup_matrix' extension is enabled for u8 usage at
+    /// @p source
+    /// @param source the source of the u8 usage
+    /// @returns true on success, false otherwise
+    bool CheckU8Enabled(const Source& source) const;
 
     /// Validates there are no duplicate attributes
     /// @param attributes the list of attributes to validate
@@ -663,7 +666,6 @@ class Validator {
     bool CheckTypeAccessAddressSpace(const core::type::Type* store_ty,
                                      core::Access access,
                                      core::AddressSpace address_space,
-                                     VectorRef<const tint::ast::Attribute*> attributes,
                                      const Source& source) const;
 
     /// Raises an error if the entry_point @p entry_point uses two or more module-scope 'var's with

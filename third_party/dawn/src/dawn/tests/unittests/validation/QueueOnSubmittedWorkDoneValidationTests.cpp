@@ -34,16 +34,17 @@
 namespace dawn {
 namespace {
 
+using testing::_;
 using testing::MockCppCallback;
 
 class QueueOnSubmittedWorkDoneValidationTests : public ValidationTest {
   protected:
-    MockCppCallback<void (*)(wgpu::QueueWorkDoneStatus)> mWorkDoneCb;
+    MockCppCallback<wgpu::QueueWorkDoneCallback<void>*> mWorkDoneCb;
 };
 
 // Test that OnSubmittedWorkDone can be called as soon as the queue is created.
 TEST_F(QueueOnSubmittedWorkDoneValidationTests, CallBeforeSubmits) {
-    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success)).Times(1);
+    EXPECT_CALL(mWorkDoneCb, Call(wgpu::QueueWorkDoneStatus::Success, _)).Times(1);
     device.GetQueue().OnSubmittedWorkDone(wgpu::CallbackMode::AllowProcessEvents,
                                           mWorkDoneCb.Callback());
 

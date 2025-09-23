@@ -23,6 +23,7 @@
 #include "Skip.h"
 #include "TrianglePrimitive.h"
 
+#include <utils/debug.h>
 #include <utils/Hash.h>
 
 #include <fstream>
@@ -71,20 +72,29 @@ namespace test {
 
 class ReadPixelsTest : public BackendTest {
 public:
+    ReadPixelsTest() {
+        // Expect a square screen
+        EXPECT_THAT(screenWidth(), ::testing::Eq(screenHeight()));
+    }
+
     bool readPixelsFinished = false;
 };
 
 TEST_F(ReadPixelsTest, ReadPixels) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Two cases fail, see b/417255941 and b/417255943");
+    SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     // These test scenarios use a known hash of the result pixel buffer to decide pass / fail,
     // asserting an exact pixel-for-pixel match. So far, rendering on macOS and iPhone have had
     // deterministic results. Take this test with a grain of salt, however, as other platform / GPU
     // combinations may vary ever-so-slightly, which would cause this test to fail.
 
-    const size_t renderTargetBaseSize = 512;
+    const size_t renderTargetBaseSize = screenWidth();
 
     struct TestCase {
+        explicit TestCase(size_t renderTargetBaseSize)
+            : renderTargetBaseSize(renderTargetBaseSize) {}
+
+        size_t renderTargetBaseSize;
+
         const char* testName = "readPixels_normal";
 
         // The murmur3 hash of the read pixel buffer result, used to determine success.
@@ -113,11 +123,15 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         size_t bufferDimension = getRenderTargetSize();
 
         size_t getBufferSizeBytes() const {
-            size_t components;
-            int bpp;
-            getPixelInfo(format, type, components, bpp);
-            return bufferDimension * bufferDimension * bpp;
+            return bufferDimension * bufferDimension * getBytesPerPixels();
         }
+
+        size_t getBytesPerPixels() const {
+            int bpp;
+            size_t components;
+            getPixelInfo(format, type, components, bpp);
+            return bpp;
+        };
 
         // The offset and stride set on the pixel buffer.
         size_t left = 0, top = 0, alignment = 1;
@@ -134,23 +148,31 @@ TEST_F(ReadPixelsTest, ReadPixels) {
             const size_t width = readRect.width, height = readRect.height;
             LinearImage image(width, height, 4);
             if (format == PixelDataFormat::RGBA && type == PixelDataType::UBYTE) {
-                image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
+                if (top == 0 && left == 0 && renderTargetBaseSize == readRect.width) {
+                    image = toLinearWithAlpha<uint8_t>(width, height, width * 4, (uint8_t*)pixelData);
+                } else {
+                    float* pixelRef = image.getPixelRef();
+                    size_t const bpp = getBytesPerPixels();
+                    size_t const bpr = bpp * bufferDimension;
+                    for (size_t l = left; l < left + width; ++l) {
+                        for (size_t t = top; t < top + height; ++t) {
+                            for (size_t c = 0; c < 4; ++c) {
+                                pixelRef[c + (l - left) * 4 + ((t - top) * 4 * width)] =
+                                        ((uint8_t*)pixelData)[c + l * bpp + t * bpr] / 255.0f;
+                            }
+                        }
+                    }
+                }
             }
             if (format == PixelDataFormat::RGBA && type == PixelDataType::FLOAT) {
                 memcpy(image.getPixelRef(), pixelData, width * height * sizeof(math::float4));
             }
             std::string png = std::string(testName) + ".png";
-            std::ofstream outputStream(png.c_str(), std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                    png.c_str());
+            std::filesystem::path path = ScreenshotParams::actualDirectoryPath();
+            path.append(png);
+            std::ofstream outputStream(path.c_str(), std::ios::binary | std::ios::trunc);
+            ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "", png);
 #endif
-        }
-
-        void exportRawBytes(void* pixelData) const {
-            std::string out = std::string(testName) + ".raw";
-            std::ofstream outputStream(out.c_str(), std::ios::binary | std::ios::trunc);
-            outputStream.write((char*)pixelData, getBufferSizeBytes());
-            outputStream.close();
         }
 
         // The format and type for the readPixels call.
@@ -163,20 +185,23 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     // The normative read pixels test case. Render a white triangle over a blue background and read
     // the full viewport into a pixel buffer.
-    TestCase const t0;
+    TestCase const t0(renderTargetBaseSize);
+    TestCase::Rect const subregionRect = {
+        .x = 90,
+        .y = 403,
+        .width = 64,
+        .height = 64,
+    };
 
     // Check that a subregion of the render target can be read into a pixel buffer.
-    TestCase t2;
+    TestCase t2(renderTargetBaseSize);
     t2.testName = "readPixels_subregion";
-    t2.readRect.x = 90;
-    t2.readRect.y = 403;
-    t2.readRect.width = 64;
-    t2.readRect.height = 64;
+    t2.readRect = subregionRect;
     t2.bufferDimension = 64;
     t2.hash = 0xcba7675a;
 
     // Check that readPixels works when rendering into and reading from a mip level.
-    TestCase t3;
+    TestCase t3(renderTargetBaseSize);
     t3.testName = "readPixels_mip";
     t3.mipLevels = 4;
     t3.mipLevel = 2;
@@ -186,7 +211,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     t3.hash = 0xe6fa6c55;
 
     // Check that readPixels can return pixels in floating point RGBA format.
-    TestCase t4;
+    TestCase t4(renderTargetBaseSize);
     t4.testName = "readPixels_float";
     t4.format = PixelDataFormat::RGBA;
     t4.type = PixelDataType::FLOAT;
@@ -194,19 +219,20 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     // Check that readPixels can read a region of the render target into a subregion of a large
     // buffer.
-    TestCase t5;
+    const size_t actualBufferSize = renderTargetBaseSize * 2;
+    constexpr size_t readOffset = 64;;
+
+    assert_invariant(renderTargetBaseSize + readOffset < actualBufferSize);
+    TestCase t5(renderTargetBaseSize);
     t5.testName = "readPixels_subbuffer";
-    t5.readRect.x = 90;
-    t5.readRect.y = 403;
-    t5.readRect.width = 64;
-    t5.readRect.height = 64;
-    t5.bufferDimension = 512;
-    t5.left = 64;
-    t5.top = 64;
-    t5.hash = 0xbaefdb54;
+    t5.readRect = subregionRect;
+    t5.bufferDimension = actualBufferSize;
+    t5.left = readOffset;
+    t5.top = readOffset;
+    t5.hash = 0x64585D10;
 
     // Check that readPixels works with integer formats.
-    TestCase t6;
+    TestCase t6(renderTargetBaseSize);
     t6.testName = "readPixels_UINT";
     t6.format = PixelDataFormat::R_INTEGER;
     t6.type = PixelDataType::UINT;
@@ -214,7 +240,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     t6.hash = 0x9d91227;
 
     // Check that readPixels works with half formats.
-    TestCase t7;
+    TestCase t7(renderTargetBaseSize);
     t7.testName = "readPixels_half";
     t7.format = PixelDataFormat::RG;
     t7.type = PixelDataType::HALF;
@@ -223,7 +249,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
     // Check that readPixels works when rendering into the SwapChain.
     // This requires that the test runner's native window size is 512x512.
-    TestCase t8;
+    TestCase t8(renderTargetBaseSize);
     t8.testName = "readPixels_swapchain";
     t8.useDefaultRT = true;
 
@@ -279,14 +305,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         TrianglePrimitive const triangle(api);
 
-        RenderPassParams params = {};
-        fullViewport(params);
-        params.flags.clear = TargetBufferFlags::COLOR;
-        params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-        params.flags.discardStart = TargetBufferFlags::ALL;
-        params.flags.discardEnd = TargetBufferFlags::NONE;
-        params.viewport.height = t.getRenderTargetSize();
+        RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
         params.viewport.width = t.getRenderTargetSize();
+        params.viewport.height = t.getRenderTargetSize();
 
         api.makeCurrent(swapChain, swapChain);
         api.beginFrame(0, 0, 0);
@@ -294,16 +315,17 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Render a white triangle over blue.
         api.beginRenderPass(renderTarget, params);
 
-        PipelineState state;
-        state.program = floatShader.getProgram();
+        PipelineState state = getColorWritePipelineState();
         if (isUnsignedIntFormat(t.textureFormat)) {
-            state.program = uintShader.getProgram();
+            uintShader.addProgramToPipelineState(state);
+        } else {
+            floatShader.addProgramToPipelineState(state);
         }
-        state.rasterState.colorWrite = true;
-        state.rasterState.depthWrite = false;
-        state.rasterState.depthFunc = RasterState::DepthFunc::A;
-        state.rasterState.culling = CullingMode::NONE;
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
 
         api.endRenderPass();
 
@@ -330,7 +352,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
                     assert_invariant(test);
 
                     test->exportScreenshot(buffer);
-                    //test->exportRawBytes(buffer);
 
                     // Hash the contents of the buffer and check that they match.
                     uint32_t hash = utils::hash::murmur3((const uint32_t*)buffer, size / 4, 0);
@@ -353,8 +374,6 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.commit(swapChain);
         api.endFrame(0);
     }
-
-    // This ensures all driver commands have finished before exiting the test.
     flushAndWait();
 }
 
@@ -400,23 +419,14 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     TrianglePrimitive triangle(api);
 
-    RenderPassParams params = {};
-    fullViewport(params);
-    params.flags.clear = TargetBufferFlags::COLOR;
-    params.clearColor = { 0.f, 0.f, 1.f, 1.f };
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::NONE;
-    params.viewport.height = renderTargetSize;
+    PipelineState state = getColorWritePipelineState();
+    shader.addProgramToPipelineState(state);
+
+    RenderPassParams params = getClearColorRenderPass(math::float4(0, 0, 1, 1));
     params.viewport.width = renderTargetSize;
+    params.viewport.height = renderTargetSize;
 
     void* buffer = calloc(1, renderTargetSize * renderTargetSize * 4);
-
-    PipelineState state;
-    state.program = shader.getProgram();
-    state.rasterState.colorWrite = true;
-    state.rasterState.depthWrite = false;
-    state.rasterState.depthFunc = RasterState::DepthFunc::A;
-    state.rasterState.culling = CullingMode::NONE;
 
     for (int iteration = 0; iteration < iterationCount; ++iteration) {
         readPixelsFinished = false;
@@ -430,7 +440,11 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
         // Render some content, just so we don't read back uninitialized data.
         api.beginRenderPass(renderTarget, params);
-        api.draw(state, triangle.getRenderPrimitive(), 0, 3, 1);
+        state.primitiveType = PrimitiveType::TRIANGLES;
+        state.vertexBufferInfo = triangle.getVertexBufferInfo();
+        api.bindPipeline(state);
+        api.bindRenderPrimitive(triangle.getRenderPrimitive());
+        api.draw2(0, 3, 1);
         api.endRenderPass();
 
         PixelBufferDescriptor descriptor(buffer, renderTargetSize * renderTargetSize * 4,

@@ -37,7 +37,10 @@ namespace {
 using namespace tint::core::fluent_types;     // NOLINT
 using namespace tint::core::number_suffixes;  // NOLINT
 
-using IR_BindingRemapperTest = TransformTest;
+class IR_BindingRemapperTest : public TransformTest {
+  public:
+    IR_BindingRemapperTest() { capabilities = kBindingRemapperCapabilities; }
+};
 
 TEST_F(IR_BindingRemapperTest, NoModify_NoRemappings) {
     auto* buffer = b.Var("buffer", ty.ptr<uniform, i32>());

@@ -1466,7 +1466,7 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
         ContainsUnexpandedParameterPack);
 
   SmallVector<unsigned, 1> CompatIndices;
-  unsigned DefaultIndex = -1U;
+  unsigned DefaultIndex = std::numeric_limits<unsigned>::max();
   for (unsigned i = 0; i < NumAssocs; ++i) {
     if (!Types[i])
       DefaultIndex = i;
@@ -1498,7 +1498,8 @@ Sema::CreateGenericSelectionExpr(SourceLocation KeyLoc,
   // C11 6.5.1.1p2 "If a generic selection has no default generic association,
   // its controlling expression shall have type compatible with exactly one of
   // the types named in its generic association list."
-  if (DefaultIndex == -1U && CompatIndices.size() == 0) {
+  if (DefaultIndex == std::numeric_limits<unsigned>::max() &&
+      CompatIndices.size() == 0) {
     // We strip parens here because the controlling expression is typically
     // parenthesized in macro definitions.
     ControllingExpr = ControllingExpr->IgnoreParens();
@@ -3504,12 +3505,14 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       Ty = Context.LitIntTy;
       if (Literal.GetIntegerValue(ResultVal)) {
         // If this value didn't fit into 64-bit literal int, report error.
-        Diag(Tok.getLocation(), diag::err_integer_literal_too_large);
+        Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
+            << /* Unsigned */ 1;
       }
     } else {
 
       if (Literal.GetIntegerValue(ResultVal)) {
-        Diag(Tok.getLocation(), diag::err_integer_literal_too_large);
+        Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
+            << /* Unsigned */ 1;
       }
       if (Literal.isLongLong) {
         if (Literal.isUnsigned)
@@ -3798,13 +3801,21 @@ static void warnOnSizeofOnArrayDecay(Sema &S, SourceLocation Loc, QualType T,
 }
 
 // HLSL Change Begins
-bool Sema::CheckHLSLUnaryExprOrTypeTraitOperand(QualType ExprType, SourceLocation Loc,
+bool Sema::CheckHLSLUnaryExprOrTypeTraitOperand(QualType ExprType,
+                                                SourceLocation Loc,
                                                 UnaryExprOrTypeTrait ExprKind) {
   assert(ExprKind == UnaryExprOrTypeTrait::UETT_SizeOf);
 
-  // "sizeof 42" is ill-defined because HLSL has literal int type which can decay to an int of any size.
-  const BuiltinType* BuiltinTy = ExprType->getAs<BuiltinType>();
-  if (BuiltinTy != nullptr && (BuiltinTy->getKind() == BuiltinType::LitInt || BuiltinTy->getKind() == BuiltinType::LitFloat)) {
+  if (RequireCompleteType(Loc, ExprType,
+                          diag::err_sizeof_alignof_incomplete_type, ExprKind,
+                          ExprType))
+    return true;
+
+  // "sizeof 42" is ill-defined because HLSL has literal int type which can
+  // decay to an int of any size.
+  const BuiltinType *BuiltinTy = ExprType->getAs<BuiltinType>();
+  if (BuiltinTy != nullptr && (BuiltinTy->getKind() == BuiltinType::LitInt ||
+                               BuiltinTy->getKind() == BuiltinType::LitFloat)) {
     Diag(Loc, diag::err_hlsl_sizeof_literal) << ExprType;
     return true;
   }
@@ -5337,8 +5348,6 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   // Do special checking on direct calls to functions.
   if (FDecl) {
     if (CheckFunctionCall(FDecl, TheCall, Proto))
-      return ExprError();
-    if (CheckHLSLFunctionCall(FDecl, TheCall))
       return ExprError();
     if (BuiltinID)
       return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);

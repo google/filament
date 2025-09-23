@@ -112,6 +112,8 @@ uint8_t reduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
 bool operator<(const VkImageSubresourceRange& a, const VkImageSubresourceRange& b);
 
+namespace utils::io {
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::VulkanLayout& layout);
+}
 
 #endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_IMAGE_H

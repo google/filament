@@ -55,7 +55,6 @@ Var* Var::Clone(CloneContext& ctx) {
     auto* new_result = ctx.Clone(Result());
     auto* new_var = ctx.ir.CreateInstruction<Var>(new_result);
 
-    new_var->binding_point_ = binding_point_;
     new_var->attributes_ = attributes_;
 
     if (auto* init = Initializer()) {

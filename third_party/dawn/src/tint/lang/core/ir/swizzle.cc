@@ -41,8 +41,8 @@ Swizzle::Swizzle(Id id) : Base(id) {}
 
 Swizzle::Swizzle(Id id, InstructionResult* result, Value* object, VectorRef<uint32_t> indices)
     : Base(id), indices_(std::move(indices)) {
-    TINT_ASSERT(!indices.IsEmpty());
-    TINT_ASSERT(indices.Length() <= Swizzle::kMaxNumIndices);
+    TINT_ASSERT(!indices_.IsEmpty());
+    TINT_ASSERT(indices_.Length() <= Swizzle::kMaxNumIndices);
 
     AddOperand(Swizzle::kObjectOperandOffset, object);
     AddResult(result);

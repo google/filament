@@ -112,8 +112,6 @@ class EventManager final : NonMovable {
 
     template <typename Event, typename... ReadyArgs>
     WireResult SetFutureReady(FutureID futureID, ReadyArgs&&... readyArgs) {
-        DAWN_ASSERT(futureID > 0);
-
         // If the future id is greater than what we have assigned, it must be invalid.
         if (futureID > mNextFutureID) {
             return WireResult::FatalError;

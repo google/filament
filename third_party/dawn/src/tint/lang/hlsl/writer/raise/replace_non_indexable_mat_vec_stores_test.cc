@@ -87,8 +87,8 @@ $B1: {  # root
     %5:u32 = load %dyn_index
     %6:vec3<f32> = load %v
     %7:vec3<f32> = construct 1.0f
-    %8:vec3<f32> = construct %5
-    %9:vec3<f32> = construct 0i, 1i, 2i
+    %8:vec3<u32> = construct %5
+    %9:vec3<u32> = construct 0u, 1u, 2u
     %10:vec3<bool> = eq %8, %9
     %11:vec3<f32> = select %6, %7, %10
     store %v, %11
@@ -161,8 +161,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec3<f32> = load %5
     %8:vec3<f32> = construct 1.0f
-    %9:vec3<f32> = construct %6
-    %10:vec3<f32> = construct 0i, 1i, 2i
+    %9:vec3<u32> = construct %6
+    %10:vec3<u32> = construct 0u, 1u, 2u
     %11:vec3<bool> = eq %9, %10
     %12:vec3<f32> = select %7, %8, %11
     store %5, %12
@@ -226,8 +226,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec3<f32> = load %5
     %8:vec3<f32> = construct 1.0f
-    %9:vec3<f32> = construct %6
-    %10:vec3<f32> = construct 0i, 1i, 2i
+    %9:vec3<u32> = construct %6
+    %10:vec3<u32> = construct 0u, 1u, 2u
     %11:vec3<bool> = eq %9, %10
     %12:vec3<f32> = select %7, %8, %11
     store %5, %12
@@ -301,8 +301,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec3<f32> = load %5
     %8:vec3<f32> = construct 1.0f
-    %9:vec3<f32> = construct %6
-    %10:vec3<f32> = construct 0i, 1i, 2i
+    %9:vec3<u32> = construct %6
+    %10:vec3<u32> = construct 0u, 1u, 2u
     %11:vec3<bool> = eq %9, %10
     %12:vec3<f32> = select %7, %8, %11
     store %5, %12
@@ -387,16 +387,16 @@ $B1: {  # root
     %7:u32 = call %get_dynamic
     %8:vec3<f32> = load %v
     %9:vec3<f32> = construct 1.0f
-    %10:vec3<f32> = construct %7
-    %11:vec3<f32> = construct 0i, 1i, 2i
+    %10:vec3<u32> = construct %7
+    %11:vec3<u32> = construct 0u, 1u, 2u
     %12:vec3<bool> = eq %10, %11
     %13:vec3<f32> = select %8, %9, %12
     store %v, %13
     %14:u32 = call %get_static
     %15:vec3<f32> = load %v
     %16:vec3<f32> = construct 1.0f
-    %17:vec3<f32> = construct %14
-    %18:vec3<f32> = construct 0i, 1i, 2i
+    %17:vec3<u32> = construct %14
+    %18:vec3<u32> = construct 0u, 1u, 2u
     %19:vec3<bool> = eq %17, %18
     %20:vec3<f32> = select %15, %16, %19
     store %v, %20
@@ -457,8 +457,8 @@ $B1: {  # root
     %5:u32 = load %dyn_index
     %6:vec3<f32> = load %v
     %7:vec3<f32> = construct 1.0f
-    %8:vec3<f32> = construct %5
-    %9:vec3<f32> = construct 0i, 1i, 2i
+    %8:vec3<u32> = construct %5
+    %9:vec3<u32> = construct 0u, 1u, 2u
     %10:vec3<bool> = eq %8, %9
     %11:vec3<f32> = select %6, %7, %10
     store %v, %11
@@ -519,8 +519,8 @@ $B1: {  # root
     %5:u32 = load %dyn_index
     %6:vec3<f32> = load %v
     %7:vec3<f32> = construct 1.0f
-    %8:vec3<f32> = construct %5
-    %9:vec3<f32> = construct 0i, 1i, 2i
+    %8:vec3<u32> = construct %5
+    %9:vec3<u32> = construct 0u, 1u, 2u
     %10:vec3<bool> = eq %8, %9
     %11:vec3<f32> = select %6, %7, %10
     store %v, %11
@@ -666,8 +666,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -740,8 +740,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -804,8 +804,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -879,8 +879,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -969,16 +969,16 @@ $B1: {  # root
     %8:u32 = call %get_dynamic
     %9:vec4<f32> = load %7
     %10:vec4<f32> = construct 1.0f
-    %11:vec4<f32> = construct %8
-    %12:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %11:vec4<u32> = construct %8
+    %12:vec4<u32> = construct 0u, 1u, 2u, 3u
     %13:vec4<bool> = eq %11, %12
     %14:vec4<f32> = select %9, %10, %13
     store %7, %14
     %15:u32 = call %get_static
     %16:vec4<f32> = load %7
     %17:vec4<f32> = construct 1.0f
-    %18:vec4<f32> = construct %15
-    %19:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %18:vec4<u32> = construct %15
+    %19:vec4<u32> = construct 0u, 1u, 2u, 3u
     %20:vec4<bool> = eq %18, %19
     %21:vec4<f32> = select %16, %17, %20
     store %7, %21
@@ -1042,8 +1042,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -1107,8 +1107,8 @@ $B1: {  # root
     %6:u32 = load %dyn_index
     %7:vec4<f32> = load %5
     %8:vec4<f32> = construct 1.0f
-    %9:vec4<f32> = construct %6
-    %10:vec4<f32> = construct 0i, 1i, 2i, 3i
+    %9:vec4<u32> = construct %6
+    %10:vec4<u32> = construct 0u, 1u, 2u, 3u
     %11:vec4<bool> = eq %9, %10
     %12:vec4<f32> = select %7, %8, %11
     store %5, %12
@@ -1975,8 +1975,8 @@ $B1: {  # root
         %8:ptr<function, vec4<f32>, read_write> = access %v, 0u
         %9:vec4<f32> = load %8
         %10:vec4<f32> = construct 1.0f
-        %11:vec4<f32> = construct %7
-        %12:vec4<f32> = construct 0i, 1i, 2i, 3i
+        %11:vec4<u32> = construct %7
+        %12:vec4<u32> = construct 0u, 1u, 2u, 3u
         %13:vec4<bool> = eq %11, %12
         %14:vec4<f32> = select %9, %10, %13
         store %8, %14
@@ -1986,8 +1986,8 @@ $B1: {  # root
         %15:ptr<function, vec4<f32>, read_write> = access %v, 1u
         %16:vec4<f32> = load %15
         %17:vec4<f32> = construct 1.0f
-        %18:vec4<f32> = construct %7
-        %19:vec4<f32> = construct 0i, 1i, 2i, 3i
+        %18:vec4<u32> = construct %7
+        %19:vec4<u32> = construct 0u, 1u, 2u, 3u
         %20:vec4<bool> = eq %18, %19
         %21:vec4<f32> = select %16, %17, %20
         store %15, %21
@@ -1999,6 +1999,68 @@ $B1: {  # root
     }
     %22:ptr<function, vec4<f32>, read_write> = access %v, %static_index
     store_vector_element %22, %static_index, 1.0f
+    ret
+  }
+}
+)";
+
+    Run(ReplaceNonIndexableMatVecStores);
+
+    EXPECT_EQ(expect, str());
+}
+
+TEST_F(HlslWriterReplaceNonIndexableMatVecStoresTest, Vector_I32Index) {
+    auto* dyn_index = b.Var("dyn_index", ty.ptr<uniform, i32>());
+    dyn_index->SetBindingPoint(0, 0);
+    mod.root_block->Append(dyn_index);
+
+    auto* func = b.ComputeFunction("main");
+    b.Append(func->Block(), [&] {
+        auto* static_index = b.Let("static_index", 0_i);
+        auto* v = b.Var("v", ty.ptr<function>(ty.vec3<f32>()));
+        b.StoreVectorElement(v, b.Load(dyn_index), 1_f);
+        b.StoreVectorElement(v, static_index, 1_f);
+        b.Return(func);
+    });
+
+    auto* src = R"(
+$B1: {  # root
+  %dyn_index:ptr<uniform, i32, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %static_index:i32 = let 0i
+    %v:ptr<function, vec3<f32>, read_write> = var undef
+    %5:i32 = load %dyn_index
+    store_vector_element %v, %5, 1.0f
+    store_vector_element %v, %static_index, 1.0f
+    ret
+  }
+}
+)";
+
+    EXPECT_EQ(src, str());
+
+    auto* expect = R"(
+$B1: {  # root
+  %dyn_index:ptr<uniform, i32, read> = var undef @binding_point(0, 0)
+}
+
+%main = @compute @workgroup_size(1u, 1u, 1u) func():void {
+  $B2: {
+    %static_index:i32 = let 0i
+    %v:ptr<function, vec3<f32>, read_write> = var undef
+    %5:i32 = load %dyn_index
+    %6:vec3<f32> = load %v
+    %7:vec3<f32> = construct 1.0f
+    %8:u32 = convert %5
+    %9:vec3<u32> = construct %8
+    %10:vec3<u32> = construct 0u, 1u, 2u
+    %11:vec3<bool> = eq %9, %10
+    %12:vec3<f32> = select %6, %7, %11
+    store %v, %12
+    store_vector_element %v, %static_index, 1.0f
     ret
   }
 }

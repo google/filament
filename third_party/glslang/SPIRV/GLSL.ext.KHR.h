@@ -65,5 +65,6 @@ static const char* const E_SPV_EXT_replicated_composites        = "SPV_EXT_repli
 static const char* const E_SPV_KHR_relaxed_extended_instruction = "SPV_KHR_relaxed_extended_instruction";
 static const char* const E_SPV_KHR_integer_dot_product          = "SPV_KHR_integer_dot_product";
 static const char* const E_SPV_NV_cooperative_vector            = "SPV_NV_cooperative_vector";
+static const char* const E_SPV_KHR_bfloat16                     = "SPV_KHR_bfloat16";
 
 #endif  // #ifndef GLSLextKHR_H

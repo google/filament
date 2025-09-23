@@ -27,22 +27,21 @@
 
 #include "src/tint/lang/hlsl/writer/printer/printer.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "src/tint/lang/core/access.h"
-#include "src/tint/lang/core/address_space.h"
-#include "src/tint/lang/core/builtin_value.h"
 #include "src/tint/lang/core/constant/splat.h"
 #include "src/tint/lang/core/constant/value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
 #include "src/tint/lang/core/ir/access.h"
+#include "src/tint/lang/core/ir/analysis/for_loop_analysis.h"
 #include "src/tint/lang/core/ir/bitcast.h"
 #include "src/tint/lang/core/ir/block.h"
 #include "src/tint/lang/core/ir/break_if.h"
@@ -78,10 +77,10 @@
 #include "src/tint/lang/core/ir/validator.h"
 #include "src/tint/lang/core/ir/value.h"
 #include "src/tint/lang/core/ir/var.h"
-#include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/array.h"
 #include "src/tint/lang/core/type/array_count.h"
 #include "src/tint/lang/core/type/atomic.h"
+#include "src/tint/lang/core/type/binding_array.h"
 #include "src/tint/lang/core/type/bool.h"
 #include "src/tint/lang/core/type/depth_multisampled_texture.h"
 #include "src/tint/lang/core/type/external_texture.h"
@@ -108,6 +107,7 @@
 #include "src/tint/lang/hlsl/type/int8_t4_packed.h"
 #include "src/tint/lang/hlsl/type/rasterizer_ordered_texture_2d.h"
 #include "src/tint/lang/hlsl/type/uint8_t4_packed.h"
+#include "src/tint/lang/hlsl/writer/common/options.h"
 #include "src/tint/utils/containers/hashmap.h"
 #include "src/tint/utils/containers/map.h"
 #include "src/tint/utils/ice/ice.h"
@@ -149,20 +149,6 @@ StringStream& operator<<(StringStream& s, const RegisterAndSpace& rs) {
     return s;
 }
 
-ast::PipelineStage ir_to_ast_stage(core::ir::Function::PipelineStage stage) {
-    switch (stage) {
-        case core::ir::Function::PipelineStage::kCompute:
-            return ast::PipelineStage::kCompute;
-        case core::ir::Function::PipelineStage::kFragment:
-            return ast::PipelineStage::kFragment;
-        case core::ir::Function::PipelineStage::kVertex:
-            return ast::PipelineStage::kVertex;
-        default:
-            break;
-    }
-    TINT_UNREACHABLE();
-}
-
 /// PIMPL class for the HLSL generator
 class Printer : public tint::TextGenerator {
   public:
@@ -173,12 +159,7 @@ class Printer : public tint::TextGenerator {
 
     /// @returns the generated HLSL shader
     tint::Result<Output> Generate() {
-        core::ir::Capabilities capabilities{
-            core::ir::Capability::kAllowModuleScopeLets,
-            core::ir::Capability::kAllowVectorElementPointer,
-            core::ir::Capability::kAllowClipDistancesOnF32,
-        };
-        auto valid = core::ir::ValidateAndDumpIfNeeded(ir_, "hlsl.Printer", capabilities);
+        auto valid = core::ir::ValidateAndDumpIfNeeded(ir_, "hlsl.Printer", kPrinterCapabilities);
         if (valid != Success) {
             return std::move(valid.Failure());
         }
@@ -266,7 +247,9 @@ class Printer : public tint::TextGenerator {
                     func_name = options_.remapped_entry_point_name;
                     TINT_ASSERT(!IsKeyword(func_name));
                 }
-                result_.entry_points.push_back({func_name, ir_to_ast_stage(func->Stage())});
+                TINT_ASSERT(result_.entry_point_name.empty());
+                result_.entry_point_name = func_name;
+                result_.pipeline_stage = func->Stage();
             }
 
             if (func->ReturnType()->Is<core::type::Array>()) {
@@ -324,9 +307,18 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitBlock(const core::ir::Block* block) {
+        auto pred = [](const core::ir::Instruction*) -> bool { return true; };
+        EmitBlock(block, pred);
+    }
+
+    template <typename T>
+    void EmitBlock(const core::ir::Block* block, T&& predicate) {
         TINT_SCOPED_ASSIGNMENT(current_block_, block);
 
         for (auto* inst : *block) {
+            if (!predicate(inst)) {
+                continue;
+            }
             Switch(
                 inst,
                 // Discard and TerminateInvocation must come before Call.
@@ -505,6 +497,14 @@ class Printer : public tint::TextGenerator {
         //   }
         // }
 
+        // Analysis to detect loop condition. FXC appears to require this to do its own uniformity
+        // analysis for expressions that include shader uniforms.
+        // See crbug.com/429187478 why this specific workaround exists.
+        std::unique_ptr<core::ir::analysis::ForLoopAnalysis> analysis(
+            options_.compiler == Options::Compiler::kFXC
+                ? new core::ir::analysis::ForLoopAnalysis(*l)
+                : nullptr);
+
         auto emit_continuing = [&] {
             Line() << "{";
             {
@@ -520,10 +520,29 @@ class Printer : public tint::TextGenerator {
             const ScopedIndent init(current_buffer_);
             EmitBlock(l->Initializer());
 
-            Line() << "while(true) {";
+            bool has_loop_condition = false;
+            if (analysis) {
+                if (auto* if_cond = analysis->GetIfCondition()) {
+                    auto while_construct_line = Line();
+                    while_construct_line << "while(";
+                    has_loop_condition = true;
+                    EmitValue(while_construct_line, if_cond);
+                    while_construct_line << ") {";
+                }
+            }
+            if (!has_loop_condition) {
+                Line() << "while(true) {";
+            }
+
             {
                 const ScopedIndent si(current_buffer_);
-                EmitBlock(l->Body());
+                if (has_loop_condition) {
+                    EmitBlock(l->Body(), [&analysis](const core::ir::Instruction* inst) {
+                        return !analysis->IsBodyRemovedInstruction(inst);
+                    });
+                } else {
+                    EmitBlock(l->Body());
+                }
             }
             Line() << "}";
         }
@@ -578,7 +597,9 @@ class Printer : public tint::TextGenerator {
 
                         break;
                     }
-                    case core::AddressSpace::kPushConstant:
+                    // All immediate address space instructions should have been converted to
+                    // uniform address space by the ChangeImmediateToUniform transform.
+                    case core::AddressSpace::kImmediate:
                     default: {
                         TINT_ICE() << "unhandled address space " << space;
                     }
@@ -588,9 +609,6 @@ class Printer : public tint::TextGenerator {
     }
 
     void EmitUniformVariable(const core::ir::Var* var) {
-        auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
-        TINT_ASSERT(ptr);
-
         auto bp = var->BindingPoint();
         TINT_ASSERT(bp.has_value());
 
@@ -620,20 +638,23 @@ class Printer : public tint::TextGenerator {
         auto* ptr = var->Result()->Type()->As<core::type::Pointer>();
         TINT_ASSERT(ptr);
 
-        char register_space = ' ';
-        if (ptr->StoreType()->Is<core::type::Texture>()) {
-            register_space = 't';
-
-            auto* st = ptr->StoreType()->As<core::type::StorageTexture>();
-            if (st && st->Access() != core::Access::kRead) {
-                register_space = 'u';
-            } else if (ptr->StoreType()->Is<hlsl::type::RasterizerOrderedTexture2D>()) {
-                register_space = 'u';
-            }
-        } else if (ptr->StoreType()->Is<core::type::Sampler>()) {
-            register_space = 's';
+        auto* type_for_register = ptr->StoreType();
+        if (auto* arr = type_for_register->As<core::type::BindingArray>()) {
+            type_for_register = arr->ElemType();
         }
-        TINT_ASSERT(register_space != ' ');
+
+        char register_space = Switch(
+            type_for_register,  //
+            [&](const core::type::DepthTexture*) { return 't'; },
+            [&](const core::type::DepthMultisampledTexture*) { return 't'; },
+            [&](const core::type::SampledTexture*) { return 't'; },
+            [&](const core::type::MultisampledTexture*) { return 't'; },
+            [&](const core::type::StorageTexture* st) {
+                return st->Access() == core::Access::kRead ? 't' : 'u';
+            },
+            [&](const hlsl::type::RasterizerOrderedTexture2D*) { return 'u'; },
+            [&](const core::type::Sampler*) { return 's'; },  //
+            TINT_ICE_ON_NO_MATCH);
 
         auto bp = var->BindingPoint();
         TINT_ASSERT(bp.has_value());
@@ -1367,6 +1388,9 @@ class Printer : public tint::TextGenerator {
 
             [&](const core::type::Atomic* atomic) { EmitType(out, atomic->Type(), name); },
             [&](const core::type::Array* ary) { EmitArrayType(out, ary, name, name_printed); },
+            [&](const core::type::BindingArray* ary) {
+                EmitBindingArrayType(out, ary, name, name_printed);
+            },
             [&](const core::type::Vector* vec) { EmitVectorType(out, vec); },
             [&](const core::type::Matrix* mat) { EmitMatrixType(out, mat); },
             [&](const core::type::Struct* str) {
@@ -1412,6 +1436,24 @@ class Printer : public tint::TextGenerator {
         for (const uint32_t size : sizes) {
             out << "[" << size << "]";
         }
+    }
+
+    void EmitBindingArrayType(StringStream& out,
+                              const core::type::BindingArray* ary,
+                              const std::string& name,
+                              bool* name_printed) {
+        EmitType(out, ary->ElemType());
+
+        if (!name.empty()) {
+            out << " " << name;
+            if (name_printed) {
+                *name_printed = true;
+            }
+        }
+
+        auto* constant_count = ary->Count()->As<core::type::ConstantArrayCount>();
+        TINT_ASSERT(constant_count != nullptr);
+        out << "[" << constant_count->value << "]";
     }
 
     void EmitVectorType(StringStream& out, const core::type::Vector* vec) {
@@ -1647,6 +1689,10 @@ class Printer : public tint::TextGenerator {
                 return "SV_SampleIndex";
             case core::BuiltinValue::kSampleMask:
                 return "SV_Coverage";
+            case core::BuiltinValue::kPrimitiveId:
+                return "SV_PrimitiveId";
+            case core::BuiltinValue::kBarycentricCoord:
+                return "SV_Barycentrics";
             default:
                 break;
         }
@@ -1766,21 +1812,43 @@ class Printer : public tint::TextGenerator {
     const char* ImageFormatToRWtextureType(core::TexelFormat image_format) {
         switch (image_format) {
             case core::TexelFormat::kR8Unorm:
+            case core::TexelFormat::kR8Snorm:
+            case core::TexelFormat::kRg8Unorm:
+            case core::TexelFormat::kRg8Snorm:
             case core::TexelFormat::kBgra8Unorm:
             case core::TexelFormat::kRgba8Unorm:
             case core::TexelFormat::kRgba8Snorm:
+            case core::TexelFormat::kR16Unorm:
+            case core::TexelFormat::kR16Snorm:
+            case core::TexelFormat::kRg16Unorm:
+            case core::TexelFormat::kRg16Snorm:
+            case core::TexelFormat::kRgba16Unorm:
+            case core::TexelFormat::kRgba16Snorm:
+            case core::TexelFormat::kR16Float:
+            case core::TexelFormat::kRg16Float:
             case core::TexelFormat::kRgba16Float:
             case core::TexelFormat::kR32Float:
             case core::TexelFormat::kRg32Float:
             case core::TexelFormat::kRgba32Float:
+            case core::TexelFormat::kRgb10A2Unorm:
+            case core::TexelFormat::kRg11B10Ufloat:
                 return "float4";
+            case core::TexelFormat::kR8Uint:
+            case core::TexelFormat::kRg8Uint:
+            case core::TexelFormat::kR16Uint:
+            case core::TexelFormat::kRg16Uint:
             case core::TexelFormat::kRgba8Uint:
             case core::TexelFormat::kRgba16Uint:
             case core::TexelFormat::kR32Uint:
             case core::TexelFormat::kRg32Uint:
             case core::TexelFormat::kRgba32Uint:
+            case core::TexelFormat::kRgb10A2Uint:
                 return "uint4";
+            case core::TexelFormat::kR8Sint:
+            case core::TexelFormat::kRg8Sint:
             case core::TexelFormat::kRgba8Sint:
+            case core::TexelFormat::kR16Sint:
+            case core::TexelFormat::kRg16Sint:
             case core::TexelFormat::kRgba16Sint:
             case core::TexelFormat::kR32Sint:
             case core::TexelFormat::kRg32Sint:

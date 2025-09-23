@@ -19,7 +19,6 @@
 
 #include <utils/algorithm.h>
 #include <utils/compiler.h>
-#include <utils/debug.h>
 
 #include <assert.h>
 #include <stddef.h>
@@ -27,6 +26,7 @@
 
 #include <algorithm> // for std::fill
 #include <iterator>
+#include <limits>
 #include <type_traits>
 
 #if defined(__ARM_NEON)
@@ -66,12 +66,12 @@ public:
     }
 
     T getBitsAt(size_t n) const noexcept {
-        assert_invariant(n<N);
+        assert(n<N);
         return storage[n];
     }
 
     T& getBitsAt(size_t n) noexcept {
-        assert_invariant(n<N);
+        assert(n<N);
         return storage[n];
     }
 
@@ -97,6 +97,17 @@ public:
         }
     }
 
+    size_t firstSetBit() const noexcept {
+        for (size_t i = 0; i < N; i++) {
+            if (T v = storage[i]) {
+                T k = utils::ctz(v);
+                v &= ~(T(1) << k);
+                return size_t(k + BITS_PER_WORD * i);
+            }
+        }
+        return std::numeric_limits<size_t>::max();
+    }
+
     size_t size() const noexcept { return N * BITS_PER_WORD; }
 
     bool empty() const noexcept { return none(); }
@@ -104,23 +115,23 @@ public:
     bool test(size_t bit) const noexcept { return operator[](bit); }
 
     void set(size_t b) noexcept {
-        assert_invariant(b / BITS_PER_WORD < N);
+        assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] |= T(1) << (b % BITS_PER_WORD);
     }
 
     void set(size_t b, bool value) noexcept {
-        assert_invariant(b / BITS_PER_WORD < N);
+        assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] &= ~(T(1) << (b % BITS_PER_WORD));
         storage[b / BITS_PER_WORD] |= T(value) << (b % BITS_PER_WORD);
     }
 
     void unset(size_t b) noexcept {
-        assert_invariant(b / BITS_PER_WORD < N);
+        assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] &= ~(T(1) << (b % BITS_PER_WORD));
     }
 
     void flip(size_t b) noexcept {
-        assert_invariant(b / BITS_PER_WORD < N);
+        assert(b / BITS_PER_WORD < N);
         storage[b / BITS_PER_WORD] ^= T(1) << (b % BITS_PER_WORD);
     }
 
@@ -133,7 +144,7 @@ public:
     }
 
     bool operator[](size_t b) const noexcept {
-        assert_invariant(b / BITS_PER_WORD < N);
+        assert(b / BITS_PER_WORD < N);
         return bool(storage[b / BITS_PER_WORD] & (T(1) << (b % BITS_PER_WORD)));
     }
 

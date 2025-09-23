@@ -20,6 +20,7 @@
 #include "downcast.h"
 
 #include "Allocators.h"
+#include "BufferPoolAllocator.h"
 #include "Culler.h"
 #include "FrameHistory.h"
 #include "FrameInfo.h"
@@ -29,8 +30,6 @@
 
 #include "ds/ColorPassDescriptorSet.h"
 #include "ds/DescriptorSet.h"
-#include "ds/PostProcessDescriptorSet.h"
-#include "ds/SsrPassDescriptorSet.h"
 #include "ds/TypedUniformBuffer.h"
 
 #include "components/LightManager.h"
@@ -41,10 +40,7 @@
 #include "details/RenderTarget.h"
 #include "details/Scene.h"
 
-#include <private/filament/EngineEnums.h>
 #include <private/filament/UibStructs.h>
-
-#include <private/backend/DriverApi.h>
 
 #include <filament/Frustum.h>
 #include <filament/Renderer.h>
@@ -54,7 +50,6 @@
 #include <backend/Handle.h>
 
 #include <utils/compiler.h>
-#include <utils/Allocator.h>
 #include <utils/Entity.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -68,8 +63,8 @@ namespace filament::fgviewer {
 }
 #endif
 
-#include <math/scalar.h>
 #include <math/mat4.h>
+#include <math/vec4.h>
 
 #include <array>
 #include <memory>
@@ -102,6 +97,7 @@ class FScene;
 
 class FView : public View {
 public:
+    using MaterialGlobals = std::array<math::float4, 4>;
     using Range = utils::Range<uint32_t>;
 
     explicit FView(FEngine& engine);
@@ -109,7 +105,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    CameraInfo computeCameraInfo(FEngine& engine) const noexcept;
+    CameraInfo computeCameraInfo(FEngine const& engine) const noexcept;
 
     // note: viewport/cameraInfo are passed by value to make it clear that prepare cannot
     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
@@ -159,10 +155,9 @@ public:
         return mName.c_str_safe();
     }
 
-    void prepareUpscaler(math::float2 scale,
-            TemporalAntiAliasingOptions const& taaOptions,
-            DynamicResolutionOptions const& dsrOptions) const noexcept;
     void prepareCamera(FEngine& engine, const CameraInfo& cameraInfo) const noexcept;
+
+    void prepareLodBias(float bias, math::float2 derivativesScale) const noexcept;
 
     void prepareViewport(
             const Viewport& physicalViewport,
@@ -173,16 +168,19 @@ public:
     void prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept;
 
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
-    void prepareSSR(backend::Handle<backend::HwTexture> ssr, bool disableSSR,
-            float refractionLodOffset,
-            ScreenSpaceReflectionsOptions const& ssrOptions) const noexcept;
+    void prepareSSAO(AmbientOcclusionOptions const& options) const noexcept;
+
+    void prepareSSR(backend::Handle<backend::HwTexture> ssr) const noexcept;
+    void prepareSSR(FEngine& engine, CameraInfo const& cameraInfo,
+            float refractionLodOffset, ScreenSpaceReflectionsOptions const& options) const noexcept;
+
     void prepareStructure(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadow(backend::Handle<backend::HwTexture> structure) const noexcept;
-    void prepareShadowMapping(FEngine const& engine, bool highPrecision) const noexcept;
+    void prepareShadowMapping(FEngine const& engine, backend::Handle<backend::HwTexture> structure) const noexcept;
+    void prepareShadowMapping() const noexcept;
 
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;
-    void commitUniformsAndSamplers(backend::DriverApi& driver) const noexcept;
-    void unbindSamplers(FEngine& engine) noexcept;
+    void commitUniforms(backend::DriverApi& driver) const noexcept;
+    void commitDescriptorSet(backend::DriverApi& driver) const noexcept;
 
     utils::JobSystem::Job* getFroxelizerSync() const noexcept { return mFroxelizerSync; }
     void setFroxelizerSync(utils::JobSystem::Job* sync) noexcept { mFroxelizerSync = sync; }
@@ -237,6 +235,12 @@ public:
         return mShadowMapManager->getDirectionalShadowCameras();
     }
 
+    void setFroxelVizEnabled(bool const enabled) noexcept {
+        mFroxelVizEnabled = enabled;
+    }
+
+    FroxelConfigurationInfoWithAge getFroxelConfigurationInfo() const noexcept;
+
     void setRenderTarget(FRenderTarget* renderTarget) noexcept {
         assert_invariant(!renderTarget || !mMultiSampleAntiAliasingOptions.enabled ||
                 !renderTarget->hasSampleableDepth());
@@ -289,7 +293,7 @@ public:
         return mGuardBandOptions;
     }
 
-    void setColorGrading(FColorGrading* colorGrading) noexcept {
+    void setColorGrading(FColorGrading const* colorGrading) noexcept {
         mColorGrading = colorGrading == nullptr ? mDefaultColorGrading : colorGrading;
     }
 
@@ -432,9 +436,8 @@ public:
     backend::TargetBufferFlags getRenderTargetAttachmentMask() const noexcept {
         if (mRenderTarget == nullptr) {
             return backend::TargetBufferFlags::NONE;
-        } else {
-            return mRenderTarget->getAttachmentMask();
         }
+        return mRenderTarget->getAttachmentMask();
     }
 
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
@@ -475,13 +478,15 @@ public:
         return mFogEntity;
     }
 
-    TypedUniformBuffer<PerViewUib>& getFrameUniforms() noexcept {
+    TypedUniformBuffer<PerViewUib>& getFrameUniforms() const noexcept {
         return mUniforms;
     }
 
     fgviewer::ViewHandle getViewHandle() const noexcept {
         return mFrameGraphViewerViewHandle;
     }
+
+    MaterialGlobals getMaterialGlobals() const { return mMaterialGlobals; }
 
 private:
     struct FPickingQuery : public PickingQuery {
@@ -497,7 +502,7 @@ private:
                 PickingQueryResultCallback const callback) noexcept {
             return new(std::nothrow) FPickingQuery(x, y, handler, callback);
         }
-        static void put(FPickingQuery* pQuery) noexcept {
+        static void put(FPickingQuery const* pQuery) noexcept {
             delete pQuery;
         }
         mutable FPickingQuery* next = nullptr;
@@ -507,11 +512,15 @@ private:
         backend::CallbackHandler* const handler;
         PickingQueryResultCallback const callback;
         // picking query result
-        PickingQueryResult result;
+        PickingQueryResult result{};
     };
 
     void prepareVisibleRenderables(utils::JobSystem& js,
             Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept;
+
+    void updateUBOs(backend::DriverApi& driver,
+            FScene::RenderableSoa& renderableData,
+            utils::Range<uint32_t> visibleRenderables) noexcept;
 
     static void prepareVisibleLights(FLightManager const& lcm,
             utils::Slice<float> scratch,
@@ -541,12 +550,14 @@ private:
 
     FScene* mScene = nullptr;
     // The camera set by the user, used for culling and viewing
-    FCamera* /* UTILS_NONNULL */ mCullingCamera = nullptr; // FIXME: should always be non-null
+    FCamera* mCullingCamera = nullptr;
     // The optional (debug) camera, used only for viewing
     FCamera* mViewingCamera = nullptr;
 
     mutable Froxelizer mFroxelizer;
     utils::JobSystem::Job* mFroxelizerSync = nullptr;
+    bool mFroxelVizEnabled = false;
+    uint32_t mFroxelConfigurationAge = 0;
 
     Viewport mViewport;
     bool mCulling = true;
@@ -601,22 +612,28 @@ private:
     Range mVisibleRenderables;
     Range mVisibleDirectionalShadowCasters;
     Range mSpotLightShadowCasters;
-    uint32_t mRenderableUBOSize = 0;
+    uint32_t mRenderableUBOElementCount = 0;
     mutable bool mHasDirectionalLighting = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;
     mutable bool mNeedsShadowMap = false;
 
+    // State shared between Scene and driver callbacks.
+    struct SharedState {
+        BufferPoolAllocator<3> mBufferPoolAllocator = {};
+    };
+    std::shared_ptr<SharedState> mSharedState;
+
     std::unique_ptr<ShadowMapManager> mShadowMapManager;
 
-    std::array<math::float4, 4> mMaterialGlobals = {{
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                            { 0, 0, 0, 1 },
-                                                    }};
+    MaterialGlobals mMaterialGlobals = {{
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+            { 0, 0, 0, 1 },
+    }};
 
-    fgviewer::ViewHandle mFrameGraphViewerViewHandle;
+    fgviewer::ViewHandle mFrameGraphViewerViewHandle{};
 
 #ifndef NDEBUG
     struct DebugState {

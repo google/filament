@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 #include <utils/debug.h>
 
 #include <algorithm>
+#include <utility>
 
 #include <stddef.h>
 
@@ -31,20 +32,20 @@ using namespace utils;
 using namespace backend;
 
 FrameSkipper::FrameSkipper(size_t const latency) noexcept
-        : mLast(std::clamp(latency, size_t(1), MAX_FRAME_LATENCY) - 1) {
+        : mLatency(std::clamp(latency, size_t(1), MAX_FRAME_LATENCY) - 1) {
 }
 
 FrameSkipper::~FrameSkipper() noexcept = default;
 
 void FrameSkipper::terminate(DriverApi& driver) noexcept {
-    for (auto fence : mDelayedFences) {
+    for (auto& fence : mDelayedFences) {
         if (fence) {
-            driver.destroyFence(fence);
+            driver.destroyFence(std::move(fence));
         }
     }
 }
 
-bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
+bool FrameSkipper::shouldRenderFrame(DriverApi& driver) const noexcept {
     auto& fences = mDelayedFences;
     if (fences.front()) {
         // Do we have a latency old fence?
@@ -58,9 +59,9 @@ bool FrameSkipper::beginFrame(DriverApi& driver) noexcept {
     return true;
 }
 
-void FrameSkipper::endFrame(DriverApi& driver) noexcept {
+void FrameSkipper::submitFrame(DriverApi& driver) noexcept {
     auto& fences = mDelayedFences;
-    size_t const last = mLast;
+    size_t const last = mLatency;
 
     // pop the oldest fence and advance the other ones
     if (fences.front()) {

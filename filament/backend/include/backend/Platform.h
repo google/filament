@@ -29,6 +29,7 @@
 
 namespace filament::backend {
 
+class CallbackHandler;
 class Driver;
 
 /**
@@ -42,6 +43,9 @@ public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
+    struct Sync {};
+
+    using SyncCallback = void(*)(Sync* UTILS_NONNULL sync, void* UTILS_NULLABLE userData);
 
     class ExternalImageHandle;
 
@@ -107,6 +111,36 @@ public:
         MULTIVIEW,
     };
 
+    /**
+     * This controls the priority level for GPU work scheduling, which helps prioritize the
+     * submitted GPU work and enables preemption.
+     */
+    enum class GpuContextPriority : uint8_t {
+        /**
+         * Backend default GPU context priority (typically MEDIUM)
+         */
+        DEFAULT,
+        /**
+         * For non-interactive, deferrable workloads. This should not interfere with standard
+         * applications.
+         */
+        LOW,
+        /**
+         * The default priority level for standard applications.
+         */
+        MEDIUM,
+        /**
+         * For high-priority, latency-sensitive workloads that are more important than standard
+         * applications.
+         */
+        HIGH,
+        /**
+         * The highest priority, intended for system-critical, real-time applications where missing
+         * deadlines is unacceptable (e.g., VR/AR compositors or other system-critical tasks).
+         */
+        REALTIME,
+    };
+
     struct DriverConfig {
         /**
          * Size of handle arena in bytes. Setting to 0 indicates default value is to be used.
@@ -121,6 +155,12 @@ public:
          * Currently only honored by the GL and Metal backends.
          */
         bool disableParallelShaderCompile = false;
+
+        /**
+         * Set to `true` to forcibly disable amortized shader compilation in the backend.
+         * Currently only honored by the GL backend.
+         */
+        bool disableAmortizedShaderCompile = true;
 
         /**
          * Disable backend handles use-after-free checks.
@@ -149,6 +189,27 @@ public:
          *      - PlatformEGLAndroid
          */
         bool assertNativeWindowIsValid = false;
+
+        /**
+         * The action to take if a Drawable cannot be acquired. If true, the
+         * frame is aborted instead of panic. This is only supported for:
+         *      - PlatformMetal
+         */
+        bool metalDisablePanicOnDrawableFailure = false;
+
+        /**
+         * GPU context priority level. Controls GPU work scheduling and preemption.
+         * This is only supported for:
+         *      - PlatformEGL
+         */
+        GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+
+        /**
+         * Bypass the staging buffer because the device is of Unified Memory Architecture.
+         * This is only supported for:
+         *      - VulkanPlatform
+         */
+        bool vulkanEnableStagingBufferBypass = false;
     };
 
     Platform() noexcept;
@@ -169,7 +230,7 @@ public:
      * @param sharedContext an optional shared context. This is not meaningful with all graphic
      *                      APIs and platforms.
      *                      For EGL platforms, this is an EGLContext.
-     * 
+     *
      * @param driverConfig  specifies driver initialization parameters
      *
      * @return nullptr on failure, or a pointer to the newly created driver.

@@ -30,7 +30,7 @@
 #include <algorithm>
 #include <unordered_set>
 
-#include "src/tint/lang/core/builtin_fn.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/utils/ice/ice.h"
 #include "src/tint/utils/text/string_stream.h"
 

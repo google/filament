@@ -45,6 +45,7 @@ cc_binary(
     "//src/tint/api",
     "//src/tint/api/common",
     "//src/tint/cmd/common",
+    "//src/tint/cmd/fuzz/ir/helpers",
     "//src/tint/lang/core",
     "//src/tint/lang/core/constant",
     "//src/tint/lang/core/ir",
@@ -52,12 +53,10 @@ cc_binary(
     "//src/tint/lang/core/type",
     "//src/tint/lang/wgsl",
     "//src/tint/lang/wgsl/ast",
-    "//src/tint/lang/wgsl/common",
-    "//src/tint/lang/wgsl/features",
-    "//src/tint/lang/wgsl/helpers",
     "//src/tint/lang/wgsl/inspector",
     "//src/tint/lang/wgsl/program",
     "//src/tint/lang/wgsl/sem",
+    "//src/tint/lang/wgsl/writer/ir_to_program",
     "//src/tint/utils",
     "//src/tint/utils/command",
     "//src/tint/utils/containers",
@@ -74,10 +73,6 @@ cc_binary(
   ] + select({
     ":tint_build_ir_binary": [
       "//src/tint/lang/core/ir/binary",
-    ],
-    "//conditions:default": [],
-  }) + select({
-    ":tint_build_ir_binary_and_tint_build_ir_fuzzer": [
       "",
     ],
     "//conditions:default": [],
@@ -102,11 +97,6 @@ alias(
 )
 
 alias(
-  name = "tint_build_ir_fuzzer",
-  actual = "//src/tint:tint_build_ir_fuzzer_true",
-)
-
-alias(
   name = "tint_build_spv_reader",
   actual = "//src/tint:tint_build_spv_reader_true",
 )
@@ -117,18 +107,10 @@ alias(
 )
 
 selects.config_setting_group(
-    name = "tint_build_ir_binary_and_tint_build_ir_fuzzer",
-    match_all = [
-        ":tint_build_ir_binary",
-        ":tint_build_ir_fuzzer",
-    ],
-)
-selects.config_setting_group(
-    name = "tint_build_ir_binary_and_tint_build_wgsl_reader_and_tint_build_ir_fuzzer",
+    name = "tint_build_ir_binary_and_tint_build_wgsl_reader",
     match_all = [
         ":tint_build_ir_binary",
         ":tint_build_wgsl_reader",
-        ":tint_build_ir_fuzzer",
     ],
 )
 

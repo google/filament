@@ -27,11 +27,13 @@
 
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <set>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include "dawn/common/Assert.h"
 #include "dawn/common/Log.h"
@@ -64,6 +66,13 @@ class WireServerTraceLayer : public dawn::wire::CommandHandler {
         // directory.
         std::replace(filename.begin(), filename.end(), '/', '_');
         std::replace(filename.begin(), filename.end(), '\\', '_');
+
+        if (!std::filesystem::is_directory(mDir)) {
+            std::error_code ec;
+            std::filesystem::create_directories(mDir, ec);
+            DAWN_ASSERT(ec.value() == 0);
+            DAWN_ASSERT(std::filesystem::is_directory(mDir));
+        }
 
         // Prepend the filename with the directory.
         filename = mDir + filename;

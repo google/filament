@@ -41,11 +41,11 @@ ObjectType QuerySet::GetObjectType() const {
     return ObjectType::QuerySet;
 }
 
-WGPUQueryType QuerySet::GetType() const {
+WGPUQueryType QuerySet::APIGetType() const {
     return mType;
 }
 
-uint32_t QuerySet::GetCount() const {
+uint32_t QuerySet::APIGetCount() const {
     return mCount;
 }
 

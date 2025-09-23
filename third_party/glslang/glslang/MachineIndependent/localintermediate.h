@@ -268,6 +268,7 @@ public:
         gpu_shader_fp64                           = 1 << 9,
         gpu_shader_int16                          = 1 << 10,
         gpu_shader_half_float                     = 1 << 11,
+        nv_gpu_shader5_types                      = 1 << 12,
     } feature;
     void insert(feature f) { features |= f; }
     void erase(feature f) { features &= ~f; }
@@ -342,6 +343,7 @@ public:
         numTaskNVBlocks(0),
         layoutPrimitiveCulling(false),
         numTaskEXTPayloads(0),
+        nonCoherentTileAttachmentReadQCOM(false),
         autoMapBindings(false),
         autoMapLocations(false),
         flattenUniformArrays(false),
@@ -370,6 +372,12 @@ public:
         localSizeSpecId[1] = TQualifier::layoutNotSet;
         localSizeSpecId[2] = TQualifier::layoutNotSet;
         xfbBuffers.resize(TQualifier::layoutXfbBufferEnd);
+        tileShadingRateQCOM[0] = 0;
+        tileShadingRateQCOM[1] = 0;
+        tileShadingRateQCOM[2] = 0;
+        tileShadingRateQCOMNotDefault[0] = false;
+        tileShadingRateQCOMNotDefault[1] = false;
+        tileShadingRateQCOMNotDefault[2] = false;
         shiftBinding.fill(0);
     }
 
@@ -650,6 +658,21 @@ public:
 
     bool isEsProfile() const { return profile == EEsProfile; }
 
+    bool setTileShadingRateQCOM(int dim, int size)
+    {
+        if (tileShadingRateQCOMNotDefault[dim])
+            return size == tileShadingRateQCOM[dim];
+        tileShadingRateQCOMNotDefault[dim] = true;
+        tileShadingRateQCOM[dim] = size;
+        return true;
+    }
+    unsigned int getTileShadingRateQCOM(int dim) const { return tileShadingRateQCOM[dim]; }
+    bool isTileShadingRateQCOMSet() const
+    {
+        // Return true if any component has been set (i.e. any component is not default).
+        return tileShadingRateQCOMNotDefault[0] || tileShadingRateQCOMNotDefault[1] || tileShadingRateQCOMNotDefault[2];
+    }
+
     void setShiftBinding(TResourceType res, unsigned int shift)
     {
         shiftBinding[res] = shift;
@@ -895,6 +918,8 @@ public:
     bool getNonCoherentDepthAttachmentReadEXT() const { return nonCoherentDepthAttachmentReadEXT; }
     void setNonCoherentStencilAttachmentReadEXT() { nonCoherentStencilAttachmentReadEXT = true; }
     bool getNonCoherentStencilAttachmentReadEXT() const { return nonCoherentStencilAttachmentReadEXT; }
+    void setNonCoherentTileAttachmentReadQCOM() { nonCoherentTileAttachmentReadQCOM = true; }
+    bool getNonCoherentTileAttachmentReadQCOM() const { return nonCoherentTileAttachmentReadQCOM; }
     void setPostDepthCoverage() { postDepthCoverage = true; }
     bool getPostDepthCoverage() const { return postDepthCoverage; }
     void setEarlyFragmentTests() { earlyFragmentTests = true; }
@@ -1053,7 +1078,8 @@ public:
 
     void mergeGlobalUniformBlocks(TInfoSink& infoSink, TIntermediate& unit, bool mergeExistingOnly);
     void mergeUniformObjects(TInfoSink& infoSink, TIntermediate& unit);
-    void checkStageIO(TInfoSink&, TIntermediate&);
+    void mergeImplicitArraySizes(TInfoSink& infoSink, TIntermediate& unit);
+    void checkStageIO(TInfoSink&, TIntermediate&, EShMessages);
     void optimizeStageIO(TInfoSink&, TIntermediate&);
 
     bool buildConvertOp(TBasicType dst, TBasicType src, TOperator& convertOp) const;
@@ -1106,17 +1132,20 @@ public:
     // Certain explicit conversions are allowed conditionally
     bool getArithemeticInt8Enabled() const {
         return numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types) ||
+               numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) ||
                numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types_int8);
     }
     bool getArithemeticInt16Enabled() const {
         return numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types) ||
                numericFeatures.contains(TNumericFeatures::gpu_shader_int16) ||
+               numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) ||
                numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types_int16);
     }
 
     bool getArithemeticFloat16Enabled() const {
         return numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types) ||
                numericFeatures.contains(TNumericFeatures::gpu_shader_half_float) ||
+               numericFeatures.contains(TNumericFeatures::nv_gpu_shader5_types) ||
                numericFeatures.contains(TNumericFeatures::shader_explicit_arithmetic_types_float16);
     }
     void updateNumericFeature(TNumericFeatures::feature f, bool on)
@@ -1124,8 +1153,14 @@ public:
 
 protected:
     TIntermSymbol* addSymbol(long long Id, const TString&, const TString&, const TType&, const TConstUnionArray&, TIntermTyped* subtree, const TSourceLoc&);
-    void error(TInfoSink& infoSink, const char*, EShLanguage unitStage = EShLangCount);
-    void warn(TInfoSink& infoSink, const char*, EShLanguage unitStage = EShLangCount);
+    void error(TInfoSink& infoSink, const TSourceLoc* loc, EShMessages messages, const char*, EShLanguage unitStage = EShLangCount);
+    void error(TInfoSink& infoSink, const char* message, EShLanguage unitStage = EShLangCount) {
+        error(infoSink, nullptr, EShMsgDefault, message, unitStage);
+    }
+    void warn(TInfoSink& infoSink, const TSourceLoc* loc, EShMessages, const char*, EShLanguage unitStage = EShLangCount);
+    void warn(TInfoSink& infoSink, const char* message, EShLanguage unitStage = EShLangCount) {
+        warn(infoSink, nullptr, EShMsgDefault, message, unitStage);
+    }
     void mergeCallGraphs(TInfoSink&, TIntermediate&);
     void mergeModes(TInfoSink&, TIntermediate&);
     void mergeTrees(TInfoSink&, TIntermediate&);
@@ -1230,6 +1265,10 @@ protected:
     int numTaskNVBlocks;
     bool layoutPrimitiveCulling;
     int numTaskEXTPayloads;
+
+    bool nonCoherentTileAttachmentReadQCOM;
+    int  tileShadingRateQCOM[3];
+    bool tileShadingRateQCOMNotDefault[3];
 
     // Base shift values
     std::array<unsigned int, EResCount> shiftBinding;

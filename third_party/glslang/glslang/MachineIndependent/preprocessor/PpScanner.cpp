@@ -470,6 +470,7 @@ int TPpContext::tStringInput::scan(TPpToken* ppToken)
     static const char* const Int64_Extensions[] = {
         E_GL_ARB_gpu_shader_int64,
         E_GL_EXT_shader_explicit_arithmetic_types,
+        E_GL_NV_gpu_shader5,
         E_GL_EXT_shader_explicit_arithmetic_types_int64 };
     static const int Num_Int64_Extensions = sizeof(Int64_Extensions) / sizeof(Int64_Extensions[0]);
 

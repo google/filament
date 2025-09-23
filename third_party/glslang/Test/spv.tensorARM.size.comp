@@ -1,0 +1,17 @@
+#version 460 core
+
+#extension GL_ARM_tensors : enable
+
+layout(set=0, binding=0) uniform tensorARM<int, 1> rank1;
+layout(set=0, binding=1) uniform tensorARM<float, 2> rank2;
+layout(set=0, binding=2) uniform tensorARM<uint, 4> rank4;
+
+uint x;
+
+void main() {
+  x = 0;
+  x += tensorSizeARM(rank1, 0);
+  x += tensorSizeARM(rank2, 0);
+  x += tensorSizeARM(rank2, 1);
+  x += tensorSizeARM(rank4, 3);
+}

@@ -324,6 +324,9 @@ bool GlPerVertex::setClipCullDistanceType(SemanticIndexToTypeMap *typeMap,
 
 bool GlPerVertex::doGlPerVertexFacts(const NamedDecl *decl, QualType baseType,
                                      bool asInput) {
+  if (hlsl::IsHLSLNodeType(baseType)) {
+    return true;
+  }
 
   llvm::StringRef semanticStr;
   const hlsl::Semantic *semantic = {};

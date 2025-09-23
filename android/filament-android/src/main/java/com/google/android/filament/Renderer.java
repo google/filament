@@ -312,6 +312,21 @@ public class Renderer {
     }
 
     /**
+     * Returns true if the current frame should be rendered.
+     *
+     * This is a convenience method that returns the same value as {@link #beginFrame}.
+     *
+     * @return
+     *      <code>false</code> the current frame should be skipped<br>
+     *      <code>true</code> the current frame can be rendered
+     *
+     * @see #beginFrame
+     */
+    public boolean shouldRenderFrame() {
+        return nShouldRenderFrame(getNativeObject());
+    }
+
+    /**
      * Sets up a frame for this <code>Renderer</code>.
      * <p><code>beginFrame</code> manages frame pacing, and returns whether or not a frame should be
      * drawn. The goal of this is to skip frames when the GPU falls behind in order to keep the frame
@@ -731,6 +746,7 @@ public class Renderer {
     private static native void nSetPresentationTime(long nativeObject, long monotonicClockNanos);
     private static native void nSetVsyncTime(long nativeObject, long steadyClockTimeNano);
     private static native void nSkipFrame(long nativeObject, long vsyncSteadyClockTimeNano);
+    private static native boolean nShouldRenderFrame(long nativeObject);
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain, long frameTimeNanos);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);

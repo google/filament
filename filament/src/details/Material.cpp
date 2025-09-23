@@ -49,7 +49,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/Hash.h>
 #include <utils/Invocable.h>
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -86,15 +86,15 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
     MaterialParser::ParseResult const materialResult = materialParser->parse();
 
     if (UTILS_UNLIKELY(materialResult == MaterialParser::ParseResult::ERROR_MISSING_BACKEND)) {
-        std::string languageNames;
+        CString languageNames;
         for (auto it = languages.begin(); it != languages.end(); ++it) {
-            languageNames.append(shaderLanguageToString(*it));
+            languageNames.append(CString{shaderLanguageToString(*it)});
             if (std::next(it) != languages.end()) {
                 languageNames.append(", ");
             }
         }
 
-        FILAMENT_CHECK_PRECONDITION(
+        FILAMENT_CHECK_POSTCONDITION(
                 materialResult != MaterialParser::ParseResult::ERROR_MISSING_BACKEND)
                 << "the material was not built for any of the " << to_string(backend)
                 << " backend's supported shader languages (" << languageNames.c_str() << ")\n";
@@ -104,12 +104,12 @@ static std::unique_ptr<MaterialParser> createParser(Backend const backend,
         return materialParser;
     }
 
-    FILAMENT_CHECK_PRECONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
+    FILAMENT_CHECK_POSTCONDITION(materialResult == MaterialParser::ParseResult::SUCCESS)
             << "could not parse the material package";
 
     uint32_t version = 0;
     materialParser->getMaterialVersion(&version);
-    FILAMENT_CHECK_PRECONDITION(version == MATERIAL_VERSION)
+    FILAMENT_CHECK_POSTCONDITION(version == MATERIAL_VERSION)
             << "Material version mismatch. Expected " << MATERIAL_VERSION << " but received "
             << version << ".";
 
@@ -169,6 +169,16 @@ template Material::Builder& Material::Builder::constant<int32_t>(const char*, si
 template Material::Builder& Material::Builder::constant<float>(const char*, size_t, float);
 template Material::Builder& Material::Builder::constant<bool>(const char*, size_t, bool);
 
+
+const char* toString(ShaderModel model) {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
+
 Material* Material::Builder::build(Engine& engine) const {
     std::unique_ptr<MaterialParser> materialParser = createParser(
         downcast(engine).getBackend(), downcast(engine).getShaderLanguage(),
@@ -176,6 +186,28 @@ Material* Material::Builder::build(Engine& engine) const {
 
     if (!materialParser) {
         return nullptr;
+    }
+
+    // Try checking CRC32 value for the package and skip if it's unavailable.
+    if (downcast(engine).features.material.check_crc32_after_loading) {
+        uint32_t parsedCrc32 = 0;
+        materialParser->getMaterialCrc32(&parsedCrc32);
+
+        constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+        const size_t originalSize = mImpl->mSize - crc32ChunkSize;
+        assert_invariant(mImpl->mSize > crc32ChunkSize);
+
+        std::vector<uint32_t> crc32Table;
+        hash::crc32GenerateTable(crc32Table);
+        uint32_t expectedCrc32 = hash::crc32Update(0, mImpl->mPayload, originalSize, crc32Table);
+        if (parsedCrc32 != expectedCrc32) {
+            CString name;
+            materialParser->getName(&name);
+            LOG(ERROR) << "The material '" << name.c_str_safe()
+                       << "' is corrupted: crc32_expected=" << expectedCrc32
+                       << ", crc32_parsed=" << parsedCrc32;
+            return nullptr;
+        }
     }
 
     uint32_t v = 0;
@@ -187,17 +219,11 @@ Material* Material::Builder::build(Engine& engine) const {
     if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
         CString name;
         materialParser->getName(&name);
-        slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
-        switch (shaderModel) {
-            case ShaderModel::MOBILE:
-                slog.e << "mobile.\n";
-                break;
-            case ShaderModel::DESKTOP:
-                slog.e << "desktop.\n";
-                break;
-        }
-        slog.e << "Compiled material contains shader models 0x"
-                << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
+        char shaderModelsString[16];
+        snprintf(shaderModelsString, sizeof(shaderModelsString), "%#x", shaderModels.getValue());
+        LOG(ERROR) << "The material '" << name.c_str_safe() << "' was not built for "
+                   << toString(shaderModel) << ".";
+        LOG(ERROR) << "Compiled material contains shader models " << shaderModelsString << ".";
         return nullptr;
     }
 
@@ -217,10 +243,10 @@ Material* Material::Builder::build(Engine& engine) const {
             if (materialStereoscopicType != engineStereoscopicType) {
                 CString name;
                 materialParser->getName(&name);
-                slog.w << "The stereoscopic type in the compiled material '" << name.c_str_safe()
-                        << "' is " << (int)materialStereoscopicType
-                        << ", which is not compatiable with the engine's setting "
-                        << (int)engineStereoscopicType << "." << io::endl;
+                LOG(WARNING) << "The stereoscopic type in the compiled material '"
+                             << name.c_str_safe() << "' is " << (int) materialStereoscopicType
+                             << ", which is not compatible with the engine's setting "
+                             << (int) engineStereoscopicType << ".";
             }
         }
     }
@@ -362,9 +388,12 @@ void FMaterial::invalidate(Variant::type_t variantMask, Variant::type_t variantV
         !mHasCustomDepthShader) {
         // it would be unsafe to invalidate any of the cached depth variant
         if (UTILS_UNLIKELY(!((variantMask & Variant::DEP) && !(variantValue & Variant::DEP)))) {
-            slog.w << io::hex << "FMaterial::invalidate("
-                   << +variantMask << ", " << +variantValue
-                   << ") would corrupt the depth variant cache" << io::endl;
+            char variantMaskString[16];
+            snprintf(variantMaskString, sizeof(variantMaskString), "%#x", +variantMask);
+            char variantValueString[16];
+            snprintf(variantValueString, sizeof(variantValueString), "%#x", +variantValue);
+            LOG(WARNING) << "FMaterial::invalidate(" << variantMaskString << ", "
+                         << variantValueString << ") would corrupt the depth variant cache";
         }
         variantMask |= Variant::DEP;
         variantValue &= ~Variant::DEP;
@@ -384,16 +413,11 @@ void FMaterial::terminate(FEngine& engine) {
     auto const& materialInstanceResourceList = engine.getMaterialInstanceResourceList();
     auto pos = materialInstanceResourceList.find(this);
     if (UTILS_LIKELY(pos != materialInstanceResourceList.cend())) {
-        if (engine.features.engine.debug.assert_destroy_material_before_material_instance) {
-            FILAMENT_CHECK_PRECONDITION(pos->second.empty())
-                    << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                    << pos->second.size() << " instances still alive.";
-        } else {
-            if (UTILS_UNLIKELY(!pos->second.empty())) {
-                slog.e << "destroying material \"" << this->getName().c_str_safe() << "\" but "
-                              << pos->second.size() << " instances still alive." << io::endl;
-            }
-        }
+        auto const& featureFlags = engine.features.engine.debug;
+        FILAMENT_FLAG_GUARDED_CHECK_PRECONDITION(pos->second.empty(),
+                featureFlags.assert_destroy_material_before_material_instance)
+                << "destroying material \"" << this->getName().c_str_safe() << "\" but "
+                << pos->second.size() << " instances still alive.";
     }
 
 #if FILAMENT_ENABLE_MATDBG
@@ -573,7 +597,7 @@ void FMaterial::getPostProcessProgramSlow(Variant const variant,
 Program FMaterial::getProgramWithVariants(
         Variant variant,
         Variant vertexVariant,
-        Variant fragmentVariant) const noexcept {
+        Variant fragmentVariant) const {
     FEngine const& engine = mEngine;
     const ShaderModel sm = engine.getShaderModel();
     const bool isNoop = engine.getBackend() == Backend::NOOP;
@@ -612,10 +636,10 @@ Program FMaterial::getProgramWithVariants(
             .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
             .shaderLanguage(mMaterialParser->getShaderLanguage())
             .diagnostics(mName,
-                    [this, variant, vertexVariant, fragmentVariant](
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
                             io::ostream& out) -> io::ostream& {
-                        return out << mName.c_str_safe() << ", variant=(" << io::hex
-                                   << +variant.key << io::dec << "), vertexVariant=(" << io::hex
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
                                    << +vertexVariant.key << io::dec << "), fragmentVariant=("
                                    << io::hex << +fragmentVariant.key << io::dec << ")";
                     });
@@ -662,8 +686,7 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
         }
     }
 
-    auto const program = driverApi.createProgram(std::move(p));
-    driverApi.setDebugTag(program.getId(), mName);
+    auto const program = driverApi.createProgram(std::move(p), CString{ mName });
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 
@@ -673,8 +696,6 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
     if (isShared) {
         FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
         if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
-            // set the tag to the default material name
-            driverApi.setDebugTag(program.getId(), mName);
             pDefaultMaterial->mCachedPrograms[variant.key] = program;
         }
     }
@@ -731,7 +752,7 @@ size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const n
 // source strings, so here we trigger a rebuild of the HwProgram objects.
 void FMaterial::applyPendingEdits() noexcept {
     const char* name = mName.c_str();
-    slog.d << "Applying edits to " << (name ? name : "(untitled)") << io::endl;
+    DLOG(INFO) << "Applying edits to " << (name ? name : "(untitled)");
     destroyPrograms(mEngine); // FIXME: this will not destroy the shared variants
     latchPendingEdits();
 }
@@ -1030,6 +1051,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     int const maxFroxelBufferHeight =
             int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
 
+    int const froxelRecordBufferHeight =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
     bool const staticTextureWorkaround =
             engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
@@ -1046,6 +1070,9 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
             int(maxFroxelBufferHeight) });
+    mSpecializationConstants.push_back({
+            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
+            int(froxelRecordBufferHeight) });
     mSpecializationConstants.push_back({
             +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
             engine.debug.shadowmap.debug_directional_shadowmap });
@@ -1162,7 +1189,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             }
             assert_invariant(Variant::isValidDepthVariant(variant));
             if (hasVariant(variant)) {
-                prepareProgram(variant);
+                prepareProgram(variant, CompilerPriorityQueue::HIGH);
             }
         }
         return;

@@ -160,10 +160,6 @@ bool Type::IsBoolScalarOrVector() const {
     return Is<Bool>() || IsBoolVector();
 }
 
-bool Type::IsScalarVector() const {
-    return Is([](const Vector* v) { return v->Type()->Is<core::type::Scalar>(); });
-}
-
 bool Type::IsNumericScalarOrVector() const {
     return Is<core::type::NumericScalar>() ||
            Is([](const Vector* v) { return v->Type()->Is<core::type::NumericScalar>(); });

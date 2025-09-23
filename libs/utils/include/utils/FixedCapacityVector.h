@@ -40,7 +40,7 @@
 
 namespace utils {
 
-class FixedCapacityVectorBase {
+class UTILS_PUBLIC FixedCapacityVectorBase {
 protected:
     UTILS_NORETURN static void capacityCheckFailed(size_t capacity, size_t size);
 };

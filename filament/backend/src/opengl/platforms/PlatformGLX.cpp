@@ -16,7 +16,7 @@
 
 #include <backend/platforms/PlatformGLX.h>
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 
 #include <X11/Xlib.h>
@@ -84,7 +84,7 @@ static PFNGLXGETPROCADDRESSPROC getProcAddress;
 static bool loadLibraries() {
     g_glx.library = dlopen(LIBRARY_GLX, RTLD_LOCAL | RTLD_NOW);
     if (!g_glx.library) {
-        utils::slog.e << "Could not find library " << LIBRARY_GLX << utils::io::endl;
+        LOG(ERROR) << "Could not find library " << LIBRARY_GLX;
         return false;
     }
 
@@ -115,7 +115,7 @@ static bool loadLibraries() {
 
     g_x11.library = dlopen(LIBRARY_X11, RTLD_LOCAL | RTLD_NOW);
     if (!g_x11.library) {
-        utils::slog.e << "Could not find library " << LIBRARY_X11 << utils::io::endl;
+        LOG(ERROR) << "Could not find library " << LIBRARY_X11;
         return false;
     }
 
@@ -134,7 +134,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
     // Get the display device
     mGLXDisplay = g_x11.openDisplay(NULL);
     if (mGLXDisplay == nullptr) {
-        utils::slog.e << "Failed to open X display. (exiting)." << utils::io::endl;
+        LOG(ERROR) << "Failed to open X display. (exiting).";
         exit(1);
     }
 
@@ -145,8 +145,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
 
         r = g_glx.queryContext(mGLXDisplay, sharedCtx, GLX_FBCONFIG_ID, &usedFbId);
         if (r != 0) {
-            utils::slog.e << "Failed to get GLX_FBCONFIG_ID from shared GL context."
-                          << utils::io::endl;
+            LOG(ERROR) << "Failed to get GLX_FBCONFIG_ID from shared GL context.";
             return nullptr;
         }
 
@@ -154,7 +153,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
         GLXFBConfig* fbConfigs = g_glx.getFbConfigs(mGLXDisplay, 0, &numConfigs);
 
         if (fbConfigs == nullptr) {
-            utils::slog.e << "Failed to get the available GLXFBConfigs." << utils::io::endl;
+            LOG(ERROR) << "Failed to get the available GLXFBConfigs.";
             return nullptr;
         }
 
@@ -164,8 +163,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
         for (int i = 0; i < numConfigs; ++i) {
             r = g_glx.getFbConfigAttrib(mGLXDisplay, fbConfigs[i], GLX_FBCONFIG_ID, &fbId);
             if (r != 0) {
-                utils::slog.e << "Failed to get GLX_FBCONFIG_ID for entry " << i << "."
-                              << utils::io::endl;
+                LOG(ERROR) << "Failed to get GLX_FBCONFIG_ID for entry " << i << ".";
                 continue;
             }
 
@@ -176,8 +174,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
         }
 
         if (fbIndex < 0) {
-            utils::slog.e << "Failed to find an `GLXFBConfig` with the requested ID."
-                          << utils::io::endl;
+            LOG(ERROR) << "Failed to find an `GLXFBConfig` with the requested ID.";
             return nullptr;
         }
 
@@ -202,8 +199,7 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
             getProcAddress((GLubyte*)"glXCreateContextAttribsARB");
 
     if (glXCreateContextAttribs == nullptr) {
-        utils::slog.i << "Unable to retrieve function pointer for `glXCreateContextAttribs()`."
-                      << utils::io::endl;
+        LOG(INFO) << "Unable to retrieve function pointer for `glXCreateContextAttribs()`.";
         return nullptr;
     }
 
@@ -266,7 +262,7 @@ void PlatformGLX::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
 bool PlatformGLX::makeCurrent(ContextType type, SwapChain* drawSwapChain,
-        SwapChain* readSwapChain) noexcept {
+        SwapChain* readSwapChain) {
     g_glx.setCurrentContext(mGLXDisplay,
             (GLXDrawable)drawSwapChain, (GLXDrawable)readSwapChain, mGLXContext);
     return true;

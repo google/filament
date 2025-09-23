@@ -90,7 +90,7 @@ void EncodingContext::HandleError(std::unique_ptr<ErrorData> error) {
     if (mDevice->IsImmediateErrorHandlingEnabled() || mStatus == Status::Finished) {
         // EncodingContext is unprotected from multiple threads by default, but this code will
         // modify Device's internal states so we need to lock the device now.
-        auto deviceLock(mDevice->GetScopedLock());
+        auto deviceGuard = mDevice->GetGuard();
         mDevice->HandleError(std::move(error));
     } else {
         // TODO(crbug.com/42240579): ASSERT that encoding only generates validation errors.

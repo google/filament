@@ -31,31 +31,15 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "src/tint/lang/wgsl/program/program_builder.h"
-#include "src/tint/lang/wgsl/resolver/resolve.h"
 
 namespace tint::core::type {
 
-/// Helper class for testing
-template <typename BASE>
-class TestHelperBase : public BASE, public ProgramBuilder {
-  public:
-    /// Builds and returns the program. Must only be called once per test
-    /// @return the built program
-    Program Build() {
-        if (!IsValid()) {
-            ADD_FAILURE() << "ProgramBuilder is not valid: " << Diagnostics();
-        }
-        return resolver::Resolve(*this);
-    }
-};
-
 /// Helper class for testing that derives from testing::Test.
-using TestHelper = TestHelperBase<testing::Test>;
+using TestHelper = testing::Test;
 
 /// Helper class for testing that derives from `T`.
 template <typename T>
-using TestParamHelper = TestHelperBase<testing::TestWithParam<T>>;
+using TestParamHelper = testing::TestWithParam<T>;
 
 }  // namespace tint::core::type
 

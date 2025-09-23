@@ -127,19 +127,16 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
-            TextureUsage::DEFAULT);
+            TextureUsage::DEFAULT,
+            utils::CString{ builder.getName() });
 
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA16I, 1,
             getWidth(mVertexCount),
             getHeight(mVertexCount),
             mCount,
-            TextureUsage::DEFAULT);
-
-    if (auto name = builder.getName(); !name.empty()) {
-        driver.setDebugTag(mPbHandle.getId(), name);
-        driver.setDebugTag(mTbHandle.getId(), std::move(name));
-    }
+            TextureUsage::DEFAULT,
+            utils::CString{ builder.getName() });
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {
@@ -178,7 +175,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetIndex,
         float4 const* positions, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
-            << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
+            << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     auto size = getSize<POSITION>(count);
@@ -200,7 +197,7 @@ void FMorphTargetBuffer::setPositionsAt(FEngine& engine, size_t const targetInde
 void FMorphTargetBuffer::setTangentsAt(FEngine& engine, size_t const targetIndex,
         short4 const* tangents, size_t const count, size_t const offset) {
     FILAMENT_CHECK_PRECONDITION(offset + count <= mVertexCount)
-            << "MorphTargetBuffer (size=" << (unsigned)mVertexCount
+            << "MorphTargetBuffer (size=" << mVertexCount
             << ") overflow (count=" << (unsigned)count << ", offset=" << (unsigned)offset << ")";
 
     const auto size = getSize<TANGENTS>(count);

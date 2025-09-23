@@ -211,6 +211,10 @@ class BaseInfo:
         self.elem = elem
         "etree Element for this feature"
 
+        self.deprecatedbyversion = None
+        self.deprecatedbyextensions = []
+        self.deprecatedlink = None
+
     def resetState(self):
         """Reset required/declared to initial values. Used
         prior to generating a new API interface."""
@@ -349,6 +353,8 @@ class FeatureInfo(BaseInfo):
 
             self.number = 0
             self.supported = None
+
+            self.deprecates = elem.findall('deprecate')
         else:
             # Extract vendor portion of <APIprefix>_<vendor>_<name>
             self.category = self.name.split('_', 2)[1]
@@ -682,6 +688,9 @@ class Registry:
         # Now loop over aliases, injecting a copy of the aliased command's
         # Element with the aliased prototype name replaced with the command
         # name - if it exists.
+        # Copy the 'export' sttribute (whether it exists or not) from the
+        # original, aliased command, since that can be different for a
+        # command and its alias.
         for (name, alias, cmd) in cmdAlias:
             if alias in self.cmddict:
                 aliasInfo = self.cmddict[alias]
@@ -689,6 +698,14 @@ class Registry:
                 cmdElem.find('proto/name').text = name
                 cmdElem.set('name', name)
                 cmdElem.set('alias', alias)
+                export = cmd.get('export')
+                if export is not None:
+                    # Replicate the command's 'export' attribute
+                    cmdElem.set('export', export)
+                elif cmdElem.get('export') is not None:
+                    # Remove the 'export' attribute, if the alias has one but
+                    # the command does not.
+                    del cmdElem.attrib['export']
                 ci = CmdInfo(cmdElem)
                 # Replace the dictionary entry for the CmdInfo element
                 self.cmddict[name] = ci
@@ -1250,6 +1267,51 @@ class Registry:
             if matchAPIProfile(api, profile, feature):
                 self.markRequired(featurename, feature, True)
 
+    def deprecateFeatures(self, interface, featurename, api, profile):
+        """Process `<require>` tags for a `<version>` or `<extension>`.
+
+        - interface - Element for `<version>` or `<extension>`, containing
+          `<require>` tags
+        - featurename - name of the feature
+        - api - string specifying API name being generated
+        - profile - string specifying API profile being generated"""
+
+        versionmatch = APIConventions().is_api_version_name(featurename)
+
+        # <deprecate> marks things that are deprecated by this version/profile
+        for deprecation in interface.findall('deprecate'):
+            if matchAPIProfile(api, profile, deprecation):
+                for typeElem in deprecation.findall('type'):
+                    type = self.lookupElementInfo(typeElem.get('name'), self.typedict)
+                    if type:
+                        if versionmatch is not False:
+                            type.deprecatedbyversion = featurename
+                        else:
+                            type.deprecatedbyextensions.append(featurename)
+                        type.deprecatedlink = deprecation.get('explanationlink')
+                    else:
+                        self.gen.logMsg('error', typeElem.get('name'), ' is tagged for deprecation but not present in registry')
+                for enumElem in deprecation.findall('enum'):
+                    enum = self.lookupElementInfo(enumElem.get('name'), self.enumdict)
+                    if enum:
+                        if versionmatch is not False:
+                            enum.deprecatedbyversion = featurename
+                        else:
+                            enum.deprecatedbyextensions.append(featurename)
+                        enum.deprecatedlink = deprecation.get('explanationlink')
+                    else:
+                        self.gen.logMsg('error', enumElem.get('name'), ' is tagged for deprecation but not present in registry')
+                for cmdElem in deprecation.findall('command'):
+                    cmd = self.lookupElementInfo(cmdElem.get('name'), self.cmddict)
+                    if cmd:
+                        if versionmatch is not False:
+                            cmd.deprecatedbyversion = featurename
+                        else:
+                            cmd.deprecatedbyextensions.append(featurename)
+                        cmd.deprecatedlink = deprecation.get('explanationlink')
+                    else:
+                        self.gen.logMsg('error', cmdElem.get('name'), ' is tagged for deprecation but not present in registry')
+
     def removeFeatures(self, interface, featurename, api, profile):
         """Process `<remove>` tags for a `<version>` or `<extension>`.
 
@@ -1750,6 +1812,7 @@ class Registry:
             self.gen.logMsg('diag', 'PASS 1: Tagging required and features for', f.name)
             self.fillFeatureDictionary(f.elem, f.name, self.genOpts.apiname, self.genOpts.profile)
             self.requireFeatures(f.elem, f.name, self.genOpts.apiname, self.genOpts.profile)
+            self.deprecateFeatures(f.elem, f.name, self.genOpts.apiname, self.genOpts.profile)
             self.assignAdditionalValidity(f.elem, self.genOpts.apiname, self.genOpts.profile)
 
         for f in features:

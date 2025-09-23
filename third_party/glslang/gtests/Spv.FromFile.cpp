@@ -401,6 +401,7 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.flowControl.frag",
         "spv.forLoop.frag",
         "spv.forwardFun.frag",
+        "spv.fp8_error.frag",
         "spv.fragmentDensity.frag",
         "spv.fragmentDensity.vert",
         "spv.fragmentDensity-es.frag",
@@ -556,6 +557,20 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.textureoffset_non_const.vert",
         "spv.sparsetextureoffset_non_const.vert",
         "spv.sparsetextureoffset_non_const_fail.vert",
+        "spv.tensorARM.access_qualifiers.comp",
+        "spv.tensorARM.all_accesses.comp",
+        "spv.tensorARM.array.comp",
+        "spv.tensorARM.declare.comp",
+        "spv.tensorARM.frag",
+        "spv.tensorARM.invalid_access.comp",
+        "spv.tensorARM.invalid_declare.comp",
+        "spv.tensorARM.invalid_operands.comp",
+        "spv.tensorARM.invalid_params.comp",
+        "spv.tensorARM.invalid_size.comp",
+        "spv.tensorARM.invalid_tensor_type.comp",
+        "spv.tensorARM.params.comp",
+        "spv.tensorARM.read.comp",
+        "spv.tensorARM.size.comp",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -644,6 +659,9 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.vulkan110.storageBuffer.vert",
 
         // These tests use the Vulkan memory model.
+        "spv.bfloat16.comp",
+        "spv.bfloat16_error.comp",
+        "spv.bfloat16_error.frag",
         "spv.bufferhandle1.frag",
         "spv.bufferhandle10.frag",
         "spv.coopmat.comp",
@@ -767,6 +785,8 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.nv.lss-allops.rchit",
         "spv.nv.lss-allops.rmiss",
         "spv.nv.lss-allops.frag",
+        "spv.nv.lss-spheregeomcap.rgen",
+        "spv.nv.lss-lssgeomcap.rgen",
 
     })),
     FileNameAsCustomTestSuffix
@@ -786,7 +806,14 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.coopmat2_constructor.comp",
         "spv.coopmat2_error.comp",
         "spv.coopmat2_tensor.comp",
-        "spv.1.6.nontemporalimage.frag"
+        "spv.1.6.nontemporalimage.frag",
+        "spv.noexplicitlayout.comp",
+        "spv.floate4m3.comp",
+        "spv.floate4m3.const.comp",
+        "spv.floate4m3_error.comp",
+        "spv.floate5m2.comp",
+        "spv.floate5m2.const.comp",
+        "spv.floate5m2_error.comp",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -892,6 +919,15 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.tpipBlockMatchGatherSSD.frag",
         "spv.tpipBlockMatchWindowSAD.frag",
         "spv.tpipBlockMatchWindowSSD.frag",
+        "spv.qcom.tileShading.0.comp",
+        "spv.qcom.tileShading.1.comp",
+        "spv.qcom.es.tileShading.0.comp",
+        "spv.qcom.es.tileShading.1.comp",
+        "spv.qcom.es.tileShading.2.comp",
+        "spv.qcom.tileShading.0.frag",
+        "spv.qcom.tileShading.1.frag",
+        "spv.qcom.es.tileShading.0.frag",
+        "spv.qcom.es.tileShading.1.frag",
     })),
     FileNameAsCustomTestSuffix
 );
@@ -959,6 +995,7 @@ INSTANTIATE_TEST_SUITE_P(
     "spv.meshShaderRedeclPerViewBuiltins.mesh",
     "spv.meshTaskShader.task",
     "spv.perprimitiveNV.frag",
+    "spv.nvgpushader5.frag"
 })),
 FileNameAsCustomTestSuffix
 );
@@ -1007,6 +1044,8 @@ INSTANTIATE_TEST_SUITE_P(
         "spv.debuginfo.include.glsl.frag",
         "spv.debuginfo.multiline.glsl.frag",
         "spv.debuginfo.implicit_br.glsl.frag",
+        "spv.debuginfo.non_ascii.glsl.frag",
+        "spv.debuginfo.continued.glsl.vert",
     })),
     FileNameAsCustomTestSuffix
 );

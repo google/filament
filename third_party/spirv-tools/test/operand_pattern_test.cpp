@@ -69,13 +69,8 @@ struct MaskExpansionCase {
 using MaskExpansionTest = ::testing::TestWithParam<MaskExpansionCase>;
 
 TEST_P(MaskExpansionTest, Sample) {
-  spv_operand_table operandTable = nullptr;
-  auto env = SPV_ENV_UNIVERSAL_1_0;
-  ASSERT_EQ(SPV_SUCCESS, spvOperandTableGet(&operandTable, env));
-
   spv_operand_pattern_t pattern(GetParam().initial);
-  spvPushOperandTypesForMask(env, operandTable, GetParam().type,
-                             GetParam().mask, &pattern);
+  spvPushOperandTypesForMask(GetParam().type, GetParam().mask, &pattern);
   EXPECT_THAT(pattern, Eq(GetParam().expected));
 }
 

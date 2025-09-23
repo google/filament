@@ -16,14 +16,23 @@ import json
 import os
 import re
 from utils import execute, ArgParseImpl
+import shutil
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCS_SRC_DIR = os.path.join(CUR_DIR, '../')
 ROOT_DIR = os.path.join(CUR_DIR, '../../')
-SRC_DIR = os.path.join(CUR_DIR, '../src')
-MARKDEEP_DIR = os.path.join(CUR_DIR, '../markdeep')
+
+MDBOOK_DIR = os.path.join(CUR_DIR, '../src_mdbook')
+BOOK_OUPUT_DIR = os.path.join(MDBOOK_DIR, 'book')
+SRC_DIR = os.path.join(MDBOOK_DIR, 'src')
+
+MARKDEEP_DIR = os.path.join(CUR_DIR, '../src_markdeep')
+RAW_COPIES_DIR = os.path.join(CUR_DIR, '../src_raw')
 DUP_DIR = os.path.join(SRC_DIR, 'dup')
 MAIN_DIR = os.path.join(SRC_DIR, 'main')
+
+FILAMENT_MD = 'Filament.md.html'
+MATERIALS_MD = 'Materials.md.html'
 
 def transform_dup_file_link(line, transforms):
   URL_CONTENT = '[-a-zA-Z0-9()@:%_\+.~#?&//=]+'
@@ -105,11 +114,15 @@ def pull_markdeep_docs():
     # 1. Remove the double empty lines.  These make the following text seem like markdown text as oppose to embedded html.
     # 2. Remove the max-width styling from the body tag.
     # 3. Remove the font-family styling from the body tag.
+    # 4. Properly redirect images to the right directory
     text = text.replace("\n\n","\n")\
                .replace("max-width:680px;", "")\
                .replace("font-family:Palatino", "--font-family:Palatino")\
                .replace("\"./images", "\"../images")\
                .replace("\"images/", "\"../images/")
+
+    # 5. Remove giant filament logo
+    text = '\n'.join([l for l in text.split("\n") if 'filament_logo.png' not in l])
 
     # Save the page source as .md with embedded html
     with open(f'{MAIN_DIR}/{doc.lower()}.md', "w", encoding="utf-8") as f:
@@ -124,5 +137,9 @@ if __name__ == "__main__":
   pull_duplicates()
   pull_markdeep_docs()
 
-  res, err = execute('mdbook build', cwd=DOCS_SRC_DIR)
+  res, err = execute('mdbook build', cwd=MDBOOK_DIR)
   assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
+
+  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)
+  shutil.copy(os.path.join(MARKDEEP_DIR, FILAMENT_MD), BOOK_OUPUT_DIR)
+  shutil.copy(os.path.join(MARKDEEP_DIR, MATERIALS_MD), BOOK_OUPUT_DIR)

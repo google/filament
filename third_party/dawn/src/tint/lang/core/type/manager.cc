@@ -54,6 +54,67 @@
 #include "src/tint/utils/macros/compiler.h"
 
 namespace tint::core::type {
+namespace {
+
+const Type* SubtypeFor(core::TexelFormat format, Manager& type_mgr) {
+    switch (format) {
+        case core::TexelFormat::kR8Uint:
+        case core::TexelFormat::kRg8Uint:
+        case core::TexelFormat::kRgba8Uint:
+        case core::TexelFormat::kR16Uint:
+        case core::TexelFormat::kRg16Uint:
+        case core::TexelFormat::kRgba16Uint:
+        case core::TexelFormat::kR32Uint:
+        case core::TexelFormat::kRg32Uint:
+        case core::TexelFormat::kRgba32Uint:
+        case core::TexelFormat::kRgb10A2Uint: {
+            return type_mgr.u32();
+        }
+
+        case core::TexelFormat::kR8Sint:
+        case core::TexelFormat::kRg8Sint:
+        case core::TexelFormat::kRgba8Sint:
+        case core::TexelFormat::kR16Sint:
+        case core::TexelFormat::kRg16Sint:
+        case core::TexelFormat::kRgba16Sint:
+        case core::TexelFormat::kR32Sint:
+        case core::TexelFormat::kRg32Sint:
+        case core::TexelFormat::kRgba32Sint: {
+            return type_mgr.i32();
+        }
+
+        case core::TexelFormat::kR8Unorm:
+        case core::TexelFormat::kR8Snorm:
+        case core::TexelFormat::kRg8Unorm:
+        case core::TexelFormat::kRg8Snorm:
+        case core::TexelFormat::kBgra8Unorm:
+        case core::TexelFormat::kRgba8Unorm:
+        case core::TexelFormat::kRgba8Snorm:
+        case core::TexelFormat::kR16Unorm:
+        case core::TexelFormat::kR16Snorm:
+        case core::TexelFormat::kRg16Unorm:
+        case core::TexelFormat::kRg16Snorm:
+        case core::TexelFormat::kRgba16Unorm:
+        case core::TexelFormat::kRgba16Snorm:
+        case core::TexelFormat::kR16Float:
+        case core::TexelFormat::kRg16Float:
+        case core::TexelFormat::kRgba16Float:
+        case core::TexelFormat::kR32Float:
+        case core::TexelFormat::kRg32Float:
+        case core::TexelFormat::kRgba32Float:
+        case core::TexelFormat::kRgb10A2Unorm:
+        case core::TexelFormat::kRg11B10Ufloat: {
+            return type_mgr.f32();
+        }
+
+        case core::TexelFormat::kUndefined:
+            break;
+    }
+
+    return nullptr;
+}
+
+}  // namespace
 
 Manager::Manager() = default;
 
@@ -167,8 +228,14 @@ const core::type::MultisampledTexture* Manager::multisampled_texture(TextureDime
 const core::type::StorageTexture* Manager::storage_texture(TextureDimension dim,
                                                            core::TexelFormat format,
                                                            core::Access access) {
-    const auto* subtype = StorageTexture::SubtypeFor(format, *this);
+    const auto* subtype = SubtypeFor(format, *this);
     return Get<core::type::StorageTexture>(dim, format, access, subtype);
+}
+
+const core::type::TexelBuffer* Manager::texel_buffer(core::TexelFormat format,
+                                                     core::Access access) {
+    const auto* subtype = SubtypeFor(format, *this);
+    return Get<core::type::TexelBuffer>(format, access, subtype);
 }
 
 const core::type::DepthTexture* Manager::depth_texture(TextureDimension dim) {

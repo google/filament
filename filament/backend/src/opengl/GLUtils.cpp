@@ -18,6 +18,7 @@
 
 #include "private/backend/Driver.h"
 
+#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/ostream.h>
 #include <utils/trap.h>
@@ -25,6 +26,7 @@
 #include <string_view>
 
 #include <stddef.h>
+#include <cstdio>
 
 namespace filament::backend {
 
@@ -55,19 +57,21 @@ std::string_view getGLErrorString(GLenum error) noexcept {
 }
 
 UTILS_NOINLINE
-GLenum checkGLError(io::ostream& out, const char* function, size_t line) noexcept {
+GLenum checkGLError(const char* function, size_t line) noexcept {
     GLenum const error = glGetError();
     if (UTILS_VERY_UNLIKELY(error != GL_NO_ERROR)) {
         auto const string = getGLErrorString(error);
-        out << "OpenGL error " << io::hex << error << " (" << string << ") in \""
-            << function << "\" at line " << io::dec << line << io::endl;
+        char hexError[16];
+        snprintf(hexError, sizeof(hexError), "%#x", error);
+        LOG(ERROR) << "OpenGL error " << hexError << " (" << string << ") in \"" << function
+                   << "\" at line " << line;
     }
     return error;
 }
 
 UTILS_NOINLINE
-void assertGLError(io::ostream& out, const char* function, size_t line) noexcept {
-    GLenum const err = checkGLError(out, function, line);
+void assertGLError(const char* function, size_t line) noexcept {
+    GLenum const err = checkGLError(function, line);
     if (UTILS_VERY_UNLIKELY(err != GL_NO_ERROR)) {
         debug_trap();
     }
@@ -97,19 +101,21 @@ std::string_view getFramebufferStatusString(GLenum status) noexcept {
 }
 
 UTILS_NOINLINE
-GLenum checkFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
+GLenum checkFramebufferStatus(GLenum target, const char* function, size_t line) noexcept {
     GLenum const status = glCheckFramebufferStatus(target);
     if (UTILS_VERY_UNLIKELY(status != GL_FRAMEBUFFER_COMPLETE)) {
         auto const string = getFramebufferStatusString(status);
-        out << "OpenGL framebuffer error " << io::hex << status << " (" << string << ") in \""
-            << function << "\" at line " << io::dec << line << io::endl;
+        char hexStatus[16];
+        snprintf(hexStatus, sizeof(hexStatus), "%#x", status);
+        LOG(ERROR) << "OpenGL framebuffer error " << hexStatus << " (" << string << ") in \""
+                   << function << "\" at line " << line;
     }
     return status;
 }
 
 UTILS_NOINLINE
-void assertFramebufferStatus(io::ostream& out, GLenum target, const char* function, size_t line) noexcept {
-    GLenum const status = checkFramebufferStatus(out, target, function, line);
+void assertFramebufferStatus(GLenum target, const char* function, size_t line) noexcept {
+    GLenum const status = checkFramebufferStatus(target, function, line);
     if (UTILS_VERY_UNLIKELY(status != GL_FRAMEBUFFER_COMPLETE)) {
         debug_trap();
     }
