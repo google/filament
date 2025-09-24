@@ -24,6 +24,7 @@
 #include "VulkanAsyncHandles.h"
 #include "VulkanConstants.h"
 #include "VulkanContext.h"
+#include "VulkanSemaphoreManager.h"
 #include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/StaticVector.h"
 
@@ -63,8 +64,8 @@ private:
 // DriverApi fence object and should not be destroyed until both the DriverApi object is freed and
 // we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
-    VulkanCommandBuffer(VulkanContext const& mContext,
-            VkDevice device, VkQueue queue, VkCommandPool pool, bool isProtected);
+    VulkanCommandBuffer(VulkanContext const& mContext, VkDevice device, VkQueue queue,
+            VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
 
     VulkanCommandBuffer(VulkanCommandBuffer const&) = delete;
     VulkanCommandBuffer& operator=(VulkanCommandBuffer const&) = delete;
@@ -87,7 +88,7 @@ struct VulkanCommandBuffer {
     void insertEvent(char const* marker) noexcept;
 
     void begin() noexcept;
-    VkSemaphore submit();
+    fvkmemory::resource_ptr<VulkanSemaphore> submit();
 
     inline void setComplete() {
         mFenceStatus->setStatus(VK_SUCCESS);
@@ -121,10 +122,11 @@ private:
     bool const isProtected;
     VkDevice mDevice;
     VkQueue mQueue;
+    VulkanSemaphoreManager* mSemaphoreManager;
     fvkutils::StaticVector<VkSemaphore, 2> mWaitSemaphores;
     fvkutils::StaticVector<VkPipelineStageFlags, 2> mWaitSemaphoreStages;
     VkCommandBuffer mBuffer;
-    VkSemaphore mSubmission;
+    fvkmemory::resource_ptr<VulkanSemaphore> mSubmission;
     VkFence mFence;
     std::shared_ptr<VulkanCmdFence> mFenceStatus;
     std::vector<fvkmemory::resource_ptr<Resource>> mResources;
@@ -136,14 +138,14 @@ struct CommandBufferPool {
     static constexpr int8_t INVALID = -1;
 
     CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
-            uint8_t queueFamilyIndex, bool isProtected);
+            uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected);
     ~CommandBufferPool();
 
     VulkanCommandBuffer& getRecording();
 
     void gc();
     void update();
-    VkSemaphore flush();
+    fvkmemory::resource_ptr<VulkanSemaphore> flush();
     void wait();
     void waitFor(VkSemaphore previousAction, VkPipelineStageFlags waitStage);
 
@@ -204,7 +206,7 @@ class VulkanCommands {
 public:
     VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
             VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex,
-            VulkanContext const& context);
+            VulkanContext const& context, VulkanSemaphoreManager* semaphoreManager);
 
     void terminate();
 
@@ -222,10 +224,10 @@ public:
     // Returns the "rendering finished" semaphore for the most recent flush and removes
     // it from the existing dependency chain. This is especially useful for setting up
     // vkQueuePresentKHR.
-    VkSemaphore acquireFinishedSignal() {
-        VkSemaphore ret = mLastSubmit;
-        mLastSubmit = VK_NULL_HANDLE;
-        return ret;
+    fvkmemory::resource_ptr<VulkanSemaphore> acquireFinishedSignal() {
+        fvkmemory::resource_ptr<VulkanSemaphore> sem = mLastSubmit;
+        mLastSubmit = {};
+        return sem;
     }
 
     VkFence getMostRecentFence() {
@@ -266,12 +268,13 @@ private:
     // For defered initialization if/when we need protected content
     uint32_t const mProtectedQueueFamilyIndex;
     VulkanContext const& mContext;
+    VulkanSemaphoreManager* mSemaphoreManager;
 
     std::unique_ptr<CommandBufferPool> mPool;
     std::unique_ptr<CommandBufferPool> mProtectedPool;
 
     VkSemaphore mInjectedDependency = VK_NULL_HANDLE;
-    VkSemaphore mLastSubmit = VK_NULL_HANDLE;
+    fvkmemory::resource_ptr<VulkanSemaphore> mLastSubmit;
 
     VkFence mLastFence = VK_NULL_HANDLE;
     std::shared_ptr<VulkanCmdFence> mLastFenceStatus;
