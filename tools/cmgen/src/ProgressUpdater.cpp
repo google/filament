@@ -21,44 +21,40 @@
 
 #include <signal.h>
 
+static void signal_safe(const char* seq, size_t len) {
+    write(STDOUT_FILENO, seq, len);
+}
+
+static void setSigintHandler(void (*handler)(int)) {
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+}
+
 static void moveCursorUp(size_t n) {
     std::cout << "\033[" << n << "F";
 }
 
 static void showCursor() {
-    struct sigaction sa;
-    sa.sa_handler = SIG_DFL;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, nullptr);
-    
     const char* show_cursor_seq = "\033[?25h";
-    write(STDOUT_FILENO, show_cursor_seq, 6);
+    signal_safe(show_cursor_seq, 6);
 }
-
 
 static void showCursorFromSignal(int) {
     const char* show_cursor_seq = "\033[?25h";
-    write(STDOUT_FILENO, show_cursor_seq, 6);
-    
-    struct sigaction sa;
-    sa.sa_handler = SIG_DFL;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, nullptr);
-    
+    signal_safe(show_cursor_seq, 6);
+
+    setSigintHandler(SIG_DFL);
     raise(SIGINT);
 }
 
 static void hideCursor() {
-    struct sigaction sa;
-    sa.sa_handler = showCursorFromSignal;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, nullptr);
-    
     const char* hide_cursor_seq = "\033[?25l";
-    write(STDOUT_FILENO, hide_cursor_seq, 6);
+    signal_safe(hide_cursor_seq, 6);
+
+    setSigintHandler(showCursorFromSignal);
 }
 
 static inline void printProgress(float v, size_t width) {
