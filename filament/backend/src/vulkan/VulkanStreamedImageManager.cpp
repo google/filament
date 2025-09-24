@@ -60,7 +60,7 @@ void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<Vu
         if (data.image->getStream() == stream) {
             // For some reason, some of the frames coming to us, are on streams where the
             // descriptor set isn't external...
-            if (data.set->getExternalSamplerVkSet()) {
+            if (data.image->getVkFormat() == VK_FORMAT_UNDEFINED) {
                 mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
                         data.samplerParams);
             } else {
