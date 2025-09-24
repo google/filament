@@ -69,7 +69,11 @@ public:
 
     ParseResult parse() noexcept;
 
+    // Compute the CRC32 of the material or return the cached value.
     uint32_t computeCrc32() const noexcept;
+    // Return the cached computed CRC32 or the CRC32 built into the material file if one exists.
+    std::optional<uint32_t> getPrecomputedCrc32() const noexcept;
+
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
     // Accessors

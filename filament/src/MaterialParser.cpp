@@ -114,16 +114,12 @@ bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
     if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
         return false;
     }
-    std::optional<uint32_t> lhsCrc32;
-    std::optional<uint32_t> rhsCrc32;
-    if (!getMaterialCrc32(&lhsCrc32.value())) {
-        lhsCrc32 = mCrc32.load(std::memory_order_relaxed);
-    }
-    if (!rhs.getMaterialCrc32(&rhsCrc32.value())) {
-        rhsCrc32 = rhs.mCrc32.load(std::memory_order_relaxed);
-    }
-    if (lhsCrc32 && rhsCrc32 && *lhsCrc32 != *rhsCrc32) {
-        return false;
+    std::optional<uint32_t> lhsCrc32 = getPrecomputedCrc32();
+    if (lhsCrc32) {
+        std::optional<uint32_t> rhsCrc32 = rhs.getPrecomputedCrc32();
+        if (rhsCrc32 && *lhsCrc32 != *rhsCrc32) {
+            return false;
+        }
     }
     return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
             mImpl.mManagedBuffer.size());
@@ -203,6 +199,18 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
     uint32_t crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
     mCrc32.store(crc32, std::memory_order_relaxed);
     return crc32;
+}
+
+std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
+    std::optional<uint32_t> cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
+    if (cachedCrc32) {
+        return cachedCrc32;
+    }
+    uint32_t parsedCrc32;
+    if (getMaterialCrc32(&parsedCrc32)) {
+        return parsedCrc32;
+    }
+    return std::nullopt;
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
