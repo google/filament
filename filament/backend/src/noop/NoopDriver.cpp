@@ -45,8 +45,16 @@ ShaderModel NoopDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage NoopDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::ESSL3;
+utils::FixedCapacityVector<ShaderLanguage> NoopDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
+    return {
+        ShaderLanguage::ESSL3,
+        ShaderLanguage::ESSL1,
+        ShaderLanguage::SPIRV,
+        ShaderLanguage::MSL,
+        ShaderLanguage::METAL_LIBRARY,
+        ShaderLanguage::WGSL,
+    };
 }
 
 // explicit instantiation of the Dispatcher
