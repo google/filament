@@ -123,9 +123,9 @@ void VulkanSwapChain::present(DriverBase& driver) {
 
     if (frameScheduled.callback) {
         driver.scheduleCallback(frameScheduled.handler,
-                [callback = std::move(frameScheduled.callback)]() {
+                [callback = frameScheduled.callback]() {
                     PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
-                    callback(noop);
+                    callback->operator()(noop);
                 });
     }
 }

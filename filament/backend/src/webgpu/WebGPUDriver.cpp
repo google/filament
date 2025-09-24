@@ -2207,4 +2207,25 @@ wgpu::AddressMode WebGPUDriver::fWrapModeToWAddressMode(const SamplerWrapMode& f
     return wgpu::AddressMode::Undefined;
 }
 
+MemoryMappedBufferHandle WebGPUDriver::mapBufferS() noexcept {
+    // TODO: MetalDriver::mapBufferS
+    return {};
+}
+
+void WebGPUDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
+        BufferObjectHandle boh, size_t offset,
+        size_t size, MapBufferAccessFlags access, utils::CString&& tag) {
+    // TODO: MetalDriver::mapBufferR
+}
+
+void WebGPUDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+    // TODO: MetalDriver::unmapBuffer
+}
+
+void WebGPUDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        BufferDescriptor&& data) {
+    // TODO: MetalDriver::copyToMemoryMappedBuffer
+}
+
+
 } // namespace filament::backend

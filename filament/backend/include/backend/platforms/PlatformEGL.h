@@ -168,6 +168,7 @@ protected:
     EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
     Config mContextAttribs;
     std::vector<EGLContext> mAdditionalContexts;
+    bool mMSAA4XSupport = false;
 
     // supported extensions detected at runtime
     struct {
@@ -218,6 +219,8 @@ private:
             return makeCurrent(mCurrentContext, drawSurface, readSurface);
         }
     } egl{ mEGLDisplay };
+
+    bool checkIfMSAASwapChainSupported(uint32_t samples) const noexcept;
 };
 
 } // namespace filament::backend

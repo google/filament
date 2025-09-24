@@ -295,6 +295,12 @@ void MetalSwapChain::ensureDepthStencilTexture() {
 
 void MetalSwapChain::setFrameScheduledCallback(
         CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+    if (!callback) {
+        frameScheduled.handler = nullptr;
+        frameScheduled.callback.reset();
+        frameScheduled.flags = 0;
+        return;
+    }
     frameScheduled.handler = handler;
     frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     frameScheduled.flags = flags;
@@ -1486,6 +1492,11 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
         buffer = { [context.device newBufferWithLength:encoder.encodedLength
                                                options:MTLResourceStorageModeShared],
             TrackedMetalBuffer::Type::DESCRIPTOR_SET };
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (!label.empty()) {
+            buffer.get().label = @(label.c_str_safe());
+        }
+#endif
     }
     [encoder setArgumentBuffer:buffer.get() offset:0];
 
