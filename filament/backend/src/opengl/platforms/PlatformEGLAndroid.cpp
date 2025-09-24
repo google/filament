@@ -83,6 +83,7 @@ UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID
 UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID = {};
 UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
+UTILS_PRIVATE PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID = {};
 }
 using namespace glext;
 
@@ -226,6 +227,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
                 "eglGetFrameTimestampSupportedANDROID");
         eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
                 "eglGetFrameTimestampsANDROID");
+        eglDupNativeFenceFDANDROID =
+                (PFNEGLDUPNATIVEFENCEFDANDROIDPROC) eglGetProcAddress("eglDupNativeFenceFDANDROID");
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -393,6 +396,31 @@ Platform::Stream* PlatformEGLAndroid::createStream(void* nativeStream) noexcept 
 
 void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
+}
+
+Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
+    auto sync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+    return new SyncEGLAndroid{.sync = sync};
+}
+
+bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept {
+    assert_invariant(sync && fd);
+    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.sync);
+    // In the case where there was no native FD, -1 is returned. Return false
+    // to indicate there was an error in this case.
+    if (*fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
+        LOG(ERROR) << "Failed to convert sync to fd: " << eglGetError();
+        return false;
+    }
+    return true;
+}
+
+void PlatformEGLAndroid::destroySync(Platform::Sync* sync) noexcept {
+    assert_invariant(sync);
+    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    eglDestroySyncKHR(mEGLDisplay, eglSync.sync);
+    delete sync;
 }
 
 void PlatformEGLAndroid::attach(Stream* stream, intptr_t tname) noexcept {

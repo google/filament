@@ -187,6 +187,7 @@ private:
     } mAppState;
 
     bool const mIsSRGBSwapChainSupported;
+    bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
 };
 

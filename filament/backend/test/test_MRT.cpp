@@ -97,7 +97,7 @@ TEST_F(BackendTest, MRT) {
                 screenWidth(),                          // width
                 screenHeight(),                         // height
                 1,                                      // samples
-                0,                                      // layerCount
+                1,                                      // layerCount
                 {{textureA },{textureB }},              // color
                 {},                                     // depth
                 {}));                                   // stencil

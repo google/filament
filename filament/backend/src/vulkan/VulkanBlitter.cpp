@@ -96,7 +96,6 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
     VulkanLayout oldSrcLayout = src.getLayout();
     VulkanLayout oldDstLayout = dst.getLayout();
 
-    src.texture->transitionLayout(commands, srcRange, VulkanLayout::TRANSFER_SRC);
     dst.texture->transitionLayout(commands, dstRange, VulkanLayout::TRANSFER_DST);
 
     assert_invariant(
@@ -109,10 +108,9 @@ inline void resolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect
             .extent = { src.getExtent2D().width, src.getExtent2D().height, 1 },
     }};
     vkCmdResolveImage(cmdbuffer,
-            src.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_SRC),
+            src.getImage(), fvkutils::getVkLayout(src.getLayout()),
             dst.getImage(), fvkutils::getVkLayout(VulkanLayout::TRANSFER_DST),
             1, resolveRegions);
-
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
         oldSrcLayout = src.texture->getDefaultLayout();
     }
