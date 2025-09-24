@@ -2214,7 +2214,7 @@ MemoryMappedBufferHandle WebGPUDriver::mapBufferS() noexcept {
 
 void WebGPUDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
-        size_t size, MapBufferAccessFlags access, utils::CString tag) {
+        size_t size, MapBufferAccessFlags access, utils::CString&& tag) {
     // TODO: MetalDriver::mapBufferR
 }
 

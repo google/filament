@@ -957,7 +957,7 @@ void VulkanDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
 
 void VulkanDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
-        size_t size, MapBufferAccessFlags access, utils::CString tag) {
+        size_t size, MapBufferAccessFlags access, utils::CString&& tag) {
     FVK_SYSTRACE_SCOPE();
     auto mmb = resource_ptr<VulkanMemoryMappedBuffer>::make(&mResourceManager, mmbh,
             boh, offset, size, access);
