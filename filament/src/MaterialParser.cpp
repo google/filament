@@ -111,6 +111,9 @@ MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept 
 // ------------------------------------------------------------------------------------------------
 
 bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
+    if (this == &rhs) {
+        return true;
+    }
     if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
         return false;
     }
