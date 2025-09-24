@@ -185,9 +185,9 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
 }
 
 uint32_t MaterialParser::computeCrc32() const noexcept {
-    std::optional<uint32_t> cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
-    if (cachedCrc32) {
-        return *cachedCrc32;
+    uint32_t crc32 = mCrc32.load(std::memory_order_relaxed);
+    if (crc32) {
+        return crc32;
     }
 
     const size_t size = mImpl.mManagedBuffer.size();
@@ -199,7 +199,7 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
 
     std::vector<uint32_t> crc32Table;
     utils::hash::crc32GenerateTable(crc32Table);
-    uint32_t crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
+    crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
     mCrc32.store(crc32, std::memory_order_relaxed);
     return crc32;
 }

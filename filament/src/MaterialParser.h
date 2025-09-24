@@ -191,7 +191,9 @@ private:
     filaflat::ChunkContainer& getChunkContainer() noexcept;
     filaflat::ChunkContainer const& getChunkContainer() const noexcept;
     MaterialParserDetails mImpl;
-    mutable std::atomic<std::optional<uint32_t>> mCrc32;
+    // 0 == not cached. This technically means that a file with a CRC32 of 0 will never be cached,
+    // but this is unlikely, and keeping it a 32-bit value guarantees that it will be lockless.
+    mutable std::atomic<uint32_t> mCrc32 = 0;
 };
 
 struct ChunkUniformInterfaceBlock {
