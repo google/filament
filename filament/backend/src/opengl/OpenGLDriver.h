@@ -24,6 +24,7 @@
 #include "GLBufferObject.h"
 #include "GLDescriptorSet.h"
 #include "GLDescriptorSetLayout.h"
+#include "GLMemoryMappedBuffer.h"
 #include "GLTexture.h"
 #include "ShaderCompilerService.h"
 
@@ -151,6 +152,8 @@ public:
 
     using GLDescriptorSet = filament::backend::GLDescriptorSet;
 
+    using GLMemoryMappedBuffer = filament::backend::GLMemoryMappedBuffer;
+
     struct GLStream : public HwStream {
         using HwStream::HwStream;
         struct Info {
@@ -213,6 +216,8 @@ public:
 
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
+
+    using DriverBase::scheduleDestroy;
 
 private:
     OpenGLPlatform& mPlatform;

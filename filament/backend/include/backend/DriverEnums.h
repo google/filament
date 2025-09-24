@@ -556,12 +556,21 @@ constexpr TargetBufferFlags getTargetBufferFlagsAt(size_t index) noexcept {
 }
 
 /**
- * Frequency at which a buffer is expected to be modified and used. This is used as an hint
- * for the driver to make better decisions about managing memory internally.
+ * How the buffer will be used.
  */
 enum class BufferUsage : uint8_t {
-    STATIC,      //!< content modified once, used many times
-    DYNAMIC,     //!< content modified frequently, used many times
+    STATIC              = 0,    //!< (legacy) content modified once, used many times
+    DYNAMIC             = 1,    //!< (legacy) content modified frequently, used many times
+    DYNAMIC_BIT         = 0x1,  //!< buffer can be modified frequently, used many times
+    SHARED_WRITE_BIT    = 0x04, //!< buffer can be memory mapped for write operations
+};
+
+/**
+ * How the buffer will be mapped.
+ */
+enum class MapBufferAccessFlags : uint8_t {
+    WRITE_BIT               = 0x2,  //!< buffer is mapped from writing
+    INVALIDATE_RANGE_BIT    = 0x4,  //!< the mapped range content is lost
 };
 
 /**
@@ -626,6 +635,15 @@ enum class ShaderModel : uint8_t {
     DESKTOP = 2,    //!< Desktop level functionality
 };
 static constexpr size_t SHADER_MODEL_COUNT = 2;
+
+constexpr std::string_view to_string(ShaderModel model) noexcept {
+    switch (model) {
+        case ShaderModel::MOBILE:
+            return "mobile";
+        case ShaderModel::DESKTOP:
+            return "desktop";
+    }
+}
 
 /**
  * Primitive types
@@ -1692,6 +1710,11 @@ template<> struct utils::EnableBitMaskOperators<filament::backend::TextureUsage>
         : public std::true_type {};
 template<> struct utils::EnableBitMaskOperators<filament::backend::StencilFace>
         : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::BufferUsage>
+        : public std::true_type {};
+template<> struct utils::EnableBitMaskOperators<filament::backend::MapBufferAccessFlags>
+        : public std::true_type {};
+
 template<> struct utils::EnableIntegerOperators<filament::backend::TextureCubemapFace>
         : public std::true_type {};
 template<> struct utils::EnableIntegerOperators<filament::backend::FeatureLevel>

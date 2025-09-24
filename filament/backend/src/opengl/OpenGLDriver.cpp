@@ -18,6 +18,7 @@
 
 #include "CommandStreamDispatcher.h"
 #include "GLTexture.h"
+#include "GLMemoryMappedBuffer.h"
 #include "GLUtils.h"
 #include "OpenGLContext.h"
 #include "OpenGLDriverFactory.h"
@@ -648,6 +649,10 @@ Handle<HwDescriptorSetLayout> OpenGLDriver::createDescriptorSetLayoutS() noexcep
 
 Handle<HwDescriptorSet> OpenGLDriver::createDescriptorSetS() noexcept {
     return initHandle<GLDescriptorSet>();
+}
+
+MemoryMappedBufferHandle OpenGLDriver::mapBufferS() noexcept {
+    return initHandle<GLMemoryMappedBuffer>();
 }
 
 void OpenGLDriver::createVertexBufferInfoR(
@@ -1907,6 +1912,14 @@ void OpenGLDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
     mHandleAllocator.associateTagToHandle(dslh.getId(), std::move(tag));
 }
 
+void OpenGLDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
+        BufferObjectHandle boh, size_t offset,
+        size_t size, MapBufferAccessFlags access, CString&& tag) {
+    DEBUG_MARKER()
+    construct<GLMemoryMappedBuffer>(mmbh, mContext, mHandleAllocator, boh, offset, size, access);
+    mHandleAllocator.associateTagToHandle(mmbh.getId(), std::move(tag));
+}
+
 // ------------------------------------------------------------------------------------------------
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
@@ -1943,6 +1956,8 @@ void OpenGLDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
     if (boh) {
         auto& gl = mContext;
         GLBufferObject const* bo = handle_cast<const GLBufferObject*>(boh);
+        // check we're not destroying a buffer that has active mappings
+        assert_invariant(bo->mappingCount == 0);
         if (UTILS_UNLIKELY(bo->bindingType == BufferObjectBinding::UNIFORM && gl.isES2())) {
             free(bo->gl.buffer);
         } else {
@@ -2152,6 +2167,15 @@ void OpenGLDriver::destroyDescriptorSet(Handle<HwDescriptorSet> dsh) {
         }
         GLDescriptorSet const* ds = handle_cast<GLDescriptorSet*>(dsh);
         destruct(dsh, ds);
+    }
+}
+
+void OpenGLDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+    DEBUG_MARKER()
+    if (mmbh) {
+        GLMemoryMappedBuffer* const mmb = handle_cast<GLMemoryMappedBuffer*>(mmbh);
+        mmb->unmap(mContext, mHandleAllocator);
+        destruct(mmbh, mmb);
     }
 }
 
@@ -3884,6 +3908,12 @@ void OpenGLDriver::updateDescriptorSetTexture(
         SamplerParams const params) {
     GLDescriptorSet* ds = handle_cast<GLDescriptorSet*>(dsh);
     ds->update(mContext, mHandleAllocator, binding, th, params);
+}
+
+void OpenGLDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        BufferDescriptor&& data) {
+    GLMemoryMappedBuffer* const mmb = handle_cast<GLMemoryMappedBuffer*>(mmbh);
+    mmb->copy(mContext, *this, offset, std::move(data));
 }
 
 void OpenGLDriver::flush(int) {

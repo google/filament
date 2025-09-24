@@ -38,6 +38,7 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/Hash.h>
 
 #include <array>
 #include <optional>
@@ -106,6 +107,14 @@ MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept 
 
 // ------------------------------------------------------------------------------------------------
 
+bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
+    if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
+        return false;
+    }
+    return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
+            mImpl.mManagedBuffer.size());
+}
+
 template<typename T>
 bool MaterialParser::get(typename T::Container* container) const noexcept {
     auto [start, end] = mImpl.mChunkContainer.getChunkRange(T::tag);
@@ -160,6 +169,19 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
 
     mImpl.mChosenLanguage = chosenLanguage;
     return ParseResult::SUCCESS;
+}
+
+uint32_t MaterialParser::computeCrc32() const noexcept {
+    const size_t size = mImpl.mManagedBuffer.size();
+    const void* const UTILS_NONNULL payload = mImpl.mManagedBuffer.data();
+
+    constexpr size_t crc32ChunkSize = sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    const size_t originalSize = size - crc32ChunkSize;
+    assert_invariant(size > crc32ChunkSize);
+
+    std::vector<uint32_t> crc32Table;
+    utils::hash::crc32GenerateTable(crc32Table);
+    return utils::hash::crc32Update(0, payload, originalSize, crc32Table);
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {
@@ -396,7 +418,7 @@ bool MaterialParser::getReflectionMode(ReflectionMode* value) const noexcept {
 }
 
 bool MaterialParser::getShader(ShaderContent& shader,
-        ShaderModel const shaderModel, Variant const variant, ShaderStage const stage) noexcept {
+        ShaderModel const shaderModel, Variant const variant, ShaderStage const stage) const noexcept {
     return mImpl.mMaterialChunk.getShader(shader,
             mImpl.mBlobDictionary, shaderModel, variant, stage);
 }

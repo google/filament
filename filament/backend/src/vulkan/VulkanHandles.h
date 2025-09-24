@@ -225,6 +225,17 @@ private:
     fvkutils::UniformBufferBitmask mUboMask;
 };
 
+struct VulkanMemoryMappedBuffer : public HwMemoryMappedBuffer, Resource {
+    VulkanMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
+            size_t const size, MapBufferAccessFlags const access)
+        : boh(boh), access(access), size(size), offset(offset) {
+    }
+    BufferObjectHandle boh{};
+    MapBufferAccessFlags access{};
+    uint32_t size = 0;
+    uint32_t offset = 0;
+};
+
 using PushConstantNameArray = utils::FixedCapacityVector<char const*>;
 using PushConstantNameByStage = std::array<PushConstantNameArray, Program::SHADER_TYPE_COUNT>;
 

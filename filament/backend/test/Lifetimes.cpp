@@ -39,7 +39,12 @@ Cleanup::~Cleanup() {
     for (const auto descriptorSetLayout : mDescriptorSetLayouts) {
         mDriverApi.destroyDescriptorSetLayout(descriptorSetLayout);
     }
+    for (const auto memoryMappedBuffer : mMemoryMappedBuffers) {
+        // destroy those before buffer objects
+        mDriverApi.unmapBuffer(memoryMappedBuffer);
+    }
     for (const auto bufferObject : mBufferObjects) {
+        // destroy those after memory mapped buffers
         mDriverApi.destroyBufferObject(bufferObject);
     }
     for (const auto program : mPrograms) {
@@ -50,6 +55,18 @@ Cleanup::~Cleanup() {
     }
     for (const auto renderTarget : mRenderTargets) {
         mDriverApi.destroyRenderTarget(renderTarget);
+    }
+    for (const auto renderPrimitive : mRenderPrimitives) {
+        mDriverApi.destroyRenderPrimitive(renderPrimitive);
+    }
+    for (const auto vertexBufferInfo : mVertexBufferInfos) {
+        mDriverApi.destroyVertexBufferInfo(vertexBufferInfo);
+    }
+    for (const auto indexBuffer : mIndexBuffers) {
+        mDriverApi.destroyIndexBuffer(indexBuffer);
+    }
+    for (const auto vertexBuffer : mVertexBuffers) {
+        mDriverApi.destroyVertexBuffer(vertexBuffer);
     }
 
     for (const auto& callback : mCallbacks) {
@@ -85,6 +102,26 @@ void Cleanup::addInternal(filament::backend::TextureHandle handle) {
 template <>
 void Cleanup::addInternal(filament::backend::RenderTargetHandle handle) {
     mRenderTargets.push_back(handle);
+}
+template <>
+void Cleanup::addInternal(filament::backend::MemoryMappedBufferHandle handle) {
+    mMemoryMappedBuffers.push_back(handle);
+}
+template <>
+void Cleanup::addInternal(filament::backend::RenderPrimitiveHandle handle) {
+    mRenderPrimitives.push_back(handle);
+}
+template <>
+void Cleanup::addInternal(filament::backend::VertexBufferInfoHandle handle) {
+    mVertexBufferInfos.push_back(handle);
+}
+template <>
+void Cleanup::addInternal(filament::backend::VertexBufferHandle handle) {
+    mVertexBuffers.push_back(handle);
+}
+template <>
+void Cleanup::addInternal(filament::backend::IndexBufferHandle handle) {
+    mIndexBuffers.push_back(handle);
 }
 
 void Cleanup::addPostCall(std::function<void()> callback){
