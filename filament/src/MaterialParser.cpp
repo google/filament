@@ -41,6 +41,7 @@
 #include <utils/Hash.h>
 
 #include <array>
+#include <atomic>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -113,6 +114,17 @@ bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
     if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
         return false;
     }
+    std::optional<uint32_t> lhsCrc32;
+    std::optional<uint32_t> rhsCrc32;
+    if (!getMaterialCrc32(&lhsCrc32.value())) {
+        lhsCrc32 = mCrc32.load(std::memory_order_relaxed);
+    }
+    if (!rhs.getMaterialCrc32(&rhsCrc32.value())) {
+        rhsCrc32 = rhs.mCrc32.load(std::memory_order_relaxed);
+    }
+    if (lhsCrc32 && rhsCrc32 && *lhsCrc32 != *rhsCrc32) {
+        return false;
+    }
     return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
             mImpl.mManagedBuffer.size());
 }
@@ -174,6 +186,11 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
 }
 
 uint32_t MaterialParser::computeCrc32() const noexcept {
+    std::optional<uint32_t> cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
+    if (cachedCrc32) {
+        return *cachedCrc32;
+    }
+
     const size_t size = mImpl.mManagedBuffer.size();
     const void* const UTILS_NONNULL payload = mImpl.mManagedBuffer.data();
 
@@ -183,7 +200,9 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
 
     std::vector<uint32_t> crc32Table;
     utils::hash::crc32GenerateTable(crc32Table);
-    return utils::hash::crc32Update(0, payload, originalSize, crc32Table);
+    uint32_t crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
+    mCrc32.store(crc32, std::memory_order_relaxed);
+    return crc32;
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {

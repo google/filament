@@ -187,6 +187,7 @@ private:
     filaflat::ChunkContainer& getChunkContainer() noexcept;
     filaflat::ChunkContainer const& getChunkContainer() const noexcept;
     MaterialParserDetails mImpl;
+    mutable std::atomic<std::optional<uint32_t>> mCrc32;
 };
 
 struct ChunkUniformInterfaceBlock {
