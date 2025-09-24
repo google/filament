@@ -48,7 +48,7 @@ public:
     // call this as many times as needed
     // populates "shaderContent" with the requested shader, or returns false on failure.
     bool getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
-            ShaderModel shaderModel, filament::Variant variant, ShaderStage stage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) const;
 
     uint32_t getShaderCount() const noexcept;
 
@@ -72,11 +72,11 @@ private:
 
     bool getTextShader(Unflattener unflattener,
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
-            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) const;
 
     bool getBinaryShader(
             BlobDictionary const& dictionary, ShaderContent& shaderContent,
-            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage);
+            ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) const;
 };
 
 } // namespace filamat

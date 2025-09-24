@@ -65,7 +65,11 @@ public:
         ERROR_OTHER
     };
 
+    bool operator==(MaterialParser const& rhs) const noexcept;
+
     ParseResult parse() noexcept;
+
+    uint32_t computeCrc32() const noexcept;
     backend::ShaderLanguage getShaderLanguage() const noexcept;
 
     // Accessors
@@ -129,7 +133,7 @@ public:
     bool getMaterialCrc32(uint32_t* value) const noexcept;
 
     bool getShader(filaflat::ShaderContent& shader, backend::ShaderModel shaderModel,
-            Variant variant, backend::ShaderStage stage) noexcept;
+            Variant variant, backend::ShaderStage stage) const noexcept;
 
     bool hasShader(backend::ShaderModel const model,
             Variant const variant, backend::ShaderStage const stage) const noexcept {

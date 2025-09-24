@@ -101,7 +101,7 @@ bool MaterialChunk::initialize(filamat::ChunkType materialTag) {
 
 bool MaterialChunk::getTextShader(Unflattener unflattener,
         BlobDictionary const& dictionary, ShaderContent& shaderContent,
-        ShaderModel shaderModel, Variant variant, ShaderStage shaderStage) {
+        ShaderModel shaderModel, Variant variant, ShaderStage shaderStage) const {
     if (mBase == nullptr) {
         return false;
     }
@@ -157,7 +157,7 @@ bool MaterialChunk::getTextShader(Unflattener unflattener,
 }
 
 bool MaterialChunk::getBinaryShader(BlobDictionary const& dictionary,
-        ShaderContent& shaderContent, ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) {
+        ShaderContent& shaderContent, ShaderModel shaderModel, filament::Variant variant, ShaderStage shaderStage) const {
 
     if (mBase == nullptr) {
         return false;
@@ -182,7 +182,7 @@ bool MaterialChunk::hasShader(ShaderModel model, Variant variant, ShaderStage st
 }
 
 bool MaterialChunk::getShader(ShaderContent& shaderContent, BlobDictionary const& dictionary,
-        ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) {
+        ShaderModel shaderModel, filament::Variant variant, ShaderStage stage) const {
     switch (mMaterialTag) {
         case filamat::ChunkType::MaterialGlsl:
         case filamat::ChunkType::MaterialEssl1:
@@ -233,4 +233,3 @@ void MaterialChunk::visitShaders(
 }
 
 } // namespace filaflat
-
