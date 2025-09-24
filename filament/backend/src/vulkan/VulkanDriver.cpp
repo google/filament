@@ -395,6 +395,8 @@ void VulkanDriver::collectGarbage() {
     FVK_SYSTRACE_SCOPE();
     // Command buffers need to be submitted and completed before other resources can be gc'd.
     mCommands.gc();
+
+    mExternalImageManager.gc();
     mDescriptorSetCache.gc();
     mStagePool.gc();
     mBufferCache.gc();
@@ -417,7 +419,6 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
     //
     // This will let us check if any VulkanBuffer is currently in flight or not.
     mCommands.gc();
-
     if (mAppState.hasExternalSamplers()) {
         mExternalImageManager.onBeginFrame();
     }
@@ -2086,14 +2087,15 @@ void VulkanDriver::bindDescriptorSet(
 
 void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
     FVK_SYSTRACE_SCOPE();
-    VkCommandBuffer cmdbuffer = mCurrentRenderPass.commandBuffer->buffer();
-    auto const& [doBindInDraw, bundle] = mPipelineState.bindInDraw;
+    VulkanCommandBuffer* bufferHolder = mCurrentRenderPass.commandBuffer;
+    VkCommandBuffer cmdbuffer = bufferHolder->buffer();
+    auto const [doBindInDraw, bundle] = mPipelineState.bindInDraw;
 
     fvkutils::DescriptorSetMask setsWithExternalSamplers = {};
     if (doBindInDraw) {
         auto& layoutHandles = bundle.dsLayoutHandles;
-        setsWithExternalSamplers = mExternalImageManager.prepareBindSets(layoutHandles,
-                mDescriptorSetCache.getBoundSets());
+        setsWithExternalSamplers = mExternalImageManager.prepareBindSets(bufferHolder,
+                layoutHandles, mDescriptorSetCache.getBoundSets());
 
         VulkanDescriptorSetLayout::DescriptorSetLayoutArray vklayouts;
         for (size_t i = 0; i < layoutHandles.size(); i++) {
@@ -2115,7 +2117,7 @@ void VulkanDriver::draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t ins
         }
         mPipelineState.bindInDraw.first = false;
     }
-    mDescriptorSetCache.commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout,
+    mDescriptorSetCache.commit(bufferHolder, mPipelineState.pipelineLayout,
             setsWithExternalSamplers, mPipelineState.descriptorSetMask);
 
     // Finally, make the actual draw call. TODO: support subranges

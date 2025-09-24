@@ -18,6 +18,8 @@
 #define TNT_FILAMENT_BACKEND_CACHING_VULKANEXTERNALIMAGEMANAGER_H
 
 #include "VulkanHandles.h"
+#include "vulkan/VulkanAsyncHandles.h"
+#include "vulkan/VulkanCommands.h"
 
 #include <backend/DriverEnums.h>
 
@@ -58,7 +60,9 @@ public:
 
     // Returns  bitmask to indicate whether or not to use the external sampler version of each
     // descriptor set.
-    fvkutils::DescriptorSetMask prepareBindSets(LayoutArray const& layouts, SetArray const& sets);
+    fvkutils::DescriptorSetMask prepareBindSets(
+            VulkanCommandBuffer* bufferHolder,
+            LayoutArray const& layouts, SetArray const& sets);
 
     void removeDescriptorSet(fvkmemory::resource_ptr<VulkanDescriptorSet> set);
 
@@ -83,13 +87,15 @@ public:
         fvkmemory::resource_ptr<VulkanTexture> image;
         Platform::ExternalImageHandle platformHandle;
         bool hasBeenValidated = false; // indicates whether the image has been validated *this frame*
-        VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;
     };
 
     bool hasExternalSampler(fvkmemory::resource_ptr<VulkanDescriptorSet> set) const;
 
+    void gc();
+
 private:
-    void updateSetAndLayout(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+    void updateSetAndLayout(VulkanCommandBuffer* bufferHolder,
+            fvkmemory::resource_ptr<VulkanDescriptorSet> set,
             fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout);
 
     void updateImage(ImageData* imageData);
@@ -114,6 +120,15 @@ private:
     // Use vectors instead of hash maps because we only expect small number of entries.
     std::vector<SetBindingInfo> mSetBindings;
     std::vector<ImageData> mImages;
+
+    // Keep metadata to manage recycling sets that have been bound and used.
+    struct BoundSetInfo {
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
+        VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+        VulkanDescriptorSetLayout::Count layoutCount = {};
+        bool recyclable = false;
+    };
+    std::unordered_map<VkDescriptorSet, BoundSetInfo> mInUseSets;
 };
 
 } // filament::backend

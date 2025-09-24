@@ -853,6 +853,10 @@ void VulkanTexture::setYcbcrConversion(VkSamplerYcbcrConversion conversion) {
     }
 }
 
+VkSamplerYcbcrConversion VulkanTexture::getYcbcrConversion() const noexcept {
+    return mState->mYcbcr.conversion;
+}
+
 VulkanLayout VulkanTexture::getLayout(uint32_t layer, uint32_t level) const {
     assert_invariant(level <= 0xffff && layer <= 0xffff);
     const uint32_t key = (layer << 16) | level;

@@ -16,6 +16,7 @@
 
 #include "VulkanExternalImageManager.h"
 
+#include "VulkanCommands.h"
 #include "VulkanDescriptorSetCache.h"
 #include "VulkanDescriptorSetLayoutCache.h"
 #include "VulkanSamplerCache.h"
@@ -51,19 +52,19 @@ ImageData& findImage(std::vector<ImageData>& images,
 }
 
 void copySet(VkDevice device, VkDescriptorSet srcSet, VkDescriptorSet dstSet, Bitmask bindings) {
-    // TODO: fix the size for better memory management
-    std::vector<VkCopyDescriptorSet> copies;
+    VkCopyDescriptorSet copies[sizeof(fvkutils::UniformBufferBitmask)];
+    size_t count = 0;
     bindings.forEachSetBit([&](size_t index) {
-        copies.push_back({
+        copies[count++] ={
             .sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
             .srcSet = srcSet,
             .srcBinding = (uint32_t) index,
             .dstSet = dstSet,
             .dstBinding = (uint32_t) index,
             .descriptorCount = 1,
-        });
+        };
     });
-    vkUpdateDescriptorSets(device, 0, nullptr, copies.size(), copies.data());
+    vkUpdateDescriptorSets(device, 0, nullptr, count, copies);
 }
 
 Bitmask foldBitsInHalf(Bitmask bitset) {
@@ -103,7 +104,8 @@ void VulkanExternalImageManager::onBeginFrame() {
     });
 }
 
-fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutArray const& layouts,
+fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(
+        VulkanCommandBuffer* bufferHolder, LayoutArray const& layouts,
         SetArray const& sets) {
     fvkutils::DescriptorSetMask shouldUseExternalSampler{};
     for (uint8_t i = 0; i < sets.size(); i++) {
@@ -113,7 +115,7 @@ fvkutils::DescriptorSetMask VulkanExternalImageManager::prepareBindSets(LayoutAr
             continue;
         }
         if (hasExternalSampler(set)) {
-            updateSetAndLayout(set, layout);
+            updateSetAndLayout(bufferHolder, set, layout);
             shouldUseExternalSampler.set(i);
         }
     }
@@ -128,6 +130,7 @@ bool VulkanExternalImageManager::hasExternalSampler(
 }
 
 void VulkanExternalImageManager::updateSetAndLayout(
+        VulkanCommandBuffer* bufferHolder,
         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
         fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout) {
     utils::FixedCapacityVector<
@@ -143,15 +146,9 @@ void VulkanExternalImageManager::updateSetAndLayout(
         auto& imageData = findImage(mImages, bindingInfo.image);
         updateImage(&imageData);
 
-        auto samplerParams = bindingInfo.samplerParams;
-        // according to spec, these must match chromaFilter
-        // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
-        samplerParams.filterMag = SamplerMagFilter::NEAREST;
-        samplerParams.filterMin = SamplerMinFilter::NEAREST;
-
         auto sampler = mSamplerCache->getSampler({
-            .sampler = samplerParams,
-            .conversion = imageData.conversion,
+            .sampler = bindingInfo.samplerParams,
+            .conversion = imageData.image->getYcbcrConversion(),
         });
         actualExternalSamplers.set(bindingInfo.binding);
         samplerAndBindings.push_back({ bindingInfo.binding, sampler, bindingInfo.image });
@@ -176,29 +173,44 @@ void VulkanExternalImageManager::updateSetAndLayout(
     VkDescriptorSetLayout const newLayout = mDescriptorSetLayoutCache->getVkLayout(layout->bitmask,
             actualExternalSamplers, outSamplers);
 
-    // Need to copy the set
+    // Below, the idea is that we will bind a new set (because the sampler binding of an exisiting
+    // set needs to change to an external sampler).  We will copy from an old external sampler set
+    // (if it exists) or the non-external version of the set.
+
+    // Note that we always need to copy the set, because we are about to update a set that might
+    // have been bound already. We cannot do that without the VK_EXT_descriptor_indexing (core
+    // in 1.2).
     VkDescriptorSet const oldSet = set->getExternalSamplerVkSet();
-    if (oldLayout != newLayout || oldSet == VK_NULL_HANDLE) {
-        // Build a new descriptor set from the new layout
-        VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
-        auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-        auto const samplers = layout->bitmask.sampler & (~actualExternalSamplers);
+    // Build a new descriptor set from the new layout
+    VkDescriptorSet const newSet = mDescriptorSetCache->getVkSet(layout->count, newLayout);
+    mInUseSets.insert({
+        newSet,
+        {
+            .fenceStatus = bufferHolder->getFenceStatus(),
+            .layout = newLayout,
+            .layoutCount = layout->count,
+        },
+    });
 
-        // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
-        // We fold the two stages into just the lower half of the bits to denote a combined set of
-        // bindings.
-        Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
-        VkDescriptorSet const srcSet = oldSet != VK_NULL_HANDLE ? oldSet : set->getVkSet();
-        copySet(mPlatform->getDevice(), srcSet, newSet, copyBindings);
+    auto const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
+    auto const samplers = layout->bitmask.sampler & (~actualExternalSamplers);
 
-        set->setExternalSamplerVkSet(newSet,
-                [&descriptorSetCache = mDescriptorSetCache, layoutCount = layout->count, newLayout,
-                        newSet](VulkanDescriptorSet*) {
-                    descriptorSetCache->manualRecycle(layoutCount, newLayout, newSet);
-                });
-        if (oldLayout != newLayout) {
-            layout->setExternalSamplerVkLayout(newLayout);
-        }
+    // Each bitmask denotes a binding index, and separated into two stages - vertex and buffer
+    // We fold the two stages into just the lower half of the bits to denote a combined set of
+    // bindings.
+    Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
+    VkDescriptorSet const srcSet = oldSet != VK_NULL_HANDLE ? oldSet : set->getVkSet();
+    copySet(mPlatform->getDevice(), srcSet, newSet, copyBindings);
+
+    set->setExternalSamplerVkSet(newSet);
+    if (oldSet) {
+        // Now that we're replacing the old set, we can recycle it once it's no longer referenced in
+        // a command buffer.
+        mInUseSets[oldSet].recyclable = true;
+    }
+
+    if (oldLayout != newLayout) {
+        layout->setExternalSamplerVkLayout(newLayout);
     }
 
     // Update the external samplers in the set
@@ -240,13 +252,7 @@ void VulkanExternalImageManager::updateImage(ImageData* image) {
     image->hasBeenValidated = true;
 
     auto metadata = mPlatform->extractExternalImageMetadata(image->platformHandle);
-    auto vkYcbcr = getVkSamplerYcbcrConversion(metadata);
-    if (vkYcbcr == image->conversion) {
-        return;
-    }
-
-    image->image->setYcbcrConversion(vkYcbcr);
-    image->conversion = vkYcbcr;
+    image->image->setYcbcrConversion(getVkSamplerYcbcrConversion(metadata));
     return;
 }
 
@@ -262,6 +268,10 @@ void VulkanExternalImageManager::bindExternallySampledTexture(
     // Should we do duplicate validation here?
     auto& imageData = findImage(mImages, image);
     mSetBindings.push_back({ bindingPoint, imageData.image, set, samplerParams });
+    // according to spec, these must match chromaFilter
+    // https://registry.khronos.org/vulkan/specs/latest/man/html/VkSamplerCreateInfo.html#VUID-VkSamplerCreateInfo-minFilter-01645
+    samplerParams.filterMag = SamplerMagFilter::NEAREST;
+    samplerParams.filterMin = SamplerMinFilter::NEAREST;
 }
 
 void VulkanExternalImageManager::addExternallySampledTexture(
@@ -291,6 +301,22 @@ void VulkanExternalImageManager::clearTextureBinding(
     erasep<SetBindingInfo>(mSetBindings, [&](auto const& bindingInfo) {
         return (bindingInfo.set == set && bindingInfo.binding == bindingPoint);
     });
+}
+
+void VulkanExternalImageManager::gc() {
+    std::vector<VkDescriptorSet> removedSets;
+    removedSets.reserve(mInUseSets.size());
+    for (auto const& [set, boundSetInfo]: mInUseSets) {
+        // It's no longer in use by the command buffer. We're free to recycle it.
+        if (boundSetInfo.fenceStatus->getStatus() == VK_SUCCESS && boundSetInfo.recyclable) {
+            removedSets.push_back(set);
+            mDescriptorSetCache->manualRecycle(boundSetInfo.layoutCount, boundSetInfo.layout, set);
+        }
+    }
+
+    for (auto set: removedSets) {
+        mInUseSets.erase(set);
+    }
 }
 
 } // namesapce filament::backend

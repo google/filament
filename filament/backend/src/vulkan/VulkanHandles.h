@@ -172,9 +172,6 @@ public:
         if (mOnRecycleFn) {
             mOnRecycleFn(this);
         }
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
     }
 
     VkDescriptorSet getVkSet() const noexcept {
@@ -185,12 +182,8 @@ public:
         return mExternalSamplerVkSet;
     }
 
-    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
+    void setExternalSamplerVkSet(VkDescriptorSet vkset) {
         mExternalSamplerVkSet = vkset;
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
-        mOnRecycleExternalSamplerFn = onRecycle;
     }
 
     void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
@@ -221,7 +214,6 @@ private:
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
     OnRecycle mOnRecycleFn;
-    OnRecycle mOnRecycleExternalSamplerFn;
     fvkutils::UniformBufferBitmask mUboMask;
 };
 

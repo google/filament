@@ -219,6 +219,8 @@ struct VulkanTexture : public HwTexture, fvkmemory::Resource {
     // happens.
     void setYcbcrConversion(VkSamplerYcbcrConversion conversion);
 
+    VkSamplerYcbcrConversion getYcbcrConversion() const noexcept;
+
 #if FVK_ENABLED(FVK_DEBUG_TEXTURE)
     void print() const;
 #endif
