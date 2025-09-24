@@ -109,6 +109,7 @@ struct MaterialDefinition {
 
 private:
     friend class MaterialCache;
+    friend class FMaterial; // for onEditCallback
 
     static std::unique_ptr<MaterialParser> createParser(backend::Backend const backend,
             utils::FixedCapacityVector<backend::ShaderLanguage> languages,
