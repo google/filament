@@ -85,7 +85,10 @@ public:
 
     // Allocates memory and copies traditional C string content. Unlike the above constructor, this
     // does not allow embedded nulls. This is explicit because this operation is costly.
-    explicit CString(const char* cstr);
+    // This is a template to ensure it's not preferred over the string literal constructor below.
+    template<typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    explicit CString(T cstr) : CString(cstr, cstr ? strlen(cstr) : 0) {
+    }
 
     template<size_t N>
     CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
@@ -171,7 +174,7 @@ public:
 
 
     // insert
-    CString& insert(size_type pos, char c) & noexcept {
+    CString& insert(size_type const pos, char const c) & noexcept {
         const char s[1] = { c };
         return replace(pos, 0, s, 1);
     }
@@ -193,7 +196,7 @@ public:
         return *this;
     }
 
-    CString&& insert(size_type pos, char c) && noexcept {
+    CString&& insert(size_type const pos, char const c) && noexcept {
         this->insert(pos, c);
         return std::move(*this);
     }
@@ -217,7 +220,7 @@ public:
 
 
     // append
-    CString& append(char c) & noexcept {
+    CString& append(char const c) & noexcept {
         return insert(length(), c);
     }
 
@@ -235,7 +238,7 @@ public:
         return insert(length(), str);
     }
 
-    CString&& append(char c) && noexcept {
+    CString&& append(char const c) && noexcept {
         this->append(c);
         return std::move(*this);
     }
@@ -258,7 +261,7 @@ public:
     }
 
     // operator+=
-    CString& operator+=(char c) & noexcept {
+    CString& operator+=(char const c) & noexcept {
         return append(c);
     }
 
@@ -387,15 +390,68 @@ inline CString operator+(const char* lhs, CString rhs) {
     return rhs;
 }
 
-inline CString operator+(CString lhs, char rhs) {
+inline CString operator+(CString lhs, char const rhs) {
     lhs += rhs;
     return lhs;
 }
 
-inline CString operator+(char lhs, CString rhs) {
+inline CString operator+(char const lhs, CString rhs) {
     rhs.insert(0, lhs);
     return rhs;
 }
+
+// CString vs StringLiteral
+template<size_t N>
+ bool operator==(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} == std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator!=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} != std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator<(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} < std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator>(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} > std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator<=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} <= std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator>=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} >= std::string_view{rhs, N - 1};
+}
+
+// StringLiteral vs CString
+template<size_t M>
+ bool operator==(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} == std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator!=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} != std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator<(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} < std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator>(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} > std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator<=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} <= std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator>=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} >= std::string_view{rhs.data(), rhs.size()};
+}
+
 
 // Implement this for your type for automatic conversion to CString. Failing to do so leads
 // to a compile-time failure.
