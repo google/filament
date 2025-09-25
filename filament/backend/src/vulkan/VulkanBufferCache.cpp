@@ -139,7 +139,7 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
     };
 
     VmaAllocationCreateFlags vmaFlags = 0;
-    // In the case of UMA, the uniform buffers will always be mappable
+    // In the case of UMA, the buffers will always be mappable
     if (mContext.isUnifiedMemoryArchitecture()) {
         vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT |
                     VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
