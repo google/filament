@@ -120,6 +120,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
         case ResourceType::MEMORY_MAPPED_BUFFER:
             destruct<VulkanMemoryMappedBuffer>(Handle<VulkanMemoryMappedBuffer>(id));
             break;
+        case ResourceType::SEMAPHORE:
+            destruct<VulkanSemaphore>(Handle<VulkanSemaphore>(id));
+            break;
         case ResourceType::UNDEFINED_TYPE:
             break;
     }

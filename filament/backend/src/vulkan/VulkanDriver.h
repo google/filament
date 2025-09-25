@@ -28,6 +28,7 @@
 #include "VulkanQueryManager.h"
 #include "VulkanReadPixels.h"
 #include "VulkanSamplerCache.h"
+#include "VulkanSemaphoreManager.h"
 #include "VulkanStagePool.h"
 #include "VulkanYcbcrConversionCache.h"
 #include "vulkan/VulkanDescriptorSetCache.h"
@@ -141,6 +142,7 @@ private:
 
     VulkanContext& mContext;
 
+    VulkanSemaphoreManager mSemaphoreManager;
     VulkanCommands mCommands;
     VulkanPipelineLayoutCache mPipelineLayoutCache;
     VulkanPipelineCache mPipelineCache;

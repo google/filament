@@ -222,9 +222,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
               mPlatform->getDevice())),
       mContext(context),
+      mSemaphoreManager(mPlatform->getDevice(), &mResourceManager),
       mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
               mPlatform->getGraphicsQueueFamilyIndex(), mPlatform->getProtectedGraphicsQueue(),
-              mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext),
+              mPlatform->getProtectedGraphicsQueueFamilyIndex(), mContext, &mSemaphoreManager),
       mPipelineLayoutCache(mPlatform->getDevice()),
       mPipelineCache(mPlatform->getDevice()),
       mStagePool(mAllocator, &mResourceManager, &mCommands, &mContext.getPhysicalDeviceLimits()),
@@ -365,6 +366,9 @@ void VulkanDriver::terminate() {
     // Before terminating stagePool, we need all resources to have been
     // reclaimed, as they perform cleanup within the stage pool.
     mStagePool.terminate();
+
+    // By this point, all of the VkSemaphores should have been returned to the pool.
+    mSemaphoreManager.terminate();
 
 #if FVK_ENABLED(FVK_DEBUG_RESOURCE_LEAK)
     mResourceManager.print();
