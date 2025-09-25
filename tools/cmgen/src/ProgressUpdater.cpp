@@ -38,23 +38,20 @@ static void moveCursorUp(size_t n) {
 }
 
 static void showCursor() {
+    setSigintHandler(SIG_DFL);
     const char* show_cursor_seq = "\033[?25h";
     signal_safe(show_cursor_seq, 6);
 }
 
 static void showCursorFromSignal(int) {
-    const char* show_cursor_seq = "\033[?25h";
-    signal_safe(show_cursor_seq, 6);
-
-    setSigintHandler(SIG_DFL);
+    showCursor(); 
     raise(SIGINT);
 }
 
 static void hideCursor() {
+    setSigintHandler(showCursorFromSignal);
     const char* hide_cursor_seq = "\033[?25l";
     signal_safe(hide_cursor_seq, 6);
-
-    setSigintHandler(showCursorFromSignal);
 }
 
 static inline void printProgress(float v, size_t width) {
