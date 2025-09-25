@@ -27,6 +27,8 @@
 #include <backend/DriverEnums.h>
 #include <backend/TargetBufferInfo.h>
 
+#include <private/filament/ConstantInfo.h>
+
 #include <utils/BitmaskEnum.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -762,16 +764,6 @@ public:
         int location;
     };
 
-    struct Constant {
-        utils::CString name;
-        ConstantType type;
-        union {
-            int32_t i;
-            float f;
-            bool b;
-        } defaultValue;
-    };
-
     struct PushConstant {
         utils::CString name;
         ConstantType type;
@@ -810,7 +802,7 @@ public:
     using ParameterList = std::vector<Parameter>;
     using SubpassList = Parameter[MAX_SUBPASS_COUNT];
     using BufferList = std::vector<std::unique_ptr<filament::BufferInterfaceBlock>>;
-    using ConstantList = std::vector<Constant>;
+    using ConstantList = std::vector<filament::MaterialConstant>;
     using PushConstantList = std::vector<PushConstant>;
 
     // returns the number of parameters declared in this material

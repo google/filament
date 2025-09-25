@@ -71,7 +71,6 @@
 #include <atomic>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -321,15 +320,11 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
 
 template<typename T, typename>
 MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType const type, T defaultValue) {
-    auto result = std::find_if(mConstants.begin(), mConstants.end(), [name](const Constant& c) {
-        return c.name == CString(name);
-    });
+    auto result = std::find_if(mConstants.begin(), mConstants.end(),
+            [name](const MaterialConstant& c) { return c.name == CString(name); });
     FILAMENT_CHECK_POSTCONDITION(result == mConstants.end())
             << "There is already a constant parameter present with the name " << name << ".";
-    Constant constant {
-            .name = CString(name),
-            .type = type,
-    };
+
     auto toString = [](ConstantType const t) {
         switch (t) {
             case ConstantType::INT: return "INT";
@@ -338,26 +333,27 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType const 
         }
     };
 
+    MaterialConstant::DefaultValue materialDefaultValue;
     if constexpr (std::is_same_v<T, int32_t>) {
         FILAMENT_CHECK_POSTCONDITION(type == ConstantType::INT)
                 << "Constant " << name << " was declared with type " << toString(type)
                 << " but given an int default value.";
-        constant.defaultValue.i = defaultValue;
+        materialDefaultValue.i = defaultValue;
     } else if constexpr (std::is_same_v<T, float>) {
         FILAMENT_CHECK_POSTCONDITION(type == ConstantType::FLOAT)
                 << "Constant " << name << " was declared with type " << toString(type)
                 << " but given a float default value.";
-        constant.defaultValue.f = defaultValue;
+        materialDefaultValue.f = defaultValue;
     } else if constexpr (std::is_same_v<T, bool>) {
         FILAMENT_CHECK_POSTCONDITION(type == ConstantType::BOOL)
                 << "Constant " << name << " was declared with type " << toString(type)
                 << " but given a bool default value.";
-        constant.defaultValue.b = defaultValue;
+        materialDefaultValue.b = defaultValue;
     } else {
         assert_invariant(false);
     }
 
-    mConstants.push_back(constant);
+    mConstants.push_back(MaterialConstant(CString(name), type, materialDefaultValue));
     return *this;
 }
 template MaterialBuilder& MaterialBuilder::constant<int32_t>(
@@ -1673,8 +1669,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
 
     // User constant parameters
     FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());
-    std::transform(mConstants.begin(), mConstants.end(), constantsEntry.begin(),
-            [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
+    std::copy(mConstants.begin(), mConstants.end(), constantsEntry.begin());
     container.push<MaterialConstantParametersChunk>(std::move(constantsEntry));
 
     FixedCapacityVector<MaterialPushConstant> pushConstantsEntry(mPushConstants.size());

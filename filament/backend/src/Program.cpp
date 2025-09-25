@@ -82,7 +82,7 @@ Program& Program::attributes(AttributesInfo attributes) noexcept {
     return *this;
 }
 
-Program& Program::specializationConstants(SpecializationConstantsInfo specConstants) noexcept {
+Program& Program::specializationConstants(utils::ConstSlice<SpecializationConstant> specConstants) noexcept {
     mSpecializationConstants = std::move(specConstants);
     return *this;
 }

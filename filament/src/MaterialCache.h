@@ -18,6 +18,9 @@
 
 #include "MaterialDefinition.h"
 
+#include "ProgramSpecialization.h"
+#include "utils/FixedCapacityVector.h"
+
 #include <private/filament/Variant.h>
 
 #include <backend/CallbackHandler.h>
@@ -27,6 +30,7 @@
 
 #include <utils/Invocable.h>
 #include <utils/RefCountedMap.h>
+#include <utils/RefCountedInternPool.h>
 
 namespace filament {
 
@@ -45,7 +49,14 @@ class MaterialCache {
     };
 
 public:
+    using SpecializationConstantInternPool =
+            utils::RefCountedInternPool<backend::Program::SpecializationConstant>;
+
     ~MaterialCache();
+
+    SpecializationConstantInternPool& getSpecializationConstantsInternPool() {
+        return mSpecializationConstantsInternPool;
+    }
 
     // Acquire or create a new entry in the cache for the given material data.
     MaterialDefinition* UTILS_NULLABLE acquire(FEngine& engine, const void* UTILS_NONNULL data,
@@ -54,10 +65,25 @@ public:
     // Release an entry in the cache, potentially freeing its GPU resources.
     void release(FEngine& engine, MaterialDefinition const& definition) noexcept;
 
+    // Acquire a program, perhaps compiling it.
+    backend::Handle<backend::HwProgram> acquireProgram(FEngine& engine,
+            MaterialDefinition const& material, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue const priorityQueue);
+
+    backend::Handle<backend::HwProgram> getProgram(ProgramSpecialization const& specialization);
+
+    void releaseProgram(FEngine& engine, ProgramSpecialization const& specialization);
+
 private:
+    // TODO: investigate using custom allocators for the below data structures?
+
     // We use unique_ptr here because we need these pointers to be stable.
-    // TODO: investigate using a custom allocator here?
     utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mDefinitions;
+
+    utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>> mPrograms;
+
+    utils::RefCountedInternPool<backend::Program::SpecializationConstant>
+            mSpecializationConstantsInternPool;
 };
 
 } // namespace filament

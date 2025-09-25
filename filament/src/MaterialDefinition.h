@@ -16,6 +16,8 @@
 #ifndef TNT_FILAMENT_MATERIALDEFINITION_H
 #define TNT_FILAMENT_MATERIALDEFINITION_H
 
+#include "ProgramSpecialization.h"
+
 #include <private/filament/Variant.h>
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -53,6 +55,13 @@ struct MaterialDefinition {
 
     // Free GPU resources owned by this MaterialDefinition.
     void terminate(FEngine& engine);
+
+    // prepareProgramSlow creates the program for the material's given variant at the backend level.
+    // Must be called outside of backend render pass.
+    // Must be called before getProgram() below.
+    backend::Handle<backend::HwProgram> compileProgram(FEngine& engine,
+            ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue priorityQueue) const noexcept;
 
     MaterialParser const& getMaterialParser() const noexcept { return *mMaterialParser; }
 
@@ -99,10 +108,17 @@ struct MaterialDefinition {
     BindingUniformInfoContainer bindingUniformInfo;
     AttributeInfoContainer attributeInfo;
 
-    // Constants defined by this Material
+    // Constants defined by this material. Does not include reserved constants.
     utils::FixedCapacityVector<MaterialConstant> materialConstants;
-    // A map from the Constant name to the materialConstants index
+    // A map from the Constant name to the materialConstants index.
     std::unordered_map<std::string_view, uint32_t> specializationConstantsNameToIndex;
+    // A list of default values for spec constants. Includes reserved constants.
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> specializationConstants;
+
+    // current push constants for the HwProgram
+    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
+            backend::Program::SHADER_TYPE_COUNT>
+            pushConstants;
 
     utils::CString name;
     uint64_t cacheId = 0;
@@ -120,8 +136,16 @@ private:
 
     void processMain();
     void processBlendingMode();
-    void processSpecializationConstants();
+    void processSpecializationConstants(FEngine& engine);
+    void processPushConstants();
     void processDescriptorSets(FEngine& engine);
+
+    backend::Program getSurfaceProgram(FEngine& engine,
+            ProgramSpecialization const& specialization) const noexcept;
+
+    backend::Program getProgramWithVariants(FEngine const& engine,
+            ProgramSpecialization const& specialization, Variant vertexVariant,
+            Variant fragmentVariant) const;
 
     std::unique_ptr<MaterialParser> mMaterialParser;
 };

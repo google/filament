@@ -149,8 +149,10 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
           mIsDefaultMaterial(builder->mDefaultMaterial),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()) {
-    processSpecializationConstants(engine, builder);
-    processPushConstants(engine);
+    mSpecializationConstants =
+            engine.getMaterialCache().getSpecializationConstantsInternPool().acquire(
+                    processSpecializationConstants(builder));
+
     precacheDepthVariants(engine);
 
 #if FILAMENT_ENABLE_MATDBG
@@ -214,6 +216,8 @@ void FMaterial::terminate(FEngine& engine) {
 
     destroyPrograms(engine);
     engine.getMaterialCache().release(engine, mDefinition);
+    engine.getMaterialCache().getSpecializationConstantsInternPool().release(
+            mSpecializationConstants);
 }
 
 filament::DescriptorSetLayout const& FMaterial::getPerViewDescriptorSetLayout(
@@ -318,6 +322,14 @@ MaterialParser const& FMaterial::getMaterialParser() const noexcept {
     return mDefinition.getMaterialParser();
 }
 
+ProgramSpecialization FMaterial::getProgramSpecialization(Variant const variant) const noexcept {
+    return ProgramSpecialization {
+            .programCacheId = mDefinition.cacheId,
+            .variant = variant,
+            .specializationConstants = mSpecializationConstants,
+    };
+}
+
 bool FMaterial::hasVariant(Variant const variant) const noexcept {
     Variant vertexVariant, fragmentVariant;
     switch (getMaterialDomain()) {
@@ -340,157 +352,6 @@ bool FMaterial::hasVariant(Variant const variant) const noexcept {
         return false;
     }
     return true;
-}
-
-void FMaterial::prepareProgramSlow(Variant const variant,
-        backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-    assert_invariant(mEngine.hasFeatureLevel(mDefinition.featureLevel));
-    switch (getMaterialDomain()) {
-        case MaterialDomain::SURFACE:
-            getSurfaceProgramSlow(variant, priorityQueue);
-            break;
-        case MaterialDomain::POST_PROCESS:
-            getPostProcessProgramSlow(variant, priorityQueue);
-            break;
-        case MaterialDomain::COMPUTE:
-            // TODO: implement MaterialDomain::COMPUTE
-            break;
-    }
-}
-
-void FMaterial::getSurfaceProgramSlow(Variant const variant,
-        CompilerPriorityQueue const priorityQueue) const noexcept {
-    // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
-    // if we're unlit, we don't have any bits that correspond to lit materials
-    assert_invariant(variant == Variant::filterVariant(variant, isVariantLit()) );
-
-    assert_invariant(!Variant::isReserved(variant));
-
-    Variant const vertexVariant   = Variant::filterVariantVertex(variant);
-    Variant const fragmentVariant = Variant::filterVariantFragment(variant);
-
-    Program pb{ getProgramWithVariants(variant, vertexVariant, fragmentVariant) };
-    pb.priorityQueue(priorityQueue);
-    pb.multiview(
-            mEngine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
-            Variant::isStereoVariant(variant));
-    createAndCacheProgram(std::move(pb), variant);
-}
-
-void FMaterial::getPostProcessProgramSlow(Variant const variant,
-        CompilerPriorityQueue const priorityQueue) const noexcept {
-    Program pb{ getProgramWithVariants(variant, variant, variant) };
-    pb.priorityQueue(priorityQueue);
-    createAndCacheProgram(std::move(pb), variant);
-}
-
-Program FMaterial::getProgramWithVariants(
-        Variant variant,
-        Variant vertexVariant,
-        Variant fragmentVariant) const {
-    FEngine const& engine = mEngine;
-    const ShaderModel sm = engine.getShaderModel();
-    const bool isNoop = engine.getBackend() == Backend::NOOP;
-    /*
-     * Vertex shader
-     */
-
-    MaterialParser const& parser = getMaterialParser();
-
-    ShaderContent& vsBuilder = engine.getVertexShaderContent();
-
-    UTILS_UNUSED_IN_RELEASE bool const vsOK = parser.getShader(vsBuilder, sm,
-            vertexVariant, ShaderStage::VERTEX);
-
-    FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
-            << "The material '" << mDefinition.name.c_str()
-            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
-               "vertex shader (variant="
-            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
-
-    /*
-     * Fragment shader
-     */
-
-    ShaderContent& fsBuilder = engine.getFragmentShaderContent();
-
-    UTILS_UNUSED_IN_RELEASE bool const fsOK = parser.getShader(fsBuilder, sm,
-            fragmentVariant, ShaderStage::FRAGMENT);
-
-    FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
-            << "The material '" << mDefinition.name.c_str()
-            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
-               "fragment shader (variant="
-            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
-
-    Program program;
-    program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
-            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
-            .shaderLanguage(parser.getShaderLanguage())
-            .diagnostics(mDefinition.name,
-                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
-                            io::ostream& out) -> io::ostream& {
-                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
-                                   << io::dec << "), vertexVariant=(" << io::hex
-                                   << +vertexVariant.key << io::dec << "), fragmentVariant=("
-                                   << io::hex << +fragmentVariant.key << io::dec << ")";
-                    });
-
-    if (UTILS_UNLIKELY(parser.getShaderLanguage() == ShaderLanguage::ESSL1)) {
-        assert_invariant(!mDefinition.bindingUniformInfo.empty());
-        for (auto const& [index, name, uniforms] : mDefinition.bindingUniformInfo) {
-            program.uniforms(uint32_t(index), name, uniforms);
-        }
-        program.attributes(mDefinition.attributeInfo);
-    }
-
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
-            mDefinition.programDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
-            mDefinition.programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
-    program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
-            mDefinition.programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
-    program.specializationConstants(mSpecializationConstants);
-
-    program.pushConstants(ShaderStage::VERTEX, mPushConstants[uint8_t(ShaderStage::VERTEX)]);
-    program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[uint8_t(ShaderStage::FRAGMENT)]);
-
-    program.cacheId(hash::combine(size_t(mDefinition.cacheId), variant.key));
-
-    return program;
-}
-
-void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const noexcept {
-    FEngine const& engine = mEngine;
-    DriverApi& driverApi = mEngine.getDriverApi();
-
-    bool const isShared = isSharedVariant(variant);
-
-    // Check if the default material has this program cached
-    if (isShared) {
-        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-        if (pDefaultMaterial) {
-            auto const program = pDefaultMaterial->mCachedPrograms[variant.key];
-            if (program) {
-                mCachedPrograms[variant.key] = program;
-                return;
-            }
-        }
-    }
-
-    auto const program = driverApi.createProgram(std::move(p), CString{ mDefinition.name });
-    assert_invariant(program);
-    mCachedPrograms[variant.key] = program;
-
-    // If the default material doesn't already have this program cached, and all caching conditions
-    // are met (Surface Domain and no custom depth shader), cache it now.
-    // New Materials will inherit these program automatically.
-    if (isShared) {
-        FMaterial const* const pDefaultMaterial = engine.getDefaultMaterial();
-        if (pDefaultMaterial && !pDefaultMaterial->mCachedPrograms[variant.key]) {
-            pDefaultMaterial->mCachedPrograms[variant.key] = program;
-        }
-    }
 }
 
 size_t FMaterial::getParameters(ParameterInfo* parameters, size_t count) const noexcept {
@@ -614,13 +475,13 @@ void FMaterial::onQueryCallback(void* userdata, VariantList* pActiveVariants) {
         }
     }
 #endif
-    assert_invariant(mCachedPrograms[variant.key]);
-    return mCachedPrograms[variant.key];
+    return mEngine.getMaterialCache().getProgram(getProgramSpecialization(variant));
 }
 
-void FMaterial::destroyPrograms(FEngine& engine,
-        Variant::type_t const variantMask, Variant::type_t const variantValue) {
-
+void FMaterial::destroyPrograms(FEngine& engine, Variant::type_t const variantMask,
+        Variant::type_t const variantValue) {
+    // TODO: exv
+    /*
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
 
@@ -630,7 +491,8 @@ void FMaterial::destroyPrograms(FEngine& engine,
                 // default material, or we have custom depth shaders, we destroy all variants
                 for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
                     if ((k & variantMask) == variantValue) {
-                        // Only destroy if the handle is valid. Not strictly needed, but we have a lot
+                        // Only destroy if the handle is valid. Not strictly needed, but we have a
+lot
                         // of variants, and this generates traffic in the command queue.
                         if (cachedPrograms[k]) {
                             driverApi.destroyProgram(std::move(cachedPrograms[k]));
@@ -648,7 +510,8 @@ void FMaterial::destroyPrograms(FEngine& engine,
 
                 for (size_t k = 0, n = VARIANT_COUNT; k < n; ++k) {
                     if ((k & variantMask) == variantValue) {
-                        // Only destroy if the handle is valid. Not strictly needed, but we have a lot
+                        // Only destroy if the handle is valid. Not strictly needed, but we have a
+lot
                         // of variant, and this generates traffic in the command queue.
                         if (cachedPrograms[k]) {
                             if (Variant::isValidDepthVariant(Variant(k))) {
@@ -689,6 +552,7 @@ void FMaterial::destroyPrograms(FEngine& engine,
             break;
         }
     }
+    */
 }
 
 std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view const name) const noexcept {
@@ -701,110 +565,53 @@ std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view 
 
 template<typename T, typename>
 bool FMaterial::setConstant(uint32_t id, T value) noexcept {
-    size_t const maxId = mDefinition.materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
-    if (UTILS_LIKELY(id < maxId)) {
-        if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
-            // Constant from the material itself (as opposed to the reserved ones)
-            auto const& constant = mDefinition.materialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
-            using ConstantType = ConstantType;
-            switch (constant.type) {
-                case ConstantType::INT:
-                    if (!std::is_same_v<T, int32_t>) return false;
-                    break;
-                case ConstantType::FLOAT:
-                    if (!std::is_same_v<T, float>) return false;
-                    break;
-                case ConstantType::BOOL:
-                    if (!std::is_same_v<T, bool>) return false;
-                    break;
-            }
-        }
+    if (UTILS_UNLIKELY(id >= mSpecializationConstants.size())) {
+        return false;
+    }
 
-        auto pos = std::find_if(
-                mSpecializationConstants.begin(), mSpecializationConstants.end(),
-                [id](Program::SpecializationConstant const& specializationConstant) {
-                    return specializationConstant.id == id;
-                });
-        if (pos != mSpecializationConstants.end()) {
-            if (std::get<T>(pos->value) != value) {
-                pos->value = value;
-                return true;
-            }
-        } else {
-            mSpecializationConstants.push_back({ id, value });
-            return true;
+    if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
+        // Constant from the material itself (as opposed to the reserved ones)
+        auto const& constant =
+                mDefinition.materialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
+        using ConstantType = ConstantType;
+        switch (constant.type) {
+            case ConstantType::INT:
+                if (!std::is_same_v<T, int32_t>) return false;
+                break;
+            case ConstantType::FLOAT:
+                if (!std::is_same_v<T, float>) return false;
+                break;
+            case ConstantType::BOOL:
+                if (!std::is_same_v<T, bool>) return false;
+                break;
         }
     }
-    return false;
+
+    FixedCapacityVector<Program::SpecializationConstant> specializationConstants(
+            mSpecializationConstants.size());
+    std::copy(mSpecializationConstants.cbegin(), mSpecializationConstants.cend(),
+            specializationConstants.begin());
+    specializationConstants[id] = value;
+
+    auto& internPool = mEngine.getMaterialCache().getSpecializationConstantsInternPool();
+    internPool.release(mSpecializationConstants);
+    mSpecializationConstants = internPool.acquire(specializationConstants);
+
+    return true;
 }
 
-void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& builder) {
-    // TODO: migrate some or all of this into MaterialDefinition.
+FixedCapacityVector<Program::SpecializationConstant>
+FMaterial::processSpecializationConstants(Builder const& builder) {
+    FixedCapacityVector<Program::SpecializationConstant> specializationConstants =
+            mDefinition.specializationConstants;
 
-    // Verify that all the constant specializations exist in the material and that their types match.
-    // The first specialization constants are defined internally by Filament.
-    // The subsequent constants are user-defined in the material.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT] =
+            builder->mShBandsCount;
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD] =
+            int32_t(builder->mShadowSamplingQuality);
 
-    // Feature level 0 doesn't support instancing
-    int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
-                                 ? 1 : CONFIG_MAX_INSTANCES;
-
-    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
-    int const maxFroxelBufferHeight =
-            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
-
-    int const froxelRecordBufferHeight =
-            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
-
-    bool const staticTextureWorkaround =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
-
-    bool const powerVrShaderWorkarounds =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
-
-    mSpecializationConstants.reserve(
-            mDefinition.materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
-            int(engine.getSupportedFeatureLevel()) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
-            int(maxInstanceCount) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
-            int(maxFroxelBufferHeight) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
-            int(froxelRecordBufferHeight) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
-            engine.debug.shadowmap.debug_directional_shadowmap });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
-            engine.debug.lighting.debug_froxel_visualization });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
-            staticTextureWorkaround });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
-            powerVrShaderWorkarounds });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
-            int(engine.getConfig().stereoscopicEyeCount) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT,
-            builder->mShBandsCount });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD,
-            int32_t(builder->mShadowSamplingQuality) });
-    if (UTILS_UNLIKELY(
-            mDefinition.getMaterialParser().getShaderLanguage() == ShaderLanguage::ESSL1)) {
-        // The actual value of this spec-constant is set in the OpenGLDriver backend.
-        mSpecializationConstants.push_back({
-                +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
-                false});
-    }
-
+    // Verify that all the constant specializations exist in the material and that their types
+    // match.
     for (auto const& [name, value] : builder->mConstantSpecializations) {
         std::string_view const key{ name.data(), name.size() };
         auto pos = mDefinition.specializationConstantsNameToIndex.find(key);
@@ -817,63 +624,27 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
             case ConstantType::INT:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<int32_t>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type int, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type int, but "
+                        << types[value.index()] << " was provided.";
                 break;
             case ConstantType::FLOAT:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<float>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type float, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type float, but "
+                        << types[value.index()] << " was provided.";
                 break;
             case ConstantType::BOOL:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<bool>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type bool, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type bool, but "
+                        << types[value.index()] << " was provided.";
                 break;
         }
         uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
-        mSpecializationConstants.push_back({ index, value });
+        specializationConstants[index] = value;
     }
-}
 
-void FMaterial::processPushConstants(FEngine&) {
-    // TODO: move some or all of this into MaterialDefinition.
-
-    FixedCapacityVector<Program::PushConstant>& vertexConstants =
-            mPushConstants[uint8_t(ShaderStage::VERTEX)];
-    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
-            mPushConstants[uint8_t(ShaderStage::FRAGMENT)];
-
-    CString structVarName;
-    FixedCapacityVector<MaterialPushConstant> pushConstants;
-    mDefinition.getMaterialParser().getPushConstants(&structVarName, &pushConstants);
-
-    vertexConstants.reserve(pushConstants.size());
-    fragmentConstants.reserve(pushConstants.size());
-
-    constexpr size_t MAX_NAME_LEN = 60;
-    char buf[MAX_NAME_LEN];
-    uint8_t vertexCount = 0, fragmentCount = 0;
-
-    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
-            [&](MaterialPushConstant const& constant) {
-                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
-
-                switch (constant.stage) {
-                    case ShaderStage::VERTEX:
-                        vertexConstants.push_back({CString(buf), constant.type});
-                        vertexCount++;
-                        break;
-                    case ShaderStage::FRAGMENT:
-                        fragmentConstants.push_back({CString(buf), constant.type});
-                        fragmentCount++;
-                        break;
-                    case ShaderStage::COMPUTE:
-                        break;
-                }
-            });
+    return specializationConstants;
 }
 
 void FMaterial::precacheDepthVariants(FEngine& engine) {
@@ -901,6 +672,8 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
         return;
     }
 
+    // TODO: exv
+    /*
     // if possible pre-cache all depth variants from the default material
     if (mDefinition.materialDomain == MaterialDomain::SURFACE &&
             !mIsDefaultMaterial &&
@@ -913,6 +686,7 @@ void FMaterial::precacheDepthVariants(FEngine& engine) {
             mCachedPrograms[variant.key] = pDefaultMaterial->mCachedPrograms[variant.key];
         }
     }
+    */
 }
 
 descriptor_binding_t FMaterial::getSamplerBinding(

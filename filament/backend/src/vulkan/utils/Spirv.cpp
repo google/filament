@@ -32,7 +32,7 @@ namespace {
 
 // This function transforms an OpSpecConstant instruction into just a OpConstant instruction.
 // Additionally, it will adjust the value of the constant as given by the program.
-void getTransformedConstantInst(SpecConstantValue* value, uint32_t* inst) {
+void getTransformedConstantInst(Program::SpecializationConstant* value, uint32_t* inst) {
 
     // The first word is the size of the instruction and the instruction type.
     // The second word is the type of the instruction.
@@ -72,15 +72,9 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants,
         std::vector<uint32_t>& output) {
     using WordMap = std::unordered_map<uint32_t, uint32_t>;
-    using SpecValueMap = std::unordered_map<uint32_t, SpecConstantValue>;
     constexpr size_t HEADER_SIZE = 5;
 
     WordMap varToIdMap;
-    SpecValueMap idToValue;
-
-    for (auto spec: specConstants) {
-        idToValue[spec.id] = spec.value;
-    }
 
     // The follow loop will iterate through all the instructions and look for instructions of the
     // form:
@@ -116,11 +110,9 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
                 assert_invariant(idItr != varToIdMap.end() &&
                         "Cannot find variable previously decorated with SpecId");
 
-                auto valItr = idToValue.find(idItr->second);
-
-                SpecConstantValue* val = (valItr != idToValue.end()) ? &valItr->second : nullptr;
+                auto val = specConstants[idItr->second];
                 std::memcpy(&outputData[outputCursor], &data[cursor], wordCount * 4);
-                getTransformedConstantInst(val, &outputData[outputCursor]);
+                getTransformedConstantInst(&val, &outputData[outputCursor]);
                 outputCursor += wordCount;
                 break;
             }

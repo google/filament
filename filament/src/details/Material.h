@@ -125,10 +125,6 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
-        return bool(mCachedPrograms[variant.key]);
-    }
-
     void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
 
     // prepareProgram creates the program for the material's given variant at the backend level.
@@ -136,10 +132,8 @@ public:
     // Must be called before getProgram() below.
     void prepareProgram(Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
-        }
+        mEngine.getMaterialCache().acquireProgram(mEngine, mDefinition,
+                getProgramSpecialization(variant), priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
@@ -149,8 +143,7 @@ public:
 #if FILAMENT_ENABLE_MATDBG
         return getProgramWithMATDBG(variant);
 #endif
-        assert_invariant(mCachedPrograms[variant.key]);
-        return mCachedPrograms[variant.key];
+        return mEngine.getMaterialCache().getProgram(getProgramSpecialization(variant));
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -280,29 +273,19 @@ public:
 
 private:
     MaterialParser const& getMaterialParser() const noexcept;
+    ProgramSpecialization getProgramSpecialization(Variant const variant) const noexcept;
 
     bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getSurfaceProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getPostProcessProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const;
 
-    void processSpecializationConstants(FEngine& engine, Builder const& builder);
-    void processPushConstants(FEngine& engine);
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+    processSpecializationConstants(Builder const& builder);
     void precacheDepthVariants(FEngine& engine);
-
-    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
 
-    mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
@@ -311,12 +294,7 @@ private:
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
     // current specialization constants for the HwProgram
-    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
-
-    // current push constants for the HwProgram
-    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
-            backend::Program::SHADER_TYPE_COUNT>
-            mPushConstants;
+    utils::ConstSlice<backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

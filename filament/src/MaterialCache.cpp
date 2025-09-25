@@ -41,7 +41,14 @@ bool MaterialCache::Key::operator==(Key const& rhs) const noexcept {
 
 MaterialCache::~MaterialCache() {
     if (!mDefinitions.empty()) {
-        LOG(WARNING) << "MaterialCache was destroyed but wasn't empty";
+        LOG(WARNING) << "MaterialCache was destroyed but definitions cache wasn't empty";
+    }
+    if (!mPrograms.empty()) {
+        LOG(WARNING) << "MaterialCache was destroyed but program cache wasn't empty";
+    }
+    if (!mSpecializationConstantsInternPool.empty()) {
+        LOG(WARNING) << "MaterialCache was destroyed but specialization constants intern pool "
+                        "wasn't empty";
     }
 }
 
@@ -62,5 +69,27 @@ void MaterialCache::release(FEngine& engine, MaterialDefinition const& definitio
                 definition.terminate(engine);
             });
 }
+
+backend::Handle<backend::HwProgram> MaterialCache::acquireProgram(FEngine& engine,
+        MaterialDefinition const& material, ProgramSpecialization const& specialization,
+        backend::CompilerPriorityQueue const priorityQueue) {
+    backend::Handle<backend::HwProgram>* program = mPrograms.acquire(specialization,
+            [&engine, &material, &specialization, priorityQueue]() {
+                return material.compileProgram(engine, specialization, priorityQueue);
+            });
+    assert_invariant(program);
+    return *program;
+}
+
+backend::Handle<backend::HwProgram> MaterialCache::getProgram(
+        ProgramSpecialization const& specialization) {
+    return mPrograms.get(specialization);
+}
+
+void MaterialCache::releaseProgram(FEngine& engine, ProgramSpecialization const& specialization) {
+    // TODO: properly release program
+    return mPrograms.release(specialization);
+}
+
 
 } // namespace filament

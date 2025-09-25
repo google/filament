@@ -28,9 +28,15 @@ struct MaterialConstant {
 
     utils::CString name;
     ConstantType type;
+    union DefaultValue {
+        int32_t i;
+        float f;
+        bool b;
+    } defaultValue;
 
     MaterialConstant() = default;
-    MaterialConstant(const char* name, ConstantType type) : name(name), type(type)  {}
+    MaterialConstant(utils::CString name, ConstantType type, DefaultValue defaultValue)
+            : name(std::move(name)), type(type), defaultValue(defaultValue) {}
 };
 
 }

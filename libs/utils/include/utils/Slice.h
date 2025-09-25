@@ -19,6 +19,7 @@
 
 #include <utils/compiler.h>
 
+#include <algorithm>
 #include <utility>
 
 #include <assert.h>
@@ -57,6 +58,16 @@ public:
     Slice(Slice&& rhs) noexcept = default;
     Slice& operator=(Slice const& rhs) noexcept = default;
     Slice& operator=(Slice&& rhs) noexcept = default;
+
+    bool operator==(Slice const& rhs) const noexcept {
+        if (mBegin == rhs.mBegin && mEnd == rhs.mEnd) {
+            return true;
+        }
+        if (size() != rhs.size()) {
+            return false;
+        }
+        return std::equal(cbegin(), cend(), rhs.cbegin());
+    }
 
     void set(pointer begin, size_type count) UTILS_RESTRICT noexcept {
         mBegin = begin;

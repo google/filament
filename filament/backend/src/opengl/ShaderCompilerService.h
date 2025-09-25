@@ -163,8 +163,7 @@ private:
     // shader IDs after this method. But this doesn't necessarily mean the shaders are successfully
     // compiled. Errors can be checked by calling `checkCompileStatus` later.
     static void compileShaders(OpenGLContext& context, Program::ShaderSource shadersSource,
-            utils::FixedCapacityVector<Program::SpecializationConstant> const&
-                    specializationConstants,
+            Program::SpecializationConstantsInfo const& specializationConstants,
             bool multiview, program_token_t const& token) noexcept;
 
     // Check if the shader compilation is completed. You may want to call this when the extension

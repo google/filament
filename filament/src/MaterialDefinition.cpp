@@ -17,12 +17,15 @@
 
 #include "Froxelizer.h"
 #include "MaterialParser.h"
+#include "private/filament/EngineEnums.h"
 
 #include <backend/DriverEnums.h>
 
 #include <ds/ColorPassDescriptorSet.h>
 
 #include <details/Engine.h>
+
+#include <private/filament/PushConstantInfo.h>
 
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -150,7 +153,8 @@ MaterialDefinition::MaterialDefinition(FEngine& engine,
 
     processMain();
     processBlendingMode();
-    processSpecializationConstants();
+    processSpecializationConstants(engine);
+    processPushConstants();
     processDescriptorSets(engine);
 }
 
@@ -338,15 +342,121 @@ void MaterialDefinition::processBlendingMode() {
     }
 }
 
-void MaterialDefinition::processSpecializationConstants() {
+void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
     // Older materials won't have a constants chunk, but that's okay.
     mMaterialParser->getConstants(&materialConstants);
+
+    // Initialize the default specialization constant values.
+    const int size = materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    specializationConstants.reserve(size);
+    specializationConstants.resize(size);
+
+    specializationConstants[+ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL] =
+            int(engine.getSupportedFeatureLevel());
+
+    // Feature level 0 doesn't support instancing.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_MAX_INSTANCES] =
+            int((engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
+                    ? 1 : CONFIG_MAX_INSTANCES);
+
+    specializationConstants
+            [+ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND] =
+                    engine.getDriverApi().isWorkaroundNeeded(
+                            Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION] =
+            mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1 &&
+            !engine.getDriver().isSRGBSwapChainSupported();
+
+    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT] =
+            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS] =
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP] =
+            engine.debug.shadowmap.debug_directional_shadowmap;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION] =
+            engine.debug.lighting.debug_froxel_visualization;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT] =
+            int(engine.getConfig().stereoscopicEyeCount);
+
+    // Actual value set in FMaterial::processSpecializationConstants.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT] = 0;
+
+    // Actual value set in FMaterial::processSpecializationConstants.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD] = 0;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT] =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
+    // Initialize the rest of the reserved constants with a dummy value.
+    for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+            i++) {
+        specializationConstants[i] = 0;
+    }
+
+    // Initialize the remaining constants and specializationConstantsNameToIndex.
     for (size_t i = 0, c = materialConstants.size(); i < c; i++) {
         auto& item = materialConstants[i];
+
         // the key can be a string_view because mMaterialConstant owns the CString
         std::string_view const key{ item.name.data(), item.name.size() };
         specializationConstantsNameToIndex[key] = i;
+
+        // Copy the default value to the corresponding specializationConstants entry.
+        const size_t id = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + i;
+        switch (item.type) {
+            case ConstantType::INT:
+                specializationConstants[id] = item.defaultValue.i;
+                break;
+            case ConstantType::FLOAT:
+                specializationConstants[id] = item.defaultValue.f;
+                break;
+            case ConstantType::BOOL:
+                specializationConstants[id] = item.defaultValue.b;
+                break;
+        }
     }
+}
+
+void MaterialDefinition::processPushConstants() {
+    FixedCapacityVector<Program::PushConstant>& vertexConstants =
+            pushConstants[uint8_t(ShaderStage::VERTEX)];
+    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
+            pushConstants[uint8_t(ShaderStage::FRAGMENT)];
+
+    CString structVarName;
+    FixedCapacityVector<MaterialPushConstant> pushConstants;
+    mMaterialParser->getPushConstants(&structVarName, &pushConstants);
+
+    vertexConstants.reserve(pushConstants.size());
+    fragmentConstants.reserve(pushConstants.size());
+
+    constexpr size_t MAX_NAME_LEN = 60;
+    char buf[MAX_NAME_LEN];
+    uint8_t vertexCount = 0, fragmentCount = 0;
+
+    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
+            [&](MaterialPushConstant const& constant) {
+                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
+
+                switch (constant.stage) {
+                    case ShaderStage::VERTEX:
+                        vertexConstants.push_back({CString(buf), constant.type});
+                        vertexCount++;
+                        break;
+                    case ShaderStage::FRAGMENT:
+                        fragmentConstants.push_back({CString(buf), constant.type});
+                        fragmentCount++;
+                        break;
+                    case ShaderStage::COMPUTE:
+                        break;
+                }
+            });
 }
 
 void MaterialDefinition::processDescriptorSets(FEngine& engine) {
@@ -401,6 +511,127 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     this->perViewDescriptorSetLayoutVsm = {
             engine.getDescriptorSetLayoutFactory(),
             engine.getDriverApi(), std::move(perViewDescriptorSetLayoutVsm) };
+}
+
+
+backend::Handle<backend::HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
+        ProgramSpecialization const& specialization,
+        backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+    assert_invariant(engine.hasFeatureLevel(featureLevel));
+    Program pb;
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            pb = getSurfaceProgram(engine, specialization);
+            break;
+        case MaterialDomain::POST_PROCESS:
+            pb = getProgramWithVariants(engine, specialization, specialization.variant,
+                    specialization.variant);
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            PANIC_PRECONDITION("Compute shaders not yet supported");
+    }
+    pb.priorityQueue(priorityQueue);
+
+    auto const program = engine.getDriverApi().createProgram(std::move(pb), CString{ name });
+    assert_invariant(program);
+    return program;
+}
+
+Program MaterialDefinition::getSurfaceProgram(FEngine& engine,
+        ProgramSpecialization const& specialization) const noexcept {
+    // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
+    // if we're unlit, we don't have any bits that correspond to lit materials
+    assert_invariant(specialization.variant ==
+                     Variant::filterVariant(specialization.variant, isVariantLit));
+
+    assert_invariant(!Variant::isReserved(specialization.variant));
+
+    Variant const vertexVariant   = Variant::filterVariantVertex(specialization.variant);
+    Variant const fragmentVariant = Variant::filterVariantFragment(specialization.variant);
+
+    Program pb = getProgramWithVariants(engine, specialization, vertexVariant, fragmentVariant);
+    pb.multiview(
+            engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
+            Variant::isStereoVariant(specialization.variant));
+    return pb;
+}
+
+Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
+        ProgramSpecialization const& specialization,
+        Variant vertexVariant,
+        Variant fragmentVariant) const {
+    const ShaderModel sm = engine.getShaderModel();
+    const bool isNoop = engine.getBackend() == Backend::NOOP;
+    const Variant variant = specialization.variant;
+
+    /*
+     * Vertex shader
+     */
+
+    MaterialParser const& parser = getMaterialParser();
+
+    filaflat::ShaderContent& vsBuilder = engine.getVertexShaderContent();
+
+    UTILS_UNUSED_IN_RELEASE bool const vsOK = parser.getShader(vsBuilder, sm,
+            vertexVariant, ShaderStage::VERTEX);
+
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
+            << "The material '" << name.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "vertex shader (variant="
+            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
+
+    /*
+     * Fragment shader
+     */
+
+    filaflat::ShaderContent& fsBuilder = engine.getFragmentShaderContent();
+
+    UTILS_UNUSED_IN_RELEASE bool const fsOK = parser.getShader(fsBuilder, sm,
+            fragmentVariant, ShaderStage::FRAGMENT);
+
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
+            << "The material '" << name.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "fragment shader (variant="
+            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
+
+    Program program;
+    program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
+            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+            .shaderLanguage(parser.getShaderLanguage())
+            .diagnostics(name,
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
+                            io::ostream& out) -> io::ostream& {
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
+                                   << +vertexVariant.key << io::dec << "), fragmentVariant=("
+                                   << io::hex << +fragmentVariant.key << io::dec << ")";
+                    });
+
+    if (UTILS_UNLIKELY(parser.getShaderLanguage() == ShaderLanguage::ESSL1)) {
+        assert_invariant(!bindingUniformInfo.empty());
+        for (auto const& [index, name, uniforms] : bindingUniformInfo) {
+            program.uniforms(uint32_t(index), name, uniforms);
+        }
+        program.attributes(attributeInfo);
+    }
+
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
+    program.specializationConstants(specialization.specializationConstants);
+
+    program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
+    program.pushConstants(ShaderStage::FRAGMENT, pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
+
+    program.cacheId(specialization.hash());
+
+    return program;
 }
 
 } // namespace filament

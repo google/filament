@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_PRIVATE_PROGRAM_H
 
 #include <utils/CString.h>
+#include <utils/ConstSlice.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 
@@ -50,11 +51,7 @@ public:
         descriptor_binding_t binding;
     };
 
-    struct SpecializationConstant {
-        using Type = std::variant<int32_t, float, bool>;
-        uint32_t id;    // id set in glsl
-        Type value;     // value and type
-    };
+    using SpecializationConstant = std::variant<int32_t, float, bool>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -65,7 +62,7 @@ public:
 
     using DescriptorBindingsInfo = utils::FixedCapacityVector<Descriptor>;
     using DescriptorSetInfo = std::array<DescriptorBindingsInfo, MAX_DESCRIPTOR_SET_COUNT>;
-    using SpecializationConstantsInfo = utils::FixedCapacityVector<SpecializationConstant>;
+    using SpecializationConstantsInfo = utils::ConstSlice<SpecializationConstant>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
@@ -108,6 +105,10 @@ public:
     struct PushConstant {
         utils::CString name;
         ConstantType type;
+
+        bool operator==(const PushConstant& rhs) const noexcept {
+            return name == rhs.name && type == rhs.type;
+        }
     };
 
     Program& pushConstants(ShaderStage stage,

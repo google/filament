@@ -145,6 +145,16 @@ public:
         return *this;
     }
 
+    bool operator==(const FixedCapacityVector& rhs) const noexcept {
+        if (this == &rhs) {
+            return true;
+        }
+        if (size() != rhs.size()) {
+            return false;
+        }
+        return std::equal(begin(), end(), rhs.begin());
+    }
+
     allocator_type get_allocator() const noexcept {
         return mCapacityAllocator.second();
     }
