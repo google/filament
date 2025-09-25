@@ -1,17 +1,17 @@
 # Rendering Difference Test
 
-We created a few scripts to run `gltf_viewer` and produce headless renderings.
+This tool is a collections of scripts to run `gltf_viewer` and produce headless renderings.
 
-This is mainly useful for continuous integration where GPUs are generally not available on cloud
+This is useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s software
 rasterizers, but nothing bars us from using another rasterizer like [SwiftShader]. Additionally,
 we should be able to use GPUs where available (though this is more of a future work).
 
 The script `render.py` contains the core logic for taking input parameters (such as the test
-description file) and then running gltf_viewer to produce the renderings.
+description file) and then running `gltf_viewer` to produce the renderings.
 
-In the `test` directory is a list of test descriptions that are specified in json.  Please see
-`sample.json` to parse the structure.
+The `test` directory contains a list of test descriptions that are specified in json.  Please see
+`sample.json` to glean the structure.
 
 ## Setting up python
 The `renderdiff` project uses `python` extensively. To install the dependencies for producing
@@ -108,8 +108,8 @@ Doing the above has multiple effects:
 
 ## Viewing test results
 We provide a viewer for looking at the result of a test run. The viewer is a webapp that can be used by
-pointing your browser to a localhost port. If you input the viewer with a PR or a directory, it will
-parse the test result and show the results and the rendered and/or golden images.
+pointing your browser to a localhost port. If you provide the viewer with a PR or a directory, it will
+parse the test result json and show the results - which are rendered and golden images.
 
 ![Viewer](docs/images/renderdiff_example.png)
 
