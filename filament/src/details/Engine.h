@@ -271,16 +271,22 @@ public:
 
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
-        switch (mBackend) {
-            default:
-                return { getDriver().getShaderLanguage() };
-            case Backend::METAL:
-                const auto& lang = mConfig.preferredShaderLanguage;
-                if (lang == Config::ShaderLanguage::MSL) {
-                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
-                }
-                return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
+        backend::ShaderLanguage preferredLanguage;
+
+        switch (mConfig.preferredShaderLanguage) {
+            case Config::ShaderLanguage::DEFAULT:
+                preferredLanguage = backend::ShaderLanguage::UNSPECIFIED;
+                break;
+            case Config::ShaderLanguage::MSL:
+                preferredLanguage = backend::ShaderLanguage::MSL;
+                break;
+            case Config::ShaderLanguage::METAL_LIBRARY:
+                preferredLanguage = backend::ShaderLanguage::METAL_LIBRARY;
+                break;
         }
+
+
+        return getDriver().getShaderLanguages(preferredLanguage);
     }
 
     ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {

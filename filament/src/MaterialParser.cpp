@@ -41,6 +41,7 @@
 #include <utils/Hash.h>
 
 #include <array>
+#include <atomic>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -69,6 +70,8 @@ constexpr std::pair<ChunkType, ChunkType> shaderLanguageToTags(ShaderLanguage co
             return { MaterialSpirv, DictionarySpirv };
         case ShaderLanguage::METAL_LIBRARY:
             return { MaterialMetalLibrary, DictionaryMetalLibrary };
+        case ShaderLanguage::UNSPECIFIED:
+            return {};
     }
 }
 
@@ -108,8 +111,18 @@ MaterialParser::MaterialParserDetails::ManagedBuffer::~ManagedBuffer() noexcept 
 // ------------------------------------------------------------------------------------------------
 
 bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
+    if (this == &rhs) {
+        return true;
+    }
     if (mImpl.mManagedBuffer.size() != rhs.mImpl.mManagedBuffer.size()) {
         return false;
+    }
+    std::optional<uint32_t> lhsCrc32 = getPrecomputedCrc32();
+    if (lhsCrc32) {
+        std::optional<uint32_t> rhsCrc32 = rhs.getPrecomputedCrc32();
+        if (rhsCrc32 && *lhsCrc32 != *rhsCrc32) {
+            return false;
+        }
     }
     return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
             mImpl.mManagedBuffer.size());
@@ -172,6 +185,11 @@ MaterialParser::ParseResult MaterialParser::parse() noexcept {
 }
 
 uint32_t MaterialParser::computeCrc32() const noexcept {
+    uint32_t crc32 = mCrc32.load(std::memory_order_relaxed);
+    if (crc32) {
+        return crc32;
+    }
+
     const size_t size = mImpl.mManagedBuffer.size();
     const void* const UTILS_NONNULL payload = mImpl.mManagedBuffer.data();
 
@@ -181,7 +199,21 @@ uint32_t MaterialParser::computeCrc32() const noexcept {
 
     std::vector<uint32_t> crc32Table;
     utils::hash::crc32GenerateTable(crc32Table);
-    return utils::hash::crc32Update(0, payload, originalSize, crc32Table);
+    crc32 = utils::hash::crc32Update(0, payload, originalSize, crc32Table);
+    mCrc32.store(crc32, std::memory_order_relaxed);
+    return crc32;
+}
+
+std::optional<uint32_t> MaterialParser::getPrecomputedCrc32() const noexcept {
+    std::optional<uint32_t> cachedCrc32 = mCrc32.load(std::memory_order_relaxed);
+    if (cachedCrc32) {
+        return cachedCrc32;
+    }
+    uint32_t parsedCrc32;
+    if (getMaterialCrc32(&parsedCrc32)) {
+        return parsedCrc32;
+    }
+    return std::nullopt;
 }
 
 ShaderLanguage MaterialParser::getShaderLanguage() const noexcept {

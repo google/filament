@@ -47,12 +47,12 @@ class MaterialCache {
 public:
     ~MaterialCache();
 
-    /** Acquire or create a new entry in the cache for the given material data. */
+    // Acquire or create a new entry in the cache for the given material data.
     MaterialDefinition* UTILS_NULLABLE acquire(FEngine& engine, const void* UTILS_NONNULL data,
             size_t size) noexcept;
 
-    /** Release an entry in the cache, potentially freeing its GPU resources. */
-    void release(FEngine& engine, MaterialParser const& parser) noexcept;
+    // Release an entry in the cache, potentially freeing its GPU resources.
+    void release(FEngine& engine, MaterialDefinition const& definition) noexcept;
 
 private:
     // We use unique_ptr here because we need these pointers to be stable.

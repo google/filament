@@ -197,6 +197,7 @@ constexpr std::string_view to_string(Backend const backend) noexcept {
  * - The Metal backend can prefer precompiled Metal libraries, while falling back to MSL.
  */
 enum class ShaderLanguage {
+    UNSPECIFIED = -1,
     ESSL1 = 0,
     ESSL3 = 1,
     SPIRV = 2,
@@ -219,6 +220,8 @@ constexpr const char* shaderLanguageToString(ShaderLanguage shaderLanguage) noex
             return "Metal precompiled library";
         case ShaderLanguage::WGSL:
             return "WGSL";
+        case ShaderLanguage::UNSPECIFIED:
+            return "Unspecified";
     }
     return "UNKNOWN";
 }
