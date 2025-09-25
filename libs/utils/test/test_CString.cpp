@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <climits>
 #include <utility>
+#include <type_traits>
 
 using namespace utils;
 
@@ -56,7 +57,8 @@ TEST(CString, Constructors) {
     }
     // CString(const char* cstr)
     {
-        CString str("hello");
+        const char* hello_cstr = "hello";
+        CString str(hello_cstr);
         EXPECT_STREQ("hello", str.c_str());
         EXPECT_EQ(5, str.length());
     }
@@ -82,6 +84,50 @@ TEST(CString, Constructors) {
         EXPECT_EQ(original_cstr, s2.c_str()); // pointer should be moved
         EXPECT_EQ(nullptr, s1.c_str()); // original should be empty
     }
+}
+
+TEST(CString, LiteralConstructor) {
+    // This test verifies that CString can be constructed from a string literal,
+    // and that this uses the desired template constructor, not the explicit
+    // (and costly) `const char*` constructor.
+
+    // Test copy-initialization. CString should be convertible from a string literal.
+    // This works because "literal" has type `const char[N]` which matches
+    // `StringLiteral<N>` and calls the non-explicit template constructor.
+    static_assert(std::is_convertible_v<decltype("literal"), CString>,
+            "CString should be convertible from a string literal.");
+    CString s_copy = "literal";
+    EXPECT_STREQ("literal", s_copy.c_str());
+    EXPECT_EQ(7, s_copy.length());
+
+    // Test direct-initialization. This should also use the same efficient constructor.
+    static_assert(std::is_constructible_v<CString, decltype("literal")>,
+            "CString should be constructible from a string literal.");
+    CString s_direct("literal");
+    EXPECT_STREQ("literal", s_direct.c_str());
+    EXPECT_EQ(7, s_direct.length());
+
+    // Verify that direct-initialization uses the sized constructor by using an embedded null.
+    // If the strlen() constructor were used, the length would be 3.
+    // The size of "abc\0def" is 8 (including the terminating null). The constructor
+    // calculates the length as N-1 = 7.
+    CString const s_direct_null("abc\0def");
+    EXPECT_EQ(7, s_direct_null.length());
+
+    // CString should NOT be convertible from a `const char*`.
+    // This is because the `const char*` constructor is explicit.
+    static_assert(!std::is_convertible_v<const char*, CString>,
+            "CString should not be convertible from a const char*.");
+
+    // This demonstrates the non-convertibility. The following line would fail to compile:
+    // const char* cstr = "hello";
+    // CString s2 = cstr;
+
+    // Explicit construction from a const char* should still work (via direct-initialization).
+    const char* cstr = "explicit";
+    CString s2(cstr);
+    EXPECT_STREQ("explicit", s2.c_str());
+    EXPECT_EQ(8, s2.length());
 }
 
 TEST(CString, Assignment) {
