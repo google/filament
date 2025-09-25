@@ -116,6 +116,7 @@ private:
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.
     utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanTexture>> mColors;
+    utils::FixedCapacityVector<fvkmemory::resource_ptr<VulkanSemaphore>> mFinishedDrawing;
     fvkmemory::resource_ptr<VulkanTexture> mDepth;
     VkExtent2D mExtent;
     uint32_t mLayerCount;
