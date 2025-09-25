@@ -1513,7 +1513,6 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
 
     auto bo = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, boh);
     commands.acquire(bo);
-    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     if (UTILS_UNLIKELY(!mStreamUniformDescriptors.empty())) {
         auto streamDescriptors = mStreamUniformDescriptors.find(bo.get());
@@ -1541,6 +1540,8 @@ void VulkanDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescript
             mStreamUniformDescriptors.erase(streamDescriptors);
         }
     }
+
+    bo->loadFromCpu(commands, bd.buffer, byteOffset, bd.size);
 
     scheduleDestroy(std::move(bd));
 }
