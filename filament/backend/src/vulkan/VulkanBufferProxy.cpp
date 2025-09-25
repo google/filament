@@ -19,22 +19,25 @@
 #include "VulkanBufferCache.h"
 #include "VulkanCommands.h"
 #include "VulkanContext.h"
-#include "VulkanMemory.h"
 #include "VulkanHandles.h"
+#include "VulkanMemory.h"
+
+#include <backend/DriverEnums.h>
 
 using namespace bluevk;
 
 namespace filament::backend {
 
 VulkanBufferProxy::VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
-        VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferUsage usage,
-        uint32_t numBytes)
+        VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
+        BufferUsage usage, uint32_t numBytes)
     : mStagingBufferBypassEnabled(context.stagingBufferBypassEnabled()),
       mAllocator(allocator),
       mStagePool(stagePool),
       mBufferCache(bufferCache),
-      mBuffer(mBufferCache.acquire(usage, numBytes)),
-      mLastReadAge(0) {}
+      mBuffer(mBufferCache.acquire(binding, numBytes)),
+      mLastReadAge(0),
+      mUsage(usage) {}
 
 void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData,
         uint32_t byteOffset, uint32_t numBytes) {
@@ -49,12 +52,16 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     commands.acquire(mBuffer);
 
     // Check if we can just memcpy directly to the GPU memory.
-    // This is only allowed for UNIFORMS that are AVAILABLE and the memory is HOST_VISIBLE
-    // (supports memcpy from host). This works regardless if it's a full or partial update of the
-    // buffer.
     bool const isMemcopyable = mBuffer->getGpuBuffer()->allocationInfo.pMappedData != nullptr;
-    bool const isUniform = getUsage() == VulkanBufferUsage::UNIFORM;
-    bool const useMemcpy = isUniform && isMemcopyable && isAvailable && mStagingBufferBypassEnabled;
+    
+    // In the case of UNIFORMS, check that is available to see to know if a memcpy is possible.
+    // This works regardless if it's a full or partial update of the buffer.
+    bool const isUniformAvailable = getBinding() == VulkanBufferBinding::UNIFORM && isAvailable;
+    
+    // In the case the content is marked as memory mapped or static, is guaranteed to be safe to do
+    // a memcpy if its available.
+    bool isStaticOrShared = any(mUsage & (BufferUsage::STATIC | BufferUsage::SHARED_WRITE_BIT));
+    bool const useMemcpy = (isUniformAvailable || isStaticOrShared) && isMemcopyable && mStagingBufferBypassEnabled;
     if (useMemcpy) {
         char* dest = static_cast<char*>(mBuffer->getGpuBuffer()->allocationInfo.pMappedData) +
                      byteOffset;
@@ -81,13 +88,13 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     if (!isAvailable) {
         VkAccessFlags srcAccess = 0;
         VkPipelineStageFlags srcStage = 0;
-        if (getUsage() == VulkanBufferUsage::UNIFORM) {
+        if (getBinding() == VulkanBufferBinding::UNIFORM) {
             srcAccess = VK_ACCESS_SHADER_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        } else if (getUsage() == VulkanBufferUsage::VERTEX) {
+        } else if (getBinding() == VulkanBufferBinding::VERTEX) {
             srcAccess = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-        } else if (getUsage() == VulkanBufferUsage::INDEX) {
+        } else if (getBinding() == VulkanBufferBinding::INDEX) {
             srcAccess = VK_ACCESS_INDEX_READ_BIT;
             srcStage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
         }
@@ -120,16 +127,16 @@ void VulkanBufferProxy::loadFromCpu(VulkanCommandBuffer& commands, const void* c
     VkAccessFlags dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
-    if (getUsage() == VulkanBufferUsage::VERTEX) {
+    if (getBinding() == VulkanBufferBinding::VERTEX) {
         dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    } else if (getUsage() == VulkanBufferUsage::INDEX) {
+    } else if (getBinding() == VulkanBufferBinding::INDEX) {
         dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    } else if (getUsage() == VulkanBufferUsage::UNIFORM) {
+    } else if (getBinding() == VulkanBufferBinding::UNIFORM) {
         dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
         dstStageMask |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-    } else if (getUsage() == VulkanBufferUsage::SHADER_STORAGE) {
+    } else if (getBinding() == VulkanBufferBinding::SHADER_STORAGE) {
         // TODO: implement me
     }
 
@@ -152,8 +159,8 @@ VkBuffer VulkanBufferProxy::getVkBuffer() const noexcept {
     return mBuffer->getGpuBuffer()->vkbuffer;
 }
 
-VulkanBufferUsage VulkanBufferProxy::getUsage() const noexcept {
-    return mBuffer->getGpuBuffer()->usage;
+VulkanBufferBinding VulkanBufferProxy::getBinding() const noexcept {
+    return mBuffer->getGpuBuffer()->binding;
 }
 
 void VulkanBufferProxy::referencedBy(VulkanCommandBuffer& commands) {
