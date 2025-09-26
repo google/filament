@@ -20,7 +20,8 @@
 #include "DriverBase.h"
 #include <backend/DriverEnums.h>
 
-#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 namespace wgpu {
 class Queue;
@@ -36,14 +37,14 @@ namespace filament::backend {
 class WebGPUFence final : public HwFence {
 public:
     [[nodiscard]] FenceStatus getStatus();
+    [[nodiscard]] FenceStatus wait(uint64_t timeout);
 
     void addMarkerToQueueState(wgpu::Queue const&);
 
 private:
-    // The current status of the fence.
-    // This is atomic because it can be updated by a WebGPU callback thread and read from the main
-    // thread.
-    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
+    std::mutex mLock;
+    std::condition_variable mCondition;
+    FenceStatus mStatus{ FenceStatus::TIMEOUT_EXPIRED };
 };
 
 } // namespace filament::backend
