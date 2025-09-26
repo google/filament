@@ -97,6 +97,8 @@ public:
         time_point_ns endFrame;             //!< Renderer::endFrame() time since epoch [ns]
         time_point_ns backendBeginFrame;    //!< Backend thread time of frame start since epoch [ns]
         time_point_ns backendEndFrame;      //!< Backend thread time of frame end since epoch [ns]
+        time_point_ns gpuFrameComplete;     //!< GPU thread time of frame end since epoch [ns] or 0
+        time_point_ns vsync;                //!< VSYNC time of this frame since epoch [ns]
     };
 
     /**

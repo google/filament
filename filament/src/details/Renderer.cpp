@@ -389,7 +389,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
 
         mFrameInfoManager.beginFrame(driver, {
                 .historySize = mFrameRateOptions.history
-        }, mFrameId);
+        }, mFrameId, appVsync);
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
         engine.prepare();
