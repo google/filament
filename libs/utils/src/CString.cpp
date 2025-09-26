@@ -53,10 +53,6 @@ CString::CString(size_t const length) {
     }
 }
 
-CString::CString(const char* cstr)
-        : CString(cstr, size_type(cstr ? strlen(cstr) : 0)) {
-}
-
 CString::CString(const CString& rhs)
         : CString(rhs.c_str(), rhs.size()) {
 }

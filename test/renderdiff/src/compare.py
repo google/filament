@@ -3,13 +3,19 @@ import os
 import sys
 import pprint
 import json
+import fnmatch
 
 from utils import execute, ArgParseImpl, important_print, mkdir_p
 from image_diff import same_image, output_image_diff
 from results import RESULT_OK, RESULT_FAILED, RESULT_MISSING, GOLDEN_MISSING
 
-def _compare_goldens(base_dir, comparison_dir, out_dir=None):
+def _compare_goldens(base_dir, comparison_dir, out_dir=None, test_filter=None):
+  def test_name(p):
+    return p.replace('.tif', '')
+
   all_files = glob.glob(os.path.join(base_dir, "./**/*.tif"), recursive=True)
+  all_files = [os.path.abspath(f) for f in all_files \
+               if not test_filter or fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
   test_dirs = set(os.path.abspath(os.path.dirname(f)).replace(os.path.abspath(base_dir) + '/', '') \
                   for f in all_files)
   all_results = []
@@ -43,13 +49,17 @@ def _compare_goldens(base_dir, comparison_dir, out_dir=None):
     comp_test_dir = os.path.abspath(os.path.join(comparison_dir, test_dir))
     results = [
       single_test(base_test_dir, comp_test_dir, golden_file) \
-      for golden_file in glob.glob(os.path.join(base_test_dir, "*.tif"))
+      for golden_file in all_files if os.path.dirname(golden_file) == base_test_dir
     ]
     seen_test_cases = set([r['name'] for r in results])
 
     # For files that are rendered but not in the golden directory
-    for base_file in \
-        glob.glob(os.path.join(comp_test_dir, "*.tif")):
+    comparison_files = glob.glob(os.path.join(comp_test_dir, "*.tif"))
+    if test_filter:
+      comparison_files = [f for f in comparison_files \
+                          if fnmatch.fnmatch(test_name(os.path.basename(f)), test_filter)]
+
+    for base_file in comparison_files:
       src_fname = os.path.abspath(base_file)
       test_case = base_file.replace(f'{comp_test_dir}/', '')
       if test_case not in seen_test_cases:
@@ -76,6 +86,7 @@ if __name__ == '__main__':
   parser.add_argument('--src', help='Directory of the base of the diff.', required=True)
   parser.add_argument('--dest', help='Directory of the comparison of the diff.')
   parser.add_argument('--out', help='Directory of output for the result of the diff.')
+  parser.add_argument('--test_filter', help='Filter for the tests to run')
 
   args, _ = parser.parse_known_args(sys.argv[1:])
 
@@ -85,7 +96,7 @@ if __name__ == '__main__':
     dest = os.path.join(os.getcwd(), './out/renderdiff')
   assert os.path.exists(dest), f"Destination folder={dest} does not exist."
 
-  results = _compare_goldens(args.src, dest, out_dir=args.out)
+  results = _compare_goldens(args.src, dest, out_dir=args.out, test_filter=args.test_filter)
 
   failed = [f"   {k['name']} ({k['result']})" for k in results if k['result'] != RESULT_OK]
   success_count = len(results) - len(failed)

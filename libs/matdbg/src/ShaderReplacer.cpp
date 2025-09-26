@@ -118,6 +118,7 @@ private:
 ShaderReplacer::ShaderReplacer(Backend backend, ShaderLanguage language,
                                const void* data, size_t size) :
         mBackend(backend), mOriginalPackage(data, size) {
+    assert_invariant(language != ShaderLanguage::UNSPECIFIED);
     switch (language) {
         // ESSL1 and ESSL3 share the same dictionary, and replacing either will corrupt the other.
         // If replacing one, delete both.
@@ -146,6 +147,9 @@ ShaderReplacer::ShaderReplacer(Backend backend, ShaderLanguage language,
         case backend::ShaderLanguage::METAL_LIBRARY:
             mMaterialTag = ChunkType::MaterialMetalLibrary;
             mDictionaryTag = ChunkType::DictionaryMetalLibrary;
+            break;
+        case backend::ShaderLanguage::UNSPECIFIED:
+            // can never happen
             break;
     }
 }
