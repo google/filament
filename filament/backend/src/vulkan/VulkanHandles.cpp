@@ -40,18 +40,18 @@ namespace filament::backend {
 
 namespace {
 
-inline VulkanBufferUsage getBufferObjectUsage(BufferObjectBinding bindingType) noexcept {
+inline VulkanBufferBinding getBufferObjectBinding(BufferObjectBinding bindingType) noexcept {
     switch (bindingType) {
         case BufferObjectBinding::VERTEX:
-            return VulkanBufferUsage::VERTEX;
+            return VulkanBufferBinding::VERTEX;
         case BufferObjectBinding::UNIFORM:
-            return VulkanBufferUsage::UNIFORM;
+            return VulkanBufferBinding::UNIFORM;
         case BufferObjectBinding::SHADER_STORAGE:
-            return VulkanBufferUsage::SHADER_STORAGE;
+            return VulkanBufferBinding::SHADER_STORAGE;
             // when adding more buffer-types here, make sure to update VulkanBuffer::loadFromCpu()
             // if necessary.
     }
-    return VulkanBufferUsage::UNKNOWN;
+    return VulkanBufferBinding::UNKNOWN;
 }
 
 void flipVertically(VkViewport* rect, uint32_t framebufferHeight) {
@@ -614,10 +614,11 @@ void VulkanVertexBuffer::setBuffer(fvkmemory::resource_ptr<VulkanBufferObject> b
 
 VulkanBufferObject::VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
         VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
-        BufferObjectBinding bindingType)
+        BufferObjectBinding bindingType, BufferUsage usage)
     : HwBufferObject(byteCount),
       bindingType(bindingType),
-      mBuffer(context, allocator, stagePool, bufferCache, getBufferObjectUsage(bindingType), byteCount) {}
+      mBuffer(context, allocator, stagePool, bufferCache, getBufferObjectBinding(bindingType),
+              usage, byteCount) {}
 
 VulkanRenderPrimitive::VulkanRenderPrimitive(PrimitiveType pt,
         fvkmemory::resource_ptr<VulkanVertexBuffer> vb,
