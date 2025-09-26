@@ -25,6 +25,19 @@
                                                       //     'presets' field in the top-level struct.
             "model": [],                              // [optional] List of models used in this test.  The list is
                                                       //      *appended* onto the lists provided by the presets.
+            "tolerance": {                            // [optional] Image comparison tolerance specification
+                "operator": "OR",                     // [optional] How to combine criteria: "AND" or "OR" (default: "AND")
+                "criteria": [
+                    {
+                        "max_pixel_diff": 3,          // [optional] Max absolute difference per channel (0-255)
+                        "allowed_diff_pixels": 1.0    // [optional] Percentage of pixels allowed to exceed (0-100%)
+                    },
+                    {
+                        "max_pixel_diff_percent": 2.0, // [optional] Max difference as percentage (0-100%)
+                        "allowed_diff_pixels": 0.5     // [optional] Percentage of pixels allowed to exceed (0-100%)
+                    }
+                ]
+            },
             "rendering": {                            // [required] See description in 'presets'
                 "view.bloom.enabled": true,
                 "view.bloom.lensFlare": true
