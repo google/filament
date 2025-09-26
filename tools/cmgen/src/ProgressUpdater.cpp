@@ -20,6 +20,13 @@
 #include <string>
 
 #include <signal.h>
+#ifdef _WIN32
+    #include <io.h>
+    #include <fcntl.h>
+    #define STDOUT_FILENO _fileno(stdout)
+#else
+    #include <unistd.h>  // For Unix/Linux/Mac/iOS
+#endif
 
 static void signal_safe(const char* seq, size_t len) {
     write(STDOUT_FILENO, seq, len);
