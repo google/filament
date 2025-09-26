@@ -23,6 +23,8 @@
 #include "VulkanMemory.h"
 #include "VulkanStagePool.h"
 
+#include <backend/DriverEnums.h>
+
 namespace filament::backend {
 
 struct VulkanDescriptorSet;
@@ -33,8 +35,8 @@ struct VulkanCommandBuffer;
 class VulkanBufferProxy {
 public:
     VulkanBufferProxy(VulkanContext const& context, VmaAllocator allocator,
-            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferUsage usage,
-            uint32_t numBytes);
+            VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, VulkanBufferBinding binding,
+            BufferUsage usage, uint32_t numBytes);
 
     void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes);
@@ -44,7 +46,7 @@ public:
     void referencedBy(VulkanCommandBuffer& commands);
 
 private:
-    VulkanBufferUsage getUsage() const noexcept;
+    VulkanBufferBinding getBinding() const noexcept;
 
     bool const mStagingBufferBypassEnabled;
     VmaAllocator mAllocator;
@@ -54,6 +56,7 @@ private:
     fvkmemory::resource_ptr<VulkanBuffer> mBuffer;
 
     uint32_t mLastReadAge;
+    BufferUsage mUsage;
 };
 
 } // namespace filament::backend

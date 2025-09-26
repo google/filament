@@ -28,24 +28,24 @@ namespace filament::backend {
 
 namespace {
 
-VkBufferUsageFlags getVkBufferUsage(VulkanBufferUsage usage) {
+VkBufferUsageFlags getVkBufferUsage(VulkanBufferBinding usage) {
     switch (usage) {
-        case VulkanBufferUsage::VERTEX:
+        case VulkanBufferBinding::VERTEX:
             return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        case VulkanBufferUsage::INDEX:
+        case VulkanBufferBinding::INDEX:
             return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        case VulkanBufferUsage::UNIFORM:
+        case VulkanBufferBinding::UNIFORM:
             return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        case VulkanBufferUsage::SHADER_STORAGE:
+        case VulkanBufferBinding::SHADER_STORAGE:
             return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        case VulkanBufferUsage::UNKNOWN:
+        case VulkanBufferBinding::UNKNOWN:
             return 0;
     }
 
     return 0;
 }
 
-}// namespace
+} // namespace
 
 VulkanBufferCache::VulkanBufferCache(VulkanContext const& context,
         fvkmemory::ResourceManager& resourceManager, VmaAllocator allocator)
@@ -53,11 +53,11 @@ VulkanBufferCache::VulkanBufferCache(VulkanContext const& context,
       mResourceManager(resourceManager),
       mAllocator(allocator) {}
 
-fvkmemory::resource_ptr<VulkanBuffer> VulkanBufferCache::acquire(VulkanBufferUsage usage,
+fvkmemory::resource_ptr<VulkanBuffer> VulkanBufferCache::acquire(VulkanBufferBinding binding,
         uint32_t numBytes) noexcept {
-    assert_invariant(usage != VulkanBufferUsage::UNKNOWN);
+    assert_invariant(binding != VulkanBufferBinding::UNKNOWN);
 
-    BufferPool& bufferPool = getPool(usage);
+    BufferPool& bufferPool = getPool(binding);
 
     // First check if an allocation exists whose capacity is greater than or equal to the requested
     // size.
@@ -71,7 +71,7 @@ fvkmemory::resource_ptr<VulkanBuffer> VulkanBufferCache::acquire(VulkanBufferUsa
 
     // We were not able to find a sufficiently large allocation, so create a new one that is
     // recycled after being yielded.
-    VulkanGpuBuffer const* gpuBuffer = allocate(usage, numBytes);
+    VulkanGpuBuffer const* gpuBuffer = allocate(binding, numBytes);
     return fvkmemory::resource_ptr<VulkanBuffer>::construct(&mResourceManager, gpuBuffer,
             [this](VulkanGpuBuffer const* gpuBuffer) { this->release(gpuBuffer); });
 }
@@ -93,9 +93,10 @@ void VulkanBufferCache::gc() noexcept {
             if (poolIter->second.lastAccessed < evictionTime) {
 #if FVK_ENABLED(FVK_DEBUG_VULKAN_BUFFER_CACHE)
                 FVK_LOGD << "VulkanBufferCache - Destroyed vkBuffer "
-                         << poolIter->second.gpuBuffer->vkbuffer << " with usage "
-                         << static_cast<int>(poolIter->second.gpuBuffer->usage) << utils::io::endl;
-#endif// FVK_DEBUG_VULKAN_BUFFER_CACHE
+                         << poolIter->second.gpuBuffer->vkbuffer << " with binding "
+                         << static_cast<int>(poolIter->second.gpuBuffer->binding)
+                         << utils::io::endl;
+#endif // FVK_DEBUG_VULKAN_BUFFER_CACHE
 
                 destroy(poolIter->second.gpuBuffer);
                 poolIter = bufferPool.erase(poolIter);
@@ -120,35 +121,33 @@ void VulkanBufferCache::terminate() noexcept {
 void VulkanBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
     assert_invariant(gpuBuffer != nullptr);
 
-    BufferPool& bufferPool = getPool(gpuBuffer->usage);
+    BufferPool& bufferPool = getPool(gpuBuffer->binding);
     bufferPool.insert(std::make_pair(gpuBuffer->numBytes, UnusedGpuBuffer{
                                                               .lastAccessed = mCurrentFrame,
                                                               .gpuBuffer = gpuBuffer,
                                                           }));
 }
 
-VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferUsage usage,
+VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
         uint32_t numBytes) noexcept {
     VkBufferCreateInfo const bufferInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = numBytes,
         // `VK_BUFFER_USAGE_TRANSFER_DST_BIT` is needed to allow updating the buffer through
         // a staging using `vkCmdCopyBuffer`.
-        .usage = getVkBufferUsage(usage) | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .usage = getVkBufferUsage(binding) | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     };
 
     VmaAllocationCreateFlags vmaFlags = 0;
-    if (usage == VulkanBufferUsage::UNIFORM) {
-        // In the case of UMA, the uniform buffers will always be mappable
-        if (mContext.isUnifiedMemoryArchitecture()) {
-            vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-        }
+    // In the case of UMA, the buffers will always be mappable
+    if (mContext.isUnifiedMemoryArchitecture()) {
+        vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT |
+                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
 
     VulkanGpuBuffer* gpuBuffer = new VulkanGpuBuffer{
         .numBytes = numBytes,
-        .usage = usage,
+        .binding = binding,
     };
     VmaAllocationCreateInfo const allocInfo{
         .flags = vmaFlags,
@@ -161,14 +160,14 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferUsage usage,
 #if FVK_ENABLED(FVK_DEBUG_VULKAN_BUFFER_CACHE)
     if (result != VK_SUCCESS) {
         FVK_LOGE << "VulkanBufferCache - failed to allocate a new vkBuffer of size " << numBytes
-                 << " and usage " << static_cast<int>(usage) << ", error: " << result
+                 << " and binding " << static_cast<int>(binding) << ", error: " << result
                  << utils::io::endl;
     } else {
         FVK_LOGD << "VulkanBufferCache - allocated a vkBuffer " << gpuBuffer->vkbuffer
-                 << " of size " << numBytes << " and usage = " << static_cast<int>(usage)
+                 << " of size " << numBytes << " and binding = " << static_cast<int>(binding)
                  << "  successfully" << utils::io::endl;
     }
-#endif// FVK_DEBUG_VULKAN_BUFFER_CACHE
+#endif // FVK_DEBUG_VULKAN_BUFFER_CACHE
 
     return gpuBuffer;
 }
@@ -179,24 +178,24 @@ void VulkanBufferCache::destroy(VulkanGpuBuffer const* gpuBuffer) noexcept {
     gpuBuffer = nullptr;
 }
 
-VulkanBufferCache::BufferPool& VulkanBufferCache::getPool(VulkanBufferUsage usage) noexcept {
+VulkanBufferCache::BufferPool& VulkanBufferCache::getPool(VulkanBufferBinding binding) noexcept {
 
     int poolIndex = -1;
-    switch (usage) {
-        case VulkanBufferUsage::VERTEX:
+    switch (binding) {
+        case VulkanBufferBinding::VERTEX:
             poolIndex = 0;
             break;
-        case VulkanBufferUsage::INDEX:
+        case VulkanBufferBinding::INDEX:
             poolIndex = 1;
             break;
-        case VulkanBufferUsage::UNIFORM:
+        case VulkanBufferBinding::UNIFORM:
             poolIndex = 2;
             break;
-        case VulkanBufferUsage::SHADER_STORAGE:
+        case VulkanBufferBinding::SHADER_STORAGE:
             poolIndex = 3;
             break;
-        case VulkanBufferUsage::UNKNOWN:
-            PANIC_LOG("There's no pool for buffers with unkown usage.");
+        case VulkanBufferBinding::UNKNOWN:
+            PANIC_LOG("There's no pool for buffers with unkown binding.");
             break;
     }
 
@@ -204,4 +203,4 @@ VulkanBufferCache::BufferPool& VulkanBufferCache::getPool(VulkanBufferUsage usag
     return mGpuBufferPools[poolIndex];
 }
 
-}// namespace filament::backend
+} // namespace filament::backend
