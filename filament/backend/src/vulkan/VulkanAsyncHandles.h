@@ -31,11 +31,12 @@ namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkResult initialStatus) {
+    VulkanCmdFence(VkResult initialStatus, VkFence fence) {
         // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
         // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
         // finishes executing the command buffer, the status changes to VK_SUCCESS.
         status.store(initialStatus);
+        this->fence = fence;
     }
 
     ~VulkanCmdFence() = default;
@@ -43,9 +44,11 @@ struct VulkanCmdFence {
     void setStatus(VkResult value) { status.store(value); }
 
     VkResult getStatus() { return status.load(std::memory_order_acquire); }
+    VkFence const& getFence() const { return fence; }
 
 private:
     std::atomic<VkResult> status;
+    VkFence fence;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {

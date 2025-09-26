@@ -21,11 +21,24 @@
 
 #include <webgpu/webgpu_cpp.h>
 
-#include <atomic>
+#include <condition_variable>
+#include <chrono>
+#include <cstdint>
+#include <mutex>
 
 namespace filament::backend {
 
-FenceStatus WebGPUFence::getStatus() { return mStatus.load(); }
+FenceStatus WebGPUFence::getStatus() {
+    std::lock_guard const lock(mLock);
+    return mStatus;
+}
+
+FenceStatus WebGPUFence::wait(uint64_t const timeout) {
+    std::unique_lock lock(mLock);
+    mCondition.wait_for(lock, std::chrono::nanoseconds(timeout),
+            [this] { return mStatus != FenceStatus::TIMEOUT_EXPIRED; });
+    return mStatus;
+}
 
 void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
     // The lambda function is called when the work is done. It updates the fence status based on the
@@ -33,13 +46,16 @@ void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
     queue.OnSubmittedWorkDone(
         wgpu::CallbackMode::AllowSpontaneous,
         [this](const wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
+            std::unique_lock const lock(mLock);
             switch (status) {
                 case wgpu::QueueWorkDoneStatus::Success:
-                    mStatus.store(FenceStatus::CONDITION_SATISFIED);
+                    mStatus = FenceStatus::CONDITION_SATISFIED;
+                    mCondition.notify_all();
                     break;
                 case wgpu::QueueWorkDoneStatus::CallbackCancelled:
                 case wgpu::QueueWorkDoneStatus::Error:
-                    mStatus.store(FenceStatus::ERROR);
+                    mStatus = FenceStatus::ERROR;
+                    mCondition.notify_all();
                     FWGPU_LOGW << "WebGPUFence: wgpu::QueueWorkDoneStatus::Error. " << message;
                     break;
             }
