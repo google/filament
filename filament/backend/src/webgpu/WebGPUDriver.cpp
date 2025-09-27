@@ -733,6 +733,14 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
     return fence->getStatus();
 }
 
+FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const timeout) {
+    const auto fence = handleCast<WebGPUFence>(fenceHandle);
+    if (!fence) {
+        return FenceStatus::ERROR;
+    }
+    return fence->wait(timeout);
+}
+
 void WebGPUDriver::destroySync(Handle<HwSync> syncHandle) {
     if (syncHandle) {
         destructHandle<WebGPUSync>(syncHandle);

@@ -168,6 +168,10 @@ FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
 }
 
+FenceStatus NoopDriver::fenceWait(Handle<HwFence> fh, uint64_t timeout) {
+    return FenceStatus::ERROR;
+}
+
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
 bool NoopDriver::isTextureFormatSupported(TextureFormat format) {

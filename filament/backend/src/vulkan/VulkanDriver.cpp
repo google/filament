@@ -1181,6 +1181,35 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::TIMEOUT_EXPIRED;
 }
 
+FenceStatus VulkanDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
+    auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+
+    auto& cmdfence = fence->fence;
+    if (!cmdfence) {
+        // If wait is called before a fence actually exists, we return timeout.  This matches the
+        // current behavior in OpenGLDriver, but we should eventually reconsider a different error
+        // code.
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
+
+    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
+    // When this fence gets submitted, its status changes to VK_NOT_READY.
+    if (cmdfence->getStatus() == VK_SUCCESS) {
+        return FenceStatus::CONDITION_SATISFIED;
+    }
+
+
+    VkResult const result = vkWaitForFences(mPlatform->getDevice(),
+            1, &cmdfence->getFence(), VK_TRUE, timeout);
+    if (result == VK_SUCCESS) {
+        return FenceStatus::CONDITION_SATISFIED;
+    }
+    if (result == VK_TIMEOUT) {
+        return FenceStatus::TIMEOUT_EXPIRED;
+    }
+    return FenceStatus::ERROR; // not supported
+}
+
 void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
         Platform::SyncCallback cb, void* userData) {
     auto sync = resource_ptr<VulkanSync>::cast(&mResourceManager, sh);

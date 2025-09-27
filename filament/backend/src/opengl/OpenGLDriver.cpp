@@ -2308,6 +2308,10 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
 }
 
 FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
+    return fenceWait(fh, 0);
+}
+
+FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     if (fh) {
         GLFence* f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
@@ -2320,13 +2324,13 @@ FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
                 // - wait() was called before the fence was asynchronously created.
                 return FenceStatus::TIMEOUT_EXPIRED;
             }
-            return mPlatform.waitFence(f->fence, 0);
+            return mPlatform.waitFence(f->fence, timeout);
         }
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
         else {
             assert_invariant(f->state);
             std::unique_lock lock(f->state->lock);
-            f->state->cond.wait_for(lock, std::chrono::nanoseconds(0), [&state = f->state]() {
+            f->state->cond.wait_for(lock, std::chrono::nanoseconds(timeout), [&state = f->state]() {
                 return state->status != FenceStatus::TIMEOUT_EXPIRED;
             });
             return f->state->status;
