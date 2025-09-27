@@ -477,6 +477,62 @@ TEST(CString, Replace) {
     }
 }
 
+TEST(CString, ReplaceInPlace) {
+    // Shrinking replacement
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(3, 3, "ab");
+        EXPECT_STREQ("012ab6789", str.c_str());
+        EXPECT_EQ(9, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(0, 3, "ab");
+        EXPECT_STREQ("ab3456789", str.c_str());
+        EXPECT_EQ(9, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(7, 3, "ab");
+        EXPECT_STREQ("0123456ab", str.c_str());
+        EXPECT_EQ(9, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(0, 10, "ab");
+        EXPECT_STREQ("ab", str.c_str());
+        EXPECT_EQ(2, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+
+    // Same size replacement
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(0, 10, "abcdefghij");
+        EXPECT_STREQ("abcdefghij", str.c_str());
+        EXPECT_EQ(10, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+
+    // Shrink to empty
+    {
+        CString str("0123456789");
+        const char* const original_cstr = str.c_str();
+        str.replace(3, 3, "");
+        EXPECT_STREQ("0126789", str.c_str());
+        EXPECT_EQ(7, str.length());
+        EXPECT_EQ(original_cstr, str.c_str());
+    }
+}
+
 TEST(CString, ReplaceZeroLength) {
     {
         std::string str("foobar");

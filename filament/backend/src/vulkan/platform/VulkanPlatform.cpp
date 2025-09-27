@@ -201,7 +201,9 @@ ExtensionSet getInstanceExtensions(ExtensionSet const& externallyRequiredExts = 
             fvkutils::enumerate(vkEnumerateInstanceExtensionProperties,
                     static_cast<char const*>(nullptr) /* pLayerName */);
     for (auto const& extension: availableExts) {
-        utils::CString name { extension.extensionName };
+        // The cast is to force the non-literal constructor of CString, which assumes
+        // null-terminated strings.
+        utils::CString name{ (char const*) extension.extensionName };
 
         // To workaround an Adreno bug where the extension name could be of 0 length.
         if (name.size() == 0) {
@@ -243,7 +245,9 @@ ExtensionSet getDeviceExtensions(VkPhysicalDevice device) {
             = fvkutils::enumerate(vkEnumerateDeviceExtensionProperties, device,
                     static_cast<const char*>(nullptr) /* pLayerName */);
     for (auto const& extension: extensions) {
-        utils::CString name { extension.extensionName };
+        // The cast is to force the non-literal constructor of CString, which assumes
+        // null-terminated strings.
+        utils::CString name { (char const*) extension.extensionName };
 
         // To workaround an Adreno bug where the extension name could be of 0 length.
         if (name.size() == 0) {

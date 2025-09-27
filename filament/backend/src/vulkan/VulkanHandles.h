@@ -477,8 +477,8 @@ struct VulkanIndexBuffer : public HwIndexBuffer, fvkmemory::Resource {
             uint32_t indexCount)
         : HwIndexBuffer(elementSize, indexCount),
           indexType(elementSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferUsage::INDEX,
-                  elementSize * indexCount) {}
+          mBuffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::INDEX,
+                  BufferUsage::STATIC, elementSize * indexCount) {}
 
     inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes) {
@@ -496,7 +496,7 @@ private:
 struct VulkanBufferObject : public HwBufferObject, fvkmemory::Resource {
     VulkanBufferObject(VulkanContext const& context, VmaAllocator allocator,
             VulkanStagePool& stagePool, VulkanBufferCache& bufferCache, uint32_t byteCount,
-            BufferObjectBinding bindingType);
+            BufferObjectBinding bindingType, BufferUsage usage);
 
     inline void loadFromCpu(VulkanCommandBuffer& commands, const void* cpuData, uint32_t byteOffset,
             uint32_t numBytes) {
