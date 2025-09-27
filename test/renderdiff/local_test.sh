@@ -29,9 +29,11 @@ bash `dirname $0`/generate.sh "$@" && \
     python3 ${RENDERDIFF_TEST_DIR}/src/golden_manager.py \
             --branch=${GOLDEN_BRANCH} \
             --output=${GOLDEN_OUTPUT_DIR} && \
-    # Pass arguments to compare.py, e.g. --test_filter
     python3 ${RENDERDIFF_TEST_DIR}/src/compare.py \
             --src=${GOLDEN_OUTPUT_DIR} \
             --dest=${RENDER_OUTPUT_DIR} \
-            --out=${DIFF_OUTPUT_DIR} "$@"
+            --out=${DIFF_OUTPUT_DIR} \
+            --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" "$@"
+
+    # $@ Pass arguments to compare.py, e.g. --test_filter
 end_
