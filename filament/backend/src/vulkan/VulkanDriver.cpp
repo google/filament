@@ -600,7 +600,7 @@ void VulkanDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
         BufferObjectBinding bindingType, BufferUsage usage, utils::CString&& tag) {
     FVK_SYSTRACE_SCOPE();
     auto bo = resource_ptr<VulkanBufferObject>::make(&mResourceManager, boh, mContext, mAllocator,
-            mStagePool, mBufferCache, byteCount, bindingType);
+            mStagePool, mBufferCache, byteCount, bindingType, usage);
     bo.inc();
     mResourceManager.associateHandle(boh.getId(), std::move(tag));
 }

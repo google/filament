@@ -532,6 +532,10 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                         &maj, &min, &driverVersion, &driverRelease);
                 if (UTILS_LIKELY(c == 4)) {
                     // we were able to parse the version string
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 46)) {
+                        // this driver version is known to be good
+                        bugs->dont_use_timer_query = false;
+                    }
                     if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 53)) {
                         // this driver version is known to be good
                         bugs->disable_framebuffer_fetch_extension = false;
