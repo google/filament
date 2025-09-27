@@ -51,7 +51,14 @@ MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
             engine.getShaderLanguage(), data, size);
     assert_invariant(parser);
 
-    return mDefinitions.acquire(Key{parser.get()}, [&engine, parser = std::move(parser)]() mutable {
+    // The `key` must be constructed using parser.get() before parser is moved into the lambda
+    // function. This prevents a potential crash or undefined behavior, as accessing a moved-from
+    // object is unsafe. The validity of the generated key is guaranteed because the
+    // MaterialDefinition object (which owns the same parser object) created within the lambda is
+    // subsequently used as the associated value in the map.
+    const Key key{ parser.get() };
+
+    return mDefinitions.acquire(key, [&engine, parser = std::move(parser)]() mutable {
         return MaterialDefinition::create(engine, std::move(parser));
     });
 }
