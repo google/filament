@@ -20,24 +20,45 @@
 #include <string>
 
 #include <signal.h>
+#ifdef _WIN32
+    #include <io.h>
+    #include <fcntl.h>
+    #define STDOUT_FILENO _fileno(stdout)
+#else
+    #include <unistd.h>  // For Unix/Linux/Mac/iOS
+#endif
+
+static void signal_safe(const char* seq, size_t len) {
+    write(STDOUT_FILENO, seq, len);
+}
+
+static void setSigintHandler(void (*handler)(int)) {
+    struct sigaction sa;
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+}
 
 static void moveCursorUp(size_t n) {
     std::cout << "\033[" << n << "F";
 }
 
 static void showCursor() {
-    signal(SIGINT, SIG_DFL);
-    std::cout << "\033[?25h" << std::flush;
+    setSigintHandler(SIG_DFL);
+    const char* show_cursor_seq = "\033[?25h";
+    signal_safe(show_cursor_seq, 6);
 }
 
 static void showCursorFromSignal(int) {
-    showCursor();
+    showCursor(); 
     raise(SIGINT);
 }
 
 static void hideCursor() {
-    signal(SIGINT, showCursorFromSignal);
-    std::cout << "\033[?25l" << std::flush;
+    setSigintHandler(showCursorFromSignal);
+    const char* hide_cursor_seq = "\033[?25l";
+    signal_safe(hide_cursor_seq, 6);
 }
 
 static inline void printProgress(float v, size_t width) {
