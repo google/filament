@@ -20,40 +20,81 @@
 #include <bluevk/BlueVK.h>
 
 #include "DriverBase.h"
+#include "backend/DriverEnums.h"
 #include "backend/Platform.h"
 
 #include "vulkan/memory/Resource.h"
 
-#include <utils/Mutex.h>
-#include <utils/Condition.h>
+#include <chrono>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
+#include <utility>
+#include <vector>
 
 namespace filament::backend {
 
 // Wrapper to enable use of shared_ptr for implementing shared ownership of low-level Vulkan fences.
 struct VulkanCmdFence {
-    VulkanCmdFence(VkResult initialStatus, VkFence fence) {
-        // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
-        // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
-        // finishes executing the command buffer, the status changes to VK_SUCCESS.
-        status.store(initialStatus);
-        this->fence = fence;
-    }
-
+    explicit VulkanCmdFence(VkFence fence) : mFence(fence) { }
     ~VulkanCmdFence() = default;
 
-    void setStatus(VkResult value) { status.store(value); }
+    void setStatus(VkResult const value) {
+        std::lock_guard const l(mLock);
+        mStatus = value;
+        mCond.notify_all();
+    }
 
-    VkResult getStatus() { return status.load(std::memory_order_acquire); }
-    VkFence const& getFence() const { return fence; }
+    VkResult getStatus() {
+        std::shared_lock const l(mLock);
+        return mStatus;
+    }
+
+    void resetFence(VkDevice device);
+
+    FenceStatus wait(VkDevice device, uint64_t timeout,
+        std::chrono::steady_clock::time_point until);
 
 private:
-    std::atomic<VkResult> status;
-    VkFence fence;
+    std::shared_mutex mLock; // NOLINT(*-include-cleaner)
+    std::condition_variable_any mCond;
+    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
+    // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
+    // finishes executing the command buffer, the status changes to VK_SUCCESS.
+    VkResult mStatus{ VK_INCOMPLETE };
+    VkFence mFence;
 };
 
 struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
-    std::shared_ptr<VulkanCmdFence> fence;
+
+    void setFence(std::shared_ptr<VulkanCmdFence> fence) {
+        std::lock_guard lock(mState->lock);
+        mState->sharedFence = std::move(fence);
+        mState->cond.notify_all();
+    }
+
+    std::shared_ptr<VulkanCmdFence>& getSharedFence() {
+        std::lock_guard lock(mState->lock);
+        return mState->sharedFence;
+    }
+
+    std::shared_ptr<VulkanCmdFence> wait(std::chrono::steady_clock::time_point const until) {
+        // hold a reference so that our state doesn't disappear while we wait
+        std::shared_ptr state{ mState };
+        std::unique_lock lock(state->lock);
+        state->cond.wait_until(lock, until, [&state] { return bool(state->sharedFence); });
+        // here mSharedFence will be null if we timed out
+        return state->sharedFence;
+    }
+private:
+    struct State {
+        std::mutex lock;
+        std::condition_variable cond;
+        std::shared_ptr<VulkanCmdFence> sharedFence;
+    };
+    std::shared_ptr<State> mState{ std::make_shared<State>() };
 };
 
 struct VulkanSync : fvkmemory::ThreadSafeResource, public HwSync {
@@ -75,12 +116,12 @@ struct VulkanTimerQuery : public HwTimerQuery, fvkmemory::ThreadSafeResource {
           mStoppingQueryIndex(stoppingIndex) {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) noexcept {
-        std::unique_lock<utils::Mutex> lock(mFenceMutex);
-        mFence = fence;
+        std::unique_lock const lock(mFenceMutex);
+        mFence = std::move(fence);
     }
 
     bool isCompleted() noexcept {
-        std::unique_lock<utils::Mutex> lock(mFenceMutex);
+        std::unique_lock const lock(mFenceMutex);
         // QueryValue is a synchronous call and might occur before beginTimerQuery has written
         // anything into the command buffer, which is an error according to the validation layer
         // that ships in the Android NDK.  Even when AVAILABILITY_BIT is set, validation seems to

@@ -113,7 +113,7 @@ VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice 
     }
     vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
 
-    mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE, mFence);
+    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
@@ -128,11 +128,13 @@ void VulkanCommandBuffer::reset() noexcept {
     mAge = ++sAgeCounter;
     mSubmission = mSemaphoreManager->acquire();
 
+    // reset the fence with proper host synchronization
+    mFenceStatus->resetFence(mDevice);
+
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
-    vkResetFences(mDevice, 1, &mFence);
-    mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE, mFence);
+    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
@@ -232,9 +234,9 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
              << " fence=" << mFence;
 #endif
 
-    mFenceStatus->setStatus(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result =
         vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
+    mFenceStatus->setStatus(VK_NOT_READY);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
