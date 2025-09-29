@@ -18,9 +18,14 @@
 #define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
 #include "DriverBase.h"
+
 #include <backend/DriverEnums.h>
 
-#include <atomic>
+#include <utils/Mutex.h> // NOLINT(*-include-cleaner)
+#include <utils/Condition.h> // NOLINT(*-include-cleaner)
+
+#include <cstdint>
+#include <memory>
 
 namespace wgpu {
 class Queue;
@@ -35,15 +40,20 @@ namespace filament::backend {
   */
 class WebGPUFence final : public HwFence {
 public:
-    [[nodiscard]] FenceStatus getStatus();
+    ~WebGPUFence() noexcept;
+    [[nodiscard]] FenceStatus getStatus() const;
+    [[nodiscard]] FenceStatus wait(uint64_t timeout);
 
     void addMarkerToQueueState(wgpu::Queue const&);
 
 private:
-    // The current status of the fence.
-    // This is atomic because it can be updated by a WebGPU callback thread and read from the main
-    // thread.
-    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
+    struct State {
+        utils::Mutex lock; // NOLINT(*-include-cleaner)
+        utils::Condition cond; // NOLINT(*-include-cleaner)
+        FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
+    };
+    // we need a shared_ptr because the Fence could be destroyed while we're waiting
+    std::shared_ptr<State> state{ std::make_shared<State>() };
 };
 
 } // namespace filament::backend
