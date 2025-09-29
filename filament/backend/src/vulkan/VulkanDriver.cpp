@@ -1179,7 +1179,7 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         return FenceStatus::TIMEOUT_EXPIRED;
     }
 
-    // now we are holding a reference to our VulkanCmdFence, so we now it can't
+    // now we are holding a reference to our VulkanCmdFence, so we know it can't
     // disappear while we wait
     return cmdfence->wait(mPlatform->getDevice(), timeout, until);
 }
