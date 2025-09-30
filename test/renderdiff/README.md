@@ -138,6 +138,17 @@ python3 test/renderdiff/src/viewer.py --pr_number=[PR #] --github_token=[github 
 where `[PR #]` is the numeric ID of your pull request, and the `[github token]` is an acess
 token that you (as a github user) needs to generate ([reference][github_token_ref]).
 
+To see the results of a specific run, you would do the following
+
+```
+python3 test/renderdiff/src/viewer.py --run_number=[RUN #] --github_token=[github token]
+```
+
+where `[RUN #]` is the numeric ID of the run. You can find the run number in the URL of the
+GitHub Actions page. For example, in the URL
+`https://github.com/google/filament/actions/runs/18023632663/job/51286323708?pr=9264`,
+the run number is `18023632663`.
+
 [github_token_ref]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 [Mesa]: https://docs.mesa3d.org
 [SwiftShader]: https://github.com/google/swiftshader
