@@ -48,6 +48,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 using namespace utils;
 using namespace filament::backend;
@@ -124,7 +125,7 @@ bool MaterialParser::operator==(MaterialParser const& rhs) const noexcept {
             return false;
         }
     }
-    return !std::memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
+    return !memcmp(mImpl.mManagedBuffer.data(), rhs.mImpl.mManagedBuffer.data(),
             mImpl.mManagedBuffer.size());
 }
 
