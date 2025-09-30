@@ -1042,11 +1042,15 @@ void MetalDriver::destroyFence(Handle<HwFence> fh) {
 }
 
 FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
+    return fenceWait(fh, 0);
+}
+
+FenceStatus MetalDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     auto* fence = handle_cast<MetalFence>(fh);
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(0);
+    return fence->wait(timeout);
 }
 
 void MetalDriver::destroySync(Handle<HwSync> sh) {

@@ -194,8 +194,8 @@ public:
     struct GLFence : public HwFence {
         using HwFence::HwFence;
         struct State {
-            std::mutex lock;
-            std::condition_variable cond;
+            utils::Mutex lock; // NOLINT(*-include-cleaner)
+            utils::Condition cond; // NOLINT(*-include-cleaner)
             FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
         };
         std::shared_ptr<State> state{ std::make_shared<State>() };

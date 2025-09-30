@@ -22,22 +22,31 @@
 
 #include <tsl/robin_map.h>
 
+#include <optional>
+#include <type_traits>
+#include <utility>
+
 namespace utils {
 
 namespace refcountedmap {
 
-template<typename T>
-concept IsPointer = requires(T a) { *a; };
+template <typename T, typename = void>
+struct is_pointer_like_trait : std::false_type {};
 
-// If T is a pointer type, get the type of the value it points to; otherwise, T.
+template <typename T>
+struct is_pointer_like_trait<T, std::void_t<decltype(*std::declval<T&>())>> : std::true_type {};
+
 template<typename T>
+inline constexpr bool IsPointer = is_pointer_like_trait<T>::value;
+
+template<typename T, typename = void>
 struct PointerTraits {
     using element_type = T;
 };
 
-template<typename T> requires IsPointer<T>
-struct PointerTraits<T> {
-    using element_type = std::pointer_traits<T>::element_type;
+template<typename T>
+struct PointerTraits<T, std::enable_if_t<IsPointer<T>>> {
+    using element_type = typename std::pointer_traits<T>::element_type;
 };
 
 } // namespace refcountedmap
@@ -51,7 +60,7 @@ template<typename Key, typename T, typename Hash = std::hash<Key>>
 class RefCountedMap {
     // Use references for the key if the size of the key type is greater than the size of a pointer.
     using KeyRef = std::conditional_t<(sizeof(Key) > sizeof(void*)), const Key&, Key>;
-    using TValue = refcountedmap::PointerTraits<T>::element_type;
+    using TValue = typename refcountedmap::PointerTraits<T>::element_type;
 
     struct Entry {
         uint32_t referenceCount;
@@ -98,20 +107,14 @@ public:
             T r = factory();
             if (r) {
                 // TODO: how to use above computed hash here?
-                return &*mMap.insert({key, Entry{
-                        .referenceCount = 1,
-                        .value = std::move(r),
-                    }}).first.value().value;
+                return &*mMap.insert({key, Entry{ 1, std::move(r) }}).first.value().value;
             }
             return nullptr;
         } else {
             std::optional<T> r = factory();
             if (r) {
                 // TODO: how to use above computed hash here?
-                return &mMap.insert({key, Entry{
-                        .referenceCount = 1,
-                        .value = std::move(r.value()),
-                    }}).first.value().value;
+                return &mMap.insert({key, Entry{ 1, std::move(r.value()) }}).first.value().value;
             }
             return nullptr;
         }

@@ -1807,25 +1807,35 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 void OpenGLDriver::createFenceR(Handle<HwFence> fh, CString&& tag) {
     DEBUG_MARKER()
 
-    GLFence* f = handle_cast<GLFence*>(fh);
-
-    if (mPlatform.canCreateFence() || mContext.isES2()) {
-        assert_invariant(mPlatform.canCreateFence());
-        f->fence = mPlatform.createFence();
-    }
-#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    else {
-        std::weak_ptr const weak = f->state;
-        whenGpuCommandsComplete([weak](){
-            if (auto const state = weak.lock()) {
-                std::lock_guard const lock(state->lock);
-                state->status = FenceStatus::CONDITION_SATISFIED;
-                state->cond.notify_all();
-            }
-        });
-    }
-#endif
     mHandleAllocator.associateTagToHandle(fh.getId(), std::move(tag));
+
+    GLFence* f = handle_cast<GLFence*>(fh);
+    assert_invariant(f->state);
+
+    bool const platformCanCreateFence = mPlatform.canCreateFence();
+
+    if (mContext.isES2() || platformCanCreateFence) {
+        std::lock_guard const lock(f->state->lock);
+        if (platformCanCreateFence) {
+            f->fence = mPlatform.createFence();
+            f->state->cond.notify_all();
+        } else {
+            f->state->status = FenceStatus::ERROR;
+        }
+        return;
+    }
+
+    // This is the case where we need to use OpenGL fences
+#ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
+    std::weak_ptr<GLFence::State> const weak = f->state;
+    whenGpuCommandsComplete([weak] {
+        if (auto const state = weak.lock()) {
+            std::lock_guard const lock(state->lock);
+            state->status = FenceStatus::CONDITION_SATISFIED;
+            state->cond.notify_all();
+        }
+    });
+#endif
 }
 
 void OpenGLDriver::createSyncR(Handle<HwSync> sh, CString&& tag) {
@@ -2308,29 +2318,62 @@ void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
 }
 
 FenceStatus OpenGLDriver::getFenceStatus(Handle<HwFence> fh) {
+    return fenceWait(fh, 0);
+}
+
+FenceStatus OpenGLDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     if (fh) {
-        GLFence* f = handle_cast<GLFence*>(fh);
-        if (mPlatform.canCreateFence() || mContext.isES2()) {
-            if (f->fence == nullptr) {
-                // we can end-up here if:
-                // - the platform doesn't support h/w fences
-                if (UTILS_UNLIKELY(!mPlatform.canCreateFence())) {
-                    return FenceStatus::ERROR;
+        // we have to take into account that the STL's wait_for() actually works with
+        // time_points relative to steady_clock::now() internally.
+        using namespace std::chrono;
+        auto const now = steady_clock::now();
+        steady_clock::time_point until = steady_clock::time_point::max();
+        if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+            until = now + nanoseconds(timeout);
+        }
+
+        GLFence const* f = handle_cast<GLFence*>(fh);
+        assert_invariant(f->state);
+
+        bool const platformCanCreateFence = mPlatform.canCreateFence();
+
+        // immediately acquire a reference on our state, so that things don't go south if
+        // the HwFence gets destroyed (on the main thread) while we wait.
+        std::shared_ptr const state{ f->state };
+
+        if (mContext.isES2() || platformCanCreateFence) {
+            if (platformCanCreateFence) {
+                std::unique_lock lock(state->lock);
+                if (f->fence == nullptr) {
+                    // we've been called before the fence was created asynchronously,
+                    // so we need to wait for that, before using the real fence.
+                    // By construction, "f" can't be destroyed while we wait, because its
+                    // construction call is in the queue and a destroy call will have to come later.
+                    state->cond.wait_until(lock, until, [f] {
+                        return f->fence != nullptr;
+                    });
+                    if (f->fence == nullptr) {
+                        // the only possible choice here is that we timed out
+                        assert_invariant(state->status == FenceStatus::TIMEOUT_EXPIRED);
+                        return FenceStatus::TIMEOUT_EXPIRED;
+                    }
                 }
-                // - wait() was called before the fence was asynchronously created.
-                return FenceStatus::TIMEOUT_EXPIRED;
+                lock.unlock();
+                // here we know that we have the platform fence
+                assert_invariant(f->fence);
+                return mPlatform.waitFence(f->fence, timeout);
             }
-            return mPlatform.waitFence(f->fence, 0);
+            // platform doesn't support fences -- nothing we can do.
+            return FenceStatus::ERROR;
         }
+
+        // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-        else {
-            assert_invariant(f->state);
-            std::unique_lock lock(f->state->lock);
-            f->state->cond.wait_for(lock, std::chrono::nanoseconds(0), [&state = f->state]() {
-                return state->status != FenceStatus::TIMEOUT_EXPIRED;
-            });
-            return f->state->status;
-        }
+        std::unique_lock lock(state->lock);
+        state->cond.wait_until(lock, until, [&state] {
+            return state->status != FenceStatus::TIMEOUT_EXPIRED;
+        });
+        return state->status;
 #endif
     }
     return FenceStatus::ERROR;

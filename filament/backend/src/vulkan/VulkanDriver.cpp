@@ -43,6 +43,8 @@
 #include <set>  // For VulkanDriver::debugCommandBegin
 #endif
 
+#include <chrono>
+
 using namespace bluevk;
 
 #if defined(__clang__)
@@ -855,7 +857,7 @@ void VulkanDriver::createFenceR(Handle<HwFence> fh, utils::CString&& tag) {
     // it with appropriate VulkanCmdFence, which is associated with the current, recording command
     // buffer.
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
-    fence->fence = cmdbuf->getFenceStatus();
+    fence->setFence(cmdbuf->getFenceStatus());
     mResourceManager.associateHandle(fh.getId(), std::move(tag));
 }
 
@@ -1156,29 +1158,30 @@ void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     fence.dec();
 }
 
-FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> fh) {
+FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
+    return fenceWait(fh, 0);
+}
+
+FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
-    auto& cmdfence = fence->fence;
+    // we have to take into account that the STL's wait_for() actually works with
+    // time_points relative to steady_clock::now() internally.
+    using namespace std::chrono;
+    auto const now = steady_clock::now();
+    steady_clock::time_point until = steady_clock::time_point::max();
+    if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+        until = now + nanoseconds(timeout);
+    }
+
+    std::shared_ptr const cmdfence = fence->wait(until);
     if (!cmdfence) {
-        // If wait is called before a fence actually exists, we return timeout.  This matches the
-        // current behavior in OpenGLDriver, but we should eventually reconsider a different error
-        // code.
         return FenceStatus::TIMEOUT_EXPIRED;
     }
 
-    // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
-    // When this fence gets submitted, its status changes to VK_NOT_READY.
-    if (cmdfence->getStatus() == VK_SUCCESS) {
-        return FenceStatus::CONDITION_SATISFIED;
-    }
-
-
-    // Two other states are possible:
-    //   - VK_INCOMPLETE: the corresponding buffer has not yet been submitted.
-    //   - VK_NOT_READY: the buffer has been submitted but not yet signaled.
-    //     In either case, we return TIMEOUT_EXPIRED to indicate the fence has not been signaled.
-    return FenceStatus::TIMEOUT_EXPIRED;
+    // now we are holding a reference to our VulkanCmdFence, so we know it can't
+    // disappear while we wait
+    return cmdfence->wait(mPlatform->getDevice(), timeout, until);
 }
 
 void VulkanDriver::getPlatformSync(Handle<HwSync> sh, CallbackHandler* handler,
