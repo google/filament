@@ -1827,7 +1827,7 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, CString&& tag) {
 
     // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    std::weak_ptr const weak = f->state;
+    std::weak_ptr<GLFence::State> const weak = f->state;
     whenGpuCommandsComplete([weak] {
         if (auto const state = weak.lock()) {
             std::lock_guard const lock(state->lock);
