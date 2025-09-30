@@ -24,6 +24,7 @@
 #include "GLBufferObject.h"
 #include "GLDescriptorSet.h"
 #include "GLDescriptorSetLayout.h"
+#include "GLMemoryMappedBuffer.h"
 #include "GLTexture.h"
 #include "ShaderCompilerService.h"
 
@@ -102,7 +103,7 @@ public:
         bool rec709 = false;
         struct {
             CallbackHandler* handler = nullptr;
-            FrameScheduledCallback callback;
+            std::shared_ptr<FrameScheduledCallback> callback = nullptr;
         } frameScheduled;
     };
 
@@ -150,6 +151,8 @@ public:
     using GLDescriptorSetLayout = filament::backend::GLDescriptorSetLayout;
 
     using GLDescriptorSet = filament::backend::GLDescriptorSet;
+
+    using GLMemoryMappedBuffer = filament::backend::GLMemoryMappedBuffer;
 
     struct GLStream : public HwStream {
         using HwStream::HwStream;
@@ -213,6 +216,8 @@ public:
 
     OpenGLDriver(OpenGLDriver const&) = delete;
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
+
+    using DriverBase::scheduleDestroy;
 
 private:
     OpenGLPlatform& mPlatform;

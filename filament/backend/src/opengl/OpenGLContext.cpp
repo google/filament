@@ -21,12 +21,14 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
+#include <algorithm>
 #include <functional>
 #include <string_view>
 #include <utility>
@@ -100,6 +102,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
 
     initBugs(&bugs, ext, state.major, state.minor,
             state.vendor, state.renderer, state.version, state.shader);
+
+    initWorkarounds(bugs, &ext);
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
@@ -559,13 +563,22 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         }
 
         if (strstr(vendor, "Mesa")) {
-            // Seen on
-            //  [Mesa],
-            //  [llvmpipe (LLVM 17.0.6, 256 bits)],
-            //  [4.5 (Core Profile) Mesa 24.0.6-1],
-            //  [4.50]
-            // not known which version are affected
-            bugs->rebind_buffer_after_deletion = true;
+            if (strstr(renderer, "llvmpipe")) {
+                // Seen on
+                //  [Mesa],
+                //  [llvmpipe (LLVM 17.0.6, 256 bits)],
+                //  [4.5 (Core Profile) Mesa 24.0.6-1],
+                //  [4.50]
+                // not known which version are affected
+                bugs->rebind_buffer_after_deletion = true;
+
+                // Seen on
+                // [Mesa]
+                // [llvmpipe (LLVM 17.0.6, 256 bits)]
+                // [4.5 (Core Profile) Mesa 24.2.1 (git-c222f7299c)]
+                // [4.50]
+                bugs->disable_framebuffer_fetch_extension = true;
+            }
         }
     } else {
         // When running under ANGLE, it's a different set of workaround that we need.
@@ -609,6 +622,12 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     // feedback loops are allowed on GL desktop as long as writes are disabled
     bugs->allow_read_only_ancillary_feedback_loop = true;
 #endif
+}
+
+void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext) {
+    if (bugs.disable_framebuffer_fetch_extension) {
+        ext->EXT_shader_framebuffer_fetch = false;
+    }
 }
 
 FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,

@@ -108,11 +108,15 @@
     DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_TAGGED_R_N(R, N, ...) \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString, tag))
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString&&, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString&&, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
+
+#define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...) \
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString, tag))
 
 // on some compilers the ##__VA_ARGS__ hack is not supported, so we can't handle 0-parameter APIs
 // with DECL_DRIVER_API_SYNCHRONOUS_N
@@ -291,27 +295,11 @@ DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetLayoutHandle, createDescriptorS
 DECL_DRIVER_API_TAGGED_R_N(backend::DescriptorSetHandle, createDescriptorSet,
         backend::DescriptorSetLayoutHandle, dslh)
 
-DECL_DRIVER_API_N(updateDescriptorSetBuffer,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_binding_t, binding,
+DECL_DRIVER_API_TAGGED_R_N(backend::MemoryMappedBufferHandle, mapBuffer,
         backend::BufferObjectHandle, boh,
-        uint32_t, offset,
-        uint32_t, size
-)
-
-DECL_DRIVER_API_N(updateDescriptorSetTexture,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_binding_t, binding,
-        backend::TextureHandle, th,
-        SamplerParams, params
-)
-
-DECL_DRIVER_API_N(bindDescriptorSet,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_set_t, set,
-        backend::DescriptorSetOffsetArray&&, offsets
-)
-
+        size_t, offset,
+        size_t, size,
+        backend::MapBufferAccessFlags, access)
 
 /*
  * Destroying driver objects
@@ -321,7 +309,7 @@ DECL_DRIVER_API_N(bindDescriptorSet,
 DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh)
 DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
 DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
-DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, ibh)
+DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, boh)
 DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
 DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
@@ -333,6 +321,7 @@ DECL_DRIVER_API_N(destroyFence,                 backend::FenceHandle, fh)
 DECL_DRIVER_API_N(destroySync,                  backend::SyncHandle, sh)
 DECL_DRIVER_API_N(destroyDescriptorSetLayout,   backend::DescriptorSetLayoutHandle, dslh)
 DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, dsh)
+DECL_DRIVER_API_N(unmapBuffer,                  backend::MemoryMappedBufferHandle, mmbh)
 
 /*
  * Synchronous APIs
@@ -340,8 +329,8 @@ DECL_DRIVER_API_N(destroyDescriptorSet,         backend::DescriptorSetHandle, ds
  */
 
 DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamNative, void*, stream, utils::CString, tag)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::StreamHandle, createStreamAcquired, utils::CString, tag)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamNative, void*, stream)
+DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(backend::StreamHandle, createStreamAcquired)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setAcquiredImage, backend::StreamHandle, stream, void*, image, const math::mat3f&, transform, backend::CallbackHandler*, handler, backend::StreamCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, stream, uint32_t, width, uint32_t, height)
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
@@ -373,7 +362,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getMaxArrayTextureLayers)
 DECL_DRIVER_API_SYNCHRONOUS_0(math::float2, getClipSpaceParams)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage2, backend::Platform::ExternalImageHandleRef, image)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, setupExternalImage, void*, image)
-DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, query, uint64_t*, elapsedTime)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::TimerQueryResult, getTimerQueryValue, backend::TimerQueryHandle, tqh, uint64_t*, elapsedTime)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, workaround)
 DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 
@@ -398,16 +387,16 @@ DECL_DRIVER_API_N(updateBufferObject,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_N(registerBufferObjectStreams,
-        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectHandle, boh,
         backend::BufferObjectStreamDescriptor&&, streams)
 
 DECL_DRIVER_API_N(updateBufferObjectUnsynchronized,
-        backend::BufferObjectHandle, ibh,
+        backend::BufferObjectHandle, boh,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_N(resetBufferObject,
-        backend::BufferObjectHandle, ibh)
+        backend::BufferObjectHandle, boh)
 
 DECL_DRIVER_API_N(update3DImage,
         backend::TextureHandle, th,
@@ -436,16 +425,36 @@ DECL_DRIVER_API_0(endRenderPass)
 DECL_DRIVER_API_0(nextSubpass)
 
 DECL_DRIVER_API_N(beginTimerQuery,
-        backend::TimerQueryHandle, query)
+        backend::TimerQueryHandle, tqh)
 
 DECL_DRIVER_API_N(endTimerQuery,
-        backend::TimerQueryHandle, query)
+        backend::TimerQueryHandle, tqh)
 
 DECL_DRIVER_API_N(compilePrograms,
         backend::CompilerPriorityQueue, priority,
         backend::CallbackHandler*, handler,
         backend::CallbackHandler::Callback, callback,
         void*, user)
+
+DECL_DRIVER_API_N(updateDescriptorSetBuffer,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_binding_t, binding,
+        backend::BufferObjectHandle, boh,
+        uint32_t, offset,
+        uint32_t, size
+)
+
+DECL_DRIVER_API_N(updateDescriptorSetTexture,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_binding_t, binding,
+        backend::TextureHandle, th,
+        SamplerParams, params
+)
+
+DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
+        backend::MemoryMappedBufferHandle, mmbh,
+        size_t, offset,
+        backend::BufferDescriptor&&, data)
 
 /*
  * Swap chain
@@ -534,6 +543,12 @@ DECL_DRIVER_API_N(bindPipeline,
 
 DECL_DRIVER_API_N(bindRenderPrimitive,
         backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(bindDescriptorSet,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_set_t, set,
+        backend::DescriptorSetOffsetArray&&, offsets
+)
 
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,
