@@ -24,7 +24,7 @@
 
 #include <filamat/Enums.h>
 
-#include <utils/Log.h>
+#include <utils/Status.h>
 #include <utils/JobSystem.h>
 
 #include "JsonishLexer.h"
@@ -60,7 +60,7 @@ MaterialParser::MaterialParser() {
     mConfigProcessorJSON[CONFIG_KEY_TOOL] = &MaterialParser::ignoreLexemeJSON;
 }
 
-bool MaterialParser::processMaterial(const MaterialLexeme& jsonLexeme,
+utils::Status MaterialParser::processMaterial(const MaterialLexeme& jsonLexeme,
         MaterialBuilder& builder) const noexcept  {
 
     JsonishLexer jlexer;
@@ -70,21 +70,14 @@ bool MaterialParser::processMaterial(const MaterialLexeme& jsonLexeme,
     std::unique_ptr<JsonishObject> const json = parser.parse();
 
     if (json == nullptr) {
-        std::cerr << "JsonishParser error (see above)." << std::endl;
-        return false;
+        return utils::Status::internal("JsonishParser error (see above).");
     }
 
     ParametersProcessor parametersProcessor;
-    bool const ok = parametersProcessor.process(builder, *json);
-    if (!ok) {
-        std::cerr << "Error while processing material." << std::endl;
-        return false;
-    }
-
-    return true;
+    return parametersProcessor.process(builder, *json);
 }
 
-bool MaterialParser::processVertexShader(const MaterialLexeme& lexeme,
+utils::Status MaterialParser::processVertexShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
     MaterialLexeme const trimmedLexeme = lexeme.trimBlockMarkers();
@@ -93,10 +86,10 @@ bool MaterialParser::processVertexShader(const MaterialLexeme& lexeme,
     // getLine() returns a line number, with 1 being the first line, but .material wants a 0-based
     // line number offset, where 0 is the first line.
     builder.materialVertex(shaderStr.c_str(), trimmedLexeme.getLine() - 1);
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::processFragmentShader(const MaterialLexeme& lexeme,
+utils::Status MaterialParser::processFragmentShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
     MaterialLexeme const trimmedLexeme = lexeme.trimBlockMarkers();
@@ -105,19 +98,19 @@ bool MaterialParser::processFragmentShader(const MaterialLexeme& lexeme,
     // getLine() returns a line number, with 1 being the first line, but .material wants a 0-based
     // line number offset, where 0 is the first line.
     builder.material(shaderStr.c_str(), trimmedLexeme.getLine() - 1);
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::processComputeShader(const MaterialLexeme& lexeme,
+utils::Status MaterialParser::processComputeShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
     return MaterialParser::processFragmentShader(lexeme, builder);
 }
 
-bool MaterialParser::ignoreLexeme(const MaterialLexeme&, MaterialBuilder&) const noexcept {
-    return true;
+utils::Status MaterialParser::ignoreLexeme(const MaterialLexeme&, MaterialBuilder&) const noexcept {
+    return utils::Status::ok();
 }
 
-static bool reflectParameters(const MaterialBuilder& builder) {
+static utils::Status reflectParameters(const MaterialBuilder& builder) {
     size_t const count = builder.getParameterCount();
     const MaterialBuilder::ParameterList& parameters = builder.getParameters();
 
@@ -155,100 +148,95 @@ static bool reflectParameters(const MaterialBuilder& builder) {
     std::cout << "  ]" << std::endl;
     std::cout << "}" << std::endl;
 
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::processMaterialJSON(const JsonishValue* value,
+utils::Status MaterialParser::processMaterialJSON(const JsonishValue* value,
         filamat::MaterialBuilder& builder) const noexcept {
 
     if (!value) {
-        std::cerr << "'material' block does not have a value, one is required." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "'material' block does not have a value, one is required.");
     }
 
     if (value->getType() != JsonishValue::OBJECT) {
-        std::cerr << "'material' block has an invalid type: "
+        std::stringstream errorMessage;
+        errorMessage << "'material' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
-                  << ", should be OBJECT."
-                  << std::endl;
-        return false;
+                  << ", should be OBJECT.";
+        return utils::Status::invalidArgument(errorMessage.view());
     }
 
     ParametersProcessor parametersProcessor;
-    bool const ok = parametersProcessor.process(builder, *value->toJsonObject());
-    if (!ok) {
-        std::cerr << "Error while processing material." << std::endl;
-        return false;
-    }
-
-    return true;
+    return parametersProcessor.process(builder, *value->toJsonObject());
 }
 
-bool MaterialParser::processVertexShaderJSON(const JsonishValue* value,
+utils::Status MaterialParser::processVertexShaderJSON(const JsonishValue* value,
         filamat::MaterialBuilder& builder) const noexcept {
 
     if (!value) {
-        std::cerr << "'vertex' block does not have a value, one is required." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "'vertex' block does not have a value, one is required.");
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::cerr << "'vertex' block has an invalid type: "
+        std::stringstream errorMessage;
+        errorMessage << "'vertex' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
-                  << ", should be STRING."
-                  << std::endl;
-        return false;
+                  << ", should be STRING.";
+        return utils::Status::invalidArgument(errorMessage.view());
     }
 
     builder.materialVertex(value->toJsonString()->getString().c_str());
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::processFragmentShaderJSON(const JsonishValue* value,
+utils::Status MaterialParser::processFragmentShaderJSON(const JsonishValue* value,
         filamat::MaterialBuilder& builder) const noexcept {
 
     if (!value) {
-        std::cerr << "'fragment' block does not have a value, one is required." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "'fragment' block does not have a value, one is required.");
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::cerr << "'fragment' block has an invalid type: "
+        std::stringstream errorMessage;
+        errorMessage << "'fragment' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
-                  << ", should be STRING."
-                  << std::endl;
-        return false;
+                  << ", should be STRING.";
+        return utils::Status::invalidArgument(errorMessage.view());
     }
 
     builder.material(value->toJsonString()->getString().c_str());
-    return true;
+    return utils::Status::ok();
 }
-bool MaterialParser::processComputeShaderJSON(const JsonishValue* value,
+
+utils::Status MaterialParser::processComputeShaderJSON(const JsonishValue* value,
         filamat::MaterialBuilder& builder) const noexcept {
 
     if (!value) {
-        std::cerr << "'compute' block does not have a value, one is required." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "'compute' block does not have a value, one is required.");
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::cerr << "'compute' block has an invalid type: "
+        std::stringstream errorMessage;
+        errorMessage << "'compute' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
-                  << ", should be STRING."
-                  << std::endl;
-        return false;
+                  << ", should be STRING.";
+        return utils::Status::invalidArgument(errorMessage.view());
     }
 
     builder.material(value->toJsonString()->getString().c_str());
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::ignoreLexemeJSON(const JsonishValue*,
+utils::Status MaterialParser::ignoreLexemeJSON(const JsonishValue*,
         filamat::MaterialBuilder&) const noexcept {
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::isValidJsonStart(const char* buffer, size_t size) const noexcept {
+utils::Status MaterialParser::isValidJsonStart(const char* buffer, size_t size) const noexcept {
     // Skip all whitespace characters.
     const char* end = buffer + size;
     while (buffer != end && isspace(buffer[0])) {
@@ -257,31 +245,36 @@ bool MaterialParser::isValidJsonStart(const char* buffer, size_t size) const noe
 
     // A buffer made only of whitespace is not a valid JSON start.
     if (buffer == end) {
-        return false;
+        return utils::Status::invalidArgument(
+                "A buffer made only of whitespace is not a valid JSON start.");
     }
 
     const char c = buffer[0];
 
     // Take care of block, array, and string
     if (c == '{' || c == '[' || c == '"') {
-        return true;
+        return utils::Status::ok();
     }
 
     // boolean true
     if (c == 't' && (end - buffer) > 3 && strncmp(buffer, "true", 4) != 0) {
-        return true;
+        return utils::Status::ok();
     }
 
     // boolean false
     if (c == 'f' && (end - buffer) > 4 && strncmp(buffer, "false", 5) != 0) {
-        return true;
+        return utils::Status::ok();
     }
 
     // null literal
-    return c == 'n' && (end - buffer) > 3 && strncmp(buffer, "null", 5) != 0;
+    if (c == 'n' && (end - buffer) > 3 && strncmp(buffer, "null", 5) != 0) {
+        return utils::Status::ok();
+    }
+
+    return utils::Status::invalidArgument("Unknown character while parsing JSON.");
 }
 
-bool MaterialParser::parseMaterialAsJSON(const char* buffer, size_t size,
+utils::Status MaterialParser::parseMaterialAsJSON(const char* buffer, size_t size,
         filamat::MaterialBuilder& builder) const noexcept {
 
     JsonishLexer jlexer;
@@ -290,31 +283,30 @@ bool MaterialParser::parseMaterialAsJSON(const char* buffer, size_t size,
     JsonishParser parser(jlexer.getLexemes());
     std::unique_ptr<JsonishObject> json = parser.parse();
     if (json == nullptr) {
-        std::cerr << "Could not parse JSON material file" << std::endl;
-        return false;
+        return utils::Status::internal("Could not parse JSON material file");
     }
 
     for (auto& entry : json->getEntries()) {
         const std::string& key = entry.first;
         if (mConfigProcessorJSON.find(key) == mConfigProcessorJSON.end()) {
-            std::cerr << "Unknown identifier '" << key << "'" << std::endl;
-            return false;
+            std::stringstream errorMessage;
+            errorMessage << "Unknown identifier '" << key << "'";
+            return utils::Status::invalidArgument(errorMessage.view());
         }
 
         // Retrieve function member pointer
         MaterialConfigProcessorJSON const p =  mConfigProcessorJSON.at(key);
         // Call it.
-        bool const ok = (*this.*p)(entry.second, builder);
-        if (!ok) {
+        if (utils::Status status = (*this.*p)(entry.second, builder); !status.isOk()) {
             std::cerr << "Error while processing block with key:'" << key << "'" << std::endl;
-            return false;
+            return status;
         }
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::parseMaterial(const char* buffer, size_t size,
+utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
         filamat::MaterialBuilder& builder) const noexcept {
 
     MaterialLexer materialLexer;
@@ -325,38 +317,42 @@ bool MaterialParser::parseMaterial(const char* buffer, size_t size,
     // a binary file.
     for (auto lexeme : lexemes) {
         if (lexeme.getType() == MaterialType::UNKNOWN) {
-            std::cerr << "Unexpected character at line:" << lexeme.getLine()
-                      << " position:" << lexeme.getLinePosition() << std::endl;
-            return false;
+            std::stringstream errorMessage;
+            errorMessage << "Unexpected character at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition();
+            return utils::Status::invalidArgument(errorMessage.view());
         }
     }
 
     // Make a first quick pass just to make sure the format was respected (the material format is
     // a series of IDENTIFIER, BLOCK pairs).
     if (lexemes.size() < 2) {
-        std::cerr << "Input MUST be an alternation of [identifier, block] pairs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "Input MUST be an alternation of [identifier, block] pairs.");
     }
     for (size_t i = 0; i < lexemes.size(); i += 2) {
         auto lexeme = lexemes.at(i);
         if (lexeme.getType() != MaterialType::IDENTIFIER) {
-            std::cerr << "An identifier was expected at line:" << lexeme.getLine()
-                      << " position:" << lexeme.getLinePosition() << std::endl;
-            return false;
+            std::stringstream errorMessage;
+            errorMessage << "An identifier was expected at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition();
+            return utils::Status::invalidArgument(errorMessage.view());
         }
 
         if (i == lexemes.size() - 1) {
-            std::cerr << "Identifier at line:" << lexeme.getLine()
+            std::stringstream errorMessage;
+            errorMessage << "Identifier at line:" << lexeme.getLine()
                       << " position:" << lexeme.getLinePosition()
-                      << " must be followed by a block." << std::endl;
-            return false;
+                      << " must be followed by a block.";
+            return utils::Status::invalidArgument(errorMessage.view());
         }
 
         auto nextLexeme = lexemes.at(i + 1);
         if (nextLexeme.getType() != MaterialType::BLOCK) {
-            std::cerr << "A block was expected at line:" << lexeme.getLine()
-                      << " position:" << lexeme.getLinePosition() << std::endl;
-            return false;
+            std::stringstream errorMessage;
+            errorMessage << "A block was expected at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition();
+            return utils::Status::invalidArgument(errorMessage.view());
         }
     }
 
@@ -366,35 +362,39 @@ bool MaterialParser::parseMaterial(const char* buffer, size_t size,
         if (lexeme.getType() == MaterialType::IDENTIFIER) {
             identifier = lexeme.getStringValue();
             if (mConfigProcessor.find(identifier) == mConfigProcessor.end()) {
-                std::cerr << "Unknown identifier '"
+                std::stringstream errorMessage;
+                errorMessage << "Unknown identifier '"
                           << identifier
                           << "' at line:" << lexeme.getLine()
-                          << " position:" << lexeme.getLinePosition() << std::endl;
-                return false;
+                          << " position:" << lexeme.getLinePosition();
+                return utils::Status::invalidArgument(errorMessage.view());
             }
         } else if (lexeme.getType() == MaterialType::BLOCK) {
             MaterialConfigProcessor const processor = mConfigProcessor.at(identifier);
-            if (!(*this.*processor)(lexeme, builder)) {
+            if (utils::Status status = (*this.*processor)(lexeme, builder); !status.isOk()) {
                 std::cerr << "Error while processing block with key:'" << identifier << "'"
                           << std::endl;
-                return false;
+                return status;
             }
         }
     }
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::processMaterialParameters(filamat::MaterialBuilder& builder,
+utils::Status MaterialParser::processMaterialParameters(filamat::MaterialBuilder& builder,
         const Config& config) const {
     ParametersProcessor parametersProcessor;
-    bool ok = true;
+    utils::Status status;
     for (const auto& param : config.getMaterialParameters()) {
-        ok &= parametersProcessor.process(builder, param.first, param.second);
+        utils::Status s = parametersProcessor.process(builder, param.first, param.second);
+        if (!s.isOk()) {
+            status = s;
+        }
     }
-    return ok;
+    return status;
 }
 
-bool MaterialParser::processTemplateSubstitutions(
+utils::Status MaterialParser::processTemplateSubstitutions(
         const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer) {
     const auto& templateMap = config.getTemplateMap();
     ssize_t modifiedSize = size;
@@ -408,8 +408,7 @@ bool MaterialParser::processTemplateSubstitutions(
             ssize_t endCursor = cursor;
             while (true) {
                 if (endCursor == size) {
-                    std::cerr << "Unexpected end of file" << std::endl;
-                    return false;
+                    return utils::Status::internal("Unexpected end of file");
                 }
                 if (buffer[endCursor] == '}') {
                     break;
@@ -422,8 +421,9 @@ bool MaterialParser::processTemplateSubstitutions(
                 modifiedSize -= macro.size() + 3;
                 modifiedSize += iter->second.size();
             } else {
-                std::cerr << "Undefined template macro:" << macro << std::endl;
-                return false;
+                std::stringstream errorMessage;
+                errorMessage << "Undefined template macro:" << macro;
+                return utils::Status::invalidArgument(errorMessage.view());
             }
             modified = true;
         }
@@ -453,28 +453,30 @@ bool MaterialParser::processTemplateSubstitutions(
         buffer = std::move(modifiedBuffer);
         size = modifiedSize;
     }
-    return true;
+    return utils::Status::ok();
 }
 
-bool MaterialParser::parse(filamat::MaterialBuilder& builder,
+utils::Status MaterialParser::parse(filamat::MaterialBuilder& builder,
         const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer) {
 
     if (builder.getFeatureLevel() > config.getFeatureLevel()) {
-        std::cerr << "Material feature level (" << +builder.getFeatureLevel()
-            << ") is higher than maximum allowed (" << +config.getFeatureLevel() << ")" << std::endl;
-        return false;
+        std::stringstream errorMessage;
+        errorMessage << "Material feature level (" << +builder.getFeatureLevel()
+            << ") is higher than maximum allowed (" << +config.getFeatureLevel() << ")";
+        return utils::Status::invalidArgument(errorMessage.view());
     }
 
     // Before attempting an expensive lex, let's find out if we were sent pure JSON.
-    bool parsed;
-    if (isValidJsonStart(buffer.get(), size_t(size))) {
-        parsed = parseMaterialAsJSON(buffer.get(), size_t(size), builder);
+    utils::Status parsedStatus;
+    if (utils::Status validJson = isValidJsonStart(buffer.get(), size_t(size));
+            validJson.isOk()) {
+        parsedStatus = parseMaterialAsJSON(buffer.get(), size_t(size), builder);
     } else {
-        parsed = parseMaterial(buffer.get(), size_t(size), builder);
+        parsedStatus = parseMaterial(buffer.get(), size_t(size), builder);
     }
 
-    if (!parsed) {
-        return false;
+    if (!parsedStatus.isOk()) {
+        return parsedStatus;
     }
 
     switch (config.getReflectionTarget()) {
@@ -500,12 +502,13 @@ bool MaterialParser::parse(filamat::MaterialBuilder& builder,
         builder.shaderDefine(define.first.c_str(), define.second.c_str());
     }
 
-    if (!processMaterialParameters(builder, config)) {
+    if (utils::Status processedStatus = processMaterialParameters(builder, config);
+            !processedStatus.isOk()) {
         std::cerr << "Error while processing material parameters." << std::endl;
-        return false;
+        return processedStatus;
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
 } // namespace matp

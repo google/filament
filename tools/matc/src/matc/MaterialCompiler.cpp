@@ -80,7 +80,9 @@ bool MaterialCompiler::run(const matp::Config& config) {
     builder.includeCallback(includer)
             .fileName(materialFilePath.getName().c_str());
 
-    if (!mParser.parse(builder, config, size, buffer)) {
+    if (utils::Status status = mParser.parse(builder, config, size, buffer);
+            !status.isOk()) {
+        std::cerr << status.getErrorMessage() << std::endl;
         return false;
     }
 
