@@ -22,12 +22,28 @@
 
 #include <tsl/robin_map.h>
 
+#include <optional>
+#include <type_traits>
+#include <utility>
+
+// TODO: maybe consider moving this somewhere else
+#if __cplusplus >= 202002L
+#define FILAMENT_CPP20  1
+#else
+#define FILAMENT_CPP20  0
+#endif
+
 namespace utils {
 
 namespace refcountedmap {
 
+#if FILAMENT_CPP20
+
 template<typename T>
-concept IsPointer = requires(T a) { *a; };
+concept is_pointer_like = requires(T a) { *a; };
+
+template<typename T>
+inline constexpr bool is_pointer_like_v = is_pointer_like<T>;
 
 // If T is a pointer type, get the type of the value it points to; otherwise, T.
 template<typename T>
@@ -35,10 +51,32 @@ struct PointerTraits {
     using element_type = T;
 };
 
-template<typename T> requires IsPointer<T>
+template<typename T> requires is_pointer_like<T>
 struct PointerTraits<T> {
-    using element_type = std::pointer_traits<T>::element_type;
+    using element_type = typename std::pointer_traits<T>::element_type;
 };
+
+#else // #if FILAMENT_CPP20
+template <typename T, typename = void>
+struct is_pointer_like_trait : std::false_type {};
+
+template <typename T>
+struct is_pointer_like_trait<T, std::void_t<decltype(*std::declval<T&>())>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool is_pointer_like_v = is_pointer_like_trait<T>::value;
+
+template<typename T, typename = void>
+struct PointerTraits {
+    using element_type = T;
+};
+
+template<typename T>
+struct PointerTraits<T, std::enable_if_t<is_pointer_like_v<T>>> {
+    using element_type = typename std::pointer_traits<T>::element_type;
+};
+
+#endif // #if FILAMENT_CPP20
 
 } // namespace refcountedmap
 
@@ -51,7 +89,7 @@ template<typename Key, typename T, typename Hash = std::hash<Key>>
 class RefCountedMap {
     // Use references for the key if the size of the key type is greater than the size of a pointer.
     using KeyRef = std::conditional_t<(sizeof(Key) > sizeof(void*)), const Key&, Key>;
-    using TValue = refcountedmap::PointerTraits<T>::element_type;
+    using TValue = typename refcountedmap::PointerTraits<T>::element_type;
 
     struct Entry {
         uint32_t referenceCount;
@@ -61,7 +99,7 @@ class RefCountedMap {
     using Map = tsl::robin_map<Key, Entry, Hash>;
 
     static constexpr TValue& deref(T& a) {
-        if constexpr (refcountedmap::IsPointer<T>) {
+        if constexpr (refcountedmap::is_pointer_like_v<T>) {
             return *a;
         } else {
             return a;
@@ -69,7 +107,7 @@ class RefCountedMap {
     }
 
     static constexpr TValue const& deref(T const& a) {
-        if constexpr (refcountedmap::IsPointer<T>) {
+        if constexpr (refcountedmap::is_pointer_like_v<T>) {
             return *a;
         } else {
             return a;
@@ -94,24 +132,18 @@ public:
             it.value().referenceCount++;
             return &deref(it.value().value);
         }
-        if constexpr (refcountedmap::IsPointer<T>) {
+        if constexpr (refcountedmap::is_pointer_like_v<T>) {
             T r = factory();
             if (r) {
                 // TODO: how to use above computed hash here?
-                return &*mMap.insert({key, Entry{
-                        .referenceCount = 1,
-                        .value = std::move(r),
-                    }}).first.value().value;
+                return &*mMap.insert({key, Entry{ 1, std::move(r) }}).first.value().value;
             }
             return nullptr;
         } else {
             std::optional<T> r = factory();
             if (r) {
                 // TODO: how to use above computed hash here?
-                return &mMap.insert({key, Entry{
-                        .referenceCount = 1,
-                        .value = std::move(r.value()),
-                    }}).first.value().value;
+                return &mMap.insert({key, Entry{ 1, std::move(r.value()) }}).first.value().value;
             }
             return nullptr;
         }
