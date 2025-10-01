@@ -178,6 +178,7 @@ set(TEST_SRCS
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
         test/test_RefCountedMap.cpp
+        test/test_Slice.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
         test/test_string.cpp

@@ -87,7 +87,7 @@ public:
         if (size() != rhs.size()) {
             return false;
         }
-        if (mBegin == rhs.mBegin) {
+        if (mBegin == rhs.cbegin()) {
             return true;
         }
         return std::equal(cbegin(), cend(), rhs.cbegin());
@@ -134,9 +134,10 @@ public:
 
     template<typename Hash = std::hash<T>>
     size_t hash() const noexcept {
+        Hash hasher;
         size_t seed = size();
         for (auto const& it : *this) {
-            utils::hash::combine_fast(seed, Hash{}(it));
+            utils::hash::combine_fast(seed, hasher(it));
         }
         return seed;
     }

@@ -21,63 +21,72 @@
 
 using namespace utils;
 
+namespace std {
+
+template<>
+struct hash<const int> {
+    inline size_t operator()(const int lhs) const noexcept { return lhs; }
+};
+
+} // namespace std
+
 TEST(SliceTest, HashIsEqual) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {1, 3, 3, 7};
-    Slice<const int32_t> slice1 = vec1.as_slice();
-    Slice<const int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {1, 3, 3, 7};
+    Slice<const int> slice1 = vec1.as_slice();
+    Slice<const int> slice2 = vec2.as_slice();
 
     EXPECT_TRUE(slice1.hash() == vec1.hash());
     EXPECT_TRUE(slice1.hash() == slice2.hash());
 }
 
 TEST(SliceTest, HashIsNotEqual) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {4, 2, 0};
-    Slice<const int32_t> slice1 = vec1.as_slice();
-    Slice<const int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {4, 2, 0};
+    Slice<const int> slice1 = vec1.as_slice();
+    Slice<const int> slice2 = vec2.as_slice();
 
     EXPECT_FALSE(slice1.hash() == slice2.hash());
 }
 
 TEST(SliceTest, ValueEqual) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {1, 3, 3, 7};
-    Slice<const int32_t> slice1 = vec1.as_slice();
-    Slice<const int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {1, 3, 3, 7};
+    Slice<const int> slice1 = vec1.as_slice();
+    Slice<const int> slice2 = vec2.as_slice();
 
     EXPECT_TRUE(slice1 == slice2);
 }
 
 TEST(SliceTest, ValueNotEqual) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {4, 2, 0};
-    Slice<const int32_t> slice1 = vec1.as_slice();
-    Slice<const int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {4, 2, 0};
+    Slice<const int> slice1 = vec1.as_slice();
+    Slice<const int> slice2 = vec2.as_slice();
 
     EXPECT_FALSE(slice1 == slice2);
 }
 
 TEST(SliceTest, CanCoerceMutableToConst) {
-    FixedCapacityVector<int32_t> vec = {1, 3, 3, 7};
-    Slice<int32_t> sliceMutable = vec.as_slice();
-    Slice<const int32_t> sliceConst = sliceMutable;
+    FixedCapacityVector<int> vec = {1, 3, 3, 7};
+    Slice<int> sliceMutable = vec.as_slice();
+    Slice<const int> sliceConst = sliceMutable;
 }
 
 TEST(SliceTest, CanCompareMutableWithConst) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {1, 3, 3, 7};
-    Slice<int32_t> slice1 = vec1.as_slice();
-    Slice<const int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {1, 3, 3, 7};
+    Slice<int> slice1 = vec1.as_slice();
+    Slice<const int> slice2 = vec2.as_slice();
 
     EXPECT_TRUE(slice1.hash() == slice2.hash());
 }
 
 TEST(SliceTest, CanCompareConstWithMutable) {
-    FixedCapacityVector<int32_t> vec1 = {1, 3, 3, 7};
-    FixedCapacityVector<int32_t> vec2 = {1, 3, 3, 7};
-    Slice<const int32_t> slice1 = vec1.as_slice();
-    Slice<int32_t> slice2 = vec2.as_slice();
+    FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
+    FixedCapacityVector<int> vec2 = {1, 3, 3, 7};
+    Slice<const int> slice1 = vec1.as_slice();
+    Slice<int> slice2 = vec2.as_slice();
 
     EXPECT_TRUE(slice1.hash() == slice2.hash());
 }
