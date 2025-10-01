@@ -49,6 +49,13 @@ struct PointerTraits<T, std::enable_if_t<IsPointer<T>>> {
     using element_type = typename std::pointer_traits<T>::element_type;
 };
 
+template<typename T>
+struct DefaultValue {
+    T operator()() const noexcept {
+        return {};
+    }
+};
+
 } // namespace refcountedmap
 
 /** A reference-counted map.
@@ -56,7 +63,8 @@ struct PointerTraits<T, std::enable_if_t<IsPointer<T>>> {
  * Don't use RAII here, both because we sometimes want to deliberately leak memory, and because
  * we're managing GL resources that require more managed destruction.
  */
-template<typename Key, typename T, typename Hash = std::hash<Key>>
+template<typename Key, typename T, typename Hash = std::hash<Key>,
+         typename NullValue = refcountedmap::DefaultValue<T>>
 class RefCountedMap {
     // Use references for the key if the size of the key type is greater than the size of a pointer.
     using KeyRef = std::conditional_t<(sizeof(Key) > sizeof(void*)), const Key&, Key>;
@@ -87,14 +95,14 @@ class RefCountedMap {
 
     static constexpr const char* UTILS_NONNULL MISSING_ENTRY_ERROR_STRING =
             "Cache is missing entry";
+    static constexpr const char* UTILS_NONNULL MISSING_VALUE_ERROR_STRING =
+            "Attempted to get missing value";
 
 public:
-    /** Acquire a new reference to value by key, initializing it with F if it doesn't exist.
+    /** Acquire and return a value by key, initializing it with F if it doesn't exist.
      *
-     * If T is a pointer type, F returns T, where nullptr indicates a failure to create the object.
-     * Otherwise, F returns std::optional<T>, where nullopt indicates a failure to create the
-     * object, and the returned pointer is valid only as long as the next call to acquire() or
-     * release().
+     * If F returns NullValue{}(), this indicates a failure to create the object. If T is a value
+     * type, the returned pointer is valid only as long as the next call to acquire() or release().
      */
     template<typename F>
     TValue* UTILS_NULLABLE acquire(KeyRef key, size_t hash, F factory) noexcept {
@@ -103,21 +111,15 @@ public:
             it.value().referenceCount++;
             return &deref(it.value().value);
         }
-        if constexpr (refcountedmap::IsPointer<T>) {
-            T r = factory();
-            if (r) {
-                // TODO: how to use above computed hash here?
-                return &*mMap.insert({key, Entry{ 1, std::move(r) }}).first.value().value;
-            }
-            return nullptr;
-        } else {
-            std::optional<T> r = factory();
-            if (r) {
-                // TODO: how to use above computed hash here?
-                return &mMap.insert({key, Entry{ 1, std::move(r.value()) }}).first.value().value;
-            }
+        T r = factory();
+        if (r == NullValue{}()) {
             return nullptr;
         }
+        // TODO: how to use above computed hash here?
+        return &deref(mMap.insert({key, Entry{
+                        .referenceCount = 1,
+                        .value = std::move(r),
+                    }}).first.value().value);
     }
 
     template<typename F>
@@ -125,18 +127,30 @@ public:
         return acquire(key, Hash{}(key), std::move(factory));
     }
 
-    /** Acquire a reference to value by key, panicking if it doesn't exist.
+    /** Acquire and return a pointer to the value if one exists.
      *
-     * This reference is valid only as long as the next call to acquire() or release().
+     * It's possible to acquire a key before its value is initialized, in which case this function
+     * returns nullptr.
+     *
+     * If T is a value type, this pointer is valid only as long as the next call to acquire() or
+     * release().
      */
-    TValue& acquire(KeyRef key, size_t hash) noexcept {
+    TValue* UTILS_NULLABLE acquire(KeyRef key, size_t hash) noexcept {
         auto it = mMap.find(key, hash);
-        FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
-        it.value().referenceCount++;
-        return deref(it.value().value);
+        if (it != mMap.end()) {
+            it.value().referenceCount++;
+            return &deref(it.value().value);
+        }
+        // TODO: how to use above computed hash here?
+        const T value = NullValue{}();
+        mMap.insert({key, Entry{
+                .referenceCount = 1,
+                .value = value,
+            }});
+        return nullptr;
     }
 
-    inline TValue& acquire(KeyRef key) noexcept {
+    inline TValue* UTILS_NULLABLE acquire(KeyRef key) noexcept {
         return acquire(key, Hash{}(key));
     }
 
@@ -149,7 +163,9 @@ public:
         auto it = mMap.find(key, hash);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         if (--it.value().referenceCount == 0) {
-            releaser(deref(it.value().value));
+            if (it.value().value != NullValue{}()){
+                releaser(deref(it.value().value));
+            }
             // TODO: change to erase_fast
             mMap.erase(it);
         }
@@ -177,6 +193,30 @@ public:
         release(key, Hash{}(key));
     }
 
+    /** Get a value by key, initializing it with F if it doesn't exist.
+     *
+     * If F returns NullValue{}(), this indicates a failure to create the object. If T is a value
+     * type, the returned pointer is valid only as long as the next call to acquire() or release().
+     */
+    template<typename F>
+    TValue* UTILS_NULLABLE get(KeyRef key, size_t hash, F factory) noexcept {
+        auto it = mMap.find(key, hash);
+        FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
+        const T nullValue = NullValue{}();
+        if (it.value().value == nullValue) {
+            it.value().value = factory();
+            if (it.value().value == nullValue) {
+                return nullptr;
+            }
+        }
+        return &deref(it.value().value);
+    }
+
+    template<typename F>
+    inline TValue* UTILS_NULLABLE get(KeyRef key, F factory) noexcept {
+        return get(key, Hash{}(key), std::move(factory));
+    }
+
     /** Return reference to existing value by key.
      *
      * This reference is valid only as long as the next call to acquire() or release().
@@ -186,6 +226,8 @@ public:
     TValue& get(KeyRef key, size_t hash) noexcept {
         auto it = mMap.find(key);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
+        FILAMENT_CHECK_PRECONDITION(it.value().value != NullValue{}())
+                << MISSING_VALUE_ERROR_STRING;
         return deref(it.value().value);
     }
 
@@ -194,6 +236,8 @@ public:
     TValue const& get(KeyRef key, size_t hash) const noexcept {
         auto it = mMap.find(key);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
+        FILAMENT_CHECK_PRECONDITION(it.value().value != NullValue{}())
+                << MISSING_VALUE_ERROR_STRING;
         return deref(it->second.value);
     }
 

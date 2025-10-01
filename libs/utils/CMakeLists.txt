@@ -37,6 +37,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedInternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
