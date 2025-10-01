@@ -291,8 +291,8 @@ private:
     backend::Program getProgramWithVariants(Variant variant,
             Variant vertexVariant, Variant fragmentVariant) const;
 
-    void processSpecializationConstants(FEngine& engine, Builder const& builder);
-    void processPushConstants(FEngine& engine);
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant>
+    processSpecializationConstants(Builder const& builder);
     void precacheDepthVariants(FEngine& engine);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
@@ -312,11 +312,6 @@ private:
 
     // current specialization constants for the HwProgram
     utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
-
-    // current push constants for the HwProgram
-    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
-            backend::Program::SHADER_TYPE_COUNT>
-            mPushConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

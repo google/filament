@@ -24,6 +24,8 @@
 
 #include <details/Engine.h>
 
+#include <private/filament/PushConstantInfo.h>
+
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
@@ -150,7 +152,8 @@ MaterialDefinition::MaterialDefinition(FEngine& engine,
 
     processMain();
     processBlendingMode();
-    processSpecializationConstants();
+    processSpecializationConstants(engine);
+    processPushConstants();
     processDescriptorSets(engine);
 }
 
@@ -338,15 +341,121 @@ void MaterialDefinition::processBlendingMode() {
     }
 }
 
-void MaterialDefinition::processSpecializationConstants() {
+void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
     // Older materials won't have a constants chunk, but that's okay.
     mMaterialParser->getConstants(&materialConstants);
+
+    // Initialize the default specialization constant values.
+    const int size = materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+    specializationConstants.reserve(size);
+    specializationConstants.resize(size);
+
+    specializationConstants[+ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL] =
+            int(engine.getSupportedFeatureLevel());
+
+    // Feature level 0 doesn't support instancing.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_MAX_INSTANCES] =
+            int((engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
+                    ? 1 : CONFIG_MAX_INSTANCES);
+
+    specializationConstants
+            [+ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND] =
+                    engine.getDriverApi().isWorkaroundNeeded(
+                            Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION] =
+            mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1 &&
+            !engine.getDriver().isSRGBSwapChainSupported();
+
+    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT] =
+            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS] =
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP] =
+            engine.debug.shadowmap.debug_directional_shadowmap;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION] =
+            engine.debug.lighting.debug_froxel_visualization;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT] =
+            int(engine.getConfig().stereoscopicEyeCount);
+
+    // Actual value set in FMaterial::processSpecializationConstants.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT] = 0;
+
+    // Actual value set in FMaterial::processSpecializationConstants.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD] = 0;
+
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT] =
+            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
+
+    // Initialize the rest of the reserved constants with a dummy value.
+    for (size_t i = CONFIG_NEXT_RESERVED_SPEC_CONSTANT; i < CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
+            i++) {
+        specializationConstants[i] = 0;
+    }
+
+    // Initialize the remaining constants and specializationConstantsNameToIndex.
     for (size_t i = 0, c = materialConstants.size(); i < c; i++) {
         auto& item = materialConstants[i];
+
         // the key can be a string_view because mMaterialConstant owns the CString
         std::string_view const key{ item.name.data(), item.name.size() };
         specializationConstantsNameToIndex[key] = i;
+
+        // Copy the default value to the corresponding specializationConstants entry.
+        const size_t id = CONFIG_MAX_RESERVED_SPEC_CONSTANTS + i;
+        switch (item.type) {
+            case ConstantType::INT:
+                specializationConstants[id] = item.defaultValue.i;
+                break;
+            case ConstantType::FLOAT:
+                specializationConstants[id] = item.defaultValue.f;
+                break;
+            case ConstantType::BOOL:
+                specializationConstants[id] = item.defaultValue.b;
+                break;
+        }
     }
+}
+
+void MaterialDefinition::processPushConstants() {
+    FixedCapacityVector<Program::PushConstant>& vertexConstants =
+            pushConstants[uint8_t(ShaderStage::VERTEX)];
+    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
+            pushConstants[uint8_t(ShaderStage::FRAGMENT)];
+
+    CString structVarName;
+    FixedCapacityVector<MaterialPushConstant> pushConstants;
+    mMaterialParser->getPushConstants(&structVarName, &pushConstants);
+
+    vertexConstants.reserve(pushConstants.size());
+    fragmentConstants.reserve(pushConstants.size());
+
+    constexpr size_t MAX_NAME_LEN = 60;
+    char buf[MAX_NAME_LEN];
+    uint8_t vertexCount = 0, fragmentCount = 0;
+
+    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
+            [&](MaterialPushConstant const& constant) {
+                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
+
+                switch (constant.stage) {
+                    case ShaderStage::VERTEX:
+                        vertexConstants.push_back({CString(buf), constant.type});
+                        vertexCount++;
+                        break;
+                    case ShaderStage::FRAGMENT:
+                        fragmentConstants.push_back({CString(buf), constant.type});
+                        fragmentCount++;
+                        break;
+                    case ShaderStage::COMPUTE:
+                        break;
+                }
+            });
 }
 
 void MaterialDefinition::processDescriptorSets(FEngine& engine) {

@@ -713,6 +713,12 @@ enum class Precision : uint8_t {
     DEFAULT
 };
 
+union ConstantValue {
+    int32_t i;
+    float f;
+    bool b;
+};
+
 /**
  * Shader compiler priority queue
  *

@@ -21,12 +21,9 @@
 
 #include <utils/FixedCapacityVector.h>
 
-#include <tuple>
 #include <vector>
 
 namespace filament::backend::fvkutils {
-
-using SpecConstantValue = Program::SpecializationConstant::Type;
 
 // For certain drivers, using spec constant can lead to compile errors [1] or undesirable behaviors
 // [2]. In those instances, we simply change the spirv and set them to constants.
@@ -44,7 +41,7 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
         std::vector<uint32_t>& output);
 
 // bindings for UBO, samplers, input attachment
-// This is no longer needed after the descriptor set refactor, but the code is good for reference. 
+// This is no longer needed after the descriptor set refactor, but the code is good for reference.
 // std::tuple<uint32_t, uint32_t, uint32_t> getProgramBindings(Program::ShaderBlob const& blob);
 
 } // namespace filament::backend::fvkutils
