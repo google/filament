@@ -210,8 +210,8 @@ public:
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
     void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
-    inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
-    inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
+    inline utils::Slice<const FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
+    inline utils::Slice<FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) noexcept;
 
     struct Entry {
         VertexBuffer* vertices = nullptr;
@@ -476,12 +476,12 @@ FRenderableManager::getInstancesInfo(Instance const instance) const noexcept {
     return mManager[instance].instances;
 }
 
-utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
+utils::Slice<const FRenderPrimitive> FRenderableManager::getRenderPrimitives(
         Instance const instance, UTILS_UNUSED uint8_t level) const noexcept {
-    return mManager[instance].primitives;
+    return utils::Slice<const FRenderPrimitive>(mManager[instance].primitives);
 }
 
-utils::Slice<FRenderPrimitive>& FRenderableManager::getRenderPrimitives(
+utils::Slice<FRenderPrimitive> FRenderableManager::getRenderPrimitives(
         Instance const instance, UTILS_UNUSED uint8_t level) noexcept {
     return mManager[instance].primitives;
 }

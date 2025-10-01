@@ -34,7 +34,7 @@ static const StaticMaterialInfo sMaterialList[] = {
     { "customResolveAsSubpass",     MATERIAL(COLORGRADING, CUSTOMRESOLVEASSUBPASS) },
 };
 
-utils::Slice<StaticMaterialInfo> getColorGradingMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getColorGradingMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 

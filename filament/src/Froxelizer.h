@@ -224,7 +224,7 @@ private:
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
     static void computeLightTree(LightTreeNode* lightTree,
-            utils::Slice<RecordBufferType> const& lightList,
+            utils::Slice<const RecordBufferType> const& lightList,
             const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
     static void updateBoundingSpheres(

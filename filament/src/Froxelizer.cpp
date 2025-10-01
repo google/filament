@@ -243,29 +243,28 @@ bool Froxelizer::prepare(
      */
 
     // froxel buffer (16 KiB with 4096 froxels)
-    mFroxelBufferUser = {
+    mFroxelBufferUser.set(
             driverApi.allocatePod<FroxelEntry>(mFroxelBufferEntryCount),
-            mFroxelBufferEntryCount };
+            mFroxelBufferEntryCount);
 
     // record buffer (64 KiB max)
-    mRecordBufferUser = {
+    mRecordBufferUser.set(
             driverApi.allocatePod<RecordBufferType>(mFroxelRecordBufferEntryCount),
-            mFroxelRecordBufferEntryCount };
+            mFroxelRecordBufferEntryCount);
 
     /*
      * Temporary allocations for processing all froxel data
      */
 
     // light records per froxel (~256 KiB with 4096 froxels)
-    mLightRecords = {
+    mLightRecords.set(
             rootArenaScope.allocate<LightRecord>(getFroxelBufferEntryCount(), CACHELINE_SIZE),
-            getFroxelBufferEntryCount() };
+            getFroxelBufferEntryCount());
 
     // froxel thread data (~256KiB with 8192 max froxels and 256 lights)
-    mFroxelShardedData = {
+    mFroxelShardedData.set(
             rootArenaScope.allocate<FroxelThreadData>(GROUP_COUNT, CACHELINE_SIZE),
-            uint32_t(GROUP_COUNT)
-    };
+            uint32_t(GROUP_COUNT));
 
     assert_invariant(mFroxelBufferUser.begin());
     assert_invariant(mRecordBufferUser.begin());
@@ -703,7 +702,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
 void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    Slice<FroxelThreadData> const froxelThreadData = mFroxelShardedData;
+    Slice<const FroxelThreadData> froxelThreadData = mFroxelShardedData;
 
     // Convert froxel data from N groups of M bits to LightRecord::bitset, so we can
     // easily compare adjacent froxels, for compaction. The conversion loops below get
@@ -986,7 +985,7 @@ void Froxelizer::froxelizePointAndSpotLight(
  */
 void Froxelizer::computeLightTree(
         LightTreeNode* lightTree,
-        Slice<RecordBufferType> const& lightList,
+        Slice<const RecordBufferType> const& lightList,
         const FScene::LightSoa& lightData,
         size_t lightRecordsOffset) noexcept {
 

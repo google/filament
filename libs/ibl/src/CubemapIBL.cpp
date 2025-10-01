@@ -302,7 +302,7 @@ void CubemapIBL::roughnessFilter(
 }
 
 void CubemapIBL::roughnessFilter(
-        utils::JobSystem& js, Cubemap& dst, const utils::Slice<Cubemap>& levels,
+        utils::JobSystem& js, Cubemap& dst, const utils::Slice<const Cubemap>& levels,
         float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,
         Progress updater, void* userdata)
 {
