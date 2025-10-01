@@ -20,14 +20,14 @@
 using namespace utils;
 
 TEST(StatusTest, DefaultConstructorOkStatus) {
-    Status actual = Status();
-    Status expected = Status(StatusCode::OK, "");
+    Status actual;
+    Status expected(StatusCode::OK, "");
     EXPECT_EQ(actual, expected);
 }
 
 TEST(StatusTest, Constructor) {
     std::string_view errorMessage = "invalid";
-    Status status = Status(StatusCode::INVALID_ARGUMENT, errorMessage);
+    Status status(StatusCode::INVALID_ARGUMENT, errorMessage);
     EXPECT_EQ(status.getCode(), StatusCode::INVALID_ARGUMENT);
     EXPECT_EQ(status.getErrorMessage(), errorMessage);
 }
@@ -37,7 +37,7 @@ TEST(StatusTest, CopyOperator) {
     EXPECT_EQ(status1.getCode(), StatusCode::OK);
     EXPECT_EQ(status1.getErrorMessage(), "");
 
-    Status status2 = Status(StatusCode::INTERNAL, "internal error");
+    Status status2(StatusCode::INTERNAL, "internal error");
     status1 = status2;
 
     EXPECT_EQ(status1, status2);
@@ -50,12 +50,12 @@ TEST(StatusTest, CopyConstructor) {
 }
 
 TEST(StatusTest, MoveOperator) {
-    Status status = Status();
+    Status status;
     EXPECT_EQ(status.getCode(), StatusCode::OK);
     EXPECT_EQ(status.getErrorMessage(), "");
 
     std::string_view errorMessage = "internal error";
-    Status another = Status(StatusCode::INTERNAL, errorMessage);
+    Status another(StatusCode::INTERNAL, errorMessage);
     status = std::move(another);
 
     EXPECT_EQ(status.getCode(), StatusCode::INTERNAL);
@@ -72,40 +72,40 @@ TEST(StatusTest, MoveConstructor) {
 }
 
 TEST(StatusTest, Equality) {
-    Status status1 = Status(StatusCode::INTERNAL, "internal error");
-    Status status2 = Status(StatusCode::INTERNAL, "internal error");
+    Status status1(StatusCode::INTERNAL, "internal error");
+    Status status2(StatusCode::INTERNAL, "internal error");
 
     EXPECT_EQ(status1, status2);
 }
 
 TEST(StatusTest, InEqualityWithDifferentStatusCode) {
-    Status status1 = Status(StatusCode::INTERNAL, "internal error");
-    Status status2 = Status(StatusCode::INVALID_ARGUMENT, "invalid argument error");
+    Status status1(StatusCode::INTERNAL, "internal error");
+    Status status2(StatusCode::INVALID_ARGUMENT, "invalid argument error");
 
     EXPECT_NE(status1, status2);
 }
 
 TEST(StatusTest, InEqualityWithDifferentMessage) {
-    Status status1 = Status(StatusCode::INTERNAL, "internal error 1");
-    Status status2 = Status(StatusCode::INTERNAL, "invalid error 2");
+    Status status1(StatusCode::INTERNAL, "internal error 1");
+    Status status2(StatusCode::INTERNAL, "invalid error 2");
 
     EXPECT_NE(status1, status2);
 }
 
 TEST(StatusTest, StaticOk) {
-    Status expected = Status(StatusCode::OK, "");
+    Status expected(StatusCode::OK, "");
     EXPECT_EQ(Status::ok(), expected);
 }
 
 TEST(StatusTest, StaticInvalidArgumentError) {
     std::string_view errorMessage = "invalid argument";
-    Status expected = Status(StatusCode::INVALID_ARGUMENT, errorMessage);
+    Status expected(StatusCode::INVALID_ARGUMENT, errorMessage);
     EXPECT_EQ(Status::invalidArgument(errorMessage), expected);
 }
 
 TEST(StatusTest, StaticInternalError) {
     std::string_view errorMessage = "internal error";
-    Status expected = Status(StatusCode::INTERNAL, errorMessage);
+    Status expected(StatusCode::INTERNAL, errorMessage);
     EXPECT_EQ(Status::internal(errorMessage), expected);
 }
 
