@@ -18,30 +18,48 @@
 #define TNT_UTILS_STATUS_H
 
 #include <ostream>
-#include <string>
 #include <string_view>
 #include <utils/compiler.h>
+#include <utils/CString.h>
 
 namespace utils {
 
+/**
+ * A code indicating the success or failure of an operation.
+ */
 enum class StatusCode {
+    /** The operation completed successfully. */
     OK,
+    /** The caller provided invalid arguments in the request. */
     INVALID_ARGUMENT,
+    /** Internal error was occurred while processing the request. */
     INTERNAL,
 };
 
-// Returns the StatusCode to indicate whether the request was successful.
-// If successful, it returns OK with no error message, if not it returns
-// other codes with an optional error message.
+/**
+ * Returns the StatusCode to indicate whether the request was successful.
+ * If successful, it returns OK with no error message, if not it returns
+ * other codes with an optional error message.
+ */
 class UTILS_PUBLIC Status {
 public:
-    // Default to StatusCode::OK
+    /**
+     * Creates a new Status with a StatusCode of OK.
+     */
     Status() : mStatusCode(StatusCode::OK) {}
+
+    /**
+     * Creates a new Status with the given status code and error message.
+     *
+     * @param statusCode The status code to use.
+     * @param errorMessage An optional error message.
+     */
     Status(StatusCode statusCode, std::string_view errorMessage) :
           mStatusCode(statusCode),
-          mErrorMessage(errorMessage) {}
+          mErrorMessage(errorMessage.data(), errorMessage.length()) {}
 
     Status(const Status& other) = default;
+
     Status(Status&& other) noexcept = default;
 
     ~Status() = default;
@@ -57,51 +75,65 @@ public:
         return !(*this == other);
     }
 
-    // Returns if the status is ok.
+    /**
+     * Returns true if the status is OK.
+     * @return true if the operation was successful, false otherwise.
+     */
     bool isOk() const {
         return mStatusCode == StatusCode::OK;
     }
 
+    /**
+     * Returns the StatusCode for this Status.
+     * @return the StatusCode for this Status.
+     */
     StatusCode getCode() const {
         return mStatusCode;
     }
 
-    std::string_view getErrorMessage() const {
-        return mErrorMessage;
-    }
+    /**
+     * Returns the error message for this Status.
+     * @return The error message string. Will be empty if the status is OK.
+     */
+    std::string_view getErrorMessage() const;
 
-    // Convenient static functions that help construct Status.
-    // E.g., Usage `return utils::Status::internal("internal error");`
+    /**
+     * Convenient factory functions for creating Status objects.
+     * Example usage: `return utils::Status::internal("internal error");`
+     */
+
+    /**
+     * Creates a success Status with a StatusCode of OK.
+     * @return a success Status with a StatusCode of OK
+     */
     static Status ok() {
         return {};
     }
 
+    /**
+     * Creates an error Status with an INTERNAL status code.
+     * @param message The error message to include.
+     * @return an error Status with an INTERNAL status code.
+     */
     static Status internal(std::string_view message) {
         return {StatusCode::INTERNAL, message};
     }
 
+    /**
+     * Creates an error Status with an INVALID_ARGUMENT status code.
+     * @param message The error message to include.
+     * @return an error Status with an INVALID_ARGUMENT status code.
+     */
     static Status invalidArgument(std::string_view message) {
         return {StatusCode::INVALID_ARGUMENT, message};
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Status& status) {
-        os << "Status: ";
-        switch (status.mStatusCode) {
-            case StatusCode::OK: os << "Ok";
-                break;
-            case StatusCode::INVALID_ARGUMENT: os << "Invalid argument";
-                break;
-            case StatusCode::INTERNAL: os << "Internal error";
-                break;
-        }
-        os << ", error message: " << status.mErrorMessage;
-        return os;
-    }
+    friend std::ostream& operator<<(std::ostream& os, const Status& status);
 
 private:
     StatusCode mStatusCode;
     // Reason for the error if exists.
-    std::string mErrorMessage;
+    utils::CString mErrorMessage;
 };
 
 } // namespace utils

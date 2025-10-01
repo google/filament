@@ -80,6 +80,7 @@ set(SRCS
         src/sstream.cpp
         src/string.cpp
         src/ThreadUtils.cpp
+        src/Status.cpp
 )
 
 if (WIN32)
