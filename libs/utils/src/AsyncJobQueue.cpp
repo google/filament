@@ -32,9 +32,7 @@ AsyncJobQueue::AsyncJobQueue(const char* name, Priority priority) {
         bool exitRequested;
         do {
             std::unique_lock lock(mLock);
-            mCondition.wait(lock, [this, &queue]() -> bool {
-                return mExitRequested || !queue.empty();
-            });
+            mCondition.wait(lock, [this]() -> bool { return mExitRequested || !mQueue.empty(); });
             exitRequested = mExitRequested;
             if (!queue.empty()) {
                 Job const job(std::move(queue.front()));
@@ -52,9 +50,10 @@ AsyncJobQueue::~AsyncJobQueue() noexcept {
 }
 
 void AsyncJobQueue::push(Job&& job) {
-    std::unique_lock const lock(mLock);
+    std::unique_lock lock(mLock);
     if (!mExitRequested) {
         mQueue.push_back(std::move(job));
+        lock.unlock();
         mCondition.notify_one();
     }
 }
@@ -62,13 +61,11 @@ void AsyncJobQueue::push(Job&& job) {
 void AsyncJobQueue::drainAndExit() {
     std::unique_lock lock(mLock);
     mCondition.wait(lock, [this] { return mQueue.empty(); });
+    mExitRequested = true;
+    lock.unlock();
+    mCondition.notify_one();
     if (mThread.joinable()) {
-        mExitRequested = true;
-        mCondition.notify_one();
-        lock.unlock();
-        if (mThread.joinable()) {
-            mThread.join();
-        }
+        mThread.join();
     }
 }
 
