@@ -21,15 +21,6 @@
 
 using namespace utils;
 
-namespace std {
-
-template<>
-struct hash<const int> {
-    inline size_t operator()(const int lhs) const noexcept { return lhs; }
-};
-
-} // namespace std
-
 TEST(SliceTest, HashIsEqual) {
     FixedCapacityVector<int> vec1 = {1, 3, 3, 7};
     FixedCapacityVector<int> vec2 = {1, 3, 3, 7};

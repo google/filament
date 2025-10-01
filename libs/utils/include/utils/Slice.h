@@ -21,6 +21,7 @@
 #include <utils/compiler.h>
 
 #include <algorithm>
+#include <type_traits>
 #include <utility>
 
 #include <assert.h>
@@ -48,16 +49,24 @@ public:
     Slice() = default;
     Slice(iterator begin, iterator end) noexcept : mBegin(begin), mEnd(end) {}
     Slice(pointer begin, size_type count) noexcept : mBegin(begin), mEnd(begin + count) {}
-    Slice(Slice<const value_type> const& rhs) : mBegin(rhs.begin()), mEnd(rhs.end()) {}
-    Slice(Slice<value_type> const& rhs) : mBegin(rhs.begin()), mEnd(rhs.end()) {}
 
-    Slice& operator=(Slice<const value_type> const& rhs) noexcept {
+    Slice(Slice<T> const& rhs) : mBegin(rhs.begin()), mEnd(rhs.end()) {}
+
+    // If Slice<T> is Slice<const U>, define coercive copy constructor from Slice<U>.
+    template<typename U = T>
+    Slice(std::enable_if_t<std::is_const_v<U>, Slice<value_type> const&> rhs)
+        : mBegin(rhs.begin()), mEnd(rhs.end()) {}
+
+    Slice& operator=(Slice<T> const& rhs) noexcept {
         mBegin = rhs.begin();
         mEnd = rhs.end();
         return *this;
     }
 
-    Slice& operator=(Slice<value_type> const& rhs) noexcept {
+    // If Slice<T> is Slice<const U>, define assignment operator from Slice<U>.
+    template<typename U = T>
+    Slice& operator=(
+            std::enable_if_t<std::is_const_v<U>, Slice<value_type> const&> rhs) noexcept {
         mBegin = rhs.begin();
         mEnd = rhs.end();
         return *this;
@@ -132,7 +141,7 @@ public:
         return this->begin();
     }
 
-    template<typename Hash = std::hash<T>>
+    template<typename Hash = std::hash<value_type>>
     size_t hash() const noexcept {
         Hash hasher;
         size_t seed = size();
