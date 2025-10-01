@@ -32,7 +32,7 @@ static const StaticMaterialInfo sMaterialList[] = {
         { "sgsr1",                      MATERIAL(SGSR, SGSR1) },
 };
 
-utils::Slice<StaticMaterialInfo> getSgsrMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getSgsrMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 

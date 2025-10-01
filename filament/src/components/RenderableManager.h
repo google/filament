@@ -141,7 +141,8 @@ public:
     inline void setFogEnabled(Instance instance, bool enable) noexcept;
     inline bool getFogEnabled(Instance instance) const noexcept;
 
-    inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
+    inline void setPrimitives(Instance instance,
+            utils::Slice<FRenderPrimitive> primitives) noexcept;
 
     inline void setSkinning(Instance instance, bool enable);
     void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0);
@@ -210,8 +211,8 @@ public:
     void setBlendOrderAt(Instance instance, uint8_t level, size_t primitiveIndex, uint16_t blendOrder) noexcept;
     void setGlobalBlendOrderEnabledAt(Instance instance, uint8_t level, size_t primitiveIndex, bool enabled) noexcept;
     AttributeBitset getEnabledAttributesAt(Instance instance, uint8_t level, size_t primitiveIndex) const noexcept;
-    inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
-    inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
+    inline utils::Slice<const FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
+    inline utils::Slice<FRenderPrimitive> getRenderPrimitives(Instance instance, uint8_t level) noexcept;
 
     struct Entry {
         VertexBuffer* vertices = nullptr;
@@ -231,7 +232,7 @@ private:
     void destroyComponent(Instance ci) noexcept;
     static void destroyComponentPrimitives(
             HwRenderPrimitiveFactory& factory, backend::DriverApi& driver,
-            utils::Slice<FRenderPrimitive>& primitives) noexcept;
+            utils::Slice<FRenderPrimitive> primitives) noexcept;
 
     struct Bones {
         backend::Handle<backend::HwBufferObject> handle;
@@ -414,7 +415,7 @@ void FRenderableManager::setMorphing(Instance const instance, bool const enable)
 }
 
 void FRenderableManager::setPrimitives(Instance const instance,
-        utils::Slice<FRenderPrimitive> const& primitives) noexcept {
+        utils::Slice<FRenderPrimitive> primitives) noexcept {
     if (instance) {
         mManager[instance].primitives = primitives;
     }
@@ -476,12 +477,12 @@ FRenderableManager::getInstancesInfo(Instance const instance) const noexcept {
     return mManager[instance].instances;
 }
 
-utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
+utils::Slice<const FRenderPrimitive> FRenderableManager::getRenderPrimitives(
         Instance const instance, UTILS_UNUSED uint8_t level) const noexcept {
-    return mManager[instance].primitives;
+    return utils::Slice<const FRenderPrimitive>(mManager[instance].primitives);
 }
 
-utils::Slice<FRenderPrimitive>& FRenderableManager::getRenderPrimitives(
+utils::Slice<FRenderPrimitive> FRenderableManager::getRenderPrimitives(
         Instance const instance, UTILS_UNUSED uint8_t level) noexcept {
     return mManager[instance].primitives;
 }

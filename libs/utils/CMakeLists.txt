@@ -26,6 +26,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
@@ -177,6 +178,7 @@ set(TEST_SRCS
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
         test/test_RefCountedMap.cpp
+        test/test_Slice.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
         test/test_string.cpp

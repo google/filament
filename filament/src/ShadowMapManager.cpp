@@ -994,7 +994,7 @@ ShadowMapManager::ShadowTechnique ShadowMapManager::updateSpotShadowMaps(FEngine
             lightData.data<FScene::SHADOW_INFO>());
 
     ShadowTechnique shadowTechnique{};
-    utils::Slice<ShadowMap> const spotShadowMaps = getSpotShadowMaps();
+    utils::Slice<const ShadowMap> spotShadowMaps = getSpotShadowMaps();
     if (!spotShadowMaps.empty()) {
         shadowTechnique |= ShadowTechnique::SHADOW_MAP;
         for (ShadowMap const& shadowMap : spotShadowMaps) {

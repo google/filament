@@ -40,7 +40,7 @@ static const StaticMaterialInfo sMaterialList[] = {
 #endif
 };
 
-utils::Slice<StaticMaterialInfo> getSsaoMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getSsaoMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 

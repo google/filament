@@ -355,7 +355,7 @@ public:
         // mSize == 0 if mMaterial is valid, otherwise mSize > 0
         mutable uint32_t mSize{};
         // the objects' must outlive the Slice<>
-        utils::Slice<StaticMaterialInfo::ConstantInfo> mConstants{};
+        utils::Slice<const StaticMaterialInfo::ConstantInfo> mConstants{};
     };
 
     void registerPostProcessMaterial(std::string_view name, StaticMaterialInfo const& info);
