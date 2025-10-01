@@ -1110,7 +1110,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        passBuilder.customCommand(3,
+        passBuilder.customCommand(7,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver, colorGradingConfigForColor] {
@@ -1118,7 +1118,7 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        passBuilder.customCommand(3,
+        passBuilder.customCommand(7,
                 RenderPass::Pass::BLENDED,
                 RenderPass::CustomCommand::EPILOG,
                 0, [&ppm, &driver] {

@@ -254,7 +254,7 @@ void RenderPass::appendCustomCommand(Command* commands,
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
-    channel = std::min(channel, uint8_t(0x3));
+    channel = std::min(channel, uint8_t(0x7));
 
     uint32_t const index = mCustomCommands.size();
     mCustomCommands.push_back(std::move(command));
