@@ -417,14 +417,6 @@ DECL_DRIVER_API_N(setExternalStream,
         backend::TextureHandle, th,
         backend::StreamHandle, sh)
 
-DECL_DRIVER_API_N(beginRenderPass,
-        backend::RenderTargetHandle, rth,
-        const backend::RenderPassParams&, params)
-
-DECL_DRIVER_API_0(endRenderPass)
-
-DECL_DRIVER_API_0(nextSubpass)
-
 DECL_DRIVER_API_N(beginTimerQuery,
         backend::TimerQueryHandle, tqh)
 
@@ -457,6 +449,36 @@ DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
         size_t, offset,
         backend::BufferDescriptor&&, data)
 
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
+
+/*
+ * Setting rendering state
+ * -----------------------
+ */
+
+DECL_DRIVER_API_N(beginRenderPass,
+        backend::RenderTargetHandle, rth,
+        const backend::RenderPassParams&, params)
+
+DECL_DRIVER_API_0(endRenderPass)
+
+DECL_DRIVER_API_0(nextSubpass)
+
+DECL_DRIVER_API_N(bindPipeline,
+        backend::PipelineState const&, state)
+
+DECL_DRIVER_API_N(bindRenderPrimitive,
+        backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(bindDescriptorSet,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_set_t, set,
+        backend::DescriptorSetOffsetArray&&, offsets
+)
+
 /*
  * Swap chain
  */
@@ -473,11 +495,6 @@ DECL_DRIVER_API_N(commit,
  * Setting rendering state
  * -----------------------
  */
-
-DECL_DRIVER_API_N(setPushConstant,
-        backend::ShaderStage, stage,
-        uint8_t, index,
-        backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string)
@@ -538,18 +555,6 @@ DECL_DRIVER_API_N(blit,
         uint8_t, srcLevel, uint8_t, srcLayer,
         math::uint2, srcOrigin,
         math::uint2, size)
-
-DECL_DRIVER_API_N(bindPipeline,
-        backend::PipelineState const&, state)
-
-DECL_DRIVER_API_N(bindRenderPrimitive,
-        backend::RenderPrimitiveHandle, rph)
-
-DECL_DRIVER_API_N(bindDescriptorSet,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_set_t, set,
-        backend::DescriptorSetOffsetArray&&, offsets
-)
 
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,
