@@ -693,7 +693,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
-        Slice<const FRenderPrimitive> const& primitives = soaPrimitives[i];
+        Slice<const FRenderPrimitive> primitives = soaPrimitives[i];
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.

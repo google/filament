@@ -128,7 +128,7 @@ public:
         this->swap(rhs);
     }
 
-    FixedCapacityVector(utils::Slice<const T> const& rhs,
+    FixedCapacityVector(utils::Slice<const T> rhs,
             const allocator_type& alloc = allocator_type())
             : mSize(rhs.size()),
               mCapacityAllocator(mSize, alloc) {

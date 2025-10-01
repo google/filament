@@ -683,7 +683,7 @@ void FRenderableManager::create(
                         BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            Slice<FRenderPrimitive>& primitives = mManager[ci].primitives;
+            Slice<FRenderPrimitive> primitives = mManager[ci].primitives;
             mManager[ci].morphTargetBuffer = morphTargetBuffer;
             if (builder->mMorphTargetBuffer) {
                 for (size_t i = 0; i < entryCount; ++i) {
@@ -767,7 +767,7 @@ void FRenderableManager::destroyComponent(Instance const ci) noexcept {
 
 void FRenderableManager::destroyComponentPrimitives(
         HwRenderPrimitiveFactory& factory, DriverApi& driver,
-        Slice<FRenderPrimitive>& primitives) noexcept {
+        Slice<FRenderPrimitive> primitives) noexcept {
     for (auto& primitive : primitives) {
         primitive.terminate(factory, driver);
     }
@@ -960,7 +960,7 @@ void FRenderableManager::setMorphTargetBufferOffsetAt(Instance const instance, u
         size_t const offset) {
     if (instance) {
         assert_invariant(mManager[instance].morphTargetBuffer);
-        Slice<FRenderPrimitive>& primitives = mManager[instance].primitives;
+        Slice<FRenderPrimitive> primitives = mManager[instance].primitives;
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setMorphingBufferOffset(offset);
         }

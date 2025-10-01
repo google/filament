@@ -985,7 +985,7 @@ void Froxelizer::froxelizePointAndSpotLight(
  */
 void Froxelizer::computeLightTree(
         LightTreeNode* lightTree,
-        Slice<const RecordBufferType> const& lightList,
+        Slice<const RecordBufferType> lightList,
         const FScene::LightSoa& lightData,
         size_t lightRecordsOffset) noexcept {
 

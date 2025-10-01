@@ -162,8 +162,8 @@ public:
     // We can't change this easily because the shader expects 16 indices per uint4
     using RecordBufferType = uint8_t;
 
-    const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
-    const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
+    utils::Slice<const FroxelEntry> getFroxelBufferUser() const { return mFroxelBufferUser; }
+    utils::Slice<const RecordBufferType> getRecordBufferUser() const { return mRecordBufferUser; }
 
     // This is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
     // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
@@ -224,7 +224,7 @@ private:
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
     static void computeLightTree(LightTreeNode* lightTree,
-            utils::Slice<const RecordBufferType> const& lightList,
+            utils::Slice<const RecordBufferType> lightList,
             const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
     static void updateBoundingSpheres(
