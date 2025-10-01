@@ -55,9 +55,9 @@ protected:
     void commit(SwapChain* swapChain) noexcept override;
 
 private:
-    Display *mGLXDisplay;
-    GLXContext mGLXContext;
-    GLXFBConfig* mGLXConfig;
+    Display* mGLXDisplay;
+    GLXContext mGLXContext{};
+    GLXFBConfig mGLXConfig{};
     GLXPbuffer mDummySurface;
     std::vector<GLXPbuffer> mPBuffers;
 };
