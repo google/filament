@@ -394,7 +394,7 @@ void OpenGLDriver::setPushConstant(ShaderStage const stage, uint8_t const index,
     }
 #endif
 
-    Slice<std::pair<GLint, ConstantType>> constants;
+    Slice<const std::pair<GLint, ConstantType>> constants;
     if (stage == ShaderStage::VERTEX) {
         constants = mCurrentPushConstants->vertexConstants;
     } else if (stage == ShaderStage::FRAGMENT) {

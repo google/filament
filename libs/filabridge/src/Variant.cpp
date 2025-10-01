@@ -210,15 +210,15 @@ static_assert(fragment_variant_count() == 33 - (2 + 2 + 8) + 4 - 1);    // 24
 
 namespace VariantUtils {
 
-utils::Slice<Variant> getLitVariants() noexcept {
+utils::Slice<const Variant> getLitVariants() noexcept {
     return { details::gLitVariants.data(), details::gLitVariants.size() };
 }
 
-utils::Slice<Variant> getUnlitVariants() noexcept {
+utils::Slice<const Variant> getUnlitVariants() noexcept {
     return { details::gUnlitVariants.data(), details::gUnlitVariants.size() };
 }
 
-utils::Slice<Variant> getDepthVariants() noexcept {
+utils::Slice<const Variant> getDepthVariants() noexcept {
     return { details::gDepthVariants.data(), details::gDepthVariants.size() };
 }
 

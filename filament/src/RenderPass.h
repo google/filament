@@ -345,8 +345,8 @@ public:
         friend class RenderPassBuilder;
 
         // these fields are constant after creation
-        utils::Slice<Command> mCommands;
-        utils::Slice<CustomCommandFn> mCustomCommands;
+        utils::Slice<const Command> mCommands;
+        utils::Slice<const CustomCommandFn> mCustomCommands;
         BufferObjectSharedHandle mInstancedUboHandle;
         DescriptorSetSharedHandle mInstancedDescriptorSetHandle;
         ColorPassDescriptorSet const* mColorPassDescriptorSet = nullptr;
