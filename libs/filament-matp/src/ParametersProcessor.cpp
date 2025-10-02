@@ -18,6 +18,7 @@
 
 #include <filamat/Enums.h>
 #include <utils/CString.h>
+#include <utils/sstream.h>
 #include <utils/Status.h>
 
 #include <private/filament/BufferInterfaceBlock.h>
@@ -29,7 +30,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <sstream>
 #include <string_view>
 #include <ctype.h>
 
@@ -41,14 +41,13 @@ namespace matp {
 template <class T>
 static utils::Status logEnumIssue(const std::string& key, const JsonishString& value,
         const std::unordered_map<std::string, T>& map) noexcept {
-    std::stringstream errorMessage;
-    errorMessage << "Error while processing key '" << key << "' value." << std::endl;
-    errorMessage << "Value '" << value.getString() << "' is invalid. Valid values are:"
-            << std::endl;
+    utils::io::sstream errorMessage;
+    errorMessage << "Error while processing key '" << key << "' value.\n";
+    errorMessage << "Value '" << value.getString() << "' is invalid. Valid values are: \n";
     for (const auto& entries : map) {
-        errorMessage << "    " << entries.first  << std::endl;
+        errorMessage << "    " << entries.first  << "\n";
     }
-    return utils::Status::invalidArgument(errorMessage.view());
+    return utils::Status::invalidArgument(errorMessage.c_str());
 }
 
 template <class T>
@@ -214,11 +213,11 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
                 if (Enums::isValid<ShaderStageType>(stageString)) {
                     parsedStages |= Enums::toEnum<ShaderStageType>(stageString);
                 } else {
-                    std::stringstream errorMessage;
+                    utils::io::sstream errorMessage;
                     errorMessage << "stages: the stage '" << stageString <<
                                        "' for parameter with name '" << nameString <<
                                        "' is not a valid shader stage.";
-                    return utils::Status::invalidArgument(errorMessage.view());
+                    return utils::Status::invalidArgument(errorMessage.c_str());
                 }
                 continue;
             }
@@ -232,11 +231,11 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
 
     if (Enums::isValid<UniformType>(typeString)) {
         if (stages.has_value()) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "parameters: the uniform parameter with name '" << nameString << "'"
                       << " has shader stages specified. Shader stages are only supported for"
                       << " samplers.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         MaterialBuilder::UniformType const type = Enums::toEnum<UniformType>(typeString);
         ParameterPrecision precision = ParameterPrecision::DEFAULT;
@@ -251,11 +250,11 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "parameters: the parameter with name '" << nameString << "'"
                     << " is an array of samplers of size " << arraySize << ". Arrays of samplers"
                     << " are currently not supported.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         MaterialBuilder::SamplerType const type = Enums::toEnum<SamplerType>(typeString);
@@ -272,10 +271,10 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
         }
 
         if (format == SamplerFormat::INT && filterableValue) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "parameters: the parameter with name '" << nameString << "'"
                       << " is an integer sampler. The `filterable` attribute must not be defined.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         // For samplers without `filterable` defined, we use the following logic
@@ -289,11 +288,11 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
 
         if (transformNameValue) {
             if (type != MaterialBuilder::SamplerType::SAMPLER_EXTERNAL) {
-                std::stringstream errorMessage;
+                utils::io::sstream errorMessage;
                 errorMessage << "parameters: the parameter with name '" << nameString << "'"
                     << " is a sampler of type " << typeString << " and has a transformName."
                     << " Transform names are only supported for external samplers.";
-                return utils::Status::invalidArgument(errorMessage.view());
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
             auto transformName = transformNameValue->toJsonString()->getString();
             builder.parameter(nameString.c_str(), type, format, precision, filterable,
@@ -304,11 +303,11 @@ static utils::Status processParameter(MaterialBuilder& builder, const JsonishObj
         }
 
     } else {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
                << "type nor a valid sampler type.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
 
     }
 
@@ -394,11 +393,11 @@ static utils::Status processConstant(MaterialBuilder& builder, const JsonishObje
                 break;
         }
     } else {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "constants: the type '" << typeString
                   << "' for constant with name '" << nameString << "' is not a valid constant "
                   << "parameter type.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     return utils::Status::ok();
@@ -472,10 +471,10 @@ static utils::Status processBufferField(filament::BufferInterfaceBlock::Builder&
                 { nameString.data(), nameString.size() }, uint32_t(arraySize), type, precision } });
         }
     } else {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "buffers: the type '" << typeString << "' for parameter with name '"
                   << nameString << "' is not a valid buffer field type.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     return utils::Status::ok();
@@ -626,11 +625,11 @@ static utils::Status processSubpass(
 
     if (Enums::isValid<SubpassType>(typeString)) {
         if (arraySize > 0) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "subpasses: the parameter with name '" << nameString << "'"
                       << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
                       << " are currently not supported.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
@@ -650,11 +649,11 @@ static utils::Status processSubpass(
             builder.subpass(type, nameString.c_str());
         }
     } else {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "subpasses: the type '" << typeString
                   << "' for parameter with name '" << nameString << "' is neither a valid uniform "
                   << "type nor a valid sampler type.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     return utils::Status::ok();
@@ -682,10 +681,10 @@ static utils::Status processVariables(MaterialBuilder& builder, const JsonishVal
     const auto& elements = jsonArray->getElements();
 
     if (elements.size() > MaterialBuilder::MATERIAL_VARIABLES_COUNT) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "variables: Max array size is "
                      << MaterialBuilder::MATERIAL_VARIABLES_COUNT << ".";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     for (size_t i = 0; i < elements.size(); i++) {
@@ -727,10 +726,10 @@ static utils::Status processVariables(MaterialBuilder& builder, const JsonishVal
             nameString = elementValue->toJsonString()->getString();
             builder.variable(v, nameString.c_str());
         } else {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "variables: array index " << i << " is not a STRING. found:" <<
                     JsonishValue::typeToString(elementValue->getType());
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
     }
 
@@ -823,14 +822,14 @@ static utils::Status processBlendFunction(MaterialBuilder& builder, const Jsonis
         const char* key = entry.first;
         const JsonishValue* v = jsonObject->getValue(key);
         if (!v) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "blendFunction: entry without '" << key << "' key.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         if (v->getType() != JsonishValue::STRING) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "blendFunction: '" << key << "' value must be STRING.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         *entry.second = stringToEnum(strToEnum, v->toJsonString()->getString());
     }
@@ -917,9 +916,9 @@ static utils::Status processFeatureLevel(MaterialBuilder& builder, const Jsonish
     } else if (number->getFloat() == 3.0f) {
         featureLevel = FeatureLevel::FEATURE_LEVEL_3;
     } else {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "featureLevel: invalid value " << number->getFloat();
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
     builder.featureLevel(featureLevel);
     return utils::Status::ok();
@@ -941,9 +940,9 @@ static utils::Status processGroupSizes(MaterialBuilder& builder, const JsonishVa
             if (aFloat > 0 && floor(aFloat) == aFloat) {
                 groupSize[index] = uint32_t(floor(aFloat));
             } else {
-                std::stringstream errorMessage;
+                utils::io::sstream errorMessage;
                 errorMessage<< "groupSize: invalid value " << aFloat;
-                return utils::Status::invalidArgument(errorMessage.view());
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
             index++;
             continue;
@@ -1328,18 +1327,18 @@ static utils::Status processVariantFilter(MaterialBuilder& builder, const Jsonis
     for (size_t i = 0; i < elements.size(); i++) {
         auto elementValue = elements[i];
         if (elementValue->getType() != JsonishValue::Type::STRING) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "variant_filter: array index " << i <<
                       " is not a STRING. found:" <<
                       JsonishValue::typeToString(elementValue->getType());
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
         if (!isStringValidEnum(strToEnum, s)) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "variant_filter: variant " << s << " is not a valid variant";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         variantFilter |= (uint32_t)strToEnum.at(s);
@@ -1419,12 +1418,12 @@ utils::Status ParametersProcessor::process(MaterialBuilder& builder, const Jsoni
 
         // Verify type is what was expected.
         if (mParameters.at(key).rootAssert != field->getType()) {
-            std::stringstream errorMessage;
-            errorMessage << "Value for key:\"" << key << "\" is not what was expected" << std::endl;
+            utils::io::sstream errorMessage;
+            errorMessage << "Value for key:\"" << key << "\" is not what was expected.\n";
             errorMessage << "Got :\"" << JsonishValue::typeToString(field->getType())
                          << "\" but expected '"
                    << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "'";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         auto fPointer = mParameters[key].callback;
@@ -1438,9 +1437,9 @@ utils::Status ParametersProcessor::process(MaterialBuilder& builder, const Jsoni
 
 utils::Status ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value) {
     if (mParameters.find(key) == mParameters.end()) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "Ignoring config entry (unknown key): \"" << key << "\"";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     std::unique_ptr<JsonishValue> var;
@@ -1463,10 +1462,10 @@ utils::Status ParametersProcessor::process(filamat::MaterialBuilder& builder, co
             var = std::make_unique<JsonishString>(value);
             break;
         default:
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "Unsupported type: \""
                       << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "\"";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     auto fPointer = mParameters[key].callback;

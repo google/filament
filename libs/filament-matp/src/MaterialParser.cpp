@@ -24,6 +24,7 @@
 
 #include <filamat/Enums.h>
 
+#include <utils/sstream.h>
 #include <utils/Status.h>
 #include <utils/JobSystem.h>
 
@@ -160,11 +161,12 @@ utils::Status MaterialParser::processMaterialJSON(const JsonishValue* value,
     }
 
     if (value->getType() != JsonishValue::OBJECT) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "'material' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
                   << ", should be OBJECT.";
-        return utils::Status::invalidArgument(errorMessage.view());
+
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     ParametersProcessor parametersProcessor;
@@ -180,11 +182,11 @@ utils::Status MaterialParser::processVertexShaderJSON(const JsonishValue* value,
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "'vertex' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
                   << ", should be STRING.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     builder.materialVertex(value->toJsonString()->getString().c_str());
@@ -200,11 +202,11 @@ utils::Status MaterialParser::processFragmentShaderJSON(const JsonishValue* valu
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "'fragment' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
                   << ", should be STRING.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     builder.material(value->toJsonString()->getString().c_str());
@@ -220,11 +222,11 @@ utils::Status MaterialParser::processComputeShaderJSON(const JsonishValue* value
     }
 
     if (value->getType() != JsonishValue::STRING) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "'compute' block has an invalid type: "
                   << JsonishValue::typeToString(value->getType())
                   << ", should be STRING.";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     builder.material(value->toJsonString()->getString().c_str());
@@ -289,9 +291,9 @@ utils::Status MaterialParser::parseMaterialAsJSON(const char* buffer, size_t siz
     for (auto& entry : json->getEntries()) {
         const std::string& key = entry.first;
         if (mConfigProcessorJSON.find(key) == mConfigProcessorJSON.end()) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "Unknown identifier '" << key << "'";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         // Retrieve function member pointer
@@ -317,10 +319,10 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
     // a binary file.
     for (auto lexeme : lexemes) {
         if (lexeme.getType() == MaterialType::UNKNOWN) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "Unexpected character at line:" << lexeme.getLine()
                       << " position:" << lexeme.getLinePosition();
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
     }
 
@@ -333,26 +335,26 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
     for (size_t i = 0; i < lexemes.size(); i += 2) {
         auto lexeme = lexemes.at(i);
         if (lexeme.getType() != MaterialType::IDENTIFIER) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "An identifier was expected at line:" << lexeme.getLine()
                       << " position:" << lexeme.getLinePosition();
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         if (i == lexemes.size() - 1) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "Identifier at line:" << lexeme.getLine()
                       << " position:" << lexeme.getLinePosition()
                       << " must be followed by a block.";
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         auto nextLexeme = lexemes.at(i + 1);
         if (nextLexeme.getType() != MaterialType::BLOCK) {
-            std::stringstream errorMessage;
+            utils::io::sstream errorMessage;
             errorMessage << "A block was expected at line:" << lexeme.getLine()
                       << " position:" << lexeme.getLinePosition();
-            return utils::Status::invalidArgument(errorMessage.view());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
     }
 
@@ -362,12 +364,12 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
         if (lexeme.getType() == MaterialType::IDENTIFIER) {
             identifier = lexeme.getStringValue();
             if (mConfigProcessor.find(identifier) == mConfigProcessor.end()) {
-                std::stringstream errorMessage;
+                utils::io::sstream errorMessage;
                 errorMessage << "Unknown identifier '"
                           << identifier
                           << "' at line:" << lexeme.getLine()
                           << " position:" << lexeme.getLinePosition();
-                return utils::Status::invalidArgument(errorMessage.view());
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
         } else if (lexeme.getType() == MaterialType::BLOCK) {
             MaterialConfigProcessor const processor = mConfigProcessor.at(identifier);
@@ -421,9 +423,9 @@ utils::Status MaterialParser::processTemplateSubstitutions(
                 modifiedSize -= macro.size() + 3;
                 modifiedSize += iter->second.size();
             } else {
-                std::stringstream errorMessage;
+                utils::io::sstream errorMessage;
                 errorMessage << "Undefined template macro:" << macro;
-                return utils::Status::invalidArgument(errorMessage.view());
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
             modified = true;
         }
@@ -460,10 +462,10 @@ utils::Status MaterialParser::parse(filamat::MaterialBuilder& builder,
         const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer) {
 
     if (builder.getFeatureLevel() > config.getFeatureLevel()) {
-        std::stringstream errorMessage;
+        utils::io::sstream errorMessage;
         errorMessage << "Material feature level (" << +builder.getFeatureLevel()
             << ") is higher than maximum allowed (" << +config.getFeatureLevel() << ")";
-        return utils::Status::invalidArgument(errorMessage.view());
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     // Before attempting an expensive lex, let's find out if we were sent pure JSON.
