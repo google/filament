@@ -349,7 +349,7 @@ void FRenderableManager::setPriority(Instance const instance, uint8_t const prio
 void FRenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.channel = std::min(channel, uint8_t(0x7));
+        visibility.channel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
     }
 }
 

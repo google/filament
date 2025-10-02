@@ -206,6 +206,16 @@ public:
         return mIsStereoSupported && mStereoscopicOptions.enabled;
     }
 
+    void setChannelDepthClearEnabled(uint8_t const channel, bool const enabled) noexcept {
+        mChannelDepthClearMask.set(channel, enabled);
+    }
+
+    bool isChannelDepthClearEnabled(uint8_t channel) const noexcept {
+        return mChannelDepthClearMask[channel];
+    }
+
+    utils::bitset32 getChannelDepthClearMask() const noexcept { return mChannelDepthClearMask; }
+
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
             RenderPassBuilder const& passBuilder) noexcept;
@@ -591,6 +601,7 @@ private:
     const FColorGrading* mDefaultColorGrading = nullptr;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
+    utils::bitset32 mChannelDepthClearMask{};
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;

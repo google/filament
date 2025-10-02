@@ -23,6 +23,11 @@
 
 #include <utils/debug.h>
 
+#include <iterator>
+#include <utility>
+
+#include <stdint.h>
+
 namespace filament {
 
 using Record = MaterialInstanceManager::Record;
@@ -39,15 +44,15 @@ std::pair<FMaterialInstance*, int32_t> Record::getInstance() {
     return { inst, mAvailable++ };
 }
 
-FMaterialInstance* Record::getInstance(int32_t fixedInstanceindex) {
-    assert_invariant(fixedInstanceindex >= 0 &&  fixedInstanceindex < (int32_t) mInstances.size());
+FMaterialInstance* Record::getInstance(int32_t const fixedInstanceindex) const {
+    assert_invariant(fixedInstanceindex >= 0 &&  fixedInstanceindex < int32_t(mInstances.size()));
     return mInstances[fixedInstanceindex];
 }
 
 // Defined in cpp to avoid inlining
 Record::Record(Record const& rhs) noexcept = default;
 Record& Record::operator=(Record const& rhs) noexcept = default;
-Record::Record(MaterialInstanceManager::Record&& rhs) noexcept = default;
+Record::Record(Record&& rhs) noexcept = default;
 Record& Record::operator=(Record&& rhs) noexcept = default;
 
 void Record::terminate(FEngine& engine) {
@@ -73,7 +78,7 @@ void MaterialInstanceManager::terminate(FEngine& engine) {
     });
 }
 
-Record& MaterialInstanceManager::getRecord(FMaterial const* ma) {
+Record& MaterialInstanceManager::getRecord(FMaterial const* const ma) const {
     auto itr = std::find_if(mMaterials.begin(), mMaterials.end(), [ma](auto& record) {
         return ma == record.mMaterial;
     });
@@ -84,13 +89,13 @@ Record& MaterialInstanceManager::getRecord(FMaterial const* ma) {
     return *itr;
 }
 
-FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const* ma) {
+FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const* ma) const {
     auto [inst, index] = getRecord(ma).getInstance();
     return inst;
 }
 
 FMaterialInstance* MaterialInstanceManager::getMaterialInstance(FMaterial const* ma,
-        int32_t const fixedIndex) {
+        int32_t const fixedIndex) const {
     return getRecord(ma).getInstance(fixedIndex);
 }
 

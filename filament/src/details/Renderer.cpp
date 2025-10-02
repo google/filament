@@ -37,6 +37,7 @@
 #include "fg/FrameGraphResources.h"
 #include "fg/FrameGraphTexture.h"
 
+#include <private/filament/EngineEnums.h>
 #include <private/filament/Variant.h>
 
 #include <private/utils/Tracing.h>
@@ -57,6 +58,7 @@
 
 #include <utils/architecture.h>
 #include <utils/Allocator.h>
+#include <utils/bitset.h>
 #include <utils/JobSystem.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
@@ -1104,23 +1106,36 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
     // at execution time.
     passBuilder.colorPassDescriptorSet(&view.getColorPassDescriptorSet());
 
+    // generate custom commands to clear the depth buffer before each channel
+    // TODO: don't generate this command if there are no content in this channel or if it's the
+    //       first channel.
+    bitset32 const channelDepthClearMask = view.getChannelDepthClearMask();
+    channelDepthClearMask.forEachSetBit([&](size_t const channel) {
+        passBuilder.customCommand(channel,
+            RenderPass::Pass::DEPTH,
+            RenderPass::CustomCommand::PROLOGUE,
+            0, [&ppm, &driver] {
+                ppm.clearAncillaryBuffers(driver, TargetBufferFlags::DEPTH);
+            });
+    });
+
     // color-grading as subpass is done either by the color pass or the TAA pass if any
     auto colorGradingConfigForColor = colorGradingConfig;
     colorGradingConfigForColor.asSubpass = colorGradingConfigForColor.asSubpass && !taaOptions.enabled;
 
     if (colorGradingConfigForColor.asSubpass) {
         // append color grading subpass after all other passes
-        passBuilder.customCommand(7,
+        passBuilder.customCommand(CONFIG_RENDERPASS_CHANNEL_COUNT - 1,
                 RenderPass::Pass::BLENDED,
-                RenderPass::CustomCommand::EPILOG,
+                RenderPass::CustomCommand::EPILOGUE,
                 0, [&ppm, &driver, colorGradingConfigForColor] {
                     ppm.colorGradingSubpass(driver, colorGradingConfigForColor);
                 });
     } else if (colorGradingConfig.customResolve) {
         // append custom resolve subpass after all other passes
-        passBuilder.customCommand(7,
+        passBuilder.customCommand(CONFIG_RENDERPASS_CHANNEL_COUNT - 1,
                 RenderPass::Pass::BLENDED,
-                RenderPass::CustomCommand::EPILOG,
+                RenderPass::CustomCommand::EPILOGUE,
                 0, [&ppm, &driver] {
                     ppm.customResolveSubpass(driver);
                 });
@@ -1229,6 +1244,10 @@ void FRenderer::renderJob(RootArenaScope& rootArenaScope, FView& view) {
         //       subpass) here because it's more convenient.
         colorPassOutput.linearColor =
                 ppm.customResolveUncompressPass(fg, colorPassOutput.linearColor);
+    }
+
+    if (view.getChannelDepthClearMask().any()) {
+        ppm.clearAncillaryBuffersPrepare(driver);
     }
 
     // export the color buffer if screen-space reflections are enabled
