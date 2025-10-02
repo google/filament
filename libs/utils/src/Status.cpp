@@ -16,10 +16,6 @@
 #include <utils/Status.h>
 
 namespace utils {
-std::string_view Status::getErrorMessage() const {
-    const char* ptr = mErrorMessage.c_str();
-    return (ptr != nullptr) ? ptr : "";
-}
 
 std::ostream& operator<<(std::ostream& os, const Status& status) {
     os << "Status: ";
