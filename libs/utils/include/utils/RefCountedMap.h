@@ -142,10 +142,9 @@ public:
             return &deref(it.value().value);
         }
         // TODO: how to use above computed hash here?
-        const T value = NullValue{}();
         mMap.insert({key, Entry{
                 .referenceCount = 1,
-                .value = value,
+                .value = NullValue{}(),
             }});
         return nullptr;
     }
