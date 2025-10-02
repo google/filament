@@ -2617,6 +2617,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
             return mContext.bugs.powervr_shader_workarounds;
         case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
             return mContext.bugs.disable_depth_precache_for_default_material;
+        case Workaround::EMULATE_SRGB_SWAPCHAIN:
+            return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
         default:
             return false;
     }

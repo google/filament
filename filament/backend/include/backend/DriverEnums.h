@@ -1703,6 +1703,8 @@ enum class Workaround : uint16_t {
     // prevents these stutters by not precaching depth variants of the default material for those
     // particular browsers.
     DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL,
+    // Emulate an sRGB swapchain in shader code.
+    EMULATE_SRGB_SWAPCHAIN,
 };
 
 using StereoscopicType = backend::Platform::StereoscopicType;

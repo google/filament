@@ -364,8 +364,7 @@ void MaterialDefinition::processSpecializationConstants(FEngine& engine) {
                             Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
 
     specializationConstants[+ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION] =
-            mMaterialParser->getShaderLanguage() == ShaderLanguage::ESSL1 &&
-            !engine.getDriver().isSRGBSwapChainSupported();
+            engine.getDriverApi().isWorkaroundNeeded(Workaround::EMULATE_SRGB_SWAPCHAIN);
 
     // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
     specializationConstants[+ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT] =
