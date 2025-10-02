@@ -17,7 +17,6 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
         ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/AsyncJobQueue.h
         ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
