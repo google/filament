@@ -17,13 +17,13 @@
 #include <gtest/gtest.h>
 
 #include <utils/FixedCapacityVector.h>
-#include <utils/RefCountedInternPool.h>
+#include <utils/InternPool.h>
 #include <utils/Slice.h>
 
 using namespace utils;
 
-TEST(RefCountedInternPoolTest, AcquireWithCopy) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, AcquireWithCopy) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     Slice<const int> interned = pool.acquire(value);
@@ -32,8 +32,8 @@ TEST(RefCountedInternPoolTest, AcquireWithCopy) {
     EXPECT_EQ(value.as_slice(), interned);
 }
 
-TEST(RefCountedInternPoolTest, AcquireWithMove) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, AcquireWithMove) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     FixedCapacityVector<int> copy = value;
@@ -45,8 +45,8 @@ TEST(RefCountedInternPoolTest, AcquireWithMove) {
     EXPECT_EQ(data, interned.data());
 }
 
-TEST(RefCountedInternPoolTest, InternIsUnique) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, InternIsUnique) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     Slice<const int> interned1 = pool.acquire(value);
@@ -60,8 +60,8 @@ TEST(RefCountedInternPoolTest, InternIsUnique) {
     EXPECT_EQ(interned1.end(), interned3.end());
 }
 
-TEST(RefCountedInternPoolTest, ReleaseByValue) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, ReleaseByValue) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     Slice<const int> interned = pool.acquire(value);
@@ -73,8 +73,8 @@ TEST(RefCountedInternPoolTest, ReleaseByValue) {
     EXPECT_TRUE(pool.empty());
 }
 
-TEST(RefCountedInternPoolTest, ReleaseByInterned) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, ReleaseByInterned) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     Slice<const int> interned = pool.acquire(value);
@@ -86,8 +86,8 @@ TEST(RefCountedInternPoolTest, ReleaseByInterned) {
     EXPECT_TRUE(pool.empty());
 }
 
-TEST(RefCountedInternPoolTest, AcquireAndReleaseEmpty) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, AcquireAndReleaseEmpty) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = {};
     Slice<const int> interned = pool.acquire(value);
@@ -101,8 +101,8 @@ TEST(RefCountedInternPoolTest, AcquireAndReleaseEmpty) {
     pool.release(interned);
 }
 
-TEST(RefCountedInternPoolTest, AcquireAndReleaseManyEqual) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, AcquireAndReleaseManyEqual) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
     pool.acquire(value);
@@ -123,8 +123,8 @@ TEST(RefCountedInternPoolTest, AcquireAndReleaseManyEqual) {
 #endif
 }
 
-TEST(RefCountedInternPoolTest, AcquireAndReleaseManyDifferent) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, AcquireAndReleaseManyDifferent) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value1 = { 1, 3, 3, 7 };
     FixedCapacityVector<int> value2 = { 4, 2, 0 };
@@ -144,8 +144,8 @@ TEST(RefCountedInternPoolTest, AcquireAndReleaseManyDifferent) {
 }
 
 #ifdef GTEST_HAS_DEATH_TEST
-TEST(RefCountedInternPoolTest, PanicsIfReleaseMissing) {
-    RefCountedInternPool<int> pool;
+TEST(InternPoolTest, PanicsIfReleaseMissing) {
+    InternPool<int> pool;
 
     FixedCapacityVector<int> value = { 1, 3, 3, 7 };
 

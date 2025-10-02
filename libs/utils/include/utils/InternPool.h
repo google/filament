@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef TNT_UTILS_REFCOUNTEDINTERNPOOL_H
-#define TNT_UTILS_REFCOUNTEDINTERNPOOL_H
+#ifndef TNT_UTILS_INTERNPOOL_H
+#define TNT_UTILS_INTERNPOOL_H
 
 #include <utils/Slice.h>
 #include <utils/FixedCapacityVector.h>
@@ -28,7 +28,7 @@ namespace utils {
 
 /** A reference-counted intern pool of slices of T. */
 template<typename T, typename Hash = std::hash<T>>
-class RefCountedInternPool {
+class InternPool {
     struct HashSlice {
         inline size_t operator()(Slice<const T> const& slice) const noexcept {
             return slice.template hash<Hash>();
@@ -43,14 +43,14 @@ class RefCountedInternPool {
     using Map = tsl::robin_map<Slice<const T>, Entry, HashSlice>;
 
     static constexpr const char* UTILS_NONNULL MISSING_ENTRY_ERROR_STRING =
-            "RefCountedInternPool is missing entry";
+            "InternPool is missing entry";
 
 public:
-    RefCountedInternPool() = default;
-    RefCountedInternPool(RefCountedInternPool const& rhs) = delete;
-    RefCountedInternPool& operator=(RefCountedInternPool const& rhs) = delete;
-    RefCountedInternPool(RefCountedInternPool&& rhs) = default;
-    RefCountedInternPool& operator=(RefCountedInternPool&& rhs) = default;
+    InternPool() = default;
+    InternPool(InternPool const& rhs) = delete;
+    InternPool& operator=(InternPool const& rhs) = delete;
+    InternPool(InternPool&& rhs) = default;
+    InternPool& operator=(InternPool&& rhs) = default;
 
     /** Acquire an interned copy of value. */
     Slice<const T> acquire(Slice<const T> slice, size_t hash) noexcept {
@@ -141,6 +141,6 @@ private:
     Map mMap;
 };
 
-}
+} // namespace utils
 
-#endif  // TNT_UTILS_REFCOUNTEDINTERNPOOL_H
+#endif  // TNT_UTILS_INTERNPOOL_H

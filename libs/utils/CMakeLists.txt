@@ -26,6 +26,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/InternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
@@ -37,7 +38,6 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedInternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
@@ -174,10 +174,10 @@ set(TEST_SRCS
         test/test_FixedCapacityVector.cpp
         test/test_FixedCircularBuffer.cpp
         test/test_Hash.cpp
+        test/test_InternPool.cpp
         test/test_JobSystem.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
-        test/test_RefCountedInternPool.cpp
         test/test_RefCountedMap.cpp
         test/test_Slice.cpp
         test/test_StructureOfArrays.cpp
