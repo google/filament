@@ -42,10 +42,11 @@ template <class T>
 static utils::Status logEnumIssue(const std::string& key, const JsonishString& value,
         const std::unordered_map<std::string, T>& map) noexcept {
     utils::io::sstream errorMessage;
-    errorMessage << "Error while processing key '" << key << "' value.\n";
-    errorMessage << "Value '" << value.getString() << "' is invalid. Valid values are: \n";
+    errorMessage << "Error while processing key '" << key << "' value." << utils::io::endl;
+    errorMessage << "Value '" << value.getString() << "' is invalid. Valid values are:"
+            << utils::io::endl;
     for (const auto& entries : map) {
-        errorMessage << "    " << entries.first  << "\n";
+        errorMessage << "    " << entries.first  << utils::io::endl;
     }
     return utils::Status::invalidArgument(errorMessage.c_str());
 }
@@ -1419,7 +1420,8 @@ utils::Status ParametersProcessor::process(MaterialBuilder& builder, const Jsoni
         // Verify type is what was expected.
         if (mParameters.at(key).rootAssert != field->getType()) {
             utils::io::sstream errorMessage;
-            errorMessage << "Value for key:\"" << key << "\" is not what was expected.\n";
+            errorMessage << "Value for key:\"" << key << "\" is not what was expected."
+                         << utils::io::endl;
             errorMessage << "Got :\"" << JsonishValue::typeToString(field->getType())
                          << "\" but expected '"
                    << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "'";

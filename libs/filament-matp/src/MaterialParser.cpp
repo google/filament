@@ -16,24 +16,22 @@
 
 #include <filament-matp/MaterialParser.h>
 
-#include <memory>
-#include <iostream>
-#include <utility>
-
-#include <filamat/MaterialBuilder.h>
-
-#include <filamat/Enums.h>
-
-#include <utils/sstream.h>
-#include <utils/Status.h>
-#include <utils/JobSystem.h>
-
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "MaterialLexeme.h"
 #include "MaterialLexer.h"
 #include "ParametersProcessor.h"
+
+#include <filamat/Enums.h>
+#include <filamat/MaterialBuilder.h>
 #include <filament-matp/Config.h>
+
+#include <utils/sstream.h>
+#include <utils/Status.h>
+#include <utils/JobSystem.h>
+
+#include <memory>
+#include <utility>
 
 using namespace utils;
 using namespace filamat;
@@ -114,42 +112,43 @@ utils::Status MaterialParser::ignoreLexeme(const MaterialLexeme&, MaterialBuilde
 static utils::Status reflectParameters(const MaterialBuilder& builder) {
     size_t const count = builder.getParameterCount();
     const MaterialBuilder::ParameterList& parameters = builder.getParameters();
+    utils::io::sstream ss;
 
-    std::cout << "{" << std::endl;
-    std::cout << "  \"parameters\": [" << std::endl;
+    ss << "{" << utils::io::endl;
+    ss << "  \"parameters\": [" << utils::io::endl;
     for (size_t i = 0; i < count; i++) {
         const MaterialBuilder::Parameter& parameter = parameters[i];
-        std::cout << "    {" << std::endl;
-        std::cout << R"(      "name": ")" << parameter.name.c_str() << "\"," << std::endl;
+        ss << "    {" << utils::io::endl;
+        ss << R"(      "name": ")" << parameter.name.c_str() << "\"," << utils::io::endl;
         if (parameter.isSampler()) {
-            std::cout << R"(      "type": ")" <<
-                      Enums::toString(parameter.samplerType) << "\"," << std::endl;
-            std::cout << R"(      "format": ")" <<
-                      Enums::toString(parameter.format) << "\"," << std::endl;
-            std::cout << R"(      "precision": ")" <<
-                      Enums::toString(parameter.precision) << "\"," << std::endl;
-            std::cout << R"(      "multisample": ")" <<
-                      (parameter.multisample ? "true" : "false")<< "\"" << std::endl;
+            ss << R"(      "type": ")" <<
+                      Enums::toString(parameter.samplerType) << "\"," << utils::io::endl;
+            ss << R"(      "format": ")" <<
+                      Enums::toString(parameter.format) << "\"," << utils::io::endl;
+            ss << R"(      "precision": ")" <<
+                      Enums::toString(parameter.precision) << "\"," << utils::io::endl;
+            ss << R"(      "multisample": ")" <<
+                      (parameter.multisample ? "true" : "false")<< "\"" << utils::io::endl;
         } else if (parameter.isUniform()) {
-            std::cout << R"(      "type": ")" <<
-                      Enums::toString(parameter.uniformType) << "\"," << std::endl;
-            std::cout << R"(      "size": ")" << parameter.size << "\"" << std::endl;
+            ss << R"(      "type": ")" <<
+                      Enums::toString(parameter.uniformType) << "\"," << utils::io::endl;
+            ss << R"(      "size": ")" << parameter.size << "\"" << utils::io::endl;
         } else if (parameter.isSubpass()) {
-            std::cout << R"(      "type": ")" <<
-                      Enums::toString(parameter.subpassType) << "\"," << std::endl;
-            std::cout << R"(      "format": ")" <<
-                      Enums::toString(parameter.format) << "\"," << std::endl;
-            std::cout << R"(      "precision": ")" <<
-                      Enums::toString(parameter.precision) << "\"" << std::endl;
+            ss << R"(      "type": ")" <<
+                      Enums::toString(parameter.subpassType) << "\"," << utils::io::endl;
+            ss << R"(      "format": ")" <<
+                      Enums::toString(parameter.format) << "\"," << utils::io::endl;
+            ss << R"(      "precision": ")" <<
+                      Enums::toString(parameter.precision) << "\"" << utils::io::endl;
         }
-        std::cout << "    }";
-        if (i < count - 1) std::cout << ",";
-        std::cout << std::endl;
+        ss << "    }";
+        if (i < count - 1) ss << ",";
+        ss << utils::io::endl;
     }
-    std::cout << "  ]" << std::endl;
-    std::cout << "}" << std::endl;
+    ss << "  ]" << utils::io::endl;
+    ss << "}" << utils::io::endl;
 
-    return utils::Status::ok();
+    return {utils::StatusCode::OK, ss.c_str()};
 }
 
 utils::Status MaterialParser::processMaterialJSON(const JsonishValue* value,
@@ -300,7 +299,6 @@ utils::Status MaterialParser::parseMaterialAsJSON(const char* buffer, size_t siz
         MaterialConfigProcessorJSON const p =  mConfigProcessorJSON.at(key);
         // Call it.
         if (utils::Status status = (*this.*p)(entry.second, builder); !status.isOk()) {
-            std::cerr << "Error while processing block with key:'" << key << "'" << std::endl;
             return status;
         }
     }
@@ -374,8 +372,6 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
         } else if (lexeme.getType() == MaterialType::BLOCK) {
             MaterialConfigProcessor const processor = mConfigProcessor.at(identifier);
             if (utils::Status status = (*this.*processor)(lexeme, builder); !status.isOk()) {
-                std::cerr << "Error while processing block with key:'" << identifier << "'"
-                          << std::endl;
                 return status;
             }
         }
@@ -506,7 +502,6 @@ utils::Status MaterialParser::parse(filamat::MaterialBuilder& builder,
 
     if (utils::Status processedStatus = processMaterialParameters(builder, config);
             !processedStatus.isOk()) {
-        std::cerr << "Error while processing material parameters." << std::endl;
         return processedStatus;
     }
 
