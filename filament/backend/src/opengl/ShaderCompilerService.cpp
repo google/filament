@@ -695,24 +695,25 @@ void ShaderCompilerService::cancelPendingSynchronousProgram(program_token_t cons
         bool multiview, program_token_t const& token) {
     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
 
-    auto const appendSpecConstantString = +[](CString& s, Program::SpecializationConstant const& sc) {
-        s += "#define SPIRV_CROSS_CONSTANT_ID_" + utils::to_string(sc.id) + ' ';
-        s += std::visit([](auto&& arg) { return to_string(arg); }, sc.value);
-        s += '\n';
-        return s;
-    };
+    auto const appendSpecConstantString =
+            +[](CString& s, size_t id, Program::SpecializationConstant const& sc) {
+                s += "#define SPIRV_CROSS_CONSTANT_ID_" + utils::to_string(id) + ' ';
+                s += std::visit([](auto&& arg) { return to_string(arg); }, sc);
+                s += '\n';
+                return s;
+            };
 
     CString specializationConstantString;
-    int32_t numViews = 2;
-    for (auto const& sc: specializationConstants) {
-        appendSpecConstantString(specializationConstantString, sc);
-        if (sc.id == 8) {
-            // This constant must match
-            // ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT
-            // which we can't use here because it's defined in EngineEnums.h.
-            // (we're breaking layering here, but it's for the good cause).
-            numViews = std::get<int32_t>(sc.value);
-        }
+    // This constant must match
+    // ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT
+    // which we can't use here because it's defined in EngineEnums.h.
+    // (we're breaking layering here, but it's for the good cause).
+    constexpr size_t CONFIG_STEREO_EYE_COUNT = 8;
+    int32_t numViews = specializationConstants.size() >= CONFIG_STEREO_EYE_COUNT
+                               ? std::get<int32_t>(specializationConstants[CONFIG_STEREO_EYE_COUNT])
+                               : 2;
+    for (size_t id = 0; id < specializationConstants.size(); id++) {
+        appendSpecConstantString(specializationConstantString, id, specializationConstants[id]);
     }
     if (!specializationConstantString.empty()) {
         specializationConstantString += '\n';

@@ -800,6 +800,7 @@ bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
     for (uint64_t i = 0; i < numConstants; i++) {
         CString constantName;
         uint8_t constantType = 0;
+        ConstantValue defaultValue;
 
         if (!unflattener.read(&constantName)) {
             return false;
@@ -809,8 +810,13 @@ bool ChunkMaterialConstants::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (!unflattener.read(&defaultValue.i)) {
+            return false;
+        }
+
         (*materialConstants)[i].name = constantName;
         (*materialConstants)[i].type = static_cast<ConstantType>(constantType);
+        (*materialConstants)[i].defaultValue = defaultValue;
     }
 
     return true;

@@ -99,10 +99,17 @@ struct MaterialDefinition {
     BindingUniformInfoContainer bindingUniformInfo;
     AttributeInfoContainer attributeInfo;
 
-    // Constants defined by this Material
+    // Constants defined by this material. Does not include reserved constants.
     utils::FixedCapacityVector<MaterialConstant> materialConstants;
-    // A map from the Constant name to the materialConstants index
+    // A map from the Constant name to the materialConstants index.
     std::unordered_map<std::string_view, uint32_t> specializationConstantsNameToIndex;
+    // A list of default values for spec constants. Includes reserved constants.
+    utils::FixedCapacityVector<backend::Program::SpecializationConstant> specializationConstants;
+
+    // current push constants for the HwProgram
+    std::array<utils::FixedCapacityVector<backend::Program::PushConstant>,
+            backend::Program::SHADER_TYPE_COUNT>
+            pushConstants;
 
     utils::CString name;
     uint64_t cacheId = 0;
@@ -120,7 +127,8 @@ private:
 
     void processMain();
     void processBlendingMode();
-    void processSpecializationConstants();
+    void processSpecializationConstants(FEngine& engine);
+    void processPushConstants();
     void processDescriptorSets(FEngine& engine);
 
     std::unique_ptr<MaterialParser> mMaterialParser;

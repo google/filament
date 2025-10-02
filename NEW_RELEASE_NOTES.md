@@ -7,3 +7,5 @@ We are chaning the way Vulkan buffers are handled. We need to switch over to a m
 appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
+
+- materials: include default values of spec constants in material metadata [⚠️ **Recompile Materials**]
