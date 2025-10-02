@@ -11,15 +11,42 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 
-# DIST_HDRS will contain all header files residing in ${PUBLIC_HDR_DIR}/${TARGET}/ excluding sub-directories.
-# E.g.,
-#   include/utils/Allocator.h
-#   include/utils/AsyncJobQueue.h
-#   ...
-file(GLOB DIST_HDRS
-        LIST_DIRECTORIES false
-        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
+set(DIST_HDRS
+        ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/memalign.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Mutex.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/NameComponentManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ostream.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Panic.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
+)
 
 # Use our custom mutex/condition only on ANDROID
 set(DIST_ANDROID_HDRS
