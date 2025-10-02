@@ -64,10 +64,7 @@ public:
         }
         FixedCapacityVector<T> value(slice);
         // TODO: how to use above computed hash here?
-        return mMap.insert({ value.as_slice(), Entry{
-                .referenceCount = 1,
-                .value = std::move(value),
-            }}).first.key();
+        return mMap.insert({ value.as_slice(), Entry{ 1, std::move(value) } }).first.key();
     }
 
     inline Slice<const T> acquire(Slice<const T> slice) noexcept {
@@ -85,14 +82,12 @@ public:
             return it.key();
         }
         // TODO: how to use above computed hash here?
-        return mMap.insert({ slice, Entry{
-                .referenceCount = 1,
-                .value = std::move(value),
-            }}).first.key();
+        return mMap.insert({ slice, Entry{ 1, std::move(value) } }).first.key();
     }
 
     inline Slice<const T> acquire(FixedCapacityVector<T>&& value) noexcept {
-        return acquire(std::move(value), HashSlice{}(value.as_slice()));
+        size_t hash = HashSlice{}(value.as_slice());
+        return acquire(std::move(value), hash);
     }
 
     inline Slice<const T> acquire(FixedCapacityVector<T> const& value, size_t hash) noexcept {

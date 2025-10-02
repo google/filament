@@ -116,10 +116,7 @@ public:
             return nullptr;
         }
         // TODO: how to use above computed hash here?
-        return &deref(mMap.insert({key, Entry{
-                        .referenceCount = 1,
-                        .value = std::move(r),
-                    }}).first.value().value);
+        return &deref(mMap.insert({ key, Entry{ 1, std::move(r) } }).first.value().value);
     }
 
     template<typename F>
@@ -142,10 +139,7 @@ public:
             return &deref(it.value().value);
         }
         // TODO: how to use above computed hash here?
-        mMap.insert({key, Entry{
-                .referenceCount = 1,
-                .value = NullValue{}(),
-            }});
+        mMap.insert({ key, Entry{ 1, NullValue{}() } });
         return nullptr;
     }
 
