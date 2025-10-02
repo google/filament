@@ -292,7 +292,8 @@ private:
             Variant vertexVariant, Variant fragmentVariant) const;
 
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
-    processSpecializationConstants(Builder const& builder);
+            processSpecializationConstants(Builder const& builder);
+
     void precacheDepthVariants(FEngine& engine);
 
     void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
