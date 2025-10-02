@@ -39,7 +39,7 @@ protected:
     // Platform Interface
 
     Driver* createDriver(void* sharedGLContext,
-            const DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) override;
 
     int getOSVersion() const noexcept final override { return 0; }
 

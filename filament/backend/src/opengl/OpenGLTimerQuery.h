@@ -64,7 +64,7 @@ class TimerQueryFactory {
     static bool mGpuTimeSupported;
 public:
     static TimerQueryFactoryInterface* init(
-            OpenGLPlatform& platform, OpenGLContext& context) noexcept;
+            OpenGLPlatform& platform, OpenGLContext& context);
 
     static bool isGpuTimeSupported() noexcept {
         return mGpuTimeSupported;

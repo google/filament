@@ -395,23 +395,23 @@ private:
 
     std::unordered_map<GLuint, BufferObjectStreamDescriptor> mStreamUniformDescriptors;
 
-    void attachStream(GLTexture* t, GLStream* stream) noexcept;
+    void attachStream(GLTexture* t, GLStream* stream);
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
     math::mat3f getStreamTransformMatrix(Handle<HwStream> sh);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     // tasks executed on the main thread after the fence signaled
-    void whenGpuCommandsComplete(const std::function<void()>& fn) noexcept;
+    void whenGpuCommandsComplete(const std::function<void()>& fn);
     void executeGpuCommandsCompleteOps() noexcept;
     std::vector<std::pair<GLsync, std::function<void()>>> mGpuCommandCompleteOps;
 
-    void whenFrameComplete(const std::function<void()>& fn) noexcept;
+    void whenFrameComplete(const std::function<void()>& fn);
     std::vector<std::function<void()>> mFrameCompleteOps;
 #endif
 
     // tasks regularly executed on the main thread at until they return true
-    void runEveryNowAndThen(std::function<bool()> fn) noexcept;
+    void runEveryNowAndThen(std::function<bool()> fn);
     void executeEveryNowAndThenOps() noexcept;
     std::vector<std::function<bool()>> mEveryNowAndThenOps;
 

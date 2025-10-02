@@ -3213,7 +3213,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
 }
 
 UTILS_NOINLINE
-void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
+void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) {
     mTexturesWithStreamsAttached.push_back(t);
 
     switch (hwStream->streamType) {
@@ -3799,16 +3799,16 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
 }
 
 
-void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) noexcept {
+void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) {
     mEveryNowAndThenOps.push_back(std::move(fn));
 }
 
-void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
+void OpenGLDriver::executeEveryNowAndThenOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mEveryNowAndThenOps;
     auto it = v.begin();
     while (it != v.end()) {
         if ((*it)()) {
-            it = v.erase(it);
+            it = v.erase(it); // cannot throw by construction
         } else {
             ++it;
         }
@@ -3816,17 +3816,17 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) {
     mFrameCompleteOps.push_back(fn);
 }
 
-void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
+void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
@@ -3842,13 +3842,13 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
                 // ready
                 it->second();
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
             default:
                 // This should never happen, but is very problematic if it does, as we might leak
                 // some data depending on what the callback does. However, we clean up our own state.
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
         }
     }

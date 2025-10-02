@@ -70,12 +70,12 @@ private:
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator : public DebugTag {
 public:
-    HandleAllocator(const char* name, size_t size) noexcept;
+    HandleAllocator(const char* name, size_t size);
     HandleAllocator(const char* name, size_t size,
-            bool disableUseAfterFreeCheck, bool disableHeapHandleTags) noexcept;
+            bool disableUseAfterFreeCheck, bool disableHeapHandleTags);
     HandleAllocator(HandleAllocator const& rhs) = delete;
     HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
-    ~HandleAllocator();
+    ~HandleAllocator() noexcept;
 
     /*
      * Constructs a D object and returns a Handle<D>
@@ -106,7 +106,7 @@ public:
      *
      */
     template<typename D>
-    Handle<D> allocate() noexcept {
+    Handle<D> allocate() {
         Handle<D> h{ allocateHandle<D>() };
         return h;
     }
@@ -342,7 +342,7 @@ private:
     // allocation size this is always inlined, because all these do is to call
     // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
     template<typename D>
-    HandleBase::HandleId allocateHandle() noexcept {
+    HandleBase::HandleId allocateHandle() {
         constexpr size_t BUCKET_SIZE = getBucketSize<D>();
         return allocateHandleInPool<BUCKET_SIZE>();
     }
@@ -358,7 +358,7 @@ private:
     // the code generated is not trivial (even if it's not insane either).
     template<size_t SIZE>
     UTILS_NOINLINE
-    HandleBase::HandleId allocateHandleInPool() noexcept {
+    HandleBase::HandleId allocateHandleInPool() {
         uint8_t age;
         void* p = mHandleArena.alloc(SIZE, alignof(std::max_align_t), 0, &age);
         if (UTILS_LIKELY(p)) {

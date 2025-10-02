@@ -81,19 +81,19 @@ HandleAllocator<P0, P1, P2>::Allocator::Allocator(AreaPolicy::HeapArea const& ar
 template <size_t P0, size_t P1, size_t P2>
 HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size,
         bool disableUseAfterFreeCheck,
-        bool disableHeapHandleTags) noexcept
+        bool disableHeapHandleTags)
     : mHandleArena(name, size, disableUseAfterFreeCheck),
       mUseAfterFreeCheckDisabled(disableUseAfterFreeCheck),
       mHeapHandleTagsDisabled(disableHeapHandleTags) {
 }
 
 template <size_t P0, size_t P1, size_t P2>
-HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size) noexcept
+HandleAllocator<P0, P1, P2>::HandleAllocator(const char* name, size_t size)
     : HandleAllocator(name, size, false, false) {
 }
 
 template <size_t P0, size_t P1, size_t P2>
-HandleAllocator<P0, P1, P2>::~HandleAllocator() {
+HandleAllocator<P0, P1, P2>::~HandleAllocator() noexcept {
     auto& overflowMap = mOverflowMap;
     if (!overflowMap.empty()) {
         PANIC_LOG("Not all handles have been freed. Probably leaking memory.");

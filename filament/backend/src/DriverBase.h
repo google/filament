@@ -214,15 +214,15 @@ public:
 protected:
     class CallbackDataDetails;
 
-    void scheduleDestroy(BufferDescriptor&& buffer) noexcept {
+    void scheduleDestroy(BufferDescriptor&& buffer) {
         if (buffer.hasCallback()) {
             scheduleDestroySlow(std::move(buffer));
         }
     }
 
-    void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
+    void scheduleDestroySlow(BufferDescriptor&& buffer);
 
-    void scheduleRelease(AcquiredImage const& image) noexcept;
+    void scheduleRelease(AcquiredImage const& image);
 
     void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;

@@ -20,7 +20,7 @@
 
 namespace filament::backend {
 
-CallbackManager::CallbackManager(DriverBase& driver) noexcept
+CallbackManager::CallbackManager(DriverBase& driver)
     : mDriver(driver), mCallbacks(1) {
 }
 

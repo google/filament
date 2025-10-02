@@ -118,7 +118,7 @@ public:
     Program& multiview(bool multiview) noexcept;
 
     // For ES2 support only...
-    Program& uniforms(uint32_t index, utils::CString name, UniformInfo uniforms) noexcept;
+    Program& uniforms(uint32_t index, utils::CString name, UniformInfo uniforms);
     Program& attributes(AttributesInfo attributes) noexcept;
 
     //
