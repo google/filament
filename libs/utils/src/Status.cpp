@@ -15,9 +15,11 @@
  */
 #include <utils/Status.h>
 
+#include <utils/ostream.h>
+
 namespace utils {
 
-std::ostream& operator<<(std::ostream& os, const Status& status) {
+utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status) {
     os << "Status: ";
     switch (status.getCode()) {
         case StatusCode::OK: os << "Ok";

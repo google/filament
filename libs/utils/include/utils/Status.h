@@ -136,7 +136,7 @@ private:
     utils::CString mErrorMessage;
 };
 
-std::ostream& operator<<(std::ostream& os, const Status& status);
+utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status);
 
 } // namespace utils
 
