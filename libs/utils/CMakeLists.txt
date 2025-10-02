@@ -13,19 +13,27 @@ file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
 
 set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/algorithm.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/api_level.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/architecture.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ashmem.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/AsyncJobQueue.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/BinaryTreeArray.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/bitset.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CallStack.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/Allocator.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/AsyncJobQueue.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/BitmaskEnum.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Condition.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CountDownLatch.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/CyclicBarrier.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/debug.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/FixedCircularBuffer.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/JobSystem.h
@@ -39,15 +47,27 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/Path.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation.h
         ${PUBLIC_HDR_DIR}/${TARGET}/PrivateImplementation-impl.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Profiler.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/QuadTree.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Range.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/RangeMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/RefCountedMap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Stopwatch.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/string.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ThermalManager.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ThreadUtils.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/trap.h
         ${PUBLIC_HDR_DIR}/${TARGET}/unwindows.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/vector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/WorkStealingDequeue.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Zip2Iterator.h
 )
 
 # Use our custom mutex/condition only on ANDROID
