@@ -273,8 +273,12 @@ namespace VariantUtils {
 utils::Slice<const Variant> getLitVariants() noexcept UTILS_PURE;
 // list of unlit variants
 utils::Slice<const Variant> getUnlitVariants() noexcept UTILS_PURE;
-// list of depth variants
-utils::Slice<const Variant> getDepthVariants() noexcept UTILS_PURE;
+// list of lit depth variants
+utils::Slice<const Variant> getLitDepthVariants() noexcept UTILS_PURE;
+// list of unlit depth variants
+utils::Slice<const Variant> getUnlitDepthVariants() noexcept UTILS_PURE;
+// list of post process variants
+utils::Slice<const Variant> getPostProcessVariants() noexcept UTILS_PURE;
 }
 
 } // namespace filament
