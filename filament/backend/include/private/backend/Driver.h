@@ -27,6 +27,7 @@
 #include <backend/AcquiredImage.h>
 
 #include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 

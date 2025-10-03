@@ -267,7 +267,7 @@ public:
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
-    void setLabel(const utils::CString& label) {
+    void setLabel(const utils::ImmutableCString& label) {
 #if FILAMENT_METAL_DEBUG_LABELS
         if (label.empty()) {
             return;
@@ -494,7 +494,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     void finalize(MetalDriver* driver);
 
-    void setLabel(const utils::CString& l) {
+    void setLabel(const utils::ImmutableCString& l) {
 #if FILAMENT_METAL_DEBUG_LABELS
         if (l.empty()) {
             return;
@@ -527,7 +527,7 @@ struct MetalDescriptorSet : public HwDescriptorSet {
     std::array<TrackedMetalBuffer, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
 
 #if FILAMENT_METAL_DEBUG_LABELS
-    utils::CString label;
+    utils::ImmutableCString label;
 #endif
 };
 

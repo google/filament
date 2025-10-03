@@ -16,16 +16,18 @@
 
 #include <filament/FilamentAPI.h>
 
+#include <utils/ImmutableCString.h>
+
 #include <algorithm>
 
 namespace filament {
 
-void builderMakeName(utils::CString& outName, const char* name, size_t const len) noexcept {
+void builderMakeName(utils::ImmutableCString& outName, const char* name, size_t const len) noexcept {
     if (!name) {
         return;
     }
     size_t const length = std::min(len, size_t { 128u });
-    outName = utils::CString(name, length);
+    outName = utils::ImmutableCString(name, length);
 }
 
 } // namespace filament

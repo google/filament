@@ -73,7 +73,7 @@ public:
          * @param desc  Descriptor for the FrameGraphRenderPass.
          * @return      An index to retrieve the concrete FrameGraphRenderPass in the execute phase.
          */
-        uint32_t declareRenderPass(const char* name,
+        uint32_t declareRenderPass(utils::StaticString name,
                 FrameGraphRenderPass::Descriptor const& desc);
 
         /**
@@ -104,7 +104,7 @@ public:
          * @return          A typed resource handle
          */
         template<typename RESOURCE>
-        FrameGraphId<RESOURCE> create(const char* name,
+        FrameGraphId<RESOURCE> create(utils::StaticString name,
                 typename RESOURCE::Descriptor const& desc = {}) noexcept {
             return mFrameGraph.create<RESOURCE>(name, desc);
         }
@@ -122,7 +122,7 @@ public:
          */
         template<typename RESOURCE>
         inline FrameGraphId<RESOURCE> createSubresource(FrameGraphId<RESOURCE> parent,
-                const char* name,
+                utils::StaticString name,
                 typename RESOURCE::SubResourceDescriptor const& desc = {}) noexcept {
             return mFrameGraph.createSubresource<RESOURCE>(parent, name, desc);
         }
@@ -191,7 +191,7 @@ public:
          * @param handle    Handle to a virtual resource
          * @return          C string to the name of the resource
          */
-        const char* getName(FrameGraphHandle handle) const noexcept;
+        utils::StaticString getName(FrameGraphHandle handle) const noexcept;
 
 
         /**
@@ -201,7 +201,7 @@ public:
          * @param desc      Descriptor for this resources
          * @return          A typed resource handle
          */
-        FrameGraphId<FrameGraphTexture> createTexture(const char* name,
+        FrameGraphId<FrameGraphTexture> createTexture(utils::StaticString name,
                 FrameGraphTexture::Descriptor const& desc = {}) noexcept {
             return create<FrameGraphTexture>(name, desc);
         }
@@ -375,7 +375,7 @@ public:
      * @return              A handle that can be used normally in the frame graph
      */
     template<typename RESOURCE>
-    FrameGraphId<RESOURCE> import(const char* name,
+    FrameGraphId<RESOURCE> import(utils::StaticString name,
             typename RESOURCE::Descriptor const& desc,
             typename RESOURCE::Usage usage,
             const RESOURCE& resource) noexcept;
@@ -391,7 +391,7 @@ public:
      * @param target    handle to the concrete FrameGraphRenderPass to import
      * @return          A handle to a FrameGraphTexture
      */
-    FrameGraphId<FrameGraphTexture> import(const char* name,
+    FrameGraphId<FrameGraphTexture> import(utils::StaticString name,
             FrameGraphRenderPass::ImportDescriptor const& desc,
             backend::Handle<backend::HwRenderTarget> target);
 
@@ -483,12 +483,12 @@ private:
     void assertValid(FrameGraphHandle handle) const;
 
     template<typename RESOURCE>
-    FrameGraphId<RESOURCE> create(char const* name,
+    FrameGraphId<RESOURCE> create(utils::StaticString name,
             typename RESOURCE::Descriptor const& desc) noexcept;
 
     template<typename RESOURCE>
     FrameGraphId<RESOURCE> createSubresource(FrameGraphId<RESOURCE> parent,
-            char const* name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept;
+            utils::StaticString name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept;
 
     template<typename RESOURCE>
     FrameGraphId<RESOURCE> read(PassNode* passNode,
@@ -587,7 +587,7 @@ void FrameGraph::present(FrameGraphId<RESOURCE> input) {
 }
 
 template<typename RESOURCE>
-FrameGraphId<RESOURCE> FrameGraph::create(char const* name,
+FrameGraphId<RESOURCE> FrameGraph::create(utils::StaticString name,
         typename RESOURCE::Descriptor const& desc) noexcept {
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(name, desc));
     return FrameGraphId<RESOURCE>(addResourceInternal(vresource));
@@ -595,14 +595,14 @@ FrameGraphId<RESOURCE> FrameGraph::create(char const* name,
 
 template<typename RESOURCE>
 FrameGraphId<RESOURCE> FrameGraph::createSubresource(FrameGraphId<RESOURCE> parent,
-        char const* name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept {
+        utils::StaticString name, typename RESOURCE::SubResourceDescriptor const& desc) noexcept {
     auto* parentResource = static_cast<Resource<RESOURCE>*>(getResource(parent));
     VirtualResource* vresource(mArena.make<Resource<RESOURCE>>(parentResource, name, desc));
     return FrameGraphId<RESOURCE>(addSubResourceInternal(parent, vresource));
 }
 
 template<typename RESOURCE>
-FrameGraphId<RESOURCE> FrameGraph::import(char const* name,
+FrameGraphId<RESOURCE> FrameGraph::import(utils::StaticString name,
         typename RESOURCE::Descriptor const& desc,
         typename RESOURCE::Usage usage,
         RESOURCE const& resource) noexcept {
@@ -665,13 +665,13 @@ FrameGraphId<RESOURCE> FrameGraph::forwardResource(char const* name,
 
 extern template void FrameGraph::present(FrameGraphId<FrameGraphTexture> input);
 
-extern template FrameGraphId<FrameGraphTexture> FrameGraph::create(char const* name,
+extern template FrameGraphId<FrameGraphTexture> FrameGraph::create(utils::StaticString name,
         FrameGraphTexture::Descriptor const& desc) noexcept;
 
 extern template FrameGraphId<FrameGraphTexture> FrameGraph::createSubresource(FrameGraphId<FrameGraphTexture> parent,
-        char const* name, FrameGraphTexture::SubResourceDescriptor const& desc) noexcept;
+        utils::StaticString name, FrameGraphTexture::SubResourceDescriptor const& desc) noexcept;
 
-extern template FrameGraphId<FrameGraphTexture> FrameGraph::import(char const* name,
+extern template FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
         FrameGraphTexture::Descriptor const& desc, FrameGraphTexture::Usage usage, FrameGraphTexture const& resource) noexcept;
 
 extern template FrameGraphId<FrameGraphTexture> FrameGraph::read(PassNode* passNode,

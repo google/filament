@@ -70,7 +70,7 @@ private:
             ShaderLanguage preferredLanguage) const noexcept final;
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
-    void setDebugTag(HandleBase::HandleId handleId, utils::CString&& tag);
+    void setDebugTag(HandleBase::HandleId handleId, utils::ImmutableCString&& tag);
 
     // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform.
