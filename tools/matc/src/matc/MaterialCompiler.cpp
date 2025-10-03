@@ -82,15 +82,14 @@ bool MaterialCompiler::run(const matp::Config& config) {
 
     utils::Status status = mParser.parse(builder, config, size, buffer);
     if (!status.isOk()) {
-        std::cerr << status.getErrorMessage() << std::endl;
+        std::cerr << status.getMessage() << std::endl;
         return false;
     }
 
     // If we're reflecting parameters, the MaterialParser will have handled it inside of parse().
     // We should return here to avoid actually building a material.
     if (config.getReflectionTarget() != matp::Config::Metadata::NONE) {
-        // When reflecting parameters, the string is in the error message.
-        std::cout << status.getErrorMessage() << std::endl;
+        std::cout << status.getMessage() << std::endl;
         return true;
     }
 
