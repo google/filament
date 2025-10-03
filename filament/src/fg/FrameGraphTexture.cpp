@@ -18,11 +18,14 @@
 
 #include "ResourceAllocator.h"
 
+#include <utils/StaticString.h>
+
 #include <algorithm>
 
 namespace filament {
 
-void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator, const char* name,
+void FrameGraphTexture::create(ResourceAllocatorInterface& resourceAllocator,
+        utils::StaticString const name,
         Descriptor const& descriptor, Usage usage,
         bool const useProtectedMemory) noexcept {
     if (useProtectedMemory) {

@@ -213,6 +213,11 @@ public:
     FrameGraphId<FrameGraphTexture> customResolveUncompressPass(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> inout) noexcept;
 
+    // clear depth buffer pass
+    void clearAncillaryBuffersPrepare(backend::DriverApi& driver) noexcept;
+    void clearAncillaryBuffers(backend::DriverApi& driver,
+            backend::TargetBufferFlags attachments) const noexcept;
+
     // Anti-aliasing
     FrameGraphId<FrameGraphTexture> fxaa(FrameGraph& fg,
             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
@@ -286,13 +291,13 @@ public:
     // Resolves base level of input and outputs a texture from outDesc.
     // outDesc with, height, format and samples will be overridden.
     FrameGraphId<FrameGraphTexture> resolve(FrameGraph& fg,
-            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
     // Resolves base level of input and outputs a texture from outDesc.
     // outDesc with, height, format and samples will be overridden.
     FrameGraphId<FrameGraphTexture> resolveDepth(FrameGraph& fg,
-            const char* outputBufferName, FrameGraphId<FrameGraphTexture> input,
+            utils::StaticString outputBufferName, FrameGraphId<FrameGraphTexture> input,
             FrameGraphTexture::Descriptor outDesc) noexcept;
 
     // VSM shadow mipmap pass
@@ -360,7 +365,8 @@ public:
 
     void registerPostProcessMaterial(std::string_view name, StaticMaterialInfo const& info);
 
-    PostProcessMaterial& getPostProcessMaterial(std::string_view name) noexcept;
+    PostProcessManager::PostProcessMaterial const& getPostProcessMaterial(
+            std::string_view name) const noexcept;
 
     void setFrameUniforms(backend::DriverApi& driver,
             TypedUniformBuffer<PerViewUib>& uniforms) noexcept;
@@ -390,7 +396,7 @@ public:
     // Sets the necessary spec constants and uniforms common to both colorGrading.mat and
     // colorGradingAsSubpass.mat.
     FMaterialInstance* configureColorGradingMaterial(
-            PostProcessMaterial& material, FColorGrading const* colorGrading,
+            PostProcessMaterial const& material, FColorGrading const* colorGrading,
             ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
             uint32_t width, uint32_t height) noexcept;
 
@@ -401,7 +407,7 @@ public:
 private:
     static void unbindAllDescriptorSets(backend::DriverApi& driver) noexcept;
 
-    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) noexcept;
+    void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
 
     // Helper to get a MaterialInstance from a FMaterial
     // This currently just call FMaterial::getDefaultInstance().
@@ -461,6 +467,7 @@ private:
         int32_t colorGradingTranslucent = MaterialInstanceManager::INVALID_FIXED_INDEX;
         int32_t colorGradingOpaque = MaterialInstanceManager::INVALID_FIXED_INDEX;
         int32_t customResolve = MaterialInstanceManager::INVALID_FIXED_INDEX;
+        int32_t clearDepth = MaterialInstanceManager::INVALID_FIXED_INDEX;
     } mFixedMaterialInstanceIndex;
 
     backend::Handle<backend::HwTexture> mStarburstTexture;

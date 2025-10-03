@@ -19,6 +19,8 @@
 
 #include "fg/FrameGraphId.h"
 
+#include <utils/StaticString.h>
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -78,7 +80,7 @@ struct FrameGraphTexture {
      * @param resourceAllocator resource allocator for textures and such
      * @param descriptor Descriptor to the resource
      */
-    void create(ResourceAllocatorInterface& resourceAllocator, const char* name,
+    void create(ResourceAllocatorInterface& resourceAllocator, utils::StaticString name,
             Descriptor const& descriptor, Usage usage, bool useProtectedMemory) noexcept;
 
     /**

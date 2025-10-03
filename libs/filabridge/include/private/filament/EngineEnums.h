@@ -92,6 +92,9 @@ enum class PushConstantIds : uint8_t  {
     MORPHING_BUFFER_OFFSET = 0,
 };
 
+// number of renderpass channels
+constexpr size_t CONFIG_RENDERPASS_CHANNEL_COUNT = 8;
+
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).
 // And it's limited by the Froxelizer's Froxel data structure, which stores

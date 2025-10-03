@@ -46,6 +46,7 @@ using absl::LogSeverity;
 #else
 
 #include <utils/Log.h>
+#include <utils/ostream.h>
 
 namespace utils {
 
@@ -67,7 +68,7 @@ public:
     LogLine& operator=(const LogLine&) = delete;
     LogLine& operator=(LogLine&&) = delete;
 
-    ~LogLine() noexcept { mStream << utils::io::endl; }
+    ~LogLine() noexcept { mStream << io::endl; }
 
     template<typename T>
     LogLine& operator<<(T&& value) {

@@ -35,6 +35,7 @@
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/StaticString.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 #include <utils/Panic.h>
@@ -54,11 +55,11 @@ void FrameGraph::Builder::sideEffect() noexcept {
     mPassNode->makeTarget();
 }
 
-const char* FrameGraph::Builder::getName(FrameGraphHandle const handle) const noexcept {
+utils::StaticString FrameGraph::Builder::getName(FrameGraphHandle const handle) const noexcept {
     return mFrameGraph.getResource(handle)->name;
 }
 
-uint32_t FrameGraph::Builder::declareRenderPass(const char* name,
+uint32_t FrameGraph::Builder::declareRenderPass(utils::StaticString name,
         FrameGraphRenderPass::Descriptor const& desc) {
     // it's safe here to cast to RenderPassNode because we can't be here for a PresentPassNode
     // also only RenderPassNodes have the concept of render targets.
@@ -438,7 +439,7 @@ FrameGraphHandle FrameGraph::forwardResourceInternal(FrameGraphHandle const reso
     return resourceHandle;
 }
 
-FrameGraphId<FrameGraphTexture> FrameGraph::import(char const* name,
+FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
         FrameGraphRenderPass::ImportDescriptor const& desc,
         backend::Handle<backend::HwRenderTarget> target) {
     // create a resource that represents the imported render target
@@ -590,13 +591,13 @@ fgviewer::FrameGraphInfo FrameGraph::getFrameGraphInfo(const char *viewName) con
 
 template void FrameGraph::present(FrameGraphId<FrameGraphTexture> input);
 
-template FrameGraphId<FrameGraphTexture> FrameGraph::create(char const* name,
+template FrameGraphId<FrameGraphTexture> FrameGraph::create(utils::StaticString name,
         FrameGraphTexture::Descriptor const& desc) noexcept;
 
 template FrameGraphId<FrameGraphTexture> FrameGraph::createSubresource(FrameGraphId<FrameGraphTexture> parent,
-        char const* name, FrameGraphTexture::SubResourceDescriptor const& desc) noexcept;
+        utils::StaticString name, FrameGraphTexture::SubResourceDescriptor const& desc) noexcept;
 
-template FrameGraphId<FrameGraphTexture> FrameGraph::import(char const* name,
+template FrameGraphId<FrameGraphTexture> FrameGraph::import(utils::StaticString name,
         FrameGraphTexture::Descriptor const& desc, FrameGraphTexture::Usage usage, FrameGraphTexture const& resource) noexcept;
 
 template FrameGraphId<FrameGraphTexture> FrameGraph::read(PassNode* passNode,

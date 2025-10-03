@@ -23,6 +23,7 @@
 #include "fg/details/DependencyGraph.h"
 
 #include <utils/Panic.h>
+#include <utils/StaticString.h>
 
 namespace filament {
 class ResourceAllocatorInterface;
@@ -49,15 +50,19 @@ class VirtualResource {
 public:
     // constants
     VirtualResource* parent;
-    const char* const name;
+    utils::StaticString name;
 
     // computed during compile()
     uint32_t refcount = 0;
     PassNode* first = nullptr;  // pass that needs to instantiate the resource
     PassNode* last = nullptr;   // pass that can destroy the resource
 
-    explicit VirtualResource(const char* name) noexcept : parent(this), name(name) { }
-    VirtualResource(VirtualResource* parent, const char* name) noexcept : parent(parent), name(name) { }
+    explicit VirtualResource(utils::StaticString const name) noexcept : parent(this), name(name) {
+    }
+
+    VirtualResource(VirtualResource* parent,
+            utils::StaticString const name) noexcept : parent(parent), name(name) {
+    }
     VirtualResource(VirtualResource const& rhs) noexcept = delete;
     VirtualResource& operator=(VirtualResource const&) = delete;
     virtual ~VirtualResource() noexcept;
@@ -147,12 +152,12 @@ public:
     };
 
     UTILS_NOINLINE
-    Resource(const char* name, Descriptor const& desc) noexcept
+    Resource(utils::StaticString name, Descriptor const& desc) noexcept
         : VirtualResource(name), descriptor(desc) {
     }
 
     UTILS_NOINLINE
-    Resource(Resource* parent, const char* name, SubResourceDescriptor const& desc) noexcept
+    Resource(Resource* parent, utils::StaticString name, SubResourceDescriptor const& desc) noexcept
             : VirtualResource(parent, name),
               descriptor(RESOURCE::generateSubResourceDescriptor(parent->descriptor, desc)),
               subResourceDescriptor(desc) {
@@ -263,7 +268,7 @@ public:
     using Usage = typename RESOURCE::Usage;
 
     UTILS_NOINLINE
-    ImportedResource(const char* name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept
+    ImportedResource(utils::StaticString name, Descriptor const& desc, Usage usage, RESOURCE const& rsrc) noexcept
             : Resource<RESOURCE>(name, desc) {
         this->resource = rsrc;
         this->usage = usage;
@@ -298,7 +303,7 @@ private:
     void assertConnect(FrameGraphTexture::Usage u) {
         FILAMENT_CHECK_PRECONDITION((u & this->usage) == u)
                 << "Requested usage " << utils::to_string(u).c_str()
-                << " not available on imported resource \"" << this->name << "\" with usage "
+                << " not available on imported resource \"" << this->name.c_str() << "\" with usage "
                 << utils::to_string(this->usage).c_str();
     }
 };
@@ -310,7 +315,7 @@ public:
     FrameGraphRenderPass::ImportDescriptor importedDesc;
 
     UTILS_NOINLINE
-    ImportedRenderTarget(const char* name,
+    ImportedRenderTarget(utils::StaticString name,
             FrameGraphTexture::Descriptor const& mainAttachmentDesc,
             FrameGraphRenderPass::ImportDescriptor const& importedDesc,
             backend::Handle<backend::HwRenderTarget> target);

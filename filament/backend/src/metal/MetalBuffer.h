@@ -192,7 +192,7 @@ public:
 
     void* getCpuBuffer() const noexcept { return mCpuBuffer; }
 
-    void setLabel(const utils::CString& label) {
+    void setLabel(const utils::ImmutableCString& label) {
 #if FILAMENT_METAL_DEBUG_LABELS
         if (label.empty()) {
             return;
