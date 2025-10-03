@@ -635,7 +635,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
                                 std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl, std::string* outputWgsl) {
     using TargetLanguage = MaterialBuilder::TargetLanguage;
 
-    if (config.targetLanguage == TargetLanguage::GLSL) {
+    if (config.targetLanguage == TargetLanguage::GLSL &&
+            mOptimization == MaterialBuilder::Optimization::NONE) {
         *outputGlsl = inputShader;
         if (mPrintShaders) {
             slog.i << *outputGlsl << io::endl;
