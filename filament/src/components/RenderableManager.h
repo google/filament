@@ -67,11 +67,11 @@ public:
     // TODO: consider renaming, this pertains to material variants, not strictly visibility.
     struct Visibility {
         uint8_t priority                : 3;
-        uint8_t channel                 : 2;
+        uint8_t channel                 : 3;
         bool castShadows                : 1;
         bool receiveShadows             : 1;
-        bool culling                    : 1;
 
+        bool culling                    : 1;
         bool skinning                   : 1;
         bool morphing                   : 1;
         bool screenSpaceContactShadows  : 1;
@@ -129,7 +129,7 @@ public:
     // The priority is clamped to the range [0..7]
     inline void setPriority(Instance instance, uint8_t priority) noexcept;
 
-    // The channel is clamped to the range [0..3]
+    // The channel is clamped to the range [0..7]
     inline void setChannel(Instance instance, uint8_t channel) noexcept;
 
     inline void setCastShadows(Instance instance, bool enable) noexcept;
@@ -349,7 +349,7 @@ void FRenderableManager::setPriority(Instance const instance, uint8_t const prio
 void FRenderableManager::setChannel(Instance const instance, uint8_t const channel) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
-        visibility.channel = std::min(channel, uint8_t(0x3));
+        visibility.channel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
     }
 }
 

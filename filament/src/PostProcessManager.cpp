@@ -253,7 +253,7 @@ void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const n
     mPostProcessDescriptorSet.bind(driver);
 }
 
-void PostProcessManager::bindPerRenderableDescriptorSet(DriverApi& driver) noexcept {
+void PostProcessManager::bindPerRenderableDescriptorSet(DriverApi& driver) const noexcept {
     driver.bindDescriptorSet(mDummyPerRenderableDsh, +DescriptorSetBindingPoints::PER_RENDERABLE,
             { { 0, 0 }, driver });
 }
@@ -265,14 +265,15 @@ void PostProcessManager::registerPostProcessMaterial(std::string_view const name
 }
 
 UTILS_NOINLINE
-PostProcessManager::PostProcessMaterial& PostProcessManager::getPostProcessMaterial(
-        std::string_view const name) noexcept {
+
+PostProcessManager::PostProcessMaterial const& PostProcessManager::getPostProcessMaterial(
+        std::string_view const name) const noexcept {
     auto pos = mMaterialRegistry.find(name);
     assert_invariant(pos != mMaterialRegistry.end());
     return pos.value();
 }
 
-// StaticMaterialInfo::ConstantInfo destructor is called during shut-down, to avoid side-effect
+// StaticMaterialInfo::ConstantInfo destructor is called during shut-down, to avoid side effect
 // we ensure it's trivially destructible
 static_assert(std::is_trivially_destructible_v<PostProcessManager::StaticMaterialInfo::ConstantInfo>);
 
@@ -285,6 +286,7 @@ static const PostProcessManager::StaticMaterialInfo sMaterialListFeatureLevel0[]
 static const PostProcessManager::StaticMaterialInfo sMaterialList[] = {
         { "blitArray",                  MATERIAL(MATERIALS, BLITARRAY) },
         { "blitDepth",                  MATERIAL(MATERIALS, BLITDEPTH) },
+        { "clearDepth",                 MATERIAL(MATERIALS, CLEARDEPTH) },
         { "separableGaussianBlur1",     MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
                 { {"arraySampler", false}, {"componentCount", 1} } },
         { "separableGaussianBlur1L",    MATERIAL(MATERIALS, SEPARABLEGAUSSIANBLUR),
@@ -2561,8 +2563,6 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     bindPostProcessDescriptorSet(driver);
     bindPerRenderableDescriptorSet(driver);
 
-    FEngine const& engine = mEngine;
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
     auto const& material = getPostProcessMaterial("customResolveAsSubpass");
     FMaterial const* const ma = material.getMaterial(mEngine);
     // the UBO has been set and committed in customResolvePrepareSubpass()
@@ -2573,7 +2573,7 @@ void PostProcessManager::customResolveSubpass(DriverApi& driver) noexcept {
     auto const pipeline = getPipelineState(ma);
     driver.nextSubpass();
     driver.scissor(mi->getScissor());
-    driver.draw(pipeline, fullScreenRenderPrimitive, 0, 3, 1);
+    driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(FrameGraph& fg,
@@ -2600,6 +2600,43 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::customResolveUncompressPass(
                 driver.endRenderPass();
             });
     return detonemapPass->inout;
+}
+
+
+void PostProcessManager::clearAncillaryBuffersPrepare(DriverApi& driver) noexcept {
+    auto const& material = getPostProcessMaterial("clearDepth");
+    auto ma = material.getMaterial(mEngine, PostProcessVariant::OPAQUE);
+    auto [mi, fixedIndex] = mMaterialInstanceManager.getFixedMaterialInstance(ma);
+    mFixedMaterialInstanceIndex.clearDepth = fixedIndex;
+    mi->commit(driver);
+    material.getMaterial(mEngine);
+}
+
+void PostProcessManager::clearAncillaryBuffers(DriverApi& driver,
+        TargetBufferFlags attachments) const noexcept {
+    // in the future we might allow STENCIL as well
+    attachments &= TargetBufferFlags::DEPTH;
+    if (none(attachments & TargetBufferFlags::DEPTH)) {
+        return;
+    }
+
+    bindPostProcessDescriptorSet(driver);
+    bindPerRenderableDescriptorSet(driver);
+
+    auto const& material = getPostProcessMaterial("clearDepth");
+    FMaterial const* const ma = material.getMaterial(mEngine);
+
+    // the UBO has been set and committed in clearAncillaryBuffersPrepare()
+    FMaterialInstance const* const mi = mMaterialInstanceManager.getMaterialInstance(ma,
+            mFixedMaterialInstanceIndex.clearDepth);
+
+    mi->use(driver);
+
+    auto pipeline = getPipelineState(ma);
+    pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
+
+    driver.scissor(mi->getScissor());
+    driver.draw(pipeline, mFullScreenQuadRph, 0, 3, 1);
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::colorGrading(FrameGraph& fg,
@@ -2874,7 +2911,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
 }
 
 FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
-        PostProcessMaterial& material, FColorGrading const* colorGrading,
+        PostProcessMaterial const& material, FColorGrading const* colorGrading,
         ColorGradingConfig const& colorGradingConfig, VignetteOptions const& vignetteOptions,
         uint32_t const width, uint32_t const height) noexcept {
     FMaterial* ma = material.getMaterial(mEngine);
@@ -3407,8 +3444,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleFSR1(FrameGraph& fg,
                 // --------------------------------------------------------------------------------
                 // set uniforms
 
-                PostProcessMaterial* splitEasuMaterial = nullptr;
-                PostProcessMaterial* easuMaterial = nullptr;
+                PostProcessMaterial const* splitEasuMaterial = nullptr;
+                PostProcessMaterial const* easuMaterial = nullptr;
 
                 if (twoPassesEASU) {
                     splitEasuMaterial = &getPostProcessMaterial("fsr_easu_mobileF");

@@ -182,7 +182,7 @@ RenderableManager::Builder& RenderableManager::Builder::priority(uint8_t const p
 }
 
 RenderableManager::Builder& RenderableManager::Builder::channel(uint8_t const channel) noexcept {
-    mImpl->mCommandChannel = std::min(channel, uint8_t(0x3));
+    mImpl->mCommandChannel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
     return *this;
 }
 
