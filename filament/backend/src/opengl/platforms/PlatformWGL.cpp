@@ -75,7 +75,7 @@ struct WGLSwapChain {
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
 
 Driver* PlatformWGL::createDriver(void* sharedGLContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
+        const Platform::DriverConfig& driverConfig) {
     int result = 0;
     int pixelFormat = 0;
     DWORD dwError = 0;

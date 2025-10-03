@@ -51,7 +51,7 @@ class OpenGLDriver;
 bool TimerQueryFactory::mGpuTimeSupported = false;
 
 TimerQueryFactoryInterface* TimerQueryFactory::init(
-        OpenGLPlatform& platform, OpenGLContext& context) noexcept {
+        OpenGLPlatform& platform, OpenGLContext& context) {
     (void)context;
 
     TimerQueryFactoryInterface* impl = nullptr;

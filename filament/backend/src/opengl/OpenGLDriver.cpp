@@ -764,29 +764,6 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
 void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program, CString&& tag) {
     DEBUG_MARKER()
 
-
-    if (UTILS_UNLIKELY(mContext.isES2())) {
-        // Here we patch the specialization constants to enable or not the rec709 output
-        // color space emulation in this program. Obviously, the backend shouldn't know about
-        // specific spec-constants, so we need to handle failures gracefully. This cannot be
-        // done at Material creation time because only the backend has access to
-        // Platform.isSRGBSwapChainSupported().
-        if (!mPlatform.isSRGBSwapChainSupported()) {
-            auto& specializationConstants = program.getSpecializationConstants();
-            auto const pos = std::find_if(specializationConstants.begin(), specializationConstants.end(),
-                    [](auto&& sc) {
-                        // This constant must match
-                        // ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION
-                        // which we can't use here because it's defined in EngineEnums.h.
-                        // (we're breaking layering here, but it's for the good cause).
-                        return sc.id == 3;
-                    });
-            if (pos != specializationConstants.end()) {
-                pos->value = true;
-            }
-        }
-    }
-
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR()
     mHandleAllocator.associateTagToHandle(ph.getId(), std::move(tag));
@@ -2640,6 +2617,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
             return mContext.bugs.powervr_shader_workarounds;
         case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
             return mContext.bugs.disable_depth_precache_for_default_material;
+        case Workaround::EMULATE_SRGB_SWAPCHAIN:
+            return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
         default:
             return false;
     }
@@ -3213,7 +3192,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
 }
 
 UTILS_NOINLINE
-void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
+void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) {
     mTexturesWithStreamsAttached.push_back(t);
 
     switch (hwStream->streamType) {
@@ -3799,16 +3778,16 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
 }
 
 
-void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) noexcept {
+void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) {
     mEveryNowAndThenOps.push_back(std::move(fn));
 }
 
-void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
+void OpenGLDriver::executeEveryNowAndThenOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mEveryNowAndThenOps;
     auto it = v.begin();
     while (it != v.end()) {
         if ((*it)()) {
-            it = v.erase(it);
+            it = v.erase(it); // cannot throw by construction
         } else {
             ++it;
         }
@@ -3816,17 +3795,17 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) {
     mFrameCompleteOps.push_back(fn);
 }
 
-void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
+void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
@@ -3842,13 +3821,13 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
                 // ready
                 it->second();
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
             default:
                 // This should never happen, but is very problematic if it does, as we might leak
                 // some data depending on what the callback does. However, we clean up our own state.
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
         }
     }

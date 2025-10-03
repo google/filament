@@ -153,14 +153,15 @@ bool MetalShaderCompiler::isParallelShaderCompileSupported() const noexcept {
 
         MTLFunctionConstantValues* constants = [MTLFunctionConstantValues new];
         auto const& specializationConstants = program.getSpecializationConstants();
-        for (auto const& sc : specializationConstants) {
+        for (size_t i = 0; i < specializationConstants.size(); i++) {
+            auto const& sc = specializationConstants[i];
             const std::array<MTLDataType, 3> types{
                     MTLDataTypeInt, MTLDataTypeFloat, MTLDataTypeBool };
-            std::visit([&sc, constants, type = types[sc.value.index()]](auto&& arg) {
+            std::visit([i, constants, type = types[sc.index()]](auto&& arg) {
                 [constants setConstantValue:&arg
                                        type:type
-                                    atIndex:sc.id];
-            }, sc.value);
+                                    atIndex:i];
+            }, sc);
         }
 
         id<MTLFunction> function = [library newFunctionWithName:@"main0"

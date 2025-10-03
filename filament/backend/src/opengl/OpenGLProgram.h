@@ -106,7 +106,7 @@ private:
     void initialize(OpenGLDriver& gld);
 
     void initializeProgramState(OpenGLContext& context, GLuint program,
-            LazyInitializationData& lazyInitializationData) noexcept;
+            LazyInitializationData& lazyInitializationData);
 
     BindingMap mBindingMap;     // 8 bytes + out-of-line 256 bytes
 

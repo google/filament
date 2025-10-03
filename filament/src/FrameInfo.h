@@ -123,11 +123,11 @@ public:
         return *this;
     }
 
-    size_t capacity() const {
+    size_t capacity() const noexcept {
         return CAPACITY;
     }
 
-    size_t size() const {
+    size_t size() const noexcept {
         return mSize;
     }
 
@@ -190,7 +190,7 @@ private:
     Storage mStorage[CAPACITY];
     uint32_t mFront = 0;
     uint32_t mSize = 0;
-    [[nodiscard]] inline uint32_t advance(uint32_t const v) noexcept {
+    [[nodiscard]] uint32_t advance(uint32_t const v) noexcept {
         return (v + 1) % CAPACITY;
     }
 };
@@ -223,7 +223,7 @@ public:
         return pFront ? *pFront : details::FrameInfo{};
     }
 
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept;
+    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const;
 
 private:
     using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;
@@ -232,11 +232,11 @@ private:
         backend::Handle<backend::HwTimerQuery> handle{};
         FrameInfoImpl* pInfo = nullptr;
     };
-    std::array<Query, POOL_COUNT> mQueries;
+    std::array<Query, POOL_COUNT> mQueries{};
     uint32_t mIndex = 0;                // index of current query
     uint32_t mLast = 0;                 // index of oldest query still active
     FrameInfoImpl* pFront = nullptr;    // the most recent slot with a valid frame time
-    FrameHistoryQueue mFrameTimeHistory;
+    FrameHistoryQueue mFrameTimeHistory{};
 };
 
 

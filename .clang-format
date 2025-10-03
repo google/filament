@@ -66,3 +66,5 @@ SpacesInSquareBrackets: false
 TabWidth: 4
 UseTab: Never
 PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 8
+IndentWrappedFunctionNames: true
