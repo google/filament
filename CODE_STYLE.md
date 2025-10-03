@@ -20,7 +20,7 @@ The guiding principles of the filament code style and code formatting can be res
 - class access modifiers are not indented
 - last line of `.cpp` or `.h` file must be an empty line
 
-```
+```c++
 for (int i = 0; i < max; i++) {
 }
 
@@ -73,12 +73,24 @@ src/data.inc
 - `public` class attributes *are not* prefixed
 - class attributes and methods are lower camelcase
 
-```
+```c++
 extern int gGlobalWarming;
 
 class FooBar {
 public:
-    void methodName();
+    FooBar(int attributeName, int sizeInBytes)
+            : mAttributeName(attributeName),
+              sizeInBytes(sizeInBytes) {}
+
+    void reallyLongMethodNameWithLotsOfArguments(bool argument1,
+            int someSecondArgument, int bestArgument) {
+        std::pair<bool, int> pair = {
+            argument1,
+            argument2,
+        };
+        // etc
+    }
+
     int sizeInBytes;
 private:
     int mAttributeName;
@@ -97,7 +109,7 @@ private:
 - always include the copyright notice at the top of every file
 - make sure the date is correct
 
-```
+```c++
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -139,7 +151,7 @@ conversely containers and algorithms are not allowed. There are exceptions such 
 
 *Sorting the headers is important to help catching missing `#include` directives.*
 
-```
+```c++
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -183,7 +195,7 @@ conversely containers and algorithms are not allowed. There are exceptions such 
 ### Misc
 
 - Use `auto` only when the type appears on the same line or with iterators and lambdas.
-```
+```c++
 auto foo = new Foo();
 for (auto& i : collection) { }
 ```
