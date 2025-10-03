@@ -45,7 +45,6 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
-#include <array>
 #include <optional>
 #include <string_view>
 
@@ -73,6 +72,56 @@ public:
         DefaultMaterialBuilder();
     };
 
+    // Used to change specialization constants at runtime internally by Filament.
+    //
+    // It would be nice to reuse Builder for this, but Builder allocates an entire map and asserts
+    // if specified constants don't exist. In constrast, SpecializationConstantsBuilder is
+    // copy-on-write and allows non-existent specialization constants to be named.
+    class SpecializationConstantsBuilder {
+        friend class FMaterial;
+
+    public:
+        SpecializationConstantsBuilder(SpecializationConstantsBuilder const& rhs) = delete;
+        SpecializationConstantsBuilder& operator=(
+                SpecializationConstantsBuilder const& rhs) = delete;
+
+        SpecializationConstantsBuilder(SpecializationConstantsBuilder&& rhs) = default;
+        SpecializationConstantsBuilder& operator=(SpecializationConstantsBuilder&& rhs) = default;
+
+        template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
+        SpecializationConstantsBuilder& set(uint32_t id, T value) noexcept {
+            // Don't allocate if we can help it.
+            if (mConstants.empty()) {
+                if (std::get<T>(mDefaultConstants[id]) == value) {
+                    return *this;
+                }
+                mConstants = utils::FixedCapacityVector<backend::Program::SpecializationConstant>(
+                        mDefaultConstants);
+            }
+            mConstants[id] = value;
+            return *this;
+        }
+
+        template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
+        SpecializationConstantsBuilder& set(std::string_view name, T value) noexcept {
+            auto it = mDefinition->specializationConstantsNameToIndex.find(name);
+            if (it != mDefinition->specializationConstantsNameToIndex.cend()) {
+                set(it->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS, value);
+            }
+            return *this;
+        }
+
+    private:
+        SpecializationConstantsBuilder(MaterialDefinition const& definition,
+                utils::Slice<const backend::Program::SpecializationConstant> defaultConstants)
+                : mDefinition(&definition),
+                  mDefaultConstants(defaultConstants) {}
+
+        MaterialDefinition const* mDefinition;
+        utils::Slice<const backend::Program::SpecializationConstant> mDefaultConstants;
+        // Copy-on-write vector.
+        utils::FixedCapacityVector<backend::Program::SpecializationConstant> mConstants;
+    };
 
     void terminate(FEngine& engine);
 
@@ -125,21 +174,17 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
-        return bool(mCachedPrograms[variant.key]);
-    }
-
-    void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
-
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
-    void prepareProgram(backend::DriverApi& driver, Variant const variant,
+    backend::Handle<backend::HwProgram> prepareProgram(backend::DriverApi& driver,
+            Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(driver, variant, priorityQueue);
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        if (UTILS_LIKELY(program)) {
+            return program;
         }
+        return prepareProgramSlow(driver, variant, priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
@@ -147,10 +192,13 @@ public:
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        return getProgramWithMATDBG(variant);
+        updateActiveProgramsForMatdbg(variant);
 #endif
-        assert_invariant(mCachedPrograms[variant.key]);
-        return mCachedPrograms[variant.key];
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        if (UTILS_LIKELY(program)) {
+            return program;
+        }
+        return getProgramSlow(variant);
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -169,9 +217,6 @@ public:
         pDefaultInstance->use(driver, variant);
         return true;
     }
-
-    [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant) const noexcept;
 
     bool isVariantLit() const noexcept { return mDefinition.isVariantLit; }
 
@@ -232,17 +277,12 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
-    void destroyPrograms(FEngine& engine,
-            Variant::type_t variantMask = 0,
-            Variant::type_t variantValue = 0);
+    // Update specialization constants.
+    SpecializationConstantsBuilder getSpecializationConstantsBuilder() const noexcept {
+        return SpecializationConstantsBuilder(mDefinition, mSpecializationConstants);
+    }
 
-    // return the id of a specialization constant specified by name for this material
-    std::optional<uint32_t> getSpecializationConstantId(std::string_view name) const noexcept ;
-
-    // Sets a specialization constant by id. call is no-op if the id is invalid.
-    // Return true is the value was changed.
-    template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
-    bool setConstant(uint32_t id, T value) noexcept;
+    void setSpecializationConstants(SpecializationConstantsBuilder&& builder) noexcept;
 
     uint8_t getPerViewLayoutIndex() const noexcept {
         return mDefinition.perViewLayoutIndex;
@@ -291,15 +331,19 @@ public:
 private:
     MaterialParser const& getMaterialParser() const noexcept;
 
-    bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(backend::DriverApi& driver, Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getSurfaceProgramSlow(backend::DriverApi& driver, Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getPostProcessProgramSlow(backend::DriverApi& driver, Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const;
+    ProgramSpecialization getProgramSpecialization(Variant const variant) const noexcept;
+
+    backend::Handle<backend::HwProgram> prepareProgramSlow(backend::DriverApi& driver,
+            Variant const variant,
+            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
+
+    [[nodiscard]]
+    backend::Handle<backend::HwProgram> getProgramSlow(Variant const variant) const noexcept;
+
+#if FILAMENT_ENABLE_MATDBG
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) noexcept;
+#endif
 
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
@@ -319,7 +363,7 @@ private:
                !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
 
-    mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
@@ -335,7 +379,7 @@ private:
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
     // current specialization constants for the HwProgram
-    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+    utils::Slice<const backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

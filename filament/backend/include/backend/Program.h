@@ -19,7 +19,9 @@
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/InternPool.h>
 #include <utils/Invocable.h>
+#include <utils/Slice.h>
 
 #include <backend/DriverEnums.h>
 
@@ -67,7 +69,7 @@ public:
 
     using DescriptorBindingsInfo = utils::FixedCapacityVector<Descriptor>;
     using DescriptorSetInfo = std::array<DescriptorBindingsInfo, MAX_DESCRIPTOR_SET_COUNT>;
-    using SpecializationConstantsInfo = utils::FixedCapacityVector<SpecializationConstant>;
+    using SpecializationConstantsInfo = utils::Slice<const SpecializationConstant>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
@@ -76,7 +78,8 @@ public:
     using BindingUniformsInfo = utils::FixedCapacityVector<
             std::tuple<uint8_t, utils::CString, Program::UniformInfo>>;
 
-    Program() noexcept;
+    explicit Program(utils::InternPool<SpecializationConstant>&
+            specializationConstantsInternPool) noexcept;
 
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
@@ -141,11 +144,7 @@ public:
 
     CompilerPriorityQueue getPriorityQueue() const noexcept { return mPriorityQueue; }
 
-    SpecializationConstantsInfo const& getSpecializationConstants() const noexcept {
-        return mSpecializationConstants;
-    }
-
-    SpecializationConstantsInfo& getSpecializationConstants() noexcept {
+    SpecializationConstantsInfo getSpecializationConstants() const noexcept {
         return mSpecializationConstants;
     }
 
@@ -184,6 +183,7 @@ public:
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
+    utils::InternPool<SpecializationConstant>* mSpecializationConstantsInternPool;
     ShaderSource mShadersSource;
     ShaderLanguage mShaderLanguage = ShaderLanguage::ESSL3;
     utils::CString mName;
