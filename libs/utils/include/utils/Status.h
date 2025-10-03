@@ -95,7 +95,9 @@ public:
      * Returns the error message for this Status.
      * @return The error message string. Will be empty if the status is OK.
      */
-    std::string_view getErrorMessage() const;
+    std::string_view getErrorMessage() const {
+        return std::string_view(mErrorMessage.begin(), mErrorMessage.end());
+    }
 
     /**
      * Convenient factory functions for creating Status objects.
@@ -128,13 +130,13 @@ public:
         return {StatusCode::INVALID_ARGUMENT, message};
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Status& status);
-
 private:
     StatusCode mStatusCode;
     // Reason for the error if exists.
     utils::CString mErrorMessage;
 };
+
+utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status);
 
 } // namespace utils
 
