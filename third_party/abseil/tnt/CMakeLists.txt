@@ -1,5 +1,8 @@
-find_package(absl CONFIG QUIET)
-if(NOT absl_FOUND)
+option(FILAMENT_USE_EXTERNAL_ABSL "Use find_package to locate an external Abseil dependency" OFF)
+
+if (FILAMENT_USE_EXTERNAL_ABSL)
+  find_package(absl CONFIG QUIET)
+else()
   add_subdirectory(../ "${CMAKE_CURRENT_BINARY_DIR}/abseil")
 endif()
 
