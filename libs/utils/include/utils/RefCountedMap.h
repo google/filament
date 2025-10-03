@@ -152,7 +152,7 @@ public:
      * Panics if no entry found in map.
      */
     template<typename F>
-    void release(KeyRef key, size_t hash, F releaser) noexcept {
+    void release(KeyRef key, size_t hash, F releaser) {
         auto it = mMap.find(key, hash);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         if (--it.value().referenceCount == 0) {
@@ -173,7 +173,7 @@ public:
      *
      * Panics if no entry found in map.
      */
-    void release(KeyRef key, size_t hash) noexcept {
+    void release(KeyRef key, size_t hash) {
         auto it = mMap.find(key, hash);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         if (--it.value().referenceCount == 0) {
@@ -192,7 +192,7 @@ public:
      * type, the returned pointer is valid only as long as the next call to acquire() or release().
      */
     template<typename F>
-    TValue* UTILS_NULLABLE get(KeyRef key, size_t hash, F factory) noexcept {
+    TValue* UTILS_NULLABLE get(KeyRef key, size_t hash, F factory) {
         auto it = mMap.find(key, hash);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         const T nullValue = NullValue{}();
@@ -216,7 +216,7 @@ public:
      *
      * Panics if no entry found in map.
      */
-    TValue& get(KeyRef key, size_t hash) noexcept {
+    TValue& get(KeyRef key, size_t hash) {
         auto it = mMap.find(key);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         FILAMENT_CHECK_PRECONDITION(it.value().value != NullValue{}())
@@ -226,7 +226,7 @@ public:
 
     inline TValue& get(KeyRef key) noexcept { return get(key, Hash{}(key)); }
 
-    TValue const& get(KeyRef key, size_t hash) const noexcept {
+    TValue const& get(KeyRef key, size_t hash) const {
         auto it = mMap.find(key);
         FILAMENT_CHECK_PRECONDITION(it != mMap.end()) << MISSING_ENTRY_ERROR_STRING;
         FILAMENT_CHECK_PRECONDITION(it.value().value != NullValue{}())

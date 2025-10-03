@@ -100,7 +100,7 @@ public:
     }
 
     /** Release interned value. */
-    void release(Slice<const T> slice, size_t hash) noexcept {
+    void release(Slice<const T> slice, size_t hash) {
         if (slice.empty()) {
             return;
         }
