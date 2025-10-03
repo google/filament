@@ -18,25 +18,16 @@
 
 #include "Froxelizer.h"
 #include "MaterialParser.h"
+#include "filament/MaterialEnums.h"
 
 #include <ds/ColorPassDescriptorSet.h>
 
 #include <details/Engine.h>
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/DescriptorSets.h>
 #include <private/filament/PushConstantInfo.h>
 
-#include <filament/MaterialEnums.h>
-
-#include <backend/DriverEnums.h>
-
-#include <string_view>
-#include <utils/CString.h>
-#include <utils/bitset.h>
-#include <utils/debug.h>
-#include <utils/FixedCapacityVector.h>
-#include <utils/compiler.h>
+#include <utils/Hash.h>
 #include <utils/Logger.h>
 #include <utils/Panic.h>
 
@@ -535,6 +526,266 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
     this->perViewDescriptorSetLayoutVsm = {
             descriptorSetLayoutFactory, driver,
             this->perViewDescriptorSetLayoutVsmDescription };
+}
+
+
+Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
+        ProgramSpecialization const& specialization,
+        backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+    assert_invariant(engine.hasFeatureLevel(featureLevel));
+    Program pb(engine.getMaterialCache().getSpecializationConstantsInternPool());
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            pb = getSurfaceProgram(engine, specialization);
+            break;
+        case MaterialDomain::POST_PROCESS:
+            pb = getProgramWithVariants(engine, specialization, specialization.variant,
+                    specialization.variant);
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            PANIC_PRECONDITION("Compute shaders not yet supported");
+    }
+    pb.priorityQueue(priorityQueue);
+
+    auto const program = engine.getDriverApi().createProgram(std::move(pb),
+            ImmutableCString{ name.c_str_safe() });
+    assert_invariant(program);
+    return program;
+}
+
+Program MaterialDefinition::getSurfaceProgram(FEngine& engine,
+        ProgramSpecialization const& specialization) const noexcept {
+    // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
+    // if we're unlit, we don't have any bits that correspond to lit materials
+    assert_invariant(specialization.variant ==
+                     Variant::filterVariant(specialization.variant, isVariantLit));
+
+    assert_invariant(!Variant::isReserved(specialization.variant));
+
+    Variant const vertexVariant   = Variant::filterVariantVertex(specialization.variant);
+    Variant const fragmentVariant = Variant::filterVariantFragment(specialization.variant);
+
+    Program pb = getProgramWithVariants(engine, specialization, vertexVariant, fragmentVariant);
+    pb.multiview(
+            engine.getConfig().stereoscopicType == StereoscopicType::MULTIVIEW &&
+            Variant::isStereoVariant(specialization.variant));
+    return pb;
+}
+
+Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
+        ProgramSpecialization const& specialization,
+        Variant vertexVariant,
+        Variant fragmentVariant) const {
+    const ShaderModel sm = engine.getShaderModel();
+    const bool isNoop = engine.getBackend() == Backend::NOOP;
+    const Variant variant = specialization.variant;
+
+    /*
+     * Vertex shader
+     */
+
+    MaterialParser const& parser = getMaterialParser();
+
+    filaflat::ShaderContent& vsBuilder = engine.getVertexShaderContent();
+
+    UTILS_UNUSED_IN_RELEASE bool const vsOK = parser.getShader(vsBuilder, sm,
+            vertexVariant, ShaderStage::VERTEX);
+
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (vsOK && !vsBuilder.empty()))
+            << "The material '" << name.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "vertex shader (variant="
+            << +variant.key << ", filtered=" << +vertexVariant.key << ").";
+
+    /*
+     * Fragment shader
+     */
+
+    filaflat::ShaderContent& fsBuilder = engine.getFragmentShaderContent();
+
+    UTILS_UNUSED_IN_RELEASE bool const fsOK = parser.getShader(fsBuilder, sm,
+            fragmentVariant, ShaderStage::FRAGMENT);
+
+    FILAMENT_CHECK_POSTCONDITION(isNoop || (fsOK && !fsBuilder.empty()))
+            << "The material '" << name.c_str()
+            << "' has not been compiled to include the required GLSL or SPIR-V chunks for the "
+               "fragment shader (variant="
+            << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
+
+    Program program(engine.getMaterialCache().getSpecializationConstantsInternPool());
+    program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
+            .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
+            .shaderLanguage(parser.getShaderLanguage())
+            .diagnostics(name,
+                    [variant, vertexVariant, fragmentVariant](utils::CString const& name,
+                            io::ostream& out) -> io::ostream& {
+                        return out << name.c_str_safe() << ", variant=(" << io::hex << +variant.key
+                                   << io::dec << "), vertexVariant=(" << io::hex
+                                   << +vertexVariant.key << io::dec << "), fragmentVariant=("
+                                   << io::hex << +fragmentVariant.key << io::dec << ")";
+                    });
+
+    if (UTILS_UNLIKELY(parser.getShaderLanguage() == ShaderLanguage::ESSL1)) {
+        assert_invariant(!bindingUniformInfo.empty());
+        for (auto const& [index, name, uniforms] : bindingUniformInfo) {
+            program.uniforms(uint32_t(index), name, uniforms);
+        }
+        program.attributes(attributeInfo);
+    }
+
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_VIEW,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_VIEW]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_RENDERABLE,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
+    program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
+            programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
+    program.specializationConstants(specialization.specializationConstants);
+
+    program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
+    program.pushConstants(ShaderStage::FRAGMENT, pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
+
+    // TODO(exv): we'll probably eventually want to replace this with the hash of the
+    // specialization, but there may be clients which depend on this value being stable across
+    // versions.
+    program.cacheId(hash::combine(size_t(cacheId), variant.key));
+
+    return program;
+}
+
+
+void MaterialDefinition::acquirePrograms(FEngine& engine,
+        utils::Slice<Handle<HwProgram>> programCache,
+        utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+        bool isDefaultMaterial) const {
+    MaterialCache& materialCache = engine.getMaterialCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+        .programCacheId = cacheId,
+        .specializationConstants = specializationConstants,
+    };
+
+    // We acquire an entry for all variants in the program cache, but we don't compile them.
+    // Programs that are acquired but aren't compiled simply hold onto an empty entry in the program
+    // cache which is initialized later.
+    for (auto variant: getVariants()) {
+        if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
+            specialization.variant = variant;
+            programCache[variant.key] = materialCache.acquireProgram(specialization);
+        }
+    }
+
+    if (UTILS_UNLIKELY(isDefaultMaterial || hasCustomDepthShader)) {
+        // Do depth variants. We only do these if this is a default material or if the material has
+        // custom depth variants.
+        if (UTILS_UNLIKELY(isDefaultMaterial && !engine.getDriverApi().isWorkaroundNeeded(
+                    Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL))) {
+            // Precache depth programs.
+            for (auto variant: getDepthVariants()) {
+                if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
+                    specialization.variant = variant;
+                    programCache[variant.key] = materialCache.acquireAndPrepareProgram(engine,
+                            *this, specialization, CompilerPriorityQueue::HIGH);
+                }
+            }
+        } else {
+            // Don't precache depth programs.
+            for (auto variant: getDepthVariants()) {
+                if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
+                    specialization.variant = variant;
+                    programCache[variant.key] = materialCache.acquireProgram(specialization);
+                }
+            }
+        }
+    }
+}
+
+void MaterialDefinition::releasePrograms(FEngine& engine,
+        utils::Slice<Handle<HwProgram>> programCache,
+        utils::Slice<const backend::Program::SpecializationConstant> specializationConstants,
+        bool isDefaultMaterial) const {
+    MaterialCache& materialCache = engine.getMaterialCache();
+    ShaderModel const shaderModel = engine.getShaderModel();
+    bool const isStereoSupported = engine.getDriverApi().isStereoSupported();
+
+    ProgramSpecialization specialization = {
+            .programCacheId = cacheId,
+            .specializationConstants = specializationConstants,
+    };
+
+    for (auto variant : getVariants()) {
+        if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
+            specialization.variant = variant;
+            materialCache.releaseProgram(engine, specialization);
+            programCache[variant.key].clear();
+        }
+    }
+
+    if (UTILS_UNLIKELY(isDefaultMaterial || hasCustomDepthShader)) {
+        for (auto variant: getDepthVariants()) {
+            if (UTILS_LIKELY(hasVariant(variant, shaderModel, isStereoSupported))) {
+                specialization.variant = variant;
+                materialCache.releaseProgram(engine, specialization);
+                programCache[variant.key].clear();
+            }
+        }
+    }
+}
+
+bool MaterialDefinition::hasVariant(Variant const variant,
+        ShaderModel const sm, bool isStereoSupported) const noexcept {
+    if (!isStereoSupported && Variant::isStereoVariant(variant)) {
+        return false;
+    }
+
+    Variant vertexVariant, fragmentVariant;
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            vertexVariant = Variant::filterVariantVertex(variant);
+            fragmentVariant = Variant::filterVariantFragment(variant);
+            break;
+        case MaterialDomain::POST_PROCESS:
+            vertexVariant = fragmentVariant = variant;
+            break;
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            return false;
+    }
+    if (!mMaterialParser->hasShader(sm, vertexVariant, ShaderStage::VERTEX)) {
+        return false;
+    }
+    if (!mMaterialParser->hasShader(sm, fragmentVariant, ShaderStage::FRAGMENT)) {
+        return false;
+    }
+    return true;
+}
+
+utils::Slice<const Variant> MaterialDefinition::getVariants() const noexcept {
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            return isVariantLit ? VariantUtils::getLitVariants()
+                                : VariantUtils::getUnlitVariants();
+        case MaterialDomain::POST_PROCESS:
+            return VariantUtils::getPostProcessVariants();
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            PANIC_PRECONDITION("Compute shaders not yet supported");
+    }
+}
+
+utils::Slice<const Variant> MaterialDefinition::getDepthVariants() const noexcept {
+    switch (materialDomain) {
+        case MaterialDomain::SURFACE:
+            return isVariantLit ? VariantUtils::getLitDepthVariants()
+                                : VariantUtils::getUnlitDepthVariants();
+        case MaterialDomain::POST_PROCESS:
+            return {};
+        case MaterialDomain::COMPUTE:
+            // TODO: implement MaterialDomain::COMPUTE
+            PANIC_PRECONDITION("Compute shaders not yet supported");
+    }
 }
 
 } // namespace filament
