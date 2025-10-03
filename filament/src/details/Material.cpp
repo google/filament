@@ -479,7 +479,8 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
         }
     }
 
-    auto const program = driverApi.createProgram(std::move(p), CString{ mDefinition.name });
+    auto const program = driverApi.createProgram(std::move(p),
+            ImmutableCString{ mDefinition.name.c_str_safe() });
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 

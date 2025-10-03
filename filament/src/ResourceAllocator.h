@@ -25,6 +25,7 @@
 
 #include "backend/DriverApiForward.h"
 
+#include <utils/StaticString.h>
 #include <utils/Hash.h>
 
 #include <array>
@@ -53,7 +54,7 @@ protected:
 
 class ResourceAllocatorInterface {
 public:
-    virtual backend::RenderTargetHandle createRenderTarget(const char* name,
+    virtual backend::RenderTargetHandle createRenderTarget(utils::StaticString name,
             backend::TargetBufferFlags targetBufferFlags,
             uint32_t width,
             uint32_t height,
@@ -65,7 +66,7 @@ public:
 
     virtual void destroyRenderTarget(backend::RenderTargetHandle h) noexcept = 0;
 
-    virtual backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
+    virtual backend::TextureHandle createTexture(utils::StaticString name, backend::SamplerType target,
             uint8_t levels,backend::TextureFormat format, uint8_t samples,
             uint32_t width, uint32_t height, uint32_t depth,
             std::array<backend::TextureSwizzle, 4> swizzle,
@@ -91,7 +92,7 @@ public:
 
     void terminate() noexcept;
 
-    backend::RenderTargetHandle createRenderTarget(const char* name,
+    backend::RenderTargetHandle createRenderTarget(utils::StaticString name,
             backend::TargetBufferFlags targetBufferFlags,
             uint32_t width,
             uint32_t height,
@@ -103,7 +104,7 @@ public:
 
     void destroyRenderTarget(backend::RenderTargetHandle h) noexcept override;
 
-    backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
+    backend::TextureHandle createTexture(utils::StaticString name, backend::SamplerType target,
             uint8_t levels, backend::TextureFormat format, uint8_t samples,
             uint32_t width, uint32_t height, uint32_t depth,
             std::array<backend::TextureSwizzle, 4> swizzle,
@@ -119,7 +120,7 @@ private:
     size_t const mCacheMaxAge;
 
     struct TextureKey {
-        const char* name; // doesn't participate in the hash
+        utils::StaticString name; // doesn't participate in the hash
         backend::SamplerType target;
         uint8_t levels;
         backend::TextureFormat format;
