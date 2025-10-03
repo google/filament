@@ -17,6 +17,7 @@
 #define TNT_FILAMENT_MATERIALCACHE_H
 
 #include "MaterialDefinition.h"
+#include "ProgramSpecialization.h"
 
 #include <private/filament/Variant.h>
 
@@ -25,6 +26,8 @@
 #include <backend/Handle.h>
 #include <backend/Program.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/InternPool.h>
 #include <utils/Invocable.h>
 #include <utils/RefCountedMap.h>
 
@@ -45,7 +48,14 @@ class MaterialCache {
     };
 
 public:
+    using SpecializationConstantInternPool =
+            utils::InternPool<backend::Program::SpecializationConstant>;
+
     ~MaterialCache();
+
+    SpecializationConstantInternPool& getSpecializationConstantsInternPool() {
+        return mSpecializationConstantsInternPool;
+    }
 
     // Acquire or create a new entry in the cache for the given material data.
     MaterialDefinition* UTILS_NULLABLE acquire(FEngine& engine, const void* UTILS_NONNULL data,
@@ -54,10 +64,30 @@ public:
     // Release an entry in the cache, potentially freeing its GPU resources.
     void release(FEngine& engine, MaterialDefinition const& definition) noexcept;
 
+    backend::Handle<backend::HwProgram> acquireProgram(
+            ProgramSpecialization const& specialization) noexcept;
+
+    backend::Handle<backend::HwProgram> acquireAndPrepareProgram(FEngine& engine,
+            MaterialDefinition const& material, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue const priorityQueue);
+
+    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine,
+            MaterialDefinition const& material, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue const priorityQueue);
+
+    backend::Handle<backend::HwProgram> getProgram(ProgramSpecialization const& specialization);
+
+    void releaseProgram(FEngine& engine, ProgramSpecialization const& specialization);
+
 private:
+    // TODO: investigate using custom allocators for the below data structures?
+
     // We use unique_ptr here because we need these pointers to be stable.
-    // TODO: investigate using a custom allocator here?
     utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mDefinitions;
+
+    utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>> mPrograms;
+
+    utils::InternPool<backend::Program::SpecializationConstant> mSpecializationConstantsInternPool;
 };
 
 } // namespace filament

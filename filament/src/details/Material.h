@@ -45,7 +45,6 @@
 #include <utils/Invocable.h>
 #include <utils/Mutex.h>
 
-#include <array>
 #include <optional>
 #include <string_view>
 
@@ -125,21 +124,16 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    bool isCached(Variant const variant) const noexcept {
-        return bool(mCachedPrograms[variant.key]);
-    }
-
-    void invalidate(Variant::type_t variantMask = 0, Variant::type_t variantValue = 0) noexcept;
-
     // prepareProgram creates the program for the material's given variant at the backend level.
     // Must be called outside of backend render pass.
     // Must be called before getProgram() below.
-    void prepareProgram(Variant const variant,
+    backend::Handle<backend::HwProgram> prepareProgram(Variant const variant,
             backend::CompilerPriorityQueue const priorityQueue) const noexcept {
-        // prepareProgram() is called for each RenderPrimitive in the scene, so it must be efficient.
-        if (UTILS_UNLIKELY(!isCached(variant))) {
-            prepareProgramSlow(variant, priorityQueue);
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        if (UTILS_LIKELY(program)) {
+            return program;
         }
+        return prepareProgramSlow(variant, priorityQueue);
     }
 
     // getProgram returns the backend program for the material's given variant.
@@ -147,10 +141,13 @@ public:
     [[nodiscard]]
     backend::Handle<backend::HwProgram> getProgram(Variant const variant) const noexcept {
 #if FILAMENT_ENABLE_MATDBG
-        return getProgramWithMATDBG(variant);
+        updateActiveProgramsForMatdbg(variant);
 #endif
-        assert_invariant(mCachedPrograms[variant.key]);
-        return mCachedPrograms[variant.key];
+        backend::Handle<backend::HwProgram> program = mCachedPrograms[variant.key];
+        if (UTILS_LIKELY(program)) {
+            return program;
+        }
+        return getProgramSlow(variant);
     }
 
     // MaterialInstance::use() binds descriptor sets before drawing. For shared variants,
@@ -169,9 +166,6 @@ public:
         pDefaultInstance->use(driver, variant);
         return true;
     }
-
-    [[nodiscard]]
-    backend::Handle<backend::HwProgram> getProgramWithMATDBG(Variant variant) const noexcept;
 
     bool isVariantLit() const noexcept { return mDefinition.isVariantLit; }
 
@@ -230,15 +224,14 @@ public:
 
     uint32_t generateMaterialInstanceId() const noexcept { return mMaterialInstanceId++; }
 
-    void destroyPrograms(FEngine& engine,
-            Variant::type_t variantMask = 0,
-            Variant::type_t variantValue = 0);
-
     // return the id of a specialization constant specified by name for this material
     std::optional<uint32_t> getSpecializationConstantId(std::string_view name) const noexcept ;
 
     // Sets a specialization constant by id. call is no-op if the id is invalid.
     // Return true is the value was changed.
+    //
+    // TODO(exv): replace this with some interface for batch-setting constants, because setting each
+    // one-by-one is really expensive.
     template<typename T, typename = Builder::is_supported_constant_parameter_t<T>>
     bool setConstant(uint32_t id, T value) noexcept;
 
@@ -281,29 +274,28 @@ public:
 private:
     MaterialParser const& getMaterialParser() const noexcept;
 
-    bool hasVariant(Variant variant) const noexcept;
-    void prepareProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getSurfaceProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    void getPostProcessProgramSlow(Variant variant,
-            CompilerPriorityQueue priorityQueue) const noexcept;
-    backend::Program getProgramWithVariants(Variant variant,
-            Variant vertexVariant, Variant fragmentVariant) const;
+    ProgramSpecialization getProgramSpecialization(Variant const variant) const noexcept;
+
+    backend::Handle<backend::HwProgram> prepareProgramSlow(Variant const variant,
+            backend::CompilerPriorityQueue const priorityQueue) const noexcept;
+
+    [[nodiscard]]
+    backend::Handle<backend::HwProgram> getProgramSlow(Variant const variant) const noexcept;
+
+#if FILAMENT_ENABLE_MATDBG
+    // Called by getProgram() to update active program list for matdbg UI.
+    void updateActiveProgramsForMatdbg(Variant const variant) noexcept;
+#endif
 
     utils::FixedCapacityVector<backend::Program::SpecializationConstant>
             processSpecializationConstants(Builder const& builder);
-
-    void precacheDepthVariants(FEngine& engine);
-
-    void createAndCacheProgram(backend::Program&& p, Variant variant) const noexcept;
 
     inline bool isSharedVariant(Variant const variant) const {
         return (mDefinition.materialDomain == MaterialDomain::SURFACE) && !mIsDefaultMaterial &&
                !mDefinition.hasCustomDepthShader && Variant::isValidDepthVariant(variant);
     }
 
-    mutable std::array<backend::Handle<backend::HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    mutable utils::FixedCapacityVector<backend::Handle<backend::HwProgram>> mCachedPrograms;
     MaterialDefinition const& mDefinition;
 
     bool mIsDefaultMaterial = false;
@@ -312,7 +304,7 @@ private:
     mutable FMaterialInstance* mDefaultMaterialInstance = nullptr;
 
     // current specialization constants for the HwProgram
-    utils::FixedCapacityVector<backend::Program::SpecializationConstant> mSpecializationConstants;
+    utils::Slice<const backend::Program::SpecializationConstant> mSpecializationConstants;
 
 #if FILAMENT_ENABLE_MATDBG
     matdbg::MaterialKey mDebuggerId;

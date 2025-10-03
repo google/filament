@@ -998,7 +998,6 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::screenSpaceAmbientOcclusion(
                 setConstantParameter(ma, "useVisibilityBitmasks", options.gtao.useVisibilityBitmasks, dirty);
                 setConstantParameter(ma, "linearThickness", options.gtao.linearThickness, dirty);
                 if (dirty) {
-                   ma->invalidate();
                    // TODO: call Material::compile(), we can't do that now because it works only
                    //       with surface materials
                 }
@@ -2867,7 +2866,6 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(
     setConstantParameter(ma, "boxClipping", int32_t(taaOptions.boxClipping), dirty);
     setConstantParameter(ma, "varianceGamma", taaOptions.varianceGamma, dirty);
     if (dirty) {
-        ma->invalidate();
         // TODO: call Material::compile(), we can't do that now because it works only
         //       with surface materials
     }
@@ -2884,7 +2882,6 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(
     setConstantParameter(ma, "isLDR", colorGrading->isLDR(), dirty);
 
     if (dirty) {
-        ma->invalidate();
         // TODO: call Material::compile(), we can't do that now because it works only
         //       with surface materials
     }
