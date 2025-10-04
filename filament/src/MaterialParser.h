@@ -32,6 +32,7 @@
 #include <utils/FixedCapacityVector.h>
 
 #include <array>
+#include <optional>
 #include <tuple>
 #include <utility>
 
