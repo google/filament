@@ -29,13 +29,13 @@ TEST(StatusTest, Constructor) {
     std::string_view errorMessage = "invalid";
     Status status(StatusCode::INVALID_ARGUMENT, errorMessage);
     EXPECT_EQ(status.getCode(), StatusCode::INVALID_ARGUMENT);
-    EXPECT_EQ(status.getErrorMessage(), errorMessage);
+    EXPECT_EQ(status.getMessage(), errorMessage);
 }
 
 TEST(StatusTest, CopyOperator) {
     Status status1 = Status::ok();
     EXPECT_EQ(status1.getCode(), StatusCode::OK);
-    EXPECT_EQ(status1.getErrorMessage(), "");
+    EXPECT_EQ(status1.getMessage(), "");
 
     Status status2(StatusCode::INTERNAL, "internal error");
     status1 = status2;
@@ -52,14 +52,14 @@ TEST(StatusTest, CopyConstructor) {
 TEST(StatusTest, MoveOperator) {
     Status status;
     EXPECT_EQ(status.getCode(), StatusCode::OK);
-    EXPECT_EQ(status.getErrorMessage(), "");
+    EXPECT_EQ(status.getMessage(), "");
 
     std::string_view errorMessage = "internal error";
     Status another(StatusCode::INTERNAL, errorMessage);
     status = std::move(another);
 
     EXPECT_EQ(status.getCode(), StatusCode::INTERNAL);
-    EXPECT_EQ(status.getErrorMessage(), errorMessage);
+    EXPECT_EQ(status.getMessage(), errorMessage);
 }
 
 TEST(StatusTest, MoveConstructor) {
@@ -68,7 +68,7 @@ TEST(StatusTest, MoveConstructor) {
     Status moved(std::move(original));
 
     EXPECT_EQ(moved.getCode(), StatusCode::INTERNAL);
-    EXPECT_EQ(moved.getErrorMessage(), errorMessage);
+    EXPECT_EQ(moved.getMessage(), errorMessage);
 }
 
 TEST(StatusTest, Equality) {
@@ -95,6 +95,12 @@ TEST(StatusTest, InEqualityWithDifferentMessage) {
 TEST(StatusTest, StaticOk) {
     Status expected(StatusCode::OK, "");
     EXPECT_EQ(Status::ok(), expected);
+}
+
+TEST(StatusTest, StaticOkWithMessage) {
+    std::string_view supplementaryMessage = "some debug string";
+    Status expected(StatusCode::OK, supplementaryMessage);
+    EXPECT_EQ(Status::ok(supplementaryMessage), expected);
 }
 
 TEST(StatusTest, StaticInvalidArgumentError) {

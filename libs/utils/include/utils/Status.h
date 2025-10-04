@@ -38,7 +38,7 @@ enum class StatusCode {
 
 /**
  * Returns the StatusCode to indicate whether the request was successful.
- * If successful, it returns OK with no error message, if not it returns
+ * If successful, it returns OK with an optional message, if not it returns
  * other codes with an optional error message.
  */
 class UTILS_PUBLIC Status {
@@ -49,14 +49,14 @@ public:
     Status() : mStatusCode(StatusCode::OK) {}
 
     /**
-     * Creates a new Status with the given status code and error message.
+     * Creates a new Status with the given status code and supplementary message.
      *
      * @param statusCode The status code to use.
-     * @param errorMessage An optional error message.
+     * @param message An optional message, usually contains the reason for the failure.
      */
-    Status(StatusCode statusCode, std::string_view errorMessage) :
+    Status(StatusCode statusCode, std::string_view message) :
           mStatusCode(statusCode),
-          mErrorMessage(errorMessage.data(), errorMessage.length()) {}
+          mMessage(message.data(), message.length()) {}
 
     Status(const Status& other) = default;
 
@@ -68,7 +68,7 @@ public:
     Status& operator=(Status&& other) noexcept = default;
 
     bool operator==(const Status& other) const {
-        return mStatusCode == other.mStatusCode && mErrorMessage == other.mErrorMessage;
+        return mStatusCode == other.mStatusCode && mMessage == other.mMessage;
     }
 
     bool operator!=(const Status& other) const {
@@ -92,11 +92,11 @@ public:
     }
 
     /**
-     * Returns the error message for this Status.
-     * @return The error message string. Will be empty if the status is OK.
+     * Returns the message for this Status.
+     * @return The message string. Can be empty if it's not set.
      */
-    std::string_view getErrorMessage() const {
-        return std::string_view(mErrorMessage.begin(), mErrorMessage.end());
+    std::string_view getMessage() const {
+        return std::string_view(mMessage.begin(), mMessage.end());
     }
 
     /**
@@ -110,6 +110,14 @@ public:
      */
     static Status ok() {
         return {};
+    }
+
+    /**
+     * Creates a success Status with a StatusCode of OK with a supplementary message.
+     * @return a success Status with a StatusCode of OK with a supplementary message.
+     */
+    static Status ok(std::string_view message) {
+        return {StatusCode::OK, message};
     }
 
     /**
@@ -132,8 +140,8 @@ public:
 
 private:
     StatusCode mStatusCode;
-    // Reason for the error if exists.
-    utils::CString mErrorMessage;
+    // Additional message for the Status. Usually contains the reason for the error.
+    utils::CString mMessage;
 };
 
 utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status);

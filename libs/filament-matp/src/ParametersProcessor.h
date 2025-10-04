@@ -25,6 +25,7 @@
 #include "JsonishParser.h"
 
 #include <filamat/MaterialBuilder.h>
+#include <utils/Status.h>
 
 namespace matp {
 
@@ -33,12 +34,12 @@ class ParametersProcessor {
 public:
     ParametersProcessor();
     ~ParametersProcessor() = default;
-    bool process(filamat::MaterialBuilder& builder, const JsonishObject& jsonObject);
-    bool process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value);
+    utils::Status process(filamat::MaterialBuilder& builder, const JsonishObject& jsonObject);
+    utils::Status process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value);
 
 private:
 
-    using Callback = bool (*)(filamat::MaterialBuilder& builder, const JsonishValue& value);
+    using Callback = utils::Status (*)(filamat::MaterialBuilder& builder, const JsonishValue& value);
 
     struct ParameterInfo {
         Callback callback;

@@ -29,7 +29,7 @@ utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status) {
         case StatusCode::INTERNAL: os << "Internal error";
             break;
     }
-    os << ", error message: " << status.getErrorMessage();
+    os << ", with a message: " << status.getMessage();
     return os;
 }
 } // namespace utils

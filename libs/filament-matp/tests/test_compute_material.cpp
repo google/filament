@@ -41,9 +41,10 @@ TEST(TestParseAndComputeMaterial, JsonMaterialCompilerSimple) {
     filamat::MaterialBuilder::init();
     filamat::MaterialBuilder builder;
 
-    bool result = testParser.parseMaterial(jsonMaterialSourceSimple.data(), jsonMaterialSourceSimple.size(), builder);
+    utils::Status result = testParser.parseMaterial(
+            jsonMaterialSourceSimple.data(), jsonMaterialSourceSimple.size(), builder);
 
-    EXPECT_TRUE(result);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 
     utils::JobSystem js;
     js.adopt();
