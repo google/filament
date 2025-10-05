@@ -28,8 +28,8 @@
 namespace utils {
 
 /**
- * Simple asynchronous job queue. This manages a thread that executes jobs submitted to it
- * in order.
+ * Simple asynchronous job queue. This manages a *single*thread that executes jobs submitted
+ * to it in order.
  */
 class AsyncJobQueue {
 public:
