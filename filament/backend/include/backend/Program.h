@@ -78,8 +78,8 @@ public:
     using BindingUniformsInfo = utils::FixedCapacityVector<
             std::tuple<uint8_t, utils::CString, Program::UniformInfo>>;
 
-    explicit Program(utils::InternPool<SpecializationConstant>&
-            specializationConstantsInternPool) noexcept;
+    explicit Program(
+            utils::InternPool<SpecializationConstant>* specializationConstantsInternPool) noexcept;
 
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
