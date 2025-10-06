@@ -45,6 +45,7 @@
 #include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 #include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/debug.h>
 
 #include <math/vec4.h>

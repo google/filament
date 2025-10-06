@@ -81,7 +81,7 @@ void RenderPassNode::execute(FrameGraphResources const& resources, DriverApi& dr
 }
 
 uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder&,
-        const char* name, FrameGraphRenderPass::Descriptor const& descriptor) {
+        utils::StaticString name, FrameGraphRenderPass::Descriptor const& descriptor) {
 
     RenderPassData data;
     data.name = name;

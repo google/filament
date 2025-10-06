@@ -65,7 +65,7 @@ ResourceNode* ResourceNode::getAncestorNode(ResourceNode* node) noexcept {
 }
 
 char const* ResourceNode::getName() const noexcept {
-    return mFrameGraph.getResource(resourceHandle)->name;
+    return mFrameGraph.getResource(resourceHandle)->name.c_str();
 }
 
 void ResourceNode::addOutgoingEdge(ResourceEdgeBase* edge) noexcept {

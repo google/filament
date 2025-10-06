@@ -25,6 +25,7 @@
 #include "details/Scene.h"
 
 #include "private/filament/Variant.h"
+#include "private/filament/EngineEnums.h"
 
 #include <backend/DriverApiForward.h>
 #include <backend/DriverEnums.h>
@@ -67,7 +68,7 @@ public:
      *   Command key encoding
      *   --------------------
      *
-     *   CC    = Channel
+     *   CCC   = Channel
      *   PP    = Pass
      *   a     = alpha masking
      *   ppp   = priority
@@ -79,43 +80,43 @@ public:
      *       auto-instancing can work better
      *
      *   DEPTH command (b00)
-     *   |  |  | 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CC|00|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CCC|0|00|01|00|0|ppp|00|000000| Z-bucket |          material-id           |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
      *   COLOR (b01) and REFRACT (b10) commands
-     *   |  | 2| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
-     *   |CC|00|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
-     *   |CC|00|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
-     *   +--+--+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|  6   |   10     |               32               |
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
+     *   |CCC|0|01|01|00|a|ppp|00|000000| Z-bucket |          material-id           |
+     *   |CCC|0|10|01|00|a|ppp|00|000000| Z-bucket |          material-id           | refraction
+     *   +---+-+--+--+--+-+---+--+------+----------+--------------------------------+
      *   | correctness        |      optimizations (truncation allowed)             |
      *
      *
      *   BLENDED command (b11)
-     *   | 2| 2| 2| 2| 2|1| 3 | 2|              32                |         15    |1|
-     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
-     *   |CC|00|11|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
-     *   +--+--+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   |  3|1| 2| 2| 2|1| 3 | 2|              32                |         15    |1|
+     *   +---+-+--+--+--+-+---+--+--------------------------------+---------------+-+
+     *   |CCC|0|11|01|00|0|ppp|00|         ~distanceBits          |   blendOrder  |t|
+     *   +---+-+--+--+--+-+---+--+--------------------------------+---------------+-+
      *   | correctness                                                              |
      *
      *
-     *   pre-CUSTOM command
-     *   | 2| 2| 2| 2| 2|         22           |               32               |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
-     *   |CC|00|PP|00|00|        order         |      custom command index      |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   CUSTOM command (prologue)
+     *   |  3|1| 2| 2| 2|         22           |               32               |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
+     *   |CCC|0|PP|00|00|        order         |      custom command index      |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
      *   | correctness                                                          |
      *
      *
-     *   post-CUSTOM command
-     *   | 2| 2| 2| 2| 2|         22           |               32               |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
-     *   |CC|00|PP|11|00|        order         |      custom command index      |
-     *   +--+--+--+--+--+----------------------+--------------------------------+
+     *   CUSTOM command (epilogue)
+     *   |  3|1| 2| 2| 2|         22           |               32               |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
+     *   |CCC|0|PP|10|00|        order         |      custom command index      |
+     *   +---+-+--+--+--+----------------------+--------------------------------+
      *   | correctness                                                          |
      *
      *
@@ -126,6 +127,8 @@ public:
      *   +-----------------------------------------------------------------------+
      */
     using CommandKey = uint64_t;
+
+    static constexpr uint64_t CHANNEL_COUNT                 = CONFIG_RENDERPASS_CHANNEL_COUNT;
 
     static constexpr uint64_t BLEND_ORDER_MASK              = 0xFFFEllu;
     static constexpr unsigned BLEND_ORDER_SHIFT             = 1;
@@ -163,8 +166,9 @@ public:
     static constexpr uint64_t PASS_MASK                     = 0x0C00000000000000llu;
     static constexpr unsigned PASS_SHIFT                    = 58;
 
-    static constexpr uint64_t CHANNEL_MASK                  = 0xC000000000000000llu;
-    static constexpr unsigned CHANNEL_SHIFT                 = 62;
+    static constexpr unsigned CHANNEL_SHIFT                 = 61;
+    static constexpr uint64_t CHANNEL_MASK                  = (CHANNEL_COUNT - 1) << CHANNEL_SHIFT;
+
 
     static constexpr uint64_t CUSTOM_ORDER_MASK             = 0x003FFFFF00000000llu;
     static constexpr unsigned CUSTOM_ORDER_SHIFT            = 32;
@@ -184,9 +188,9 @@ public:
     };
 
     enum class CustomCommand : uint64_t {    // 2-bits max
-        PROLOG  = uint64_t(0x0) << CUSTOM_SHIFT,
-        PASS    = uint64_t(0x1) << CUSTOM_SHIFT,
-        EPILOG  = uint64_t(0x2) << CUSTOM_SHIFT
+        PROLOGUE    = uint64_t(0x0) << CUSTOM_SHIFT,
+        PASS        = uint64_t(0x1) << CUSTOM_SHIFT,
+        EPILOGUE    = uint64_t(0x2) << CUSTOM_SHIFT
     };
 
     enum class CommandTypeFlags : uint32_t {

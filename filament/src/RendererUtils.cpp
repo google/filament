@@ -119,8 +119,9 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
                     clearDepthFlags = TargetBufferFlags::DEPTH;
                     clearStencilFlags = config.enabledStencilBuffer ?
                             TargetBufferFlags::STENCIL : TargetBufferFlags::NONE;
-                    const char* const textureName = config.enabledStencilBuffer ?
-                             "Depth/Stencil Buffer" : "Depth Buffer";
+                    utils::StaticString const textureName = config.enabledStencilBuffer ?
+                            utils::StaticString{"Depth/Stencil Buffer"} :
+                            utils::StaticString{"Depth Buffer"};
 
                     bool const isES2 =
                             engine.getDriverApi().getFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0;
