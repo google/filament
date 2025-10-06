@@ -34,8 +34,8 @@ using namespace utils;
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
 Program::Program(
-        utils::InternPool<SpecializationConstant>& specializationConstantsInternPool) noexcept
-        : mSpecializationConstantsInternPool(&specializationConstantsInternPool) {}
+        utils::InternPool<SpecializationConstant>* specializationConstantsInternPool) noexcept
+        : mSpecializationConstantsInternPool(specializationConstantsInternPool) {}
 
 Program::Program(Program&& rhs) noexcept
         : mSpecializationConstantsInternPool(rhs.mSpecializationConstantsInternPool),
