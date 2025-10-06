@@ -24,6 +24,7 @@
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/WebGPUQueueManager.h"
 #include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -49,6 +50,7 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WebGPUQueueManager;
 
 /**
  * Implements the private backend driver API for WebGPU specifically (that API is essentially
@@ -78,14 +80,12 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Limits mDeviceLimits = {};
-    wgpu::Queue mQueue = nullptr;
+    WebGPUQueueManager mQueueManager;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
-    wgpu::CommandEncoder mCommandEncoder = nullptr;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
-    wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
     WebGPUPipelineLayoutCache mPipelineLayoutCache;
