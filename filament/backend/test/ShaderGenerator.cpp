@@ -180,7 +180,7 @@ ShaderGenerator::Blob ShaderGenerator::transpileShader(ShaderStage stage, std::s
 }
 
 Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
-    Program program;
+    Program program(/*specializationConstantsInternPool=*/ nullptr);
     program.shaderLanguage(mShaderLanguage);
     program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
     program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
@@ -189,7 +189,7 @@ Program ShaderGenerator::getProgram(filament::backend::DriverApi&) noexcept {
 
 Program ShaderGenerator::getProgramWithPushConstants(filament::backend::DriverApi&,
         std::array<PushConstants, filament::backend::Program::SHADER_TYPE_COUNT> constants) {
-    Program program;
+    Program program(/*specializationConstantsInternPool=*/ nullptr);
     program.shaderLanguage(mShaderLanguage);
     program.shader(ShaderStage::VERTEX, mVertexBlob.data(), mVertexBlob.size());
     program.shader(ShaderStage::FRAGMENT, mFragmentBlob.data(), mFragmentBlob.size());
