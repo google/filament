@@ -20,6 +20,7 @@
 
 #include <unordered_map>
 
+#include <utils/Status.h>
 #include "Config.h"
 
 namespace filamat {
@@ -40,45 +41,48 @@ public:
     // Call MaterialBuilder::init before passing in the builder; call MaterialBuilder::build to
     // create filamat::Package after.
     // When the input shader has #includes, it has to be resolved before calling into parse.
-    bool parse(
+    utils::Status parse(
             filamat::MaterialBuilder& builder,
             const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer);
     // Replaces macro keywords with user specified ones. Must be called before parse.
-    bool processTemplateSubstitutions(
+    utils::Status processTemplateSubstitutions(
             const Config& config, ssize_t& size, std::unique_ptr<const char[]>& buffer);
 private:
     friend class ::TestMaterialParser;
 
-    bool parseMaterial(const char* buffer, size_t size,
+    utils::Status parseMaterial(const char* buffer, size_t size,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processMaterial(const MaterialLexeme&,
+    utils::Status processMaterial(const MaterialLexeme&,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processVertexShader(const MaterialLexeme&,
+    utils::Status processVertexShader(const MaterialLexeme&,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processFragmentShader(const MaterialLexeme&,
+    utils::Status processFragmentShader(const MaterialLexeme&,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processComputeShader(const MaterialLexeme&,
+    utils::Status processComputeShader(const MaterialLexeme&,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool ignoreLexeme(const MaterialLexeme&, filamat::MaterialBuilder& builder) const noexcept;
+    utils::Status ignoreLexeme(
+            const MaterialLexeme&, filamat::MaterialBuilder& builder) const noexcept;
 
-    bool parseMaterialAsJSON(const char* buffer, size_t size,
+    utils::Status parseMaterialAsJSON(const char* buffer, size_t size,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processMaterialJSON(const JsonishValue*,
+    utils::Status processMaterialJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processVertexShaderJSON(const JsonishValue*,
+    utils::Status processVertexShaderJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processFragmentShaderJSON(const JsonishValue*,
+    utils::Status processFragmentShaderJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool processComputeShaderJSON(const JsonishValue*,
+    utils::Status processComputeShaderJSON(const JsonishValue*,
             filamat::MaterialBuilder& builder) const noexcept;
-    bool ignoreLexemeJSON(const JsonishValue*, filamat::MaterialBuilder& builder) const noexcept;
-    bool isValidJsonStart(const char* buffer, size_t size) const noexcept;
+    utils::Status ignoreLexemeJSON(
+            const JsonishValue*, filamat::MaterialBuilder& builder) const noexcept;
+    utils::Status isValidJsonStart(const char* buffer, size_t size) const noexcept;
 
-    bool processMaterialParameters(filamat::MaterialBuilder& builder, const Config& config) const;
+    utils::Status processMaterialParameters(
+            filamat::MaterialBuilder& builder, const Config& config) const;
 
     // Member function pointer type, this is used to implement a Command design
     // pattern.
-    using MaterialConfigProcessor = bool (MaterialParser::*)
+    using MaterialConfigProcessor = utils::Status (MaterialParser::*)
             (const MaterialLexeme&, filamat::MaterialBuilder& builder) const;
     // Map used to store Command pattern function pointers.
     // Using string_view is generally not recommended in a map, but the string keys are program constants,
@@ -86,7 +90,7 @@ private:
     std::unordered_map<std::string_view, MaterialConfigProcessor> mConfigProcessor;
 
     // The same, but for pure JSON syntax
-    using MaterialConfigProcessorJSON = bool (MaterialParser::*)
+    using MaterialConfigProcessorJSON = utils::Status (MaterialParser::*)
             (const JsonishValue*, filamat::MaterialBuilder& builder) const;
     std::unordered_map<std::string_view, MaterialConfigProcessorJSON> mConfigProcessorJSON;
 };
