@@ -56,11 +56,26 @@ function end_render_() {
 #  - Build gltf_viewer
 #  - Run a test
 
+for i in "$@"
+do
+case $i in
+    --test_filter=*)
+    TEST_FILTER="${i#*=}"
+    shift # past argument=value
+    ;;
+    *)
+          # unknown option
+    ;;
+esac
+done
+
+
 start_render_ && \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" \
             --output_dir="${RENDER_OUTPUT_DIR}" \
             --opengl_lib="${MESA_LIB_DIR}" \
-            --vk_icd="${MESA_VK_ICD_PATH}" && \
+            --vk_icd="${MESA_VK_ICD_PATH}" \
+            ${TEST_FILTER:+--test_filter="$TEST_FILTER"} && \
     end_render_

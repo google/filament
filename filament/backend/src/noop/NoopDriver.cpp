@@ -45,8 +45,16 @@ ShaderModel NoopDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage NoopDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::ESSL3;
+utils::FixedCapacityVector<ShaderLanguage> NoopDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
+    return {
+        ShaderLanguage::ESSL3,
+        ShaderLanguage::ESSL1,
+        ShaderLanguage::SPIRV,
+        ShaderLanguage::MSL,
+        ShaderLanguage::METAL_LIBRARY,
+        ShaderLanguage::WGSL,
+    };
 }
 
 // explicit instantiation of the Dispatcher
@@ -158,6 +166,10 @@ void NoopDriver::destroyFence(Handle<HwFence> fh) {
 
 FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
+}
+
+FenceStatus NoopDriver::fenceWait(Handle<HwFence> fh, uint64_t timeout) {
+    return FenceStatus::ERROR;
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that

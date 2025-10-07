@@ -507,20 +507,40 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "Mali")) {
             // ARM GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
+
+            // We have run into several problems with timer queries on Mali-Gxx:
+            // - timer queries seem to cause memory corruptions in some cases on some devices
+            //   (see b/233754398)
+            //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
+            //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
+            // - timer queries sometime crash with an NPE (see b/273759031)
+            //   (see b/273759031)
+            //          - possibly not present in: "OpenGL ES 3.2 v1.r46p0"
+            bugs->dont_use_timer_query = true;
+
+            // at least some version of Mali have problems with framebuffer_fetch
+            // (see b/445721121, https://github.com/google/filament/issues/7794)
+            bugs->disable_framebuffer_fetch_extension = true;
+
             if (strstr(renderer, "Mali-T")) {
                 bugs->disable_glFlush = true;
                 bugs->disable_shared_context_draws = true;
-                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
-                bugs->dont_use_timer_query = true;
             }
             if (strstr(renderer, "Mali-G")) {
-                // We have run into several problems with timer queries on Mali-Gxx:
-                // - timer queries seem to cause memory corruptions in some cases on some devices
-                //   (see b/233754398)
-                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
-                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
-                // - timer queries sometime crash with an NPE (see b/273759031)
-                bugs->dont_use_timer_query = true;
+                int maj, min, driverVersion, driverRelease;
+                int const c = sscanf(version, "OpenGL ES %d.%d v%d.r%d",
+                        &maj, &min, &driverVersion, &driverRelease);
+                if (UTILS_LIKELY(c == 4)) {
+                    // we were able to parse the version string
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 46)) {
+                        // this driver version is known to be good
+                        bugs->dont_use_timer_query = false;
+                    }
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 53)) {
+                        // this driver version is known to be good
+                        bugs->disable_framebuffer_fetch_extension = false;
+                    }
+                }
             }
             // Mali seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;

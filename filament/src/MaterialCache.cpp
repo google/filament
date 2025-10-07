@@ -63,10 +63,11 @@ MaterialDefinition* UTILS_NULLABLE MaterialCache::acquire(FEngine& engine,
     });
 }
 
-void MaterialCache::release(FEngine& engine, MaterialParser const& parser) noexcept {
-    mDefinitions.release(Key{&parser}, [&engine](MaterialDefinition& definition) {
-        definition.terminate(engine);
-    });
+void MaterialCache::release(FEngine& engine, MaterialDefinition const& definition) noexcept {
+    mDefinitions.release(Key{ &definition.getMaterialParser() },
+            [&engine](MaterialDefinition& definition) {
+                definition.terminate(engine);
+            });
 }
 
 } // namespace filament

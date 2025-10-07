@@ -10,6 +10,10 @@
                 "viewer.cameraFocusDistance": 0,
                 "view.postProcessingEnabled": true,
                 "view.dithering": "NONE"
+            },
+            "tolerance": {                            // [optional] Simple tolerance - single criteria
+                "max_pixel_diff": 5,                  // Max absolute difference per channel (0-255)
+                "allowed_diff_pixels": 0.1            // Percentage of pixels allowed to exceed (0-100%)
             }
         },
         {

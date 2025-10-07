@@ -1002,8 +1002,12 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage MetalDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::MSL;
+utils::FixedCapacityVector<ShaderLanguage> MetalDriver::getShaderLanguages(
+        ShaderLanguage preferredLanguage) const noexcept {
+    if (preferredLanguage == backend::ShaderLanguage::MSL) {
+        return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
+    }
+    return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
 }
 
 Handle<HwStream> MetalDriver::createStreamNative(void* stream, utils::CString tag) {
@@ -1038,11 +1042,15 @@ void MetalDriver::destroyFence(Handle<HwFence> fh) {
 }
 
 FenceStatus MetalDriver::getFenceStatus(Handle<HwFence> fh) {
+    return fenceWait(fh, 0);
+}
+
+FenceStatus MetalDriver::fenceWait(FenceHandle fh, uint64_t const timeout) {
     auto* fence = handle_cast<MetalFence>(fh);
     if (!fence) {
         return FenceStatus::ERROR;
     }
-    return fence->wait(0);
+    return fence->wait(timeout);
 }
 
 void MetalDriver::destroySync(Handle<HwSync> sh) {

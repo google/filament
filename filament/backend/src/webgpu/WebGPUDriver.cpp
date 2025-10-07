@@ -132,8 +132,9 @@ ShaderModel WebGPUDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage WebGPUDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::WGSL;
+utils::FixedCapacityVector<ShaderLanguage> WebGPUDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
+    return { ShaderLanguage::WGSL };
 }
 
 // explicit instantiation of the Dispatcher
@@ -732,6 +733,14 @@ FenceStatus WebGPUDriver::getFenceStatus(Handle<HwFence> fenceHandle) {
     return fence->getStatus();
 }
 
+FenceStatus WebGPUDriver::fenceWait(FenceHandle fenceHandle, uint64_t const timeout) {
+    const auto fence = handleCast<WebGPUFence>(fenceHandle);
+    if (!fence) {
+        return FenceStatus::ERROR;
+    }
+    return fence->wait(timeout);
+}
+
 void WebGPUDriver::destroySync(Handle<HwSync> syncHandle) {
     if (syncHandle) {
         destructHandle<WebGPUSync>(syncHandle);
@@ -782,7 +791,7 @@ bool WebGPUDriver::isFrameBufferFetchMultiSampleSupported() {
 }
 
 bool WebGPUDriver::isFrameTimeSupported() {
-    return true;
+    return false;
 }
 
 bool WebGPUDriver::isAutoDepthResolveSupported() {
