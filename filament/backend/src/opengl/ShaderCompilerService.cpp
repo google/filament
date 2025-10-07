@@ -343,6 +343,12 @@ void ShaderCompilerService::compileProgram(
                                     program.getSpecializationConstants(), program.isMultiview(),
                                     token);
                             linkProgram(gl, token);
+                            // Check status of program linking. If it failed, errors will be logged.
+                            bool const linked = checkLinkStatusAndCleanupShaders(token);
+                            // We panic if it failed to create the program.
+                            FILAMENT_CHECK_POSTCONDITION(linked)
+                                    << "OpenGL program " << token->name.c_str_safe()
+                                    << " failed to link or compile";
                         }
                         // Now `token->gl.program` must be populated, so we signal the completion
                         // of the linking. We don't need to check the result of the program here
@@ -475,16 +481,14 @@ GLuint ShaderCompilerService::initialize(program_token_t& token) {
     ensureTokenIsReady(token);
     assert_invariant(token->gl.program);
 
-    // Check status of program linking. If it failed, errors will be logged.
-    bool const linked = checkLinkStatusAndCleanupShaders(token);
-
-    // We panic if it failed to create the program.
-    FILAMENT_CHECK_POSTCONDITION(linked)
-            << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
-
     GLuint const program = token->gl.program;
 
     if (mMode != Mode::THREAD_POOL) {
+        // Check status of program linking. If it failed, errors will be logged.
+        bool const linked = checkLinkStatusAndCleanupShaders(token);
+        // We panic if it failed to create the program.
+        FILAMENT_CHECK_POSTCONDITION(linked)
+                << "OpenGL program " << token->name.c_str_safe() << " failed to link or compile";
         // The program has been successfully created. Try caching the program blob for
         // non-THREAD_POOL modes. In the THREAD_POOL mode, caching is performed in the pool.
         tryCachingProgram(mBlobCache, mDriver.mPlatform, token);
