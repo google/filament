@@ -56,6 +56,10 @@ Program::Program(Program&& rhs) noexcept
 }
 
 Program& Program::operator=(Program&& rhs) noexcept {
+    if (mSpecializationConstantsInternPool) {
+        mSpecializationConstantsInternPool->release(mSpecializationConstants);
+    }
+
     mSpecializationConstantsInternPool = rhs.mSpecializationConstantsInternPool;
     mShadersSource = std::move(rhs.mShadersSource);
     mShaderLanguage = std::move(rhs.mShaderLanguage);
