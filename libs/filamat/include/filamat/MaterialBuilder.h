@@ -146,7 +146,7 @@ protected:
     Platform mPlatform = Platform::DESKTOP;
     TargetApi mTargetApi = (TargetApi) 0;
     Optimization mOptimization = Optimization::PERFORMANCE;
-    Workarounds mWorkarounds = Workarounds::NONE;
+    Workarounds mWorkarounds = Workarounds::ALL;
     bool mPrintShaders = false;
     bool mSaveRawVariants = false;
     bool mGenerateDebugInfo = false;
