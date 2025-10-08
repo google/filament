@@ -16,15 +16,15 @@
 
 #include "JsonishParser.h"
 
-#include <iostream>
+#include <utils/sstream.h>
+#include <utils/string.h>
+#include <utils/Status.h>
 
 #include <string.h>
 
-#include <utils/string.h>
-
 namespace matp {
 
-static std::string resolveEscapes(const std::string& s) {
+static std::string resolveEscapes(const std::string& s, utils::Status& status) {
     std::string out;
     out.reserve(s.length());
 
@@ -58,10 +58,13 @@ static std::string resolveEscapes(const std::string& s) {
                     break;
                 case 'u':
                     // TODO: implement unicode escape sequences
-                    std::cerr << "Unicode escape sequences currently not supported." << std::endl;
+                    status = utils::Status::unsupported(
+                                    "Unicode escape sequences currently not supported.");
                     break;
                 default:
-                    std::cerr << "Invalid escape sequence \\" << c << "." << std::endl;
+                    utils::io::sstream errorMessage;
+                    errorMessage << "Invalid escape sequence \\" << c << ".";
+                    status = utils::Status::invalidArgument(errorMessage.c_str());
                     return out;
             }
             inEscape = false;
@@ -76,14 +79,14 @@ static std::string resolveEscapes(const std::string& s) {
     }
 
     if (inEscape) {
-        std::cerr << "Incomplete escape sequence." << std::endl;
+        status = utils::Status::invalidArgument("Incomplete escape sequence.");
     }
 
     return out;
 }
 
 JsonishString::JsonishString(const std::string& string) : JsonishValue(STRING) {
-    mString = resolveEscapes(string);
+    mString = string;
 }
 
 std::unique_ptr<JsonishObject> JsonishParser::parse() noexcept {
@@ -91,10 +94,14 @@ std::unique_ptr<JsonishObject> JsonishParser::parse() noexcept {
     return p;
 }
 
+utils::Status JsonishParser::getParseStatus() const noexcept {
+    return mStatus;
+}
+
 JsonishObject* JsonishParser::parseObject() noexcept {
     // Read the {
     if (!consumeLexeme(JsonType::BLOCK_START)) {
-        reportError("expected token '{'");
+        setInvalidArgumentError("expected token '{'");
         return nullptr;
     }
 
@@ -108,7 +115,7 @@ JsonishObject* JsonishParser::parseObject() noexcept {
 
     // Read the }
     if (!consumeLexeme(JsonType::BLOCK_END)) {
-        reportError("expected token '}'");
+        setInvalidArgumentError("expected token '}'");
         delete object;
         return nullptr;
     }
@@ -119,7 +126,7 @@ JsonishObject* JsonishParser::parseObject() noexcept {
 JsonishArray* JsonishParser::parseArray() noexcept {
     // Read the [
     if (!consumeLexeme(JsonType::ARRAY_START)) {
-        reportError("expected token '['");
+        setInvalidArgumentError("expected token '['");
         return nullptr;
     }
 
@@ -133,7 +140,7 @@ JsonishArray* JsonishParser::parseArray() noexcept {
 
     // Read the ]
     if (!consumeLexeme(JsonType::ARRAY_END)) {
-        reportError("expected token ']'");
+        setInvalidArgumentError("expected token ']'");
         delete array;
         return nullptr;
     }
@@ -203,7 +210,7 @@ JsonishObject* JsonishParser::parseMembers() noexcept {
                 break;
             }
 
-            reportError("unable to parse pair");
+            setInvalidArgumentError("unable to parse pair");
 
             delete object;
             return nullptr;
@@ -225,7 +232,7 @@ JsonishArray* JsonishParser::parseElements() noexcept {
     while (true) {
         JsonishValue* value = parseValue();
         if (!value) {
-            reportError("unable to read value");
+            setInvalidArgumentError("unable to read value");
             delete array;
             return nullptr;
         }
@@ -260,7 +267,7 @@ JsonishValue* JsonishParser::parseString() noexcept {
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
     }
-    return new JsonishString(tmp);
+    return new JsonishString(resolveEscapes(tmp, mStatus));
 }
 
 JsonishValue* JsonishParser::parseValue() noexcept {
@@ -286,17 +293,20 @@ JsonishValue* JsonishParser::parseValue() noexcept {
             consumeLexeme(NUll);
             return new JsonishNull();
         default:
-            reportError("unexpected token");
+            setInvalidArgumentError("unexpected token");
             return nullptr;
     }
 }
 
-void JsonishParser::reportError(const char* message) noexcept {
-    if (mErrorReported) {
+void JsonishParser::setInvalidArgumentError(const char* message) noexcept {
+    // Already encountered an error.
+    if (!mStatus.isOk()) {
         return;
     }
 
-    std::cerr << "Syntax error, " << message;
+    utils::io::sstream errorMessage;
+    errorMessage << "JsonishParser error" << utils::io::endl;
+    errorMessage << "Syntax error, " << message;
 
     const JsonLexeme* lexeme = peekNextLexemeType();
     if (lexeme == nullptr) {
@@ -304,16 +314,16 @@ void JsonishParser::reportError(const char* message) noexcept {
     }
 
     if (lexeme != nullptr) {
-        std::cerr << " at line:" << lexeme->getLine()
-               << " position:" << lexeme->getLinePosition() << std::endl
-               << "  got lexeme type: "
-               << JsonLexeme::getTypeString(lexeme->getType()) << std::endl
-               << "  got lexeme value: " << lexeme->getStringValue() << std::endl;
+        errorMessage << " at line:" << lexeme->getLine()
+          << " position:" << lexeme->getLinePosition() << utils::io::endl
+          << "  got lexeme type: "
+          << JsonLexeme::getTypeString(lexeme->getType()) << utils::io::endl
+          << "  got lexeme value: " << lexeme->getStringValue() << utils::io::endl;
     } else {
-        std::cerr << " but reached end of file instead." << std::endl;
+        errorMessage << " but reached end of file instead." << utils::io::endl;
     }
 
-    mErrorReported = true;
+    mStatus = utils::Status::invalidArgument(errorMessage.c_str());
 }
 
 } // namespace matp

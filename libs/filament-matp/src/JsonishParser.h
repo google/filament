@@ -19,6 +19,8 @@
 
 #include "JsonishLexeme.h"
 
+#include <utils/Status.h>
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -178,6 +180,7 @@ private:
 
 class JsonishString final : public JsonishValue {
 public:
+    // Expects the input string to have its escape symbols resolved.
     explicit JsonishString(const std::string& string);
 
     ~JsonishString() override = default;
@@ -259,6 +262,8 @@ public:
 
     std::unique_ptr<JsonishObject> parse() noexcept;
 
+    utils::Status getParseStatus() const noexcept;
+
 private:
     JsonishObject* parseObject() noexcept;
     JsonishArray* parseArray() noexcept;
@@ -272,11 +277,11 @@ private:
     const JsonLexeme* peekNextLexemeType() const noexcept;
     const JsonLexeme* peekCurrentLexemeType() const noexcept;
 
-    void reportError(const char* message) noexcept;
+    void setInvalidArgumentError(const char* message) noexcept;
 
     size_t mCursor = 0;
     const std::vector<JsonLexeme>& mLexemes;
-    bool mErrorReported = false;
+    utils::Status mStatus = utils::Status::ok();
 };
 
 } // namespace matp
