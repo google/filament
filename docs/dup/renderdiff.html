@@ -206,11 +206,15 @@ golden repo.</li>
 </code></pre>
 </li>
 </ul>
-<h2 id="filtering-tests"><a class="header" href="#filtering-tests">Filtering Tests</a></h2>
-<p>You can run a subset of the tests by passing the <code>--test_filter</code> flag to <code>local_test.sh</code>. The
-filter supports wildcards (<code>*</code>) to match test names. For example, to run all tests in the
-<code>ClearCoat</code> suite, you can use the following command:</p>
-<pre><code>bash test/renderdiff/local_test.sh --test_filter='ClearCoat.*.*'
+<h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
+<p>You can control the behavior of the test scripts with the following flags passed to <code>local_test.sh</code>:</p>
+<ul>
+<li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests. The filter supports wildcards (<code>*</code>) to match test names.</li>
+<li><code>--no_rebuild</code>: Skip rebuilding the <code>gltf_viewer</code> executable.</li>
+<li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
+</ul>
+<p>For example, to run all <code>MSAA</code> tests without rebuilding and using 8 threads:</p>
+<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
 </code></pre>
 <h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
 <p>The golden images are stored in a github repository:
