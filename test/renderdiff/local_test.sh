@@ -35,5 +35,6 @@ bash `dirname $0`/generate.sh "$@" && \
             --out=${DIFF_OUTPUT_DIR} \
             --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" "$@"
 
-    # $@ Pass arguments to compare.py, e.g. --test_filter
+    # $@ Pass arguments to generate.sh, e.g. --test_filter
 end_
+
