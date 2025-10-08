@@ -51,14 +51,18 @@ renderings, do the following step
   bash test/renderdiff/generate.sh
   ```
 
-## Filtering Tests
+## Command-line Options
 
-You can run a subset of the tests by passing the `--test_filter` flag to `local_test.sh`. The
-filter supports wildcards (`*`) to match test names. For example, to run all tests in the
-`ClearCoat` suite, you can use the following command:
+You can control the behavior of the test scripts with the following flags passed to `local_test.sh`:
+
+- `--test_filter=<filter>`: Run a subset of tests. The filter supports wildcards (`*`) to match test names.
+- `--no_rebuild`: Skip rebuilding the `gltf_viewer` executable.
+- `--num_threads=<number>`: Set the number of threads for rendering. If not set, the system's default is used.
+
+For example, to run all `MSAA` tests without rebuilding and using 8 threads:
 
 ```
-bash test/renderdiff/local_test.sh --test_filter='ClearCoat.*.*'
+bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
 ```
 
 ## Update the golden images
