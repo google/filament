@@ -15,76 +15,51 @@
  */
 
 #include "WebGPUFence.h"
-#include "WebGPUConstants.h"
 
-#include <backend/DriverEnums.h>
-
-#include <memory>
-#include <webgpu/webgpu_cpp.h>
-
-#include <condition_variable>
 #include <chrono>
-#include <cstdint>
-#include <mutex>
 
 namespace filament::backend {
 
-WebGPUFence::~WebGPUFence() noexcept {
-    // if the fence was being waited on, make sure to return with an error
-    std::lock_guard const lock(state->lock);
-    state->status = FenceStatus::ERROR;
-    state->cond.notify_all();
+WebGPUFence::WebGPUFence() = default;
+WebGPUFence::~WebGPUFence() = default;
+
+void WebGPUFence::setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state) {
+    std::lock_guard<std::mutex> const lock(mLock);
+    mState = state;
+    mCond.notify_one();
 }
 
-FenceStatus WebGPUFence::getStatus() const {
-    std::lock_guard const lock(state->lock);
-    return state->status;
+FenceStatus WebGPUFence::getStatus() {
+    return wait(0);
 }
 
-FenceStatus WebGPUFence::wait(uint64_t const timeout) {
+FenceStatus WebGPUFence::wait(uint64_t timeout) {
     // we have to take into account that the STL's wait_for() actually works with
     // time_points relative to steady_clock::now() internally.
     using namespace std::chrono;
-    auto const now = steady_clock::now();
+    auto now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
     if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
         until = now + nanoseconds(timeout);
     }
-
-    std::unique_lock lock(state->lock);
-    state->cond.wait_until(lock, until,
-            [state = state] { return state->status != FenceStatus::TIMEOUT_EXPIRED; });
-    return state->status;
-}
-
-void WebGPUFence::addMarkerToQueueState(wgpu::Queue const& queue) {
-    // The lambda function is called when the work is done. It updates the fence status based on the
-    // result of the work.
-    // Because the callback holds a weak_ptr to the state of the HwFence object, it can be
-    // destroyed before the fence signals.
-    std::weak_ptr const weak = state;
-    queue.OnSubmittedWorkDone(
-            wgpu::CallbackMode::AllowSpontaneous,
-            [weak](const wgpu::QueueWorkDoneStatus status, wgpu::StringView message) {
-                if (auto const state = weak.lock()) {
-                    std::unique_lock const lock(state->lock);
-                    if (state->status != FenceStatus::ERROR) {
-                        switch (status) {
-                            case wgpu::QueueWorkDoneStatus::Success:
-                                state->status = FenceStatus::CONDITION_SATISFIED;
-                                state->cond.notify_all();
-                                break;
-                            case wgpu::QueueWorkDoneStatus::CallbackCancelled:
-                            case wgpu::QueueWorkDoneStatus::Error:
-                                state->status = FenceStatus::ERROR;
-                                state->cond.notify_all();
-                                FWGPU_LOGW << "WebGPUFence: wgpu::QueueWorkDoneStatus::Error. " <<
-                                        message;
-                                break;
-                        }
-                    }
-                }
-            });
+    {
+        std::unique_lock<std::mutex> lock(mLock);
+        bool const success = mCond.wait_until(lock, until, [this] {
+            return bool(mState);
+        });
+        if (!success) {
+            return FenceStatus::TIMEOUT_EXPIRED;
+        }
+    }
+    auto duration_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(steady_clock::now() - now)
+                    .count());
+    // In the unlikely event that duration_ns is too close to timeout, we just assume the leftover
+    // timeout is 0.
+    if (timeout == 0 || duration_ns > timeout) {
+        duration_ns = timeout;
+    }
+    return mState->waitForCompletion(timeout - duration_ns);
 }
 
 } // namespace filament::backend

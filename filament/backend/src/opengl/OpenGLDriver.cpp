@@ -50,6 +50,7 @@
 #include <type_traits>
 #include <utils/BitmaskEnum.h>
 #include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/Invocable.h>
 #include <utils/Logger.h>
@@ -394,7 +395,7 @@ void OpenGLDriver::setPushConstant(ShaderStage const stage, uint8_t const index,
     }
 #endif
 
-    Slice<std::pair<GLint, ConstantType>> constants;
+    Slice<const std::pair<GLint, ConstantType>> constants;
     if (stage == ShaderStage::VERTEX) {
         constants = mCurrentPushConstants->vertexConstants;
     } else if (stage == ShaderStage::FRAGMENT) {
@@ -661,7 +662,7 @@ void OpenGLDriver::createVertexBufferInfoR(
         uint8_t bufferCount,
         uint8_t attributeCount,
         AttributeArray attributes,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
     construct<GLVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
     mHandleAllocator.associateTagToHandle(vbih.getId(), std::move(tag));
@@ -671,7 +672,7 @@ void OpenGLDriver::createVertexBufferR(
         Handle<HwVertexBuffer> vbh,
         uint32_t vertexCount,
         Handle<HwVertexBufferInfo> vbih,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
     construct<GLVertexBuffer>(vbh, vertexCount, vbih);
     mHandleAllocator.associateTagToHandle(vbh.getId(), std::move(tag));
@@ -682,7 +683,7 @@ void OpenGLDriver::createIndexBufferR(
         ElementType const elementType,
         uint32_t indexCount,
         BufferUsage const usage,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -698,7 +699,7 @@ void OpenGLDriver::createIndexBufferR(
 }
 
 void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
-        BufferObjectBinding bindingType, BufferUsage usage, CString&& tag) {
+        BufferObjectBinding bindingType, BufferUsage usage, ImmutableCString&& tag) {
     DEBUG_MARKER()
     assert_invariant(byteCount > 0);
 
@@ -725,7 +726,7 @@ void OpenGLDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byte
 
 void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
         Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
-        PrimitiveType const pt, CString&& tag) {
+        PrimitiveType const pt, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     auto& gl = mContext;
@@ -761,31 +762,8 @@ void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
     mHandleAllocator.associateTagToHandle(rph.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program, CString&& tag) {
+void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program, ImmutableCString&& tag) {
     DEBUG_MARKER()
-
-
-    if (UTILS_UNLIKELY(mContext.isES2())) {
-        // Here we patch the specialization constants to enable or not the rec709 output
-        // color space emulation in this program. Obviously, the backend shouldn't know about
-        // specific spec-constants, so we need to handle failures gracefully. This cannot be
-        // done at Material creation time because only the backend has access to
-        // Platform.isSRGBSwapChainSupported().
-        if (!mPlatform.isSRGBSwapChainSupported()) {
-            auto& specializationConstants = program.getSpecializationConstants();
-            auto const pos = std::find_if(specializationConstants.begin(), specializationConstants.end(),
-                    [](auto&& sc) {
-                        // This constant must match
-                        // ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION
-                        // which we can't use here because it's defined in EngineEnums.h.
-                        // (we're breaking layering here, but it's for the good cause).
-                        return sc.id == 3;
-                    });
-            if (pos != specializationConstants.end()) {
-                pos->value = true;
-            }
-        }
-    }
 
     construct<OpenGLProgram>(ph, *this, std::move(program));
     CHECK_GL_ERROR()
@@ -894,7 +872,7 @@ void OpenGLDriver::textureStorage(GLTexture* t,
 
 void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
-        TextureUsage usage, CString&& tag) {
+        TextureUsage usage, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     GLenum internalFormat = getInternalFormat(format);
@@ -987,7 +965,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 }
 
 void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
-        Handle<HwTexture> srch, uint8_t const baseLevel, uint8_t const levelCount, CString&& tag) {
+        Handle<HwTexture> srch, uint8_t const baseLevel, uint8_t const levelCount, ImmutableCString&& tag) {
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
 
@@ -1035,7 +1013,7 @@ void OpenGLDriver::createTextureViewR(Handle<HwTexture> th,
 
 void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTexture> srch,
         TextureSwizzle const r, TextureSwizzle const g, TextureSwizzle const b, TextureSwizzle const a,
-        CString&& tag) {
+        ImmutableCString&& tag) {
 
     DEBUG_MARKER()
     GLTexture const* const src = handle_cast<GLTexture const*>(srch);
@@ -1101,7 +1079,7 @@ void OpenGLDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwText
 
 void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerType target,
     TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
-    Platform::ExternalImageHandleRef image, CString&& tag) {
+    Platform::ExternalImageHandleRef image, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     usage |= TextureUsage::SAMPLEABLE;
@@ -1153,7 +1131,7 @@ void OpenGLDriver::createTextureExternalImage2R(Handle<HwTexture> th, SamplerTyp
 
 void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType target,
         TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage, void* image,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     usage |= TextureUsage::SAMPLEABLE;
@@ -1204,13 +1182,13 @@ void OpenGLDriver::createTextureExternalImageR(Handle<HwTexture> th, SamplerType
 
 void OpenGLDriver::createTextureExternalImagePlaneR(Handle<HwTexture> th,
         TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
-        void* image, uint32_t plane, CString&&) {
+        void* image, uint32_t plane, ImmutableCString&&) {
     // not relevant for the OpenGL backend
 }
 
 void OpenGLDriver::importTextureR(Handle<HwTexture> th, intptr_t const id,
         SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, CString&& tag) {
+        uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     auto const& gl = mContext;
@@ -1665,7 +1643,7 @@ void OpenGLDriver::renderBufferStorage(GLuint const rbo, GLenum internalformat, 
 }
 
 void OpenGLDriver::createDefaultRenderTargetR(
-        Handle<HwRenderTarget> rth, CString&& tag) {
+        Handle<HwRenderTarget> rth, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
@@ -1688,7 +1666,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         MRT color,
         TargetBufferInfo depth,
         TargetBufferInfo stencil,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     GLRenderTarget* rt = construct<GLRenderTarget>(rth, width, height);
@@ -1804,7 +1782,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     mHandleAllocator.associateTagToHandle(rth.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createFenceR(Handle<HwFence> fh, CString&& tag) {
+void OpenGLDriver::createFenceR(Handle<HwFence> fh, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     mHandleAllocator.associateTagToHandle(fh.getId(), std::move(tag));
@@ -1827,7 +1805,7 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, CString&& tag) {
 
     // This is the case where we need to use OpenGL fences
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-    std::weak_ptr const weak = f->state;
+    std::weak_ptr<GLFence::State> const weak = f->state;
     whenGpuCommandsComplete([weak] {
         if (auto const state = weak.lock()) {
             std::lock_guard const lock(state->lock);
@@ -1838,7 +1816,7 @@ void OpenGLDriver::createFenceR(Handle<HwFence> fh, CString&& tag) {
 #endif
 }
 
-void OpenGLDriver::createSyncR(Handle<HwSync> sh, CString&& tag) {
+void OpenGLDriver::createSyncR(Handle<HwSync> sh, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     GLSyncFence* s = handle_cast<GLSyncFence*>(sh);
@@ -1857,7 +1835,7 @@ void OpenGLDriver::createSyncR(Handle<HwSync> sh, CString&& tag) {
 }
 
 void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t const flags,
-        CString&& tag) {
+        ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
@@ -1879,7 +1857,7 @@ void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
 }
 
 void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
-        uint32_t const width, uint32_t const height, uint64_t const flags, CString&& tag) {
+        uint32_t const width, uint32_t const height, uint64_t const flags, ImmutableCString&& tag) {
     DEBUG_MARKER()
 
     GLSwapChain* sc = handle_cast<GLSwapChain*>(sch);
@@ -1901,7 +1879,7 @@ void OpenGLDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch,
     mHandleAllocator.associateTagToHandle(sch.getId(), std::move(tag));
 }
 
-void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, CString&& tag) {
+void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, ImmutableCString&& tag) {
     DEBUG_MARKER()
     GLTimerQuery* tq = handle_cast<GLTimerQuery*>(tqh);
     mContext.createTimerQuery(tq);
@@ -1909,14 +1887,14 @@ void OpenGLDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, CString&& tag) {
 }
 
 void OpenGLDriver::createDescriptorSetLayoutR(Handle<HwDescriptorSetLayout> dslh,
-        DescriptorSetLayout&& info, CString&& tag) {
+        DescriptorSetLayout&& info, ImmutableCString&& tag) {
     DEBUG_MARKER()
     construct<GLDescriptorSetLayout>(dslh, std::move(info));
     mHandleAllocator.associateTagToHandle(dslh.getId(), std::move(tag));
 }
 
 void OpenGLDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
-        Handle<HwDescriptorSetLayout> dslh, CString&& tag) {
+        Handle<HwDescriptorSetLayout> dslh, ImmutableCString&& tag) {
     DEBUG_MARKER()
     GLDescriptorSetLayout const* dsl = handle_cast<GLDescriptorSetLayout*>(dslh);
     construct<GLDescriptorSet>(dsh, mContext, dslh, dsl);
@@ -1925,7 +1903,7 @@ void OpenGLDriver::createDescriptorSetR(Handle<HwDescriptorSet> dsh,
 
 void OpenGLDriver::mapBufferR(MemoryMappedBufferHandle mmbh,
         BufferObjectHandle boh, size_t offset,
-        size_t size, MapBufferAccessFlags access, CString&& tag) {
+        size_t size, MapBufferAccessFlags access, ImmutableCString&& tag) {
     DEBUG_MARKER()
     construct<GLMemoryMappedBuffer>(mmbh, mContext, mHandleAllocator, boh, offset, size, access);
     mHandleAllocator.associateTagToHandle(mmbh.getId(), std::move(tag));
@@ -2195,14 +2173,14 @@ void OpenGLDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
 // These are called on the application's thread
 // ------------------------------------------------------------------------------------------------
 
-Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream, CString tag) {
+Handle<HwStream> OpenGLDriver::createStreamNative(void* nativeStream, ImmutableCString tag) {
     Platform::Stream* stream = mPlatform.createStream(nativeStream);
     auto handle = initHandle<GLStream>(stream);
     mHandleAllocator.associateTagToHandle(handle.getId(), std::move(tag));
     return handle;
 }
 
-Handle<HwStream> OpenGLDriver::createStreamAcquired(CString tag) {
+Handle<HwStream> OpenGLDriver::createStreamAcquired(ImmutableCString tag) {
     auto handle = initHandle<GLStream>();
     mHandleAllocator.associateTagToHandle(handle.getId(), std::move(tag));
     return handle;
@@ -2640,6 +2618,8 @@ bool OpenGLDriver::isWorkaroundNeeded(Workaround const workaround) {
             return mContext.bugs.powervr_shader_workarounds;
         case Workaround::DISABLE_DEPTH_PRECACHE_FOR_DEFAULT_MATERIAL:
             return mContext.bugs.disable_depth_precache_for_default_material;
+        case Workaround::EMULATE_SRGB_SWAPCHAIN:
+            return mContext.isES2() && !mPlatform.isSRGBSwapChainSupported();
         default:
             return false;
     }
@@ -3213,7 +3193,7 @@ void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) 
 }
 
 UTILS_NOINLINE
-void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
+void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) {
     mTexturesWithStreamsAttached.push_back(t);
 
     switch (hwStream->streamType) {
@@ -3799,16 +3779,16 @@ void OpenGLDriver::readBufferSubData(BufferObjectHandle boh,
 }
 
 
-void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) noexcept {
+void OpenGLDriver::runEveryNowAndThen(std::function<bool()> fn) {
     mEveryNowAndThenOps.push_back(std::move(fn));
 }
 
-void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
+void OpenGLDriver::executeEveryNowAndThenOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mEveryNowAndThenOps;
     auto it = v.begin();
     while (it != v.end()) {
         if ((*it)()) {
-            it = v.erase(it);
+            it = v.erase(it); // cannot throw by construction
         } else {
             ++it;
         }
@@ -3816,17 +3796,17 @@ void OpenGLDriver::executeEveryNowAndThenOps() noexcept {
 }
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
-void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenFrameComplete(const std::function<void()>& fn) {
     mFrameCompleteOps.push_back(fn);
 }
 
-void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) noexcept {
+void OpenGLDriver::whenGpuCommandsComplete(const std::function<void()>& fn) {
     GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     mGpuCommandCompleteOps.emplace_back(sync, fn);
     CHECK_GL_ERROR()
 }
 
-void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
+void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept { // NOLINT(*-exception-escape)
     auto& v = mGpuCommandCompleteOps;
     auto it = v.begin();
     while (it != v.end()) {
@@ -3842,13 +3822,13 @@ void OpenGLDriver::executeGpuCommandsCompleteOps() noexcept {
                 // ready
                 it->second();
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
             default:
                 // This should never happen, but is very problematic if it does, as we might leak
                 // some data depending on what the callback does. However, we clean up our own state.
                 glDeleteSync(sync);
-                it = v.erase(it);
+                it = v.erase(it); // cannot throw by construction
                 break;
         }
     }

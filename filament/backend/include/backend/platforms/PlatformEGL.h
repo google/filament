@@ -80,7 +80,7 @@ protected:
      * Initializes EGL, creates the OpenGL context and returns a concrete Driver implementation
      * that supports OpenGL/OpenGL ES.
      */
-    Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedContext, const DriverConfig& driverConfig) override;
 
     /**
      * This returns zero. This method can be overridden to return something more useful.
@@ -101,8 +101,8 @@ protected:
     bool isSRGBSwapChainSupported() const noexcept override;
     bool isMSAASwapChainSupported(uint32_t samples) const noexcept override;
 
-    SwapChain* createSwapChain(void* nativewindow, uint64_t flags) noexcept override;
-    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) noexcept override;
+    SwapChain* createSwapChain(void* nativewindow, uint64_t flags) override;
+    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
     bool isSwapChainProtected(SwapChain* swapChain) noexcept override;
 

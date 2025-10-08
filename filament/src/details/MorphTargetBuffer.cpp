@@ -128,7 +128,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT,
-            utils::CString{ builder.getName() });
+            utils::ImmutableCString{ builder.getName() });
 
     mTbHandle = driver.createTexture(SamplerType::SAMPLER_2D_ARRAY, 1,
             TextureFormat::RGBA16I, 1,
@@ -136,7 +136,7 @@ FMorphTargetBuffer::FMorphTargetBuffer(FEngine& engine, const Builder& builder)
             getHeight(mVertexCount),
             mCount,
             TextureUsage::DEFAULT,
-            utils::CString{ builder.getName() });
+            utils::ImmutableCString{ builder.getName() });
 }
 
 void FMorphTargetBuffer::terminate(FEngine& engine) {

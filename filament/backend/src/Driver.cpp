@@ -131,7 +131,7 @@ void DriverBase::purge() noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
+void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) {
     auto const handler = buffer.getHandler();
     scheduleCallback(handler, [buffer = std::move(buffer)]() {
         // user callback is called when BufferDescriptor gets destroyed
@@ -140,7 +140,7 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 
 // This is called from an async driver method so it's in the GL thread, but purge is called
 // on the user thread. This is typically called 0 or 1 times per frame.
-void DriverBase::scheduleRelease(AcquiredImage const& image) noexcept {
+void DriverBase::scheduleRelease(AcquiredImage const& image) {
     scheduleCallback(image.handler, [callback = image.callback, image = image.image, userData = image.userData]() {
         callback(image, userData);
     });

@@ -43,7 +43,7 @@ VirtualResource& FrameGraphResources::getResource(FrameGraphHandle const handle)
 
     FILAMENT_CHECK_PRECONDITION(hasReadOrWrite)
             << "Pass \"" << mPassNode.getName() << "\" didn't declare any access to resource \""
-            << resource->name << "\"";
+            << resource->name.c_str() << "\"";
 
     assert_invariant(resource->refcount);
 

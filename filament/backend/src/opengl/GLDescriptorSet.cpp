@@ -33,6 +33,7 @@
 
 #include <utils/BitmaskEnum.h>
 #include <utils/Log.h>
+#include <utils/Logger.h>
 #include <utils/Panic.h>
 #include <utils/bitset.h>
 #include <utils/compiler.h>
@@ -49,7 +50,7 @@
 namespace filament::backend {
 
 GLDescriptorSet::GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
-        GLDescriptorSetLayout const* layout) noexcept
+        GLDescriptorSetLayout const* layout)
         : descriptors(layout->maxDescriptorBinding + 1),
           dslh(std::move(dslh)) {
 
@@ -156,8 +157,9 @@ void GLDescriptorSet::update(OpenGLContext&,
             arg.bo = bo;
             arg.offset = uint32_t(offset);
         } else {
-            // API usage error. User asked to update the wrong type of descriptor.
-            PANIC_PRECONDITION("descriptor %d is not a buffer", +binding);
+            // User asked to update the wrong type of descriptor. This should never happen
+            // because we're checking that on the filament side
+            LOG(ERROR) << "descriptor " << +binding << " is not a buffer";
         }
     }, descriptors[binding].desc);
 }
@@ -214,8 +216,9 @@ void GLDescriptorSet::update(OpenGLContext& gl, HandleAllocatorGL& handleAllocat
                 arg.params = params;
             }
         } else {
-            // API usage error. User asked to update the wrong type of descriptor.
-            PANIC_PRECONDITION("descriptor %d is not a texture", +binding);
+            // User asked to update the wrong type of descriptor. This should never happen
+            // because we're checking that on the filament side
+            LOG(ERROR) << "descriptor " << +binding << " is not a texture";
         }
     }, descriptors[binding].desc);
 }

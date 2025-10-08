@@ -176,7 +176,7 @@ protected:
         // Map the buffer with a specific offset.
         MemoryMappedBufferHandle const memoryMappedBuffer =
                 api.mapBuffer(bufferObject, mapOffset, vertexDataSize + copyOffset,
-                MapBufferAccessFlags::WRITE_BIT, utils::CString{ screenshotName });
+                MapBufferAccessFlags::WRITE_BIT, utils::ImmutableCString{ screenshotName });
 
         copyData(vertices.data(), vertexDataSize, copyOffset, memoryMappedBuffer, callbackExecuted);
 

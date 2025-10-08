@@ -254,7 +254,7 @@ void RenderPass::appendCustomCommand(Command* commands,
 
     assert_invariant((uint64_t(order) << CUSTOM_ORDER_SHIFT) <=  CUSTOM_ORDER_MASK);
 
-    channel = std::min(channel, uint8_t(0x3));
+    channel = std::min(channel, uint8_t(CHANNEL_COUNT - 1));
 
     uint32_t const index = mCustomCommands.size();
     mCustomCommands.push_back(std::move(command));
@@ -693,7 +693,7 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
         const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
-        const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
+        Slice<const FRenderPrimitive> primitives = soaPrimitives[i];
         /*
          * This is our hot loop. It's written to avoid branches.
          * When modifying this code, always ensure it stays efficient.

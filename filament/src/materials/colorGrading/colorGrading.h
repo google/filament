@@ -22,6 +22,6 @@
 
 namespace filament {
 
-utils::Slice<StaticMaterialInfo> getColorGradingMaterialList() noexcept;
+utils::Slice<const StaticMaterialInfo> getColorGradingMaterialList() noexcept;
 
 } // namespace filament

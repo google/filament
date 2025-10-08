@@ -21,6 +21,7 @@
 
 #include <utils/Allocator.h>
 #include <utils/CString.h>
+#include <utils/ImmutableCString.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/compiler.h>
@@ -52,16 +53,16 @@ namespace filament::backend {
 class DebugTag {
 public:
     DebugTag();
-    void writePoolHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
-    void writeHeapHandleTag(HandleBase::HandleId key, utils::CString&& tag) noexcept;
-    utils::CString findHandleTag(HandleBase::HandleId key) const noexcept;
+    void writePoolHandleTag(HandleBase::HandleId key, utils::ImmutableCString&& tag) noexcept;
+    void writeHeapHandleTag(HandleBase::HandleId key, utils::ImmutableCString&& tag) noexcept;
+    utils::ImmutableCString findHandleTag(HandleBase::HandleId key) const noexcept;
 
 private:
     // This is used to associate a tag to a handle. mDebugTags is only written the in the main
     // driver thread, but it can be accessed from any thread, because it's called from handle_cast<>
     // which is used by synchronous calls.
     mutable utils::Mutex mDebugTagLock;
-    tsl::robin_map<HandleBase::HandleId, utils::CString> mDebugTags;
+    tsl::robin_map<HandleBase::HandleId, utils::ImmutableCString> mDebugTags;
 };
 
 /*
@@ -70,12 +71,12 @@ private:
 template<size_t P0, size_t P1, size_t P2>
 class HandleAllocator : public DebugTag {
 public:
-    HandleAllocator(const char* name, size_t size) noexcept;
+    HandleAllocator(const char* name, size_t size);
     HandleAllocator(const char* name, size_t size,
-            bool disableUseAfterFreeCheck, bool disableHeapHandleTags) noexcept;
+            bool disableUseAfterFreeCheck, bool disableHeapHandleTags);
     HandleAllocator(HandleAllocator const& rhs) = delete;
     HandleAllocator& operator=(HandleAllocator const& rhs) = delete;
-    ~HandleAllocator();
+    ~HandleAllocator() noexcept;
 
     /*
      * Constructs a D object and returns a Handle<D>
@@ -106,7 +107,7 @@ public:
      *
      */
     template<typename D>
-    Handle<D> allocate() noexcept {
+    Handle<D> allocate() {
         Handle<D> h{ allocateHandle<D>() };
         return h;
     }
@@ -222,7 +223,7 @@ public:
         return static_cast<Dp>(p);
     }
 
-    utils::CString getHandleTag(HandleBase::HandleId key) const noexcept;
+    utils::ImmutableCString getHandleTag(HandleBase::HandleId key) const noexcept;
 
     template<typename B>
     bool is_valid(Handle<B>& handle) {
@@ -248,7 +249,7 @@ public:
         return handle_cast<Dp>(const_cast<Handle<B>&>(handle));
     }
 
-    void associateTagToHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
+    void associateTagToHandle(HandleBase::HandleId id, utils::ImmutableCString&& tag) noexcept {
         if (tag.empty()) {
             return;
         }
@@ -342,7 +343,7 @@ private:
     // allocation size this is always inlined, because all these do is to call
     // allocateHandleInPool()/deallocateHandleFromPool() with the right pool size.
     template<typename D>
-    HandleBase::HandleId allocateHandle() noexcept {
+    HandleBase::HandleId allocateHandle() {
         constexpr size_t BUCKET_SIZE = getBucketSize<D>();
         return allocateHandleInPool<BUCKET_SIZE>();
     }
@@ -358,7 +359,7 @@ private:
     // the code generated is not trivial (even if it's not insane either).
     template<size_t SIZE>
     UTILS_NOINLINE
-    HandleBase::HandleId allocateHandleInPool() noexcept {
+    HandleBase::HandleId allocateHandleInPool() {
         uint8_t age;
         void* p = mHandleArena.alloc(SIZE, alignof(std::max_align_t), 0, &age);
         if (UTILS_LIKELY(p)) {

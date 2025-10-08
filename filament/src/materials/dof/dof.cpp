@@ -40,7 +40,7 @@ static const StaticMaterialInfo sMaterialList[] = {
         { "dofTilesSwizzle",    MATERIAL(DOF, DOFTILESSWIZZLE) },
 };
 
-utils::Slice<StaticMaterialInfo> getDofMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getDofMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 

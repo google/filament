@@ -17,6 +17,9 @@
 #include "ParametersProcessor.h"
 
 #include <filamat/Enums.h>
+#include <utils/CString.h>
+#include <utils/sstream.h>
+#include <utils/Status.h>
 
 #include <private/filament/BufferInterfaceBlock.h>
 #include <private/filament/Variant.h>
@@ -28,7 +31,6 @@
 #include <algorithm>
 #include <iostream>
 #include <string_view>
-
 #include <ctype.h>
 
 using namespace filamat;
@@ -37,15 +39,16 @@ using namespace utils;
 namespace matp {
 
 template <class T>
-static bool logEnumIssue(const std::string& key, const JsonishString& value,
+static utils::Status logEnumIssue(const std::string& key, const JsonishString& value,
         const std::unordered_map<std::string, T>& map) noexcept {
-    std::cerr << "Error while processing key '" << key << "' value." << std::endl;
-    std::cerr << "Value '" << value.getString() << "' is invalid. Valid values are:"
-            << std::endl;
+    utils::io::sstream errorMessage;
+    errorMessage << "Error while processing key '" << key << "' value." << utils::io::endl;
+    errorMessage << "Value '" << value.getString() << "' is invalid. Valid values are:"
+            << utils::io::endl;
     for (const auto& entries : map) {
-        std::cerr << "    " << entries.first  << std::endl;
+        errorMessage << "    " << entries.first  << utils::io::endl;
     }
-    return false;
+    return utils::Status::invalidArgument(errorMessage.c_str());
 }
 
 template <class T>
@@ -71,12 +74,12 @@ static MaterialBuilder::Variable intToVariable(size_t i) noexcept {
     }
 }
 
-static bool processName(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processName(MaterialBuilder& builder, const JsonishValue& value) {
     builder.name(value.toJsonString()->getString().c_str());
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processInterpolation(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processInterpolation(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::Interpolation> strToEnum {
         { "smooth", MaterialBuilder::Interpolation::SMOOTH },
         { "flat", MaterialBuilder::Interpolation::FLAT },
@@ -86,7 +89,7 @@ static bool processInterpolation(MaterialBuilder& builder, const JsonishValue& v
         return logEnumIssue("interpolation", *interpolationString, strToEnum);
     }
     builder.interpolation(stringToEnum(strToEnum, interpolationString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
 /**
@@ -133,39 +136,34 @@ static ssize_t extractArraySize(std::string& type) {
     return (ssize_t)std::stoul(type.c_str() + start + 1, nullptr);
 }
 
-static bool processParameter(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+static utils::Status processParameter(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
-        std::cerr << "parameters: entry without key 'type'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("parameters: entry without key 'type'.");
     }
     if (typeValue->getType() != JsonishValue::STRING) {
-        std::cerr << "parameters: type value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("parameters: type value must be STRING.");
     }
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "parameters: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("parameters: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "parameters: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("parameters: name value must be STRING.");
     }
 
     const JsonishValue* transformNameValue = jsonObject.getValue("transformName");
     if (transformNameValue && transformNameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "parameters: transformName value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument(
+                "parameters: transformName value must be STRING.");
     }
 
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
         if (precisionValue->getType() != JsonishValue::STRING) {
-            std::cerr << "parameters: precision must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: precision must be a STRING.");
         }
         auto precisionString = precisionValue->toJsonString();
         if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
@@ -176,8 +174,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
     const JsonishValue* formatValue = jsonObject.getValue("format");
     if (formatValue) {
         if (formatValue->getType() != JsonishValue::STRING) {
-            std::cerr << "parameters: format must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: format must be a STRING.");
         }
         auto formatString = formatValue->toJsonString();
         if (!Enums::isValid<SamplerFormat>(formatString->getString())){
@@ -188,15 +185,13 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
     const JsonishValue* filterableValue = jsonObject.getValue("filterable");
     if (filterableValue) {
         if (filterableValue->getType() != JsonishValue::BOOL) {
-            std::cerr << "parameters: filterable must be a BOOL." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: filterable must be a BOOL.");
         }
     }
     const JsonishValue* multiSampleValue = jsonObject.getValue("multisample");
     if (multiSampleValue) {
         if (multiSampleValue->getType() != JsonishValue::BOOL) {
-            std::cerr << "parameters: multisample must be a BOOL." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: multisample must be a BOOL.");
         }
     }
 
@@ -209,8 +204,7 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
     if (stagesValue) {
         ShaderStageFlags parsedStages = ShaderStageFlags::NONE;
         if (stagesValue->getType() != JsonishValue::ARRAY) {
-            std::cerr << "parameters: stages must be an ARRAY." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: stages must be an ARRAY.");
         }
         for (auto value: stagesValue->toJsonArray()->getElements()) {
             if (value->getType() == JsonishValue::Type::STRING) {
@@ -220,15 +214,16 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 if (Enums::isValid<ShaderStageType>(stageString)) {
                     parsedStages |= Enums::toEnum<ShaderStageType>(stageString);
                 } else {
-                    std::cerr << "stages: the stage '" << stageString
-                              << "' for parameter with name '" << nameString
-                              << "' is not a valid shader stage." << std::endl;
-                    return false;
+                    utils::io::sstream errorMessage;
+                    errorMessage << "stages: the stage '" << stageString <<
+                                       "' for parameter with name '" << nameString <<
+                                       "' is not a valid shader stage.";
+                    return utils::Status::invalidArgument(errorMessage.c_str());
                 }
                 continue;
             }
-            std::cerr << "parameters: stages must be an array of STRINGs." << std::endl;
-            return false;
+            return utils::Status::invalidArgument(
+                    "parameters: stages must be an array of STRINGs.");
         }
         stages = parsedStages;
     }
@@ -237,10 +232,11 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
     if (Enums::isValid<UniformType>(typeString)) {
         if (stages.has_value()) {
-            std::cerr << "parameters: the uniform parameter with name '" << nameString << "'"
+            utils::io::sstream errorMessage;
+            errorMessage << "parameters: the uniform parameter with name '" << nameString << "'"
                       << " has shader stages specified. Shader stages are only supported for"
-                      << " samplers." << std::endl;
-            return false;
+                      << " samplers.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         MaterialBuilder::UniformType const type = Enums::toEnum<UniformType>(typeString);
         ParameterPrecision precision = ParameterPrecision::DEFAULT;
@@ -255,10 +251,11 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {
-            std::cerr << "parameters: the parameter with name '" << nameString << "'"
+            utils::io::sstream errorMessage;
+            errorMessage << "parameters: the parameter with name '" << nameString << "'"
                     << " is an array of samplers of size " << arraySize << ". Arrays of samplers"
-                    << " are currently not supported." << std::endl;
-            return false;
+                    << " are currently not supported.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         MaterialBuilder::SamplerType const type = Enums::toEnum<SamplerType>(typeString);
@@ -270,15 +267,15 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
                 precisionValue->toJsonString()->getString()) : ParameterPrecision::DEFAULT;
 
         if (format == SamplerFormat::SHADOW) {
-            std::cerr << "Materials should not be able to define a shadow sampler";
-            return false;
+            return utils::Status::invalidArgument(
+                    "Materials should not be able to define a shadow sampler");
         }
 
         if (format == SamplerFormat::INT && filterableValue) {
-            std::cerr << "parameters: the parameter with name '" << nameString << "'"
-                      << " is an integer sampler. The `filterable` attribute must not be defined."
-                      << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "parameters: the parameter with name '" << nameString << "'"
+                      << " is an integer sampler. The `filterable` attribute must not be defined.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         // For samplers without `filterable` defined, we use the following logic
@@ -292,11 +289,11 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
 
         if (transformNameValue) {
             if (type != MaterialBuilder::SamplerType::SAMPLER_EXTERNAL) {
-                std::cerr << "parameters: the parameter with name '" << nameString << "'"
+                utils::io::sstream errorMessage;
+                errorMessage << "parameters: the parameter with name '" << nameString << "'"
                     << " is a sampler of type " << typeString << " and has a transformName."
-                    << " Transform names are only supported for external samplers."
-                    << std::endl;
-                return false;
+                    << " Transform names are only supported for external samplers.";
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
             auto transformName = transformNameValue->toJsonString()->getString();
             builder.parameter(nameString.c_str(), type, format, precision, filterable,
@@ -307,49 +304,49 @@ static bool processParameter(MaterialBuilder& builder, const JsonishObject& json
         }
 
     } else {
-        std::cerr << "parameters: the type '" << typeString
+        utils::io::sstream errorMessage;
+        errorMessage << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
-               << "type nor a valid sampler type." << std::endl;
-        return false;
+               << "type nor a valid sampler type.";
+        return utils::Status::invalidArgument(errorMessage.c_str());
+
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processParameters(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
 
-    bool ok = true;
+    utils::Status status;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processParameter(builder, *value->toJsonObject());
+            utils::Status s = processParameter(builder, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "parameters must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("parameters must be an array of OBJECTs.");
     }
-    return ok;
+    return status;
 }
 
-static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+static utils::Status processConstant(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
-        std::cerr << "constants: entry without key 'type'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("constants: entry without key 'type'.");
     }
     if (typeValue->getType() != JsonishValue::STRING) {
-        std::cerr << "constants: type value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("constants: type value must be STRING.");
     }
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "constants: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("constants: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "constants: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("constants: name value must be STRING.");
     }
 
     auto typeString = typeValue->toJsonString()->getString();
@@ -363,9 +360,8 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                 int32_t intDefault = 0;
                 if (defaultValue) {
                     if (defaultValue->getType() != JsonishValue::NUMBER) {
-                        std::cerr << "constants: INT constants must have NUMBER default value"
-                                  << std::endl;
-                        return false;
+                        return utils::Status::invalidArgument(
+                                "constants: INT constants must have NUMBER default value");
                     }
                     // FIXME: Jsonish doesn't distinguish between integers and floats.
                     intDefault = (int32_t)defaultValue->toJsonNumber()->getFloat();
@@ -377,9 +373,8 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                 float floatDefault = 0.0f;
                 if (defaultValue) {
                     if (defaultValue->getType() != JsonishValue::NUMBER) {
-                        std::cerr << "constants: FLOAT constants must have NUMBER default value"
-                                  << std::endl;
-                        return false;
+                        return utils::Status::invalidArgument(
+                                "constants: FLOAT constants must have NUMBER default value");
                     }
                     floatDefault = defaultValue->toJsonNumber()->getFloat();
                 }
@@ -390,9 +385,8 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                 bool boolDefault = false;
                 if (defaultValue) {
                     if (defaultValue->getType() != JsonishValue::BOOL) {
-                        std::cerr << "constants: BOOL constants must have BOOL default value"
-                                  << std::endl;
-                        return false;
+                        return utils::Status::invalidArgument(
+                                "constants: BOOL constants must have BOOL default value");
                     }
                     boolDefault = defaultValue->toJsonBool()->getBool();
                 }
@@ -400,58 +394,56 @@ static bool processConstant(MaterialBuilder& builder, const JsonishObject& jsonO
                 break;
         }
     } else {
-        std::cerr << "constants: the type '" << typeString
+        utils::io::sstream errorMessage;
+        errorMessage << "constants: the type '" << typeString
                   << "' for constant with name '" << nameString << "' is not a valid constant "
-                  << "parameter type." << std::endl;
-        return false;
+                  << "parameter type.";
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processConstants(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processConstants(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
 
-    bool ok = true;
+    utils::Status status;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processConstant(builder, *value->toJsonObject());
+            utils::Status s = processConstant(builder, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "constants must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("constants must be an array of OBJECTs.");
     }
-    return ok;
+    return utils::Status::ok();
 }
 
-static bool processBufferField(filament::BufferInterfaceBlock::Builder& builder,
+static utils::Status processBufferField(filament::BufferInterfaceBlock::Builder& builder,
         const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "buffers: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "buffers: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: name value must be STRING.");
     }
 
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
-        std::cerr << "buffers: entry without key 'type'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: entry without key 'type'.");
     }
     if (typeValue->getType() != JsonishValue::STRING) {
-        std::cerr << "buffers: type value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: type value must be STRING.");
     }
 
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
         if (precisionValue->getType() != JsonishValue::STRING) {
-            std::cerr << "buffers: precision must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("buffers: precision must be a STRING.");
         }
 
         auto precisionString = precisionValue->toJsonString();
@@ -480,15 +472,16 @@ static bool processBufferField(filament::BufferInterfaceBlock::Builder& builder,
                 { nameString.data(), nameString.size() }, uint32_t(arraySize), type, precision } });
         }
     } else {
-        std::cerr << "buffers: the type '" << typeString << "' for parameter with name '"
-                  << nameString << "' is not a valid buffer field type." << std::endl;
-        return false;
+        utils::io::sstream errorMessage;
+        errorMessage << "buffers: the type '" << typeString << "' for parameter with name '"
+                  << nameString << "' is not a valid buffer field type.";
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processBuffer(MaterialBuilder& builder,
+static utils::Status processBuffer(MaterialBuilder& builder,
         const JsonishObject& jsonObject) noexcept {
 
     filament::BufferInterfaceBlock::Builder bibb;
@@ -498,32 +491,26 @@ static bool processBuffer(MaterialBuilder& builder,
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "buffers: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "buffers: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: name value must be STRING.");
     }
 
     const JsonishValue* qualifiersValue = jsonObject.getValue("qualifiers");
     if (!qualifiersValue) {
-        std::cerr << "buffers: entry without key 'qualifiers'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: entry without key 'qualifiers'.");
     }
     if (qualifiersValue->getType() != JsonishValue::ARRAY) {
-        std::cerr << "buffers: qualifiers value must be an ARRAY." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: qualifiers value must be an ARRAY.");
     }
 
     const JsonishValue* fieldsValue = jsonObject.getValue("fields");
     if (!fieldsValue) {
-        std::cerr << "buffers: entry without key 'fields'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: entry without key 'fields'.");
     }
     if (fieldsValue->getType() != JsonishValue::ARRAY) {
-        std::cerr << "buffers: fields value must be an ARRAY." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: fields value must be an ARRAY.");
     }
 
     auto nameString = nameValue->toJsonString()->getString();
@@ -547,72 +534,71 @@ static bool processBuffer(MaterialBuilder& builder,
             }
             continue;
         }
-        std::cerr << "buffers: qualifiers must be an array of STRINGs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: qualifiers must be an array of STRINGs.");
     }
 
-    bool ok = true;
+    utils::Status status;
     for (auto value : fieldsValue->toJsonArray()->getElements()) {
 
         if (bibb.hasVariableSizeArray()) {
-            std::cerr << "buffers: a variable size array must be the only and last field." << std::endl;
-            return false;
+            return utils::Status::invalidArgument(
+                    "buffers: a variable size array must be the only and last field.");
         }
 
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processBufferField(bibb, *value->toJsonObject());
+            utils::Status s = processBufferField(bibb, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "buffers: fields must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers: fields must be an array of OBJECTs.");
     }
 
     builder.buffer(bibb.build());
-    return ok;
+    return status;
 }
 
-static bool processBuffers(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processBuffers(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
-    bool ok = true;
+    utils::Status status;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processBuffer(builder, *value->toJsonObject());
+            utils::Status s = processBuffer(builder, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "buffers must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("buffers must be an array of OBJECTs.");
     }
-    return ok;
+    return status;
 }
 
 
-static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+static utils::Status processSubpass(
+        MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
-        std::cerr << "subpasses: entry without key 'type'." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("subpasses: entry without key 'type'.");
     }
     if (typeValue->getType() != JsonishValue::STRING) {
-        std::cerr << "subpasses: type value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("subpasses: type value must be STRING.");
     }
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "subpasses: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("subpasses: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "subpasses: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("subpasses: name value must be STRING.");
     }
 
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
         if (precisionValue->getType() != JsonishValue::STRING) {
-            std::cerr << "subpasses: precision must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("subpasses: precision must be a STRING.");
         }
 
         auto precisionString = precisionValue->toJsonString();
@@ -624,8 +610,7 @@ static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonOb
     const JsonishValue* formatValue = jsonObject.getValue("format");
     if (formatValue) {
         if (formatValue->getType() != JsonishValue::STRING) {
-            std::cerr << "subpasses: format must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("subpasses: format must be a STRING.");
         }
 
         auto formatString = formatValue->toJsonString();
@@ -641,10 +626,11 @@ static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonOb
 
     if (Enums::isValid<SubpassType>(typeString)) {
         if (arraySize > 0) {
-            std::cerr << "subpasses: the parameter with name '" << nameString << "'"
+            utils::io::sstream errorMessage;
+            errorMessage << "subpasses: the parameter with name '" << nameString << "'"
                       << " is an array of subpasses of size " << arraySize << ". Arrays of subpasses"
-                      << " are currently not supported." << std::endl;
-            return false;
+                      << " are currently not supported.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         MaterialBuilder::SubpassType type = Enums::toEnum<SubpassType>(typeString);
@@ -664,37 +650,42 @@ static bool processSubpass(MaterialBuilder& builder, const JsonishObject& jsonOb
             builder.subpass(type, nameString.c_str());
         }
     } else {
-        std::cerr << "subpasses: the type '" << typeString
+        utils::io::sstream errorMessage;
+        errorMessage << "subpasses: the type '" << typeString
                   << "' for parameter with name '" << nameString << "' is neither a valid uniform "
-                  << "type nor a valid sampler type." << std::endl;
-        return false;
+                  << "type nor a valid sampler type.";
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processSubpasses(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processSubpasses(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
 
-    bool ok = true;
+    utils::Status status;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processSubpass(builder, *value->toJsonObject());
+            utils::Status s = processSubpass(builder, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "subpasses must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("subpasses must be an array of OBJECTs.");
     }
-    return ok;
+    return status;
 }
 
-static bool processVariables(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processVariables(MaterialBuilder& builder, const JsonishValue& value) {
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
 
     if (elements.size() > MaterialBuilder::MATERIAL_VARIABLES_COUNT) {
-        std::cerr << "variables: Max array size is " << MaterialBuilder::MATERIAL_VARIABLES_COUNT << "." << std::endl;
-        return false;
+        utils::io::sstream errorMessage;
+        errorMessage << "variables: Max array size is "
+                     << MaterialBuilder::MATERIAL_VARIABLES_COUNT << ".";
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     for (size_t i = 0; i < elements.size(); i++) {
@@ -709,19 +700,16 @@ static bool processVariables(MaterialBuilder& builder, const JsonishValue& value
 
             const JsonishValue* nameValue = jsonObject.getValue("name");
             if (!nameValue) {
-                std::cerr << "variables: entry without 'name' key." << std::endl;
-                return false;
+                return utils::Status::invalidArgument("variables: entry without 'name' key.");
             }
             if (nameValue->getType() != JsonishValue::STRING) {
-                std::cerr << "variables: name value must be STRING." << std::endl;
-                return false;
+                return utils::Status::invalidArgument("variables: name value must be STRING.");
             }
 
             const JsonishValue* precisionValue = jsonObject.getValue("precision");
             if (precisionValue) {
                 if (precisionValue->getType() != JsonishValue::STRING) {
-                    std::cerr << "variables: precision must be a STRING." << std::endl;
-                    return false;
+                    return utils::Status::invalidArgument("variables: precision must be a STRING.");
                 }
                 auto precisionString = precisionValue->toJsonString();
                 if (!Enums::isValid<ParameterPrecision>(precisionString->getString())){
@@ -739,16 +727,17 @@ static bool processVariables(MaterialBuilder& builder, const JsonishValue& value
             nameString = elementValue->toJsonString()->getString();
             builder.variable(v, nameString.c_str());
         } else {
-            std::cerr << "variables: array index " << i << " is not a STRING. found:" <<
-                    JsonishValue::typeToString(elementValue->getType()) << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "variables: array index " << i << " is not a STRING. found:" <<
+                    JsonishValue::typeToString(elementValue->getType());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processRequires(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processRequires(MaterialBuilder& builder, const JsonishValue& value) {
     using Attribute = filament::VertexAttribute;
     static const std::unordered_map<std::string, Attribute> strToEnum {
         { "color", Attribute::COLOR },
@@ -767,8 +756,7 @@ static bool processRequires(MaterialBuilder& builder, const JsonishValue& value)
     };
     for (auto v : value.toJsonArray()->getElements()) {
         if (v->getType() != JsonishValue::Type::STRING) {
-            std::cerr << "requires: entries must be STRINGs." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("requires: entries must be STRINGs.");
         }
 
         auto jsonString = v->toJsonString();
@@ -779,10 +767,10 @@ static bool processRequires(MaterialBuilder& builder, const JsonishValue& value)
         builder.require(stringToEnum(strToEnum, jsonString->getString()));
     }
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processBlending(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processBlending(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::BlendingMode> strToEnum {
         { "add", MaterialBuilder::BlendingMode::ADD },
         { "masked", MaterialBuilder::BlendingMode::MASKED },
@@ -799,10 +787,10 @@ static bool processBlending(MaterialBuilder& builder, const JsonishValue& value)
     }
 
     builder.blending(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processBlendFunction(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processBlendFunction(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::BlendFunction> strToEnum{
             { "zero",             MaterialBuilder::BlendFunction::ZERO },
             { "one",              MaterialBuilder::BlendFunction::ONE },
@@ -818,7 +806,7 @@ static bool processBlendFunction(MaterialBuilder& builder, const JsonishValue& v
     };
 
     if (value.getType() != JsonishValue::Type::OBJECT) {
-        std::cerr << "blendFunction must be an OBJECT." << std::endl;
+        return utils::Status::invalidArgument("blendFunction must be an OBJECT.");
     }
 
     JsonishObject const* const jsonObject = value.toJsonObject();
@@ -835,20 +823,23 @@ static bool processBlendFunction(MaterialBuilder& builder, const JsonishValue& v
         const char* key = entry.first;
         const JsonishValue* v = jsonObject->getValue(key);
         if (!v) {
-            std::cerr << "blendFunction: entry without '" << key << "' key." << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "blendFunction: entry without '" << key << "' key.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         if (v->getType() != JsonishValue::STRING) {
-            std::cerr << "blendFunction: '" << key << "' value must be STRING." << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "blendFunction: '" << key << "' value must be STRING.";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
         *entry.second = stringToEnum(strToEnum, v->toJsonString()->getString());
     }
     builder.customBlendFunctions(srcRGB, srcA, dstRGB, dstA);
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processPostLightingBlending(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processPostLightingBlending(
+        MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::BlendingMode> strToEnum {
         { "add", MaterialBuilder::BlendingMode::ADD },
         { "opaque", MaterialBuilder::BlendingMode::OPAQUE },
@@ -862,10 +853,10 @@ static bool processPostLightingBlending(MaterialBuilder& builder, const JsonishV
     }
 
     builder.postLightingBlending(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processVertexDomain(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processVertexDomain(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::VertexDomain> strToEnum {
         { "device", MaterialBuilder::VertexDomain::DEVICE},
         { "object", MaterialBuilder::VertexDomain::OBJECT},
@@ -878,10 +869,10 @@ static bool processVertexDomain(MaterialBuilder& builder, const JsonishValue& va
     }
 
     builder.vertexDomain(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processCulling(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processCulling(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::CullingMode> strToEnum {
         { "back", MaterialBuilder::CullingMode::BACK },
         { "front", MaterialBuilder::CullingMode::FRONT },
@@ -894,10 +885,10 @@ static bool processCulling(MaterialBuilder& builder, const JsonishValue& value) 
     }
 
     builder.culling(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processQuality(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processQuality(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::ShaderQuality> strToEnum {
         { "low", MaterialBuilder::ShaderQuality::LOW },
         { "normal", MaterialBuilder::ShaderQuality::NORMAL },
@@ -910,10 +901,10 @@ static bool processQuality(MaterialBuilder& builder, const JsonishValue& value) 
     }
 
     builder.quality(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processFeatureLevel(MaterialBuilder& builder, const JsonishValue& value) {
     using filament::backend::FeatureLevel;
     JsonishNumber const* const number = value.toJsonNumber();
     FeatureLevel featureLevel;
@@ -926,14 +917,15 @@ static bool processFeatureLevel(MaterialBuilder& builder, const JsonishValue& va
     } else if (number->getFloat() == 3.0f) {
         featureLevel = FeatureLevel::FEATURE_LEVEL_3;
     } else {
-        std::cerr << "featureLevel: invalid value " << number->getFloat() << std::endl;
-        return false;
+        utils::io::sstream errorMessage;
+        errorMessage << "featureLevel: invalid value " << number->getFloat();
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
     builder.featureLevel(featureLevel);
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
 
     filament::math::uint3 groupSize{ 1, 1, 1 };
@@ -941,8 +933,7 @@ static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
 
     for (auto value : jsonArray->getElements()) {
         if (index >= 3) {
-            std::cerr << "groupSize: must be an array no larger than 3" << std::endl;
-            return false;
+            return utils::Status::invalidArgument("groupSize: must be an array no larger than 3");
         }
         if (value->getType() == JsonishValue::Type::NUMBER) {
             JsonishNumber const* const number = value->toJsonNumber();
@@ -950,20 +941,20 @@ static bool processGroupSizes(MaterialBuilder& builder, const JsonishValue& v) {
             if (aFloat > 0 && floor(aFloat) == aFloat) {
                 groupSize[index] = uint32_t(floor(aFloat));
             } else {
-                std::cerr << "groupSize: invalid value " << aFloat << std::endl;
-                return false;
+                utils::io::sstream errorMessage;
+                errorMessage<< "groupSize: invalid value " << aFloat;
+                return utils::Status::invalidArgument(errorMessage.c_str());
             }
             index++;
             continue;
         }
-        std::cerr << "groupSize must be an array of NUMBERs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("groupSize must be an array of NUMBERs.");
     }
     builder.groupSize(groupSize);
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processStereoscopicType(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processStereoscopicType(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::StereoscopicType> strToEnum{
             { "instanced", MaterialBuilder::StereoscopicType::INSTANCED },
             { "multiview",  MaterialBuilder::StereoscopicType::MULTIVIEW },
@@ -974,26 +965,24 @@ static bool processStereoscopicType(MaterialBuilder& builder, const JsonishValue
     }
 
     builder.stereoscopicType(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
+static utils::Status processOutput(
+        MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << "outputs: entry without 'name' key." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("outputs: entry without 'name' key.");
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << "outputs: name value must be STRING." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("outputs: name value must be STRING.");
     }
 
     const JsonishValue* targetValue = jsonObject.getValue("target");
     if (targetValue) {
         if (targetValue->getType() != JsonishValue::STRING) {
-            std::cerr << "outputs: target must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("outputs: target must be a STRING.");
         }
 
         auto targetString = targetValue->toJsonString();
@@ -1005,8 +994,7 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
         if (precisionValue->getType() != JsonishValue::STRING) {
-            std::cerr << "parameters: precision must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("parameters: precision must be a STRING.");
         }
 
         auto precisionString = precisionValue->toJsonString();
@@ -1018,8 +1006,7 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (typeValue) {
         if (typeValue->getType() != JsonishValue::STRING) {
-            std::cerr << "outputs: type must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("outputs: type must be a STRING.");
         }
 
         auto typeString = typeValue->toJsonString();
@@ -1031,8 +1018,7 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
     const JsonishValue* qualifierValue = jsonObject.getValue("qualifier");
     if (qualifierValue) {
         if (qualifierValue->getType() != JsonishValue::STRING) {
-            std::cerr << "outputs: qualifier must be a STRING." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("outputs: qualifier must be a STRING.");
         }
 
         auto qualifierString = qualifierValue->toJsonString();
@@ -1044,8 +1030,7 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
     const JsonishValue* locationValue = jsonObject.getValue("location");
     if (locationValue) {
         if (locationValue->getType() != JsonishValue::NUMBER) {
-            std::cerr << "outputs: location must be a NUMBER." << std::endl;
-            return false;
+            return utils::Status::invalidArgument("outputs: location must be a NUMBER.");
         }
     }
 
@@ -1082,50 +1067,52 @@ static bool processOutput(MaterialBuilder& builder, const JsonishObject& jsonObj
 
     builder.output(qualifier, target, precision, type, name, location);
 
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processOutputs(MaterialBuilder& builder, const JsonishValue& v) {
+static utils::Status processOutputs(MaterialBuilder& builder, const JsonishValue& v) {
     auto jsonArray = v.toJsonArray();
 
-    bool ok = true;
+    utils::Status status;
     for (auto value : jsonArray->getElements()) {
         if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok &= processOutput(builder, *value->toJsonObject());
+            utils::Status s = processOutput(builder, *value->toJsonObject());
+            if (!s.isOk()) {
+                status = s;
+            }
             continue;
         }
-        std::cerr << "outputs must be an array of OBJECTs." << std::endl;
-        return false;
+        return utils::Status::invalidArgument("outputs must be an array of OBJECTs.");
     }
-    return ok;
+    return status;
 }
 
-static bool processColorWrite(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processColorWrite(MaterialBuilder& builder, const JsonishValue& value) {
     builder.colorWrite(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processDepthWrite(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processDepthWrite(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthWrite(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processInstanced(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processInstanced(MaterialBuilder& builder, const JsonishValue& value) {
     builder.instanced(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthCulling(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processDoubleSided(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processDoubleSided(MaterialBuilder& builder, const JsonishValue& value) {
     builder.doubleSided(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processTransparencyMode(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processTransparencyMode(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::TransparencyMode> strToEnum {
         { "default", MaterialBuilder::TransparencyMode::DEFAULT },
         { "twoPassesOneSide", MaterialBuilder::TransparencyMode::TWO_PASSES_ONE_SIDE },
@@ -1137,94 +1124,94 @@ static bool processTransparencyMode(MaterialBuilder& builder, const JsonishValue
     }
 
     builder.transparencyMode(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processMaskThreshold(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processMaskThreshold(MaterialBuilder& builder, const JsonishValue& value) {
     builder.maskThreshold(value.toJsonNumber()->getFloat());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processAlphaToCoverage(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processAlphaToCoverage(MaterialBuilder& builder, const JsonishValue& value) {
     builder.alphaToCoverage(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processShadowMultiplier(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processShadowMultiplier(MaterialBuilder& builder, const JsonishValue& value) {
     builder.shadowMultiplier(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processTransparentShadow(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processTransparentShadow(MaterialBuilder& builder, const JsonishValue& value) {
     builder.transparentShadow(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processSpecularAntiAliasing(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processSpecularAntiAliasing(MaterialBuilder& builder, const JsonishValue& value) {
     builder.specularAntiAliasing(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processSpecularAntiAliasingVariance(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processSpecularAntiAliasingVariance(MaterialBuilder& builder, const JsonishValue& value) {
     builder.specularAntiAliasingVariance(value.toJsonNumber()->getFloat());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processSpecularAntiAliasingThreshold(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processSpecularAntiAliasingThreshold(MaterialBuilder& builder, const JsonishValue& value) {
     builder.specularAntiAliasingThreshold(value.toJsonNumber()->getFloat());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processClearCoatIorChange(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processClearCoatIorChange(MaterialBuilder& builder, const JsonishValue& value) {
     builder.clearCoatIorChange(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processFlipUV(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processFlipUV(MaterialBuilder& builder, const JsonishValue& value) {
     builder.flipUV(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processLinearFog(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processLinearFog(MaterialBuilder& builder, const JsonishValue& value) {
     builder.linearFog(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processShadowFarAttenuation(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processShadowFarAttenuation(MaterialBuilder& builder, const JsonishValue& value) {
     builder.shadowFarAttenuation(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processMultiBounceAO(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processMultiBounceAO(MaterialBuilder& builder, const JsonishValue& value) {
     builder.multiBounceAmbientOcclusion(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processFramebufferFetch(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processFramebufferFetch(MaterialBuilder& builder, const JsonishValue& value) {
     if (value.toJsonBool()->getBool()) {
         builder.enableFramebufferFetch();
     }
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processVertexDomainDeviceJittered(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processVertexDomainDeviceJittered(MaterialBuilder& builder, const JsonishValue& value) {
     builder.vertexDomainDeviceJittered(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processLegacyMorphing(MaterialBuilder& builder, const JsonishValue& value) {
     if (value.toJsonBool()->getBool()) {
         builder.useLegacyMorphing();
     }
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processCustomSurfaceShading(MaterialBuilder& builder, const JsonishValue& value) {
     builder.customSurfaceShading(value.toJsonBool()->getBool());
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processSpecularAmbientOcclusion(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processSpecularAmbientOcclusion(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::SpecularAmbientOcclusion> strToEnum {
             { "none",        MaterialBuilder::SpecularAmbientOcclusion::NONE },
             { "simple",      MaterialBuilder::SpecularAmbientOcclusion::SIMPLE },
@@ -1239,10 +1226,10 @@ static bool processSpecularAmbientOcclusion(MaterialBuilder& builder, const Json
     }
 
     builder.specularAmbientOcclusion(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processShading(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processShading(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::Shading> strToEnum {
         { "cloth",              MaterialBuilder::Shading::CLOTH },
         { "lit",                MaterialBuilder::Shading::LIT },
@@ -1256,10 +1243,10 @@ static bool processShading(MaterialBuilder& builder, const JsonishValue& value) 
     }
 
     builder.shading(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processDomain(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::MaterialDomain> strToEnum {
         { "surface",            MaterialBuilder::MaterialDomain::SURFACE },
         { "postprocess",        MaterialBuilder::MaterialDomain::POST_PROCESS },
@@ -1271,10 +1258,10 @@ static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
     }
 
     builder.materialDomain(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processRefractionMode(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processRefractionMode(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::RefractionMode> strToEnum{
             { "none",        MaterialBuilder::RefractionMode::NONE },
             { "cubemap",     MaterialBuilder::RefractionMode::CUBEMAP },
@@ -1286,10 +1273,10 @@ static bool processRefractionMode(MaterialBuilder& builder, const JsonishValue& 
     }
 
     builder.refractionMode(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processReflectionMode(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processReflectionMode(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::ReflectionMode> strToEnum {
             { "default", MaterialBuilder::ReflectionMode ::DEFAULT },
             { "screenspace", MaterialBuilder::ReflectionMode::SCREEN_SPACE },
@@ -1300,10 +1287,10 @@ static bool processReflectionMode(MaterialBuilder& builder, const JsonishValue& 
     }
 
     builder.reflectionMode(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processRefractionType(MaterialBuilder& builder, const JsonishValue& value) {
     static const std::unordered_map<std::string, MaterialBuilder::RefractionType> strToEnum {
             { "solid", MaterialBuilder::RefractionType::SOLID },
             { "thin",  MaterialBuilder::RefractionType::THIN },
@@ -1314,10 +1301,10 @@ static bool processRefractionType(MaterialBuilder& builder, const JsonishValue& 
     }
 
     builder.refractionType(stringToEnum(strToEnum, jsonString->getString()));
-    return true;
+    return utils::Status::ok();;
 }
 
-static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
     // We avoid using an initializer list for this particular map to avoid build errors that are
     // due to static initialization ordering.
     using filament::Variant;
@@ -1341,30 +1328,32 @@ static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& v
     for (size_t i = 0; i < elements.size(); i++) {
         auto elementValue = elements[i];
         if (elementValue->getType() != JsonishValue::Type::STRING) {
-            std::cerr << "variant_filter: array index " << i <<
+            utils::io::sstream errorMessage;
+            errorMessage << "variant_filter: array index " << i <<
                       " is not a STRING. found:" <<
-                      JsonishValue::typeToString(elementValue->getType()) << std::endl;
-            return false;
+                      JsonishValue::typeToString(elementValue->getType());
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
         if (!isStringValidEnum(strToEnum, s)) {
-            std::cerr << "variant_filter: variant " << s <<
-                      " is not a valid variant" << std::endl;
+            utils::io::sstream errorMessage;
+            errorMessage << "variant_filter: variant " << s << " is not a valid variant";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         variantFilter |= (uint32_t)strToEnum.at(s);
     }
 
     builder.variantFilter(variantFilter);
-    return true;
+    return utils::Status::ok();
 }
 
-static bool processUseDefaultDepthVariant(MaterialBuilder& builder, const JsonishValue& value) {
+static utils::Status processUseDefaultDepthVariant(MaterialBuilder& builder, const JsonishValue& value) {
     if (value.toJsonBool()->getBool()) {
         builder.useDefaultDepthVariant();
     }
-    return true;
+    return utils::Status::ok();;
 }
 
 ParametersProcessor::ParametersProcessor() {
@@ -1419,7 +1408,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["shadowFarAttenuation"]          = { &processShadowFarAttenuation, Type::BOOL };
 }
 
-bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
+utils::Status ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
     for(const auto& entry : jsonObject.getEntries()) {
         const std::string& key = entry.first;
         const JsonishValue* field = entry.second;
@@ -1430,26 +1419,29 @@ bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject&
 
         // Verify type is what was expected.
         if (mParameters.at(key).rootAssert != field->getType()) {
-            std::cerr << "Value for key:\"" << key << "\" is not what was expected" << std::endl;
-            std::cerr << "Got :\"" << JsonishValue::typeToString(field->getType())<< "\" but expected '"
-                   << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "'" << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "Value for key:\"" << key << "\" is not what was expected."
+                         << utils::io::endl;
+            errorMessage << "Got :\"" << JsonishValue::typeToString(field->getType())
+                         << "\" but expected '"
+                   << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "'";
+            return utils::Status::invalidArgument(errorMessage.c_str());
         }
 
         auto fPointer = mParameters[key].callback;
-        bool ok = fPointer(builder, *field);
-        if (!ok) {
+        if (utils::Status status = fPointer(builder, *field); !status.isOk()) {
             std::cerr << "Error while processing material json, key:\"" << key << "\"" << std::endl;
-            return false;
+            return status;
         }
     }
-    return true;
+    return utils::Status::ok();;
 }
 
-bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value) {
+utils::Status ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::string& key, const std::string& value) {
     if (mParameters.find(key) == mParameters.end()) {
-        std::cerr << "Ignoring config entry (unknown key): \"" << key << "\"" << std::endl;
-        return false;
+        utils::io::sstream errorMessage;
+        errorMessage << "Ignoring config entry (unknown key): \"" << key << "\"";
+        return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     std::unique_ptr<JsonishValue> var;
@@ -1472,19 +1464,18 @@ bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const std::
             var = std::make_unique<JsonishString>(value);
             break;
         default:
-            std::cerr << "Unsupported type: \""
-                      << JsonishValue::typeToString(mParameters.at(key).rootAssert)
-                      << "\"" << std::endl;
-            return false;
+            utils::io::sstream errorMessage;
+            errorMessage << "Unsupported type: \""
+                      << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "\"";
+            return utils::Status::invalidArgument(errorMessage.c_str());
     }
 
     auto fPointer = mParameters[key].callback;
-    bool ok = fPointer(builder, *var);
-    if (!ok) {
+    if (utils::Status status = fPointer(builder, *var); !status.isOk()) {
         std::cerr << "Error while processing material param, key:\"" << key << "\"" << std::endl;
-        return false;
+        return status;
     }
-    return true;
+    return utils::Status::ok();
 }
 
 } // namespace matp

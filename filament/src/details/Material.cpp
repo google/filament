@@ -149,8 +149,7 @@ FMaterial::FMaterial(FEngine& engine, const Builder& builder, MaterialDefinition
           mIsDefaultMaterial(builder->mDefaultMaterial),
           mEngine(engine),
           mMaterialId(engine.getMaterialId()) {
-    processSpecializationConstants(engine, builder);
-    processPushConstants(engine);
+    mSpecializationConstants = processSpecializationConstants(builder);
     precacheDepthVariants(engine);
 
 #if FILAMENT_ENABLE_MATDBG
@@ -452,8 +451,10 @@ Program FMaterial::getProgramWithVariants(
             mDefinition.programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
     program.specializationConstants(mSpecializationConstants);
 
-    program.pushConstants(ShaderStage::VERTEX, mPushConstants[uint8_t(ShaderStage::VERTEX)]);
-    program.pushConstants(ShaderStage::FRAGMENT, mPushConstants[uint8_t(ShaderStage::FRAGMENT)]);
+    program.pushConstants(ShaderStage::VERTEX,
+            mDefinition.pushConstants[uint8_t(ShaderStage::VERTEX)]);
+    program.pushConstants(ShaderStage::FRAGMENT,
+            mDefinition.pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
 
     program.cacheId(hash::combine(size_t(mDefinition.cacheId), variant.key));
 
@@ -478,7 +479,8 @@ void FMaterial::createAndCacheProgram(Program&& p, Variant const variant) const 
         }
     }
 
-    auto const program = driverApi.createProgram(std::move(p), CString{ mDefinition.name });
+    auto const program = driverApi.createProgram(std::move(p),
+            ImmutableCString{ mDefinition.name.c_str_safe() });
     assert_invariant(program);
     mCachedPrograms[variant.key] = program;
 
@@ -701,110 +703,45 @@ std::optional<uint32_t> FMaterial::getSpecializationConstantId(std::string_view 
 
 template<typename T, typename>
 bool FMaterial::setConstant(uint32_t id, T value) noexcept {
-    size_t const maxId = mDefinition.materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
-    if (UTILS_LIKELY(id < maxId)) {
-        if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
-            // Constant from the material itself (as opposed to the reserved ones)
-            auto const& constant = mDefinition.materialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
-            using ConstantType = ConstantType;
-            switch (constant.type) {
-                case ConstantType::INT:
-                    if (!std::is_same_v<T, int32_t>) return false;
-                    break;
-                case ConstantType::FLOAT:
-                    if (!std::is_same_v<T, float>) return false;
-                    break;
-                case ConstantType::BOOL:
-                    if (!std::is_same_v<T, bool>) return false;
-                    break;
-            }
-        }
+    if (UTILS_UNLIKELY(id >= mSpecializationConstants.size())) {
+        return false;
+    }
 
-        auto pos = std::find_if(
-                mSpecializationConstants.begin(), mSpecializationConstants.end(),
-                [id](Program::SpecializationConstant const& specializationConstant) {
-                    return specializationConstant.id == id;
-                });
-        if (pos != mSpecializationConstants.end()) {
-            if (std::get<T>(pos->value) != value) {
-                pos->value = value;
-                return true;
-            }
-        } else {
-            mSpecializationConstants.push_back({ id, value });
-            return true;
+    if (id >= CONFIG_MAX_RESERVED_SPEC_CONSTANTS) {
+        // Constant from the material itself (as opposed to the reserved ones)
+        auto const& constant =
+                mDefinition.materialConstants[id - CONFIG_MAX_RESERVED_SPEC_CONSTANTS];
+        using ConstantType = ConstantType;
+        switch (constant.type) {
+            case ConstantType::INT:
+                if (!std::is_same_v<T, int32_t>) return false;
+                break;
+            case ConstantType::FLOAT:
+                if (!std::is_same_v<T, float>) return false;
+                break;
+            case ConstantType::BOOL:
+                if (!std::is_same_v<T, bool>) return false;
+                break;
         }
     }
-    return false;
+
+    mSpecializationConstants[id] = value;
+
+    return true;
 }
 
-void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& builder) {
-    // TODO: migrate some or all of this into MaterialDefinition.
+FixedCapacityVector<Program::SpecializationConstant>
+FMaterial::processSpecializationConstants(Builder const& builder) {
+    FixedCapacityVector<Program::SpecializationConstant> specializationConstants =
+            mDefinition.specializationConstants;
 
-    // Verify that all the constant specializations exist in the material and that their types match.
-    // The first specialization constants are defined internally by Filament.
-    // The subsequent constants are user-defined in the material.
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT] =
+            builder->mShBandsCount;
+    specializationConstants[+ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD] =
+            int32_t(builder->mShadowSamplingQuality);
 
-    // Feature level 0 doesn't support instancing
-    int const maxInstanceCount = (engine.getActiveFeatureLevel() == FeatureLevel::FEATURE_LEVEL_0)
-                                 ? 1 : CONFIG_MAX_INSTANCES;
-
-    // The 16u below denotes the 16 bytes in a uvec4, which is how the froxel buffer is stored.
-    int const maxFroxelBufferHeight =
-            int(Froxelizer::getFroxelBufferByteCount(engine.getDriverApi()) / 16u);
-
-    int const froxelRecordBufferHeight =
-            int(Froxelizer::getFroxelRecordBufferByteCount(engine.getDriverApi()) / 16u);
-
-    bool const staticTextureWorkaround =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::METAL_STATIC_TEXTURE_TARGET_ERROR);
-
-    bool const powerVrShaderWorkarounds =
-            engine.getDriverApi().isWorkaroundNeeded(Workaround::POWER_VR_SHADER_WORKAROUNDS);
-
-    mSpecializationConstants.reserve(
-            mDefinition.materialConstants.size() + CONFIG_MAX_RESERVED_SPEC_CONSTANTS);
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::BACKEND_FEATURE_LEVEL,
-            int(engine.getSupportedFeatureLevel()) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_MAX_INSTANCES,
-            int(maxInstanceCount) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_FROXEL_BUFFER_HEIGHT,
-            int(maxFroxelBufferHeight) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_FROXEL_RECORD_BUFFER_HEIGHT,
-            int(froxelRecordBufferHeight) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_DEBUG_DIRECTIONAL_SHADOWMAP,
-            engine.debug.shadowmap.debug_directional_shadowmap });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_DEBUG_FROXEL_VISUALIZATION,
-            engine.debug.lighting.debug_froxel_visualization });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_STATIC_TEXTURE_TARGET_WORKAROUND,
-            staticTextureWorkaround });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_POWER_VR_SHADER_WORKAROUNDS,
-            powerVrShaderWorkarounds });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_STEREO_EYE_COUNT,
-            int(engine.getConfig().stereoscopicEyeCount) });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SH_BANDS_COUNT,
-            builder->mShBandsCount });
-    mSpecializationConstants.push_back({
-            +ReservedSpecializationConstants::CONFIG_SHADOW_SAMPLING_METHOD,
-            int32_t(builder->mShadowSamplingQuality) });
-    if (UTILS_UNLIKELY(
-            mDefinition.getMaterialParser().getShaderLanguage() == ShaderLanguage::ESSL1)) {
-        // The actual value of this spec-constant is set in the OpenGLDriver backend.
-        mSpecializationConstants.push_back({
-                +ReservedSpecializationConstants::CONFIG_SRGB_SWAPCHAIN_EMULATION,
-                false});
-    }
-
+    // Verify that all the constant specializations exist in the material and that their types
+    // match.
     for (auto const& [name, value] : builder->mConstantSpecializations) {
         std::string_view const key{ name.data(), name.size() };
         auto pos = mDefinition.specializationConstantsNameToIndex.find(key);
@@ -817,63 +754,26 @@ void FMaterial::processSpecializationConstants(FEngine& engine, Builder const& b
             case ConstantType::INT:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<int32_t>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type int, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type int, but "
+                        << types[value.index()] << " was provided.";
                 break;
             case ConstantType::FLOAT:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<float>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type float, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type float, but "
+                        << types[value.index()] << " was provided.";
                 break;
             case ConstantType::BOOL:
                 FILAMENT_CHECK_PRECONDITION(std::holds_alternative<bool>(value))
                         << "The constant parameter " << name.c_str() << " on material "
-                        << mDefinition.name.c_str_safe() << " is of type bool, but " << types[value.index()]
-                        << " was provided.";
+                        << mDefinition.name.c_str_safe() << " is of type bool, but "
+                        << types[value.index()] << " was provided.";
                 break;
         }
         uint32_t const index = pos->second + CONFIG_MAX_RESERVED_SPEC_CONSTANTS;
-        mSpecializationConstants.push_back({ index, value });
+        specializationConstants[index] = value;
     }
-}
-
-void FMaterial::processPushConstants(FEngine&) {
-    // TODO: move some or all of this into MaterialDefinition.
-
-    FixedCapacityVector<Program::PushConstant>& vertexConstants =
-            mPushConstants[uint8_t(ShaderStage::VERTEX)];
-    FixedCapacityVector<Program::PushConstant>& fragmentConstants =
-            mPushConstants[uint8_t(ShaderStage::FRAGMENT)];
-
-    CString structVarName;
-    FixedCapacityVector<MaterialPushConstant> pushConstants;
-    mDefinition.getMaterialParser().getPushConstants(&structVarName, &pushConstants);
-
-    vertexConstants.reserve(pushConstants.size());
-    fragmentConstants.reserve(pushConstants.size());
-
-    constexpr size_t MAX_NAME_LEN = 60;
-    char buf[MAX_NAME_LEN];
-    uint8_t vertexCount = 0, fragmentCount = 0;
-
-    std::for_each(pushConstants.cbegin(), pushConstants.cend(),
-            [&](MaterialPushConstant const& constant) {
-                snprintf(buf, sizeof(buf), "%s.%s", structVarName.c_str(), constant.name.c_str());
-
-                switch (constant.stage) {
-                    case ShaderStage::VERTEX:
-                        vertexConstants.push_back({CString(buf), constant.type});
-                        vertexCount++;
-                        break;
-                    case ShaderStage::FRAGMENT:
-                        fragmentConstants.push_back({CString(buf), constant.type});
-                        fragmentCount++;
-                        break;
-                    case ShaderStage::COMPUTE:
-                        break;
-                }
-            });
+    return specializationConstants;
 }
 
 void FMaterial::precacheDepthVariants(FEngine& engine) {

@@ -17,8 +17,11 @@
 #ifndef TNT_UTILS_SLICE_H
 #define TNT_UTILS_SLICE_H
 
+#include <utils/Hash.h>
 #include <utils/compiler.h>
 
+#include <algorithm>
+#include <type_traits>
 #include <utility>
 
 #include <assert.h>
@@ -26,116 +29,126 @@
 
 namespace utils {
 
-/*
- * A fixed-size slice of a container
+/** A fixed-size slice of a container.
+ *
+ * Analogous to std::span.
  */
-template <typename T>
+template<typename T>
 class Slice {
 public:
+    using element_type = T;
+    using value_type = std::remove_cv_t<T>;
+    using size_type = size_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
     using iterator = T*;
     using const_iterator = T const*;
-    using value_type = T;
-    using reference = T&;
-    using const_reference = T const&;
-    using pointer = T*;
-    using const_pointer = T const*;
-    using size_type = size_t;
 
-    Slice() noexcept = default;
+    Slice() = default;
+    Slice(iterator begin, iterator end) noexcept : mBegin(begin), mEnd(end) {}
+    Slice(pointer begin, size_type count) noexcept : mBegin(begin), mEnd(begin + count) {}
 
-    Slice(const_iterator begin, const_iterator end) noexcept
-            : mBegin(const_cast<iterator>(begin)),
-              mEnd(const_cast<iterator>(end)) {
+    Slice(Slice<T> const& rhs) : mBegin(rhs.begin()), mEnd(rhs.end()) {}
+
+    // If Slice<T> is Slice<const U>, define coercive copy constructor from Slice<U>.
+    template<typename U = T>
+    Slice(std::enable_if_t<std::is_const_v<U>, Slice<value_type> const&> rhs)
+        : mBegin(rhs.begin()), mEnd(rhs.end()) {}
+
+    Slice& operator=(Slice<T> const& rhs) noexcept {
+        mBegin = rhs.begin();
+        mEnd = rhs.end();
+        return *this;
     }
 
-    Slice(const_pointer begin, size_type count) noexcept
-            : mBegin(const_cast<iterator>(begin)),
-              mEnd(mBegin + count) {
+    // If Slice<T> is Slice<const U>, define assignment operator from Slice<U>.
+    template<typename U = T>
+    Slice& operator=(
+            std::enable_if_t<std::is_const_v<U>, Slice<value_type> const&> rhs) noexcept {
+        mBegin = rhs.begin();
+        mEnd = rhs.end();
+        return *this;
     }
 
-    Slice(Slice const& rhs) noexcept = default;
-    Slice(Slice&& rhs) noexcept = default;
-    Slice& operator=(Slice const& rhs) noexcept = default;
-    Slice& operator=(Slice&& rhs) noexcept = default;
-
-    void set(pointer begin, size_type count) UTILS_RESTRICT noexcept {
+    void set(pointer begin, size_type count) noexcept {
         mBegin = begin;
         mEnd = begin + count;
     }
 
-    void set(iterator begin, iterator end) UTILS_RESTRICT noexcept {
+    void set(iterator begin, iterator end) noexcept {
         mBegin = begin;
         mEnd = end;
     }
 
-    void swap(Slice& rhs) UTILS_RESTRICT noexcept {
+    void swap(Slice<T>& rhs) noexcept {
         std::swap(mBegin, rhs.mBegin);
         std::swap(mEnd, rhs.mEnd);
     }
 
-    void clear() UTILS_RESTRICT noexcept {
+    void clear() noexcept {
         mBegin = nullptr;
         mEnd = nullptr;
     }
 
+    bool operator==(Slice<const value_type> const& rhs) const noexcept {
+        if (size() != rhs.size()) {
+            return false;
+        }
+        if (mBegin == rhs.cbegin()) {
+            return true;
+        }
+        return std::equal(cbegin(), cend(), rhs.cbegin());
+    }
+
+    bool operator==(Slice<value_type> const& rhs) const noexcept {
+        return *this == Slice<const value_type>(rhs);
+    }
+
     // size
-    size_t size() const UTILS_RESTRICT noexcept { return mEnd - mBegin; }
-    size_t sizeInBytes() const UTILS_RESTRICT noexcept { return size() * sizeof(T); }
-    bool empty() const UTILS_RESTRICT noexcept { return size() == 0; }
+    size_t size() const noexcept { return mEnd - mBegin; }
+    size_t sizeInBytes() const noexcept { return size() * sizeof(T); }
+    bool empty() const noexcept { return size() == 0; }
 
     // iterators
-    iterator begin() UTILS_RESTRICT noexcept { return mBegin; }
-    const_iterator begin() const UTILS_RESTRICT noexcept { return mBegin; }
-    const_iterator cbegin() const UTILS_RESTRICT noexcept { return this->begin(); }
-    iterator end() UTILS_RESTRICT noexcept { return mEnd; }
-    const_iterator end() const UTILS_RESTRICT noexcept { return mEnd; }
-    const_iterator cend() const UTILS_RESTRICT noexcept { return this->end(); }
+    iterator begin() const noexcept { return mBegin; }
+    const_iterator cbegin() const noexcept { return this->begin(); }
+    iterator end() const noexcept { return mEnd; }
+    const_iterator cend() const noexcept { return this->end(); }
 
     // data access
-    reference operator[](size_t n) UTILS_RESTRICT noexcept {
+    reference operator[](size_t n) const noexcept {
         assert(n < size());
         return mBegin[n];
     }
 
-    const_reference operator[](size_t n) const UTILS_RESTRICT noexcept {
-        assert(n < size());
-        return mBegin[n];
-    }
-
-    reference at(size_t n) UTILS_RESTRICT noexcept {
+    reference at(size_t n) const noexcept {
         return operator[](n);
     }
 
-    const_reference at(size_t n) const UTILS_RESTRICT noexcept {
-        return operator[](n);
-    }
-
-    reference front() UTILS_RESTRICT noexcept {
+    reference front() const noexcept {
         assert(!empty());
         return *mBegin;
     }
 
-    const_reference front() const UTILS_RESTRICT noexcept {
-        assert(!empty());
-        return *mBegin;
-    }
-
-    reference back() UTILS_RESTRICT noexcept {
+    reference back() const noexcept {
         assert(!empty());
         return *(this->end() - 1);
     }
 
-    const_reference back() const UTILS_RESTRICT noexcept {
-        assert(!empty());
-        return *(this->end() - 1);
-    }
-
-    pointer data() UTILS_RESTRICT noexcept {
+    pointer data() const noexcept {
         return this->begin();
     }
 
-    const_pointer data() const UTILS_RESTRICT noexcept {
-        return this->begin();
+    template<typename Hash = std::hash<value_type>>
+    size_t hash() const noexcept {
+        Hash hasher;
+        size_t seed = size();
+        for (auto const& it : *this) {
+            utils::hash::combine_fast(seed, hasher(it));
+        }
+        return seed;
     }
 
 protected:
@@ -144,5 +157,14 @@ protected:
 };
 
 } // namespace utils
+
+namespace std {
+
+template<typename T>
+struct hash<utils::Slice<T>> {
+    inline size_t operator()(utils::Slice<T> const& lhs) const noexcept { return lhs.hash(); }
+};
+
+} // namespace std
 
 #endif // TNT_UTILS_SLICE_H

@@ -75,7 +75,7 @@ struct WGLSwapChain {
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
 
 Driver* PlatformWGL::createDriver(void* sharedGLContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
+        const Platform::DriverConfig& driverConfig) {
     int result = 0;
     int pixelFormat = 0;
     DWORD dwError = 0;
@@ -124,8 +124,6 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
 
     // try all versions down, from GL 4.5 to 4.1
-
-
     for (int minor = 5; minor >= 1; minor--) {
         mAttribs = {
                 WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
@@ -144,6 +142,18 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
         goto error;
     }
 
+    // Create shared contexts here for use by other threads. This is a Windows specific workaround
+    // necessitated by the requirement that shared contexts must be initialized on the same thread
+    // as the primary context. If more shared contexts are necessary, the constant
+    // SHARED_CONTEXT_NUM must be updated.
+    for (int i = 0; i < SHARED_CONTEXT_NUM; ++i) {
+        HGLRC context = wglCreateContextAttribs(mWhdc, mContext, mAttribs.data());
+        if (context) {
+            mAdditionalContexts.push_back(context);
+        }
+    }
+
+    // Delete the temporary context
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(tempContext);
     tempContext = NULL;
@@ -169,13 +179,17 @@ error:
 }
 
 bool PlatformWGL::isExtraContextSupported() const noexcept {
-    return false;
+    return true;
 }
 
 void PlatformWGL::createContext(bool shared) {
-    HGLRC context = wglCreateContextAttribs(mWhdc, shared ? mContext : nullptr, mAttribs.data());
-    wglMakeCurrent(mWhdc, context);
-    mAdditionalContexts.push_back(context);
+    int nextIndex = mNextFreeSharedContextIndex.fetch_add(1, std::memory_order_relaxed);
+    FILAMENT_CHECK_PRECONDITION(nextIndex < SHARED_CONTEXT_NUM)
+            << "Shared context index out of range. Increase SHARED_CONTEXT_NUM.";
+
+    HGLRC context = mAdditionalContexts[nextIndex];
+    BOOL result = wglMakeCurrent(mWhdc, context);
+    FILAMENT_CHECK_POSTCONDITION(result) << "Failed to make current.";
 }
 
 void PlatformWGL::terminate() noexcept {

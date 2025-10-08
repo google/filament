@@ -24,6 +24,7 @@
 #include <private/backend/HandleAllocator.h>
 
 #include <utils/Panic.h>
+#include <utils/ImmutableCString.h>
 
 namespace filament::backend::fvkmemory {
 
@@ -36,7 +37,7 @@ public:
         return mHandleAllocatorImpl.allocate<D>();
     }
 
-    inline void associateHandle(HandleBase::HandleId id, utils::CString&& tag) noexcept {
+    inline void associateHandle(HandleBase::HandleId id, utils::ImmutableCString&& tag) noexcept {
         mHandleAllocatorImpl.associateTagToHandle(id, std::move(tag));
     }
 

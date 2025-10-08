@@ -50,11 +50,7 @@ public:
         descriptor_binding_t binding;
     };
 
-    struct SpecializationConstant {
-        using Type = std::variant<int32_t, float, bool>;
-        uint32_t id;    // id set in glsl
-        Type value;     // value and type
-    };
+    using SpecializationConstant = std::variant<int32_t, float, bool>;
 
     struct Uniform { // For ES2 support
         utils::CString name;    // full qualified name of the uniform field
@@ -118,7 +114,7 @@ public:
     Program& multiview(bool multiview) noexcept;
 
     // For ES2 support only...
-    Program& uniforms(uint32_t index, utils::CString name, UniformInfo uniforms) noexcept;
+    Program& uniforms(uint32_t index, utils::CString name, UniformInfo uniforms);
     Program& attributes(AttributesInfo attributes) noexcept;
 
     //

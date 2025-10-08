@@ -45,7 +45,7 @@ public:
         void terminate(FEngine& engine);
         void reset() { mAvailable = 0; }
         std::pair<FMaterialInstance*, int32_t> getInstance();
-        FMaterialInstance* getInstance(int32_t fixedInstanceindex);
+        FMaterialInstance* getInstance(int32_t fixedInstanceindex) const;
 
     private:
         FMaterial const* mMaterial = nullptr;
@@ -66,7 +66,7 @@ public:
     ~MaterialInstanceManager();
 
     /*
-     * Destroy all of the cached material instances. This needs to be done before the destruction of
+     * Destroy all the cached material instances. This needs to be done before the destruction of
      * the corresponding Material.
      */
     void terminate(FEngine& engine);
@@ -76,13 +76,13 @@ public:
      * available instance in the cache. If one is not found, then a new instance will be created and
      * added to the cache.
      */
-    FMaterialInstance* getMaterialInstance(FMaterial const* ma);
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma) const;
 
     /*
      * This returns a material instance given a material and an index. The `fixedIndex` should be
      * a value returned by getiFixedMaterialInstance.
      */
-    FMaterialInstance* getMaterialInstance(FMaterial const* ma, int32_t const fixedIndex);
+    FMaterialInstance* getMaterialInstance(FMaterial const* ma, int32_t const fixedIndex) const;
 
     /*
      * This returns a material instance and an index given a material. This is needed for the
@@ -102,9 +102,9 @@ public:
     }
 
 private:
-    Record& getRecord(FMaterial const* material);
+    Record& getRecord(FMaterial const* material) const;
 
-    std::vector<Record> mMaterials;
+    mutable std::vector<Record> mMaterials;
 };
 
 } // namespace filament

@@ -22,6 +22,6 @@
 
 namespace filament {
 
-utils::Slice<StaticMaterialInfo> getSgsrMaterialList() noexcept;
+utils::Slice<const StaticMaterialInfo> getSgsrMaterialList() noexcept;
 
 } // namespace filament

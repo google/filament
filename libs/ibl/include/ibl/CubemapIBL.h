@@ -54,7 +54,7 @@ public:
      * @param updater           a callback for the caller to track progress
      */
     static void roughnessFilter(
-            utils::JobSystem& js, Cubemap& dst, const utils::Slice<Cubemap>& levels,
+            utils::JobSystem& js, Cubemap& dst, utils::Slice<const Cubemap> levels,
             float linearRoughness, size_t maxNumSamples, math::float3 mirror, bool prefilter,
             Progress updater = nullptr, void* userdata = nullptr);
 

@@ -276,6 +276,13 @@ For example, it could be <code>out/renderdiff/diffs/presubmit</code> for the sta
 </code></pre>
 <p>where <code>[PR #]</code> is the numeric ID of your pull request, and the <code>[github token]</code> is an acess
 token that you (as a github user) needs to generate (<a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">reference</a>).</p>
+<p>To see the results of a specific run, you would do the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --run_number=[RUN #] --github_token=[github token]
+</code></pre>
+<p>where <code>[RUN #]</code> is the numeric ID of the run. You can find the run number in the URL of the
+GitHub Actions page. For example, in the URL
+<code>https://github.com/google/filament/actions/runs/18023632663/job/51286323708?pr=9264</code>,
+the run number is <code>18023632663</code>.</p>
 
                     </main>
 
