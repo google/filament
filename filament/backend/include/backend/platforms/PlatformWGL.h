@@ -61,8 +61,12 @@ protected:
     HWND mHWnd = NULL;
     HDC mWhdc = NULL;
     PIXELFORMATDESCRIPTOR mPfd = {};
-    std::vector<HGLRC> mAdditionalContexts;
     std::vector<int> mAttribs;
+
+    // For shared contexts
+    static constexpr int SHARED_CONTEXT_NUM = 1;
+    std::vector<HGLRC> mAdditionalContexts;
+    std::atomic<int> mNextFreeSharedContextIndex{0};
 };
 
 } // namespace filament::backend
