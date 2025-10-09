@@ -264,12 +264,12 @@ JsonishValue* JsonishParser::parseString() noexcept {
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
     }
-    std::pair<utils::Status, std::string> resolved = resolveEscapes(tmp);
-    if (!resolved.first.isOk()) {
-        mStatus = resolved.first;
+    auto [status, resolvedStr] = resolveEscapes(tmp);
+    if (!status.isOk()) {
+        mStatus = status;
         return nullptr;
     }
-    return new JsonishString(resolved.second);
+    return new JsonishString(resolvedStr);
 }
 
 JsonishValue* JsonishParser::parseValue() noexcept {
