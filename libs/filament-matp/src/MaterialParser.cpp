@@ -68,8 +68,10 @@ utils::Status MaterialParser::processMaterial(const MaterialLexeme& jsonLexeme,
     JsonishParser parser(jlexer.getLexemes());
     std::unique_ptr<JsonishObject> const json = parser.parse();
 
-    if (json == nullptr) {
-        return utils::Status::internal("JsonishParser error (see above).");
+    // If it fails to parse, json value is always null.
+    if (utils::Status jsonishParseStatus = parser.getParseStatus(); !jsonishParseStatus.isOk() ||
+            json == nullptr) {
+        return jsonishParseStatus;
     }
 
     ParametersProcessor parametersProcessor;
