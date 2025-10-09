@@ -59,7 +59,6 @@
 #include <algorithm>
 #include <array>
 #include <new>
-#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -271,8 +270,8 @@ void FMaterial::compile(CompilerPriorityQueue const priority,
     }
 }
 
-backend::Handle<backend::HwProgram> FMaterial::prepareProgramSlow(Variant const variant,
-        backend::CompilerPriorityQueue const priorityQueue) const noexcept {
+Handle<HwProgram> FMaterial::prepareProgramSlow(Variant const variant,
+        CompilerPriorityQueue const priorityQueue) const noexcept {
     if (isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
@@ -284,8 +283,7 @@ backend::Handle<backend::HwProgram> FMaterial::prepareProgramSlow(Variant const 
 }
 
 [[nodiscard]]
-backend::Handle<backend::HwProgram> FMaterial::getProgramSlow(
-        Variant const variant) const noexcept {
+Handle<HwProgram> FMaterial::getProgramSlow(Variant const variant) const noexcept {
     if (isSharedVariant(variant)) {
         FMaterial const* defaultMaterial = mEngine.getDefaultMaterial();
         FILAMENT_CHECK_PRECONDITION(defaultMaterial);
