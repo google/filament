@@ -33,57 +33,14 @@ namespace filament::backend {
 using namespace utils;
 
 // We want these in the .cpp file, so they're not inlined (not worth it)
-Program::Program(
-        utils::InternPool<SpecializationConstant>* specializationConstantsInternPool) noexcept
-        : mSpecializationConstantsInternPool(specializationConstantsInternPool) {}
-
-Program::Program(Program&& rhs) noexcept
-        : mSpecializationConstantsInternPool(rhs.mSpecializationConstantsInternPool),
-          mShadersSource(std::move(rhs.mShadersSource)),
-          mShaderLanguage(std::move(rhs.mShaderLanguage)),
-          mName(std::move(rhs.mName)),
-          mCacheId(std::move(rhs.mCacheId)),
-          mPriorityQueue(std::move(rhs.mPriorityQueue)),
-          mLogger(std::move(rhs.mLogger)),
-          mSpecializationConstants(std::move(rhs.mSpecializationConstants)),
-          mPushConstants(std::move(rhs.mPushConstants)),
-          mDescriptorBindings(std::move(rhs.mDescriptorBindings)),
-          mAttributes(std::move(rhs.mAttributes)),
-          mBindingUniformsInfo(std::move(rhs.mBindingUniformsInfo)),
-          mMultiview(std::move(rhs.mMultiview)) {
-    rhs.mSpecializationConstantsInternPool = nullptr;
-    rhs.mSpecializationConstants.clear();
+Program::Program() noexcept {  // NOLINT(modernize-use-equals-default)
 }
 
-Program& Program::operator=(Program&& rhs) noexcept {
-    if (mSpecializationConstantsInternPool) {
-        mSpecializationConstantsInternPool->release(mSpecializationConstants);
-    }
+Program::Program(Program&& rhs) noexcept = default;
 
-    mSpecializationConstantsInternPool = rhs.mSpecializationConstantsInternPool;
-    mShadersSource = std::move(rhs.mShadersSource);
-    mShaderLanguage = std::move(rhs.mShaderLanguage);
-    mName = std::move(rhs.mName);
-    mCacheId = std::move(rhs.mCacheId);
-    mPriorityQueue = std::move(rhs.mPriorityQueue);
-    mLogger = std::move(rhs.mLogger);
-    mSpecializationConstants = std::move(rhs.mSpecializationConstants);
-    mPushConstants = std::move(rhs.mPushConstants);
-    mDescriptorBindings = std::move(rhs.mDescriptorBindings);
-    mAttributes = std::move(rhs.mAttributes);
-    mBindingUniformsInfo = std::move(rhs.mBindingUniformsInfo);
-    mMultiview = std::move(rhs.mMultiview);
+Program& Program::operator=(Program&& rhs) noexcept = default;
 
-    rhs.mSpecializationConstantsInternPool = nullptr;
-    rhs.mSpecializationConstants.clear();
-    return *this;
-}
-
-Program::~Program() noexcept {
-    if (mSpecializationConstantsInternPool) {
-        mSpecializationConstantsInternPool->release(mSpecializationConstants);
-    }
-}
+Program::~Program() noexcept = default;
 
 Program& Program::priorityQueue(CompilerPriorityQueue const priorityQueue) noexcept {
     mPriorityQueue = priorityQueue;
@@ -127,12 +84,7 @@ Program& Program::attributes(AttributesInfo attributes) noexcept {
 }
 
 Program& Program::specializationConstants(SpecializationConstantsInfo specConstants) noexcept {
-    FILAMENT_CHECK_PRECONDITION(mSpecializationConstantsInternPool);
-    // NOTE: This is allowed because InternPool treats an empty list as having infinite
-    // references held.
-    mSpecializationConstantsInternPool->release(mSpecializationConstants);
-    mSpecializationConstants = specConstants;
-    mSpecializationConstantsInternPool->acquire(mSpecializationConstants);
+    mSpecializationConstants = std::move(specConstants);
     return *this;
 }
 

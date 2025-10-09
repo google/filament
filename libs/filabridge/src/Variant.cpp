@@ -77,14 +77,11 @@ namespace details {
 namespace {
 
 // Compile-time variant count for lit and unlit
-constexpr inline size_t variant_count(bool lit, bool depth) noexcept {
+constexpr inline size_t variant_count(bool lit) noexcept {
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
         if (!Variant::isValid(variant)) {
-            continue;
-        }
-        if (Variant::isValidDepthVariant(variant) != depth) {
             continue;
         }
         variant = Variant::filterVariant(variant, lit);
@@ -95,21 +92,41 @@ constexpr inline size_t variant_count(bool lit, bool depth) noexcept {
     return count;
 }
 
+constexpr inline size_t depth_variant_count() noexcept {
+    size_t count = 0;
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
+        Variant const variant(i);
+        if (Variant::isValidDepthVariant(variant)) {
+            count++;
+        }
+    }
+    return count;
+}
+
 // Compile-time variant list for lit and unlit
-template<bool LIT, bool DEPTH>
+template<bool LIT>
 constexpr auto get_variants() noexcept {
-    std::array<Variant, variant_count(LIT, DEPTH)> variants;
+    std::array<Variant, variant_count(LIT)> variants;
     size_t count = 0;
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
         Variant variant(i);
         if (Variant::isReserved(variant)) {
             continue;
         }
-        if (Variant::isValidDepthVariant(variant) != DEPTH) {
-            continue;
-        }
         variant = Variant::filterVariant(variant, LIT);
         if (i == variant.key) {
+            variants[count++] = variant;
+        }
+    }
+    return variants;
+}
+
+constexpr auto get_depth_variants() noexcept {
+    std::array<Variant, depth_variant_count()> variants;
+    size_t count = 0;
+    for (size_t i = 0; i < VARIANT_COUNT; i++) {
+        Variant const variant(i);
+        if (Variant::isValidDepthVariant(variant)) {
             variants[count++] = variant;
         }
     }
@@ -189,10 +206,9 @@ constexpr inline size_t fragment_variant_count() noexcept {
 } // anonymous namespace
 
 
-static auto const gLitVariants{ details::get_variants<true, false>() };
-static auto const gUnlitVariants{ details::get_variants<false, false>() };
-static auto const gLitDepthVariants{ details::get_variants<true, true>() };
-static auto const gUnlitDepthVariants{ details::get_variants<false, true>() };
+static auto const gLitVariants{ details::get_variants<true>() };
+static auto const gUnlitVariants{ details::get_variants<false>() };
+static auto const gDepthVariants{ details::get_depth_variants() };
 static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
@@ -214,12 +230,8 @@ utils::Slice<const Variant> getUnlitVariants() noexcept {
     return { details::gUnlitVariants.data(), details::gUnlitVariants.size() };
 }
 
-utils::Slice<const Variant> getLitDepthVariants() noexcept {
-    return { details::gLitDepthVariants.data(), details::gLitDepthVariants.size() };
-}
-
-utils::Slice<const Variant> getUnlitDepthVariants() noexcept {
-    return { details::gUnlitDepthVariants.data(), details::gUnlitDepthVariants.size() };
+utils::Slice<const Variant> getDepthVariants() noexcept {
+    return { details::gDepthVariants.data(), details::gDepthVariants.size() };
 }
 
 utils::Slice<const Variant> getPostProcessVariants() noexcept {
