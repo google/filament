@@ -522,7 +522,7 @@ Handle<HwProgram> MaterialDefinition::compileProgram(FEngine& engine,
         ProgramSpecialization const& specialization,
         backend::CompilerPriorityQueue const priorityQueue) const noexcept {
     assert_invariant(engine.hasFeatureLevel(featureLevel));
-    Program pb(&engine.getMaterialCache().getSpecializationConstantsInternPool());
+    Program pb;
     switch (materialDomain) {
         case MaterialDomain::SURFACE:
             pb = getSurfaceProgram(engine, specialization);
@@ -602,7 +602,7 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
                "fragment shader (variant="
             << +variant.key << ", filtered=" << +fragmentVariant.key << ").";
 
-    Program program(&engine.getMaterialCache().getSpecializationConstantsInternPool());
+    Program program;
     program.shader(ShaderStage::VERTEX, vsBuilder.data(), vsBuilder.size())
             .shader(ShaderStage::FRAGMENT, fsBuilder.data(), fsBuilder.size())
             .shaderLanguage(parser.getShaderLanguage())
@@ -629,7 +629,8 @@ Program MaterialDefinition::getProgramWithVariants(FEngine const& engine,
             programDescriptorBindings[+DescriptorSetBindingPoints::PER_RENDERABLE]);
     program.descriptorBindings(+DescriptorSetBindingPoints::PER_MATERIAL,
             programDescriptorBindings[+DescriptorSetBindingPoints::PER_MATERIAL]);
-    program.specializationConstants(specialization.specializationConstants);
+    program.specializationConstants(
+            utils::FixedCapacityVector(specialization.specializationConstants));
 
     program.pushConstants(ShaderStage::VERTEX, pushConstants[uint8_t(ShaderStage::VERTEX)]);
     program.pushConstants(ShaderStage::FRAGMENT, pushConstants[uint8_t(ShaderStage::FRAGMENT)]);
@@ -767,8 +768,7 @@ utils::Slice<const Variant> MaterialDefinition::getVariants() const noexcept {
 utils::Slice<const Variant> MaterialDefinition::getDepthVariants() const noexcept {
     switch (materialDomain) {
         case MaterialDomain::SURFACE:
-            return isVariantLit ? VariantUtils::getLitDepthVariants()
-                                : VariantUtils::getUnlitDepthVariants();
+            return VariantUtils::getDepthVariants();
         case MaterialDomain::POST_PROCESS:
             return {};
         case MaterialDomain::COMPUTE:
