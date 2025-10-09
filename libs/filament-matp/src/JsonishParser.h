@@ -181,7 +181,7 @@ private:
 class JsonishString final : public JsonishValue {
 public:
     // Expects the input string to have its escape symbols resolved.
-    explicit JsonishString(const std::string& string);
+    explicit JsonishString(const std::string& string) : JsonishValue(STRING), mString(string) {}
 
     ~JsonishString() override = default;
 

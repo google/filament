@@ -24,7 +24,7 @@
 
 namespace matp {
 
-static std::string resolveEscapes(const std::string& s, utils::Status& status) {
+static std::pair<utils::Status, std::string> resolveEscapes(const std::string& s) {
     std::string out;
     out.reserve(s.length());
 
@@ -58,14 +58,15 @@ static std::string resolveEscapes(const std::string& s, utils::Status& status) {
                     break;
                 case 'u':
                     // TODO: implement unicode escape sequences
-                    status = utils::Status::unsupported(
-                                    "Unicode escape sequences currently not supported.");
+                    return { utils::Status::unsupported(
+                            "Unicode escape sequences currently not supported."),
+                        out };
                     break;
                 default:
                     utils::io::sstream errorMessage;
                     errorMessage << "Invalid escape sequence \\" << c << ".";
-                    status = utils::Status::invalidArgument(errorMessage.c_str());
-                    return out;
+                    return { utils::Status::invalidArgument(
+                                     errorMessage.c_str()), out };
             }
             inEscape = false;
         } else {
@@ -79,14 +80,10 @@ static std::string resolveEscapes(const std::string& s, utils::Status& status) {
     }
 
     if (inEscape) {
-        status = utils::Status::invalidArgument("Incomplete escape sequence.");
+        return { utils::Status::invalidArgument("Incomplete escape sequence."), out };
     }
 
-    return out;
-}
-
-JsonishString::JsonishString(const std::string& string) : JsonishValue(STRING) {
-    mString = string;
+    return { utils::Status::ok(),  out };
 }
 
 std::unique_ptr<JsonishObject> JsonishParser::parse() noexcept {
@@ -267,7 +264,12 @@ JsonishValue* JsonishParser::parseString() noexcept {
     } else {
         tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
     }
-    return new JsonishString(resolveEscapes(tmp, mStatus));
+    std::pair<utils::Status, std::string> resolved = resolveEscapes(tmp);
+    if (!resolved.first.isOk()) {
+        mStatus = resolved.first;
+        return nullptr;
+    }
+    return new JsonishString(resolved.second);
 }
 
 JsonishValue* JsonishParser::parseValue() noexcept {
