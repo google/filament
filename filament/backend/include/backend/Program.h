@@ -69,7 +69,7 @@ public:
 
     using DescriptorBindingsInfo = utils::FixedCapacityVector<Descriptor>;
     using DescriptorSetInfo = std::array<DescriptorBindingsInfo, MAX_DESCRIPTOR_SET_COUNT>;
-    using SpecializationConstantsInfo = utils::Slice<const SpecializationConstant>;
+    using SpecializationConstantsInfo = utils::FixedCapacityVector<SpecializationConstant>;
     using ShaderBlob = utils::FixedCapacityVector<uint8_t>;
     using ShaderSource = std::array<ShaderBlob, SHADER_TYPE_COUNT>;
 
@@ -78,8 +78,7 @@ public:
     using BindingUniformsInfo = utils::FixedCapacityVector<
             std::tuple<uint8_t, utils::CString, Program::UniformInfo>>;
 
-    explicit Program(
-            utils::InternPool<SpecializationConstant>* specializationConstantsInternPool) noexcept;
+    Program() noexcept;
 
     Program(const Program& rhs) = delete;
     Program& operator=(const Program& rhs) = delete;
@@ -183,7 +182,6 @@ public:
 private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const Program& builder);
 
-    utils::InternPool<SpecializationConstant>* mSpecializationConstantsInternPool;
     ShaderSource mShadersSource;
     ShaderLanguage mShaderLanguage = ShaderLanguage::ESSL3;
     utils::CString mName;
