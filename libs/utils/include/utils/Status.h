@@ -34,6 +34,8 @@ enum class StatusCode {
     INVALID_ARGUMENT,
     /** Internal error was occurred while processing the request. */
     INTERNAL,
+    /** The requested operation is not supported. */
+    UNSUPPORTED,
 };
 
 /**
@@ -136,6 +138,15 @@ public:
      */
     static Status invalidArgument(std::string_view message) {
         return {StatusCode::INVALID_ARGUMENT, message};
+    }
+
+    /**
+     * Creates an error Status with an UNSUPPORTED status code.
+     * @param message The error message to include.
+     * @return an error Status with an UNSUPPORTED status code.
+     */
+    static Status unsupported(std::string_view message) {
+        return { StatusCode::UNSUPPORTED, message };
     }
 
 private:
