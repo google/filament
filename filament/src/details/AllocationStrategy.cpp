@@ -17,15 +17,16 @@
 #include "details/AllocationStrategy.h"
 
 #include <utils/Panic.h>
+#include <utils/debug.h>
 
 namespace filament {
 namespace {
 
-bool isValidId(AllocationStrategy::AllocationId id) {
+static bool isValidId(AllocationStrategy::AllocationId id) {
     return id != AllocationStrategy::UNALLOCATED && id != AllocationStrategy::REALLOCATION_REQUIRED;
 }
 
-constexpr bool isPowerOfTwo(uint32_t n) {
+constexpr static bool isPowerOfTwo(uint32_t n) {
     return (n > 0) && ((n & (n - 1)) == 0);
 }
 
@@ -98,6 +99,8 @@ AllocationStrategy::allocate(allocation_size_t size) noexcept {
 
         allocation_size_t remainingSize = originalSlotSize - alignedSize;
         allocation_size_t newSlotOffset = targetNode->mSlot.offset + alignedSize;
+        assert_invariant(remainingSize % mSlotSize == 0);
+        assert_invariant(newSlotOffset % mSlotSize == 0);
 
         // Create a new node for the remaining free space.
         auto insertPos = std::next(targetNode->mSlotPoolIterator);
@@ -180,6 +183,7 @@ void AllocationStrategy::releaseFreeSlots() {
             merged = true;
             // Combine the size of free slots
             curr->mSlot.slotSize += next->mSlot.slotSize;
+            assert_invariant(curr->mSlot.slotSize % mSlotSize == 0);
 
             // Erase the merged slot from all maps
             if (next->mFreeListIterator != mFreeList.end()) {
