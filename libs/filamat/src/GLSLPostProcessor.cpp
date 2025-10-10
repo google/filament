@@ -290,8 +290,6 @@ GLSLPostProcessor::GLSLPostProcessor(
     : mOptimization(optimization), mWorkarounds(workarounds),
       mPrintShaders(flags & PRINT_SHADERS),
       mGenerateDebugInfo(flags & GENERATE_DEBUG_INFO) {
-    // This should occur only once, to avoid races.
-    SpirvRemapWrapperSetUp();
 }
 
 GLSLPostProcessor::~GLSLPostProcessor() = default;
@@ -1002,7 +1000,8 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
 
 void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) {
 
-    // always add the CanonicalizeIds Pass
+    // Always add the CanonicalizeIds Pass.
+    // The CanonicalIds pass replaces the old SPIR-V remapper in Glslang.
     optimizer->RegisterPass(CreateCanonicalizeIdsPass());
 
     // run optimizer
@@ -1010,9 +1009,6 @@ void GLSLPostProcessor::optimizeSpirv(OptimizerPtr optimizer, SpirvBlob& spirv) 
         slog.e << "SPIR-V optimizer pass failed" << io::endl;
         return;
     }
-
-    // Remove dead module-level objects: functions, types, vars
-    SpirvRemapWrapperRemap(spirv);
 }
 
 void GLSLPostProcessor::fixupClipDistance(

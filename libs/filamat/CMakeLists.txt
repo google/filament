@@ -56,7 +56,6 @@ set(PRIVATE_HDRS
         src/MetalArgumentBuffer.h
         src/ShaderMinifier.h
         src/SpirvFixup.h
-        src/SpirvRemapWrapper.h
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
         src/sca/builtinResource.h)
@@ -72,8 +71,7 @@ set(SRCS
         src/sca/GLSLTools.cpp
         src/GLSLPostProcessor.cpp
         src/ShaderMinifier.cpp
-        src/SpirvFixup.cpp
-        src/SpirvRemapWrapper.cpp)
+        src/SpirvFixup.cpp)
 
 # ==================================================================================================
 # Include and target definitions
