@@ -16,6 +16,8 @@
 
 #include <private/filament/Variant.h>
 
+#include <private/filament/EngineEnums.h>
+
 #include <filament/MaterialEnums.h>
 
 #include <utils/Slice.h>
@@ -131,6 +133,15 @@ constexpr auto get_depth_variants() noexcept {
     return variants;
 }
 
+constexpr auto get_post_process_variants() noexcept {
+    std::array<Variant, POST_PROCESS_VARIANT_COUNT> variants;
+    for (size_t i = 0; i < POST_PROCESS_VARIANT_COUNT; i++) {
+        Variant const variant(i);
+        variants[i] = variant;
+    }
+    return variants;
+}
+
 // Below are compile time sanity-check tests
 constexpr inline bool reserved_is_not_valid() noexcept {
     for (size_t i = 0; i < VARIANT_COUNT; i++) {
@@ -198,6 +209,7 @@ constexpr inline size_t fragment_variant_count() noexcept {
 static auto const gLitVariants{ details::get_variants<true>() };
 static auto const gUnlitVariants{ details::get_variants<false>() };
 static auto const gDepthVariants{ details::get_depth_variants() };
+static auto const gPostProcessVariants{ details::get_post_process_variants() };
 
 static_assert(reserved_is_not_valid());
 static_assert(reserved_variant_count() == 160);
@@ -220,6 +232,10 @@ utils::Slice<const Variant> getUnlitVariants() noexcept {
 
 utils::Slice<const Variant> getDepthVariants() noexcept {
     return { details::gDepthVariants.data(), details::gDepthVariants.size() };
+}
+
+utils::Slice<const Variant> getPostProcessVariants() noexcept {
+    return { details::gPostProcessVariants.data(), details::gPostProcessVariants.size() };
 }
 
 }; // VariantUtils
