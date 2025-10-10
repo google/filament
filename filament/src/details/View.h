@@ -82,8 +82,8 @@ class JobSystem;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif defined(_MSC_VER)
-#pragma warning push
-#pragma warning disable : 4996
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #endif
 
 namespace filament {
@@ -663,7 +663,7 @@ FILAMENT_DOWNCAST(View)
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(_MSC_VER)
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H

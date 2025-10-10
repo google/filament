@@ -28,6 +28,8 @@ utils::io::ostream& operator<<(utils::io::ostream& os, const Status& status) {
             break;
         case StatusCode::INTERNAL: os << "Internal error";
             break;
+        case StatusCode::UNSUPPORTED: os << "Unsupported error";
+            break;
     }
     os << ", with a message: " << status.getMessage();
     return os;
