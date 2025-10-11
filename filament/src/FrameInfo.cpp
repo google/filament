@@ -173,6 +173,12 @@ void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
         // backend frame end-time
         front.backendEndFrame = std::chrono::steady_clock::now();
 
+        if (UTILS_UNLIKELY(!jobQueue.isValid())) {
+            front.gpuFrameComplete = {};
+            front.ready.store(true, std::memory_order_release);
+            return;
+        }
+
         // now launch a job that'll wait for the gpu to complete
         jobQueue.push([&driver, &front] {
             FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
