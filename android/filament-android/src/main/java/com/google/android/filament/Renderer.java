@@ -732,6 +732,22 @@ public class Renderer {
         nResetUserTime(getNativeObject());
     }
 
+    /**
+     * Requests the next frameCount frames to be skipped. For Debugging.
+     * @param frameCount number of frames to skip.
+     */
+    public void skipNextFrames(int frameCount) {
+        nSkipNextFrames(getNativeObject(), frameCount);
+    }
+
+    /**
+     * Remainder count of frame to be skipped
+     * @return remaining frames to be skipped
+     */
+    public int getFrameToSkipCount() {
+        return nGetFrameToSkipCount(getNativeObject());
+    }
+
     public long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Renderer");
@@ -773,4 +789,7 @@ public class Renderer {
             float interval, float headRoomRatio, float scaleRate, int history);
     private static native void nSetClearOptions(long nativeRenderer,
             float r, float g, float b, float a, boolean clear, boolean discard);
+
+    private static native void nSkipNextFrames(long nativeObject, int frameCount);
+    private static native int nGetFrameToSkipCount(long nativeObject);
 }

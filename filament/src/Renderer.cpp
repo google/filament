@@ -87,6 +87,14 @@ void Renderer::resetUserTime() {
     downcast(this)->resetUserTime();
 }
 
+void Renderer::skipNextFrames(size_t frameCount) const noexcept {
+    downcast(this)->skipNextFrames(frameCount);
+}
+
+size_t Renderer::getFrameToSkipCount() const noexcept {
+    return downcast(this)->getFrameToSkipCount();
+}
+
 void Renderer::setDisplayInfo(const DisplayInfo& info) noexcept {
     downcast(this)->setDisplayInfo(info);
 }
