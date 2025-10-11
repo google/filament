@@ -201,6 +201,7 @@ void AutomationEngine::applySettings(Engine* engine, const char* json, size_t js
     Camera* camera = &content.view->getCamera();
     Skybox* skybox = content.scene->getSkybox();
     viewer::applySettings(engine, mSettings->viewer, camera, skybox, content.renderer);
+    viewer::applySettings(engine, mSettings->debug, content.renderer);
 }
 
 ColorGrading* AutomationEngine::getColorGrading(Engine* engine) {

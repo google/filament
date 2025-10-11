@@ -623,6 +623,10 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("getUserTime", &Renderer::getUserTime)
+    .function("resetUserTime", &Renderer::resetUserTime)
+    .function("skipNextFrames", &Renderer::skipNextFrames)
+    .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", &Renderer::setPresentationTime)

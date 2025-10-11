@@ -391,7 +391,7 @@ Alternatively, if you have node installed you can use the
 [live-server](https://www.npmjs.com/package/live-server) package, which automatically refreshes the
 web page when it detects a change.
 
-Each sample app has its own handwritten html file. Additionally the server folder contains assets
+Each sample app has its own handwritten html file. Additionally, the server folder contains assets
 such as meshes, textures, and materials.
 
 ## Running the native samples

@@ -648,6 +648,19 @@ public:
      */
     void resetUserTime();
 
+
+    /**
+     * Requests the next frameCount frames to be skipped. For Debugging.
+     * @param frameCount number of frames to skip.
+     */
+    void skipNextFrames(size_t frameCount) const noexcept;
+
+    /**
+     * Remainder count of frame to be skipped
+     * @return remaining frames to be skipped
+     */
+    size_t getFrameToSkipCount() const noexcept;
+
 protected:
     // prevent heap allocation
     ~Renderer() = default;

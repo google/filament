@@ -208,3 +208,19 @@ Java_com_google_android_filament_Renderer_nSetVsyncTime(JNIEnv *, jclass,
     Renderer *renderer = (Renderer *) nativeRenderer;
     renderer->setVsyncTime(steadyClockTimeNano);
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nSkipNextFrames(JNIEnv *, jclass ,
+    jlong nativeRenderer, jint frameCount) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->skipNextFrames(frameCount);
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Renderer_nGetFrameToSkipCount(JNIEnv *, jclass ,
+    jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    return renderer->getFrameToSkipCount();
+}

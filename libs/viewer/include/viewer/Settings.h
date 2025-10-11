@@ -51,6 +51,7 @@ struct Settings;
 struct ViewSettings;
 struct LightSettings;
 struct ViewerOptions;
+struct DebugOptions;
 
 enum class ToneMapping : uint8_t {
     LINEAR        = 0,
@@ -87,6 +88,8 @@ void applySettings(Engine* engine, const MaterialSettings& settings, MaterialIns
 void applySettings(Engine* engine, const LightSettings& settings, IndirectLight* ibl, utils::Entity sunlight,
         const utils::Entity* sceneLights, size_t sceneLightCount, LightManager* lm, Scene* scene, View* view);
 void applySettings(Engine* engine, const ViewerOptions& settings, Camera* camera, Skybox* skybox,
+        Renderer* renderer);
+void applySettings(Engine* engine, const DebugOptions& settings,
         Renderer* renderer);
 
 // Creates a new ColorGrading object based on the given settings.
@@ -246,11 +249,16 @@ struct ViewerOptions {
     bool autoInstancingEnabled = false;
 };
 
+struct DebugOptions {
+    uint16_t skipFrames = 0;
+};
+
 struct Settings {
     ViewSettings view;
     MaterialSettings material;
     LightSettings lighting;
     ViewerOptions viewer;
+    DebugOptions debug;
 };
 
 } // namespace viewer
