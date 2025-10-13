@@ -24,6 +24,14 @@
 
 namespace filament {
 
+// This class is NOT thread-safe.
+//
+// It internally manages shared state (e.g., mSlotPool, mFreeList, mOffsetMap) without any
+// synchronization primitives. Concurrent access from multiple threads to the same
+// AllocationStrategy instance will result in data races and undefined behavior.
+//
+// If an instance of this class is to be shared between threads, all calls to its member
+// functions MUST be protected by external synchronization (e.g., a std::mutex).
 class AllocationStrategy {
 public:
     using allocation_size_t = uint32_t;
@@ -36,6 +44,7 @@ public:
         const allocation_size_t offset;       // 4 bytes
         allocation_size_t slotSize;           // 4 bytes
         bool isAllocated;                     // 1 byte
+        char padding[3];                      // 3 bytes
         uint32_t gpuUseCount;                 // 4 bytes
 
         [[nodiscard]] bool isFree() const noexcept {
@@ -43,6 +52,8 @@ public:
         }
     };
 
+    // `slotSize` is derived from the GPU's uniform buffer offset alignment requirement,
+    // which can be up to 256 bytes.
     explicit AllocationStrategy(allocation_size_t totalSize,
             allocation_size_t slotSize);
 

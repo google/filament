@@ -41,7 +41,7 @@ protected:
 TEST_F(AllocationStrategyTest, ConstructorFailure) {
     // The constructor requires slotSize to be a power of two.
     constexpr AllocationStrategy::allocation_size_t NON_POT_SLOT_SIZE = 60;
-    EXPECT_THROW(AllocationStrategy(TOTAL_SIZE, NON_POT_SLOT_SIZE), utils::Panic);
+    EXPECT_DEATH(AllocationStrategy(TOTAL_SIZE, NON_POT_SLOT_SIZE), "failed assertion");
 }
 
 TEST_F(AllocationStrategyTest, InitialState) {
@@ -211,8 +211,8 @@ TEST_F(AllocationStrategyTest, GpuPanicOnUnderflow) {
     // 2. Release it once, which is fine.
     mAllocator.releaseGpu(id);
 
-    // 3. Releasing it again when the count is 0 should trigger a panic.
-    EXPECT_THROW(mAllocator.releaseGpu(id), utils::Panic);
+    // 3. Releasing it again when the count is 0 should trigger a failed assertion.
+    EXPECT_DEATH(mAllocator.releaseGpu(id), "failed assertion");
 }
 
 TEST_F(AllocationStrategyTest, MergeFreeSlots) {
@@ -339,7 +339,7 @@ TEST_F(AllocationStrategyTest, Reset) {
 
 TEST_F(AllocationStrategyTest, ResetWithInvalidSize) {
     // Reset to a size which is not a power of two.
-    EXPECT_THROW(mAllocator.reset(123), utils::Panic);
+    EXPECT_DEATH(mAllocator.reset(123), "failed assertion");
 }
 
 
@@ -365,19 +365,19 @@ TEST_F(AllocationStrategyTest, ResetWithGpuLock) {
 
 TEST_F(AllocationStrategyTest, InvalidOperations) {
     // These operations on invalid IDs should not crash and should be handled gracefully.
-    EXPECT_THROW(mAllocator.retire(AllocationStrategy::UNALLOCATED), utils::Panic);
-    EXPECT_THROW(mAllocator.retire(999), utils::Panic); // Non-existent ID
+    EXPECT_DEATH(mAllocator.retire(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.retire(999), "failed assertion"); // Non-existent ID
 
-    EXPECT_THROW(mAllocator.acquireGpu(AllocationStrategy::UNALLOCATED), utils::Panic);
-    EXPECT_THROW(mAllocator.acquireGpu(999), utils::Panic);
+    EXPECT_DEATH(mAllocator.acquireGpu(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.acquireGpu(999), "failed assertion");
 
-    EXPECT_THROW(mAllocator.releaseGpu(AllocationStrategy::UNALLOCATED), utils::Panic);
-    EXPECT_THROW(mAllocator.releaseGpu(999), utils::Panic);
+    EXPECT_DEATH(mAllocator.releaseGpu(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.releaseGpu(999), "failed assertion");
 
     // Check that an invalid offset query panics in debug/testing builds.
-    EXPECT_THROW(mAllocator.getAllocationOffset(AllocationStrategy::UNALLOCATED), utils::Panic);
-    EXPECT_THROW(mAllocator.getAllocationOffset(AllocationStrategy::REALLOCATION_REQUIRED),
-            utils::Panic);
+    EXPECT_DEATH(mAllocator.getAllocationOffset(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.getAllocationOffset(AllocationStrategy::REALLOCATION_REQUIRED),
+            "failed assertion");
 }
 
 TEST_F(AllocationStrategyTest, ComplexScenario) {

@@ -35,16 +35,14 @@ constexpr static bool isPowerOfTwo(uint32_t n) {
 AllocationStrategy::AllocationStrategy(allocation_size_t totalSize, allocation_size_t slotSize)
     : mTotalSize(totalSize),
       mSlotSize(slotSize) {
-    FILAMENT_CHECK_PRECONDITION(mSlotSize > 0) << "mSlotSize cannot be zero.";
-    FILAMENT_CHECK_PRECONDITION(isPowerOfTwo(mSlotSize))
-            << "slotSize " << mSlotSize << " must be a power of two.";
+    assert_invariant(mSlotSize > 0);
+    assert_invariant(isPowerOfTwo(mSlotSize));
 
     reset(mTotalSize);
 }
 
 void AllocationStrategy::reset(allocation_size_t newTotalSize) {
-    FILAMENT_CHECK_PRECONDITION(newTotalSize % mSlotSize == 0)
-            << "newTotalSize " << newTotalSize << " is not a multiple of slot size " << mSlotSize;
+    assert_invariant(newTotalSize % mSlotSize == 0);
 
     mTotalSize = newTotalSize;
 
@@ -74,16 +72,16 @@ void AllocationStrategy::reset(allocation_size_t newTotalSize) {
 }
 
 std::pair<AllocationStrategy::AllocationId, AllocationStrategy::allocation_size_t>
-AllocationStrategy::allocate(allocation_size_t size) noexcept {
+    AllocationStrategy::allocate(allocation_size_t size) noexcept {
     if (size == 0) {
-        return {UNALLOCATED, 0};
+        return { UNALLOCATED, 0 };
     }
 
     const allocation_size_t alignedSize = alignUp(size);
     auto bestFitIter = mFreeList.lower_bound(alignedSize);
 
     if (bestFitIter == mFreeList.end()) {
-        return {REALLOCATION_REQUIRED, 0};
+        return { REALLOCATION_REQUIRED, 0 };
     }
 
     InternalSlotNode* targetNode = bestFitIter->second;
@@ -123,7 +121,7 @@ AllocationStrategy::allocate(allocation_size_t size) noexcept {
     }
 
     auto allocationId = calculateIdByOffset(targetNode->mSlot.offset);
-    return {allocationId, targetNode->mSlot.offset};
+    return { allocationId, targetNode->mSlot.offset };
 }
 
 AllocationStrategy::InternalSlotNode* AllocationStrategy::getNodeById(
@@ -144,27 +142,22 @@ AllocationStrategy::InternalSlotNode* AllocationStrategy::getNodeById(
 
 void AllocationStrategy::retire(AllocationId id) {
     auto targetNode = getNodeById(id);
-    FILAMENT_CHECK_PRECONDITION(
-            targetNode != nullptr) << "Cannot retire invalid node with id: " << id;
+    assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.isAllocated = false;
 }
 
 void AllocationStrategy::acquireGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
-    FILAMENT_CHECK_PRECONDITION(
-            targetNode != nullptr) << "Cannot acquire Gpu for invalid node with id: " << id;
+    assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.gpuUseCount++;
 }
 
 void AllocationStrategy::releaseGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
-    FILAMENT_CHECK_PRECONDITION(
-            targetNode != nullptr) << "Cannot release Gpu for invalid node with id: " << id;
-    FILAMENT_CHECK_PRECONDITION(
-            targetNode->mSlot.gpuUseCount >
-            0) << "Cannot release Gpu for node with Gpu count == 0, id: " << id;
+    assert_invariant(targetNode != nullptr);
+    assert_invariant(targetNode->mSlot.gpuUseCount > 0);
 
     targetNode->mSlot.gpuUseCount--;
 }
@@ -216,23 +209,22 @@ AllocationStrategy::allocation_size_t AllocationStrategy::getTotalSize() const n
 
 AllocationStrategy::allocation_size_t
     AllocationStrategy::getAllocationOffset(AllocationId id) const {
-    FILAMENT_CHECK_PRECONDITION(isValidId(id)) << "Get offset for invalid id: " << id;
+    assert_invariant(isValidId(id));
 
     return (id - 1) * mSlotSize;
 }
 
 AllocationStrategy::AllocationId AllocationStrategy::calculateIdByOffset(
         allocation_size_t offset) const {
-    FILAMENT_CHECK_PRECONDITION(offset % mSlotSize == 0)
-            << "Offset " << offset << " is not a multiple of slot size " << mSlotSize;
+    assert_invariant(offset % mSlotSize == 0);
 
     // The ID is 1-based since we use 0 for UNALLOCATED.
     return (offset / mSlotSize) + 1;
 }
 
-AllocationStrategy::allocation_size_t AllocationStrategy::alignUp(allocation_size_t size) const noexcept {
-    if (size == 0)
-        return 0;
+AllocationStrategy::allocation_size_t AllocationStrategy::alignUp(
+        allocation_size_t size) const noexcept {
+    if (size == 0) return 0;
 
     return (size + mSlotSize - 1) & ~(mSlotSize - 1);
 }
