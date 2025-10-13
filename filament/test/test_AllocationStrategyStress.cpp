@@ -22,7 +22,6 @@
 #include <algorithm>
 #include <ctime>
 #include <random>
-#include <utility>
 #include <vector>
 
 using namespace filament;
@@ -55,7 +54,7 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
     std::uniform_int_distribution<> slotOffsetDistrib(0, SLOT_SIZE - 1);
     // Random the operation we perform: 0,1,2 -> allocate, 3 -> retire, 4 -> release slots
     // We bias the operations to make more allocations than releases.
-    std::uniform_int_distribution<> operationDistrib(0, 4);
+    std::uniform_int_distribution operationDistrib(0, 4);
 
     // 2. Randomly do some actions and expect to have no crash
     std::vector<AllocationStrategy::AllocationId> ids;
@@ -83,8 +82,8 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
                 }
 
                 // Retire a random slot.
-                std::uniform_int_distribution<size_t> idDistrib(0, ids.size() - 1);
-                size_t indexToRetire = idDistrib(gen);
+                std::uniform_int_distribution<uint32_t> idDistrib(0, ids.size() - 1);
+                uint32_t indexToRetire = idDistrib(gen);
 
                 AllocationStrategy::AllocationId idToRetire = ids[indexToRetire];
                 mAllocator.retire(idToRetire);
@@ -105,7 +104,7 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
     }
 
     // 3. Retire all remaining allocations.
-    for (const auto id: ids) {
+    for (const auto& id: ids) {
         mAllocator.retire(id);
     }
     ids.clear();
