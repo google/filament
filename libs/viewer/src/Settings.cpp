@@ -556,7 +556,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DebugOpt
             i = parse(tokens, i + 1);
         }
         if (i < 0) {
-            slog.e << "Invalid viewer options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            slog.e << "Invalid debug options value: '" << STR(tok, jsonChunk) << "'" << io::endl;
             return i;
         }
     }
