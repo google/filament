@@ -96,7 +96,7 @@ public:
      * @return The message string. Can be empty if it's not set.
      */
     std::string_view getMessage() const {
-        return std::string_view(mMessage.begin(), mMessage.end());
+        return std::string_view(mMessage.begin(), mMessage.length());
     }
 
     /**
