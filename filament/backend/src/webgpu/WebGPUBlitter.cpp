@@ -17,19 +17,19 @@
 #include "WebGPUBlitter.h"
 
 #include "WebGPUConstants.h"
-#include "WebGPUStrings.h"
 #include "WebGPUTextureHelpers.h"
 #include "webgpu/utils/StringPlaceholderTemplateProcessor.h"
 
 #include <backend/DriverEnums.h>
 
-#include <webgpu/webgpu_cpp.h>
-
 #include <math/vec2.h>
 #include <utils/Hash.h>
 #include <utils/Panic.h>
 
+#include <webgpu/webgpu_cpp.h>
+
 #include <cstdint>
+#include <string.h>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -395,10 +395,15 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
     const bool multisampledSource{ args.source.texture.GetSampleCount() > 1 };
     const bool depthSource{ hasDepth(args.source.texture.GetFormat()) };
     const bool depthDestination{ hasDepth(args.destination.texture.GetFormat()) };
+    const PipelineLayoutKey pipelineLayoutKey{
+        .sourceDimension = sourceDimension,
+        .filterType = args.filter,
+        .multisampledSource = multisampledSource,
+        .depthSource = depthSource,
+    };
     const wgpu::BindGroupDescriptor textureBindGroupDescriptor{
         .label = "blit_texture_bind_group",
-        .layout = getOrCreateTextureBindGroupLayout(args.filter, sourceDimension,
-                multisampledSource, depthSource),
+        .layout = getOrCreateTextureBindGroupLayout(pipelineLayoutKey),
         .entryCount = textureBindGroupEntriesCount,
         .entries = textureBindGroupEntries,
     };
@@ -447,9 +452,14 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
             &renderPassDescriptor) };
     FILAMENT_CHECK_POSTCONDITION(renderPassEncoder)
             << "Failed to create render pass encoder for blit.";
-    renderPassEncoder.SetPipeline(getOrCreateRenderPipeline(args.filter, sourceDimension,
-            args.source.texture.GetSampleCount(), depthSource,
-            args.destination.texture.GetFormat()));
+    const RenderPipelineKey renderPipelineKey{
+        .sourceDimension = sourceDimension,
+        .destinationTextureFormat = args.destination.texture.GetFormat(),
+        .sourceSampleCount = static_cast<uint8_t>(args.source.texture.GetSampleCount()),
+        .filterType = args.filter,
+        .depthSource = depthSource,
+    };
+    renderPassEncoder.SetPipeline(getOrCreateRenderPipeline(renderPipelineKey));
     renderPassEncoder.SetBindGroup(TEXTURE_BIND_GROUP_INDEX, textureBindGroup);
     renderPassEncoder.Draw(3); // draw the full-screen triangle
                                // with hard-coded vertices in the shader
@@ -527,14 +537,9 @@ void WebGPUBlitter::createSampler(const SamplerMagFilter filter) {
 // Caches and returns a render pipeline for a given blit configuration.
 // If a pipeline for the given configuration does not exist, it creates and caches one.
 wgpu::RenderPipeline const& WebGPUBlitter::getOrCreateRenderPipeline(
-        const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
-        const uint32_t sourceSampleCount, const bool depthSource,
-        const wgpu::TextureFormat destinationTextureFormat) {
-    const size_t key{ hashRenderPipelineKey(filterType, sourceDimension, sourceSampleCount,
-            depthSource, destinationTextureFormat) };
+        RenderPipelineKey const& key) {
     if (mRenderPipelines.find(key) == mRenderPipelines.end()) {
-        mRenderPipelines[key] = createRenderPipeline(filterType, sourceDimension, sourceSampleCount,
-                depthSource, destinationTextureFormat);
+        mRenderPipelines[key] = createRenderPipeline(key);
     }
     return mRenderPipelines[key];
 }
@@ -542,18 +547,21 @@ wgpu::RenderPipeline const& WebGPUBlitter::getOrCreateRenderPipeline(
 // Creates a render pipeline for a blit operation.
 // The pipeline is configured with the appropriate vertex and fragment shaders,
 // pipeline layout, and render target state based on the blit parameters.
-wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const uint32_t sourceSampleCount,
-        const bool depthSource, const wgpu::TextureFormat destinationTextureFormat) {
-    const bool depthDestination{ hasDepth(destinationTextureFormat) };
-    const wgpu::ColorTargetState colorTargetState{ .format = destinationTextureFormat };
+wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(RenderPipelineKey const& key) {
+    const bool depthDestination{ hasDepth(key.destinationTextureFormat) };
+    const wgpu::ColorTargetState colorTargetState{ .format = key.destinationTextureFormat };
     const wgpu::DepthStencilState depthStencilState{
-        .format = destinationTextureFormat,
+        .format = key.destinationTextureFormat,
         .depthWriteEnabled = true,
         .depthCompare = wgpu::CompareFunction::Always,
     };
-    wgpu::ShaderModule const& shaderModule{ getOrCreateShaderModule(sourceDimension,
-            sourceSampleCount > 1, depthSource, hasDepth(destinationTextureFormat)) };
+    const ShaderModuleKey shaderModuleKey{
+        .sourceDimension = key.sourceDimension,
+        .multisampledSource = key.sourceSampleCount > 1,
+        .depthSource = key.depthSource,
+        .depthDestination = hasDepth(key.destinationTextureFormat),
+    };
+    wgpu::ShaderModule const& shaderModule{ getOrCreateShaderModule(shaderModuleKey) };
     const wgpu::FragmentState fragmentState{
         .module = shaderModule,
         .entryPoint = FRAGMENT_SHADER_ENTRY_POINT,
@@ -562,9 +570,15 @@ wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(const SamplerMagFilter 
         .targetCount = depthDestination ? 0u : 1u,
         .targets = depthDestination ? nullptr : &colorTargetState,
     };
+    const PipelineLayoutKey pipelineLayoutKey{
+        .sourceDimension = key.sourceDimension,
+        .filterType = key.filterType,
+        .multisampledSource = key.sourceSampleCount > 1,
+        .depthSource = key.depthSource,
+    };
     const wgpu::RenderPipelineDescriptor pipelineDescriptor{
         .label = "render_pass_blit_pipeline",
-        .layout = getOrCreatePipelineLayout(filterType, sourceDimension, sourceSampleCount > 1, depthSource),
+        .layout = getOrCreatePipelineLayout(pipelineLayoutKey),
         .vertex = {
             .module = shaderModule,
             .entryPoint = VERTEX_SHADER_ENTRY_POINT,
@@ -586,7 +600,7 @@ wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(const SamplerMagFilter 
         },
         .depthStencil = depthDestination ? &depthStencilState : nullptr,
         .multisample = {
-            .count = sourceSampleCount,
+            .count = key.sourceSampleCount,
             .mask = 0xFFFFFFFF,
             .alphaToCoverageEnabled = false,
         },
@@ -597,41 +611,27 @@ wgpu::RenderPipeline WebGPUBlitter::createRenderPipeline(const SamplerMagFilter 
     return pipeline;
 }
 
-size_t WebGPUBlitter::hashRenderPipelineKey(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const uint32_t sourceSampleCount,
-        const bool depthSource, const wgpu::TextureFormat destinationTextureFormat) {
-    size_t seed{ std::hash<uint8_t>{}(static_cast<uint8_t>(filterType)) };
-    utils::hash::combine(seed, static_cast<uint32_t>(sourceDimension));
-    utils::hash::combine(seed, sourceSampleCount);
-    utils::hash::combine(seed, depthSource);
-    utils::hash::combine(seed, static_cast<uint32_t>(destinationTextureFormat));
-    return seed;
+bool WebGPUBlitter::RenderPipelineKey::operator==(RenderPipelineKey const& other) const {
+    return memcmp(this, &other, sizeof(RenderPipelineKey)) == 0;
 }
 
 // Caches and returns a pipeline layout for a given blit configuration.
 // If a layout for the given configuration does not exist, it creates and caches one.
 wgpu::PipelineLayout const& WebGPUBlitter::getOrCreatePipelineLayout(
-        const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
-        const bool multisampledSource, const bool depthSource) {
-    const size_t key{ hashPipelineLayoutKey(filterType, sourceDimension, multisampledSource,
-            depthSource) };
+        PipelineLayoutKey const& key) {
     if (mPipelineLayouts.find(key) == mPipelineLayouts.end()) {
-        mPipelineLayouts[key] =
-                createPipelineLayout(filterType, sourceDimension, multisampledSource, depthSource);
+        mPipelineLayouts[key] = createPipelineLayout(key);
     }
     return mPipelineLayouts[key];
 }
 
 // Creates a pipeline layout for a blit operation.
 // The layout defines the bind group layouts used by the blit pipeline.
-wgpu::PipelineLayout WebGPUBlitter::createPipelineLayout(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource) {
+wgpu::PipelineLayout WebGPUBlitter::createPipelineLayout(PipelineLayoutKey const& key) {
     const wgpu::PipelineLayoutDescriptor pipelineLayoutDescriptor{
         .label = "render_pass_blit_pipeline_layout",
         .bindGroupLayoutCount = 1,
-        .bindGroupLayouts = &getOrCreateTextureBindGroupLayout(filterType, sourceDimension,
-                multisampledSource, depthSource),
+        .bindGroupLayouts = &getOrCreateTextureBindGroupLayout(key),
     };
     const wgpu::PipelineLayout pipelineLayout{ mDevice.CreatePipelineLayout(
             &pipelineLayoutDescriptor) };
@@ -640,26 +640,16 @@ wgpu::PipelineLayout WebGPUBlitter::createPipelineLayout(const SamplerMagFilter 
     return pipelineLayout;
 }
 
-size_t WebGPUBlitter::hashPipelineLayoutKey(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource) {
-    size_t seed{ std::hash<uint8_t>{}(static_cast<uint8_t>(filterType)) };
-    utils::hash::combine(seed, static_cast<uint32_t>(sourceDimension));
-    utils::hash::combine(seed, multisampledSource);
-    utils::hash::combine(seed, depthSource);
-    return seed;
+bool WebGPUBlitter::PipelineLayoutKey::operator==(const PipelineLayoutKey& other) const {
+    return memcmp(this, &other, sizeof(PipelineLayoutKey)) == 0;
 }
 
 // Caches and returns a bind group layout for a given blit configuration.
 // If a layout for the given configuration does not exist, it creates and caches one.
 wgpu::BindGroupLayout const& WebGPUBlitter::getOrCreateTextureBindGroupLayout(
-        const SamplerMagFilter filterType, const wgpu::TextureViewDimension sourceDimension,
-        const bool multisampledSource, const bool depthSource) {
-    const size_t key{ hashTextureBindGroupLayoutKey(filterType, sourceDimension, multisampledSource,
-            depthSource) };
+        PipelineLayoutKey const& key) {
     if (mTextureBindGroupLayouts.find(key) == mTextureBindGroupLayouts.end()) {
-        mTextureBindGroupLayouts[key] = createTextureBindGroupLayout(filterType, sourceDimension,
-                multisampledSource, depthSource);
+        mTextureBindGroupLayouts[key] = createTextureBindGroupLayout(key);
     }
     return mTextureBindGroupLayouts[key];
 }
@@ -667,23 +657,21 @@ wgpu::BindGroupLayout const& WebGPUBlitter::getOrCreateTextureBindGroupLayout(
 // Creates a bind group layout for the blit operation's texture resources.
 // This layout specifies the bindings for the source texture, a uniform buffer with blit parameters,
 // and optionally a sampler.
-wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource) {
-    const wgpu::BindGroupLayoutEntry bindGroupLayoutEntries[MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE] {
+wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(PipelineLayoutKey const& key) {
+    const wgpu::BindGroupLayoutEntry bindGroupLayoutEntries[MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE]{
         {
             .binding = TEXTURE_BINDING_INDEX,
             .visibility = wgpu::ShaderStage::Fragment,
             .texture = {
-                .sampleType = depthSource
+                .sampleType = key.depthSource
                                       ? wgpu::TextureSampleType::Depth
-                                      : (multisampledSource
+                                      : (key.multisampledSource
                                                 ? wgpu::TextureSampleType::UnfilterableFloat
                                                 : wgpu::TextureSampleType::Float), // only F32 scalar sample
                                                                                    // type supported for now
                                                                                    // (aside from depth)
-                .viewDimension = sourceDimension,
-                .multisampled = multisampledSource,
+                .viewDimension = key.sourceDimension,
+                .multisampled = key.multisampledSource,
             },
         },
         {
@@ -699,7 +687,7 @@ wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerM
             .binding = SAMPLER_BINDING_INDEX,
             .visibility = wgpu::ShaderStage::Fragment,
             .sampler = {
-                .type =filterType == SamplerMagFilter::LINEAR
+                .type = key.filterType == SamplerMagFilter::LINEAR
                                 ? wgpu::SamplerBindingType::Filtering
                                 : wgpu::SamplerBindingType::NonFiltering,
             },
@@ -708,8 +696,8 @@ wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerM
     const wgpu::BindGroupLayoutDescriptor textureBindGroupLayoutDescriptor{
         .label = "render_pass_blit_texture_bind_group_layout",
         // TODO, doesnt make any sense but gets rid of the error. Are the entries 0 based?
-        .entryCount = multisampledSource ? (MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE - 1)
-                                         : (MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE),
+        .entryCount = key.multisampledSource ? (MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE - 1)
+                                             : (MAX_TEXTURE_BIND_GROUP_ENTRY_SIZE),
         .entries = bindGroupLayoutEntries,
     };
     const wgpu::BindGroupLayout textureBindGroupLayout{ mDevice.CreateBindGroupLayout(
@@ -719,26 +707,11 @@ wgpu::BindGroupLayout WebGPUBlitter::createTextureBindGroupLayout(const SamplerM
     return textureBindGroupLayout;
 }
 
-size_t WebGPUBlitter::hashTextureBindGroupLayoutKey(const SamplerMagFilter filterType,
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource) {
-    size_t seed{ std::hash<uint8_t>{}(static_cast<uint8_t>(filterType)) };
-    utils::hash::combine(seed, static_cast<uint32_t>(sourceDimension));
-    utils::hash::combine(seed, multisampledSource);
-    utils::hash::combine(seed, depthSource);
-    return seed;
-}
-
 // Caches and returns a shader module for a given blit configuration.
 // If a shader module for the given configuration does not exist, it creates and caches one.
-wgpu::ShaderModule const& WebGPUBlitter::getOrCreateShaderModule(
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource, const bool depthDestination) {
-    const size_t key{ hashShaderModuleKey(sourceDimension, multisampledSource, depthSource,
-            depthDestination) };
+wgpu::ShaderModule const& WebGPUBlitter::getOrCreateShaderModule(ShaderModuleKey const& key) {
     if (mShaderModules.find(key) == mShaderModules.end()) {
-        mShaderModules[key] = createShaderModule(sourceDimension, multisampledSource, depthSource,
-                depthDestination);
+        mShaderModules[key] = createShaderModule(key);
     }
     return mShaderModules[key];
 }
@@ -746,46 +719,45 @@ wgpu::ShaderModule const& WebGPUBlitter::getOrCreateShaderModule(
 // Creates a shader module containing the vertex and fragment shaders for the blit operation.
 // The shader source is generated from a template, with placeholders filled in based on the
 // blit configuration (e.g., texture type, sample count).
-wgpu::ShaderModule WebGPUBlitter::createShaderModule(
-        const wgpu::TextureViewDimension sourceDimension, const bool multisampledSource,
-        const bool depthSource, const bool depthDestination) {
+wgpu::ShaderModule WebGPUBlitter::createShaderModule(ShaderModuleKey const& key) {
     std::string_view textureType;
-    if (depthSource) {
-        if (multisampledSource) {
+    if (key.depthSource) {
+        if (key.multisampledSource) {
             textureType = "texture_depth_multisampled_2d";
         } else {
             textureType = "texture_depth_2d";
         }
     } else {
-        if (multisampledSource) {
+        if (key.multisampledSource) {
             textureType = "texture_multisampled_2d<f32>";
         } else {
-            if (sourceDimension == wgpu::TextureViewDimension::e3D) {
+            if (key.sourceDimension == wgpu::TextureViewDimension::e3D) {
                 textureType = "texture_3d<f32>";
             } else {
                 textureType = "texture_2d<f32>";
             }
         }
     }
-    const std::string_view texture2dType{ depthSource ? "texture_depth_2d" : "texture_2d<f32>" };
+    const std::string_view texture2dType{ key.depthSource ? "texture_depth_2d"
+                                                          : "texture_2d<f32>" };
     // we don't declare a sampler in the shader or pipeline for the multisampled case
     const std::string_view samplerDeclaration{
-        multisampledSource ? "" : "@group(0) @binding(2) var sourceSampler: sampler;"
+        key.multisampledSource ? "" : "@group(0) @binding(2) var sourceSampler: sampler;"
     };
     const std::string_view fragmentReturnAttributeAndType{
-        depthDestination ? "@builtin(frag_depth) f32" : "@location(0) vec4<f32>"
+        key.depthDestination ? "@builtin(frag_depth) f32" : "@location(0) vec4<f32>"
     };
     const std::unordered_map<std::string_view, std::string_view>
             valueByPlaceholderNameForFragmentSnippet{
                 { FRAGMENT_RETURN_ATTRIBUTE_AND_TYPE_PLACEHOLDER, fragmentReturnAttributeAndType },
             };
     std::string fragmentShaderSnippet;
-    if (multisampledSource) {
+    if (key.multisampledSource) {
         fragmentShaderSnippet = webgpuutils::processPlaceholderTemplate(
                 FRAGMENT_SHADER_SNIPPET_MSAA_INPUT_TEMPLATE, PLACEHOLDER_PREFIX, PLACEHOLDER_SUFFIX,
                 valueByPlaceholderNameForFragmentSnippet);
     } else {
-        if (sourceDimension == wgpu::TextureViewDimension::e3D) {
+        if (key.sourceDimension == wgpu::TextureViewDimension::e3D) {
             fragmentShaderSnippet = webgpuutils::processPlaceholderTemplate(
                     FRAGMENT_SHADER_SNIPPET_3D_INPUT_TEMPLATE, PLACEHOLDER_PREFIX,
                     PLACEHOLDER_SUFFIX, valueByPlaceholderNameForFragmentSnippet);
@@ -815,13 +787,8 @@ wgpu::ShaderModule WebGPUBlitter::createShaderModule(
     return shaderModule;
 }
 
-size_t WebGPUBlitter::hashShaderModuleKey(const wgpu::TextureViewDimension sourceDimension,
-        const bool multisampledSource, const bool depthSource, const bool depthDestination) {
-    size_t seed{ std::hash<uint32_t>{}(static_cast<uint32_t>(sourceDimension)) };
-    utils::hash::combine(seed, multisampledSource);
-    utils::hash::combine(seed, depthSource);
-    utils::hash::combine(seed, depthDestination);
-    return seed;
+bool WebGPUBlitter::ShaderModuleKey::operator==(const ShaderModuleKey& other) const {
+    return memcmp(this, &other, sizeof(ShaderModuleKey)) == 0;
 }
 
 } // namespace filament::backend

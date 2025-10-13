@@ -725,9 +725,11 @@ bool FMaterial::setConstant(uint32_t id, T value) noexcept {
         }
     }
 
-    mSpecializationConstants[id] = value;
-
-    return true;
+    if (std::get<T>(mSpecializationConstants[id]) != value) {
+        mSpecializationConstants[id] = value;
+        return true;
+    }
+    return false;
 }
 
 FixedCapacityVector<Program::SpecializationConstant>

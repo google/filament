@@ -76,55 +76,75 @@ private:
     // The following methods are used to create and cache WebGPU objects.
     // The pattern is to have a `getOrCreate...` method that looks up the object in a cache,
     // and if it's not found, it calls a `create...` method to create it and then stores it in the
-    // cache. A `hash...` method is used to generate a key for the cache.
+    // cache.
 
-    [[nodiscard]] wgpu::RenderPipeline const& getOrCreateRenderPipeline(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, uint32_t sourceSampleCount,
-            bool depthSource, wgpu::TextureFormat destinationTextureFormat);
+    struct RenderPipelineKey;
+    struct PipelineLayoutKey;
+    struct ShaderModuleKey;
 
-    [[nodiscard]] wgpu::RenderPipeline createRenderPipeline(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, uint32_t sourceSampleCount,
-            bool depthSource, wgpu::TextureFormat destinationTextureFormat);
+    [[nodiscard]] wgpu::RenderPipeline const& getOrCreateRenderPipeline(RenderPipelineKey const&);
+    [[nodiscard]] wgpu::RenderPipeline createRenderPipeline(RenderPipelineKey const&);
 
-    [[nodiscard]] static size_t hashRenderPipelineKey(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, uint32_t sourceSampleCount,
-            bool depthSource, wgpu::TextureFormat destinationTextureFormat);
+    [[nodiscard]] wgpu::PipelineLayout const& getOrCreatePipelineLayout(PipelineLayoutKey const&);
+    [[nodiscard]] wgpu::PipelineLayout createPipelineLayout(PipelineLayoutKey const&);
 
-    [[nodiscard]] wgpu::PipelineLayout const& getOrCreatePipelineLayout(SamplerMagFilter,
-            wgpu::TextureViewDimension, bool multisampledSource, bool depthSource);
+    [[nodiscard]] wgpu::BindGroupLayout const& getOrCreateTextureBindGroupLayout(
+            PipelineLayoutKey const&);
+    [[nodiscard]] wgpu::BindGroupLayout createTextureBindGroupLayout(PipelineLayoutKey const&);
 
-    [[nodiscard]] wgpu::PipelineLayout createPipelineLayout(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource);
+    [[nodiscard]] wgpu::ShaderModule const& getOrCreateShaderModule(ShaderModuleKey const&);
+    [[nodiscard]] wgpu::ShaderModule createShaderModule(ShaderModuleKey const&);
 
-    [[nodiscard]] static size_t hashPipelineLayoutKey(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource);
+    struct RenderPipelineKey {
+        wgpu::TextureViewDimension sourceDimension;   // 4 bytes
+        wgpu::TextureFormat destinationTextureFormat; // 4
+        uint8_t sourceSampleCount;                    // 1
+        SamplerMagFilter filterType;                  // 1
+        bool depthSource;                             // 1
+        uint8_t padding = 0;                          // 1
 
-    [[nodiscard]] wgpu::BindGroupLayout const& getOrCreateTextureBindGroupLayout(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource);
+        bool operator==(const RenderPipelineKey& other) const;
+        using Hasher = utils::hash::MurmurHashFn<RenderPipelineKey>;
+    };
 
-    [[nodiscard]] wgpu::BindGroupLayout createTextureBindGroupLayout(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource);
+    struct PipelineLayoutKey {
+        wgpu::TextureViewDimension sourceDimension; // 4 bytes
+        SamplerMagFilter filterType;                // 1
+        bool multisampledSource;                    // 1
+        bool depthSource;                           // 1
+        uint8_t padding = 0;                        // 1
 
-    [[nodiscard]] static size_t hashTextureBindGroupLayoutKey(SamplerMagFilter,
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource);
+        bool operator==(const PipelineLayoutKey& other) const;
+        using Hasher = utils::hash::MurmurHashFn<PipelineLayoutKey>;
+    };
 
-    [[nodiscard]] wgpu::ShaderModule const& getOrCreateShaderModule(
-            wgpu::TextureViewDimension sourceDimension, bool multisampledSource, bool depthSource,
-            bool depthDestination);
+    struct ShaderModuleKey {
+        wgpu::TextureViewDimension sourceDimension;   // 4 bytes
+        bool multisampledSource;                      // 1
+        bool depthSource;                             // 1
+        bool depthDestination;                        // 1
+        uint8_t padding = 0;                          // 1
 
-    [[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::TextureViewDimension sourceDimension,
-            bool multisampledSource, bool depthSource, bool depthDestination);
+        bool operator==(const ShaderModuleKey& other) const;
+        using Hasher = utils::hash::MurmurHashFn<ShaderModuleKey>;
+    };
 
-    [[nodiscard]] static size_t hashShaderModuleKey(wgpu::TextureViewDimension sourceDimension,
-            bool multisampledSource, bool depthSource, bool depthDestination);
+    static_assert(sizeof(RenderPipelineKey) == 12,
+            "RenderPipelineKey must not have implicit padding.");
+    static_assert(sizeof(PipelineLayoutKey) == 8,
+            "PipelineLayoutKey must not have implicit padding.");
+    static_assert(sizeof(ShaderModuleKey) == 8, "ShaderModuleKey must not have implicit padding.");
 
     wgpu::Device mDevice;
     wgpu::Sampler mNearestSampler{ nullptr };
     wgpu::Sampler mLinearSampler{ nullptr };
-    tsl::robin_map<size_t, wgpu::RenderPipeline> mRenderPipelines{};
-    tsl::robin_map<size_t, wgpu::PipelineLayout> mPipelineLayouts{};
-    tsl::robin_map<size_t, wgpu::BindGroupLayout> mTextureBindGroupLayouts{};
-    tsl::robin_map<size_t, wgpu::ShaderModule> mShaderModules{};
+    tsl::robin_map<RenderPipelineKey, wgpu::RenderPipeline, RenderPipelineKey::Hasher>
+            mRenderPipelines{};
+    tsl::robin_map<PipelineLayoutKey, wgpu::PipelineLayout, PipelineLayoutKey::Hasher>
+            mPipelineLayouts{};
+    tsl::robin_map<PipelineLayoutKey, wgpu::BindGroupLayout, PipelineLayoutKey::Hasher>
+            mTextureBindGroupLayouts{};
+    tsl::robin_map<ShaderModuleKey, wgpu::ShaderModule, ShaderModuleKey::Hasher> mShaderModules{};
 };
 
 } // namespace filament::backend
