@@ -218,6 +218,22 @@ public:
         return const_cast<View*>(this)->getCamera();
     }
 
+
+    /**
+     * Sets whether a channel must clear the depth buffer before all primitives are rendered.
+     * Channel depth clear is off by default for all channels.
+     * This is orthogonal to Renderer::setClearOptions().
+     * @param channel between 0 and 7
+     * @param enabled true to enable clear, false to disable
+     */
+    void setChannelDepthClearEnabled(uint8_t channel, bool enabled) noexcept;
+
+    /**
+     * @param channel between 0 and 7
+     * @return true if this channel has depth clear enabled.
+     */
+    bool isChannelDepthClearEnabled(uint8_t channel) const noexcept;
+
     /**
      * Sets the blending mode used to draw the view into the SwapChain.
      *

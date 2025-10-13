@@ -85,12 +85,15 @@ enum class ReservedSpecializationConstants : uint8_t {
     CONFIG_SH_BANDS_COUNT = 9,
     CONFIG_SHADOW_SAMPLING_METHOD = 10,
     CONFIG_FROXEL_RECORD_BUFFER_HEIGHT = 11,
-    // check CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
+    // check CONFIG_NEXT_RESERVED_SPEC_CONSTANT and CONFIG_MAX_RESERVED_SPEC_CONSTANTS below
 };
 
 enum class PushConstantIds : uint8_t  {
     MORPHING_BUFFER_OFFSET = 0,
 };
+
+// number of renderpass channels
+constexpr size_t CONFIG_RENDERPASS_CHANNEL_COUNT = 8;
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // It's also limited by the Froxelizer's record buffer data type (uint8_t).
@@ -103,6 +106,8 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // the first constants (from 0 to CONFIG_MAX_RESERVED_SPEC_CONSTANTS - 1).
 // Updating this value necessitates a material version bump.
 constexpr size_t CONFIG_MAX_RESERVED_SPEC_CONSTANTS = 16;
+// The number of the next unassigned reserved spec constant.
+constexpr size_t CONFIG_NEXT_RESERVED_SPEC_CONSTANT = 12;
 
 // The maximum number of shadow maps possible.
 // There is currently a maximum limit of 128 shadow maps.

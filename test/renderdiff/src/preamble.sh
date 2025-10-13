@@ -28,6 +28,7 @@ BUILD_COMMON_DIR="$(pwd)/build/common"
 os_name=$(uname -s)
 if [[ "$os_name" == "Linux" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib/x86_64-linux-gnu"
+    MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.x86_64.json"
 elif [[ "$os_name" == "Darwin" ]]; then
     MESA_LIB_DIR="${MESA_DIR}lib"
     MESA_VK_ICD_PATH="${MESA_DIR}share/vulkan/icd.d/lvp_icd.aarch64.json"

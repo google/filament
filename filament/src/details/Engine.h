@@ -25,6 +25,7 @@
 #include "ResourceList.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
+#include "MaterialCache.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
@@ -270,16 +271,22 @@ public:
 
     // Return a vector of shader languages, in order of preference.
     utils::FixedCapacityVector<backend::ShaderLanguage> getShaderLanguage() const noexcept {
-        switch (mBackend) {
-            default:
-                return { getDriver().getShaderLanguage() };
-            case Backend::METAL:
-                const auto& lang = mConfig.preferredShaderLanguage;
-                if (lang == Config::ShaderLanguage::MSL) {
-                    return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY};
-                }
-                return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
+        backend::ShaderLanguage preferredLanguage;
+
+        switch (mConfig.preferredShaderLanguage) {
+            case Config::ShaderLanguage::DEFAULT:
+                preferredLanguage = backend::ShaderLanguage::UNSPECIFIED;
+                break;
+            case Config::ShaderLanguage::MSL:
+                preferredLanguage = backend::ShaderLanguage::MSL;
+                break;
+            case Config::ShaderLanguage::METAL_LIBRARY:
+                preferredLanguage = backend::ShaderLanguage::METAL_LIBRARY;
+                break;
         }
+
+
+        return getDriver().getShaderLanguages(preferredLanguage);
     }
 
     ResourceAllocatorDisposer& getResourceAllocatorDisposer() noexcept {
@@ -289,6 +296,10 @@ public:
 
     std::shared_ptr<ResourceAllocatorDisposer> const& getSharedResourceAllocatorDisposer() noexcept {
         return mResourceAllocatorDisposer;
+    }
+
+    MaterialCache& getMaterialCache() const noexcept {
+        return mMaterialCache;
     }
 
     void* streamAlloc(size_t size, size_t alignment) noexcept;
@@ -312,7 +323,8 @@ public:
     FMorphTargetBuffer* createMorphTargetBuffer(const MorphTargetBuffer::Builder& builder) noexcept;
     FInstanceBuffer* createInstanceBuffer(const InstanceBuffer::Builder& builder) noexcept;
     FIndirectLight* createIndirectLight(const IndirectLight::Builder& builder) noexcept;
-    FMaterial* createMaterial(const Material::Builder& builder, std::unique_ptr<MaterialParser> materialParser) noexcept;
+    FMaterial* createMaterial(const Material::Builder& builder,
+            MaterialDefinition const& definition) noexcept;
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
     FColorGrading* createColorGrading(const ColorGrading::Builder& builder) noexcept;
@@ -590,6 +602,7 @@ private:
     FLightManager mLightManager;
     FCameraManager mCameraManager;
     std::shared_ptr<ResourceAllocatorDisposer> mResourceAllocatorDisposer;
+    mutable MaterialCache mMaterialCache;
     HwVertexBufferInfoFactory mHwVertexBufferInfoFactory;
     HwDescriptorSetLayoutFactory mHwDescriptorSetLayoutFactory;
     DescriptorSetLayout mPerViewDescriptorSetLayoutDepthVariant;

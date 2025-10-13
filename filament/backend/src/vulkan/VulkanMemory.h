@@ -39,7 +39,7 @@ VK_DEFINE_HANDLE(VmaPool)
 
 namespace filament::backend {
 
-enum class VulkanBufferUsage : uint8_t {
+enum class VulkanBufferBinding : uint8_t {
     UNKNOWN,
     VERTEX,
     INDEX,
@@ -52,7 +52,7 @@ struct VulkanGpuBuffer {
     VmaAllocation vmaAllocation = VK_NULL_HANDLE;
     VmaAllocationInfo allocationInfo;
     uint32_t numBytes = 0;
-    VulkanBufferUsage usage = VulkanBufferUsage::UNKNOWN;
+    VulkanBufferBinding binding = VulkanBufferBinding::UNKNOWN;
 };
 
 } // namespace filament::backend

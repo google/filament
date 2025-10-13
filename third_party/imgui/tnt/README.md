@@ -1,22 +1,21 @@
-## Updating
+To update the version of imgui used in this project, run the `update_imgui.sh` script.
 
-To update imgui to a public release on GitHub, do the following.
+The script is located in `third_party/imgui/tnt`.
 
-First, find the release tag you want on https://github.com/ocornut/imgui/releases/.
-These steps assume v1.77.
+From the root of the repository, you can run it like this:
 
-```
-cd third_party
-curl -L https://github.com/ocornut/imgui/archive/v1.77.zip > imgui.zip
-unzip imgui.zip
-rsync -r imgui-1.77/ imgui/ --delete
-git checkout imgui/tnt
-rm -rf imgui-1.77 imgui.zip
-rm imgui/examples/libs/glfw/lib-vc2010-32/*.lib
-rm imgui/examples/libs/glfw/lib-vc2010-64/*.lib
-git add imgui
+**Usage:**
+```shell
+./third_party/imgui/tnt/update_imgui.sh <version>
 ```
 
-Make any necessary changes to tnt/CMakeLists.txt to get Filament to compile.
+For example, to update to version 1.90.9:
+```shell
+./third_party/imgui/tnt/update_imgui.sh 1.90.9
+```
 
-Please be sure to test Filament before uploading your CL.
+- If necessary, add or remove source files from `third_party/imgui/tnt/CMakeLists.txt`.
+- Compile and test Filament.
+
+You can find the latest version number on the imgui releases page:
+[https://github.com/ocornut/imgui/releases](https://github.com/ocornut/imgui/releases)

@@ -72,7 +72,7 @@ public:
 
 protected:
     [[nodiscard]] Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const Platform::DriverConfig& driverConfig) override;
 
 private:
     // returns adapter request option variations applicable for the particular

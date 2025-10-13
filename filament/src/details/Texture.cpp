@@ -313,10 +313,7 @@ FTexture::FTexture(FEngine& engine, const Builder& builder)
         return;
     }
 
-    auto tag = builder.getName();
-    if (tag.empty()) {
-        tag = CString{"FTexture"};
-    }
+    ImmutableCString tag{ !builder.getName().empty() ? builder.getName() : "FTexture" };
 
     if (UTILS_LIKELY(!isImported)) {
         mHandle = driver.createTexture(

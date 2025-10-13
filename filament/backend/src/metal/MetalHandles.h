@@ -27,6 +27,7 @@
 #include "MetalContext.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
+#include "MetalFlags.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 
 #include <backend/DriverEnums.h>
@@ -266,6 +267,16 @@ public:
 
     static MTLPixelFormat decidePixelFormat(MetalContext* context, TextureFormat format);
 
+    void setLabel(const utils::ImmutableCString& label) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (label.empty()) {
+            return;
+        }
+        texture.label = @(label.c_str_safe());
+        swizzledTextureView.label = @(label.c_str_safe());
+#endif
+    }
+
     MetalContext& context;
 
     // A "sidecar" texture used to implement automatic MSAA resolve.
@@ -483,6 +494,15 @@ struct MetalDescriptorSet : public HwDescriptorSet {
 
     void finalize(MetalDriver* driver);
 
+    void setLabel(const utils::ImmutableCString& l) {
+#if FILAMENT_METAL_DEBUG_LABELS
+        if (l.empty()) {
+            return;
+        }
+        label = l;
+#endif
+    }
+
     id<MTLBuffer> finalizeAndGetBuffer(MetalDriver* driver, ShaderStage stage);
 
     MetalDescriptorSetLayout* layout;
@@ -505,6 +525,22 @@ struct MetalDescriptorSet : public HwDescriptorSet {
     std::vector<std::shared_ptr<MetalExternalImage>> externalImages;
 
     std::array<TrackedMetalBuffer, Program::SHADER_TYPE_COUNT> cachedBuffer = { nil };
+
+#if FILAMENT_METAL_DEBUG_LABELS
+    utils::ImmutableCString label;
+#endif
+};
+
+
+struct MetalMemoryMappedBuffer : public HwMemoryMappedBuffer {
+    MetalMemoryMappedBuffer(BufferObjectHandle boh, size_t const offset,
+            size_t const size, MapBufferAccessFlags const access)
+        : boh(boh), access(access), size(size), offset(offset) {
+    }
+    BufferObjectHandle boh{};
+    MapBufferAccessFlags access{};
+    uint32_t size = 0;
+    uint32_t offset = 0;
 };
 
 } // namespace backend

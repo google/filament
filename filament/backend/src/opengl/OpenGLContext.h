@@ -193,7 +193,7 @@ public:
     void deleteBuffer(GLuint buffer, GLenum target) noexcept;
     void deleteVertexArray(GLuint vao) noexcept;
 
-    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept;
+    void destroyWithContext(size_t index, std::function<void(OpenGLContext&)> const& closure);
 
     // glGet*() values
     struct Gets {
@@ -333,6 +333,13 @@ public:
         // prevents these stutters by not precaching depth variants of the default material for
         // those particular browsers.
         bool disable_depth_precache_for_default_material;
+
+        // On llvmpipe (mesa), enabling framebuffer fetch causes a crash in draw2
+        //   'OpenGL error 0x502 (GL_INVALID_OPERATION) in "draw2" at line 4389'
+        // This coincides with the use of framebuffer fetch (ColorGradingAsSubpass). We disable
+        // framebuffer fetch in the case of llvmpipe.
+        // Some Mali drivers also have problems with this (b/445721121)
+        bool disable_framebuffer_fetch_extension;
 
     } bugs = {};
 
@@ -491,7 +498,7 @@ public:
     } procs{};
 
     void unbindEverything() noexcept;
-    void synchronizeStateAndCache(size_t index) noexcept;
+    void synchronizeStateAndCache(size_t index);
 
 #ifndef FILAMENT_SILENCE_NOT_SUPPORTED_BY_ES2
     GLuint getSamplerSlow(SamplerParams sp) const noexcept;
@@ -577,6 +584,9 @@ private:
             {   bugs.disable_depth_precache_for_default_material,
                     "disable_depth_precache_for_default_material",
                     ""},
+            {   bugs.disable_framebuffer_fetch_extension,
+                    "disable_framebuffer_fetch_extension",
+                    ""},
     }};
 
     // this is chosen to minimize code size
@@ -606,6 +616,8 @@ private:
 
     static void initProcs(Procs* procs,
             Extensions const& exts, GLint major, GLint minor) noexcept;
+
+    static void initWorkarounds(Bugs const& bugs, Extensions* ext);
 
     static FeatureLevel resolveFeatureLevel(GLint major, GLint minor,
             Extensions const& exts,

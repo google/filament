@@ -40,10 +40,12 @@ struct GLBufferObject : public HwBufferObject {
             GLenum binding;
             void* buffer;
         };
-    } gl;
-    BufferUsage usage;
-    BufferObjectBinding bindingType;
+    } gl{};
+    BufferUsage usage                   : 4;
+    BufferObjectBinding bindingType     : 4;
+    uint8_t mappingCount = 0;
     uint16_t age = 0;
+
 };
 
 } // namespace filament::backend

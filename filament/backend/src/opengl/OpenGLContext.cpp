@@ -21,12 +21,14 @@
 
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 #include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
 
+#include <algorithm>
 #include <functional>
 #include <string_view>
 #include <utility>
@@ -100,6 +102,8 @@ OpenGLContext::OpenGLContext(OpenGLPlatform& platform,
 
     initBugs(&bugs, ext, state.major, state.minor,
             state.vendor, state.renderer, state.version, state.shader);
+
+    initWorkarounds(bugs, &ext);
 
     glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE,             &gets.max_renderbuffer_size);
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS,           &gets.max_texture_image_units);
@@ -273,7 +277,7 @@ void OpenGLContext::terminate() noexcept {
 }
 
 void OpenGLContext::destroyWithContext(
-        size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept {
+        size_t index, std::function<void(OpenGLContext&)> const& closure) {
     if (index == 0) {
         // Note: we only need to delay the destruction of objects on the unprotected context
         // (index 0) because the protected context is always immediately destroyed and all its
@@ -292,7 +296,7 @@ void OpenGLContext::unbindEverything() noexcept {
     //        worry about.
 }
 
-void OpenGLContext::synchronizeStateAndCache(size_t index) noexcept {
+void OpenGLContext::synchronizeStateAndCache(size_t index) {
 
     // if we're just switching back to context 0, run all the pending destructors
     if (index == 0) {
@@ -503,20 +507,40 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         } else if (strstr(renderer, "Mali")) {
             // ARM GPU
             bugs->vao_doesnt_store_element_array_buffer_binding = true;
+
+            // We have run into several problems with timer queries on Mali-Gxx:
+            // - timer queries seem to cause memory corruptions in some cases on some devices
+            //   (see b/233754398)
+            //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
+            //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
+            // - timer queries sometime crash with an NPE (see b/273759031)
+            //   (see b/273759031)
+            //          - possibly not present in: "OpenGL ES 3.2 v1.r46p0"
+            bugs->dont_use_timer_query = true;
+
+            // at least some version of Mali have problems with framebuffer_fetch
+            // (see b/445721121, https://github.com/google/filament/issues/7794)
+            bugs->disable_framebuffer_fetch_extension = true;
+
             if (strstr(renderer, "Mali-T")) {
                 bugs->disable_glFlush = true;
                 bugs->disable_shared_context_draws = true;
-                // We have not verified that timer queries work on Mali-T, so we disable to be safe.
-                bugs->dont_use_timer_query = true;
             }
             if (strstr(renderer, "Mali-G")) {
-                // We have run into several problems with timer queries on Mali-Gxx:
-                // - timer queries seem to cause memory corruptions in some cases on some devices
-                //   (see b/233754398)
-                //          - appeared at least in: "OpenGL ES 3.2 v1.r26p0-01eac0"
-                //          - wasn't present in: "OpenGL ES 3.2 v1.r32p1-00pxl1"
-                // - timer queries sometime crash with an NPE (see b/273759031)
-                bugs->dont_use_timer_query = true;
+                int maj, min, driverVersion, driverRelease;
+                int const c = sscanf(version, "OpenGL ES %d.%d v%d.r%d",
+                        &maj, &min, &driverVersion, &driverRelease);
+                if (UTILS_LIKELY(c == 4)) {
+                    // we were able to parse the version string
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 46)) {
+                        // this driver version is known to be good
+                        bugs->dont_use_timer_query = false;
+                    }
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 53)) {
+                        // this driver version is known to be good
+                        bugs->disable_framebuffer_fetch_extension = false;
+                    }
+                }
             }
             // Mali seems to have no problem with this (which is good for us)
             bugs->allow_read_only_ancillary_feedback_loop = true;
@@ -559,13 +583,22 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
         }
 
         if (strstr(vendor, "Mesa")) {
-            // Seen on
-            //  [Mesa],
-            //  [llvmpipe (LLVM 17.0.6, 256 bits)],
-            //  [4.5 (Core Profile) Mesa 24.0.6-1],
-            //  [4.50]
-            // not known which version are affected
-            bugs->rebind_buffer_after_deletion = true;
+            if (strstr(renderer, "llvmpipe")) {
+                // Seen on
+                //  [Mesa],
+                //  [llvmpipe (LLVM 17.0.6, 256 bits)],
+                //  [4.5 (Core Profile) Mesa 24.0.6-1],
+                //  [4.50]
+                // not known which version are affected
+                bugs->rebind_buffer_after_deletion = true;
+
+                // Seen on
+                // [Mesa]
+                // [llvmpipe (LLVM 17.0.6, 256 bits)]
+                // [4.5 (Core Profile) Mesa 24.2.1 (git-c222f7299c)]
+                // [4.50]
+                bugs->disable_framebuffer_fetch_extension = true;
+            }
         }
     } else {
         // When running under ANGLE, it's a different set of workaround that we need.
@@ -609,6 +642,12 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
     // feedback loops are allowed on GL desktop as long as writes are disabled
     bugs->allow_read_only_ancillary_feedback_loop = true;
 #endif
+}
+
+void OpenGLContext::initWorkarounds(Bugs const& bugs, Extensions* ext) {
+    if (bugs.disable_framebuffer_fetch_extension) {
+        ext->EXT_shader_framebuffer_fetch = false;
+    }
 }
 
 FeatureLevel OpenGLContext::resolveFeatureLevel(GLint major, GLint minor,
@@ -826,10 +865,12 @@ GLuint OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
     if (UTILS_UNLIKELY(buffer == 0)) {
         // we're binding the default frame buffer, resolve its actual name
         auto& defaultFboForThisContext = mDefaultFbo[contextIndex];
+
         if (UTILS_UNLIKELY(!defaultFboForThisContext.has_value())) {
             defaultFboForThisContext = GLuint(mPlatform.getDefaultFramebufferObject());
         }
-        buffer = defaultFboForThisContext.value();
+        // by construction, defaultFboForThisContext has a value. value_or() avoids a throwing call.
+        buffer = defaultFboForThisContext.value_or(0);
     }
     bindFramebufferResolved(target, buffer);
     return buffer;

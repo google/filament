@@ -24,6 +24,7 @@
 #include "webgpu/WebGPUPipelineCache.h"
 #include "webgpu/WebGPUPipelineLayoutCache.h"
 #include "webgpu/WebGPURenderPassMipmapGenerator.h"
+#include "webgpu/WebGPUQueueManager.h"
 #include "webgpu/utils/AsyncTaskCounter.h"
 #include <backend/platforms/WebGPUPlatform.h>
 
@@ -33,6 +34,7 @@
 #include "private/backend/HandleAllocator.h"
 #include <backend/DriverEnums.h>
 
+#include <utils/FixedCapacityVector.h>
 #include <utils/compiler.h>
 
 #include "SpdMipmapGenerator/SpdMipmapGenerator.h"
@@ -48,6 +50,7 @@
 namespace filament::backend {
 
 class WebGPUSwapChain;
+class WebGPUQueueManager;
 
 /**
  * Implements the private backend driver API for WebGPU specifically (that API is essentially
@@ -65,10 +68,11 @@ public:
 private:
     WebGPUDriver(WebGPUPlatform& platform, const Platform::DriverConfig& driverConfig) noexcept;
     [[nodiscard]] ShaderModel getShaderModel() const noexcept final;
-    [[nodiscard]] ShaderLanguage getShaderLanguage() const noexcept final;
+    [[nodiscard]] utils::FixedCapacityVector<ShaderLanguage> getShaderLanguages(
+            ShaderLanguage preferredLanguage) const noexcept final;
     [[nodiscard]] wgpu::Sampler makeSampler(SamplerParams const& params);
     [[nodiscard]] static wgpu::AddressMode fWrapModeToWAddressMode(const filament::backend::SamplerWrapMode& fUsage);
-    void setDebugTag(HandleBase::HandleId handleId, utils::CString tag);
+    void setDebugTag(HandleBase::HandleId handleId, utils::ImmutableCString&& tag);
 
     // The platform (e.g. OS) specific aspects of the WebGPU backend are strictly only
     // handled in the WebGPUPlatform.
@@ -76,14 +80,12 @@ private:
     wgpu::Adapter mAdapter = nullptr;
     wgpu::Device mDevice = nullptr;
     wgpu::Limits mDeviceLimits = {};
-    wgpu::Queue mQueue = nullptr;
+    WebGPUQueueManager mQueueManager;
     void* mNativeWindow = nullptr;
     WebGPUSwapChain* mSwapChain = nullptr;
     uint64_t mNextFakeHandle = 1;
-    wgpu::CommandEncoder mCommandEncoder = nullptr;
     wgpu::TextureView mTextureView = nullptr;
     wgpu::RenderPassEncoder mRenderPassEncoder = nullptr;
-    wgpu::CommandBuffer mCommandBuffer = nullptr;
     WebGPURenderTarget* mDefaultRenderTarget = nullptr;
     WebGPURenderTarget* mCurrentRenderTarget = nullptr;
     WebGPUPipelineLayoutCache mPipelineLayoutCache;

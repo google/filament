@@ -25,12 +25,12 @@ public:
     explicit TestMaterialParser(const matp::MaterialParser& materialParser) :
             mMaterialParser(materialParser) {}
 
-        bool parseMaterial(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
+        utils::Status parseMaterial(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
         noexcept{
             return mMaterialParser.parseMaterial(buffer, size, builder);
         }
 
-        bool parseMaterialAsJSON(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
+        utils::Status parseMaterialAsJSON(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
         noexcept{
             return mMaterialParser.parseMaterialAsJSON(buffer, size, builder);
         }

@@ -39,7 +39,7 @@ protected:
     // Platform Interface
 
     Driver* createDriver(void* sharedGLContext,
-            const DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) override;
 
     int getOSVersion() const noexcept final override { return 0; }
 
@@ -55,9 +55,9 @@ protected:
     void commit(SwapChain* swapChain) noexcept override;
 
 private:
-    Display *mGLXDisplay;
-    GLXContext mGLXContext;
-    GLXFBConfig* mGLXConfig;
+    Display* mGLXDisplay;
+    GLXContext mGLXContext{};
+    GLXFBConfig mGLXConfig{};
     GLXPbuffer mDummySurface;
     std::vector<GLXPbuffer> mPBuffers;
 };

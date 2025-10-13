@@ -239,7 +239,7 @@ public:
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
     virtual Driver* UTILS_NULLABLE createDriver(void* UTILS_NULLABLE sharedContext,
-            const DriverConfig& driverConfig) noexcept = 0;
+            const DriverConfig& driverConfig) = 0;
 
     /**
      * Processes the platform's event queue when called from its primary event-handling thread.

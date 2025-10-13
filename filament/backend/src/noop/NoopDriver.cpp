@@ -21,6 +21,8 @@
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
+#include <utils/ImmutableCString.h>
+
 #include <stdint.h>
 
 namespace filament::backend {
@@ -45,8 +47,16 @@ ShaderModel NoopDriver::getShaderModel() const noexcept {
 #endif
 }
 
-ShaderLanguage NoopDriver::getShaderLanguage() const noexcept {
-    return ShaderLanguage::ESSL3;
+utils::FixedCapacityVector<ShaderLanguage> NoopDriver::getShaderLanguages(
+        ShaderLanguage /*preferredLanguage*/) const noexcept {
+    return {
+        ShaderLanguage::ESSL3,
+        ShaderLanguage::ESSL1,
+        ShaderLanguage::SPIRV,
+        ShaderLanguage::MSL,
+        ShaderLanguage::METAL_LIBRARY,
+        ShaderLanguage::WGSL,
+    };
 }
 
 // explicit instantiation of the Dispatcher
@@ -127,11 +137,11 @@ void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
 void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
-Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::CString tag) {
+Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::ImmutableCString tag) {
     return {};
 }
 
-Handle<HwStream> NoopDriver::createStreamAcquired(utils::CString tag) {
+Handle<HwStream> NoopDriver::createStreamAcquired(utils::ImmutableCString tag) {
     return {};
 }
 
@@ -158,6 +168,10 @@ void NoopDriver::destroyFence(Handle<HwFence> fh) {
 
 FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
+}
+
+FenceStatus NoopDriver::fenceWait(Handle<HwFence> fh, uint64_t timeout) {
+    return FenceStatus::ERROR;
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
@@ -328,8 +342,8 @@ void NoopDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> re
 void NoopDriver::commit(Handle<HwSwapChain> sch) {
 }
 
-void NoopDriver::setPushConstant(backend::ShaderStage stage, uint8_t index,
-        backend::PushConstantVariant value) {
+void NoopDriver::setPushConstant(ShaderStage stage, uint8_t index,
+        PushConstantVariant value) {
 }
 
 void NoopDriver::insertEventMarker(char const* string) {
@@ -353,8 +367,8 @@ void NoopDriver::readPixels(Handle<HwRenderTarget> src,
     scheduleDestroy(std::move(p));
 }
 
-void NoopDriver::readBufferSubData(backend::BufferObjectHandle boh,
-        uint32_t offset, uint32_t size, backend::BufferDescriptor&& p) {
+void NoopDriver::readBufferSubData(BufferObjectHandle boh,
+        uint32_t offset, uint32_t size, BufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
 
@@ -405,24 +419,31 @@ void NoopDriver::resetState(int) {
 }
 
 void NoopDriver::updateDescriptorSetBuffer(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_binding_t binding,
-        backend::BufferObjectHandle boh,
+        DescriptorSetHandle dsh,
+        descriptor_binding_t binding,
+        BufferObjectHandle boh,
         uint32_t offset,
         uint32_t size) {
 }
 
 void NoopDriver::updateDescriptorSetTexture(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_binding_t binding,
-        backend::TextureHandle th,
+        DescriptorSetHandle dsh,
+        descriptor_binding_t binding,
+        TextureHandle th,
         SamplerParams params) {
 }
 
 void NoopDriver::bindDescriptorSet(
-        backend::DescriptorSetHandle dsh,
-        backend::descriptor_set_t set,
-        backend::DescriptorSetOffsetArray&& offsets) {
+        DescriptorSetHandle dsh,
+        descriptor_set_t set,
+        DescriptorSetOffsetArray&& offsets) {
+}
+
+void NoopDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
+}
+
+void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
+        BufferDescriptor&& data) {
 }
 
 } // namespace filament

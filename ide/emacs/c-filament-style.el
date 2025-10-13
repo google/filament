@@ -34,13 +34,14 @@ position (or nil if there is none)."
           c-basic-offset
         (if (assq 'arglist-cont-nonempty c-syntactic-context)
             (- c-basic-offset)
-          (* 2 c-basic-offset))))))
+          c-basic-offset)))))
 
 (defun c-filament-style-lineup-brace-list-entry (_langelem)
   "Indent following lines in braced lists in the Filament style.
 
 This properly indents doubled-up arglists + lists, e.g. ({."
   (if (assq 'arglist-cont-nonempty c-syntactic-context)
+      ;; Un-indent closing brace line.
       (- (* c-basic-offset 2))
     0))
 
@@ -67,13 +68,14 @@ nil if there is none)."
                 (arglist-cont . 0)
                 (arglist-cont-nonempty . c-filament-style-lineup-arglist)
                 (arglist-close . c-filament-style-lineup-arglist)
-                (statement-cont . ++)
                 (case-label . +)
                 (brace-list-intro . c-filament-style-lineup-brace-list-intro)
                 (brace-list-entry . c-filament-style-lineup-brace-list-entry)
                 (brace-list-close . c-filament-style-lineup-brace-list-entry)
                 (label . [0])
-                (member-init-intro . ++))))
+                (statement-cont . ++)
+                (member-init-intro . ++)
+                (topmost-intro-cont . ++))))
 
 (provide 'c-filament-style)
 

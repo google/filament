@@ -119,7 +119,7 @@ public:
     ~VulkanPlatform() override;
 
     Driver* createDriver(void* sharedContext,
-            Platform::DriverConfig const& driverConfig) noexcept override;
+            Platform::DriverConfig const& driverConfig) override;
 
     int getOSVersion() const noexcept override {
         return 0;

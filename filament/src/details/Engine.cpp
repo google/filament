@@ -787,7 +787,8 @@ int FEngine::loop() {
     #endif
     if (portString != nullptr) {
         const int port = atoi(portString);
-        debug.server = new matdbg::DebugServer(mBackend, mDriver->getShaderLanguage(),
+        debug.server = new matdbg::DebugServer(mBackend,
+                mDriver->getShaderLanguages(ShaderLanguage::UNSPECIFIED).front(),
                 matdbg::DbgShaderModel((uint8_t) mDriver->getShaderModel()), port);
 
         // Sometimes the server can fail to spin up (e.g. if the above port is already in use).
@@ -908,8 +909,8 @@ FIndirectLight* FEngine::createIndirectLight(const IndirectLight::Builder& build
 }
 
 FMaterial* FEngine::createMaterial(const Material::Builder& builder,
-        std::unique_ptr<MaterialParser> materialParser) noexcept {
-    return create(mMaterials, builder, std::move(materialParser));
+        MaterialDefinition const& definition) noexcept {
+    return create(mMaterials, builder, definition);
 }
 
 FSkybox* FEngine::createSkybox(const Skybox::Builder& builder) noexcept {

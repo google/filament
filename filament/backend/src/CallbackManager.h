@@ -51,7 +51,7 @@ class CallbackManager {
 public:
     using Handle = Container::const_iterator;
 
-    explicit CallbackManager(DriverBase& driver) noexcept;
+    explicit CallbackManager(DriverBase& driver);
 
     ~CallbackManager() noexcept;
 
@@ -78,7 +78,7 @@ private:
         return --mCallbacks.end();
     }
 
-    Container::iterator allocateNewSlot() noexcept {
+    Container::iterator allocateNewSlot() {
         std::lock_guard const lock(mLock);
         auto curr = --mCallbacks.end();
         mCallbacks.emplace_back();

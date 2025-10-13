@@ -254,6 +254,7 @@ public:
     using AttributeType = filament::backend::UniformType;
     using UniformType = filament::backend::UniformType;
     using ConstantType = filament::backend::ConstantType;
+    using ConstantValue = filament::backend::ConstantValue;
     using SamplerType = filament::backend::SamplerType;
     using SubpassType = filament::backend::SubpassType;
     using SamplerFormat = filament::backend::SamplerFormat;
@@ -765,11 +766,7 @@ public:
     struct Constant {
         utils::CString name;
         ConstantType type;
-        union {
-            int32_t i;
-            float f;
-            bool b;
-        } defaultValue;
+        ConstantValue defaultValue;
     };
 
     struct PushConstant {

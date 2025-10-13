@@ -1,4 +1,10 @@
-add_subdirectory(../ "${CMAKE_CURRENT_BINARY_DIR}/abseil")
+option(FILAMENT_USE_EXTERNAL_ABSL "Use find_package to locate an external Abseil dependency" OFF)
+
+if (FILAMENT_USE_EXTERNAL_ABSL)
+  find_package(absl CONFIG QUIET)
+else()
+  add_subdirectory(../ "${CMAKE_CURRENT_BINARY_DIR}/abseil")
+endif()
 
 # To make Abseil easy for clients to link against, we create a dummy target just for installation
 # purposes and combine all of Abseil's libraries into a single, easy to link against static library.

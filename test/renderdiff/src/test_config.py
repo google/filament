@@ -61,6 +61,54 @@ class PresetConfig(RenderingConfig):
         _check(models)
         self.models += models
 
+    # Parse tolerance configuration from preset
+    tolerance = data.get('tolerance')
+    if tolerance:
+      assert _is_dict(tolerance)
+      self._validate_tolerance(tolerance)
+      self.tolerance = tolerance
+    else:
+      self.tolerance = None
+
+  def _validate_tolerance(self, tolerance):
+    """
+    Validate tolerance configuration structure.
+
+    Tolerance can be:
+    1. Single criteria: {"max_pixel_diff": 5, "allowed_diff_pixels": 1.0}
+    2. Nested criteria: {"operator": "OR", "criteria": [...]}
+    """
+    if 'criteria' in tolerance:
+      # Nested structure with operator
+      operator = tolerance.get('operator', 'AND')
+      assert operator.upper() in ['AND', 'OR'], f"Invalid operator: {operator}"
+
+      criteria_list = tolerance['criteria']
+      assert isinstance(criteria_list, list), "criteria must be a list"
+      assert len(criteria_list) > 0, "criteria list cannot be empty"
+
+      # Recursively validate each criteria
+      for criteria in criteria_list:
+        self._validate_tolerance(criteria)
+    else:
+      # Leaf criteria - validate individual parameters
+      valid_keys = {'max_pixel_diff', 'max_pixel_diff_percent', 'allowed_diff_pixels'}
+      tolerance_keys = set(tolerance.keys())
+      invalid_keys = tolerance_keys - valid_keys
+      assert len(invalid_keys) == 0, f"Invalid tolerance keys: {invalid_keys}"
+
+      if 'max_pixel_diff' in tolerance:
+        assert isinstance(tolerance['max_pixel_diff'], (int, float)), "max_pixel_diff must be numeric"
+        assert 0 <= tolerance['max_pixel_diff'] <= 255, "max_pixel_diff must be 0-255"
+
+      if 'max_pixel_diff_percent' in tolerance:
+        assert isinstance(tolerance['max_pixel_diff_percent'], (int, float)), "max_pixel_diff_percent must be numeric"
+        assert 0 <= tolerance['max_pixel_diff_percent'] <= 100, "max_pixel_diff_percent must be 0-100%"
+
+      if 'allowed_diff_pixels' in tolerance:
+        assert isinstance(tolerance['allowed_diff_pixels'], (int, float)), "allowed_diff_pixels must be numeric"
+        assert 0 <= tolerance['allowed_diff_pixels'] <= 100, "allowed_diff_pixels must be 0-100%"
+
 class TestConfig(RenderingConfig):
   def __init__(self, data, existing_models, presets):
     RenderingConfig.__init__(self, data)
@@ -72,6 +120,7 @@ class TestConfig(RenderingConfig):
     apply_presets = data.get('apply_presets')
     rendering = {}
     preset_models = []
+    preset_tolerance = None
     if apply_presets:
       given_presets = {p.name: p for p in presets}
       assert all((name in given_presets) for name in apply_presets),\
@@ -79,9 +128,12 @@ class TestConfig(RenderingConfig):
 
       # Note that this needs to applied in order.  Models will be overwritten.
       # Properties will be "added" in order.
+      # Tolerance is inherited from the LAST preset that has one defined
       for preset in apply_presets:
         rendering.update(given_presets[preset].rendering)
         preset_models = given_presets[preset].models
+        if given_presets[preset].tolerance:
+          preset_tolerance = given_presets[preset].tolerance
 
     assert 'rendering' in data
     rendering.update(data['rendering'])
@@ -93,6 +145,22 @@ class TestConfig(RenderingConfig):
       assert _is_list_of_strings(models)
       assert all(m in existing_models for m in models)
       self.models = set(models + self.models)
+
+    # Parse tolerance configuration - test-level tolerance overrides preset tolerance
+    tolerance = data.get('tolerance')
+    if tolerance:
+      assert _is_dict(tolerance)
+      self._validate_tolerance(tolerance)
+      self.tolerance = tolerance
+    else:
+      # Use tolerance inherited from presets
+      self.tolerance = preset_tolerance
+
+  def _validate_tolerance(self, tolerance):
+    """Use the same validation logic as PresetConfig."""
+    # Create a temporary PresetConfig instance to reuse validation logic
+    temp_preset = PresetConfig({'name': 'temp', 'rendering': {}}, {})
+    return temp_preset._validate_tolerance(tolerance)
 
   def to_filament_format(self):
     json_out = {

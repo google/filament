@@ -17,6 +17,7 @@
 #include "details/View.h"
 #include "filament/View.h"
 
+#include <stdint.h>
 
 namespace filament {
 
@@ -39,6 +40,14 @@ bool View::hasCamera() const noexcept {
 
 Camera& View::getCamera() noexcept {
     return downcast(this)->getCameraUser();
+}
+
+void View::setChannelDepthClearEnabled(uint8_t channel, bool enabled) noexcept {
+    downcast(this)->setChannelDepthClearEnabled(channel, enabled);
+}
+
+bool View::isChannelDepthClearEnabled(uint8_t channel) const noexcept {
+    return downcast(this)->isChannelDepthClearEnabled(channel);
 }
 
 void View::setViewport(Viewport const& viewport) noexcept {

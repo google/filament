@@ -19,6 +19,8 @@
 
 #include <imageio/ImageDecoder.h>
 
+#include <ios>
+
 namespace image {
 
 class HDRDecoder : public ImageDecoder::Decoder {

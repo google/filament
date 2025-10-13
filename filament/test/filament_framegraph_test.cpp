@@ -41,7 +41,7 @@ class MockResourceAllocator : public ResourceAllocatorInterface {
     } disposer;
 
 public:
-    backend::RenderTargetHandle createRenderTarget(const char* name,
+    backend::RenderTargetHandle createRenderTarget(utils::StaticString name,
             backend::TargetBufferFlags targetBufferFlags,
             uint32_t width,
             uint32_t height,
@@ -56,7 +56,7 @@ public:
     void destroyRenderTarget(backend::RenderTargetHandle h) noexcept override {
     }
 
-    backend::TextureHandle createTexture(const char* name, backend::SamplerType target,
+    backend::TextureHandle createTexture(utils::StaticString name, backend::SamplerType target,
             uint8_t levels,
             backend::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
             uint32_t depth, std::array<backend::TextureSwizzle, 4>,

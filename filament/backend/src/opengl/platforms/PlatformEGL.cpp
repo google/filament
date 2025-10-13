@@ -119,7 +119,7 @@ bool PlatformEGL::isOpenGL() const noexcept {
 
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
@@ -322,6 +322,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& drive
 
     mCurrentContextType = ContextType::UNPROTECTED;
     mContextAttribs = std::move(contextAttribs);
+    mMSAA4XSupport = checkIfMSAASwapChainSupported(4);
 
     initializeGlExtensions();
 
@@ -491,38 +492,15 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
         return true;
     }
 
-    Config configAttribs = {
-            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
-            { EGL_RED_SIZE,        8 },
-            { EGL_GREEN_SIZE,      8 },
-            { EGL_BLUE_SIZE,       8 },
-            { EGL_DEPTH_SIZE,      24 },
-            { EGL_SAMPLE_BUFFERS,  1 },
-            { EGL_SAMPLES,         samples },
-    };
-
-    if (!ext.egl.KHR_no_config_context) {
-        if (isOpenGL()) {
-            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
-        } else {
-            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
-            if (ext.egl.KHR_create_context) {
-                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
-            }
-        }
+    if (samples == 4) {
+        return mMSAA4XSupport;
     }
 
-    EGLConfig config = EGL_NO_CONFIG_KHR;
-    EGLint configsCount;
-    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
-        return false;
-    }
-
-    return configsCount > 0;
+    return false;
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        void* nativeWindow, uint64_t flags) noexcept {
+        void* nativeWindow, uint64_t flags) {
 
     Config attribs;
 
@@ -583,7 +561,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t flags) noexcept {
+        uint32_t width, uint32_t height, uint64_t flags) {
 
     Config attribs = {
             { EGL_WIDTH,  EGLint(width) },
@@ -836,6 +814,38 @@ EGLContext PlatformEGL::getContextForType(ContextType type) const noexcept {
         case ContextType::PROTECTED:
             return mEGLContextProtected;
     }
+}
+
+bool PlatformEGL::checkIfMSAASwapChainSupported(uint32_t samples) const noexcept {
+    // Retrieve the config to see if the given number of samples is supported. The result is cached.
+    Config configAttribs = {
+            { EGL_SURFACE_TYPE,    EGL_WINDOW_BIT | EGL_PBUFFER_BIT },
+            { EGL_RED_SIZE,        8 },
+            { EGL_GREEN_SIZE,      8 },
+            { EGL_BLUE_SIZE,       8 },
+            { EGL_DEPTH_SIZE,      24 },
+            { EGL_SAMPLE_BUFFERS,  1 },
+            { EGL_SAMPLES,         (EGLint)samples },
+    };
+
+    if (!ext.egl.KHR_no_config_context) {
+        if (isOpenGL()) {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_BIT;
+        } else {
+            configAttribs[EGL_RENDERABLE_TYPE] = EGL_OPENGL_ES2_BIT;
+            if (ext.egl.KHR_create_context) {
+                configAttribs[EGL_RENDERABLE_TYPE] |= EGL_OPENGL_ES3_BIT_KHR;
+            }
+        }
+    }
+
+    EGLConfig config = EGL_NO_CONFIG_KHR;
+    EGLint configsCount;
+    if (!eglChooseConfig(mEGLDisplay, configAttribs.data(), &config, 1, &configsCount)) {
+        return false;
+    }
+
+    return configsCount > 0;
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -17,33 +17,32 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
+#include "WebGPUQueueManager.h"
+
 #include "DriverBase.h"
+
 #include <backend/DriverEnums.h>
 
-#include <atomic>
-
-namespace wgpu {
-class Queue;
-} // namespace wgpu
+#include <memory>
 
 namespace filament::backend {
 
-/**
-  * A WebGPU-specific implementation of the HwFence.
-  * This class is used to synchronize the CPU and GPU. It allows the CPU to know when the GPU has
-  * finished a set of commands.
-  */
-class WebGPUFence final : public HwFence {
+class WebGPUFence : public HwFence {
 public:
-    [[nodiscard]] FenceStatus getStatus();
+    WebGPUFence();
+    ~WebGPUFence();
 
-    void addMarkerToQueueState(wgpu::Queue const&);
+    // Initialize the fence with a submission state from the queue manager.
+    void setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state);
+
+    // Note that getStatus cannot be const since it's implemented with wait();
+    FenceStatus getStatus();
+    FenceStatus wait(uint64_t timeout);
 
 private:
-    // The current status of the fence.
-    // This is atomic because it can be updated by a WebGPU callback thread and read from the main
-    // thread.
-    std::atomic<FenceStatus> mStatus{ FenceStatus::TIMEOUT_EXPIRED };
+    std::mutex mLock;
+    std::condition_variable mCond;
+    std::shared_ptr<WebGPUSubmissionState> mState;
 };
 
 } // namespace filament::backend

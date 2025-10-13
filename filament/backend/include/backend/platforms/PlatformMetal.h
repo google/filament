@@ -36,7 +36,7 @@ public:
     PlatformMetal();
     ~PlatformMetal() noexcept override;
 
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override;
     int getOSVersion() const noexcept override { return 0; }
 
     /**

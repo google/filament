@@ -21,8 +21,7 @@
 
 #include "DriverBase.h"
 
-#include <utils/Condition.h>
-#include <utils/Mutex.h>
+#include <utils/AsyncJobQueue.h>
 
 #include "gl_headers.h"
 
@@ -65,7 +64,7 @@ class TimerQueryFactory {
     static bool mGpuTimeSupported;
 public:
     static TimerQueryFactoryInterface* init(
-            OpenGLPlatform& platform, OpenGLContext& context) noexcept;
+            OpenGLPlatform& platform, OpenGLContext& context);
 
     static bool isGpuTimeSupported() noexcept {
         return mGpuTimeSupported;
@@ -108,22 +107,13 @@ public:
     explicit TimerQueryFenceFactory(OpenGLPlatform& platform);
     ~TimerQueryFenceFactory() override;
 private:
-    using Job = std::function<void()>;
-    using Container = std::vector<Job>;
-
     void createTimerQuery(GLTimerQuery* query) override;
     void destroyTimerQuery(GLTimerQuery* query) override;
     void beginTimeElapsedQuery(GLTimerQuery* tq) override;
     void endTimeElapsedQuery(OpenGLDriver& driver, GLTimerQuery* tq) override;
 
-    void push(Job&& job);
-
     OpenGLPlatform& mPlatform;
-    std::thread mThread;
-    mutable utils::Mutex mLock;
-    mutable utils::Condition mCondition;
-    Container mQueue;
-    bool mExitRequested = false;
+    utils::AsyncJobQueue mJobQueue;
 };
 
 class TimerQueryFallbackFactory final : public TimerQueryFactoryInterface {
