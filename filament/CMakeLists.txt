@@ -117,7 +117,7 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
-        src/details/SubAllocator.cpp
+        src/details/BufferAllocator.cpp
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
@@ -197,7 +197,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
-        src/details/SubAllocator.h
+        src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h

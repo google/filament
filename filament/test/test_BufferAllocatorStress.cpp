@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../src/details/SubAllocator.h"
+#include "../src/details/BufferAllocator.h"
 #include "utils/Panic.h"
 
 #include <algorithm>
@@ -27,21 +27,21 @@ using namespace filament;
 
 namespace {
 
-class SubAllocatorStressTest : public ::testing::Test {
+class BufferAllocatorStressTest : public ::testing::Test {
 protected:
     // We use a total size of 1024 * 64 and a slot size (alignment) of 64.
     // This gives us 1024 total possible slots if aligned.
-    static constexpr SubAllocator::allocation_size_t SLOT_SIZE = 64;
-    static constexpr SubAllocator::allocation_size_t SLOT_COUNT = 4096;
-    static constexpr SubAllocator::allocation_size_t TOTAL_SIZE = SLOT_COUNT * SLOT_SIZE;
+    static constexpr BufferAllocator::allocation_size_t SLOT_SIZE = 64;
+    static constexpr BufferAllocator::allocation_size_t SLOT_COUNT = 4096;
+    static constexpr BufferAllocator::allocation_size_t TOTAL_SIZE = SLOT_COUNT * SLOT_SIZE;
 
-    SubAllocatorStressTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {
+    BufferAllocatorStressTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {
     }
 
-    SubAllocator mAllocator;
+    BufferAllocator mAllocator;
 };
 
-TEST_F(SubAllocatorStressTest, StressTest) {
+TEST_F(BufferAllocatorStressTest, StressTest) {
     // Many operations.
     constexpr int operationCount = 5000;
 
@@ -56,7 +56,7 @@ TEST_F(SubAllocatorStressTest, StressTest) {
     std::uniform_int_distribution operationDistrib(0, 4);
 
     // 2. Randomly do some actions and expect to have no crash
-    std::vector<SubAllocator::AllocationId> ids;
+    std::vector<BufferAllocator::AllocationId> ids;
     for (int i = 0; i < operationCount; i++) {
         switch (operationDistrib(gen)) {
             case 0: // Allocate
@@ -64,12 +64,12 @@ TEST_F(SubAllocatorStressTest, StressTest) {
             case 2: // Allocate
             {
                 // Random the slot count + its offset.
-                const SubAllocator::allocation_size_t size =
+                const BufferAllocator::allocation_size_t size =
                         slotCountDistrib(gen) * SLOT_SIZE - slotOffsetDistrib(gen);
 
                 if (auto [id, _] = mAllocator.allocate(size);
-                    id != SubAllocator::REALLOCATION_REQUIRED && id !=
-                    SubAllocator::UNALLOCATED) {
+                    id != BufferAllocator::REALLOCATION_REQUIRED && id !=
+                    BufferAllocator::UNALLOCATED) {
                     ids.push_back(id);
                 }
                 break;
@@ -84,7 +84,7 @@ TEST_F(SubAllocatorStressTest, StressTest) {
                 std::uniform_int_distribution<uint32_t> idDistrib(0, ids.size() - 1);
                 uint32_t indexToRetire = idDistrib(gen);
 
-                SubAllocator::AllocationId idToRetire = ids[indexToRetire];
+                BufferAllocator::AllocationId idToRetire = ids[indexToRetire];
                 mAllocator.retire(idToRetire);
 
                 // Remove the retired id from the list.
@@ -114,8 +114,8 @@ TEST_F(SubAllocatorStressTest, StressTest) {
     // 5. The allocator should now be in a pristine state.
     //    A final allocation of the total size should succeed.
     auto [finalId, finalOffset] = mAllocator.allocate(TOTAL_SIZE);
-    EXPECT_NE(finalId, SubAllocator::REALLOCATION_REQUIRED);
-    EXPECT_NE(finalId, SubAllocator::UNALLOCATED);
+    EXPECT_NE(finalId, BufferAllocator::REALLOCATION_REQUIRED);
+    EXPECT_NE(finalId, BufferAllocator::UNALLOCATED);
     EXPECT_EQ(finalOffset, 0);
 }
 

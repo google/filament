@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/SubAllocator.h"
+#include "details/BufferAllocator.h"
 
 #include <utils/Panic.h>
 #include <utils/debug.h>
@@ -22,8 +22,8 @@
 namespace filament {
 namespace {
 
-static bool isValidId(SubAllocator::AllocationId id) {
-    return id != SubAllocator::UNALLOCATED && id != SubAllocator::REALLOCATION_REQUIRED;
+static bool isValidId(BufferAllocator::AllocationId id) {
+    return id != BufferAllocator::UNALLOCATED && id != BufferAllocator::REALLOCATION_REQUIRED;
 }
 
 #ifndef NDEBUG
@@ -34,7 +34,7 @@ constexpr static bool isPowerOfTwo(uint32_t n) {
 
 } // anonymous namespace
 
-SubAllocator::SubAllocator(allocation_size_t totalSize, allocation_size_t slotSize)
+BufferAllocator::BufferAllocator(allocation_size_t totalSize, allocation_size_t slotSize)
     : mTotalSize(totalSize),
       mSlotSize(slotSize) {
     assert_invariant(mSlotSize > 0);
@@ -43,7 +43,7 @@ SubAllocator::SubAllocator(allocation_size_t totalSize, allocation_size_t slotSi
     reset(mTotalSize);
 }
 
-void SubAllocator::reset(allocation_size_t newTotalSize) {
+void BufferAllocator::reset(allocation_size_t newTotalSize) {
     assert_invariant(newTotalSize % mSlotSize == 0);
 
     mTotalSize = newTotalSize;
@@ -73,8 +73,8 @@ void SubAllocator::reset(allocation_size_t newTotalSize) {
     firstNode->mOffsetMapIterator = offsetMapIter.first;
 }
 
-std::pair<SubAllocator::AllocationId, SubAllocator::allocation_size_t>
-    SubAllocator::allocate(allocation_size_t size) noexcept {
+std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
+    BufferAllocator::allocate(allocation_size_t size) noexcept {
     if (size == 0) {
         return { UNALLOCATED, 0 };
     }
@@ -126,7 +126,7 @@ std::pair<SubAllocator::AllocationId, SubAllocator::allocation_size_t>
     return { allocationId, targetNode->mSlot.offset };
 }
 
-SubAllocator::InternalSlotNode* SubAllocator::getNodeById(
+BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
         AllocationId id) const noexcept {
     if (!isValidId(id)) {
         return nullptr;
@@ -142,21 +142,21 @@ SubAllocator::InternalSlotNode* SubAllocator::getNodeById(
     return iter->second;
 }
 
-void SubAllocator::retire(AllocationId id) {
+void BufferAllocator::retire(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.isAllocated = false;
 }
 
-void SubAllocator::acquireGpu(AllocationId id) {
+void BufferAllocator::acquireGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.gpuUseCount++;
 }
 
-void SubAllocator::releaseGpu(AllocationId id) {
+void BufferAllocator::releaseGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
     assert_invariant(targetNode->mSlot.gpuUseCount > 0);
@@ -164,7 +164,7 @@ void SubAllocator::releaseGpu(AllocationId id) {
     targetNode->mSlot.gpuUseCount--;
 }
 
-void SubAllocator::releaseFreeSlots() {
+void BufferAllocator::releaseFreeSlots() {
     auto curr = mSlotPool.begin();
     while (curr != mSlotPool.end()) {
         if (!curr->mSlot.isFree()) {
@@ -205,18 +205,18 @@ void SubAllocator::releaseFreeSlots() {
     }
 }
 
-SubAllocator::allocation_size_t SubAllocator::getTotalSize() const noexcept {
+BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcept {
     return mTotalSize;
 }
 
-SubAllocator::allocation_size_t
-    SubAllocator::getAllocationOffset(AllocationId id) const {
+BufferAllocator::allocation_size_t
+    BufferAllocator::getAllocationOffset(AllocationId id) const {
     assert_invariant(isValidId(id));
 
     return (id - 1) * mSlotSize;
 }
 
-SubAllocator::AllocationId SubAllocator::calculateIdByOffset(
+BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
         allocation_size_t offset) const {
     assert_invariant(offset % mSlotSize == 0);
 
@@ -224,7 +224,7 @@ SubAllocator::AllocationId SubAllocator::calculateIdByOffset(
     return (offset / mSlotSize) + 1;
 }
 
-SubAllocator::allocation_size_t SubAllocator::alignUp(
+BufferAllocator::allocation_size_t BufferAllocator::alignUp(
         allocation_size_t size) const noexcept {
     if (size == 0) return 0;
 

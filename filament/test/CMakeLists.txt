@@ -43,8 +43,8 @@ list(APPEND RESGEN_SOURCE ${DUMMY_SRC})
 if (TNT_DEV)
     add_executable(test_${TARGET}
             filament_AtlasAllocator_test.cpp
-            test_SubAllocator.cpp
-            test_SubAllocatorStress.cpp
+            test_BufferAllocator.cpp
+            test_BufferAllocatorStress.cpp
             test_CircularQueue.cpp
             filament_test_exposure.cpp
             filament_rendering_test.cpp
