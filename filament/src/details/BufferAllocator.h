@@ -107,7 +107,7 @@ private:
     [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id) const noexcept;
 
     allocation_size_t mTotalSize;
-    allocation_size_t mSlotSize; // Size of a single slot in bytes.
+    const allocation_size_t mSlotSize; // Size of a single slot in bytes.
     std::list<InternalSlotNode> mSlotPool; // All slots, including both allocated and freed
     std::multimap</*slot size*/allocation_size_t, InternalSlotNode*> mFreeList;
     std::unordered_map</*slot offset*/allocation_size_t, InternalSlotNode*> mOffsetMap;
