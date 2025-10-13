@@ -26,6 +26,7 @@
 namespace utils {
 
 AsyncJobQueue::AsyncJobQueue(const char* name, Priority priority) {
+#if !defined(__EMSCRIPTEN__)
     mQueue.reserve(2);
     mThread = std::thread([this, name, priority]() {
         JobSystem::setThreadName(name);
@@ -50,13 +51,17 @@ AsyncJobQueue::AsyncJobQueue(const char* name, Priority priority) {
             }
         } while (!exitRequested);
     });
+#endif
 }
 
 AsyncJobQueue::~AsyncJobQueue() noexcept {
+#if !defined(__EMSCRIPTEN__)
     assert_invariant(mQueue.empty());
+#endif
 }
 
 void AsyncJobQueue::push(Job&& job) {
+#if !defined(__EMSCRIPTEN__)
     std::unique_lock lock(mLock);
     if (UTILS_UNLIKELY(mExitRequested)) {
         LOG(WARNING) << "AsyncJobQueue::push() called after drainAndExit()";
@@ -67,9 +72,20 @@ void AsyncJobQueue::push(Job&& job) {
         lock.unlock();
         mCondition.notify_one();
     }
+#endif
 }
 
+bool AsyncJobQueue::isValid() const noexcept {
+#if !defined(__EMSCRIPTEN__)
+    return mThread.joinable();
+#else
+    return false;
+#endif
+}
+
+
 void AsyncJobQueue::drainAndExit() {
+#if !defined(__EMSCRIPTEN__)
     std::unique_lock lock(mLock);
     // we request the service thread to exit, but we're guaranteed that it'll only exit
     // after all current callbacks are processed. In addition, once mExitRequested is set,
@@ -80,6 +96,7 @@ void AsyncJobQueue::drainAndExit() {
     if (mThread.joinable()) {
         mThread.join();
     }
+#endif
 }
 
 } // namespace utils
