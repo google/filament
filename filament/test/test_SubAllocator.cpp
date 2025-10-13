@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "../src/details/AllocationStrategy.h"
+#include "../src/details/SubAllocator.h"
 #include "utils/Panic.h"
 
 #include <utility>
@@ -26,25 +26,25 @@ using namespace filament;
 
 namespace {
 
-class AllocationStrategyTest : public ::testing::Test {
+class SubAllocatorTest : public ::testing::Test {
 protected:
     // We use a total size of 1024 and a slot size (alignment) of 64.
     // This gives us 1024 / 64 = 16 total possible slots if aligned.
-    static constexpr AllocationStrategy::allocation_size_t TOTAL_SIZE = 1024;
-    static constexpr AllocationStrategy::allocation_size_t SLOT_SIZE = 64;
+    static constexpr SubAllocator::allocation_size_t TOTAL_SIZE = 1024;
+    static constexpr SubAllocator::allocation_size_t SLOT_SIZE = 64;
 
-    AllocationStrategyTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {}
+    SubAllocatorTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {}
 
-    AllocationStrategy mAllocator;
+    SubAllocator mAllocator;
 };
 
-TEST_F(AllocationStrategyTest, ConstructorFailure) {
+TEST_F(SubAllocatorTest, ConstructorFailure) {
     // The constructor requires slotSize to be a power of two.
-    constexpr AllocationStrategy::allocation_size_t NON_POT_SLOT_SIZE = 60;
-    EXPECT_DEATH(AllocationStrategy(TOTAL_SIZE, NON_POT_SLOT_SIZE), "failed assertion");
+    constexpr SubAllocator::allocation_size_t NON_POT_SLOT_SIZE = 60;
+    EXPECT_DEATH(SubAllocator(TOTAL_SIZE, NON_POT_SLOT_SIZE), "failed assertion");
 }
 
-TEST_F(AllocationStrategyTest, InitialState) {
+TEST_F(SubAllocatorTest, InitialState) {
     EXPECT_EQ(mAllocator.getTotalSize(), TOTAL_SIZE);
     // Initially, there should be one large free block of the total size.
     // Let's try to allocate the whole thing.
@@ -53,7 +53,7 @@ TEST_F(AllocationStrategyTest, InitialState) {
     EXPECT_EQ(offset, 0);
 }
 
-TEST_F(AllocationStrategyTest, SimpleAllocation) {
+TEST_F(SubAllocatorTest, SimpleAllocation) {
     // Allocate 100 bytes, which should be aligned up to 128 (2 * 64).
     auto [id, offset] = mAllocator.allocate(100);
     EXPECT_EQ(id, 1);
@@ -67,10 +67,10 @@ TEST_F(AllocationStrategyTest, SimpleAllocation) {
     EXPECT_EQ(mAllocator.getAllocationOffset(id2), offset2);
 }
 
-TEST_F(AllocationStrategyTest, AllocateZeroSize) {
+TEST_F(SubAllocatorTest, AllocateZeroSize) {
     // Allocating zero bytes should return an unallocated ID and not affect the state.
     auto [id, offset] = mAllocator.allocate(0);
-    EXPECT_EQ(id, AllocationStrategy::UNALLOCATED);
+    EXPECT_EQ(id, SubAllocator::UNALLOCATED);
     EXPECT_EQ(offset, 0);
 
     // The allocator should still be in its initial state, able to allocate the full size.
@@ -79,7 +79,7 @@ TEST_F(AllocationStrategyTest, AllocateZeroSize) {
     EXPECT_EQ(fullOffset, 0);
 }
 
-TEST_F(AllocationStrategyTest, AllocateAll) {
+TEST_F(SubAllocatorTest, AllocateAll) {
     auto [id1, offset1] = mAllocator.allocate(512);
     EXPECT_EQ(id1, 1);
     EXPECT_EQ(offset1, 0);
@@ -90,21 +90,21 @@ TEST_F(AllocationStrategyTest, AllocateAll) {
 
     // The buffer is now full. The next allocation should fail.
     auto [id3, offset3] = mAllocator.allocate(1);
-    EXPECT_EQ(id3, AllocationStrategy::REALLOCATION_REQUIRED);
+    EXPECT_EQ(id3, SubAllocator::REALLOCATION_REQUIRED);
 }
 
-TEST_F(AllocationStrategyTest, AllocationFailure) {
+TEST_F(SubAllocatorTest, AllocationFailure) {
     auto [id1, offset1] = mAllocator.allocate(TOTAL_SIZE - 1); // Allocate most of the buffer.
     EXPECT_EQ(id1, 1);
     EXPECT_EQ(offset1, 0);
 
     // Try to allocate more than the remaining space.
     auto [id2, offset2] = mAllocator.allocate(100);
-    EXPECT_EQ(id2, AllocationStrategy::REALLOCATION_REQUIRED);
+    EXPECT_EQ(id2, SubAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(offset2, 0);
 }
 
-TEST_F(AllocationStrategyTest, AllocationLifecycle) {
+TEST_F(SubAllocatorTest, AllocationLifecycle) {
     // 1. Allocate
     auto [id, offset] = mAllocator.allocate(128);
     EXPECT_EQ(id, 1);
@@ -133,7 +133,7 @@ TEST_F(AllocationStrategyTest, AllocationLifecycle) {
     EXPECT_EQ(offset3, 0);
 }
 
-TEST_F(AllocationStrategyTest, RetireThenReleaseGpu) {
+TEST_F(SubAllocatorTest, RetireThenReleaseGpu) {
     // 1. Allocate a block and a dummy block next to it.
     auto [id1, offset1] = mAllocator.allocate(128);
     auto [id2, offset2] = mAllocator.allocate(128);
@@ -167,7 +167,7 @@ TEST_F(AllocationStrategyTest, RetireThenReleaseGpu) {
     EXPECT_EQ(offset4, 0); // Success! It reuses the first slot.
 }
 
-TEST_F(AllocationStrategyTest, MultipleGpuAcquires) {
+TEST_F(SubAllocatorTest, MultipleGpuAcquires) {
     // 1. Allocate a block.
     auto [id, offset] = mAllocator.allocate(128);
     EXPECT_EQ(id, 1);
@@ -203,7 +203,7 @@ TEST_F(AllocationStrategyTest, MultipleGpuAcquires) {
     EXPECT_EQ(successId, 1);
 }
 
-TEST_F(AllocationStrategyTest, GpuPanicOnUnderflow) {
+TEST_F(SubAllocatorTest, GpuPanicOnUnderflow) {
     // 1. Allocate a block and acquire it.
     auto [id, _] = mAllocator.allocate(128);
     mAllocator.acquireGpu(id);
@@ -215,7 +215,7 @@ TEST_F(AllocationStrategyTest, GpuPanicOnUnderflow) {
     EXPECT_DEATH(mAllocator.releaseGpu(id), "failed assertion");
 }
 
-TEST_F(AllocationStrategyTest, MergeFreeSlots) {
+TEST_F(SubAllocatorTest, MergeFreeSlots) {
     // Allocate three blocks
     auto [id1, offset1] = mAllocator.allocate(128); // Slot 0-127
     auto [id2, offset2] = mAllocator.allocate(128); // Slot 128-255
@@ -258,20 +258,20 @@ TEST_F(AllocationStrategyTest, MergeFreeSlots) {
     EXPECT_EQ(offset5, 0);
 }
 
-TEST_F(AllocationStrategyTest, MergeAllSlots) {
+TEST_F(SubAllocatorTest, MergeAllSlots) {
     // Allocate the entire buffer in small chunks.
-    constexpr AllocationStrategy::allocation_size_t CHUNK_SIZE = 128;
+    constexpr SubAllocator::allocation_size_t CHUNK_SIZE = 128;
     constexpr uint32_t NUM_CHUNKS = TOTAL_SIZE / CHUNK_SIZE;
-    std::vector<AllocationStrategy::AllocationId> ids;
+    std::vector<SubAllocator::AllocationId> ids;
     for (uint32_t i = 0; i < NUM_CHUNKS; ++i) {
         auto [id, offset] = mAllocator.allocate(CHUNK_SIZE);
-        ASSERT_NE(id, AllocationStrategy::REALLOCATION_REQUIRED);
+        ASSERT_NE(id, SubAllocator::REALLOCATION_REQUIRED);
         ids.push_back(id);
     }
 
     // The buffer should be full.
     auto [failId, failOffset] = mAllocator.allocate(1);
-    EXPECT_EQ(failId, AllocationStrategy::REALLOCATION_REQUIRED);
+    EXPECT_EQ(failId, SubAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(failOffset, 0);
 
     // Retire all chunks.
@@ -289,7 +289,7 @@ TEST_F(AllocationStrategyTest, MergeAllSlots) {
     EXPECT_EQ(fullOffset, 0);
 }
 
-TEST_F(AllocationStrategyTest, NoMergePossible) {
+TEST_F(SubAllocatorTest, NoMergePossible) {
     // Allocate blocks in an alternating pattern.
     auto [id1, offset1] = mAllocator.allocate(128);
     auto [id2, offset2] = mAllocator.allocate(128);
@@ -318,7 +318,7 @@ TEST_F(AllocationStrategyTest, NoMergePossible) {
     EXPECT_EQ(offset6, 256);
 }
 
-TEST_F(AllocationStrategyTest, Reset) {
+TEST_F(SubAllocatorTest, Reset) {
     auto [id1, offset1] = mAllocator.allocate(100);
     auto [id2, offset2] = mAllocator.allocate(200);
     EXPECT_EQ(id1, 1);
@@ -337,20 +337,20 @@ TEST_F(AllocationStrategyTest, Reset) {
     EXPECT_EQ(offset3, 0);
 }
 
-TEST_F(AllocationStrategyTest, ResetWithInvalidSize) {
+TEST_F(SubAllocatorTest, ResetWithInvalidSize) {
     // Reset to a size which is not a power of two.
     EXPECT_DEATH(mAllocator.reset(123), "failed assertion");
 }
 
 
-TEST_F(AllocationStrategyTest, ResetWithGpuLock) {
+TEST_F(SubAllocatorTest, ResetWithGpuLock) {
     // 1. Allocate a block and acquire a GPU lock on it.
     auto [id1, offset1] = mAllocator.allocate(128);
     EXPECT_EQ(id1, 1);
     mAllocator.acquireGpu(id1); // gpuUseCount = 1
 
     // 2. Call reset. This should disregard the GPU lock and clear everything.
-    constexpr AllocationStrategy::allocation_size_t NEW_TOTAL_SIZE = 4096;
+    constexpr SubAllocator::allocation_size_t NEW_TOTAL_SIZE = 4096;
     mAllocator.reset(NEW_TOTAL_SIZE);
 
     // 3. Verify the allocator is in a pristine state with the new size.
@@ -363,25 +363,25 @@ TEST_F(AllocationStrategyTest, ResetWithGpuLock) {
     EXPECT_EQ(offset2, 0);
 }
 
-TEST_F(AllocationStrategyTest, InvalidOperations) {
+TEST_F(SubAllocatorTest, InvalidOperations) {
     // These operations on invalid IDs should not crash and should be handled gracefully.
-    EXPECT_DEATH(mAllocator.retire(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.retire(SubAllocator::UNALLOCATED), "failed assertion");
     EXPECT_DEATH(mAllocator.retire(999), "failed assertion"); // Non-existent ID
 
-    EXPECT_DEATH(mAllocator.acquireGpu(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.acquireGpu(SubAllocator::UNALLOCATED), "failed assertion");
     EXPECT_DEATH(mAllocator.acquireGpu(999), "failed assertion");
 
-    EXPECT_DEATH(mAllocator.releaseGpu(AllocationStrategy::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.releaseGpu(SubAllocator::UNALLOCATED), "failed assertion");
     EXPECT_DEATH(mAllocator.releaseGpu(999), "failed assertion");
 
     // Check that an invalid offset query panics in debug/testing builds.
-    EXPECT_DEATH(mAllocator.getAllocationOffset(AllocationStrategy::UNALLOCATED), "failed assertion");
-    EXPECT_DEATH(mAllocator.getAllocationOffset(AllocationStrategy::REALLOCATION_REQUIRED),
+    EXPECT_DEATH(mAllocator.getAllocationOffset(SubAllocator::UNALLOCATED), "failed assertion");
+    EXPECT_DEATH(mAllocator.getAllocationOffset(SubAllocator::REALLOCATION_REQUIRED),
             "failed assertion");
 }
 
-TEST_F(AllocationStrategyTest, ComplexScenario) {
-    std::vector<AllocationStrategy::AllocationId> ids;
+TEST_F(SubAllocatorTest, ComplexScenario) {
+    std::vector<SubAllocator::AllocationId> ids;
     // 1. Allocate 4 blocks of 256 bytes
     for (int i = 0; i < 4; ++i) {
         auto [id, offset] = mAllocator.allocate(256);
@@ -391,7 +391,7 @@ TEST_F(AllocationStrategyTest, ComplexScenario) {
 
     // Buffer should be full
     auto [failId1, failOffset1] = mAllocator.allocate(1);
-    EXPECT_EQ(failId1, AllocationStrategy::REALLOCATION_REQUIRED);
+    EXPECT_EQ(failId1, SubAllocator::REALLOCATION_REQUIRED);
 
     // 2. Retire the 2nd and 3rd blocks (ids[1] and ids[2])
     mAllocator.retire(ids[1]);
@@ -408,7 +408,7 @@ TEST_F(AllocationStrategyTest, ComplexScenario) {
 
     // 4. The buffer should be full again.
     auto [failId2,failOffset2] = mAllocator.allocate(1);
-    EXPECT_EQ(failId2, AllocationStrategy::REALLOCATION_REQUIRED);
+    EXPECT_EQ(failId2, SubAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(failOffset2,0);
 }
 

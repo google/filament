@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAILS_ALLOCATIONSTRATEGY_H
-#define TNT_FILAMENT_DETAILS_ALLOCATIONSTRATEGY_H
+#ifndef TNT_FILAMENT_DETAILS_SUBALLOCATOR_H
+#define TNT_FILAMENT_DETAILS_SUBALLOCATOR_H
 
 #include <cstdint>
 #include <list>
@@ -28,11 +28,11 @@ namespace filament {
 //
 // It internally manages shared state (e.g., mSlotPool, mFreeList, mOffsetMap) without any
 // synchronization primitives. Concurrent access from multiple threads to the same
-// AllocationStrategy instance will result in data races and undefined behavior.
+// SubAllocator instance will result in data races and undefined behavior.
 //
 // If an instance of this class is to be shared between threads, all calls to its member
 // functions MUST be protected by external synchronization (e.g., a std::mutex).
-class AllocationStrategy {
+class SubAllocator {
 public:
     using allocation_size_t = uint32_t;
     using AllocationId = uint32_t;
@@ -54,11 +54,11 @@ public:
 
     // `slotSize` is derived from the GPU's uniform buffer offset alignment requirement,
     // which can be up to 256 bytes.
-    explicit AllocationStrategy(allocation_size_t totalSize,
+    explicit SubAllocator(allocation_size_t totalSize,
             allocation_size_t slotSize);
 
-    AllocationStrategy(AllocationStrategy const&) = delete;
-    AllocationStrategy(AllocationStrategy&&) = delete;
+    SubAllocator(SubAllocator const&) = delete;
+    SubAllocator(SubAllocator&&) = delete;
 
     // Allocate a new slot and return its id and slot offset in the UBO.
     // If the returned id is not valid, that means there's no large enough slot for allocation.
@@ -115,4 +115,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAILS_ALLOCATIONSTRATEGY_H
+#endif // TNT_FILAMENT_DETAILS_SUBALLOCATOR_H

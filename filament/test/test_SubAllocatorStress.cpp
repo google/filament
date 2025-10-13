@@ -16,11 +16,10 @@
 
 #include <gtest/gtest.h>
 
-#include "../src/details/AllocationStrategy.h"
+#include "../src/details/SubAllocator.h"
 #include "utils/Panic.h"
 
 #include <algorithm>
-#include <ctime>
 #include <random>
 #include <vector>
 
@@ -28,21 +27,21 @@ using namespace filament;
 
 namespace {
 
-class AllocationStrategyStressTest : public ::testing::Test {
+class SubAllocatorStressTest : public ::testing::Test {
 protected:
     // We use a total size of 1024 * 64 and a slot size (alignment) of 64.
     // This gives us 1024 total possible slots if aligned.
-    static constexpr AllocationStrategy::allocation_size_t SLOT_SIZE = 64;
-    static constexpr AllocationStrategy::allocation_size_t SLOT_COUNT = 4096;
-    static constexpr AllocationStrategy::allocation_size_t TOTAL_SIZE = SLOT_COUNT * SLOT_SIZE;
+    static constexpr SubAllocator::allocation_size_t SLOT_SIZE = 64;
+    static constexpr SubAllocator::allocation_size_t SLOT_COUNT = 4096;
+    static constexpr SubAllocator::allocation_size_t TOTAL_SIZE = SLOT_COUNT * SLOT_SIZE;
 
-    AllocationStrategyStressTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {
+    SubAllocatorStressTest() : mAllocator(TOTAL_SIZE, SLOT_SIZE) {
     }
 
-    AllocationStrategy mAllocator;
+    SubAllocator mAllocator;
 };
 
-TEST_F(AllocationStrategyStressTest, StressTest) {
+TEST_F(SubAllocatorStressTest, StressTest) {
     // Many operations.
     constexpr int operationCount = 5000;
 
@@ -57,7 +56,7 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
     std::uniform_int_distribution operationDistrib(0, 4);
 
     // 2. Randomly do some actions and expect to have no crash
-    std::vector<AllocationStrategy::AllocationId> ids;
+    std::vector<SubAllocator::AllocationId> ids;
     for (int i = 0; i < operationCount; i++) {
         switch (operationDistrib(gen)) {
             case 0: // Allocate
@@ -65,12 +64,12 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
             case 2: // Allocate
             {
                 // Random the slot count + its offset.
-                const AllocationStrategy::allocation_size_t size =
+                const SubAllocator::allocation_size_t size =
                         slotCountDistrib(gen) * SLOT_SIZE - slotOffsetDistrib(gen);
 
                 if (auto [id, _] = mAllocator.allocate(size);
-                    id != AllocationStrategy::REALLOCATION_REQUIRED && id !=
-                    AllocationStrategy::UNALLOCATED) {
+                    id != SubAllocator::REALLOCATION_REQUIRED && id !=
+                    SubAllocator::UNALLOCATED) {
                     ids.push_back(id);
                 }
                 break;
@@ -85,7 +84,7 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
                 std::uniform_int_distribution<uint32_t> idDistrib(0, ids.size() - 1);
                 uint32_t indexToRetire = idDistrib(gen);
 
-                AllocationStrategy::AllocationId idToRetire = ids[indexToRetire];
+                SubAllocator::AllocationId idToRetire = ids[indexToRetire];
                 mAllocator.retire(idToRetire);
 
                 // Remove the retired id from the list.
@@ -115,8 +114,8 @@ TEST_F(AllocationStrategyStressTest, StressTest) {
     // 5. The allocator should now be in a pristine state.
     //    A final allocation of the total size should succeed.
     auto [finalId, finalOffset] = mAllocator.allocate(TOTAL_SIZE);
-    EXPECT_NE(finalId, AllocationStrategy::REALLOCATION_REQUIRED);
-    EXPECT_NE(finalId, AllocationStrategy::UNALLOCATED);
+    EXPECT_NE(finalId, SubAllocator::REALLOCATION_REQUIRED);
+    EXPECT_NE(finalId, SubAllocator::UNALLOCATED);
     EXPECT_EQ(finalOffset, 0);
 }
 

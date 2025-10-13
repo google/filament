@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/AllocationStrategy.h"
+#include "details/SubAllocator.h"
 
 #include <utils/Panic.h>
 #include <utils/debug.h>
@@ -22,8 +22,8 @@
 namespace filament {
 namespace {
 
-static bool isValidId(AllocationStrategy::AllocationId id) {
-    return id != AllocationStrategy::UNALLOCATED && id != AllocationStrategy::REALLOCATION_REQUIRED;
+static bool isValidId(SubAllocator::AllocationId id) {
+    return id != SubAllocator::UNALLOCATED && id != SubAllocator::REALLOCATION_REQUIRED;
 }
 
 #ifndef NDEBUG
@@ -34,7 +34,7 @@ constexpr static bool isPowerOfTwo(uint32_t n) {
 
 } // anonymous namespace
 
-AllocationStrategy::AllocationStrategy(allocation_size_t totalSize, allocation_size_t slotSize)
+SubAllocator::SubAllocator(allocation_size_t totalSize, allocation_size_t slotSize)
     : mTotalSize(totalSize),
       mSlotSize(slotSize) {
     assert_invariant(mSlotSize > 0);
@@ -43,7 +43,7 @@ AllocationStrategy::AllocationStrategy(allocation_size_t totalSize, allocation_s
     reset(mTotalSize);
 }
 
-void AllocationStrategy::reset(allocation_size_t newTotalSize) {
+void SubAllocator::reset(allocation_size_t newTotalSize) {
     assert_invariant(newTotalSize % mSlotSize == 0);
 
     mTotalSize = newTotalSize;
@@ -73,8 +73,8 @@ void AllocationStrategy::reset(allocation_size_t newTotalSize) {
     firstNode->mOffsetMapIterator = offsetMapIter.first;
 }
 
-std::pair<AllocationStrategy::AllocationId, AllocationStrategy::allocation_size_t>
-    AllocationStrategy::allocate(allocation_size_t size) noexcept {
+std::pair<SubAllocator::AllocationId, SubAllocator::allocation_size_t>
+    SubAllocator::allocate(allocation_size_t size) noexcept {
     if (size == 0) {
         return { UNALLOCATED, 0 };
     }
@@ -126,7 +126,7 @@ std::pair<AllocationStrategy::AllocationId, AllocationStrategy::allocation_size_
     return { allocationId, targetNode->mSlot.offset };
 }
 
-AllocationStrategy::InternalSlotNode* AllocationStrategy::getNodeById(
+SubAllocator::InternalSlotNode* SubAllocator::getNodeById(
         AllocationId id) const noexcept {
     if (!isValidId(id)) {
         return nullptr;
@@ -142,21 +142,21 @@ AllocationStrategy::InternalSlotNode* AllocationStrategy::getNodeById(
     return iter->second;
 }
 
-void AllocationStrategy::retire(AllocationId id) {
+void SubAllocator::retire(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.isAllocated = false;
 }
 
-void AllocationStrategy::acquireGpu(AllocationId id) {
+void SubAllocator::acquireGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
     targetNode->mSlot.gpuUseCount++;
 }
 
-void AllocationStrategy::releaseGpu(AllocationId id) {
+void SubAllocator::releaseGpu(AllocationId id) {
     auto targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
     assert_invariant(targetNode->mSlot.gpuUseCount > 0);
@@ -164,7 +164,7 @@ void AllocationStrategy::releaseGpu(AllocationId id) {
     targetNode->mSlot.gpuUseCount--;
 }
 
-void AllocationStrategy::releaseFreeSlots() {
+void SubAllocator::releaseFreeSlots() {
     auto curr = mSlotPool.begin();
     while (curr != mSlotPool.end()) {
         if (!curr->mSlot.isFree()) {
@@ -205,18 +205,18 @@ void AllocationStrategy::releaseFreeSlots() {
     }
 }
 
-AllocationStrategy::allocation_size_t AllocationStrategy::getTotalSize() const noexcept {
+SubAllocator::allocation_size_t SubAllocator::getTotalSize() const noexcept {
     return mTotalSize;
 }
 
-AllocationStrategy::allocation_size_t
-    AllocationStrategy::getAllocationOffset(AllocationId id) const {
+SubAllocator::allocation_size_t
+    SubAllocator::getAllocationOffset(AllocationId id) const {
     assert_invariant(isValidId(id));
 
     return (id - 1) * mSlotSize;
 }
 
-AllocationStrategy::AllocationId AllocationStrategy::calculateIdByOffset(
+SubAllocator::AllocationId SubAllocator::calculateIdByOffset(
         allocation_size_t offset) const {
     assert_invariant(offset % mSlotSize == 0);
 
@@ -224,7 +224,7 @@ AllocationStrategy::AllocationId AllocationStrategy::calculateIdByOffset(
     return (offset / mSlotSize) + 1;
 }
 
-AllocationStrategy::allocation_size_t AllocationStrategy::alignUp(
+SubAllocator::allocation_size_t SubAllocator::alignUp(
         allocation_size_t size) const noexcept {
     if (size == 0) return 0;
 
