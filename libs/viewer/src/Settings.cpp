@@ -552,7 +552,7 @@ static int parse(jsmntok_t const* tokens, int i, const char* jsonChunk, DebugOpt
         if (compare(tok, jsonChunk, "skipFrames") == 0) {
             i = parse(tokens, i + 1, jsonChunk, &out->skipFrames);
         } else {
-            slog.w << "Invalid viewer options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
+            slog.w << "Invalid debug options key: '" << STR(tok, jsonChunk) << "'" << io::endl;
             i = parse(tokens, i + 1);
         }
         if (i < 0) {
