@@ -83,9 +83,16 @@ public:
 
     void resetUserTime();
 
+    void skipNextFrames(size_t frameCount) const noexcept {
+        mFrameSkipper.skipNextFrames(frameCount);
+    }
+
+    size_t getFrameToSkipCount() const noexcept {
+        return mFrameSkipper.getFrameToSkipCount();
+    }
+
     // renders a single standalone view. The view must have a a custom rendertarget.
     void renderStandaloneView(FView const* view);
-
 
     void setPresentationTime(int64_t monotonic_clock_ns) const;
 
