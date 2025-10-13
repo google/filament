@@ -19,13 +19,15 @@
 #include <filament/Renderer.h>
 
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <private/utils/Tracing.h>
 
-#include <utils/FixedCapacityVector.h>
-#include <utils/Logger.h>
 #include <utils/compiler.h>
 #include <utils/debug.h>
+#include <utils/FixedCapacityVector.h>
+#include <utils/JobSystem.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <algorithm>
@@ -33,6 +35,7 @@
 #include <chrono>
 #include <memory>
 #include <ratio>
+#include <utility>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -42,24 +45,44 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept {
-    for (auto& query : mQueries) {
-        query.handle = driver.createTimerQuery();
+FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept
+    : mJobQueue("FrameInfoGpuComplete", JobSystem::Priority::URGENT_DISPLAY),
+      mHasTimerQueries(driver.isFrameTimeSupported()) {
+    if (mHasTimerQueries) {
+        for (auto& query : mQueries) {
+            query.handle = driver.createTimerQuery();
+        }
     }
 }
 
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
 void FrameInfoManager::terminate(DriverApi& driver) noexcept {
-    for (auto& query : mQueries) {
-        driver.destroyTimerQuery(query.handle);
+    if (mHasTimerQueries) {
+        for (auto const& query : mQueries) {
+            driver.destroyTimerQuery(query.handle);
+        }
+    }
+
+    // wait for all pending callbacks to be called & terminate the thread
+    mJobQueue.drainAndExit();
+
+    // destroy the fences that are still alive
+    for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
+        auto& info = mFrameTimeHistory[i];
+        if (info.fence) {
+            driver.destroyFence(std::move(info.fence));
+        }
     }
 }
 
-void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint32_t frameId) noexcept {
+void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config,
+        uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept {
     auto& history = mFrameTimeHistory;
     // don't exceed the capacity, drop the oldest entry
     if (UTILS_LIKELY(history.size() == history.capacity())) {
+        assert_invariant(history.back().fence);
+        driver.destroyFence(std::move(history.back().fence));
         history.pop_back();
     }
 
@@ -67,73 +90,108 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
     auto& front = history.emplace_front(frameId);
 
     // store the current time
+    front.vsync = vsync;
     front.beginFrame = std::chrono::steady_clock::now();
 
-    // references are not invalidated by CircularQueue<>, so we can associate a reference to
-    // the slot we created to the timer query used to find the frame time.
-    mQueries[mIndex].pInfo = std::addressof(front);
-    // issue the timer query
-    driver.beginTimerQuery(mQueries[mIndex].handle);
+    if (mHasTimerQueries) {
+        // references are not invalidated by CircularQueue<>, so we can associate a reference to
+        // the slot we created to the timer query used to find the frame time.
+        mQueries[mIndex].pInfo = std::addressof(front);
+        // issue the timer query
+        driver.beginTimerQuery(mQueries[mIndex].handle);
+    }
+
     // issue the custom backend command to get the backend time
     driver.queueCommand([&front](){
         front.backendBeginFrame = std::chrono::steady_clock::now();
     });
 
-    // now is a good time to check the oldest active query
-    while (mLast != mIndex) {
-        uint64_t elapsed = 0;
-        TimerQueryResult const result = driver.getTimerQueryValue(mQueries[mLast].handle, &elapsed);
-        switch (result) {
-            case TimerQueryResult::NOT_READY:
-                // nothing to do
-                break;
-            case TimerQueryResult::ERROR:
-                mLast = (mLast + 1) % POOL_COUNT;
-                break;
-            case TimerQueryResult::AVAILABLE: {
-                FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
-                FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameInfo::elapsed", uint32_t(elapsed));
-                // conversion to our duration happens here
-                pFront = mQueries[mLast].pInfo;
-                pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
-                mLast = (mLast + 1) % POOL_COUNT;
-                denoiseFrameTime(history, config);
+    if (mHasTimerQueries) {
+        // now is a good time to check the oldest active query
+        while (mLast != mIndex) {
+            uint64_t elapsed = 0;
+            TimerQueryResult const result = driver.getTimerQueryValue(mQueries[mLast].handle, &elapsed);
+            switch (result) {
+                case TimerQueryResult::NOT_READY:
+                    // nothing to do
+                    break;
+                case TimerQueryResult::ERROR:
+                    mLast = (mLast + 1) % POOL_COUNT;
+                    break;
+                case TimerQueryResult::AVAILABLE: {
+                    FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+                    FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameInfo::elapsed", uint32_t(elapsed));
+                    // conversion to our duration happens here
+                    pFront = mQueries[mLast].pInfo;
+                    pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+                    mLast = (mLast + 1) % POOL_COUNT;
+                    denoiseFrameTime(history, config);
+                    break;
+                }
+            }
+            if (result != TimerQueryResult::AVAILABLE) {
                 break;
             }
+            // read the pending timer queries until we find one that's not ready
         }
-        if (result != TimerQueryResult::AVAILABLE) {
-            break;
+    } else {
+        if (mLast != mIndex) {
+            mLast = (mLast + 1) % POOL_COUNT;
         }
-        // read the pending timer queries until we find one that's not ready
     }
 
+#if 0
     // keep this just for debugging
-    if constexpr (false) {
-        using namespace utils;
-        auto h = getFrameInfoHistory(1);
-        if (!h.empty()) {
-            DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId << ")"
-                       << ", Dm=" << h[0].endFrame - h[0].beginFrame
-                       << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
-                       << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
-                       << ", T =" << h[0].frameTime;
-        }
+    using namespace utils;
+    auto h = getFrameInfoHistory(1); // this can throw
+    if (!h.empty()) {
+        DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId <<
+                ")"
+                << ", Dm=" << h[0].endFrame - h[0].beginFrame
+                << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
+                << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
+                << ", T =" << h[0].frameTime;
     }
+#endif
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
+    // create a Fence to capture the GPU complete time
+    FenceHandle const fence = driver.createFence();
+
     auto& front = mFrameTimeHistory.front();
-    // close the timer query
-    driver.endTimerQuery(mQueries[mIndex].handle);
+    front.fence = fence;
+    front.endFrame = std::chrono::steady_clock::now();
+
+    if (mHasTimerQueries) {
+        // close the timer query
+        driver.endTimerQuery(mQueries[mIndex].handle);
+    }
+
     // queue custom backend command to query the current time
-    driver.queueCommand([&front](){
+    driver.queueCommand([&jobQueue = mJobQueue, &driver, &front] {
         // backend frame end-time
         front.backendEndFrame = std::chrono::steady_clock::now();
-        // signal that the data is available
-        front.ready.store(true, std::memory_order_release);
+
+        // now launch a job that'll wait for the gpu to complete
+        jobQueue.push([&driver, &front] {
+            FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
+            if (status == FenceStatus::CONDITION_SATISFIED) {
+                front.gpuFrameComplete = std::chrono::steady_clock::now();
+            } else if (status == FenceStatus::TIMEOUT_EXPIRED) {
+                // that should never happen because:
+                // - we wait forever
+                // - made sure that the createFence() command was processed on the backed
+                //   (because we're inside a custom command)
+            } else {
+                // We got an error, fenceWait might not be supported
+                front.gpuFrameComplete = {};
+            }
+            // finally, signal that the data is available
+            front.ready.store(true, std::memory_order_release);
+        });
     });
-    // and finally acquire the time on the main thread
-    front.endFrame = std::chrono::steady_clock::now();
+
     mIndex = (mIndex + 1) % POOL_COUNT;
 }
 
@@ -172,14 +230,14 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
 }
 
 FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
-        size_t historySize) const noexcept {
+        size_t historySize) const {
     auto result = FixedCapacityVector<Renderer::FrameInfo>::with_capacity(MAX_FRAMETIME_HISTORY);
     auto const& history = mFrameTimeHistory;
     size_t i = 0;
     size_t const c = history.size();
     for (; i < c; ++i) {
         auto const& entry = history[i];
-        if (entry.ready.load(std::memory_order_acquire) && entry.valid) {
+        if (entry.ready.load(std::memory_order_acquire) && (entry.valid || !mHasTimerQueries)) {
             // once we found an entry ready,
             // we know by construction that all following ones are too
             break;
@@ -188,6 +246,7 @@ FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
     for (; i < c && historySize; ++i, --historySize) {
         auto const& entry = history[i];
         using namespace std::chrono;
+        // can't throw by construction
         result.push_back({
                 entry.frameId,
                 duration_cast<nanoseconds>(entry.frameTime).count(),
@@ -195,7 +254,9 @@ FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
                 duration_cast<nanoseconds>(entry.beginFrame.time_since_epoch()).count(),
                 duration_cast<nanoseconds>(entry.endFrame.time_since_epoch()).count(),
                 duration_cast<nanoseconds>(entry.backendBeginFrame.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.backendEndFrame.time_since_epoch()).count()
+                duration_cast<nanoseconds>(entry.backendEndFrame.time_since_epoch()).count(),
+                duration_cast<nanoseconds>(entry.gpuFrameComplete.time_since_epoch()).count(),
+                duration_cast<nanoseconds>(entry.vsync.time_since_epoch()).count()
         });
     }
     return result;

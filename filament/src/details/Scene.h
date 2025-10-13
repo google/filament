@@ -115,7 +115,7 @@ public:
             uint8_t,                                    // CHANNELS
             uint8_t,                                    // LAYERS
             math::float3,                               // WORLD_AABB_EXTENT
-            utils::Slice<FRenderPrimitive>,             // PRIMITIVES
+            utils::Slice<const FRenderPrimitive>,       // PRIMITIVES
             uint32_t,                                   // SUMMED_PRIMITIVE_COUNT
             PerRenderableData,                          // UBO
             backend::DescriptorSetHandle,               // DESCRIPTOR_SET_HANDLE

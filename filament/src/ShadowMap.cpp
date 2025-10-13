@@ -796,7 +796,7 @@ float4 ShadowMap::computeBoundingSphere(float3 const* vertices, size_t count) no
 Aabb ShadowMap::compute2DBounds(const mat4f& lightView,
         float3 const* wsVertices, size_t const count) noexcept {
     Aabb bounds{};
-    Slice<float3> const vertices{ wsVertices, count };
+    Slice<const float3> vertices{ wsVertices, count };
     for (auto const& vertice : vertices) {
         const float3 v = mat4f::project(lightView, vertice);
         bounds.min.xy = min(bounds.min.xy, v.xy);

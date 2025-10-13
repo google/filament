@@ -25,12 +25,15 @@ namespace filament {
 
 struct MaterialConstant {
     using ConstantType = backend::ConstantType;
+    using ConstantValue = backend::ConstantValue;
 
     utils::CString name;
     ConstantType type;
+    ConstantValue defaultValue;
 
     MaterialConstant() = default;
-    MaterialConstant(const char* name, ConstantType type) : name(name), type(type)  {}
+    MaterialConstant(utils::CString name, ConstantType type, ConstantValue defaultValue)
+            : name(std::move(name)), type(type), defaultValue(defaultValue) {}
 };
 
 }

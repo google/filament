@@ -90,30 +90,33 @@ bool VulkanGroupMarkers::empty() const noexcept {
 uint32_t VulkanCommandBuffer::sAgeCounter = 0;
 
 VulkanCommandBuffer::VulkanCommandBuffer(VulkanContext const& context, VkDevice device,
-        VkQueue queue, VkCommandPool pool, bool isProtected)
+        VkQueue queue, VkCommandPool pool, VulkanSemaphoreManager* semaphoreManager,
+        bool isProtected)
     : mContext(context),
       mMarkerCount(0),
       isProtected(isProtected),
       mDevice(device),
       mQueue(queue),
+      mSemaphoreManager(semaphoreManager),
       mBuffer(createCommandBuffer(device, pool)),
-      mFenceStatus(std::make_shared<VulkanCmdFence>(VK_INCOMPLETE)),
+      mSubmission(semaphoreManager->acquire()),
       mAge(++sAgeCounter) {
-    VkSemaphoreCreateInfo sci{.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-    vkCreateSemaphore(mDevice, &sci, VKALLOC, &mSubmission);
-
     VkFenceCreateInfo fenceCreateInfo{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
     VkExportFenceCreateInfo exportFenceCreateInfo{
         .sType = VK_STRUCTURE_TYPE_EXPORT_FENCE_CREATE_INFO,
         .handleTypes = context.getFenceExportFlags()
     };
-    fenceCreateInfo.pNext = &exportFenceCreateInfo;
 
+    // Necessary to guard this. Otherwise, swiftshader would throw an error.
+    if (context.getFenceExportFlags()) {
+        fenceCreateInfo.pNext = &exportFenceCreateInfo;
+    }
     vkCreateFence(device, &fenceCreateInfo, VKALLOC, &mFence);
+
+    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
 }
 
 VulkanCommandBuffer::~VulkanCommandBuffer() {
-    vkDestroySemaphore(mDevice, mSubmission, VKALLOC);
     vkDestroyFence(mDevice, mFence, VKALLOC);
 }
 
@@ -123,12 +126,15 @@ void VulkanCommandBuffer::reset() noexcept {
     mWaitSemaphores.clear();
     mWaitSemaphoreStages.clear();
     mAge = ++sAgeCounter;
+    mSubmission = mSemaphoreManager->acquire();
+
+    // reset the fence with proper host synchronization
+    mFenceStatus->resetFence(mDevice);
 
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets, gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
-    mFenceStatus = std::make_shared<VulkanCmdFence>(VK_INCOMPLETE);
-    vkResetFences(mDevice, 1, &mFence);
+    mFenceStatus = std::make_shared<VulkanCmdFence>(mFence);
 }
 
 void VulkanCommandBuffer::pushMarker(char const* marker) noexcept {
@@ -187,13 +193,14 @@ void VulkanCommandBuffer::begin() noexcept {
     vkBeginCommandBuffer(mBuffer, &binfo);
 }
 
-VkSemaphore VulkanCommandBuffer::submit() {
+fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
     while (mMarkerCount > 0) {
         popMarker();
     }
 
     vkEndCommandBuffer(mBuffer);
 
+    VkSemaphore submissionSemaphore = mSubmission->getVkSemaphore();
     VkSubmitInfo submitInfo{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .waitSemaphoreCount = mWaitSemaphores.size(),
@@ -202,7 +209,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
         .commandBufferCount = 1u,
         .pCommandBuffers = &mBuffer,
         .signalSemaphoreCount = 1u,
-        .pSignalSemaphores = &mSubmission,
+        .pSignalSemaphores = &submissionSemaphore,
     };
     // add submit protection if needed
     VkProtectedSubmitInfo protectedSubmitInfo{
@@ -223,13 +230,13 @@ VkSemaphore VulkanCommandBuffer::submit() {
                  << (s <  mWaitSemaphores.size() - 1 ? "\n" : "");
     }
     FVK_LOGI << ") "
-             << " signal=" << mSubmission
+             << " signal=" << submissionSemaphore
              << " fence=" << mFence;
 #endif
 
-    mFenceStatus->setStatus(VK_NOT_READY);
     UTILS_UNUSED_IN_RELEASE VkResult result =
         vkQueueSubmit(mQueue, 1, &submitInfo, mFence);
+    mFenceStatus->setStatus(VK_NOT_READY);
 
 #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
     if (result != VK_SUCCESS) {
@@ -242,7 +249,7 @@ VkSemaphore VulkanCommandBuffer::submit() {
 }
 
 CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice device, VkQueue queue,
-        uint8_t queueFamilyIndex, bool isProtected)
+        uint8_t queueFamilyIndex, VulkanSemaphoreManager* semaphoreManager, bool isProtected)
     : mDevice(device),
       mRecording(INVALID) {
     VkCommandPoolCreateInfo createInfo = {
@@ -255,8 +262,8 @@ CommandBufferPool::CommandBufferPool(VulkanContext const& context, VkDevice devi
     vkCreateCommandPool(device, &createInfo, VKALLOC, &mPool);
 
     for (size_t i = 0; i < CAPACITY; ++i) {
-        mBuffers.emplace_back(
-                std::make_unique<VulkanCommandBuffer>(context, device, queue, mPool, isProtected));
+        mBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(
+                context, device, queue, mPool, semaphoreManager, isProtected));
     }
 }
 
@@ -328,10 +335,10 @@ void CommandBufferPool::update() {
     });
 }
 
-VkSemaphore CommandBufferPool::flush() {
+fvkmemory::resource_ptr<VulkanSemaphore> CommandBufferPool::flush() {
     // We're not recording right now.
     if (!isRecording()) {
-        return VK_NULL_HANDLE;
+        return {};
     }
     auto submitSemaphore = mBuffers[mRecording]->submit();
     mSubmitted.set(mRecording, true);
@@ -393,16 +400,21 @@ void CommandBufferPool::insertEvent(char const* marker) {
 #endif // FVK_DEBUG_GROUP_MARKERS
 
 VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex,
-        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext const& context)
+        VkQueue protectedQueue, uint32_t protectedQueueFamilyIndex, VulkanContext const& context,
+        VulkanSemaphoreManager* semaphoreManager)
     : mDevice(device),
       mProtectedQueue(protectedQueue),
       mProtectedQueueFamilyIndex(protectedQueueFamilyIndex),
       mContext(context),
-      mPool(std::make_unique<CommandBufferPool>(context, device, queue, queueFamilyIndex, false)) {}
+      mSemaphoreManager(semaphoreManager),
+      mPool(std::make_unique<CommandBufferPool>(
+              context, device, queue, queueFamilyIndex, semaphoreManager, false)) {}
 
 void VulkanCommands::terminate() {
     mPool.reset();
     mProtectedPool.reset();
+    mLastSubmit = {};
+    mLastFenceStatus = {};
 }
 
 VulkanCommandBuffer& VulkanCommands::get() {
@@ -415,7 +427,7 @@ VulkanCommandBuffer& VulkanCommands::getProtected() {
 
     if (!mProtectedPool) {
         mProtectedPool = std::make_unique<CommandBufferPool>(mContext, mDevice, mProtectedQueue,
-                mProtectedQueueFamilyIndex, true);
+                mProtectedQueueFamilyIndex, mSemaphoreManager, true);
     }
     auto& ret = mProtectedPool->getRecording();
     return ret;
@@ -427,8 +439,8 @@ bool VulkanCommands::flush() {
         return false;
     }
 
-    VkSemaphore dependency = mInjectedDependency;
-    VkSemaphore lastSubmit = mLastSubmit;
+    VkSemaphore injectedDependency = mInjectedDependency;
+    fvkmemory::resource_ptr<VulkanSemaphore> dependency;
     bool hasFlushed = false;
 
     VkFence flushedFence = VK_NULL_HANDLE;
@@ -441,19 +453,19 @@ bool VulkanCommands::flush() {
         if (!pool || !pool->isRecording()) {
             continue;
         }
-        if (dependency != VK_NULL_HANDLE) {
-            pool->waitFor(dependency, mInjectedDependencyWaitStage);
+        if (injectedDependency != VK_NULL_HANDLE) {
+            pool->waitFor(injectedDependency, mInjectedDependencyWaitStage);
         }
-        if (lastSubmit != VK_NULL_HANDLE) {
+        if (mLastSubmit) {
             // Note that the stage we're waiting on is the fragment shader stage.  This assumes
             // that the subsequent command buffer will only depend on
             //    1) fragment output of the previous command buffer
             //    2) reading/writing of buffers (i.e. UBO) of the previous command buffer
             // Restricting the wait stages will allow for vertex work to proceed (more overlapping
             // vertex/fragment work).
-            pool->waitFor(lastSubmit,
+            pool->waitFor(mLastSubmit->getVkSemaphore(),
                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
-            lastSubmit = VK_NULL_HANDLE;
+            mLastSubmit = {};
         }
         flushedFence = pool->getRecording().getVkFence();
         flushedFenceStatus = pool->getRecording().getFenceStatus();

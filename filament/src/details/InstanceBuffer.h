@@ -55,7 +55,7 @@ public:
             PerRenderableData* buffer, uint32_t index, uint32_t count,
             math::mat4f const& rootTransform, PerRenderableData const& ubo);
 
-    utils::CString const& getName() const noexcept { return mName; }
+    utils::ImmutableCString const& getName() const noexcept { return mName; }
 
     uint32_t getIndex() const noexcept { return mIndex; }
 
@@ -63,7 +63,7 @@ private:
     friend class RenderableManager;
 
     utils::FixedCapacityVector<math::mat4f> mLocalTransforms;
-    utils::CString mName;
+    utils::ImmutableCString mName;
     uint32_t mInstanceCount;
     uint32_t mIndex = 0;
 };

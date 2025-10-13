@@ -292,6 +292,25 @@ public class View {
     }
 
     /**
+     * Sets whether a channel must clear the depth buffer before all primitives are rendered.
+     * Channel depth clear is off by default for all channels.
+     * This is orthogonal to Renderer::setClearOptions().
+     * @param channel between 0 and 7
+     * @param enabled true to enable clear, false to disable
+     */
+    void setChannelDepthClearEnabled(@IntRange(from = 0, to = 7) int channel, boolean enabled) {
+        nSetChannelDepthClearEnabled(getNativeObject(), channel, enabled);
+    }
+
+    /**
+     * @param channel between 0 and 7
+     * @return true if this channel has depth clear enabled.
+     */
+    boolean isChannelDepthClearEnabled(@IntRange(from = 0, to = 7) int channel) {
+        return nIsChannelDepthClearEnabled(getNativeObject(), channel);
+    }
+
+    /**
      * Sets the blending mode used to draw the view into the SwapChain.
      *
      * @param blendMode either {@link BlendMode#OPAQUE} or {@link BlendMode#TRANSLUCENT}
@@ -1318,6 +1337,8 @@ public class View {
             boolean lensFlare, boolean starburst, float chromaticAberration, int ghostCount, float ghostSpacing, float ghostThreshold, float haloThickness, float haloRadius, float haloThreshold);
     private static native void nSetFogOptions(long nativeView, float distance, float maximumOpacity, float height, float heightFalloff, float cutOffDistance, float v, float v1, float v2, float density, float inScatteringStart, float inScatteringSize, boolean fogColorFromIbl, long skyColorNativeObject, boolean enabled);
     private static native void nSetStereoscopicOptions(long nativeView, boolean enabled);
+    private static native void nSetChannelDepthClearEnabled(long nativeView, int channel, boolean enabled);
+    private static native boolean nIsChannelDepthClearEnabled(long nativeView, int channel);
     private static native void nSetBlendMode(long nativeView, int blendMode);
     private static native void nSetDepthOfFieldOptions(long nativeView, float cocScale, float maxApertureDiameter, boolean enabled, int filter,
             boolean nativeResolution, int foregroundRingCount, int backgroundRingCount, int fastGatherRingCount, int maxForegroundCOC, int maxBackgroundCOC);
@@ -1615,7 +1636,7 @@ public class View {
          *
          *  This value is used as a tint instead, when fogColorFromIbl is enabled.
          *
-         *  @see fogColorFromIbl
+         *  @see #fogColorFromIbl
          */
         @NonNull @Size(min = 3)
         public float[] color = {1.0f, 1.0f, 1.0f};
@@ -1656,7 +1677,7 @@ public class View {
          *
          * `fogColorFromIbl` is ignored when skyTexture is specified.
          *
-         * @see skyColor
+         * @see #skyColor
          */
         public boolean fogColorFromIbl = false;
         /**
@@ -1674,7 +1695,7 @@ public class View {
          * In `linearFog` mode mipmap level 0 is always used.
          *
          * @see Texture
-         * @see fogColorFromIbl
+         * @see #fogColorFromIbl
          */
         @Nullable
         public Texture skyColor = null;
@@ -1796,7 +1817,8 @@ public class View {
     /**
      * Structure used to set the precision of the color buffer and related quality settings.
      *
-     * @see setRenderQuality, getRenderQuality
+     * @see #setRenderQuality
+     * @see #getRenderQuality
      */
     public static class RenderQuality {
         /**
@@ -1814,7 +1836,7 @@ public class View {
 
     /**
      * Options for screen space Ambient Occlusion (SSAO) and Screen Space Cone Tracing (SSCT)
-     * @see setAmbientOcclusionOptions()
+     * @see #setAmbientOcclusionOptions
      */
     public static class AmbientOcclusionOptions {
         public enum AmbientOcclusionType {
@@ -1966,7 +1988,7 @@ public class View {
 
     /**
      * Options for Multi-Sample Anti-aliasing (MSAA)
-     * @see setMultiSampleAntiAliasingOptions()
+     * @see #setMultiSampleAntiAliasingOptions
      */
     public static class MultiSampleAntiAliasingOptions {
         /**
@@ -1996,7 +2018,7 @@ public class View {
      * `feedback` of 0.1 effectively accumulates a maximum of 19 samples in steady state.
      * see "A Survey of Temporal Antialiasing Techniques" by Lei Yang and all for more information.
      *
-     * @see setTemporalAntiAliasingOptions()
+     * @see #setTemporalAntiAliasingOptions
      */
     public static class TemporalAntiAliasingOptions {
         public enum BoxType {
@@ -2098,7 +2120,7 @@ public class View {
 
     /**
      * Options for Screen-space Reflections.
-     * @see setScreenSpaceReflectionsOptions()
+     * @see #setScreenSpaceReflectionsOptions
      */
     public static class ScreenSpaceReflectionsOptions {
         /**
@@ -2132,7 +2154,9 @@ public class View {
 
     /**
      * List of available post-processing anti-aliasing techniques.
-     * @see setAntiAliasing, getAntiAliasing, setSampleCount
+     * @see #setAntiAliasing
+     * @see #getAntiAliasing
+     * @see #setSampleCount
      */
     public enum AntiAliasing {
         /**
@@ -2161,7 +2185,7 @@ public class View {
 
     /**
      * List of available shadow mapping techniques.
-     * @see setShadowType
+     * @see #setShadowType
      */
     public enum ShadowType {
         /**
@@ -2185,7 +2209,7 @@ public class View {
 
     /**
      * View-level options for VSM Shadowing.
-     * @see setVsmShadowOptions()
+     * @see #setVsmShadowOptions
      * @warning This API is still experimental and subject to change.
      */
     public static class VsmShadowOptions {
@@ -2226,7 +2250,7 @@ public class View {
 
     /**
      * View-level options for DPCF and PCSS Shadowing.
-     * @see setSoftShadowOptions()
+     * @see #setSoftShadowOptions
      * @warning This API is still experimental and subject to change.
      */
     public static class SoftShadowOptions {

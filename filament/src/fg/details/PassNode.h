@@ -67,7 +67,7 @@ public:
     class RenderPassData {
     public:
         static constexpr size_t ATTACHMENT_COUNT = backend::MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2;
-        const char* name = {};
+        utils::StaticString name{};
         FrameGraphRenderPass::Descriptor descriptor;
         bool imported = false;
         backend::TargetBufferFlags targetBufferFlags = {};
@@ -88,7 +88,7 @@ public:
     ~RenderPassNode() noexcept override;
 
     uint32_t declareRenderTarget(FrameGraph& fg, FrameGraph::Builder& builder,
-            const char* name, FrameGraphRenderPass::Descriptor const& descriptor);
+            utils::StaticString name, FrameGraphRenderPass::Descriptor const& descriptor);
 
     RenderPassData const* getRenderPassData(uint32_t id) const noexcept;
 

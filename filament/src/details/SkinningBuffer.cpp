@@ -91,7 +91,7 @@ FSkinningBuffer::FSkinningBuffer(FEngine& engine, const Builder& builder)
             getPhysicalBoneCount(mBoneCount) * sizeof(PerRenderableBoneUib::BoneData),
             BufferObjectBinding::UNIFORM,
             BufferUsage::DYNAMIC,
-            builder.getName());
+            utils::ImmutableCString{ builder.getName() });
 
     if (builder->mInitialize) {
         // initialize the bones to identity (before rounding up)

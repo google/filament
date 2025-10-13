@@ -17,23 +17,49 @@
 #include <utils/CString.h>
 
 #include <utils/compiler.h>
+#include <utils/Logger.h>
 #include <utils/ostream.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#include <cstddef>
 #include <memory>
 
 
 namespace utils {
 
+namespace {
+struct CStringStats {
+    std::atomic_int32_t alive = { 0 };
+    std::atomic_int32_t ctor = { 0 };
+};
+
+CStringStats gCStringStats{};
+constexpr size_t CSTRING_LOG_INTERVAL = 10000;
+}
+
+void CString::do_tracking(bool ctor) {
+    if (ctor) {
+        gCStringStats.ctor.fetch_add(1, std::memory_order_relaxed);
+        gCStringStats.alive.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        gCStringStats.alive.fetch_sub(1, std::memory_order_relaxed);
+    }
+    static std::atomic_int32_t sCtorSinceLastLog = { 0 };
+    if (UTILS_UNLIKELY(sCtorSinceLastLog.fetch_add(1, std::memory_order_relaxed) == CSTRING_LOG_INTERVAL)) {
+        LOG(INFO) << "CString stats: "
+                  << gCStringStats.alive.load(std::memory_order_relaxed) << " alive, "
+                  << gCStringStats.ctor.load(std::memory_order_relaxed) << " ctor";
+        sCtorSinceLastLog.store(0, std::memory_order_relaxed);
+    }
+}
+
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_t const length) {
+    track(true);
     if (length && cstr) {
-
         Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
         p->length = size_type(length);
         mCStr = reinterpret_cast<value_type*>(p + 1);
@@ -44,6 +70,7 @@ CString::CString(const char* cstr, size_t const length) {
 }
 
 CString::CString(size_t const length) {
+    track(true);
     if (length) {
         Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + length + 1));
         p->length = size_type(length);
@@ -53,24 +80,19 @@ CString::CString(size_t const length) {
     }
 }
 
-CString::CString(const char* cstr)
-        : CString(cstr, size_type(cstr ? strlen(cstr) : 0)) {
-}
-
 CString::CString(const CString& rhs)
         : CString(rhs.c_str(), rhs.size()) {
 }
 
 CString& CString::operator=(const CString& rhs) {
     if (this != &rhs) {
-        auto *const p = mData ? mData - 1 : nullptr;
-        new(this) CString(rhs);
-        std::free(p);
+        CString(rhs).swap(*this);
     }
     return *this;
 }
 
 CString::~CString() noexcept {
+    track(false);
     if (mData) {
         std::free(mData - 1);
     }
@@ -79,10 +101,29 @@ CString::~CString() noexcept {
 CString& CString::replace(size_type const pos, size_type len, char const* str, size_t const l) & noexcept {
     assert(pos <= size());
 
+    if (UTILS_UNLIKELY(!l && !len)) { // nothing to do
+        return *this;
+    }
+
     len = std::min(len, size() - pos);
 
-    // The new size of the string, after the replacement.
     const size_type newSize = size() - len + l;
+
+    // if the new string is not longer, we can do it in-place, which is much faster.
+    if (newSize <= size()) {
+        if (mCStr) {
+            // This is equivalent to l <= len because capacity() == size()
+            // move the tail of the string. +1 to move the null-terminator
+            std::copy(mCStr + pos + len, mCStr + size() + 1, mCStr + pos + l);
+            // copy the new content
+            std::copy_n(str, l, mCStr + pos);
+            // update the size
+            (mData - 1)->length = newSize;
+        }
+        // if mCStr is null, newSize<=size() implies l<=len and since size is 0, len is 0, so l is 0.
+        // so we're replacing nothing with nothing and there is nothing to do.
+        return *this;
+    }
 
     // Allocate enough memory to hold the new string.
     Data* const p = static_cast<Data*>(std::malloc(sizeof(Data) + newSize + 1));

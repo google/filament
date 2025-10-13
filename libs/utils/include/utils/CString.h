@@ -53,14 +53,15 @@ struct hashCStrings {
 template <size_t N>
 using StringLiteral = const char[N];
 
-namespace details {
-    template<typename T>
-    constexpr bool is_char_pointer_v = std::is_pointer_v<T> && std::is_same_v<char, std::remove_cv_t<std::remove_pointer_t<T>>>;
-} // namespace details
-
 // ------------------------------------------------------------------------------------------------
 
 class UTILS_PUBLIC CString {
+    static constexpr bool TRACK_AND_LOG_ALLOCATIONS = false;
+
+    template<typename T>
+    static constexpr bool is_char_pointer_v =
+        std::is_pointer_v<T> && std::is_same_v<char, std::remove_cv_t<std::remove_pointer_t<T>>>;
+
 public:
     using value_type      = char;
     using size_type       = uint32_t;
@@ -72,7 +73,9 @@ public:
     using iterator        = value_type*;
     using const_iterator  = const value_type*;
 
-    CString() noexcept {} // NOLINT(modernize-use-equals-default), Ubuntu compiler bug
+    CString() noexcept {
+        track(true);
+    }
 
     // Allocates memory and appends a null. This constructor can be used to hold arbitrary data
     // inside the string (i.e. it can contain nulls or non-ASCII encodings).
@@ -85,22 +88,37 @@ public:
 
     // Allocates memory and copies traditional C string content. Unlike the above constructor, this
     // does not allow embedded nulls. This is explicit because this operation is costly.
-    explicit CString(const char* cstr);
+    // This is a template to ensure it's not preferred over the string literal constructor below.
+    template<typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
+    explicit CString(T cstr) : CString(cstr, cstr ? strlen(cstr) : 0) {
+        track(true);
+    }
 
+    // The string can't have NULs in it.
     template<size_t N>
     CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
             : CString(other, N - 1) {
+        track(true);
     }
 
-    CString(StaticString const& other) noexcept
-        : CString(other.c_str(), other.length()) {}
+    // This constructor can be used if the string has NULs in it.
+    template<size_t N>
+    CString(StringLiteral<N> const& other, size_t const length) noexcept
+            : CString(other, length) {
+        track(true);
+    }
+
+    CString(StaticString const& other) noexcept // NOLINT(*-explicit-constructor)
+        : CString(other.c_str(), other.length()) {
+        track(true);
+    }
 
     CString(const CString& rhs);
 
     CString(CString&& rhs) noexcept {
+        track(true);
         this->swap(rhs);
     }
-
 
     CString& operator=(const CString& rhs);
 
@@ -144,7 +162,7 @@ public:
         return replace(pos, len, str.c_str_safe(), str.size());
     }
 
-    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template <typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString& replace(size_type pos, size_type len, T str) & noexcept {
         if (str) {
             return replace(pos, len, str, strlen(str));
@@ -163,7 +181,7 @@ public:
         return std::move(*this);
     }
 
-    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template <typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString&& replace(size_type pos, size_type len, T str) && noexcept {
         this->replace(pos, len, str);
         return std::move(*this);
@@ -171,7 +189,7 @@ public:
 
 
     // insert
-    CString& insert(size_type pos, char c) & noexcept {
+    CString& insert(size_type const pos, char const c) & noexcept {
         const char s[1] = { c };
         return replace(pos, 0, s, 1);
     }
@@ -185,7 +203,7 @@ public:
         return replace(pos, 0, str.c_str_safe(), str.size());
     }
 
-    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template <typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString& insert(size_type pos, T str) & noexcept {
         if (str) {
             return replace(pos, 0, str, strlen(str));
@@ -193,7 +211,7 @@ public:
         return *this;
     }
 
-    CString&& insert(size_type pos, char c) && noexcept {
+    CString&& insert(size_type const pos, char const c) && noexcept {
         this->insert(pos, c);
         return std::move(*this);
     }
@@ -209,7 +227,7 @@ public:
         return std::move(*this);
     }
 
-    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template <typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString&& insert(size_type pos, T str) && noexcept {
         this->insert(pos, str);
         return std::move(*this);
@@ -217,7 +235,7 @@ public:
 
 
     // append
-    CString& append(char c) & noexcept {
+    CString& append(char const c) & noexcept {
         return insert(length(), c);
     }
 
@@ -230,12 +248,12 @@ public:
         return insert(length(), str);
     }
 
-    template<typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template<typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString& append(T str) & noexcept {
         return insert(length(), str);
     }
 
-    CString&& append(char c) && noexcept {
+    CString&& append(char const c) && noexcept {
         this->append(c);
         return std::move(*this);
     }
@@ -251,14 +269,14 @@ public:
         return std::move(*this);
     }
 
-    template<typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template<typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString&& append(T str) && noexcept {
         this->append(str);
         return std::move(*this);
     }
 
     // operator+=
-    CString& operator+=(char c) & noexcept {
+    CString& operator+=(char const c) & noexcept {
         return append(c);
     }
 
@@ -269,7 +287,7 @@ public:
     CString& operator+=(const StringLiteral<N>& str) & noexcept {
         return append(str);
     }
-    template <typename T, typename = std::enable_if_t<details::is_char_pointer_v<T>>>
+    template <typename T, typename = std::enable_if_t<is_char_pointer_v<T>>>
     CString& operator+=(T str) & noexcept {
         return append(str);
     }
@@ -329,6 +347,13 @@ public:
     };
 
 private:
+    static void do_tracking(bool ctor);
+    static void track(bool ctor) {
+        if constexpr (TRACK_AND_LOG_ALLOCATIONS) {
+            do_tracking(ctor);
+        }
+    }
+
     CString& replace(size_type pos, size_type len, char const* str, size_t l) & noexcept;
 
 #if !defined(NDEBUG)
@@ -387,15 +412,68 @@ inline CString operator+(const char* lhs, CString rhs) {
     return rhs;
 }
 
-inline CString operator+(CString lhs, char rhs) {
+inline CString operator+(CString lhs, char const rhs) {
     lhs += rhs;
     return lhs;
 }
 
-inline CString operator+(char lhs, CString rhs) {
+inline CString operator+(char const lhs, CString rhs) {
     rhs.insert(0, lhs);
     return rhs;
 }
+
+// CString vs StringLiteral
+template<size_t N>
+ bool operator==(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} == std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator!=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} != std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator<(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} < std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator>(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} > std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator<=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} <= std::string_view{rhs, N - 1};
+}
+template<size_t N>
+ bool operator>=(CString const& lhs, const StringLiteral<N>& rhs) noexcept {
+    return std::string_view{lhs.data(), lhs.size()} >= std::string_view{rhs, N - 1};
+}
+
+// StringLiteral vs CString
+template<size_t M>
+ bool operator==(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} == std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator!=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} != std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator<(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} < std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator>(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} > std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator<=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} <= std::string_view{rhs.data(), rhs.size()};
+}
+template<size_t M>
+ bool operator>=(const StringLiteral<M>& lhs, CString const& rhs) noexcept {
+    return std::string_view{lhs, M - 1} >= std::string_view{rhs.data(), rhs.size()};
+}
+
 
 // Implement this for your type for automatic conversion to CString. Failing to do so leads
 // to a compile-time failure.

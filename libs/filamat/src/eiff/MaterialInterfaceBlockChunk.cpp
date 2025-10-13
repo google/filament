@@ -113,6 +113,7 @@ void MaterialConstantParametersChunk::flatten(Flattener& f) {
     for (const auto& constant : mConstants) {
         f.writeString(constant.name.c_str());
         f.writeUint8(static_cast<uint8_t>(constant.type));
+        f.writeUint32(static_cast<uint32_t>(constant.defaultValue.i));
     }
 }
 

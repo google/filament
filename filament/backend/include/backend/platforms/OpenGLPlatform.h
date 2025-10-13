@@ -112,7 +112,7 @@ public:
      *
      */
     virtual SwapChain* UTILS_NULLABLE createSwapChain(
-            void* UTILS_NULLABLE nativeWindow, uint64_t flags) noexcept = 0;
+            void* UTILS_NULLABLE nativeWindow, uint64_t flags) = 0;
 
     /**
      * Called by the driver create a headless SwapChain.
@@ -126,7 +126,7 @@ public:
      *       A void* might be enough.
      */
     virtual SwapChain* UTILS_NULLABLE createSwapChain(
-            uint32_t width, uint32_t height, uint64_t flags) noexcept = 0;
+            uint32_t width, uint32_t height, uint64_t flags) = 0;
 
     /**
      * Called by the driver to destroys the SwapChain

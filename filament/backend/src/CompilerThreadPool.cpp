@@ -18,7 +18,14 @@
 
 #include <private/utils/Tracing.h>
 
+#include <utils/compiler.h>
+#include <utils/debug.h>
+
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <mutex>
+#include <utility>
 
 namespace filament::backend {
 
@@ -36,7 +43,7 @@ CompilerThreadPool::~CompilerThreadPool() noexcept {
 }
 
 void CompilerThreadPool::init(uint32_t threadCount,
-        ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) noexcept {
+        ThreadSetup&& threadSetup, ThreadCleanup&& threadCleanup) {
     auto setup = std::make_shared<ThreadSetup>(std::move(threadSetup));
     auto cleanup = std::make_shared<ThreadCleanup>(std::move(threadCleanup));
 

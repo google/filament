@@ -57,8 +57,7 @@ namespace {
  */
 [[nodiscard]] std::string replaceSpecConstants(std::string_view shaderLabel,
         std::string_view shaderSource,
-        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> const&
-                specConstants) {
+        utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants) {
     // this function is not expected to be called at all if no spec constants are to be replaced
     assert_invariant(!specConstants.empty());
     static constexpr std::string_view specConstantPrefix = "FILAMENT_SPEC_CONST_";
@@ -120,16 +119,7 @@ namespace {
                 constantId = static_cast<int>(tempConstantId);
             }
         }
-        const auto newValueItr = specConstants.find(static_cast<uint32_t>(constantId));
-        if (newValueItr == specConstants.end()) {
-            // The constant is not being overridden, so keep the default value.
-            processedShaderSource << std::string_view(sourceData + pos,
-                    posEndOfStatement + 1 - pos);
-            pos = posEndOfStatement + 1;
-            continue;
-        }
-        // need to override the constant...
-        const std::variant<int32_t, float, bool> newValue = newValueItr->second;
+        const std::variant<int32_t, float, bool> newValue = specConstants[constantId];
         // stream up to the equal sign...
         processedShaderSource << std::string_view(sourceData + pos, posOfEqual + 1 - pos);
         // stream the new value...
@@ -156,15 +146,13 @@ namespace {
  * @param program The "program" to compile/create the shader, which includes the shader source
  * @param stage The stage (e.g. vertex, fragment, etc.) to create the shader module
  * @param specConstants Override constants to apply when creating/compiling the shader module.
- * The expectation is that this is consistent with the program's spec constants, just in a map
- * format for quick access
  * @return the proper WebGPU shader module compiled/created from the input parameters. This might
  * wrap a null handle if the shader is not present (if the shader source is empty), such as
  * a missing fragment or compute shader.
  */
 [[nodiscard]] wgpu::ShaderModule createShaderModule(wgpu::Device const& device,
         Program const& program, const ShaderStage stage,
-        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> const& specConstants) {
+        utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants) {
     const char* const programName = program.getName().c_str_safe();
     std::array<utils::FixedCapacityVector<uint8_t>, Program::SHADER_TYPE_COUNT> const&
             shaderSource = program.getShadersSource();
@@ -260,26 +248,12 @@ namespace {
     return shaderModule;
 }
 
-/**
- * Convenience function to convert the array structure of constants to a map indexed by constant
- * id.
- * @param specConstants Original spec constant structure (immutable)
- * @param outConstantById Output map of spec constants indexed by constant id
- */
-void toMap(utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants,
-        std::unordered_map<uint32_t, std::variant<int32_t, float, bool>>& outConstantById) {
-    outConstantById.reserve(specConstants.size());
-    for (auto const& specConstant: specConstants) {
-        outConstantById.emplace(specConstant.id, specConstant.value);
-    }
-}
-
 }// namespace
 
 WebGPUProgram::WebGPUProgram(wgpu::Device const& device, Program const& program)
     : HwProgram{ program.getName() } {
-    std::unordered_map<uint32_t, std::variant<int32_t, float, bool>> specConstants;
-    toMap(program.getSpecializationConstants(), specConstants);
+    utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants =
+            program.getSpecializationConstants();
     // TODO: Consider creating/compiling these shaders in parallel.
     vertexShaderModule = createShaderModule(device, program, ShaderStage::VERTEX, specConstants);
     fragmentShaderModule =

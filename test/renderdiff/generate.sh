@@ -41,7 +41,12 @@ function start_render_() {
     # -W enables the webgpu build
     # -f forces regeneration of cmake build files
     # -X points to the mesa directory, which contains the compiled gl and vk drivers.
-    CXX=`which clang++` CC=`which clang` ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer
+    GLTF_VIEWER_PATH="$(pwd)/out/cmake-debug/samples/gltf_viewer"
+    if [[ "$NOREBUILD" == "true" ]] && [[ -f ${GLTF_VIEWER_PATH} ]]; then
+        echo "Skipping build of gltf_viewer"
+    else
+        CXX=`which clang++` CC=`which clang` ./build.sh -f -W -X ${MESA_DIR} -p desktop debug gltf_viewer
+    fi
 }
 
 function end_render_() {
@@ -56,11 +61,35 @@ function end_render_() {
 #  - Build gltf_viewer
 #  - Run a test
 
+for i in "$@"
+do
+case $i in
+    --test_filter=*)
+    TEST_FILTER="${i#*=}"
+    shift # past argument=value
+    ;;
+    --no_rebuild)
+    NOREBUILD="true"
+    shift # past argument with no value
+    ;;
+    --num_threads=*)
+    NUM_THREADS="${i#*=}"
+    shift # past argument=value
+    ;;
+    *)
+          # unknown option
+    ;;
+esac
+done
+
+
 start_render_ && \
     python3 ${RENDERDIFF_TEST_DIR}/src/render.py \
             --gltf_viewer="$(pwd)/out/cmake-debug/samples/gltf_viewer" \
             --test="${RENDERDIFF_TEST_DIR}/tests/presubmit.json" \
             --output_dir="${RENDER_OUTPUT_DIR}" \
             --opengl_lib="${MESA_LIB_DIR}" \
-            --vk_icd="${MESA_VK_ICD_PATH}" && \
+            --vk_icd="${MESA_VK_ICD_PATH}" \
+            ${TEST_FILTER:+--test_filter="$TEST_FILTER"} \
+            ${NUM_THREADS:+--num_threads="$NUM_THREADS"} && \
     end_render_

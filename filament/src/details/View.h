@@ -82,8 +82,8 @@ class JobSystem;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif defined(_MSC_VER)
-#pragma warning push
-#pragma warning disable : 4996
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #endif
 
 namespace filament {
@@ -205,6 +205,16 @@ public:
     bool hasStereo() const noexcept {
         return mIsStereoSupported && mStereoscopicOptions.enabled;
     }
+
+    void setChannelDepthClearEnabled(uint8_t const channel, bool const enabled) noexcept {
+        mChannelDepthClearMask.set(channel, enabled);
+    }
+
+    bool isChannelDepthClearEnabled(uint8_t channel) const noexcept {
+        return mChannelDepthClearMask[channel];
+    }
+
+    utils::bitset32 getChannelDepthClearMask() const noexcept { return mChannelDepthClearMask; }
 
     FrameGraphId<FrameGraphTexture> renderShadowMaps(FEngine& engine, FrameGraph& fg,
             CameraInfo const& cameraInfo, math::float4 const& userTime,
@@ -591,6 +601,7 @@ private:
     const FColorGrading* mDefaultColorGrading = nullptr;
     utils::Entity mFogEntity{};
     bool mIsStereoSupported : 1;
+    utils::bitset32 mChannelDepthClearMask{};
 
     PIDController mPidController;
     DynamicResolutionOptions mDynamicResolution;
@@ -652,7 +663,7 @@ FILAMENT_DOWNCAST(View)
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(_MSC_VER)
-#pragma warning pop
+#pragma warning(pop)
 #endif
 
 #endif // TNT_FILAMENT_DETAILS_VIEW_H

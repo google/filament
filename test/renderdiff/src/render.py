@@ -18,6 +18,8 @@ import json
 import glob
 import shutil
 import concurrent.futures
+import fnmatch
+
 
 from utils import execute, ArgParseImpl, mkdir_p, mv_f, important_print
 
@@ -80,7 +82,9 @@ def _render_test_config(gltf_viewer,
             output_dir,
             local_only=False,
             opengl_lib=None,
-            vk_icd=None):
+            vk_icd=None,
+            test_filter=None,
+            num_threads=None):
   assert os.path.isdir(output_dir), f"output directory {output_dir} does not exist"
   assert os.access(gltf_viewer, os.X_OK)
 
@@ -90,7 +94,7 @@ def _render_test_config(gltf_viewer,
   gltf_viewer_abs = os.path.abspath(gltf_viewer)
 
   results = []
-  with concurrent.futures.ThreadPoolExecutor() as executor:
+  with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
     futures = []
     for test in test_config.tests:
       test_json_path = os.path.abspath(
@@ -103,6 +107,10 @@ def _render_test_config(gltf_viewer,
         if backend == 'vulkan':
           assert vk_icd, "VK ICD must be specified when testing vulkan backend"
         for model in test.models:
+          test_name = f'{test.name}.{backend}.{model}'
+          if test_filter and not fnmatch.fnmatch(test_name, test_filter):
+            print(f'Skipping {test_name} because it does not match filter')
+            continue
           model_path = os.path.abspath(test_config.models[model])
           futures.append(
             executor.submit(_render_single_model, gltf_viewer_abs,
@@ -122,6 +130,8 @@ if __name__ == "__main__":
   parser.add_argument('--output_dir', help='Output Directory', required=True)
   parser.add_argument('--opengl_lib', help='Path to the folder containing OpenGL driver lib (for LD_LIBRARY_PATH)')
   parser.add_argument('--vk_icd', help='Path to VK ICD file')
+  parser.add_argument('--test_filter', help='Filter for the tests to run')
+  parser.add_argument('--num_threads', help='Number of threads to use for rendering', type=int)
 
   args, _ = parser.parse_known_args(sys.argv[1:])
   test = test_config.parse_from_path(args.test)
@@ -131,7 +141,9 @@ if __name__ == "__main__":
                         test,
                         args.output_dir,
                         opengl_lib=args.opengl_lib,
-                        vk_icd=args.vk_icd)
+                        vk_icd=args.vk_icd,
+                        test_filter=args.test_filter,
+                        num_threads=args.num_threads)
 
   with open(f'{output_dir}/render_results.json', 'w') as f:
     f.write(json.dumps(results, indent=2))

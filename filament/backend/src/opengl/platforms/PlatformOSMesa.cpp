@@ -113,7 +113,7 @@ private:
 }// anonymous namespace
 
 Driver* PlatformOSMesa::createDriver(void* sharedGLContext,
-        const DriverConfig& driverConfig) noexcept {
+        const DriverConfig& driverConfig) {
 
     OSMesaAPI* api = new OSMesaAPI();
     mOsMesaApi = api;
