@@ -26,9 +26,11 @@ static bool isValidId(AllocationStrategy::AllocationId id) {
     return id != AllocationStrategy::UNALLOCATED && id != AllocationStrategy::REALLOCATION_REQUIRED;
 }
 
+#ifndef NDEBUG
 constexpr static bool isPowerOfTwo(uint32_t n) {
     return (n > 0) && ((n & (n - 1)) == 0);
 }
+#endif
 
 } // anonymous namespace
 
