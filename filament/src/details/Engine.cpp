@@ -530,6 +530,7 @@ void FEngine::init() {
                         constants.set(+ReservedSpecializationConstants::
                                               CONFIG_DEBUG_FROXEL_VISUALIZATION,
                                 debug.lighting.debug_froxel_visualization);
+                        material->setSpecializationConstants(std::move(constants));
                     }
                 });
             });
