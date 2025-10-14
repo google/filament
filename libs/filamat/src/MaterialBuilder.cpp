@@ -672,7 +672,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
             ShaderStageFlags stages = param.stages.value_or(defaultShaderStages);
             sbb.add({ param.name.data(), param.name.size() }, binding, param.samplerType,
                     param.format, param.precision, param.filterable, param.multisample,
-                    stages);
+                    { param.transformName.data(), param.transformName.size() }, stages);
             if (!param.transformName.empty()) {
                 ibb.add({ { { param.transformName.data(), param.transformName.size() },
                     uint8_t(binding), 0, UniformType::MAT3, Precision::DEFAULT,
