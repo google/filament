@@ -529,18 +529,15 @@ void FMaterial::setSpecializationConstants(SpecializationConstantsBuilder&& buil
 
     auto& internPool = mEngine.getMaterialCache().getSpecializationConstantsInternPool();
 
-    utils::Slice<const backend::Program::SpecializationConstant> prevSpecializationConstants =
-            mSpecializationConstants;
+    // Release old resources...
+    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), mSpecializationConstants,
+            mIsDefaultMaterial);
+    internPool.release(mSpecializationConstants);
 
-    // Acquire new resources...
+    // Then acquire new ones
     mSpecializationConstants = internPool.acquire(std::move(builder.mConstants));
     mDefinition.acquirePrograms(mEngine, mCachedPrograms.as_slice(), mSpecializationConstants,
             mIsDefaultMaterial);
-
-    // Then release old ones.
-    mDefinition.releasePrograms(mEngine, mCachedPrograms.as_slice(), prevSpecializationConstants,
-            mIsDefaultMaterial);
-    internPool.release(prevSpecializationConstants);
 }
 
 FixedCapacityVector<Program::SpecializationConstant> FMaterial::processSpecializationConstants(

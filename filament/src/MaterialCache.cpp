@@ -114,10 +114,9 @@ backend::Handle<backend::HwProgram> MaterialCache::getProgram(
 }
 
 void MaterialCache::releaseProgram(FEngine& engine, ProgramSpecialization const& specialization) {
-    return mPrograms.release(specialization,
-            [&engine](backend::Handle<backend::HwProgram> program) {
-                engine.getDriverApi().destroyProgram(program);
-            });
+    mPrograms.release(specialization, [&engine](backend::Handle<backend::HwProgram> program) {
+        engine.getDriverApi().destroyProgram(program);
+    });
 }
 
 } // namespace filament
