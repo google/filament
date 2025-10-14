@@ -19,7 +19,6 @@
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
-#include <utils/InternPool.h>
 #include <utils/Invocable.h>
 #include <utils/Slice.h>
 
