@@ -542,6 +542,8 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
         uint8_t fieldPrecision = 0;
         bool fieldFilterable = false;
         bool fieldMultisample = false;
+        bool hasFieldTransformName = false;
+        CString fieldTransformName;
 
         if (!unflattener.read(&fieldName)) {
             return false;
@@ -571,13 +573,22 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
+        if (!unflattener.read(&hasFieldTransformName)) {
+            return false;
+        }
+
+        if (hasFieldTransformName && !unflattener.read(&fieldTransformName)) {
+            return false;
+        }
+
         builder.add({ fieldName.data(), fieldName.size() },
                 SamplerInterfaceBlock::Binding(fieldBinding),
                 SamplerInterfaceBlock::Type(fieldType),
                 SamplerInterfaceBlock::Format(fieldFormat),
                 SamplerInterfaceBlock::Precision(fieldPrecision),
                 fieldFilterable,
-                fieldMultisample);
+                fieldMultisample,
+                { fieldTransformName.data(), fieldTransformName.size() });
     }
 
     *sib = builder.build();
