@@ -281,7 +281,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
             mBufferCount, mDeclaredAttributes.count(), mAttributes);
 
     mHandle = driver.createVertexBuffer(mVertexCount, mVertexBufferInfoHandle,
-            utils::CString{ builder.getName() });
+            utils::ImmutableCString{ builder.getName() });
 
     // calculate buffer sizes
     size_t bufferSizes[MAX_VERTEX_BUFFER_COUNT] = {};
@@ -309,7 +309,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                             BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                            utils::CString{ builder.getName() });
+                            utils::ImmutableCString{ builder.getName() });
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
                 }
@@ -326,7 +326,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const Builder& builder)
                 if (!mBufferObjects[i]) {
                     BufferObjectHandle const bo = driver.createBufferObject(bufferSizes[i],
                             BufferObjectBinding::VERTEX, BufferUsage::STATIC,
-                            utils::CString{ builder.getName() });
+                            utils::ImmutableCString{ builder.getName() });
                     driver.setVertexBufferObject(mHandle, i, bo);
                     mBufferObjects[i] = bo;
                 }

@@ -33,6 +33,8 @@
 #include <utils/compiler.h>
 #include <utils/debug.h>
 #include <utils/ostream.h>
+#include <utils/ImmutableCString.h>
+#include <utils/StaticString.h>
 
 #include <array>
 #include <algorithm>
@@ -143,12 +145,12 @@ void ResourceAllocator::terminate() noexcept {
     }
 }
 
-RenderTargetHandle ResourceAllocator::createRenderTarget(const char* name,
+RenderTargetHandle ResourceAllocator::createRenderTarget(StaticString name,
         TargetBufferFlags const targetBufferFlags, uint32_t const width, uint32_t const height,
         uint8_t const samples, uint8_t const layerCount, MRT const color, TargetBufferInfo const depth,
         TargetBufferInfo const stencil) noexcept {
     auto handle = mBackend.createRenderTarget(targetBufferFlags,
-            width, height, samples ? samples : 1u, layerCount, color, depth, stencil, CString(name));
+            width, height, samples ? samples : 1u, layerCount, color, depth, stencil, name);
     return handle;
 }
 
@@ -156,7 +158,7 @@ void ResourceAllocator::destroyRenderTarget(RenderTargetHandle const h) noexcept
     mBackend.destroyRenderTarget(h);
 }
 
-TextureHandle ResourceAllocator::createTexture(const char* name,
+TextureHandle ResourceAllocator::createTexture(StaticString name,
         SamplerType const target, uint8_t const levels, TextureFormat const format, uint8_t samples,
         uint32_t const width, uint32_t const height, uint32_t const depth,
         std::array<TextureSwizzle, 4> const swizzle,
@@ -166,7 +168,7 @@ TextureHandle ResourceAllocator::createTexture(const char* name,
     samples = samples ? samples : uint8_t(1);
 
     using TS = TextureSwizzle;
-    constexpr const auto defaultSwizzle = std::array<TextureSwizzle, 4>{
+    constexpr const auto defaultSwizzle = std::array{
         TS::CHANNEL_0, TS::CHANNEL_1, TS::CHANNEL_2, TS::CHANNEL_3};
 
     // do we have a suitable texture in the cache?
@@ -183,20 +185,20 @@ TextureHandle ResourceAllocator::createTexture(const char* name,
         } else {
             // we don't, allocate a new texture and populate the in-use list
             handle = mBackend.createTexture(
-                    target, levels, format, samples, width, height, depth, usage, CString(name));
+                    target, levels, format, samples, width, height, depth, usage, name);
             if (swizzle != defaultSwizzle) {
                 TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
-                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], CString(name));
+                        handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], name);
                 mBackend.destroyTexture(handle);
                 handle = swizzledHandle;
             }
         }
     } else {
         handle = mBackend.createTexture(
-                target, levels, format, samples, width, height, depth, usage, CString(name));
+                target, levels, format, samples, width, height, depth, usage, name);
         if (swizzle != defaultSwizzle) {
             TextureHandle swizzledHandle = mBackend.createTextureViewSwizzle(
-                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], CString(name));
+                    handle, swizzle[0], swizzle[1], swizzle[2], swizzle[3], name);
             mBackend.destroyTexture(handle);
             handle = swizzledHandle;
         }
@@ -297,7 +299,7 @@ void ResourceAllocator::dump(bool const brief) const noexcept {
             auto w = it.first.width;
             auto h = it.first.height;
             auto f = FTexture::getFormatSize(it.first.format);
-            DLOG(INFO) << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f
+            DLOG(INFO) << it.first.name.c_str() << ": w=" << w << ", h=" << h << ", f=" << f
                        << ", sz=" << (float) it.second.size * MiB;
         }
     }

@@ -119,7 +119,7 @@ bool PlatformEGL::isOpenGL() const noexcept {
 
 PlatformEGL::ExternalImageEGL::~ExternalImageEGL() = default;
 
-Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) noexcept {
+Driver* PlatformEGL::createDriver(void* sharedContext, const DriverConfig& driverConfig) {
     mEGLDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     assert_invariant(mEGLDisplay != EGL_NO_DISPLAY);
 
@@ -500,7 +500,7 @@ bool PlatformEGL::isMSAASwapChainSupported(uint32_t samples) const noexcept {
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        void* nativeWindow, uint64_t flags) noexcept {
+        void* nativeWindow, uint64_t flags) {
 
     Config attribs;
 
@@ -561,7 +561,7 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 }
 
 Platform::SwapChain* PlatformEGL::createSwapChain(
-        uint32_t width, uint32_t height, uint64_t flags) noexcept {
+        uint32_t width, uint32_t height, uint64_t flags) {
 
     Config attribs = {
             { EGL_WIDTH,  EGLint(width) },

@@ -45,16 +45,16 @@ class ImageMagnifier extends LitElement {
 
     .pixel-info {
       position: absolute;
-      top: -65px;
-      left: 0;
+      top: -40px;
+      left: 15px;
       background: rgba(0,0,0,0.8);
       color: white;
       padding: 4px 8px;
       border-radius: 4px;
       font-family: monospace;
-      font-size: 11px;
+      font-size: 9px;
       white-space: pre-line;
-      max-width: 250px;
+      max-width: 300px;
     }
   `;
 
@@ -76,7 +76,8 @@ class ImageMagnifier extends LitElement {
     `;
   }
 
-  updateMagnifier(imageData, imageX, imageY, mouseX, mouseY, canvasRect, zoomFactor = 8, originalImageData = null) {
+  updateMagnifier(imageData, parentRect, imageX, imageY, originalImageData = null) {
+    const zoomFactor = 8;
     if (!imageData) return;
 
     if (imageX < 0 || imageX >= imageData.width || imageY < 0 || imageY >= imageData.height) {
@@ -90,7 +91,7 @@ class ImageMagnifier extends LitElement {
     const b = imageData.data[pixelIndex + 2];
     const a = imageData.data[pixelIndex + 3];
 
-    let pixelInfoText = `RGBA(${r}, ${g}, ${b}, ${a})\n@ (${imageX}, ${imageY})`;
+    let pixelInfoText = `(${r}, ${g}, ${b}, ${a})\n@ (${imageX}, ${imageY})`;
 
     // If original image data is provided, show the unmultiplied values too
     if (originalImageData) {
@@ -98,8 +99,9 @@ class ImageMagnifier extends LitElement {
       const origG = originalImageData.data[pixelIndex + 1];
       const origB = originalImageData.data[pixelIndex + 2];
       const origA = originalImageData.data[pixelIndex + 3];
-      pixelInfoText = `Diff: RGBA(${origR}, ${origG}, ${origB}, ${origA})\nDisplay: RGBA(${r}, ${g}, ${b}, ${a})\n@ (${imageX}, ${imageY})`;
+      pixelInfoText = `Orig: (${origR}, ${origG}, ${origB}, ${origA})\nMult: (${r}, ${g}, ${b}, ${a})\n@ (${imageX}, ${imageY})`;
     }
+
 
     const magnifierSize = 150;
     const sourceSize = magnifierSize / zoomFactor;
@@ -131,19 +133,25 @@ class ImageMagnifier extends LitElement {
 
     const centerX = magnifierSize / 2;
     const centerY = magnifierSize / 2;
+    const lineWidth = 1;
+    const boxWidth = zoomFactor + lineWidth;
     magnifierCtx.strokeStyle = 'red';
-    magnifierCtx.lineWidth = 1;
+    magnifierCtx.lineWidth = lineWidth;
     magnifierCtx.beginPath();
-    magnifierCtx.moveTo(centerX - 5, centerY);
-    magnifierCtx.lineTo(centerX + 5, centerY);
-    magnifierCtx.moveTo(centerX, centerY - 5);
-    magnifierCtx.lineTo(centerX, centerY + 5);
+    magnifierCtx.moveTo(centerX, centerY);
+    magnifierCtx.lineTo(centerX + boxWidth, centerY);
+    magnifierCtx.lineTo(centerX + boxWidth, centerY + boxWidth);
+    magnifierCtx.lineTo(centerX, centerY + boxWidth);
+    magnifierCtx.lineTo(centerX, centerY);
     magnifierCtx.stroke();
 
     // Position relative to the TiffViewer container
-    this.style.left = (mouseX - magnifierSize / 2) + 'px';
-    this.style.top = (mouseY - magnifierSize / 2) + 'px';
-
+    this.style.left = Math.round(-centerX +
+                                 (imageX / imageData.width) * parentRect.width -
+                                 boxWidth) + 'px';
+    this.style.top = Math.round(-centerY +
+                                (imageY / imageData.height) * parentRect.height -
+                                boxWidth) + 'px';
     pixelInfo.textContent = pixelInfoText;
 
     this.visible = true;
@@ -172,20 +180,20 @@ export class TiffViewer extends LitElement {
 
   static properties = {
     fileurl: {type: String, attribute: 'fileurl'},
-    name: {type: String, attribute: 'name'},
     failedToFetch: {type: Boolean },
     magnifierEnabled: {type: Boolean, attribute: 'magnifier-enabled'},
     disableMouseHandlers: {type: Boolean, attribute: 'disable-mouse-handlers'},
+    srcdata: {type: Object, attribute: 'srcdata'},
   };
 
   constructor() {
     super();
     this.fileurl = null;
-    this.name = null;
     this.failedToFetch = false;
     this.magnifierEnabled = false;
     this.disableMouseHandlers = false;
-    this.imageData = null;
+    this.imgdata = null;
+    this.srcdata = null;
     this.canvasRect = null;
   }
 
@@ -194,7 +202,11 @@ export class TiffViewer extends LitElement {
       return html``;
     }
     return html`
-      <canvas id="tiffCanvas" @mousemove="${this._onMouseMove}" @mouseenter="${this._onMouseEnter}" @mouseleave="${this._onMouseLeave}"></canvas>
+      <canvas id="tiffCanvas"
+              @mousemove="${this._onMouseMove}"
+              @mouseenter="${this._onMouseEnter}"
+              @mouseleave="${this._onMouseLeave}">
+      </canvas>
       <image-magnifier id="magnifier"></image-magnifier>
     `;
   }
@@ -202,7 +214,20 @@ export class TiffViewer extends LitElement {
   updated(props) {
     if (props.has('fileurl') && this.fileurl) {
       this._updateImage(this.fileurl);
+      return;
     }
+    if (props.has('srcdata') && this.srcdata) {
+      this._drawImage(this.srcdata);
+    }
+  }
+
+  _drawImage(imageData) {
+    const canvas = this.shadowRoot.getElementById('tiffCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    ctx.putImageData(imageData, 0, 0);
+    this.imgdata = imageData;
   }
 
   async _updateImage(fileurl) {
@@ -233,9 +258,6 @@ export class TiffViewer extends LitElement {
       });
       this.dispatchEvent(event);
     }
-    const canvas = this.shadowRoot.getElementById('tiffCanvas');
-    const ctx = canvas.getContext('2d');
-
     try {
       const arrayBuffer = fileblob;
       const ifds = UTIF.decode(arrayBuffer); // Parse TIFF data
@@ -251,6 +273,10 @@ export class TiffViewer extends LitElement {
       UTIF.decodeImage(arrayBuffer, firstImage, ifds); // Decode the actual pixel data
 
       const rgba = UTIF.toRGBA8(firstImage); // Convert to RGBA
+
+      // This needs to be present so that the ImageData has the right dimension to begin with
+      // (without initial resizing due to flex's css styling and then resized again in _drawImage()).
+      const canvas = this.shadowRoot.getElementById('tiffCanvas');
       canvas.width = firstImage.width;
       canvas.height = firstImage.height;
 
@@ -262,18 +288,17 @@ export class TiffViewer extends LitElement {
       }
 
       const imageData = new ImageData(new Uint8ClampedArray(rgba), firstImage.width, firstImage.height);
-      ctx.putImageData(imageData, 0, 0);
-
-      this.imageData = imageData;
+      this.imgdata = imageData;
 
       this.dispatchEvent(new CustomEvent('image-loaded', {
         bubbles: true,
         composed: true,
         detail: {
-          name: this.name,
+          url: this.fileurl,
           img: imageData,
         }
       }));
+      this._drawImage(imageData);
     } catch (error) {
       console.error('Error processing TIFF file:', error);
       this._clearCanvas();
@@ -289,7 +314,7 @@ export class TiffViewer extends LitElement {
   }
 
   _onMouseEnter(event) {
-    if (this.disableMouseHandlers || !this.magnifierEnabled || !this.imageData) return;
+    if (this.disableMouseHandlers || !this.magnifierEnabled || !this.imgdata) return;
     this.canvasRect = event.target.getBoundingClientRect();
   }
 
@@ -300,11 +325,11 @@ export class TiffViewer extends LitElement {
   }
 
   _onMouseMove(event) {
-    if (this.disableMouseHandlers || !this.magnifierEnabled || !this.imageData || !this.canvasRect) return;
-
+    if (this.disableMouseHandlers || !this.canvasRect) return;
     const rect = this.canvasRect;
-    const scaleX = this.imageData.width / rect.width;
-    const scaleY = this.imageData.height / rect.height;
+
+    const scaleX = this.imgdata.width / rect.width;
+    const scaleY = this.imgdata.height / rect.height;
 
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -312,8 +337,18 @@ export class TiffViewer extends LitElement {
     const imageX = Math.floor(mouseX * scaleX);
     const imageY = Math.floor(mouseY * scaleY);
 
+    this.updateMagnifier(imageX, imageY);
+  }
+
+  updateMagnifier(imageX, imageY, origData = null) {
+    let rect = null;
+    const canvas = this.shadowRoot.getElementById('tiffCanvas');
+    if (canvas) {
+      rect = canvas.getBoundingClientRect();
+    }
+    if (!this.magnifierEnabled || !this.imgdata || !rect) return;
     const magnifier = this.shadowRoot.getElementById('magnifier');
-    magnifier.updateMagnifier(this.imageData, imageX, imageY, event.clientX, event.clientY, rect);
+    magnifier.updateMagnifier(this.imgdata, rect, imageX, imageY, origData);
   }
 }
 

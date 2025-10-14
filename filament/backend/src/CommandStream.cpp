@@ -57,12 +57,15 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
     printParameterPack(out, rest...);
 }
 
-static UTILS_NOINLINE UTILS_UNUSED std::string_view extractMethodName(std::string_view command) noexcept {
-    constexpr const char startPattern[] = "::Command<&filament::backend::Driver::";
+static UTILS_NOINLINE UTILS_UNUSED std::string_view extractMethodName(std::string_view command) noexcept { // NOLINT(*-exception-escape)
+    constexpr char startPattern[] = "::Command<&filament::backend::Driver::";
     auto pos = command.rfind(startPattern);
     auto end = command.rfind('(');
     pos += sizeof(startPattern) - 1;
-    return command.substr(pos, end-pos);
+    if (pos > command.size()) {
+        return { command.data(), command.size() };
+    }
+    return command.substr(pos, end-pos); // this can't throw by construction
 }
 
 // ------------------------------------------------------------------------------------------------

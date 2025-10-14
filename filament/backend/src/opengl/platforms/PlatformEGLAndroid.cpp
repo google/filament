@@ -198,7 +198,7 @@ void backend::PlatformEGLAndroid::preCommit() noexcept {
 }
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
-        const Platform::DriverConfig& driverConfig) noexcept {
+        const Platform::DriverConfig& driverConfig) {
 
     // the refresh rate default value doesn't matter, we change it later
     int32_t const tid = gettid();

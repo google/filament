@@ -107,18 +107,19 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config, uint3
         // read the pending timer queries until we find one that's not ready
     }
 
+#if 0
     // keep this just for debugging
-    if constexpr (false) {
-        using namespace utils;
-        auto h = getFrameInfoHistory(1);
-        if (!h.empty()) {
-            DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId << ")"
-                       << ", Dm=" << h[0].endFrame - h[0].beginFrame
-                       << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
-                       << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
-                       << ", T =" << h[0].frameTime;
-        }
+    using namespace utils;
+    auto h = getFrameInfoHistory(1); // this can throw
+    if (!h.empty()) {
+        DLOG(INFO) << frameId << ": " << h[0].frameId << " (" << frameId - h[0].frameId <<
+                ")"
+                << ", Dm=" << h[0].endFrame - h[0].beginFrame
+                << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
+                << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
+                << ", T =" << h[0].frameTime;
     }
+#endif
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
@@ -172,7 +173,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
 }
 
 FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
-        size_t historySize) const noexcept {
+        size_t historySize) const {
     auto result = FixedCapacityVector<Renderer::FrameInfo>::with_capacity(MAX_FRAMETIME_HISTORY);
     auto const& history = mFrameTimeHistory;
     size_t i = 0;
@@ -188,6 +189,7 @@ FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
     for (; i < c && historySize; ++i, --historySize) {
         auto const& entry = history[i];
         using namespace std::chrono;
+        // can't throw by construction
         result.push_back({
                 entry.frameId,
                 duration_cast<nanoseconds>(entry.frameTime).count(),

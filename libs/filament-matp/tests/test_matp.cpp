@@ -93,8 +93,9 @@ TEST_F(MaterialLexer, MaterialParser) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
-    EXPECT_EQ(result, true);
+    utils::Status result =
+            testParser.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
 
 TEST_F(MaterialLexer, NoSpaceBetweenBlockAndIdentifier) {
@@ -111,16 +112,18 @@ TEST_F(MaterialLexer, MaterialParserWithToolSection) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
-    EXPECT_EQ(result, true);
+    utils::Status result =testParser.parseMaterial(
+            materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
 
 TEST_F(MaterialLexer, MaterialParserWithCommentedBraces) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
-    EXPECT_EQ(result, true);
+    utils::Status result = testParser.parseMaterial(
+            materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
 
 TEST_F(MaterialLexer, MaterialParserErrorOnlyIdentifier) {
@@ -130,9 +133,9 @@ TEST_F(MaterialLexer, MaterialParserErrorOnlyIdentifier) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(
+    utils::Status result = testParser.parseMaterial(
             sourceMissingIdentifier.c_str(), sourceMissingIdentifier.size(), unused);
-    EXPECT_EQ(result, false);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
 }
 
 TEST_F(MaterialLexer, MaterialParserErrorMissingBlock) {
@@ -143,9 +146,9 @@ TEST_F(MaterialLexer, MaterialParserErrorMissingBlock) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(
+    utils::Status result = testParser.parseMaterial(
             sourceMissingBlock.c_str(), sourceMissingBlock.size(), unused);
-    EXPECT_EQ(result, false);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
 }
 
 TEST_F(MaterialLexer, MaterialParserErrorTwoBlock) {
@@ -155,8 +158,9 @@ TEST_F(MaterialLexer, MaterialParserErrorTwoBlock) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(sourceTwoBlock.c_str(), sourceTwoBlock.size(), unused);
-    EXPECT_EQ(result, false);
+    utils::Status result =
+            testParser.parseMaterial(sourceTwoBlock.c_str(), sourceTwoBlock.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
 }
 
 TEST_F(MaterialLexer, MaterialParserSyntaxError) {
@@ -166,8 +170,8 @@ TEST_F(MaterialLexer, MaterialParserSyntaxError) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
-    EXPECT_EQ(result, false);
+    utils::Status result = testParser.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::INVALID_ARGUMENT);
 }
 
 static std::string jsonMaterialSource(R"(
@@ -290,8 +294,9 @@ TEST_F(MaterialLexer, JsonMaterialParser) {
     matp::MaterialParser parser;
     TestMaterialParser testParser(parser);
     filamat::MaterialBuilder unused;
-    bool result = testParser.parseMaterialAsJSON(jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
-    EXPECT_EQ(result, true);
+    utils::Status result = testParser.parseMaterialAsJSON(
+            jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
+    EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
 }
 
 int main(int argc, char** argv) {

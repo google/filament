@@ -332,7 +332,7 @@ public class RenderableManager {
         }
 
         /**
-         * Set the channel this renderable is associated to. There can be 4 channels.
+         * Set the channel this renderable is associated to. There can be 8 channels.
          *
          * <p>All renderables in a given channel are rendered together, regardless of anything else.
          * They are sorted as usual within a channel.</p>
@@ -342,7 +342,7 @@ public class RenderableManager {
          * <p>Channels 0 and 1 may not have render primitives using a material with `refractionType`
          * set to `screenspace`.</p>
          *
-         * @param channel clamped to the range [0..3], defaults to 2.
+         * @param channel clamped to the range [0..7], defaults to 2.
          *
          * @return Builder reference for chaining calls.
          *
@@ -351,7 +351,7 @@ public class RenderableManager {
          * @see RenderableManager::setBlendOrderAt()
          */
         @NonNull
-        public Builder channel(@IntRange(from = 0, to = 3) int channel) {
+        public Builder channel(@IntRange(from = 0, to = 7) int channel) {
             nBuilderChannel(mNativeBuilder, channel);
             return this;
         }
@@ -730,7 +730,7 @@ public class RenderableManager {
      *
      * @see Builder#channel
      */
-    public void setChannel(@EntityInstance int i, @IntRange(from = 0, to = 3) int channel) {
+    public void setChannel(@EntityInstance int i, @IntRange(from = 0, to = 7) int channel) {
         nSetChannel(mNativeObject, i, channel);
     }
 

@@ -51,14 +51,36 @@ struct FrameInfo {
 struct FrameInfoImpl : public details::FrameInfo {
     using clock = std::chrono::steady_clock;
     using time_point = clock::time_point;
-    uint32_t const frameId;
+    uint32_t frameId;
     time_point beginFrame;           // main thread beginFrame time
     time_point endFrame;             // main thread endFrame time
     time_point backendBeginFrame;    // backend thread beginFrame time (makeCurrent time)
     time_point backendEndFrame;      // backend thread endFrame time (present time)
     std::atomic_bool ready{};        // true once backend thread has populated its data
-    explicit FrameInfoImpl(uint32_t const frameId) noexcept
-        : frameId(frameId) {
+    explicit FrameInfoImpl(uint32_t const id) noexcept
+        : frameId(id) {
+    }
+
+    FrameInfoImpl(FrameInfoImpl&& rhs) noexcept : 
+        details::FrameInfo(rhs),
+        frameId(rhs.frameId),
+        beginFrame(rhs.beginFrame),
+        endFrame(rhs.endFrame),
+        backendBeginFrame(rhs.backendBeginFrame),
+        backendEndFrame(rhs.backendEndFrame),
+        ready(rhs.ready.load())
+    {
+    }
+
+    FrameInfoImpl& operator=(FrameInfoImpl&& rhs) noexcept {
+        details::FrameInfo::operator=(rhs);
+        frameId = rhs.frameId;
+        beginFrame = rhs.beginFrame;
+        endFrame = rhs.endFrame;
+        backendBeginFrame = rhs.backendBeginFrame;
+        backendEndFrame = rhs.backendEndFrame;
+        ready.store(rhs.ready.load());
+        return *this;
     }
 };
 
@@ -69,11 +91,43 @@ public:
     using reference = value_type&;
     using const_reference = value_type const&;
 
-    size_t capacity() const {
+    CircularQueue() = default;
+
+    ~CircularQueue() {
+        if constexpr (!std::is_trivially_destructible_v<T>) {
+            for (size_t i = 0, c = mSize; i < c; ++i) {
+                size_t const index = (mFront + CAPACITY - i) % CAPACITY;
+                std::destroy_at(std::launder(reinterpret_cast<T*>(&mStorage[index])));
+            }
+        }
+    }
+
+    CircularQueue(const CircularQueue&) = delete;
+    CircularQueue& operator=(const CircularQueue&) = delete;
+
+    CircularQueue(CircularQueue&& other) noexcept {
+        for (size_t i = 0; i < other.mSize; i++) {
+            size_t const index = (other.mFront + CAPACITY - i) % CAPACITY;
+            new(&mStorage[index]) T(std::move(*std::launder(reinterpret_cast<T*>(&other.mStorage[index]))));
+        }
+        mFront = other.mFront;
+        mSize = other.mSize;
+        other.mSize = 0;
+    }
+
+    CircularQueue& operator=(CircularQueue&& other) noexcept {
+        if (this != &other) {
+            this->~CircularQueue();
+            new(this) CircularQueue(std::move(other));
+        }
+        return *this;
+    }
+
+    size_t capacity() const noexcept {
         return CAPACITY;
     }
 
-    size_t size() const {
+    size_t size() const noexcept {
         return mSize;
     }
 
@@ -84,7 +138,8 @@ public:
     void pop_back() noexcept {
         assert_invariant(!empty());
         --mSize;
-        std::destroy_at(&mStorage[(mFront - mSize) % CAPACITY]);
+        size_t const index = (mFront + CAPACITY - mSize) % CAPACITY;
+        std::destroy_at(std::launder(reinterpret_cast<T*>(&mStorage[index])));
     }
 
     void push_front(T const& v) noexcept {
@@ -133,9 +188,9 @@ public:
 private:
     using Storage = std::aligned_storage_t<sizeof(T), alignof(T)>;
     Storage mStorage[CAPACITY];
-    uint32_t mFront = 0;    // always index 0
+    uint32_t mFront = 0;
     uint32_t mSize = 0;
-    [[nodiscard]] inline uint32_t advance(uint32_t const v) noexcept {
+    [[nodiscard]] uint32_t advance(uint32_t const v) noexcept {
         return (v + 1) % CAPACITY;
     }
 };
@@ -168,7 +223,7 @@ public:
         return pFront ? *pFront : details::FrameInfo{};
     }
 
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const noexcept;
+    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const;
 
 private:
     using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;
@@ -177,11 +232,11 @@ private:
         backend::Handle<backend::HwTimerQuery> handle{};
         FrameInfoImpl* pInfo = nullptr;
     };
-    std::array<Query, POOL_COUNT> mQueries;
+    std::array<Query, POOL_COUNT> mQueries{};
     uint32_t mIndex = 0;                // index of current query
     uint32_t mLast = 0;                 // index of oldest query still active
     FrameInfoImpl* pFront = nullptr;    // the most recent slot with a valid frame time
-    FrameHistoryQueue mFrameTimeHistory;
+    FrameHistoryQueue mFrameTimeHistory{};
 };
 
 

@@ -35,7 +35,7 @@ static const StaticMaterialInfo sMaterialList[] = {
     { "bloomUpsample",              MATERIAL(BLOOM, BLOOMUPSAMPLE) },
 };
 
-utils::Slice<StaticMaterialInfo> getBloomMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getBloomMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 
