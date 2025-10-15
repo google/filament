@@ -299,7 +299,7 @@ void ResourceAllocator::dump(bool const brief) const noexcept {
             auto w = it.first.width;
             auto h = it.first.height;
             auto f = FTexture::getFormatSize(it.first.format);
-            DLOG(INFO) << it.first.name << ": w=" << w << ", h=" << h << ", f=" << f
+            DLOG(INFO) << it.first.name.c_str() << ": w=" << w << ", h=" << h << ", f=" << f
                        << ", sz=" << (float) it.second.size * MiB;
         }
     }
