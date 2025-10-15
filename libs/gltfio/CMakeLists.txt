@@ -196,10 +196,7 @@ if (WEBGL_PTHREADS)
     target_compile_definitions(gltfio_core PUBLIC -DFILAMENT_WASM_THREADS)
 endif()
 
-set(GLTFIO_WARNINGS -Wall -Werror)
-if (NOT MSVC)
-    target_compile_options(gltfio_core PRIVATE ${GLTFIO_WARNINGS})
-endif()
+target_compile_options(gltfio_core PRIVATE ${FILAMENT_WARNINGS})
 
 if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
