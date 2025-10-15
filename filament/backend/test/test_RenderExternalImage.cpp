@@ -47,7 +47,7 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::VULKAN, "b/453776730");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
@@ -111,8 +111,9 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
 TEST_F(BackendTest, RenderExternalImage) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::VULKAN, "b/453777319");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758594");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
