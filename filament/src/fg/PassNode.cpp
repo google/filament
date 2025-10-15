@@ -95,7 +95,7 @@ uint32_t RenderPassNode::declareRenderTarget(FrameGraph& fg, FrameGraph::Builder
 
     for (size_t i = 0; i < RenderPassData::ATTACHMENT_COUNT; i++) {
         FrameGraphId<FrameGraphTexture> const& handle =
-                data.descriptor.attachments.array[i];
+                data.descriptor.attachments[i];
         if (handle) {
             data.attachmentInfo[i] = handle;
 
@@ -150,7 +150,7 @@ void RenderPassNode::resolve() noexcept {
         constexpr size_t STENCIL_INDEX = MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1;
 
         for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 2; i++) {
-            if (rt.descriptor.attachments.array[i]) {
+            if (rt.descriptor.attachments[i]) {
                 const TargetBufferFlags target = getTargetBufferFlagsAt(i);
 
                 rt.targetBufferFlags |= target;
@@ -174,7 +174,7 @@ void RenderPassNode::resolve() noexcept {
                 if (!rt.incoming[i] || !rt.incoming[i]->hasActiveWriters()) {
                     rt.backend.params.flags.discardStart |= target;
                 }
-                VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments.array[i]);
+                VirtualResource* pResource = mFrameGraph.getResource(rt.descriptor.attachments[i]);
                 Resource<FrameGraphTexture>* pTextureResource = static_cast<Resource<FrameGraphTexture>*>(pResource);
 
                 pImportedRenderTarget = pImportedRenderTarget ?
