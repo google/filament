@@ -73,6 +73,14 @@ public:
     bool convertSyncToFd(Sync* sync, int* fd) noexcept;
 
 protected:
+    struct {
+        struct {
+            bool ANDROID_presentation_time = false;
+            bool ANDROID_get_frame_timestamps = false;
+            bool ANDROID_native_fence_sync = false;
+        } egl;
+    } ext;
+
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
@@ -84,6 +92,11 @@ protected:
 
     Driver* createDriver(void* sharedContext,
             const DriverConfig& driverConfig) override;
+
+    bool isCompositorTimingSupported() const noexcept override;
+
+    bool queryCompositorTiming(SwapChain const* swapchain,
+            CompositorTiming* outCompositorTiming) const noexcept override;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
@@ -178,8 +191,6 @@ private:
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
 
-    void* mNativeWindowLib = nullptr;
-    int32_t (*ANativeWindow_getBuffersDefaultDataSpace)(ANativeWindow* window) = nullptr;
     bool mAssertNativeWindowIsValid = false;
 };
 

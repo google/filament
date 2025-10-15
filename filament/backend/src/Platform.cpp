@@ -122,6 +122,14 @@ bool Platform::pumpEvents() noexcept {
     return false;
 }
 
+bool Platform::isCompositorTimingSupported() const noexcept {
+    return false;
+}
+
+bool Platform::queryCompositorTiming(SwapChain const*, CompositorTiming*) const noexcept {
+    return false;
+}
+
 void Platform::setBlobFunc(InsertBlobFunc&& insertBlob, RetrieveBlobFunc&& retrieveBlob) noexcept {
     mInsertBlob = std::move(insertBlob);
     mRetrieveBlob = std::move(retrieveBlob);

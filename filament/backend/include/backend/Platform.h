@@ -91,6 +91,30 @@ public:
 
     using ExternalImageHandleRef = ExternalImageHandle const&;
 
+    struct CompositorTiming {
+        /** duration in nanosecond since epoch of std::steady_clock */
+        using time_point_ns = int64_t;
+        /** duration in nanosecond on the std::steady_clock */
+        using duration_ns = int64_t;
+        /**
+         * The timestamp [ns] since epoch of the next time the compositor will begin composition.
+         * This is effectively the deadline for when the compositor must receive a newly queued
+         * frame.
+         */
+        time_point_ns compositeDeadline;
+
+        /**
+         * The time delta [ns] between subsequent composition events.
+         */
+        duration_ns compositeInterval;
+
+        /**
+         * The time delta [ns] between the start of composition and the expected present time of
+         *  that composition. This can be used to estimate the latency of the actual present time.
+         */
+        duration_ns compositeToPresentLatency;
+    };
+
     /**
      * The type of technique for stereoscopic rendering. (Note that the materials used will need to
      * be compatible with the chosen technique.)
@@ -246,6 +270,28 @@ public:
      * thread, or if the platform does not need to perform any special processing.
      */
     virtual bool pumpEvents() noexcept;
+
+
+    /**
+     * Whether this platform supports compositor timing querying.
+     * @return true if this Platform supports compositor timings, false otherwise [default]
+     * @see queryCompositorTiming()
+     * @see setPresentFrameId()
+     * @see queryFrameTimestamps()
+     */
+    virtual bool isCompositorTimingSupported() const noexcept;
+
+    /**
+     * If compositor timing is supported, fills the provided CompositorTiming structure
+     * with timing information form the compositor the swapchain's native window is using.
+     * The swapchain'snative window must be valid (i.e. not a headless swapchain).
+     * @param swapchain to query the compositor timing from
+     * @return true on success, false otherwise (e.g. if not supported)
+     * @see isCompositorTimingSupported()
+     */
+    virtual bool queryCompositorTiming(SwapChain const* UTILS_NONNULL swapchain,
+        CompositorTiming* UTILS_NONNULL outCompositorTiming) const noexcept;
+
 
     /**
      * InsertBlobFunc is an Invocable to an application-provided function that a
