@@ -91,7 +91,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
         mUboData = BufferAllocator::UNALLOCATED;
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
-                BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
+                BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
         // set the UBO, always descriptor 0
         mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
                 0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
