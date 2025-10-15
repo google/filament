@@ -191,6 +191,8 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {
+    g_meshSet.reset(nullptr);
+
     for (const auto& material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
@@ -202,8 +204,6 @@ static void cleanup(Engine* engine, View*, Scene*) {
     for (auto& i : g_params.material) {
         engine->destroy(i);
     }
-
-    g_meshSet.reset(nullptr);
 
     engine->destroy(g_params.light);
     engine->destroy(g_params.spotLight);
