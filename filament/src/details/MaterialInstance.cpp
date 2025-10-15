@@ -61,8 +61,8 @@ using namespace backend;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
         const char* name) noexcept
-    : FMaterialInstance(engine, material, name,
-            engine.features.material.enable_material_instance_uniform_batching) {
+        : FMaterialInstance(engine, material, name,
+                  engine.features.material.enable_material_instance_uniform_batching) {
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
@@ -91,7 +91,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
         mUboData = BufferAllocator::UNALLOCATED;
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
-                BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
+                BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
         // set the UBO, always descriptor 0
         mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
                 0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
@@ -163,7 +163,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine,
         mUboData = BufferAllocator::UNALLOCATED;
     } else {
         mUboData = driver.createBufferObject(mUniforms.getSize(), BufferObjectBinding::UNIFORM,
-                BufferUsage::STATIC, ImmutableCString{ material->getName().c_str_safe() });
+                BufferUsage::DYNAMIC, ImmutableCString{ material->getName().c_str_safe() });
         // set the UBO, always descriptor 0
         mDescriptorSet.setBuffer(material->getDescriptorSetLayout(),
                 0, std::get<Handle<HwBufferObject>>(mUboData), 0, mUniforms.getSize());
