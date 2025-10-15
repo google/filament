@@ -106,7 +106,9 @@ test::NativeView getNativeView() {
 
 int main(int argc, char* argv[]) {
     const auto arguments = test::parseArguments(argc, argv);
-    test::initTests(arguments.backend, test::OperatingSystem::APPLE, false, argc, argv);
+    const auto operatingSystem = arguments.isContinuousIntegration ?
+            test::OperatingSystem::CONTINUOUS_INTEGRATION : test::OperatingSystem::APPLE;
+    test::initTests(arguments.backend, operatingSystem, false, argc, argv);
 
     NSApplication* app = [NSApplication sharedApplication];
     AppDelegate* delegate = [AppDelegate new];

@@ -41,6 +41,7 @@ enum class OperatingSystem: uint8_t {
     LINUX = 2,
     // Also represents iOS phones.
     APPLE = 3,
+    CONTINUOUS_INTEGRATION = 4,
     // TODO: When tests support windows add it here.
 };
 
@@ -76,6 +77,7 @@ int runTests();
 struct TestArguments {
     Backend backend;
     bool headlessOnly = false;
+    bool isContinuousIntegration = false;
 };
 
 /**

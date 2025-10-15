@@ -29,10 +29,11 @@ TestArguments parseArguments(int argc, char* argv[]) {
 
     // The first colon in OPTSTR turns on silent error reporting. This is important, as the
     // arguments may also contain gtest parameters we don't know about.
-    static constexpr const char* OPTSTR = ":a:k";
+    static constexpr const char* OPTSTR = ":a:kc";
     static const struct option OPTIONS[] = {
             { "api", required_argument, nullptr, 'a' },
             { "headless_only", no_argument, nullptr, 'k' },
+            { "ci", no_argument, nullptr, 'c' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -60,6 +61,9 @@ TestArguments parseArguments(int argc, char* argv[]) {
                 break;
             case 'k':
                 arguments.headlessOnly = true;
+                break;
+            case 'c':
+                arguments.isContinuousIntegration = true;
                 break;
         }
     }
