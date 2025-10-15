@@ -264,7 +264,8 @@ public class Engine {
                     config.disableHandleUseAfterFreeCheck,
                     config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
-                    config.gpuContextPriority.ordinal());
+                    config.gpuContextPriority.ordinal(),
+                    config.enableMaterialInstanceUniformBatching);
             return this;
         }
 
@@ -525,6 +526,15 @@ public class Engine {
          * GPU context priority level. Controls GPU work scheduling and preemption.
          */
         public GpuContextPriority gpuContextPriority = GpuContextPriority.DEFAULT;
+
+        /**
+         * Enables uniform batching for all material instances.
+         *
+         * When enabled, material instances will share a common large uniform buffer
+         * and use sub-allocations within it. This is expected to reduce CPU overhead
+         * by minimizing the number of buffer updates sent to the driver.
+         */
+        public boolean enableMaterialInstanceUniformBatching = false;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1529,7 +1539,7 @@ public class Engine {
             boolean disableHandleUseAfterFreeCheck,
             int preferredShaderLanguage,
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
-            int gpuContextPriority);
+            int gpuContextPriority, boolean enableMaterialInstanceUniformBatching);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
