@@ -62,7 +62,7 @@ using namespace backend;
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
         const char* name) noexcept
     : FMaterialInstance(engine, material, name,
-            engine.getConfig().enableMaterialInstanceUniformBatching) {
+            engine.features.material.enable_material_instance_uniform_batching) {
 }
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material,
