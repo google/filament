@@ -776,6 +776,7 @@ public:
         } backend;
         struct {
             bool check_crc32_after_loading = false;
+            bool enableMaterialInstanceUniformBatching = false;
         } material;
     } features;
 
@@ -824,6 +825,9 @@ public:
               &features.engine.debug.assert_texture_can_generate_mipmap, false },
             { "material.check_crc32_after_loading",
               "Verify the checksum of package data when a material is loaded.",
+              &features.material.check_crc32_after_loading, false },
+            { "material.enableMaterialInstanceUniformBatching",
+              "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
               &features.material.check_crc32_after_loading, false },
     }};
 
