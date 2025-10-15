@@ -417,6 +417,15 @@ public:
          * GPU context priority level. Controls GPU work scheduling and preemption.
          */
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+
+        /**
+         * Enables uniform batching for all material instances.
+         *
+         * When enabled, material instances will share a common large uniform buffer
+         * and use sub-allocations within it. This is expected to reduce CPU overhead
+         * by minimizing the number of buffer updates sent to the driver.
+         */
+        bool enableMaterialInstanceUniformBatching = false;
     };
 
 
