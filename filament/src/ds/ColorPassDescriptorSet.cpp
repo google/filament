@@ -112,7 +112,7 @@ ColorPassDescriptorSet::ColorPassDescriptorSet(FEngine& engine, bool const vsm,
 
     setSampler(+PerViewBindingPoints::IBL_DFG_LUT,
             engine.getDFG().isValid() ?
-                    engine.getDFG().getTexture() : engine.getZeroTexture(), {
+                    engine.getDFG().getTexture() : engine.getZeroTexture(), SamplerParams{
                     .filterMag = SamplerMagFilter::LINEAR
             });
 }
@@ -236,7 +236,7 @@ void ColorPassDescriptorSet::prepareFog(FEngine& engine, const CameraInfo& camer
 
     setSampler(+PerViewBindingPoints::FOG,
             fogColorTextureHandle ?
-                    fogColorTextureHandle : engine.getDummyCubemap()->getHwHandleForSampling(), {
+                    fogColorTextureHandle : engine.getDummyCubemap()->getHwHandleForSampling(), SamplerParams{
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
             });
@@ -277,7 +277,7 @@ void ColorPassDescriptorSet::prepareSSAO(Handle<HwTexture> ssao,
             && options.resolution < 1.0f;
 
     // LINEAR filtering is only needed when AO is enabled and low-quality upsampling is used.
-    setSampler(+PerViewBindingPoints::SSAO, ssao, {
+    setSampler(+PerViewBindingPoints::SSAO, ssao, SamplerParams{
         .filterMag = options.enabled && !highQualitySampling ?
                 SamplerMagFilter::LINEAR : SamplerMagFilter::NEAREST
     });
@@ -293,7 +293,7 @@ void ColorPassDescriptorSet::prepareMaterialGlobals(
 }
 
 void ColorPassDescriptorSet::prepareScreenSpaceRefraction(Handle<HwTexture> ssr) noexcept {
-    setSampler(+PerViewBindingPoints::SSR, ssr, {
+    setSampler(+PerViewBindingPoints::SSR, ssr, SamplerParams{
         .filterMag = SamplerMagFilter::LINEAR,
         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
     });
@@ -364,7 +364,7 @@ void ColorPassDescriptorSet::prepareAmbientLight(FEngine const& engine, FIndirec
         reflection = engine.getDummyCubemap()->getHwHandle();
     }
     setSampler(+PerViewBindingPoints::IBL_SPECULAR,
-            reflection, {
+            reflection, SamplerParams{
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR
             });
@@ -390,7 +390,7 @@ void ColorPassDescriptorSet::prepareShadowVSM(Handle<HwTexture> texture,
         filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
     }
     setSampler(+PerViewBindingPoints::SHADOW_MAP,
-            texture, {
+            texture, SamplerParams{
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = filterMin,
                     .anisotropyLog2 = options.anisotropy,
@@ -399,7 +399,7 @@ void ColorPassDescriptorSet::prepareShadowVSM(Handle<HwTexture> texture,
 
 void ColorPassDescriptorSet::prepareShadowPCF(Handle<HwTexture> texture) noexcept {
     setSampler(+PerViewBindingPoints::SHADOW_MAP,
-            texture, {
+            texture, SamplerParams{
                     .filterMag = SamplerMagFilter::LINEAR,
                     .filterMin = SamplerMinFilter::LINEAR,
                     .compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE,
@@ -416,7 +416,7 @@ void ColorPassDescriptorSet::prepareShadowPCSS(Handle<HwTexture> texture) noexce
 }
 
 void ColorPassDescriptorSet::prepareShadowPCFDebug(Handle<HwTexture> texture) noexcept {
-    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, {
+    setSampler(+PerViewBindingPoints::SHADOW_MAP, texture, SamplerParams{
             .filterMag = SamplerMagFilter::NEAREST,
             .filterMin = SamplerMinFilter::NEAREST
     });
