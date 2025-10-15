@@ -267,8 +267,8 @@ void VulkanPipelineCache::bindVertexArray(VkVertexInputAttributeDescription cons
             mPipelineRequirements.vertexAttributes[i] = attribDesc[i];
             mPipelineRequirements.vertexBuffers[i] = bufferDesc[i];
         } else {
-            mPipelineRequirements.vertexAttributes[i] = {};
-            mPipelineRequirements.vertexBuffers[i] = {};
+            mPipelineRequirements.vertexAttributes[i] = VertexInputAttributeDescription{};
+            mPipelineRequirements.vertexBuffers[i] = VertexInputBindingDescription{};
         }
     }
 }
