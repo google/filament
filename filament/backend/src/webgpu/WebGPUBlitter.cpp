@@ -705,8 +705,8 @@ wgpu::ShaderModule WebGPUBlitter::createShaderModule(ShaderModuleKey const& key)
         { RET_TYPE, retType },
     });
 
-    // Fill in fragment in the shader module, third dpass
-    // TEXTURE_TYPE, RET_ATTRIBUTE, RET_TYPE have a depedency on SRC_PRIM_TYPE, DST_PRIM_TYPE,
+    // Fill in fragment in the shader module, third pass
+    // TEXTURE_TYPE, RET_ATTRIBUTE, RET_TYPE have a dependency on SRC_PRIM_TYPE, DST_PRIM_TYPE,
     // VECTOR_DIM so we need another pass to fill them in.
     source = replace(source, {
         { VECTOR_DIM, vecDim },
