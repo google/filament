@@ -828,7 +828,7 @@ public:
               &features.material.check_crc32_after_loading, false },
             { "material.enableMaterialInstanceUniformBatching",
               "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
-              &features.material.check_crc32_after_loading, false },
+              &features.material.enableMaterialInstanceUniformBatching, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
