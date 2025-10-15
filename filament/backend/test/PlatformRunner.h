@@ -73,11 +73,16 @@ void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, 
  */
 int runTests();
 
+struct TestArguments {
+    Backend backend;
+    bool headlessOnly = false;
+};
+
 /**
  * A utility method that can be invoked by test runners to parse arguments.
  * Looks through the provided command-line arguments and finds any -a <backend> arguments.
  */
-Backend parseArgumentsForBackend(int argc, char* argv[]);
+TestArguments parseArguments(int argc, char* argv[]);
 
 } // namespace test
 

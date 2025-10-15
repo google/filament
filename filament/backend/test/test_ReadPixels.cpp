@@ -385,8 +385,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     Cleanup cleanup(api);
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(
-            api.createSwapChainHeadless(renderTargetSize, renderTargetSize, 0));
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{

@@ -23,13 +23,16 @@
 
 namespace test {
 
-Backend parseArgumentsForBackend(int argc, char* argv[]) {
-    Backend backend = Backend::OPENGL;
+TestArguments parseArguments(int argc, char* argv[]) {
+    TestArguments arguments = {};
+    arguments.backend = Backend::OPENGL;
+
     // The first colon in OPTSTR turns on silent error reporting. This is important, as the
     // arguments may also contain gtest parameters we don't know about.
-    static constexpr const char* OPTSTR = ":a:";
+    static constexpr const char* OPTSTR = ":a:k";
     static const struct option OPTIONS[] = {
             { "api", required_argument, nullptr, 'a' },
+            { "headless_only", no_argument, nullptr, 'k' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -41,13 +44,13 @@ Backend parseArgumentsForBackend(int argc, char* argv[]) {
         switch (opt) {
             case 'a':
                 if (arg == "opengl") {
-                    backend = Backend::OPENGL;
+                    arguments.backend = Backend::OPENGL;
                 } else if (arg == "vulkan") {
-                    backend = Backend::VULKAN;
+                    arguments.backend = Backend::VULKAN;
                 } else if (arg == "metal") {
-                    backend = Backend::METAL;
+                    arguments.backend = Backend::METAL;
                 } else if (arg == "webgpu") {
-                    backend = Backend::WEBGPU;
+                    arguments.backend = Backend::WEBGPU;
                 } else {
                     std::cerr << "Unrecognized target API. Must be 'opengl'|'vulkan'|'metal'|'webgpu'."
                               << std::endl
@@ -55,10 +58,13 @@ Backend parseArgumentsForBackend(int argc, char* argv[]) {
                               << std::endl;
                 }
                 break;
+            case 'k':
+                arguments.headlessOnly = true;
+                break;
         }
     }
 
-    return backend;
+    return arguments;
 }
 
 } // namespace test
