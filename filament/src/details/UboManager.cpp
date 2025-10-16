@@ -31,12 +31,15 @@ using namespace backend;
 
 using AllocationId = BufferAllocator::AllocationId;
 using allocation_size_t = BufferAllocator::allocation_size_t;
+
+// TODO: Remove this after we can get it from config/backend
+constexpr allocation_size_t DEFAULT_SLOT_SIZE_IN_BYTES = 256;
+constexpr allocation_size_t DEFAULT_TOTAL_SIZE_IN_BYTES = 256 * 20;
 } // anonymous namespace
 
-UboManager::UboManager(Engine::Config const& config)
-// TODO: Get the totalSize from Engine::config
-// TODO: Get the slotSize from the backend
-    : mAllocator(256 * 20, 256) {
+UboManager::UboManager(DriverApi& driver, Engine::Config const& config)
+        : mAllocator(DEFAULT_TOTAL_SIZE_IN_BYTES, DEFAULT_SLOT_SIZE_IN_BYTES) {
+    reallocate(driver, DEFAULT_TOTAL_SIZE_IN_BYTES);
 }
 
 void UboManager::beginFrame(DriverApi& driver,
@@ -117,8 +120,8 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
 
     // Iterate from the newest fence to the oldest.
     for (auto it = mFenceAllocationList.rbegin(); it != mFenceAllocationList.rend(); ++it) {
-        auto& fence = it->first;
-        auto status = driver.getFenceStatus(fence);
+        const auto& fence = it->first;
+        const auto status = driver.getFenceStatus(fence);
 
         // If we have already seen a signaled fence, we can assume all older fences
         // are also complete, regardless of their reported status (e.g., TIMEOUT_EXPIRED).
@@ -127,10 +130,10 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
             signaledCount++;
 #ifndef NDEBUG
             if (UTILS_UNLIKELY(status != FenceStatus::CONDITION_SATISFIED)) {
-                slog.w <<
-                        "A fence is either an error or hasn't signaled, but the new fence has been "
-                        "signaled. Will release the resource anyways."
-                        << io::endl;
+                slog.w << "A fence is either an error or hasn't signaled, but the new fence has "
+                          "been "
+                          "signaled. Will release the resource anyways."
+                       << io::endl;
             }
 #endif
             continue;
@@ -159,6 +162,8 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
     }
 
     mFenceAllocationList.erase(mFenceAllocationList.begin(), firstToKeep);
+
+    // Try to merge the unlocked slots.
     mAllocator.releaseFreeSlots();
 }
 

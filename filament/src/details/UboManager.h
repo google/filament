@@ -31,12 +31,7 @@
 
 namespace filament {
 
-namespace backend {
-class Driver;
-}
-
 class FMaterialInstance;
-struct Config;
 
 // This class is NOT thread-safe.
 //
@@ -49,7 +44,7 @@ struct Config;
 // functions MUST be protected by external synchronization (e.g., a std::mutex).
 class UboManager {
 public:
-    explicit UboManager(Engine::Config const& config);
+    explicit UboManager(backend::DriverApi& driver, Engine::Config const& config);
 
     UboManager(UboManager const&) = delete;
     UboManager(UboManager&&) = delete;
@@ -74,8 +69,7 @@ public:
 
     void terminate(backend::DriverApi& driver);
 
-    void updateSlot(backend::DriverApi& driver,
-            BufferAllocator::AllocationId id,
+    void updateSlot(backend::DriverApi& driver, BufferAllocator::AllocationId id,
             backend::BufferDescriptor bufferDescriptor) const;
 
 private:
@@ -93,14 +87,14 @@ private:
     BufferAllocator::allocation_size_t getTotalSize() const noexcept;
 
     // Query the offset by the allocation id.
-    BufferAllocator::allocation_size_t getAllocationOffset(
-            BufferAllocator::AllocationId id) const;
+    BufferAllocator::allocation_size_t getAllocationOffset(BufferAllocator::AllocationId id) const;
 
     [[nodiscard]] bool isLockedByGpu(BufferAllocator::AllocationId id) const;
     void checkFenceAndUnlockSlots(backend::DriverApi& driver);
     // Returns true if the current buffer needs reallocation.
     // Otherwise, returns false.
-    bool updateMaterialInstanceAllocations(const ResourceList<FMaterialInstance>& materialInstances);
+    bool updateMaterialInstanceAllocations(
+            const ResourceList<FMaterialInstance>& materialInstances);
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
     BufferAllocator::allocation_size_t calculateRequiredSize(
             const ResourceList<FMaterialInstance>& materialInstances);
@@ -112,7 +106,7 @@ private:
 
     // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
     using FenceAllocationList = std::vector<std::pair<backend::Handle<backend::HwFence>,
-        std::unordered_set<BufferAllocator::AllocationId>>>;
+            std::unordered_set<BufferAllocator::AllocationId>>>;
     FenceAllocationList mFenceAllocationList;
 
     BufferAllocator mAllocator;
