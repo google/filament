@@ -31,15 +31,12 @@ using namespace backend;
 
 using AllocationId = BufferAllocator::AllocationId;
 using allocation_size_t = BufferAllocator::allocation_size_t;
-
-// TODO: Remove this after we can get it from config/backend
-constexpr allocation_size_t DEFAULT_SLOT_SIZE_IN_BYTES = 256;
-constexpr allocation_size_t DEFAULT_TOTAL_SIZE_IN_BYTES = 256 * 20;
 } // anonymous namespace
 
-UboManager::UboManager(DriverApi& driver, Engine::Config const& config)
-        : mAllocator(DEFAULT_TOTAL_SIZE_IN_BYTES, DEFAULT_SLOT_SIZE_IN_BYTES) {
-    reallocate(driver, DEFAULT_TOTAL_SIZE_IN_BYTES);
+UboManager::UboManager(DriverApi& driver, BufferAllocator::allocation_size_t defaultSlotSizeInBytes,
+        BufferAllocator::allocation_size_t defaultTotalSizeInBytes)
+        : mAllocator(defaultTotalSizeInBytes, defaultSlotSizeInBytes) {
+    reallocate(driver, defaultTotalSizeInBytes);
 }
 
 void UboManager::beginFrame(DriverApi& driver,

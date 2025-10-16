@@ -25,8 +25,6 @@
 #include <backend/Handle.h>
 #include <private/backend/DriverApi.h>
 
-#include <filament/Engine.h>
-
 #include <unordered_set>
 
 namespace filament {
@@ -41,7 +39,9 @@ class FMaterialInstance;
 // undefined behavior.
 class UboManager {
 public:
-    explicit UboManager(backend::DriverApi& driver, Engine::Config const& config);
+    explicit UboManager(backend::DriverApi& driver,
+            BufferAllocator::allocation_size_t defaultSlotSizeInBytes,
+            BufferAllocator::allocation_size_t defaultTotalSizeInBytes);
 
     UboManager(UboManager const&) = delete;
     UboManager(UboManager&&) = delete;
