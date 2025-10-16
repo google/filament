@@ -33,15 +33,12 @@ namespace filament {
 
 class FMaterialInstance;
 
-// This class is NOT thread-safe.
+// This class is NOT thread-safe and designed to be used on a single core thread.
 //
 // It internally manages the actual allocator (e.g., mAllocator) without any
 // synchronization primitives, and the allocator itself is not thread-safe as well. Concurrent
 // access from multiple threads to the same UboManager instance will result in data races and
 // undefined behavior.
-//
-// If an instance of this class is to be shared between threads, all calls to its member
-// functions MUST be protected by external synchronization (e.g., a std::mutex).
 class UboManager {
 public:
     explicit UboManager(backend::DriverApi& driver, Engine::Config const& config);
