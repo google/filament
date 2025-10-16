@@ -70,7 +70,7 @@ TEST_F(BackendTest, ScissorViewportRegion) {
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         Shader shader = SharedShaders::makeShader(api, cleanup,
@@ -149,7 +149,7 @@ TEST_F(BackendTest, ScissorViewportEdgeCases) {
     // executeCommands().
     {
         // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-        auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
+        auto swapChain = cleanup.add(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
