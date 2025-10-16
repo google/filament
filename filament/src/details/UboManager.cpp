@@ -75,6 +75,12 @@ void UboManager::terminate(DriverApi& driver) {
     driver.destroyBufferObject(mUbHandle);
 }
 
+void UboManager::updateSlot(DriverApi& driver, BufferAllocator::AllocationId id,
+        BufferDescriptor bufferDescriptor) const {
+    const auto offset = mAllocator.getAllocationOffset(id);
+    driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
+}
+
 std::pair<AllocationId, allocation_size_t> UboManager::allocate(uint32_t required_size) {
     auto [id, offset] = mAllocator.allocate(required_size);
     if (id == BufferAllocator::REALLOCATION_REQUIRED) {
@@ -106,12 +112,6 @@ allocation_size_t UboManager::getAllocationOffset(AllocationId id) const {
 
 bool UboManager::isLockedByGpu(BufferAllocator::AllocationId id) const {
     return mAllocator.isLockedByGpu(id);
-}
-
-void UboManager::updateSlot(DriverApi& driver, BufferAllocator::AllocationId id,
-        BufferDescriptor bufferDescriptor) const {
-    const auto offset = mAllocator.getAllocationOffset(id);
-    driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
 }
 
 void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
