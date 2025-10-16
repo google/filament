@@ -1,3 +1,5 @@
+# This action retrieves the latest commit message from a push or pull_request event
+# and makes it available as an output variable named 'msg'.
 name: 'Get commit message'
 outputs:
   msg:
@@ -8,6 +10,8 @@ runs:
     - name: Find commit message (on push)
       if: github.event_name == 'push'
       shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
       run: |
         AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
         AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
@@ -16,15 +20,12 @@ runs:
         echo "Author: ${AUTHOR_NAME}<${AUTHOR_EMAIL}>" >> /tmp/commit_msg.txt
         echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
         echo "" >> /tmp/commit_msg.txt
-        echo "${{ github.event.head_commit.message }}" >> /tmp/commit_msg.txt
+        echo "$COMMIT_MESSAGE" >> /tmp/commit_msg.txt
     - name: Find commit message (PR)
       shell: bash
       id: checkout_code
       if: github.event_name == 'pull_request'
       run: |
-        echo "+++++ head commit message +++++"
-        echo "$(git log -1 --no-merges)"
-        echo "+++++++++++++++++++++++++++++++"
         echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
         git checkout ${{ github.event.pull_request.head.sha }}
         echo "$(git log -1 --no-merges)" >> /tmp/commit_msg.txt
