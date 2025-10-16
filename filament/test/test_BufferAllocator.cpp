@@ -441,4 +441,13 @@ TEST_F(BufferAllocatorTest, ComplexScenario) {
     EXPECT_EQ(failOffset2,0);
 }
 
+TEST_F(BufferAllocatorTest, AlignUp) {
+    EXPECT_EQ(mAllocator.alignUp(1), 64);
+    EXPECT_EQ(mAllocator.alignUp(63), 64);
+    EXPECT_EQ(mAllocator.alignUp(100), 128);
+    EXPECT_EQ(mAllocator.alignUp(234), 256);
+    EXPECT_EQ(mAllocator.alignUp(255), 256);
+    EXPECT_EQ(mAllocator.alignUp(999), 1024);
+}
+
 } // anonymous namespace
