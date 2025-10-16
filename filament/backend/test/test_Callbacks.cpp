@@ -103,7 +103,7 @@ TEST_F(BackendTest, FrameCompletedCallback) {
     Cleanup cleanup(api);
 
     // Create a SwapChain.
-    auto swapChain = cleanup.add(api.createSwapChainHeadless(256, 256, 0));
+    auto swapChain = cleanup.add(createSwapChain());
 
     int callbackCountA = 0;
     api.setFrameCompletedCallback(swapChain, nullptr,
