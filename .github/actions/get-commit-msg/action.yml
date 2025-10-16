@@ -4,6 +4,8 @@ name: 'Get commit message'
 outputs:
   msg:
     value: ${{ steps.action_output.outputs.msg }}
+  hash:
+    value: ${{ steps.action_output.outputs.hash }}
 runs:
   using: "composite"
   steps:
@@ -16,29 +18,36 @@ runs:
         AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
         AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
         TSTAMP="${{ github.event.head_commit.timestamp }}"
-        echo "commit ${{ github.event.head_commit.id }}" >> /tmp/commit_msg.txt
+        HASH="${{ github.event.head_commit.id }}"
+        echo "commit $HASH" >> /tmp/commit_msg.txt
         echo "Author: ${AUTHOR_NAME}<${AUTHOR_EMAIL}>" >> /tmp/commit_msg.txt
         echo "Date: ${TSTAMP}" >> /tmp/commit_msg.txt
         echo "" >> /tmp/commit_msg.txt
         echo "$COMMIT_MESSAGE" >> /tmp/commit_msg.txt
+        echo "$HASH" > /tmp/commit_hash.txt
     - name: Find commit message (PR)
       shell: bash
       id: checkout_code
       if: github.event_name == 'pull_request'
       run: |
-        echo "hash=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-        git checkout ${{ github.event.pull_request.head.sha }}
-        echo "$(git log -1 --no-merges)" >> /tmp/commit_msg.txt
+        BEFORE_HASH=$(git rev-parse HEAD)
+        echo "hash=$BEFORE_HASH" >> "$GITHUB_OUTPUT"
+        # Next we will checkout the actual head (not the merge commits) of the PR
+        AFTER_HASH="${{ github.event.pull_request.head.sha }}"
+        git checkout $AFTER_HASH
+        COMMIT_MESSAGE=$(git log -1 --no-merges)
+        echo "$COMMIT_MESSAGE" > /tmp/commit_msg.txt
+        echo "$AFTER_HASH" > /tmp/commit_hash.txt
     - shell: bash
       id: action_output
       run: |
+        # Get the commit message
         DELIMITER="EOF_FILE_CONTENT_$(date +%s)" # Using timestamp to make it more unique
         echo "msg<<$DELIMITER" >> "$GITHUB_OUTPUT"
         cat /tmp/commit_msg.txt >> "$GITHUB_OUTPUT"
         echo "$DELIMITER" >> "$GITHUB_OUTPUT"
-        echo "----- got commit message ---"
-        cat /tmp/commit_msg.txt
-        echo "----------------------------"
+        # Get the commit hash
+        echo "hash=$(cat /tmp/commit_hash.txt)" >> "$GITHUB_OUTPUT"
     - name: Cleanup Find commit message (PR)
       shell: bash
       if: github.event_name == 'pull_request'
