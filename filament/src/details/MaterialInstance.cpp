@@ -445,9 +445,12 @@ void FMaterialInstance::assignUboAllocation(
         BufferAllocator::AllocationId id,
         BufferAllocator::allocation_size_t offset) {
     assert_invariant(mUseUboBatching);
+
     mUboData = id;
-    mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, offset,
-            mUniforms.getSize());
+    if (id != BufferAllocator::UNALLOCATED && id != BufferAllocator::REALLOCATION_REQUIRED) {
+        mDescriptorSet.setBuffer(mMaterial->getDescriptorSetLayout(), 0, ubHandle, offset,
+                mUniforms.getSize());
+    }
 }
 
 BufferAllocator::AllocationId FMaterialInstance::getAllocationId() const noexcept {

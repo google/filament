@@ -216,12 +216,26 @@ BufferAllocator::allocation_size_t
     return (id - 1) * mSlotSize;
 }
 
+bool BufferAllocator::isLockedByGpu(AllocationId id) const {
+    auto targetNode = getNodeById(id);
+    assert_invariant(targetNode != nullptr);
+
+    return targetNode->mSlot.gpuUseCount > 0;
+}
+
 BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
         allocation_size_t offset) const {
     assert_invariant(offset % mSlotSize == 0);
 
     // The ID is 1-based since we use 0 for UNALLOCATED.
     return (offset / mSlotSize) + 1;
+}
+
+BufferAllocator::allocation_size_t BufferAllocator::getAllocationSize(AllocationId id) const {
+    auto targetNode = getNodeById(id);
+    assert_invariant(targetNode != nullptr);
+
+    return targetNode->mSlot.slotSize;
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::alignUp(
