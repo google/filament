@@ -6,11 +6,15 @@ set -ex
 # This script updates the test material used to verify old materials can still be parsed.
 # See filament_test_material_parser.cpp.
 
-OUTPUT="filament/test/test_material.filamat"
+OUTPUT_DIR="filament/test/"
 
 ./build.sh -p desktop release matc
 MATC=out/cmake-release/tools/matc/matc
-${MATC} --platform all --api all -o ${OUTPUT} samples/materials/sandboxLit.mat
+${MATC} --platform all --api all -o ${OUTPUT_DIR}/test_material.filamat samples/materials/sandboxLit.mat
+
+./build.sh -p desktop release matc
+MATC=out/cmake-release/tools/matc/matc
+${MATC} --platform all --api all -o ${OUTPUT_DIR}/test_material_transformname.filamat samples/materials/sandboxTransformName.mat
 
 set +x
 

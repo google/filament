@@ -79,12 +79,7 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener& f) {
         f.writeUint8(static_cast<uint8_t>(sInfo.precision));
         f.writeBool(sInfo.filterable);
         f.writeBool(sInfo.multisample);
-
-        bool hasTransformNameField = !sInfo.transformName.empty();
-        f.writeBool(hasTransformNameField);
-        if (hasTransformNameField) {
-            f.writeString(sInfo.transformName.c_str());
-        }
+        f.writeString(sInfo.transformName.c_str_safe());
     }
 }
 

@@ -542,7 +542,6 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
         uint8_t fieldPrecision = 0;
         bool fieldFilterable = false;
         bool fieldMultisample = false;
-        bool hasFieldTransformName = false;
         CString fieldTransformName;
 
         if (!unflattener.read(&fieldName)) {
@@ -573,11 +572,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
             return false;
         }
 
-        if (!unflattener.read(&hasFieldTransformName)) {
-            return false;
-        }
-
-        if (hasFieldTransformName && !unflattener.read(&fieldTransformName)) {
+        if (!unflattener.read(&fieldTransformName)) {
             return false;
         }
 

@@ -788,6 +788,21 @@ public class Material {
     }
 
     /**
+     * 
+     * Returns the name of the transform name parameter associated with the given sampler parameter. 
+     * In the case the parameter don't have a transform name field, it will return an empty value.
+     * 
+     * @param samplerName the name of the sampler parameter to query.
+     * 
+     * @see
+     * <a href="https://google.github.io/filament/Materials.html#materialdefinitions/materialblock/general:parameters">
+     * General: parameters</a>
+     */
+    public String getParameterTransformName(@NonNull String samplerName) {
+        return nGetParameterTransformName(getNativeObject(), samplerName);
+    }
+
+    /**
      * Sets the value of a bool parameter on this material's default instance.
      *
      * @param name the name of the material parameter
@@ -1111,4 +1126,5 @@ public class Material {
     private static native int nGetRequiredAttributes(long nativeMaterial);
 
     private static native boolean nHasParameter(long nativeMaterial, @NonNull String name);
+    private static native String nGetParameterTransformName(long nativeMaterial, @NonNull String samplerName);
 }
