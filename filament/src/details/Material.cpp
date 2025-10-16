@@ -822,9 +822,9 @@ descriptor_binding_t FMaterial::getSamplerBinding(
     return mDefinition.samplerInterfaceBlock.getSamplerInfo(name)->binding;
 }
 
-const char* FMaterial::getParameterTransformName(std::string_view name) const noexcept {
+const char* FMaterial::getParameterTransformName(std::string_view samplerName) const noexcept {
     auto const& sib = getSamplerInterfaceBlock();
-    SamplerInterfaceBlock::SamplerInfo const* info = sib.getSamplerInfo(name);
+    SamplerInterfaceBlock::SamplerInfo const* info = sib.getSamplerInfo(samplerName);
     if (!info || info->transformName.empty()) {
         return nullptr;
     }
