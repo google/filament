@@ -57,7 +57,7 @@ void UboManager::endFrame(DriverApi& driver,
     std::unordered_set<AllocationId> allocationIds;
     materialInstances.forEach([&allocator, &allocationIds](FMaterialInstance* mi) {
         const AllocationId id = mi->getAllocationId();
-        allocator.releaseGpu(id);
+        allocator.acquireGpu(id);
         allocationIds.insert(id);
     });
 
@@ -81,37 +81,12 @@ void UboManager::updateSlot(DriverApi& driver, BufferAllocator::AllocationId id,
     driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
 }
 
-std::pair<AllocationId, allocation_size_t> UboManager::allocate(uint32_t required_size) {
-    auto [id, offset] = mAllocator.allocate(required_size);
-    if (id == BufferAllocator::REALLOCATION_REQUIRED) {
-        mNeedReallocate = true;
-    }
-
-    return { id, offset };
-}
-
-void UboManager::retire(AllocationId id) {
-    mAllocator.retire(id);
-}
-
-void UboManager::acquireGpu(AllocationId id) {
-    mAllocator.acquireGpu(id);
-}
-
-void UboManager::releaseGpu(AllocationId id) {
-    mAllocator.releaseGpu(id);
-}
-
 allocation_size_t UboManager::getTotalSize() const noexcept {
     return mUboSize;
 }
 
 allocation_size_t UboManager::getAllocationOffset(AllocationId id) const {
     return mAllocator.getAllocationOffset(id);
-}
-
-bool UboManager::isLockedByGpu(BufferAllocator::AllocationId id) const {
-    return mAllocator.isLockedByGpu(id);
 }
 
 void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
@@ -219,7 +194,7 @@ void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
 allocation_size_t UboManager::calculateRequiredSize(
         const ResourceList<FMaterialInstance>& materialInstances) {
     BufferAllocator& allocator = mAllocator;
-    allocation_size_t newBufferSize = mUboSize;
+    allocation_size_t newBufferSize = 0;
     materialInstances.forEach([&newBufferSize, &allocator](FMaterialInstance* mi) {
         auto allocationId = mi->getAllocationId();
         if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {

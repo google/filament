@@ -69,24 +69,16 @@ public:
     void updateSlot(backend::DriverApi& driver, BufferAllocator::AllocationId id,
             backend::BufferDescriptor bufferDescriptor) const;
 
-private:
-    constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
-
-    // If the allocation fails due to an insufficient UBO size, set needReallocate to true.
-    std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t> allocate(
-            uint32_t required_size);
-    void retire(BufferAllocator::AllocationId id);
-    void acquireGpu(BufferAllocator::AllocationId id);
-    void releaseGpu(BufferAllocator::AllocationId id);
-
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
     BufferAllocator::allocation_size_t getTotalSize() const noexcept;
 
+private:
+    constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
+
     // Query the offset by the allocation id.
     BufferAllocator::allocation_size_t getAllocationOffset(BufferAllocator::AllocationId id) const;
 
-    [[nodiscard]] bool isLockedByGpu(BufferAllocator::AllocationId id) const;
     void checkFenceAndUnlockSlots(backend::DriverApi& driver);
     // Returns true if the current buffer needs reallocation.
     // Otherwise, returns false.
