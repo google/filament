@@ -229,7 +229,7 @@ if __name__ == '__main__':
   important_print(f'Successfully compared {success_count} / {len(results)} images')
 
   if tolerance_used_details:
-    pstr = 'Tolerance-based passes:'
+    pstr = 'Passed:'
     for detail in tolerance_used_details:
       pstr += '\n' + detail
     important_print(pstr)
@@ -237,7 +237,7 @@ if __name__ == '__main__':
   if failed_details:
     pstr = 'Failed:'
     for detail in failed_details:
-      pstr = '\n' + detail
+      pstr += '\n' + detail
     important_print(pstr)
   if len(failed) > 0:
     exit(1)
