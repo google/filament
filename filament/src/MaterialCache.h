@@ -17,6 +17,7 @@
 #define TNT_FILAMENT_MATERIALCACHE_H
 
 #include "MaterialDefinition.h"
+#include "ProgramSpecialization.h"
 
 #include <private/filament/Variant.h>
 
@@ -25,6 +26,8 @@
 #include <backend/Handle.h>
 #include <backend/Program.h>
 
+#include <utils/FixedCapacityVector.h>
+#include <utils/InternPool.h>
 #include <utils/Invocable.h>
 #include <utils/RefCountedMap.h>
 
@@ -35,29 +38,64 @@ class Material;
 class MaterialCache {
     // A newtype around a material parser used as a key for the material cache. The material file's
     // CRC32 is used as the hash function.
-    struct Key {
+    struct MaterialKey {
         struct Hash {
-            size_t operator()(Key const& x) const noexcept;
+            size_t operator()(MaterialKey const& x) const noexcept;
         };
-        bool operator==(Key const& rhs) const noexcept;
+        bool operator==(MaterialKey const& rhs) const noexcept;
 
         MaterialParser const* UTILS_NONNULL parser;
     };
 
 public:
+    using SpecializationConstantInternPool =
+            utils::InternPool<backend::Program::SpecializationConstant>;
+
     ~MaterialCache();
 
+    SpecializationConstantInternPool& getSpecializationConstantsInternPool() {
+        return mSpecializationConstantsInternPool;
+    }
+
     // Acquire or create a new entry in the cache for the given material data.
-    MaterialDefinition* UTILS_NULLABLE acquire(FEngine& engine, const void* UTILS_NONNULL data,
+    MaterialDefinition* UTILS_NULLABLE acquireMaterial(FEngine& engine, const void* UTILS_NONNULL data,
             size_t size) noexcept;
 
     // Release an entry in the cache, potentially freeing its GPU resources.
-    void release(FEngine& engine, MaterialDefinition const& definition) noexcept;
+    void releaseMaterial(FEngine& engine, MaterialDefinition const& definition) noexcept;
+
+    // Acquire a program, but don't compile it.
+    //
+    // If the program is not yet compiled, returns an invalid handle.
+    backend::Handle<backend::HwProgram> acquireProgram(
+            ProgramSpecialization const& specialization) noexcept;
+
+    // Acquire a program, compiling it if necessary.
+    backend::Handle<backend::HwProgram> acquireAndPrepareProgram(FEngine& engine,
+            MaterialDefinition const& material, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue const priorityQueue);
+
+    // If necessary, compiles a program and returns it.
+    backend::Handle<backend::HwProgram> prepareProgram(FEngine& engine,
+            MaterialDefinition const& material, ProgramSpecialization const& specialization,
+            backend::CompilerPriorityQueue const priorityQueue);
+
+    // Get an already compiled program.
+    backend::Handle<backend::HwProgram> getProgram(ProgramSpecialization const& specialization);
+
+    // Release a program, potentially freeing its GPU resources.
+    void releaseProgram(FEngine& engine, ProgramSpecialization const& specialization);
 
 private:
+    // TODO: investigate using custom allocators for the below data structures?
+
     // We use unique_ptr here because we need these pointers to be stable.
-    // TODO: investigate using a custom allocator here?
-    utils::RefCountedMap<Key, std::unique_ptr<MaterialDefinition>, Key::Hash> mDefinitions;
+    utils::RefCountedMap<MaterialKey, std::unique_ptr<MaterialDefinition>, MaterialKey::Hash>
+            mDefinitions;
+
+    utils::RefCountedMap<ProgramSpecialization, backend::Handle<backend::HwProgram>> mPrograms;
+
+    utils::InternPool<backend::Program::SpecializationConstant> mSpecializationConstantsInternPool;
 };
 
 } // namespace filament

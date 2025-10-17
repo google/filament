@@ -17,10 +17,11 @@
 #include <backend/Program.h>
 #include <backend/DriverEnums.h>
 
-#include <utils/debug.h>
 #include <utils/CString.h>
-#include <utils/ostream.h>
 #include <utils/Invocable.h>
+#include <utils/Panic.h>
+#include <utils/debug.h>
+#include <utils/ostream.h>
 
 #include <utility>
 
