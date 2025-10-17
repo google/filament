@@ -90,11 +90,16 @@ public:
     [[nodiscard]] allocation_size_t getTotalSize() const noexcept;
 
     // Query the allocation offset by AllocationId.
-    allocation_size_t getAllocationOffset(AllocationId id) const;
+    [[nodiscard]] allocation_size_t getAllocationOffset(AllocationId id) const;
+
+    [[nodiscard]] bool isLockedByGpu(AllocationId id) const;
+
+    [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
+
+    [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
 
 private:
     [[nodiscard]] AllocationId calculateIdByOffset(allocation_size_t offset) const;
-    [[nodiscard]] allocation_size_t alignUp(allocation_size_t size) const noexcept;
 
     // Having an internal node type holding the base slot node and additional information.
     struct InternalSlotNode {
