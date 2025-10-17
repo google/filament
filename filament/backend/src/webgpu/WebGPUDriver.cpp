@@ -446,6 +446,7 @@ void WebGPUDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
 void WebGPUDriver::createVertexBufferInfoR(Handle<HwVertexBufferInfo> vertexBufferInfoHandle,
         const uint8_t bufferCount, const uint8_t attributeCount, const AttributeArray attributes,
         utils::ImmutableCString&& tag) {
+    // Hello world! This is a test for pushing branch to Github
     FWGPU_SYSTRACE_SCOPE();
     constructHandle<WebGPUVertexBufferInfo>(vertexBufferInfoHandle, bufferCount, attributeCount,
             attributes, mDeviceLimits);
