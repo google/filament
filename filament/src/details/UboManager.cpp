@@ -66,7 +66,9 @@ void UboManager::beginFrame(DriverApi& driver,
     mNeedReallocate = false;
 
     // Allocate slots for each MI on the new Ubo.
+#ifndef NDEBUG
     const bool needReallocationAgain =
+#endif
             updateMaterialInstanceAllocations(materialInstances, /*forceAllocateAll*/ true);
     assert_invariant(!needReallocationAgain);
 
