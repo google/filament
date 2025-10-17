@@ -37,6 +37,7 @@ set(MATERIAL_SRCS
         materials/sandboxLitSolidRefractionSsr.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
+        materials/sandboxTransformName.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
 )

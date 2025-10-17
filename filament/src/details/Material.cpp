@@ -822,6 +822,15 @@ descriptor_binding_t FMaterial::getSamplerBinding(
     return mDefinition.samplerInterfaceBlock.getSamplerInfo(name)->binding;
 }
 
+const char* FMaterial::getParameterTransformName(std::string_view samplerName) const noexcept {
+    auto const& sib = getSamplerInterfaceBlock();
+    SamplerInterfaceBlock::SamplerInfo const* info = sib.getSamplerInfo(samplerName);
+    if (!info || info->transformName.empty()) {
+        return nullptr;
+    }
+    return info->transformName.c_str();
+}
+
 template bool FMaterial::setConstant<int32_t>(uint32_t id, int32_t value) noexcept;
 template bool FMaterial::setConstant<float>(uint32_t id, float value) noexcept;
 template bool FMaterial::setConstant<bool>(uint32_t id, bool value) noexcept;

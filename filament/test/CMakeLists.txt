@@ -16,7 +16,9 @@ file(MAKE_DIRECTORY ${RESOURCE_DIR})
 get_resgen_vars(${RESOURCE_DIR} filament_test_resources)
 
 set(RESOURCE_BINS
-        ${CMAKE_CURRENT_SOURCE_DIR}/test_material.filamat)
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_material.filamat
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_material_transformname.filamat
+)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
@@ -75,3 +77,11 @@ target_link_libraries(test_material_parser PRIVATE filament gtest)
 target_compile_options(test_material_parser PRIVATE ${COMPILER_FLAGS})
 target_include_directories(test_material_parser PRIVATE ${RESOURCE_DIR})
 set_target_properties(test_material_parser PROPERTIES FOLDER Tests)
+
+add_executable(test_material
+        filament_test_material.cpp
+        ${RESGEN_SOURCE})
+target_link_libraries(test_material PRIVATE filament gtest)
+target_compile_options(test_material PRIVATE ${COMPILER_FLAGS})
+target_include_directories(test_material PRIVATE ${RESOURCE_DIR})
+set_target_properties(test_material PROPERTIES FOLDER Tests)

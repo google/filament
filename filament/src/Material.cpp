@@ -146,6 +146,10 @@ bool Material::isSampler(const char* name) const noexcept {
     return downcast(this)->isSampler(name);
 }
 
+const char* Material::getParameterTransformName(const char* samplerName) const noexcept {
+    return downcast(this)->getParameterTransformName(samplerName);
+}
+
 MaterialInstance* Material::getDefaultInstance() noexcept {
     return downcast(this)->getDefaultInstance();
 }
