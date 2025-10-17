@@ -54,8 +54,7 @@
             "description": "transmission",
             "apply_presets": ["base", "transmission_models"],
             "rendering": {
-                "viewer.cameraFocalLength": 52.0,
-                "view.screenSpaceReflections.enabled": true
+                "viewer.cameraFocalLength": 52.0
             }
         },
         {
