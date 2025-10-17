@@ -33,8 +33,8 @@ using AllocationId = BufferAllocator::AllocationId;
 using allocation_size_t = BufferAllocator::allocation_size_t;
 } // anonymous namespace
 
-UboManager::UboManager(DriverApi& driver, BufferAllocator::allocation_size_t defaultSlotSizeInBytes,
-        BufferAllocator::allocation_size_t defaultTotalSizeInBytes)
+UboManager::UboManager(DriverApi& driver, allocation_size_t defaultSlotSizeInBytes,
+        allocation_size_t defaultTotalSizeInBytes)
         : mAllocator(defaultTotalSizeInBytes, defaultSlotSizeInBytes) {
     reallocate(driver, defaultTotalSizeInBytes);
 }
@@ -72,7 +72,7 @@ void UboManager::terminate(DriverApi& driver) {
     driver.destroyBufferObject(mUbHandle);
 }
 
-void UboManager::updateSlot(DriverApi& driver, BufferAllocator::AllocationId id,
+void UboManager::updateSlot(DriverApi& driver, AllocationId id,
         BufferDescriptor bufferDescriptor) const {
     const auto offset = mAllocator.getAllocationOffset(id);
     driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
