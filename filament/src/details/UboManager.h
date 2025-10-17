@@ -71,27 +71,28 @@ public:
 
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
-    BufferAllocator::allocation_size_t getTotalSize() const noexcept;
+    [[nodiscard]] BufferAllocator::allocation_size_t getTotalSize() const noexcept;
 
 private:
     constexpr static float BUFFER_SIZE_GROWTH_MULTIPLIER = 1.5f;
 
     // Query the offset by the allocation id.
-    BufferAllocator::allocation_size_t getAllocationOffset(BufferAllocator::AllocationId id) const;
+    [[nodiscard]] BufferAllocator::allocation_size_t getAllocationOffset(
+            BufferAllocator::AllocationId id) const;
 
     void checkFenceAndUnlockSlots(backend::DriverApi& driver);
     // Returns true if the current buffer needs reallocation.
     // Otherwise, returns false.
     bool updateMaterialInstanceAllocations(
-            const ResourceList<FMaterialInstance>& materialInstances);
+            const ResourceList<FMaterialInstance>& materialInstances, bool forceAllocateAll);
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
     BufferAllocator::allocation_size_t calculateRequiredSize(
             const ResourceList<FMaterialInstance>& materialInstances);
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
     backend::MemoryMappedBufferHandle mMmbHandle;
-    BufferAllocator::allocation_size_t mUboSize;
-    bool mNeedReallocate;
+    BufferAllocator::allocation_size_t mUboSize{};
+    bool mNeedReallocate{};
 
     // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
     using FenceAllocationList = std::vector<std::pair<backend::Handle<backend::HwFence>,
