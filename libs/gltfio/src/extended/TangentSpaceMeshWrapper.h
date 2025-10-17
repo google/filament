@@ -67,11 +67,6 @@ struct TangentSpaceMeshWrapper {
     short4* getQuats() noexcept;
     uint3* getTriangles();
 
-    template<typename T>
-    using is_supported_aux_t = typename std::enable_if<
-            std::is_same<float2*, T>::value || std::is_same<float3*, T>::value ||
-            std::is_same<float4*, T>::value || std::is_same<ushort3*, T>::value ||
-            std::is_same<ushort4*, T>::value>::type;
     template<typename T, typename = is_supported_aux_t<T>>
     T getAux(AuxType attribute) noexcept;
 

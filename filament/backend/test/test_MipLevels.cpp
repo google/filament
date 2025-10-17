@@ -163,7 +163,7 @@ TEST_F(BackendTest, TextureViewLod) {
         params.viewport = getFullViewport();
 
         DescriptorSetHandle descriptorSet13 = texturedShader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, {
+        api.updateDescriptorSetTexture(descriptorSet13, 0, texture13, SamplerParams{
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
@@ -185,7 +185,7 @@ TEST_F(BackendTest, TextureViewLod) {
         auto texture22 = cleanup.add(api.createTextureView(texture, 2, 2));
 
         DescriptorSetHandle descriptorSet22 = texturedShader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet22, 0, texture22, {
+        api.updateDescriptorSetTexture(descriptorSet22, 0, texture22, SamplerParams{
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
