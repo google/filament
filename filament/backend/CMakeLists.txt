@@ -592,6 +592,7 @@ if (APPLE OR LINUX)
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
         test/test_MemoryMappedBuffer.cpp
+        test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp
         test/test_PushConstants.cpp
         test/test_LoadImage.cpp

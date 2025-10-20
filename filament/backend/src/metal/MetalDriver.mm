@@ -620,7 +620,9 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     auto& sc = mContext->sampleCountLookup;
     samples = sc[std::min(MAX_SAMPLE_COUNT, samples)];
 
-    MetalRenderTarget::Attachment colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {{}};
+    using AttachmentInfo = MetalRenderTarget::AttachmentInfo;
+
+    AttachmentInfo colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { {} };
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         if (none(targetBufferFlags & getTargetBufferFlagsAt(i))) {
             continue;
@@ -634,7 +636,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         colorAttachments[i] = { colorTexture, color[i].level, color[i].layer };
     }
 
-    MetalRenderTarget::Attachment depthAttachment = {};
+    AttachmentInfo depthAttachment = {};
     if (any(targetBufferFlags & TargetBufferFlags::DEPTH)) {
         FILAMENT_CHECK_PRECONDITION(depth.handle)
                 << "The DEPTH flag was specified, but invalid depth handle provided.";
@@ -644,7 +646,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         depthAttachment = { depthTexture, depth.level, depth.layer };
     }
 
-    MetalRenderTarget::Attachment stencilAttachment = {};
+    AttachmentInfo stencilAttachment = {};
     if (any(targetBufferFlags & TargetBufferFlags::STENCIL)) {
         FILAMENT_CHECK_PRECONDITION(stencil.handle)
                 << "The STENCIL flag was specified, but invalid stencil handle provided.";
@@ -668,8 +670,6 @@ void MetalDriver::createFenceR(Handle<HwFence> fh, utils::ImmutableCString&& tag
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags,
         utils::ImmutableCString&& tag) {
-    // TODO: support MSAA swapchain
-
     if (UTILS_UNLIKELY(flags & SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER)) {
         CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) nativeWindow;
         construct_handle<MetalSwapChain>(sch, *mContext, mPlatform, pixelBuffer, flags);
@@ -1149,8 +1149,7 @@ bool MetalDriver::isSRGBSwapChainSupported() {
 }
 
 bool MetalDriver::isMSAASwapChainSupported(uint32_t) {
-    // TODO: support MSAA swapchain
-    return false;
+    return true;
 }
 
 bool MetalDriver::isProtectedContentSupported() {
@@ -1556,9 +1555,9 @@ void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y,
 
     auto srcTarget = handle_cast<MetalRenderTarget>(src);
     // We always readPixels from the COLOR0 attachment.
-    MetalRenderTarget::Attachment color = srcTarget->getDrawColorAttachment(0);
+    MetalAttachment color = srcTarget->getDrawColorAttachment(0);
     id<MTLTexture> srcTexture = color.getTexture();
-    size_t miplevel = color.level;
+    size_t miplevel = color.getLevel();
 
     // Clamp height and width to actual texture's height and width
     MTLSize srcTextureSize = MTLSizeMake(srcTexture.width >> miplevel, srcTexture.height >> miplevel, 1);
@@ -1766,8 +1765,8 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
     };
 
     // We always blit from/to the COLOR0 attachment.
-    MetalRenderTarget::Attachment const srcColorAttachment = srcTarget->getReadColorAttachment(0);
-    MetalRenderTarget::Attachment const dstColorAttachment = dstTarget->getDrawColorAttachment(0);
+    MetalAttachment const srcColorAttachment = srcTarget->getReadColorAttachment(0);
+    MetalAttachment const dstColorAttachment = dstTarget->getDrawColorAttachment(0);
 
     if (srcColorAttachment && dstColorAttachment) {
         FILAMENT_CHECK_PRECONDITION(
@@ -1779,13 +1778,13 @@ void MetalDriver::blitDEPRECATED(TargetBufferFlags buffers,
         args.filter = filter;
         args.source.region = srcTarget->getRegionFromClientRect(srcRect);
         args.source.texture = srcColorAttachment.getTexture();
-        args.source.level = srcColorAttachment.level;
-        args.source.slice = srcColorAttachment.layer;
+        args.source.level = srcColorAttachment.getLevel();
+        args.source.slice = srcColorAttachment.getLayer();
 
         args.destination.region = dstTarget->getRegionFromClientRect(dstRect);
         args.destination.texture = dstColorAttachment.getTexture();
-        args.destination.level = dstColorAttachment.level;
-        args.destination.slice = dstColorAttachment.layer;
+        args.destination.level = dstColorAttachment.getLevel();
+        args.destination.slice = dstColorAttachment.getLayer();
 
         mContext->blitter->blit(getPendingCommandBuffer(mContext), args, "blitDEPRECATED");
     }
@@ -1821,6 +1820,7 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     auto [fragment, vertex] = functions.getRasterFunctions();
 
     // Pipeline state
+    std::vector<NSUInteger> sampleCounts;
     MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
         const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
@@ -1828,18 +1828,27 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
             continue;
         }
         colorPixelFormat[i] = attachment.getPixelFormat();
+        sampleCounts.push_back(attachment.getSampleCount());
     }
     MTLPixelFormat depthPixelFormat = MTLPixelFormatInvalid;
     const auto& depthAttachment = mContext->currentRenderTarget->getDepthAttachment();
     if (depthAttachment) {
         depthPixelFormat = depthAttachment.getPixelFormat();
+        sampleCounts.push_back(depthAttachment.getSampleCount());
     }
     MTLPixelFormat stencilPixelFormat = MTLPixelFormatInvalid;
     const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
     if (stencilAttachment) {
         stencilPixelFormat = stencilAttachment.getPixelFormat();
+        sampleCounts.push_back(stencilAttachment.getSampleCount());
         assert_invariant(isMetalFormatStencil(stencilPixelFormat));
     }
+    UTILS_UNUSED_IN_RELEASE bool allSampleCountsEqual =
+            std::adjacent_find(sampleCounts.begin(), sampleCounts.end(), std::not_equal_to<>()) ==
+            sampleCounts.end();
+    assert_invariant(sampleCounts.size() > 0);
+    assert_invariant(allSampleCountsEqual);
+    NSUInteger sampleCount = sampleCounts.front();
     MetalPipelineState const pipelineState {
         .vertexFunction = vertex,
         .fragmentFunction = fragment,
@@ -1856,7 +1865,7 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
         .stencilAttachmentPixelFormat = stencilPixelFormat,
-        .sampleCount = mContext->currentRenderTarget->getSamples(),
+        .sampleCount = sampleCount,
         .blendState = BlendState {
             .alphaBlendOperation = getMetalBlendOperation(rs.blendEquationAlpha),
             .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),
