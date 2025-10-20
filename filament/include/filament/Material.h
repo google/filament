@@ -352,10 +352,11 @@ public:
 
 
     /**
-     * 
-     * Gets the name of the transform name field associated for the given sampler parameter. 
-     * In the case the parameter don't have a transform name field, it will return an empty value.
-     * 
+     *
+     * Gets the name of the transform name field associated for the given sampler parameter.
+     * In the case where the parameter does not have a transform name field, it will return an empty
+     * value.
+     *
      * @param samplerName the name of the sampler parameter to query.
      *
      * @return If exists, the transform name value otherwise returns a nullptr.

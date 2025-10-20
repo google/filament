@@ -11,9 +11,6 @@ OUTPUT_DIR="filament/test/"
 ./build.sh -p desktop release matc
 MATC=out/cmake-release/tools/matc/matc
 ${MATC} --platform all --api all -o ${OUTPUT_DIR}/test_material.filamat samples/materials/sandboxLit.mat
-
-./build.sh -p desktop release matc
-MATC=out/cmake-release/tools/matc/matc
 ${MATC} --platform all --api all -o ${OUTPUT_DIR}/test_material_transformname.filamat samples/materials/sandboxTransformName.mat
 
 set +x

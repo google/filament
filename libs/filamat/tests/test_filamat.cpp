@@ -955,6 +955,24 @@ TEST_F(MaterialCompiler, SamplerTransformName) {
   EXPECT_TRUE(result.isValid());
 }
 
+TEST_F(MaterialCompiler, SamplerMissingTransformName) {
+  std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            vec3 uvw = materialParams.sampler_transform * vec3(0.0, 0.0, 0.0);
+            material.baseColor = texture2D(materialParams_sampler, uvw.xy);
+        }
+    )");
+  filamat::MaterialBuilder builder;
+  builder.parameter("sampler", SamplerType::SAMPLER_2D);
+
+  builder.featureLevel(FeatureLevel::FEATURE_LEVEL_0);
+  builder.shading(filament::Shading::UNLIT);
+  builder.material(shaderCode.c_str());
+  filamat::Package result = builder.build(*jobSystem);
+  EXPECT_FALSE(result.isValid());
+}
+
 TEST_F(MaterialCompiler, FeatureLevel0Ess3CallFails) {
   std::string shaderCode(R"(
         void material(inout MaterialInputs material) {

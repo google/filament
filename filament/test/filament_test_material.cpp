@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@ TEST(MaterialTransformName, QuerySamplerWithTransform) {
     Engine* engine = Engine::create(Engine::Backend::DEFAULT);
 
     Material* material = Material::Builder()
-    .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
-    .build(*engine);
+                                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
+                                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
+                                 .build(*engine);
     ASSERT_NE(material, nullptr);
 
     EXPECT_STREQ(material->getParameterTransformName("sampler"), "transform");
@@ -41,8 +42,9 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithTransforms) {
     Engine* engine = Engine::create(Engine::Backend::DEFAULT);
 
     Material* material = Material::Builder()
-    .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
-    .build(*engine);
+                                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
+                                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
+                                 .build(*engine);
     ASSERT_NE(material, nullptr);
 
     EXPECT_STREQ(material->getParameterTransformName("sampler"), "transform");
@@ -55,8 +57,9 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithTransforms) {
 TEST(MaterialTransformName, QuerySamplerWithoutTransform) {
     Engine* engine = Engine::create(Engine::Backend::DEFAULT);
     Material* material = Material::Builder()
-    .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
-    .build(*engine);
+                                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
+                                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
+                                 .build(*engine);
     ASSERT_NE(material, nullptr);
 
     EXPECT_EQ(material->getParameterTransformName("sampler2"), nullptr);
@@ -69,8 +72,9 @@ TEST(MaterialTransformName, QueryMultipleSamplersWithoutTransforms) {
     Engine* engine = Engine::create(Engine::Backend::DEFAULT);
 
     Material* material = Material::Builder()
-    .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA, FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
-    .build(*engine);
+                                 .package(FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_DATA,
+                                         FILAMENT_TEST_RESOURCES_TEST_MATERIAL_TRANSFORMNAME_SIZE)
+                                 .build(*engine);
     ASSERT_NE(material, nullptr);
 
     EXPECT_EQ(material->getParameterTransformName("sampler1"), nullptr);
