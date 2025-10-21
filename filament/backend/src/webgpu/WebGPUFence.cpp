@@ -39,9 +39,15 @@ FenceStatus WebGPUFence::wait(uint64_t timeout) {
     using namespace std::chrono;
     auto now = steady_clock::now();
     steady_clock::time_point until = steady_clock::time_point::max();
-    if (now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+
+    using TimeoutType = decltype(timeout);
+    constexpr TimeoutType maxTimeout = std::numeric_limits<TimeoutType>::max();
+    constexpr nanoseconds maxNano = nanoseconds::max();
+    if (timeout < maxNano.count() && timeout < maxTimeout && // Need to account for overflow
+            now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
         until = now + nanoseconds(timeout);
     }
+
     {
         std::unique_lock<std::mutex> lock(mLock);
         bool const success = mCond.wait_until(lock, until, [this] {
