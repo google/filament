@@ -68,12 +68,12 @@ std::tuple<VkImage, VkDeviceMemory> createImageAndMemory(VulkanContext const& co
             = context.selectMemoryType(memReqs.memoryTypeBits, requiredMemoryFlags);
 
     FILAMENT_CHECK_POSTCONDITION(memoryTypeIndex < VK_MAX_MEMORY_TYPES)
-            << "VulkanPlatformSwapChainImpl: unable to find a memory type that meets requirements.";
+            << "VulkanPlatformSwapChainBase: unable to find a memory type that meets requirements.";
 
     VkMemoryAllocateInfo allocInfo = {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memReqs.size,
-            .memoryTypeIndex = memoryTypeIndex,
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memReqs.size,
+        .memoryTypeIndex = memoryTypeIndex,
     };
     result = vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory);
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to allocate image memory."
@@ -94,17 +94,15 @@ VkFormat selectDepthFormat(fvkutils::VkFormatList const& depthFormats, bool hasS
 
 }// anonymous namespace
 
-VulkanPlatformSwapChainImpl::VulkanPlatformSwapChainImpl(VulkanContext const& context,
+VulkanPlatformSwapChainBase::VulkanPlatformSwapChainBase(VulkanContext const& context,
         VkDevice device, VkQueue queue)
     : mContext(context),
       mDevice(device),
       mQueue(queue) {}
 
-VulkanPlatformSwapChainImpl::~VulkanPlatformSwapChainImpl() {
-    destroy();
-}
+VulkanPlatformSwapChainBase::~VulkanPlatformSwapChainBase() = default;
 
-void VulkanPlatformSwapChainImpl::destroy() {
+void VulkanPlatformSwapChainBase::destroy() {
     if (mSwapChainBundle.depth) {
         vkDestroyImage(mDevice, mSwapChainBundle.depth, VKALLOC);
         if (mMemory.find(mSwapChainBundle.depth) != mMemory.end()) {
@@ -118,7 +116,7 @@ void VulkanPlatformSwapChainImpl::destroy() {
     mSwapChainBundle.colors.clear();
 }
 
-VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat format,
+VkImage VulkanPlatformSwapChainBase::createImage(VkExtent2D extent, VkFormat format,
         bool isProtected) {
     auto [image, memory] = createImageAndMemory(mContext, mDevice, extent, format, isProtected);
     mMemory.insert({image, memory});
@@ -128,7 +126,7 @@ VkImage VulkanPlatformSwapChainImpl::createImage(VkExtent2D extent, VkFormat for
 VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext const& context,
         VkPhysicalDevice physicalDevice, VkDevice device, VkQueue queue, VkInstance instance,
         VkSurfaceKHR surface, VkExtent2D fallbackExtent, uint64_t flags)
-    : VulkanPlatformSwapChainImpl(context, device, queue),
+    : VulkanPlatformSwapChainBase(context, device, queue),
       mInstance(instance),
       mPhysicalDevice(physicalDevice),
       mSurface(surface),
@@ -171,13 +169,13 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     FixedCapacityVector<VkSurfaceFormatKHR> const surfaceFormats
             = fvkutils::enumerate(vkGetPhysicalDeviceSurfaceFormatsKHR, mPhysicalDevice, mSurface);
     std::array<VkFormat, 2> expectedFormats = {
-            VK_FORMAT_R8G8B8A8_UNORM,
-            VK_FORMAT_B8G8R8A8_UNORM,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_B8G8R8A8_UNORM,
     };
     if (mUsesRGB) {
         expectedFormats = {
-                VK_FORMAT_R8G8B8A8_SRGB,
-                VK_FORMAT_B8G8R8A8_SRGB,
+            VK_FORMAT_R8G8B8A8_SRGB,
+            VK_FORMAT_B8G8R8A8_SRGB,
         };
     }
     for (VkSurfaceFormatKHR const& format: surfaceFormats) {
@@ -195,13 +193,9 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
     VkPresentModeKHR const desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     FixedCapacityVector<VkPresentModeKHR> presentModes = fvkutils::enumerate(
             vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
-    bool foundSuitablePresentMode = false;
-    for (VkPresentModeKHR mode: presentModes) {
-        if (mode == desiredPresentMode) {
-            foundSuitablePresentMode = true;
-            break;
-        }
-    }
+
+    bool const foundSuitablePresentMode = std::find(presentModes.begin(), presentModes.end(),
+                                            desiredPresentMode) != presentModes.end();
     FILAMENT_CHECK_POSTCONDITION(foundSuitablePresentMode)
             << "Desired present mode is not supported by this device.";
 
@@ -319,7 +313,7 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
     return result;
 }
 
-bool VulkanPlatformSurfaceSwapChain::hasResized() {
+bool VulkanPlatformSurfaceSwapChain::hasResized() const {
     VkSurfaceCapabilitiesKHR caps;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mPhysicalDevice, mSurface, &caps);
     VkExtent2D perceivedExtent = caps.currentExtent;
@@ -331,7 +325,7 @@ bool VulkanPlatformSurfaceSwapChain::hasResized() {
     return !fvkutils::equivalent(mSwapChainBundle.extent, perceivedExtent);
 }
 
-bool VulkanPlatformSurfaceSwapChain::isProtected() {
+bool VulkanPlatformSurfaceSwapChain::isProtected() const {
     return mIsProtected;
 }
 
@@ -358,8 +352,6 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
     // phone). If necessary, we can revisit and implement the workaround [1].
     vkQueueWaitIdle(mQueue);
 
-    VulkanPlatformSwapChainImpl::destroy();
-
     for (uint32_t i = 0; i < IMAGE_READY_SEMAPHORE_COUNT; ++i) {
         if (mImageReady[i] != VK_NULL_HANDLE) {
             vkDestroySemaphore(mDevice, mImageReady[i], VKALLOC);
@@ -374,7 +366,7 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
 
 VulkanPlatformHeadlessSwapChain::VulkanPlatformHeadlessSwapChain(VulkanContext const& context,
         VkDevice device, VkQueue queue, VkExtent2D extent, uint64_t flags)
-    : VulkanPlatformSwapChainImpl(context, device, queue),
+    : VulkanPlatformSwapChainBase(context, device, queue),
       mCurrentIndex(0) {
     mSwapChainBundle.extent = extent;
     mSwapChainBundle.colorFormat = (flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0
