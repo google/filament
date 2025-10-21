@@ -32,25 +32,27 @@ namespace filament::backend {
 FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     std::chrono::steady_clock::time_point const until) {
 
-    std::shared_lock l(mLock);
+    {
+        std::shared_lock l(mLock);
 
-    // If the vulkan fence has not been submitted yet, we need to wait for that before we
-    // can use vkWaitForFences()
-    if (mStatus == VK_INCOMPLETE) {
-        bool const success = mCond.wait_until(l, until, [this] {
-            // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
-            // When this fence gets submitted, its status changes to VK_NOT_READY.
-            return mStatus != VK_INCOMPLETE;
-        });
-        if (!success) {
-            // !success indicates a timeout
-            return FenceStatus::TIMEOUT_EXPIRED;
+        // If the vulkan fence has not been submitted yet, we need to wait for that before we
+        // can use vkWaitForFences()
+        if (mStatus == VK_INCOMPLETE) {
+            bool const success = mCond.wait_until(l, until, [this] {
+                // Internally we use the VK_INCOMPLETE status to mean "not yet submitted".
+                // When this fence gets submitted, its status changes to VK_NOT_READY.
+                return mStatus != VK_INCOMPLETE;
+            });
+            if (!success) {
+                // !success indicates a timeout
+                return FenceStatus::TIMEOUT_EXPIRED;
+            }
         }
-    }
 
-    // The fence could have already signaled, avoid calling into vkWaitForFences()
-    if (mStatus == VK_SUCCESS) {
-        return FenceStatus::CONDITION_SATISFIED;
+        // The fence could have already signaled, avoid calling into vkWaitForFences()
+        if (mStatus == VK_SUCCESS) {
+            return FenceStatus::CONDITION_SATISFIED;
+        }
     }
 
     // If we're here, we know that vkQueueSubmit has been called (because it sets the status
@@ -60,13 +62,17 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     // place simultaneously. vkResetFence is only called once it knows the fence has signaled,
     // which guaranties that vkResetFence won't have to wait too long, just enough for
     // all the vkWaitForFences() to return.
-    mStatus = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
-    if (mStatus == VK_SUCCESS) {
-        return FenceStatus::CONDITION_SATISFIED;
-    }
-    if (mStatus == VK_TIMEOUT) {
+    VkResult status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
+    if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }
+
+    if (status == VK_SUCCESS) {
+        std::lock_guard const l(mLock);
+        mStatus = status;
+        return FenceStatus::CONDITION_SATISFIED;
+    }
+
     return FenceStatus::ERROR; // not supported
 }
 
