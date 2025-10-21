@@ -41,7 +41,7 @@ TEST(InternPoolTest, AcquireWithMove) {
     Slice<const int> interned = pool.acquire(std::move(value));
 
     EXPECT_FALSE(pool.empty());
-    EXPECT_EQ(copy, interned);
+    EXPECT_EQ(copy.as_slice(), interned);
     EXPECT_EQ(data, interned.data());
 }
 
