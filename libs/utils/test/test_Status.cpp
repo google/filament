@@ -115,6 +115,12 @@ TEST(StatusTest, StaticInternalError) {
     EXPECT_EQ(Status::internal(errorMessage), expected);
 }
 
+TEST(StatusTest, StaticUnsupportedError) {
+    std::string_view errorMessage = "unsupported error";
+    Status expected(StatusCode::UNSUPPORTED, errorMessage);
+    EXPECT_EQ(Status::unsupported(errorMessage), expected);
+}
+
 TEST(StatusTest, IsOk) {
     Status status = Status::ok();
     EXPECT_TRUE(status.isOk());
@@ -125,9 +131,9 @@ TEST(StatusTest, IsOk) {
 
 TEST(StatusTest, SelfAssignment) {
     Status status = Status::internal("error");
-    Status original_copy = status;
+    Status self = status;
 
     status = status;
 
-    EXPECT_EQ(status, original_copy);
+    EXPECT_EQ(status, self);
 }

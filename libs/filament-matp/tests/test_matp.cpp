@@ -259,6 +259,21 @@ material: {
 
 })");
 
+static std::string invalidJsonMaterialSourceNoQuotes(R"({
+
+material: {
+    blending: opaque,
+    parameters: [
+        {
+            name: baseColorFactor\\a\\a,  // invalid escape symbols
+            type: float4
+        },
+    ],
+    shadingModel: lit
+}
+
+})");
+
 TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
     matp::JsonishLexer jsonishLexer;
     jsonishLexer.lex(jsonMaterialSource.c_str(), jsonMaterialSource.size(), 1);
@@ -297,6 +312,24 @@ TEST_F(MaterialLexer, JsonMaterialParser) {
     utils::Status result = testParser.parseMaterialAsJSON(
             jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
     EXPECT_EQ(result.getCode(), utils::StatusCode::OK);
+}
+
+TEST_F(MaterialLexer, JsonMaterialParserInvalidInputReturnsError) {
+    matp::JsonishLexer jsonishLexer;
+    jsonishLexer.lex(
+            invalidJsonMaterialSourceNoQuotes.c_str(),
+            invalidJsonMaterialSourceNoQuotes.size(), 1);
+    auto lexemes = jsonishLexer.getLexemes();
+
+    EXPECT_TRUE(!lexemes.empty());
+
+    matp::JsonishParser jsonishParser(lexemes);
+    EXPECT_TRUE(jsonishParser.getParseStatus().isOk());
+
+    std::unique_ptr<matp::JsonishObject> root = jsonishParser.parse();
+
+    EXPECT_FALSE(jsonishParser.getParseStatus().isOk());
+    EXPECT_EQ(root, nullptr);
 }
 
 int main(int argc, char** argv) {

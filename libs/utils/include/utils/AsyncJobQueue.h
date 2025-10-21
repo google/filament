@@ -28,8 +28,8 @@
 namespace utils {
 
 /**
- * Simple asynchronous job queue. This manages a thread that executes jobs submitted to it
- * in order.
+ * Simple asynchronous job queue. This manages a *single*thread that executes jobs submitted
+ * to it in order.
  */
 class AsyncJobQueue {
 public:
@@ -48,13 +48,17 @@ public:
     // adds a job to the queue. no-op if drainAndExit() was called.
     void push(Job&& job);
 
+    bool isValid() const noexcept;
+
 private:
+#if !defined(__EMSCRIPTEN__)
     using Container = std::vector<Job>;
     std::thread mThread;
     Mutex mLock; // NOLINT(*-include-cleaner)
     Condition mCondition; // NOLINT(*-include-cleaner)
     Container mQueue;
     bool mExitRequested = false;
+#endif
 };
 
 } // namespace utils

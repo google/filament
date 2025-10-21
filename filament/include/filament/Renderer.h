@@ -97,6 +97,8 @@ public:
         time_point_ns endFrame;             //!< Renderer::endFrame() time since epoch [ns]
         time_point_ns backendBeginFrame;    //!< Backend thread time of frame start since epoch [ns]
         time_point_ns backendEndFrame;      //!< Backend thread time of frame end since epoch [ns]
+        time_point_ns gpuFrameComplete;     //!< GPU thread time of frame end since epoch [ns] or 0
+        time_point_ns vsync;                //!< VSYNC time of this frame since epoch [ns]
     };
 
     /**
@@ -645,6 +647,19 @@ public:
      * getUserTime()
      */
     void resetUserTime();
+
+
+    /**
+     * Requests the next frameCount frames to be skipped. For Debugging.
+     * @param frameCount number of frames to skip.
+     */
+    void skipNextFrames(size_t frameCount) const noexcept;
+
+    /**
+     * Remainder count of frame to be skipped
+     * @return remaining frames to be skipped
+     */
+    size_t getFrameToSkipCount() const noexcept;
 
 protected:
     // prevent heap allocation

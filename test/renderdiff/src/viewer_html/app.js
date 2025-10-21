@@ -16,16 +16,20 @@ import { LitElement, html, css, repeat } from "https://cdn.jsdelivr.net/gh/lit/d
 import './tools.js';
 import './tiff-viewer.js';
 
+const urlParams = new URLSearchParams(window.location.search);
+const RUN_ID = urlParams.get('run_id');
+const URL_PREFIX = RUN_ID ? `/artifacts/${RUN_ID}` : '';
+
 function getGoldenUrl(testResult) {
-  return '/g/' + testResult.name;
+  return `${URL_PREFIX}/g/` + testResult.name;
 }
 
 function getCompUrl(testResult) {
-  return '/c/' + testResult.name;
+  return `${URL_PREFIX}/c/` + testResult.name;
 }
 
 function getDiffUrl(testResult) {
-  return '/d/' + testResult.diff;
+  return `${URL_PREFIX}/d/` + testResult.diff;
 }
 
 const DIFF_VIEW = 'diff'
@@ -570,7 +574,7 @@ class App extends LitElement {
   };
 
   async _init() {
-    const config = await ((await fetch("/r/")).json());
+    const config = await ((await fetch(`${URL_PREFIX}/r/`)).json());
     config['results'] = config['results'].sort((a, b) => a.name < b.name ? -1 : (a.name > b.name ? 1 : 0));
     this.tests = config['results']
   }

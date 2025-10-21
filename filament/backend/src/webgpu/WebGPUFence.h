@@ -17,43 +17,32 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUFENCE_H
 
+#include "WebGPUQueueManager.h"
+
 #include "DriverBase.h"
 
 #include <backend/DriverEnums.h>
 
-#include <utils/Mutex.h> // NOLINT(*-include-cleaner)
-#include <utils/Condition.h> // NOLINT(*-include-cleaner)
-
-#include <cstdint>
 #include <memory>
-
-namespace wgpu {
-class Queue;
-} // namespace wgpu
 
 namespace filament::backend {
 
-/**
-  * A WebGPU-specific implementation of the HwFence.
-  * This class is used to synchronize the CPU and GPU. It allows the CPU to know when the GPU has
-  * finished a set of commands.
-  */
-class WebGPUFence final : public HwFence {
+class WebGPUFence : public HwFence {
 public:
-    ~WebGPUFence() noexcept;
-    [[nodiscard]] FenceStatus getStatus() const;
-    [[nodiscard]] FenceStatus wait(uint64_t timeout);
+    WebGPUFence();
+    ~WebGPUFence();
 
-    void addMarkerToQueueState(wgpu::Queue const&);
+    // Initialize the fence with a submission state from the queue manager.
+    void setSubmissionState(std::shared_ptr<WebGPUSubmissionState> state);
+
+    // Note that getStatus cannot be const since it's implemented with wait();
+    FenceStatus getStatus();
+    FenceStatus wait(uint64_t timeout);
 
 private:
-    struct State {
-        utils::Mutex lock; // NOLINT(*-include-cleaner)
-        utils::Condition cond; // NOLINT(*-include-cleaner)
-        FenceStatus status{ FenceStatus::TIMEOUT_EXPIRED };
-    };
-    // we need a shared_ptr because the Fence could be destroyed while we're waiting
-    std::shared_ptr<State> state{ std::make_shared<State>() };
+    std::mutex mLock;
+    std::condition_variable mCond;
+    std::shared_ptr<WebGPUSubmissionState> mState;
 };
 
 } // namespace filament::backend
