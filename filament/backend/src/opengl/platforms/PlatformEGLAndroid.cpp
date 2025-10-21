@@ -28,6 +28,7 @@
 #include <private/backend/VirtualMachineEnv.h>
 
 #include "AndroidNativeWindow.h"
+#include "AndroidSwapChainHelper.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
@@ -51,6 +52,8 @@
 
 #include <array>
 #include <chrono>
+#include <limits>
+#include <mutex>
 #include <new>
 #include <string_view>
 
@@ -128,6 +131,9 @@ bool PlatformEGLAndroid::makeCurrent(ContextType const type,
         SwapChain* drawSwapChain,
         SwapChain* readSwapChain) {
 
+    // remember the current swapchain for use in beginFrame()
+    mCurrentDrawSwapChain = static_cast<SwapChainEGLAndroid*>(drawSwapChain);
+
     // fast & safe path
     if (UTILS_LIKELY(!mAssertNativeWindowIsValid)) {
         return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
@@ -146,14 +152,26 @@ void PlatformEGLAndroid::beginFrame(
         int64_t const monotonic_clock_ns,
         int64_t refreshIntervalNs,
         uint32_t const frameId) noexcept {
+    // associate the user frameid with the system frame id
+    setPresentFrameId(mCurrentDrawSwapChain, frameId);
+
     if (mPerformanceHintSession.isValid()) {
         if (refreshIntervalNs <= 0) {
-            // we're not provided with a target time, assume 16.67ms
+            // we're not provided with a target time, use the display period, if everything fails,
+            // assume 16.67ms
             refreshIntervalNs = 16'666'667;
+
+            CompositorTiming compositorTiming{};
+            bool const hasCompositorTiming =
+                    queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
+            if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
+                refreshIntervalNs = compositorTiming.compositeInterval;
+            }
         }
         mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
         mPerformanceHintSession.updateTargetWorkDuration(refreshIntervalNs);
     }
+
     PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
 }
 
@@ -274,6 +292,82 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
     }
 
     return PlatformEGL::queryCompositorTiming(swapchain, outCompositorTiming);
+}
+
+bool PlatformEGLAndroid::setPresentFrameId(SwapChain const* swapchain,
+        uint64_t const frameId) noexcept {
+    if (swapchain) {
+        SwapChainEGLAndroid const* const sc = static_cast<SwapChainEGLAndroid const*>(swapchain);
+        return sc->setPresentFrameId(frameId);
+    }
+    return PlatformEGL::setPresentFrameId(swapchain, frameId);
+}
+
+bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) const noexcept {
+
+    if (!swapchain) {
+        return false;
+    }
+
+    SwapChainEGLAndroid const* const sc = static_cast<SwapChainEGLAndroid const*>(swapchain);
+    uint64_t const hwFrameId = sc->getFrameId(frameId);
+    if (hwFrameId == std::numeric_limits<uint64_t>::max()) {
+        return false;
+    }
+
+    if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
+        EGLSurface const sur = sc->sur;
+        if (sur == EGL_NO_SURFACE) {
+            return false;
+        }
+
+        std::array<EGLnsecsANDROID, 9> values;
+        constexpr std::array<EGLint, 9> names{
+            EGL_REQUESTED_PRESENT_TIME_ANDROID,                 // requestedPresentTime
+            EGL_RENDERING_COMPLETE_TIME_ANDROID,                // acquireTime
+            EGL_COMPOSITION_LATCH_TIME_ANDROID,                 // latchTime
+            EGL_FIRST_COMPOSITION_START_TIME_ANDROID,           // firstRefreshStartTime
+            EGL_LAST_COMPOSITION_START_TIME_ANDROID,            // lastRefreshStartTime
+            EGL_FIRST_COMPOSITION_GPU_FINISHED_TIME_ANDROID,    // gpuCompositionDoneTime
+            EGL_DISPLAY_PRESENT_TIME_ANDROID,                   // displayPresentTime
+            EGL_DEQUEUE_READY_TIME_ANDROID,                     // dequeueReadyTime
+            EGL_READS_DONE_TIME_ANDROID,                        // releaseTime
+        };
+        EGLBoolean const success = eglGetFrameTimestampsANDROID(getEglDisplay(), sur, hwFrameId,
+                names.size(), names.data(), values.data());
+        if (!success) {
+            return false;
+        }
+        outFrameTimestamps->requestedPresentTime = values[0];
+        outFrameTimestamps->acquireTime = values[1];
+        outFrameTimestamps->latchTime = values[2];
+        outFrameTimestamps->firstRefreshStartTime = values[3];
+        outFrameTimestamps->lastRefreshStartTime = values[4];
+        outFrameTimestamps->gpuCompositionDoneTime = values[5];
+        outFrameTimestamps->displayPresentTime = values[6];
+        outFrameTimestamps->dequeueReadyTime = values[7];
+        outFrameTimestamps->releaseTime = values[8];
+        return true;
+    }
+
+    // fallback to private APIs
+    auto const anw = sc->nativeWindow;
+    int const status = NativeWindow::getFrameTimestamps(anw, hwFrameId,
+            &outFrameTimestamps->requestedPresentTime,
+            &outFrameTimestamps->acquireTime,
+            &outFrameTimestamps->latchTime,
+            &outFrameTimestamps->firstRefreshStartTime,
+            &outFrameTimestamps->lastRefreshStartTime,
+            &outFrameTimestamps->gpuCompositionDoneTime,
+            &outFrameTimestamps->displayPresentTime,
+            &outFrameTimestamps->dequeueReadyTime,
+            &outFrameTimestamps->releaseTime);
+    if (status == 0) {
+        return true;
+    }
+
+    return PlatformEGL::queryFrameTimestamps(swapchain, frameId, outFrameTimestamps);
 }
 
 Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uint64_t const flags) {
@@ -572,6 +666,14 @@ PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid 
 
 void PlatformEGLAndroid::SwapChainEGLAndroid::terminate(PlatformEGLAndroid& platform) {
     SwapChainEGL::terminate(platform);
+}
+
+bool PlatformEGLAndroid::SwapChainEGLAndroid::setPresentFrameId(uint64_t frameId) const noexcept {
+    return mImpl.setPresentFrameId(nativeWindow, frameId);
+}
+
+uint64_t PlatformEGLAndroid::SwapChainEGLAndroid::getFrameId(uint64_t const frameId) const noexcept {
+    return mImpl.getFrameId(frameId);
 }
 
 } // namespace filament::backend

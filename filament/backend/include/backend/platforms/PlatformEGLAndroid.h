@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
+#include "AndroidSwapChainHelper.h"
+
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
 #include <backend/Platform.h>
@@ -98,6 +100,11 @@ protected:
     bool queryCompositorTiming(SwapChain const* swapchain,
             CompositorTiming* outCompositorTiming) const noexcept override;
 
+    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
+
+    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* outFrameTimestamps) const noexcept override;
+
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
@@ -166,6 +173,10 @@ protected:
         SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
                 uint32_t width, uint32_t height, uint64_t flags);
         void terminate(PlatformEGLAndroid& platform);
+        bool setPresentFrameId(uint64_t frameId) const noexcept;
+        uint64_t getFrameId(uint64_t frameId) const noexcept;
+    private:
+        AndroidSwapChainHelper mImpl{};
     };
 
 private:
@@ -187,6 +198,7 @@ private:
     InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
+    SwapChainEGLAndroid* mCurrentDrawSwapChain{};
 
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
