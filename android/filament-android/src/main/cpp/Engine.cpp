@@ -558,7 +558,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
         jint preferredShaderLanguage,
         jboolean forceGLES2Context, jboolean assertNativeWindowIsValid,
         jint gpuContextPriority,
-        jlong uboAllocatorInitialSizeInBytes) {
+        jlong sharedUboInitialSizeInBytes) {
     Engine::Builder* builder = (Engine::Builder*) nativeBuilder;
     Engine::Config config = {
             .commandBufferSizeMB = (uint32_t) commandBufferSizeMB,
@@ -577,7 +577,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_google_android_filament_Engine_nSetBu
             .forceGLES2Context = (bool) forceGLES2Context,
             .assertNativeWindowIsValid = (bool) assertNativeWindowIsValid,
             .gpuContextPriority = (Engine::GpuContextPriority) gpuContextPriority,
-            .uboAllocatorInitialSizeInBytes = (uint32_t) uboAllocatorInitialSizeInBytes,
+            .sharedUboInitialSizeInBytes = (uint32_t) sharedUboInitialSizeInBytes,
     };
     builder->config(&config);
 }

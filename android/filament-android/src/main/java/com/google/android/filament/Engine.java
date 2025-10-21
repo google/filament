@@ -265,7 +265,7 @@ public class Engine {
                     config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
                     config.gpuContextPriority.ordinal(),
-                    config.uboAllocatorInitialSizeInBytes);
+                    config.sharedUboInitialSizeInBytes);
             return this;
         }
 
@@ -535,7 +535,7 @@ public class Engine {
          * reallocations, which can cause a minor performance stutter, at the cost of higher
          * initial memory usage.
          */
-        public long uboAllocatorInitialSizeInBytes = 256 * 64;
+        public long sharedUboInitialSizeInBytes = 256 * 64;
     }
 
     private Engine(long nativeEngine, Config config) {
