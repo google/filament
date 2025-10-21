@@ -350,6 +350,19 @@ public:
     //! Indicates whether an existing parameter is a sampler or not.
     bool isSampler(const char* UTILS_NONNULL name) const noexcept;
 
+
+    /**
+     *
+     * Gets the name of the transform field associated for the given sampler parameter.
+     * In the case where the parameter does not have a transform name field, it will return nullptr.
+     *
+     * @param samplerName the name of the sampler parameter to query.
+     *
+     * @return If exists, the transform name value otherwise returns a nullptr.
+     */
+    const char* UTILS_NULLABLE getParameterTransformName(
+            const char* UTILS_NONNULL samplerName) const noexcept;
+
     /**
      * Sets the value of the given parameter on this material's default instance.
      *
