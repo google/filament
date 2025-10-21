@@ -1540,7 +1540,8 @@ public class Engine {
             boolean disableHandleUseAfterFreeCheck,
             int preferredShaderLanguage,
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
-            int gpuContextPriority);
+            int gpuContextPriority,
+            long sharedUboInitialSizeInBytes);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);
