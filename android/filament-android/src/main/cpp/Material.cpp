@@ -284,7 +284,8 @@ Java_com_google_android_filament_Material_nGetParameterTransformName(JNIEnv* env
         jlong nativeMaterial, jstring samplerName_) {
     Material* material = (Material*) nativeMaterial;
     const char* samplerName = env->GetStringUTFChars(samplerName_, 0);
-    jstring transformName_ = env->NewStringUTF(material->getParameterTransformName(samplerName));
+    const char* transformName = material->getParameterTransformName(samplerName);
+    jstring transformName_ = env->NewStringUTF(transformName ? transformName : "");
     env->ReleaseStringUTFChars(samplerName_, samplerName);
     return transformName_;
 }

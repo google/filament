@@ -789,8 +789,8 @@ public class Material {
 
     /**
      * 
-     * Returns the name of the transform name parameter associated with the given sampler parameter. 
-     * In the case the parameter don't have a transform name field, it will return an empty value.
+     * Returns the name of the transform parameter associated with the given sampler parameter.
+     * In the case the parameter doesn't have a transform name field, it will return an empty string.
      * 
      * @param samplerName the name of the sampler parameter to query.
      * 
