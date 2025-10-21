@@ -33,8 +33,7 @@ TEST_F(BackendTest, TestTemplate) {
 
     auto& api = getDriverApi();
     Cleanup cleanup(api);
-    auto swapChain =
-            cleanup.add(api.createSwapChainHeadless(kRenderTargetSize, kRenderTargetSize, 0));
+    auto swapChain = cleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
     RenderTargetHandle renderTarget = cleanup.add(api.createDefaultRenderTarget());
 

@@ -66,6 +66,8 @@ for include in "${includes[@]}"; do
         echo "#define SYSTRACE_TAG SYSTRACE_TAG_DISABLED" >> ${TMP_FILE}
     fi
     echo "#include <${include}>" >> ${TMP_FILE}
-    clang -std=c++20 -I "${FILAMENT_HEADERS}" ${TMP_FILE} -c -o /dev/null
+    # Filament is built internally with C++20, but we maintain C++17 compatibility (for the time
+    # being) in our public headers to support projects on older toolchains.
+    clang -std=c++17 -I "${FILAMENT_HEADERS}" ${TMP_FILE} -c -o /dev/null
 done
 echo "Done!"

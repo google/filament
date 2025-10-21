@@ -1143,6 +1143,10 @@ int main(int argc, char** argv) {
         Skybox* skybox = scene->getSkybox();
         applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
 
+        // FIMXE: This applySettings() is done here instead of in AutomationEngine.cpp because
+        // we need access to the Renderer, which AutomationEngine does not provide.
+        applySettings(engine, app.viewer->getSettings().debug, renderer);
+
         // technically we don't need to do this each frame
         auto& tcm = engine->getTransformManager();
         TransformManager::Instance const& root = tcm.getInstance(app.rootTransformEntity);

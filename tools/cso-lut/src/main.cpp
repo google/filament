@@ -164,7 +164,7 @@ static float sq(float x) { return x * x; }
 
 constexpr float PI_F = 3.141592653589793238f;
 
-static UTILS_UNUSED float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
+UTILS_UNUSED static float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
     float r1 = std::acos(cosCap1);
     float r2 = std::acos(cosCap2);

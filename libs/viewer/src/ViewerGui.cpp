@@ -1149,6 +1149,13 @@ void ViewerGui::updateUserInterface() {
 #endif
     }
 
+    if (ImGui::CollapsingHeader("Debug Options")) {
+        mSettings.debug.skipFrames = 0;
+        if (ImGui::Button("Skip 10 frames")) {
+            mSettings.debug.skipFrames = 10;
+        }
+    }
+
     colorGradingUI(mSettings, mRangePlot, mCurvePlot, mToneMapPlot);
 
     // At this point, all View settings have been modified,

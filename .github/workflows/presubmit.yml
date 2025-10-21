@@ -108,8 +108,7 @@ jobs:
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
         run: |
-          COMMIT_ID=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | head -n 1 | sed "s/commit //g")
-          bash docs_src/build/presubmit_check.sh ${COMMIT_ID}
+          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hash }}
 
   test-renderdiff:
     name: test-renderdiff
@@ -121,7 +120,7 @@ jobs:
       - uses: ./.github/actions/mac-prereq
       - uses: ./.github/actions/get-gltf-assets
       - uses: ./.github/actions/get-mesa
-      - uses: ./.github/actions/get-vulkan-sdk      
+      - uses: ./.github/actions/get-vulkan-sdk
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Prerequisites
@@ -132,12 +131,14 @@ jobs:
         shell: bash
       - name: Render and compare
         id: render_compare
+        env:
+          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
           ls ./gltf/Models
           TEST_DIR=test/renderdiff
           source ${TEST_DIR}/src/preamble.sh
           start_
-          GOLDEN_BRANCH=$(echo "${{ steps.get_commit_msg.outputs.msg }}" | python3 ${TEST_DIR}/src/commit_msg.py)
+          GOLDEN_BRANCH=$(echo "${COMMIT_MESSAGE}" | python3 ${TEST_DIR}/src/commit_msg.py)
           bash ${TEST_DIR}/generate.sh && \
               python3 ${TEST_DIR}/src/golden_manager.py \
                   --branch=${GOLDEN_BRANCH} \
