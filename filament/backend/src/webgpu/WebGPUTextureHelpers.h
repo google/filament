@@ -41,6 +41,45 @@ namespace filament::backend {
            textureFormat == wgpu::TextureFormat::Depth32FloatStencil8;
 }
 
+[[nodiscard]] constexpr bool isUIntFormat(const wgpu::TextureFormat format) {
+    // see https://www.w3.org/TR/webgpu/#texture-formats
+    //  and https://www.w3.org/TR/webgpu/#texture-format-caps
+    switch (format) {
+        case wgpu::TextureFormat::R8Uint:
+        case wgpu::TextureFormat::R16Uint:
+        case wgpu::TextureFormat::RG8Uint:
+        case wgpu::TextureFormat::R32Uint:
+        case wgpu::TextureFormat::RG16Uint:
+        case wgpu::TextureFormat::RGBA8Uint:
+        case wgpu::TextureFormat::RGB10A2Uint:
+        case wgpu::TextureFormat::RG32Uint:
+        case wgpu::TextureFormat::RGBA16Uint:
+        case wgpu::TextureFormat::RGBA32Uint:
+            return true;
+        default:
+            return false;
+    }
+}
+
+[[nodiscard]] constexpr bool isIntFormat(const wgpu::TextureFormat format) {
+    // see https://www.w3.org/TR/webgpu/#texture-formats
+    //  and https://www.w3.org/TR/webgpu/#texture-format-caps
+    switch (format) {
+        case wgpu::TextureFormat::R8Sint:
+        case wgpu::TextureFormat::R16Sint:
+        case wgpu::TextureFormat::RG8Sint:
+        case wgpu::TextureFormat::R32Sint:
+        case wgpu::TextureFormat::RG16Sint:
+        case wgpu::TextureFormat::RGBA8Sint:
+        case wgpu::TextureFormat::RG32Sint:
+        case wgpu::TextureFormat::RGBA16Sint:
+        case wgpu::TextureFormat::RGBA32Sint:
+            return true;
+        default:
+            return false;
+    }
+}
+
 [[nodiscard]] constexpr std::string_view toString(const PixelDataFormat format) {
     switch (format) {
         case PixelDataFormat::R:               return "R";

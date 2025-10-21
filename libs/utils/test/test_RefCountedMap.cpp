@@ -77,6 +77,12 @@ TEST(RefCountedMapTest, ValueType_GetsValue) {
     EXPECT_EQ(v1const, 1);
 }
 
+TEST(RefCountedMapTest, ValueType_CanReleaseNullValue) {
+    RefCountedMap<KeyType, ValueType> map;
+    map.acquire(1);
+    map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 TEST(RefCountedMapTest, ValueType_PanicsIfReleaseMissing) {
     RefCountedMap<KeyType, ValueType> map;
@@ -85,6 +91,12 @@ TEST(RefCountedMapTest, ValueType_PanicsIfReleaseMissing) {
 
 TEST(RefCountedMapTest, ValueType_PanicsIfGetsMissing) {
     RefCountedMap<KeyType, ValueType> map;
+    ASSERT_DEATH(map.get(1), "");
+}
+
+TEST(RefCountedMapTest, ValueType_PanicsIfGetsNullValue) {
+    RefCountedMap<KeyType, ValueType> map;
+    map.acquire(1);
     ASSERT_DEATH(map.get(1), "");
 }
 #endif // GTEST_HAS_DEATH_TEST
@@ -149,6 +161,12 @@ TEST(RefCountedMapTest, PlainPointerType_GetsValue) {
     delete a1;
 }
 
+TEST(RefCountedMapTest, PlainPointerType_CanReleaseNullValue) {
+    RefCountedMap<KeyType, PlainPointerType> map;
+    map.acquire(1);
+    map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 TEST(RefCountedMapTest, PlainPointerType_PanicsIfReleaseMissing) {
     RefCountedMap<KeyType, PlainPointerType> map;
@@ -157,6 +175,12 @@ TEST(RefCountedMapTest, PlainPointerType_PanicsIfReleaseMissing) {
 
 TEST(RefCountedMapTest, PlainPointerType_PanicsIfGetsMissing) {
     RefCountedMap<KeyType, PlainPointerType> map;
+    ASSERT_DEATH(map.get(1), "");
+}
+
+TEST(RefCountedMapTest, PlainPointerType_PanicsIfGetsNullValue) {
+    RefCountedMap<KeyType, PlainPointerType> map;
+    map.acquire(1);
     ASSERT_DEATH(map.get(1), "");
 }
 #endif // GTEST_HAS_DEATH_TEST
@@ -214,6 +238,12 @@ TEST(RefCountedMapTest, SmartPointerType_GetsValue) {
     EXPECT_EQ(v1const, 1);
 }
 
+TEST(RefCountedMapTest, SmartPointerType_CanReleaseNullValue) {
+    RefCountedMap<KeyType, SmartPointerType> map;
+    map.acquire(1);
+    map.release(1, [](ValueType& it) { ADD_FAILURE(); });
+}
+
 #ifdef GTEST_HAS_DEATH_TEST
 TEST(RefCountedMapTest, SmartPointerType_PanicsIfReleaseMissing) {
     RefCountedMap<KeyType, SmartPointerType> map;
@@ -222,6 +252,12 @@ TEST(RefCountedMapTest, SmartPointerType_PanicsIfReleaseMissing) {
 
 TEST(RefCountedMapTest, SmartPointerType_PanicsIfGetsMissing) {
     RefCountedMap<KeyType, SmartPointerType> map;
+    ASSERT_DEATH(map.get(1), "");
+}
+
+TEST(RefCountedMapTest, SmartPointerType_PanicsIfGetsNullValue) {
+    RefCountedMap<KeyType, SmartPointerType> map;
+    map.acquire(1);
     ASSERT_DEATH(map.get(1), "");
 }
 #endif // GTEST_HAS_DEATH_TEST

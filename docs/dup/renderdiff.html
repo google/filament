@@ -159,16 +159,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="rendering-difference-test"><a class="header" href="#rendering-difference-test">Rendering Difference Test</a></h1>
-<p>We created a few scripts to run <code>gltf_viewer</code> and produce headless renderings.</p>
+<p>This tool is a collections of scripts to run <code>gltf_viewer</code> and produce headless renderings.</p>
 <p>This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around <a href="https://docs.mesa3d.org">Mesa</a>'s
 software rasterizers, but nothing bars us from using another rasterizer like <a href="https://github.com/google/swiftshader">SwiftShader</a>.
 Additionally, we should be able to use GPUs where available (though this is more of a future
 work).</p>
 <p>The script <code>render.py</code> contains the core logic for taking input parameters (such as the test
-description file) and then running gltf_viewer to produce the renderings.</p>
+description file) and then running <code>gltf_viewer</code> to produce the renderings.</p>
 <p>In the <code>test</code> directory is a list of test descriptions that are specified in json. Please see
-<code>sample.json</code> to parse the structure.</p>
+<code>sample.json</code> to glean the structure.</p>
 <h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
 <p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
 renderings, do the following step</p>
@@ -206,11 +206,15 @@ golden repo.</li>
 </code></pre>
 </li>
 </ul>
-<h2 id="filtering-tests"><a class="header" href="#filtering-tests">Filtering Tests</a></h2>
-<p>You can run a subset of the tests by passing the <code>--test_filter</code> flag to <code>local_test.sh</code>. The
-filter supports wildcards (<code>*</code>) to match test names. For example, to run all tests in the
-<code>ClearCoat</code> suite, you can use the following command:</p>
-<pre><code>bash test/renderdiff/local_test.sh --test_filter='ClearCoat.*.*'
+<h2 id="command-line-options"><a class="header" href="#command-line-options">Command-line Options</a></h2>
+<p>You can control the behavior of the test scripts with the following flags passed to <code>local_test.sh</code>:</p>
+<ul>
+<li><code>--test_filter=&lt;filter&gt;</code>: Run a subset of tests. The filter supports wildcards (<code>*</code>) to match test names.</li>
+<li><code>--no_rebuild</code>: Skip rebuilding the <code>gltf_viewer</code> executable.</li>
+<li><code>--num_threads=&lt;number&gt;</code>: Set the number of threads for rendering. If not set, the system's default is used.</li>
+</ul>
+<p>For example, to run all <code>MSAA</code> tests without rebuilding and using 8 threads:</p>
+<pre><code>bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
 </code></pre>
 <h2 id="update-the-golden-images"><a class="header" href="#update-the-golden-images">Update the golden images</a></h2>
 <p>The golden images are stored in a github repository:
@@ -276,6 +280,13 @@ For example, it could be <code>out/renderdiff/diffs/presubmit</code> for the sta
 </code></pre>
 <p>where <code>[PR #]</code> is the numeric ID of your pull request, and the <code>[github token]</code> is an acess
 token that you (as a github user) needs to generate (<a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens">reference</a>).</p>
+<p>To see the results of a specific run, you would do the following</p>
+<pre><code>python3 test/renderdiff/src/viewer.py --run_number=[RUN #] --github_token=[github token]
+</code></pre>
+<p>where <code>[RUN #]</code> is the numeric ID of the run. You can find the run number in the URL of the
+GitHub Actions page. For example, in the URL
+<code>https://github.com/google/filament/actions/runs/18023632663/job/51286323708?pr=9264</code>,
+the run number is <code>18023632663</code>.</p>
 
                     </main>
 

@@ -277,7 +277,7 @@ void OpenGLContext::terminate() noexcept {
 }
 
 void OpenGLContext::destroyWithContext(
-        size_t index, std::function<void(OpenGLContext&)> const& closure) noexcept {
+        size_t index, std::function<void(OpenGLContext&)> const& closure) {
     if (index == 0) {
         // Note: we only need to delay the destruction of objects on the unprotected context
         // (index 0) because the protected context is always immediately destroyed and all its
@@ -296,7 +296,7 @@ void OpenGLContext::unbindEverything() noexcept {
     //        worry about.
 }
 
-void OpenGLContext::synchronizeStateAndCache(size_t index) noexcept {
+void OpenGLContext::synchronizeStateAndCache(size_t index) {
 
     // if we're just switching back to context 0, run all the pending destructors
     if (index == 0) {
@@ -532,6 +532,10 @@ void OpenGLContext::initBugs(Bugs* bugs, Extensions const& exts,
                         &maj, &min, &driverVersion, &driverRelease);
                 if (UTILS_LIKELY(c == 4)) {
                     // we were able to parse the version string
+                    if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 46)) {
+                        // this driver version is known to be good
+                        bugs->dont_use_timer_query = false;
+                    }
                     if (driverVersion > 1 || (driverVersion == 1 && driverRelease >= 53)) {
                         // this driver version is known to be good
                         bugs->disable_framebuffer_fetch_extension = false;
@@ -756,6 +760,7 @@ void OpenGLContext::initExtensionsGLES(Extensions* ext, GLint major, GLint minor
     ext->EXT_texture_compression_rgtc = exts.has("GL_EXT_texture_compression_rgtc"sv);
     ext->EXT_texture_compression_bptc = exts.has("GL_EXT_texture_compression_bptc"sv);
     ext->EXT_texture_cube_map_array = exts.has("GL_EXT_texture_cube_map_array"sv) || exts.has("GL_OES_texture_cube_map_array"sv);
+    ext->EXT_texture_filter_anisotropic = exts.has("GL_EXT_texture_filter_anisotropic"sv);
     ext->GOOGLE_cpp_style_line_directive = exts.has("GL_GOOGLE_cpp_style_line_directive"sv);
     ext->KHR_debug = exts.has("GL_KHR_debug"sv);
     ext->KHR_parallel_shader_compile = exts.has("GL_KHR_parallel_shader_compile"sv);
@@ -861,10 +866,12 @@ GLuint OpenGLContext::bindFramebuffer(GLenum target, GLuint buffer) noexcept {
     if (UTILS_UNLIKELY(buffer == 0)) {
         // we're binding the default frame buffer, resolve its actual name
         auto& defaultFboForThisContext = mDefaultFbo[contextIndex];
+
         if (UTILS_UNLIKELY(!defaultFboForThisContext.has_value())) {
             defaultFboForThisContext = GLuint(mPlatform.getDefaultFramebufferObject());
         }
-        buffer = defaultFboForThisContext.value();
+        // by construction, defaultFboForThisContext has a value. value_or() avoids a throwing call.
+        buffer = defaultFboForThisContext.value_or(0);
     }
     bindFramebufferResolved(target, buffer);
     return buffer;

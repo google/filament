@@ -16,16 +16,20 @@ import { LitElement, html, css, repeat } from "https://cdn.jsdelivr.net/gh/lit/d
 import './tools.js';
 import './tiff-viewer.js';
 
+const urlParams = new URLSearchParams(window.location.search);
+const RUN_ID = urlParams.get('run_id');
+const URL_PREFIX = RUN_ID ? `/artifacts/${RUN_ID}` : '';
+
 function getGoldenUrl(testResult) {
-  return '/g/' + testResult.name;
+  return `${URL_PREFIX}/g/` + testResult.name;
 }
 
 function getCompUrl(testResult) {
-  return '/c/' + testResult.name;
+  return `${URL_PREFIX}/c/` + testResult.name;
 }
 
 function getDiffUrl(testResult) {
-  return '/d/' + testResult.diff;
+  return `${URL_PREFIX}/d/` + testResult.diff;
 }
 
 const DIFF_VIEW = 'diff'
@@ -53,9 +57,26 @@ class ExpandedPassedResult extends LitElement {
   render() {
     if (this.content) {
       const url = getGoldenUrl(this.content);
-      return html`<tiff-viewer fileurl="${url}"></tiff-viewer>`;
+      return html`
+        <div>
+          <div style="margin-bottom: 10px;">
+            <label>
+              <input type="checkbox" id="magnifierToggle" @change="${this._onMagnifierToggle}">
+              Enable Magnifier
+            </label>
+          </div>
+          <tiff-viewer fileurl="${url}" id="passedViewer"></tiff-viewer>
+        </div>
+      `;
     }
     return html``;
+  }
+
+  _onMagnifierToggle(ev) {
+    const viewer = this.shadowRoot.getElementById('passedViewer');
+    if (viewer) {
+      viewer.magnifierEnabled = ev.target.checked;
+    }
   }
 }
 customElements.define('expanded-passed-result', ExpandedPassedResult);
@@ -74,12 +95,12 @@ class ExpandedFailedResult extends LitElement {
     }
     return html`
       <expanded-comparison-result
+        label-with-type
         .left=${this.content}
         .right=${this.content}
         leftViewType="golden"
         rightViewType="rendered"
         .tests=${this.tests}
-        ?disableDropdowns=${true}>
       </expanded-comparison-result>
     `;
   }
@@ -89,14 +110,15 @@ customElements.define('expanded-failed-result', ExpandedFailedResult);
 class ExpandedComparisonResult extends LitElement {
   static get properties() {
     return {
+      labelWithType: {type: Boolean, attribute: "label-with-type" },
       left: { type: Object },
       right: { type: Object },
       tests: { type: Array },
       diffResult: { type: Object },
-      showDiff: {type: Boolean },
       leftViewType: { type: String },
       rightViewType: { type: String },
-      disableDropdowns: { type: Boolean },
+      magnifierEnabled: { type: Boolean },
+      currentDiffImageData: {type: Object },
     };
   }
 
@@ -109,12 +131,7 @@ class ExpandedComparisonResult extends LitElement {
     .viewer-container {
       display: flex;
       flex-direction: row;
-    }
-    #diffCanvas {
-      width: 100%;
-      height: 100%;
-      margin-top: 22px;
-      margin-bottom: 5px;
+      position: relative;
     }
     .selector {
       margin: 8px 0;
@@ -123,23 +140,25 @@ class ExpandedComparisonResult extends LitElement {
 
   constructor() {
     super();
+    this.labelWithType = false;
     this.left = null;
     this.right = null;
     this.tests = [];
-    this.showDiff = false;
     this.leftImageLoaded = false;
     this.rightImageLoaded = false;
     this.leftViewType = 'golden';
     this.rightViewType = 'golden';
-    this.disableDropdowns = false;
+    this.magnifierEnabled = true;
+    this.originalDiffImageData = null;
+    this.currentDiffImageData = null;
 
     this.addEventListener(
       'image-loaded',
       (ev) => {
-        if (ev.detail.name == this.left.name) {
+        if (ev.detail.url == this._getUrl(this.leftViewType, this.left)) {
           this.leftImageLoaded = true;
         }
-        if (ev.detail.name == this.right.name) {
+        if (ev.detail.url == this._getUrl(this.rightViewType, this.right)) {
           this.rightImageLoaded = true;
         }
         if (this.leftImageLoaded && this.rightImageLoaded) {
@@ -149,14 +168,20 @@ class ExpandedComparisonResult extends LitElement {
     );
   }
 
+  _getUrl(viewType, test) {
+    return viewType == 'rendered' ? getCompUrl(test) : getGoldenUrl(test);
+  }
+
   _viewer(name, choices, current, viewType) {
-    const url = viewType == 'rendered' ? getCompUrl(current) : getGoldenUrl(current);
+    const url = this._getUrl(viewType, current);
+    const label = this.labelWithType ? viewType : current.name;
     return html`
       <div style="flex: 1; margin: 0 5px;">
-        <div>${current.name}</div>
+        <div>${label}</div>
         <tiff-viewer id="viewer-${name}" class="viewer"
-                     name="${current.name}"
-                     fileurl="${url}"></tiff-viewer>
+                     fileurl="${url}"
+                     ?magnifier-enabled="${this.magnifierEnabled}"
+                     disable-mouse-handlers></tiff-viewer>
       </div>
     `;
   }
@@ -180,10 +205,8 @@ class ExpandedComparisonResult extends LitElement {
       };
     }
 
-    const ctxLeft = canvasLeft.getContext('2d');
-    const ctxRight = canvasRight.getContext('2d');
-    const imgLeft = ctxLeft.getImageData(0, 0, canvasLeft.width, canvasLeft.height);
-    const imgRight = ctxRight.getImageData(0, 0, canvasRight.width, canvasRight.height);
+    const imgLeft = tiffViewerLeft.imgdata;
+    const imgRight = tiffViewerRight.imgdata;
 
     if (imgLeft.width !== imgRight.width || imgLeft.height !== imgRight.height) {
       console.error("Images have different dimensions");
@@ -232,23 +255,19 @@ class ExpandedComparisonResult extends LitElement {
     const diff = this._computeDiff();
     if (diff.result == RES_DIFFERENT_PIXELS) {
       this.diffResult = diff;
-      this.showDiff = true;
-    }
-  }
-
-  updated(props) {
-    if (this.showDiff && this.diffResult) {
-      const mult = this.shadowRoot.querySelector('#diffMultiplier').value;
-      this._updateDiffCanvas(this.diffResult, mult);
+      // Reset original diff data when new diff is computed
+      this.originalDiffImageData = null;
+      const multDiv = this.shadowRoot.querySelector('#diffMultiplier');
+      if (multDiv) {
+        this._updateDiffCanvas(this.diffResult, multDiv.value);
+      }
+    } else {
+      this.diffResult = null;
+      this.currentDiffImageData = null;
     }
   }
 
   _updateDiffCanvas(diffResult, mult) {
-    const diffCanvas = this.shadowRoot.querySelector('#diffCanvas');
-    const diffCtx = diffCanvas.getContext('2d');
-    diffCanvas.width = diffResult.dim.width;
-    diffCanvas.height = diffResult.dim.height;
-
     // Create a fresh copy of the original diff data to avoid mutation.
     const diffImgCopy = diffResult.diffImg.slice();
 
@@ -262,7 +281,154 @@ class ExpandedComparisonResult extends LitElement {
 
     // Create the ImageData from the modified copy.
     const imgData = new ImageData(diffImgCopy, diffResult.dim.width, diffResult.dim.height);
-    diffCtx.putImageData(imgData, 0, 0);
+
+    // Store both original and current diff image data for magnifier
+    if (!this.originalDiffImageData) {
+      this.originalDiffImageData = new ImageData(diffResult.diffImg.slice(), diffResult.dim.width, diffResult.dim.height);
+    }
+    this.currentDiffImageData = imgData;
+  }
+
+  _onGlobalMouseLeave(event) {
+    // Hide all magnifiers when mouse leaves the viewer container
+    for (const name of ['left', 'right', 'diff']) {
+      const viewer = this.shadowRoot.querySelector('#viewer-' + name);
+      if (viewer) {
+        const mag = viewer.shadowRoot?.getElementById('magnifier');
+        if (mag) {
+          mag.hide();
+        }
+      }
+    }
+  }
+
+  _onGlobalMouseMove(event) {
+    if (!this.magnifierEnabled) return;
+    for (const name of ['left', 'right', 'diff']) {
+      const viewer = this.shadowRoot.querySelector('#viewer-' + name);
+      if (!viewer) continue;
+
+      const canvas = viewer.shadowRoot?.querySelector('canvas');
+      if (!canvas) continue;
+
+      // Get image data from the viewer
+      const imageData = viewer.imgdata;
+      const magnifier = viewer.shadowRoot?.getElementById('magnifier');
+
+      // Check if mouse is over any of the three views (left, , or diff)
+      if (!this._isMouseOverAnyView(event)) {
+        magnifier.hide();
+        continue;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+
+      // Calculate the equivalent position on the image
+      const { imageX, imageY, mouseX, mouseY } = this._calculateEquivalentPosition(event, rect, imageData);
+
+      // Position magnifier relative to the canvas within the viewer
+      const origData = name == 'diff' ? this.originalDiffImageData : null;
+      viewer.updateMagnifier(imageX, imageY, origData);
+    }
+  }
+
+  _isMouseOverElement(event, rect) {
+    return event.clientX >= rect.left &&
+           event.clientX <= rect.right &&
+           event.clientY >= rect.top &&
+           event.clientY <= rect.bottom;
+  }
+
+  _isMouseOverAnyView(event) {
+    // Check if mouse is over left viewer
+    const leftViewer = this.shadowRoot.querySelector('#viewer-left');
+    if (leftViewer) {
+      const leftCanvas = leftViewer.shadowRoot?.querySelector('canvas');
+      if (leftCanvas && this._isMouseOverElement(event, leftCanvas.getBoundingClientRect())) {
+        return true;
+      }
+    }
+
+    // Check if mouse is over right viewer
+    const rightViewer = this.shadowRoot.querySelector('#viewer-right');
+    if (rightViewer) {
+      const rightCanvas = rightViewer.shadowRoot?.querySelector('canvas');
+      if (rightCanvas && this._isMouseOverElement(event, rightCanvas.getBoundingClientRect())) {
+        return true;
+      }
+    }
+
+    // Check if mouse is over diff viewer
+    const diffViewer = this.shadowRoot.querySelector('#viewer-diff');
+    if (diffViewer) {
+      const diffCanvas = diffViewer.shadowRoot?.querySelector('canvas');
+      if (diffCanvas && this._isMouseOverElement(event, diffCanvas.getBoundingClientRect())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _calculateEquivalentPosition(event, targetRect, targetImageData) {
+    // Find which view the mouse is actually over and calculate the equivalent position
+    const leftViewer = this.shadowRoot.querySelector('#viewer-left');
+    const rightViewer = this.shadowRoot.querySelector('#viewer-right');
+    const diffViewer = this.shadowRoot.querySelector('#viewer-diff');
+
+    let sourceRect = null;
+    let sourceImageData = null;
+
+    // Determine source view
+    if (leftViewer) {
+      const leftCanvas = leftViewer.shadowRoot?.querySelector('canvas');
+      if (leftCanvas && this._isMouseOverElement(event, leftCanvas.getBoundingClientRect())) {
+        sourceRect = leftCanvas.getBoundingClientRect();
+        sourceImageData = leftViewer.imgdata;
+      }
+    }
+
+    if (!sourceRect && rightViewer) {
+      const rightCanvas = rightViewer.shadowRoot?.querySelector('canvas');
+      if (rightCanvas && this._isMouseOverElement(event, rightCanvas.getBoundingClientRect())) {
+        sourceRect = rightCanvas.getBoundingClientRect();
+        sourceImageData = rightViewer.imgdata;
+      }
+    }
+
+    if (!sourceRect && this.diffResult && diffViewer) {
+      const diffCanvas = diffViewer.shadowRoot?.querySelector('canvas');
+      if (diffCanvas && this._isMouseOverElement(event, diffCanvas.getBoundingClientRect())) {
+        sourceRect = diffCanvas.getBoundingClientRect();
+        sourceImageData = diffViewer.imgdata;
+      }
+    }
+
+    if (!sourceRect || !sourceImageData) {
+      // Fallback to target rect
+      sourceRect = targetRect;
+      sourceImageData = targetImageData;
+    }
+
+    // Calculate relative position in source
+    const sourceMouseX = event.clientX - sourceRect.left;
+    const sourceMouseY = event.clientY - sourceRect.top;
+    const sourceScaleX = sourceImageData.width / sourceRect.width;
+    const sourceScaleY = sourceImageData.height / sourceRect.height;
+    const sourceImageX = Math.floor(sourceMouseX * sourceScaleX);
+    const sourceImageY = Math.floor(sourceMouseY * sourceScaleY);
+
+    // Convert to target coordinates
+    const targetScaleX = targetImageData.width / targetRect.width;
+    const targetScaleY = targetImageData.height / targetRect.height;
+    const targetMouseX = sourceImageX / targetScaleX;
+    const targetMouseY = sourceImageY / targetScaleY;
+
+    return {
+      imageX: sourceImageX,
+      imageY: sourceImageY,
+      mouseX: targetMouseX,
+      mouseY: targetMouseY
+    };
   }
 
   render() {
@@ -270,25 +436,42 @@ class ExpandedComparisonResult extends LitElement {
       return html``;
     }
 
-    const diffStyle = !this.showDiff ? "display:none;" : "display:flex; flex-direction: column;";
+    const showDiff = !!this.diffResult;
+    const diffStyle = !showDiff ? "display:none;" : "display:flex; flex-direction: column; margin: 0 5px;";
     const v1 = this._viewer("left", this.tests, this.left, this.leftViewType);
     const v2 = this._viewer("right", this.tests, this.right, this.rightViewType);
     const onMultiplierChange = (ev) => {
+      const multiplierValue = this.shadowRoot.querySelector('#multiplierValue');
+      multiplierValue.textContent = ev.target.value;
       this._updateDiffCanvas(this.diffResult, ev.target.value);
+    };
+    const onMagnifierToggle = (ev) => {
+      this.magnifierEnabled = ev.target.checked;
     };
     return html`
       <div class="main-container">
-        <div class="viewer-container">
+        <div class="viewer-container" @mousemove="${this._onGlobalMouseMove}" @mouseleave="${this._onGlobalMouseLeave}">
           ${v1}
-          <div style="flex: 1; ${diffStyle}">
-            <canvas id="diffCanvas"></canvas>
+          <div style="flex: 1; ${diffStyle}" class="viewer-container">
+            <div>&nbsp;</div>
+            <tiff-viewer id="viewer-diff" class="viewer"
+                         name="diff"
+                         .srcdata="${this.currentDiffImageData}"
+                         ?magnifier-enabled="${this.magnifierEnabled}"
+                         disable-mouse-handlers></tiff-viewer>
           </div>
           ${v2}
         </div>
         <div class="control" style="${diffStyle}">
           <div>
-            <div>Difference Multiplier</div>
+            <div>Difference Multiplier: <span id="multiplierValue">1</span></div>
             <input type="range" min="1" max="100" value="1" id="diffMultiplier" @input=${onMultiplierChange}>
+          </div>
+          <div style="margin-top: 10px;">
+            <label>
+              <input type="checkbox" .checked="${this.magnifierEnabled}" @change=${onMagnifierToggle}>
+              Enable Magnifier
+            </label>
           </div>
         </div>
       </div>
@@ -297,9 +480,13 @@ class ExpandedComparisonResult extends LitElement {
 }
 customElements.define('expanded-comparison-result', ExpandedComparisonResult);
 
-
 class App extends LitElement {
   static styles = css`
+    :host {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
     .test-label {
       margin-bottom: 10px;
       font-size: 12px;
@@ -320,9 +507,9 @@ class App extends LitElement {
     .app {
       display: flex;
       flex-direction: column;
-      width: 100%;
+      max-width: 800px;
       align-items: center;
-      padding-top: 20px;
+      padding: 20px 0;
     }
     .results {
       display: flex;
@@ -387,7 +574,7 @@ class App extends LitElement {
   };
 
   async _init() {
-    const config = await ((await fetch("/r/")).json());
+    const config = await ((await fetch(`${URL_PREFIX}/r/`)).json());
     config['results'] = config['results'].sort((a, b) => a.name < b.name ? -1 : (a.name > b.name ? 1 : 0));
     this.tests = config['results']
   }

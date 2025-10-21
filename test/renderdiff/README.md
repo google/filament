@@ -1,6 +1,6 @@
 # Rendering Difference Test
 
-We created a few scripts to run `gltf_viewer` and produce headless renderings.
+This tool is a collections of scripts to run `gltf_viewer` and produce headless renderings.
 
 This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s
@@ -9,10 +9,10 @@ Additionally, we should be able to use GPUs where available (though this is more
 work).
 
 The script `render.py` contains the core logic for taking input parameters (such as the test
-description file) and then running gltf_viewer to produce the renderings.
+description file) and then running `gltf_viewer` to produce the renderings.
 
 In the `test` directory is a list of test descriptions that are specified in json. Please see
-`sample.json` to parse the structure.
+`sample.json` to glean the structure.
 
 ## Setting up python
 
@@ -51,14 +51,18 @@ renderings, do the following step
   bash test/renderdiff/generate.sh
   ```
 
-## Filtering Tests
+## Command-line Options
 
-You can run a subset of the tests by passing the `--test_filter` flag to `local_test.sh`. The
-filter supports wildcards (`*`) to match test names. For example, to run all tests in the
-`ClearCoat` suite, you can use the following command:
+You can control the behavior of the test scripts with the following flags passed to `local_test.sh`:
+
+- `--test_filter=<filter>`: Run a subset of tests. The filter supports wildcards (`*`) to match test names.
+- `--no_rebuild`: Skip rebuilding the `gltf_viewer` executable.
+- `--num_threads=<number>`: Set the number of threads for rendering. If not set, the system's default is used.
+
+For example, to run all `MSAA` tests without rebuilding and using 8 threads:
 
 ```
-bash test/renderdiff/local_test.sh --test_filter='ClearCoat.*.*'
+bash test/renderdiff/local_test.sh --test_filter='MSAA.*.*' --no_rebuild --num_threads=8
 ```
 
 ## Update the golden images
@@ -137,6 +141,17 @@ python3 test/renderdiff/src/viewer.py --pr_number=[PR #] --github_token=[github 
 
 where `[PR #]` is the numeric ID of your pull request, and the `[github token]` is an acess
 token that you (as a github user) needs to generate ([reference][github_token_ref]).
+
+To see the results of a specific run, you would do the following
+
+```
+python3 test/renderdiff/src/viewer.py --run_number=[RUN #] --github_token=[github token]
+```
+
+where `[RUN #]` is the numeric ID of the run. You can find the run number in the URL of the
+GitHub Actions page. For example, in the URL
+`https://github.com/google/filament/actions/runs/18023632663/job/51286323708?pr=9264`,
+the run number is `18023632663`.
 
 [github_token_ref]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 [Mesa]: https://docs.mesa3d.org

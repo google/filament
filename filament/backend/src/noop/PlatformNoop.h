@@ -31,7 +31,7 @@ public:
 
 protected:
 
-    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) noexcept override;
+    Driver* createDriver(void* sharedContext, const Platform::DriverConfig& driverConfig) override;
 };
 
 } // namespace filament

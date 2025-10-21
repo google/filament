@@ -71,7 +71,6 @@
 #include <atomic>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -322,7 +321,7 @@ MaterialBuilder& MaterialBuilder::parameter(const char* name, SamplerType sample
 template<typename T, typename>
 MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType const type, T defaultValue) {
     auto result = std::find_if(mConstants.begin(), mConstants.end(), [name](const Constant& c) {
-        return c.name == CString(name);
+        return !strcmp(c.name.c_str(), name);
     });
     FILAMENT_CHECK_POSTCONDITION(result == mConstants.end())
             << "There is already a constant parameter present with the name " << name << ".";
@@ -357,7 +356,7 @@ MaterialBuilder& MaterialBuilder::constant(const char* name, ConstantType const 
         assert_invariant(false);
     }
 
-    mConstants.push_back(constant);
+    mConstants.push_back(std::move(constant));
     return *this;
 }
 template MaterialBuilder& MaterialBuilder::constant<int32_t>(
@@ -1674,7 +1673,7 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     // User constant parameters
     FixedCapacityVector<MaterialConstant> constantsEntry(mConstants.size());
     std::transform(mConstants.begin(), mConstants.end(), constantsEntry.begin(),
-            [](Constant const& c) { return MaterialConstant(c.name.c_str(), c.type); });
+            [](Constant const& c) { return MaterialConstant(c.name, c.type, c.defaultValue); });
     container.push<MaterialConstantParametersChunk>(std::move(constantsEntry));
 
     FixedCapacityVector<MaterialPushConstant> pushConstantsEntry(mPushConstants.size());

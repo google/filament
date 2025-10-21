@@ -182,7 +182,7 @@ RenderableManager::Builder& RenderableManager::Builder::priority(uint8_t const p
 }
 
 RenderableManager::Builder& RenderableManager::Builder::channel(uint8_t const channel) noexcept {
-    mImpl->mCommandChannel = std::min(channel, uint8_t(0x3));
+    mImpl->mCommandChannel = std::min(channel, uint8_t(CONFIG_RENDERPASS_CHANNEL_COUNT - 1));
     return *this;
 }
 
@@ -557,7 +557,7 @@ void FRenderableManager::create(
 
     if (ci) {
         // create and initialize all needed RenderPrimitives
-        using size_type = Slice<FRenderPrimitive>::size_type;
+        using size_type = Slice<const FRenderPrimitive>::size_type;
         auto const * const entries = builder->mEntries.data();
         const size_t entryCount = builder->mEntries.size();
         FRenderPrimitive* rp = new FRenderPrimitive[entryCount];
@@ -683,7 +683,7 @@ void FRenderableManager::create(
                         BufferUsage::DYNAMIC),
                 .count = targetCount };
 
-            Slice<FRenderPrimitive>& primitives = mManager[ci].primitives;
+            Slice<FRenderPrimitive> primitives = mManager[ci].primitives;
             mManager[ci].morphTargetBuffer = morphTargetBuffer;
             if (builder->mMorphTargetBuffer) {
                 for (size_t i = 0; i < entryCount; ++i) {
@@ -691,7 +691,7 @@ void FRenderableManager::create(
                     primitives[i].setMorphingBufferOffset(morphing.offset);
                 }
             }
-            
+
             // When targetCount equal 0, boneCount>0 in this case, do an initialization for the
             // morphWeights uniform array to avoid crash on adreno gpu.
             if (UTILS_UNLIKELY(targetCount == 0 &&
@@ -767,7 +767,7 @@ void FRenderableManager::destroyComponent(Instance const ci) noexcept {
 
 void FRenderableManager::destroyComponentPrimitives(
         HwRenderPrimitiveFactory& factory, DriverApi& driver,
-        Slice<FRenderPrimitive>& primitives) noexcept {
+        Slice<FRenderPrimitive> primitives) noexcept {
     for (auto& primitive : primitives) {
         primitive.terminate(factory, driver);
     }
@@ -778,7 +778,7 @@ void FRenderableManager::setMaterialInstanceAt(Instance const instance, uint8_t 
         size_t const primitiveIndex, FMaterialInstance const* mi) {
     assert_invariant(mi);
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size() && mi) {
             FMaterial const* material = mi->getMaterial();
 
@@ -806,7 +806,7 @@ void FRenderableManager::setMaterialInstanceAt(Instance const instance, uint8_t 
 void FRenderableManager::clearMaterialInstanceAt(Instance instance, uint8_t level,
         size_t primitiveIndex) {
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setMaterialInstance(nullptr);
         }
@@ -816,7 +816,7 @@ void FRenderableManager::clearMaterialInstanceAt(Instance instance, uint8_t leve
 MaterialInstance* FRenderableManager::getMaterialInstanceAt(
         Instance const instance, uint8_t const level, size_t const primitiveIndex) const noexcept {
     if (instance) {
-        const Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<const FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             // We store the material instance as const because we don't want to change it internally
             // but when the user queries it, we want to allow them to call setParameter()
@@ -829,7 +829,7 @@ MaterialInstance* FRenderableManager::getMaterialInstanceAt(
 void FRenderableManager::setBlendOrderAt(Instance const instance, uint8_t const level,
         size_t const primitiveIndex, uint16_t const order) noexcept {
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setBlendOrder(order);
         }
@@ -839,7 +839,7 @@ void FRenderableManager::setBlendOrderAt(Instance const instance, uint8_t const 
 void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance const instance, uint8_t const level,
         size_t const primitiveIndex, bool const enabled) noexcept {
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setGlobalBlendOrderEnabled(enabled);
         }
@@ -849,7 +849,7 @@ void FRenderableManager::setGlobalBlendOrderEnabledAt(Instance const instance, u
 AttributeBitset FRenderableManager::getEnabledAttributesAt(
         Instance const instance, uint8_t const level, size_t const primitiveIndex) const noexcept {
     if (instance) {
-        Slice<FRenderPrimitive> const& primitives = getRenderPrimitives(instance, level);
+        Slice<const FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             return primitives[primitiveIndex].getEnabledAttributes();
         }
@@ -861,7 +861,7 @@ void FRenderableManager::setGeometryAt(Instance const instance, uint8_t const le
         PrimitiveType const type, FVertexBuffer* vertices, FIndexBuffer* indices,
         size_t const offset, size_t const count) noexcept {
     if (instance) {
-        Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
+        Slice<FRenderPrimitive> primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].set(mHwRenderPrimitiveFactory, mEngine.getDriverApi(),
                     type, vertices, indices, offset, count);
@@ -960,7 +960,7 @@ void FRenderableManager::setMorphTargetBufferOffsetAt(Instance const instance, u
         size_t const offset) {
     if (instance) {
         assert_invariant(mManager[instance].morphTargetBuffer);
-        Slice<FRenderPrimitive>& primitives = mManager[instance].primitives;
+        Slice<FRenderPrimitive> primitives = mManager[instance].primitives;
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setMorphingBufferOffset(offset);
         }

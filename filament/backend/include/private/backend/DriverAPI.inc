@@ -108,15 +108,15 @@
     DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_TAGGED_R_N(R, N, ...) \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString&&, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString&&, tag))
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString&&, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString&&, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...) \
-    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::CString, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::CString, tag))
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString, tag))
 
 // on some compilers the ##__VA_ARGS__ hack is not supported, so we can't handle 0-parameter APIs
 // with DECL_DRIVER_API_SYNCHRONOUS_N
@@ -336,6 +336,7 @@ DECL_DRIVER_API_SYNCHRONOUS_N(void, setStreamDimensions, backend::StreamHandle, 
 DECL_DRIVER_API_SYNCHRONOUS_N(int64_t, getStreamTimestamp, backend::StreamHandle, stream)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, updateStreams, backend::DriverApi*, driver)
 DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, getFenceStatus, backend::FenceHandle, fh)
+DECL_DRIVER_API_SYNCHRONOUS_N(backend::FenceStatus, fenceWait, backend::FenceHandle, fh, uint64_t, timeout)
 DECL_DRIVER_API_SYNCHRONOUS_N(void, getPlatformSync, backend::SyncHandle, sh,
         backend::CallbackHandler*, handler, backend::Platform::SyncCallback, cb, void*, userData)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, isTextureFormatSupported, backend::TextureFormat, format)
@@ -416,14 +417,6 @@ DECL_DRIVER_API_N(setExternalStream,
         backend::TextureHandle, th,
         backend::StreamHandle, sh)
 
-DECL_DRIVER_API_N(beginRenderPass,
-        backend::RenderTargetHandle, rth,
-        const backend::RenderPassParams&, params)
-
-DECL_DRIVER_API_0(endRenderPass)
-
-DECL_DRIVER_API_0(nextSubpass)
-
 DECL_DRIVER_API_N(beginTimerQuery,
         backend::TimerQueryHandle, tqh)
 
@@ -456,6 +449,36 @@ DECL_DRIVER_API_N(copyToMemoryMappedBuffer,
         size_t, offset,
         backend::BufferDescriptor&&, data)
 
+DECL_DRIVER_API_N(setPushConstant,
+        backend::ShaderStage, stage,
+        uint8_t, index,
+        backend::PushConstantVariant, value)
+
+/*
+ * Setting rendering state
+ * -----------------------
+ */
+
+DECL_DRIVER_API_N(beginRenderPass,
+        backend::RenderTargetHandle, rth,
+        const backend::RenderPassParams&, params)
+
+DECL_DRIVER_API_0(endRenderPass)
+
+DECL_DRIVER_API_0(nextSubpass)
+
+DECL_DRIVER_API_N(bindPipeline,
+        backend::PipelineState const&, state)
+
+DECL_DRIVER_API_N(bindRenderPrimitive,
+        backend::RenderPrimitiveHandle, rph)
+
+DECL_DRIVER_API_N(bindDescriptorSet,
+        backend::DescriptorSetHandle, dsh,
+        backend::descriptor_set_t, set,
+        backend::DescriptorSetOffsetArray&&, offsets
+)
+
 /*
  * Swap chain
  */
@@ -472,11 +495,6 @@ DECL_DRIVER_API_N(commit,
  * Setting rendering state
  * -----------------------
  */
-
-DECL_DRIVER_API_N(setPushConstant,
-        backend::ShaderStage, stage,
-        uint8_t, index,
-        backend::PushConstantVariant, value)
 
 DECL_DRIVER_API_N(insertEventMarker,
         const char*, string)
@@ -537,18 +555,6 @@ DECL_DRIVER_API_N(blit,
         uint8_t, srcLevel, uint8_t, srcLayer,
         math::uint2, srcOrigin,
         math::uint2, size)
-
-DECL_DRIVER_API_N(bindPipeline,
-        backend::PipelineState const&, state)
-
-DECL_DRIVER_API_N(bindRenderPrimitive,
-        backend::RenderPrimitiveHandle, rph)
-
-DECL_DRIVER_API_N(bindDescriptorSet,
-        backend::DescriptorSetHandle, dsh,
-        backend::descriptor_set_t, set,
-        backend::DescriptorSetOffsetArray&&, offsets
-)
 
 DECL_DRIVER_API_N(draw2,
         uint32_t, indexOffset,

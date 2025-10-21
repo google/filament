@@ -35,7 +35,7 @@ static const StaticMaterialInfo sMaterialList[] = {
     { "fsr_rcas",                   MATERIAL(FSR, FSR_RCAS) },
 };
 
-utils::Slice<StaticMaterialInfo> getFsrMaterialList() noexcept {
+utils::Slice<const StaticMaterialInfo> getFsrMaterialList() noexcept {
     return { std::begin(sMaterialList), std::end(sMaterialList) };
 }
 

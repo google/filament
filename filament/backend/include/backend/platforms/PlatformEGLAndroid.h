@@ -80,7 +80,7 @@ protected:
     int getOSVersion() const noexcept override;
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) noexcept override;
+            const Platform::DriverConfig& driverConfig) override;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface

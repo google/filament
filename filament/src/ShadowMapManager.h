@@ -245,19 +245,26 @@ private:
     }
 
     ShadowMap const& getShadowMap(size_t const index) const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getShadowMap(index);
+        assert_invariant(index < mShadowMapCache.size());
+        return *std::launder(reinterpret_cast<ShadowMap const*>(&mShadowMapCache[index]));
     }
 
     utils::Slice<ShadowMap> getCascadedShadowMap() noexcept {
+        ShadowMap* const p = &getShadowMap(0);
+        return { p, mDirectionalShadowMapCount };
+    }
+
+    utils::Slice<const ShadowMap> getCascadedShadowMap() const noexcept {
         ShadowMap const* const p = &getShadowMap(0);
         return { p, mDirectionalShadowMapCount };
     }
 
-    utils::Slice<ShadowMap> getCascadedShadowMap() const noexcept {
-        return const_cast<ShadowMapManager*>(this)->getCascadedShadowMap();
+    utils::Slice<ShadowMap> getSpotShadowMaps() noexcept {
+        ShadowMap* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
+        return { p, mSpotShadowMapCount };
     }
 
-    utils::Slice<ShadowMap> getSpotShadowMaps() const noexcept {
+    utils::Slice<const ShadowMap> getSpotShadowMaps() const noexcept {
         ShadowMap const* const p = &getShadowMap(CONFIG_MAX_SHADOW_CASCADES);
         return { p, mSpotShadowMapCount };
     }

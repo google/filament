@@ -1,0 +1,8 @@
+material {
+    name : clearDepth,
+    culling: none,
+    colorWrite : false,
+    depthWrite : true,
+    depthCulling : false,
+    domain: postprocess,
+}

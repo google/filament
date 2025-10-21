@@ -21,6 +21,8 @@
 #include "noop/NoopDriver.h"
 #include "CommandStreamDispatcher.h"
 
+#include <utils/ImmutableCString.h>
+
 #include <stdint.h>
 
 namespace filament::backend {
@@ -135,11 +137,11 @@ void NoopDriver::destroyDescriptorSetLayout(Handle<HwDescriptorSetLayout> tqh) {
 void NoopDriver::destroyDescriptorSet(Handle<HwDescriptorSet> tqh) {
 }
 
-Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::CString tag) {
+Handle<HwStream> NoopDriver::createStreamNative(void* nativeStream, utils::ImmutableCString tag) {
     return {};
 }
 
-Handle<HwStream> NoopDriver::createStreamAcquired(utils::CString tag) {
+Handle<HwStream> NoopDriver::createStreamAcquired(utils::ImmutableCString tag) {
     return {};
 }
 
@@ -166,6 +168,10 @@ void NoopDriver::destroyFence(Handle<HwFence> fh) {
 
 FenceStatus NoopDriver::getFenceStatus(Handle<HwFence> fh) {
     return FenceStatus::CONDITION_SATISFIED;
+}
+
+FenceStatus NoopDriver::fenceWait(Handle<HwFence> fh, uint64_t timeout) {
+    return FenceStatus::ERROR;
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that

@@ -179,6 +179,7 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             include/backend/platforms/VulkanPlatform.h
+            src/vulkan/VulkanAsyncHandles.cpp
             src/vulkan/VulkanAsyncHandles.h
             src/vulkan/VulkanBlitter.cpp
             src/vulkan/VulkanBlitter.h
@@ -293,6 +294,8 @@ if (FILAMENT_SUPPORTS_WEBGPU)
             src/webgpu/WebGPUPipelineLayoutCache.h
             src/webgpu/WebGPUProgram.cpp
             src/webgpu/WebGPUProgram.h
+            src/webgpu/WebGPUQueueManager.cpp
+            src/webgpu/WebGPUQueueManager.h
             src/webgpu/WebGPURenderPassMipmapGenerator.cpp
             src/webgpu/WebGPURenderPassMipmapGenerator.h
             src/webgpu/WebGPURenderPrimitive.h

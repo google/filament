@@ -52,15 +52,14 @@ std::string processPlaceholderTemplate(std::string_view const& stringTemplate,
                          "Malformed source with missing suffix to placeholder");
         const std::string_view placeholderName{ std::string_view(sourceData + positionOfPlaceholder,
                 positionAfterPlaceholder - positionOfPlaceholder) };
+
         if (const auto iter{ valueByPlaceholderName.find(placeholderName) };
-                iter == valueByPlaceholderName.end()) {
-            // wrapping placeholderName in a std::string to null terminate the C string....
-            PANIC_POSTCONDITION("Found placeholder '%s' in template, but this is not present in "
-                                "valueByPlaceholderName",
-                    std::string{ placeholderName }.data());
-        } else {
+                iter != valueByPlaceholderName.end()) {
             const std::string_view value{ iter->second };
             out << value;
+        } else {
+            // It's ok to not replace a template item.  We assume replacement can take multiple passes.
+            out << placeholderPrefix << placeholderName << placeholderSuffix;
         }
         // update the cursor for after the placeholder...
         positionCursorInTemplateString = positionAfterPlaceholder + placeholderSuffix.size();

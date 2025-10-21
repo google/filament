@@ -21,10 +21,13 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/compiler.h
         ${PUBLIC_HDR_DIR}/${TARGET}/compressed_pair.h
         ${PUBLIC_HDR_DIR}/${TARGET}/CString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ImmutableCString.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Entity.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityInstance.h
         ${PUBLIC_HDR_DIR}/${TARGET}/EntityManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/FixedCapacityVector.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Hash.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/InternPool.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Invocable.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Log.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Logger.h
@@ -40,6 +43,7 @@ set(DIST_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/SingleInstanceComponentManager.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Slice.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StaticString.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/Status.h
         ${PUBLIC_HDR_DIR}/${TARGET}/StructureOfArrays.h
         ${PUBLIC_HDR_DIR}/${TARGET}/Systrace.h
         ${PUBLIC_HDR_DIR}/${TARGET}/sstream.h
@@ -61,6 +65,7 @@ set(SRCS
         src/ashmem.cpp
         src/debug.cpp
         src/Allocator.cpp
+        src/AsyncJobQueue.cpp
         src/CallStack.cpp
         src/CString.cpp
         src/CountDownLatch.cpp
@@ -68,6 +73,7 @@ set(SRCS
         src/EntityManager.cpp
         src/EntityManagerImpl.h
         src/FixedCapacityVectorBase.cpp
+        src/ImmutableCString.cpp
         src/Invocable.cpp
         src/JobSystem.cpp
         src/Log.cpp
@@ -79,6 +85,7 @@ set(SRCS
         src/sstream.cpp
         src/string.cpp
         src/ThreadUtils.cpp
+        src/Status.cpp
 )
 
 if (WIN32)
@@ -164,21 +171,25 @@ set(TEST_SRCS
         test/test_bitset.cpp
         test/test_CountDownLatch.cpp
         test/test_CString.cpp
+        test/test_ImmutableCString.cpp
         test/test_CyclicBarrier.cpp
         test/test_Entity.cpp
         test/test_FixedCapacityVector.cpp
         test/test_FixedCircularBuffer.cpp
         test/test_Hash.cpp
+        test/test_InternPool.cpp
         test/test_JobSystem.cpp
         test/test_QuadTreeArray.cpp
         test/test_RangeMap.cpp
         test/test_RefCountedMap.cpp
+        test/test_Slice.cpp
         test/test_StructureOfArrays.cpp
         test/test_sstream.cpp
         test/test_string.cpp
         test/test_utils_main.cpp
         test/test_Zip2Iterator.cpp
         test/test_BinaryTreeArray.cpp
+        test/test_Status.cpp
 )
 
 if (WEBGL_PTHREADS)

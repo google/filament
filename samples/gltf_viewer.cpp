@@ -639,7 +639,7 @@ int main(int argc, char** argv) {
         // pre-compile all material variants
         std::set<Material*> materials;
         RenderableManager const& rcm = app.engine->getRenderableManager();
-        Slice<Entity> const renderables{
+        Slice<const Entity> const renderables{
                 app.asset->getRenderableEntities(), app.asset->getRenderableEntityCount() };
         for (Entity const e: renderables) {
             auto ri = rcm.getInstance(e);
@@ -1142,6 +1142,10 @@ int main(int argc, char** argv) {
         Camera& camera = view->getCamera();
         Skybox* skybox = scene->getSkybox();
         applySettings(engine, app.viewer->getSettings().viewer, &camera, skybox, renderer);
+
+        // FIMXE: This applySettings() is done here instead of in AutomationEngine.cpp because
+        // we need access to the Renderer, which AutomationEngine does not provide.
+        applySettings(engine, app.viewer->getSettings().debug, renderer);
 
         // technically we don't need to do this each frame
         auto& tcm = engine->getTransformManager();

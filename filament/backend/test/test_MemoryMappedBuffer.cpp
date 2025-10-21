@@ -22,6 +22,7 @@
 #include "SharedShaders.h"
 #include "SharedShadersConstants.h"
 #include "Skip.h"
+#include "Workarounds.h"
 
 #include <backend/BufferDescriptor.h>
 #include <backend/DriverEnums.h>
@@ -55,7 +56,7 @@ protected:
         auto colorTexture = cleanup.add(
                 api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
                         screenWidth(), screenHeight(), 1,
-                        TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
+                        TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE TEXTURE_USAGE_READ_PIXELS));
         auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0,
                 screenWidth(), screenHeight(), 1, 1, { { colorTexture } }, {}, {}));
         return renderTarget;
@@ -90,19 +91,27 @@ protected:
         return { vbih, vbh, ibh };
     }
 
-    Shader getSimpleShader(Cleanup& cleanup, math::float4 const& color) {
+    std::pair<Shader, DescriptorSetHandle> getSimpleShader(Cleanup& cleanup,
+            math::float4 const& color) {
         auto& api = getDriverApi();
-        Shader const shader = SharedShaders::makeShader(getDriverApi(), cleanup, ShaderRequest{
-            .mVertexType = VertexShaderType::Simple,
-            .mFragmentType = FragmentShaderType::SolidColored,
-            .mUniformType = ShaderUniformType::Simple
-        });
+        Shader const shader = SharedShaders::makeShader(getDriverApi(), cleanup,
+                ShaderRequest{
+                    .mVertexType = VertexShaderType::Simple,
+                    .mFragmentType = FragmentShaderType::SolidColored,
+                    .mUniformType = ShaderUniformType::Simple,
+                });
 
+        auto descSet = shader.createDescriptorSet(api);
+        UniformBindingConfig uboBindingConfig = {
+            .descriptorSet = descSet,
+        };
         auto const ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
                 BufferObjectBinding::UNIFORM, BufferUsage::DYNAMIC_BIT));
-        shader.bindUniform<SimpleMaterialParams>(api, ubuffer);
+        // This will bind the UBO to descSet and also bind descSet.  But we also need to manually
+        // bind descset every begin/end frame.
+        shader.bindUniform<SimpleMaterialParams>(api, ubuffer, uboBindingConfig);
         shader.uploadUniform(api, ubuffer, SimpleMaterialParams{ .color = color });
-        return shader;
+        return { shader, descSet };
     }
 
     void copyData(const void* data, size_t const size, size_t const offset,
@@ -122,7 +131,9 @@ protected:
             int64_t const frame,
             SwapChainHandle swapChain,
             RenderTargetHandle renderTarget,
-            RenderPrimitiveHandle renderPrimitive, PipelineState const& state) {
+            RenderPrimitiveHandle renderPrimitive,
+            DescriptorSetHandle descSet,
+            PipelineState const& state) {
         auto& api = getDriverApi();
         RenderPassParams params = getClearColorRenderPass({0,0,0,1});
         params.viewport = getFullViewport();
@@ -130,6 +141,8 @@ protected:
         api.beginFrame(frame, 0, 0);
         api.beginRenderPass(renderTarget, params);
         api.bindPipeline(state);
+        // The binding index is always 0 for the simple shaders we're using.
+        api.bindDescriptorSet(descSet, 0, {});
         api.bindRenderPrimitive(renderPrimitive);
         api.draw2(0, count, 1);
         api.endRenderPass();
@@ -176,7 +189,7 @@ protected:
         // Map the buffer with a specific offset.
         MemoryMappedBufferHandle const memoryMappedBuffer =
                 api.mapBuffer(bufferObject, mapOffset, vertexDataSize + copyOffset,
-                MapBufferAccessFlags::WRITE_BIT, utils::CString{ screenshotName });
+                MapBufferAccessFlags::WRITE_BIT, utils::ImmutableCString{ screenshotName });
 
         copyData(vertices.data(), vertexDataSize, copyOffset, memoryMappedBuffer, callbackExecuted);
 
@@ -185,7 +198,7 @@ protected:
         flushAndWait();
         EXPECT_EQ(callbackExecuted, 1);
 
-        Shader const shader = getSimpleShader(cleanup, color);
+        auto [shader, descset] = getSimpleShader(cleanup, color);
 
         auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 3, stride, baseVertex, bufferObject);
 
@@ -197,7 +210,7 @@ protected:
         state.primitiveType = PrimitiveType::TRIANGLES;
         state.vertexBufferInfo = vbih;
 
-        render(3, 0, swapChain, renderTarget, renderPrimitive, state);
+        render(3, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
         EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), screenshotName, 0));
     }
@@ -288,7 +301,7 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
     flushAndWait();
     EXPECT_EQ(callbacksExecuted, 3);
 
-    Shader const shader = getSimpleShader(cleanup, { 1, 1, 0, 1 });
+    auto [shader, descset] = getSimpleShader(cleanup, { 1, 1, 0, 1 });
 
     auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 9, sizeof(math::float2), 0, bufferObject);
 
@@ -300,7 +313,7 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
     state.primitiveType = PrimitiveType::TRIANGLES;
     state.vertexBufferInfo = vbih;
 
-    render(9, 0, swapChain, renderTarget, renderPrimitive, state);
+    render(9, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
     EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "MultipleCopies", 0));
 }
@@ -345,7 +358,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     }
 
 
-    Shader const shader = getSimpleShader(cleanup, { 1, 1, 0, 1 });
+    auto [shader, descset] = getSimpleShader(cleanup, { 1, 1, 0, 1 });
 
     auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 9, sizeof(math::float2), 0, bufferObject);
 
@@ -357,7 +370,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     state.primitiveType = PrimitiveType::TRIANGLES;
     state.vertexBufferInfo = vbih;
 
-    render(9, 0, swapChain, renderTarget, renderPrimitive, state);
+    render(9, 0, swapChain, renderTarget, renderPrimitive, descset, state);
 
     EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_before", 0));
 
@@ -380,7 +393,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     api.makeCurrent(swapChain, swapChain);
 
     // Second render, after update
-    render(9, 1, swapChain, renderTarget, renderPrimitive, state);
+    render(9, 1, swapChain, renderTarget, renderPrimitive, descset, state);
 
     EXPECT_IMAGE(renderTarget, ScreenshotParams(screenWidth(), screenHeight(), "UpdatePartial_after", 0));
 }

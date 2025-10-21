@@ -179,7 +179,7 @@ Google code style and is derived from the Java code style, but not quite.</p>
 <li>class access modifiers are not indented</li>
 <li>last line of <code>.cpp</code> or <code>.h</code> file must be an empty line</li>
 </ul>
-<pre><code>for (int i = 0; i &lt; max; i++) {
+<pre><code class="language-c++">for (int i = 0; i &lt; max; i++) {
 }
 
 class Foo {
@@ -227,11 +227,23 @@ src/data.inc
 <li><code>public</code> class attributes <em>are not</em> prefixed</li>
 <li>class attributes and methods are lower camelcase</li>
 </ul>
-<pre><code>extern int gGlobalWarming;
+<pre><code class="language-c++">extern int gGlobalWarming;
 
 class FooBar {
 public:
-    void methodName();
+    FooBar(int attributeName, int sizeInBytes)
+            : mAttributeName(attributeName),
+              sizeInBytes(sizeInBytes) {}
+
+    void reallyLongMethodNameWithLotsOfArguments(bool argument1,
+            int someSecondArgument, int bestArgument) {
+        std::pair&lt;bool, int&gt; pair = {
+            argument1,
+            argument2,
+        };
+        // etc
+    }
+
     int sizeInBytes;
 private:
     int mAttributeName;
@@ -248,7 +260,7 @@ private:
 <li>always include the copyright notice at the top of every file</li>
 <li>make sure the date is correct</li>
 </ul>
-<pre><code>/*
+<pre><code class="language-c++">/*
  * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -293,7 +305,7 @@ conversely containers and algorithms are not allowed. There are exceptions such 
 </li>
 </ul>
 <p><em>Sorting the headers is important to help catching missing <code>#include</code> directives.</em></p>
-<pre><code>/*
+<pre><code class="language-c++">/*
  * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -336,7 +348,7 @@ from other string types.</li>
 <ul>
 <li>Use <code>auto</code> only when the type appears on the same line or with iterators and lambdas.</li>
 </ul>
-<pre><code>auto foo = new Foo();
+<pre><code class="language-c++">auto foo = new Foo();
 for (auto&amp; i : collection) { }
 </code></pre>
 

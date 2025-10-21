@@ -32,7 +32,7 @@ namespace {
 
 // This function transforms an OpSpecConstant instruction into just a OpConstant instruction.
 // Additionally, it will adjust the value of the constant as given by the program.
-void getTransformedConstantInst(SpecConstantValue* value, uint32_t* inst) {
+void getTransformedConstantInst(Program::SpecializationConstant const& value, uint32_t* inst) {
 
     // The first word is the size of the instruction and the instruction type.
     // The second word is the type of the instruction.
@@ -42,25 +42,15 @@ void getTransformedConstantInst(SpecConstantValue* value, uint32_t* inst) {
     constexpr size_t const OP = 0;
     constexpr size_t const VALUE = 3;
 
-    if (!value) {
-        // If a specialization wasn't provided, just switch the opcode.
-        uint32_t const op = inst[OP] & 0x0000FFFF;
-        if (op == spv::Op::OpSpecConstantFalse) {
-            inst[OP] = (3 << 16) | spv::Op::OpConstantFalse;
-        } else if (op == spv::Op::OpSpecConstantTrue) {
-            inst[OP] = (3 << 16) | spv::Op::OpConstantTrue;
-        } else if (op == spv::Op::OpSpecConstant) {
-            inst[OP] = (4 << 16) | spv::Op::OpConstant;
-        }
-    } else if (std::holds_alternative<bool>(*value)) {
+    if (std::holds_alternative<bool>(value)) {
         inst[OP] = (3 << 16)
-                   | (std::get<bool>(*value) ? spv::Op::OpConstantTrue : spv::Op::OpConstantFalse);
-    } else if (std::holds_alternative<float>(*value)) {
-        float const fval = std::get<float>(*value);
+                | (std::get<bool>(value) ? spv::Op::OpConstantTrue : spv::Op::OpConstantFalse);
+    } else if (std::holds_alternative<float>(value)) {
+        float const fval = std::get<float>(value);
         inst[OP] = (4 << 16) | spv::Op::OpConstant;
         inst[VALUE] = *reinterpret_cast<uint32_t const*>(&fval);
     } else {
-        int const ival = std::get<int>(*value);
+        int const ival = std::get<int>(value);
         inst[OP] = (4 << 16) | spv::Op::OpConstant;
         inst[VALUE] = *reinterpret_cast<uint32_t const*>(&ival);
     }
@@ -72,15 +62,9 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
         utils::FixedCapacityVector<Program::SpecializationConstant> const& specConstants,
         std::vector<uint32_t>& output) {
     using WordMap = std::unordered_map<uint32_t, uint32_t>;
-    using SpecValueMap = std::unordered_map<uint32_t, SpecConstantValue>;
     constexpr size_t HEADER_SIZE = 5;
 
     WordMap varToIdMap;
-    SpecValueMap idToValue;
-
-    for (auto spec: specConstants) {
-        idToValue[spec.id] = spec.value;
-    }
 
     // The follow loop will iterate through all the instructions and look for instructions of the
     // form:
@@ -116,9 +100,7 @@ void workaroundSpecConstant(Program::ShaderBlob const& blob,
                 assert_invariant(idItr != varToIdMap.end() &&
                         "Cannot find variable previously decorated with SpecId");
 
-                auto valItr = idToValue.find(idItr->second);
-
-                SpecConstantValue* val = (valItr != idToValue.end()) ? &valItr->second : nullptr;
+                auto const& val = specConstants[idItr->second];
                 std::memcpy(&outputData[outputCursor], &data[cursor], wordCount * 4);
                 getTransformedConstantInst(val, &outputData[outputCursor]);
                 outputCursor += wordCount;

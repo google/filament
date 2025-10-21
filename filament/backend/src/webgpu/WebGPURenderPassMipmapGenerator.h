@@ -27,6 +27,8 @@
 
 namespace filament::backend {
 
+class WebGPUQueueManager;
+
 /**
  * A utility class for generating mipmaps for a texture using a series of render passes.
  */
@@ -37,6 +39,8 @@ public:
         std::string_view reason;
     };
 
+    WebGPURenderPassMipmapGenerator(wgpu::Device const&, WebGPUQueueManager* queueManager);
+
     /**
      * Checks if a given texture format is compatible with render pass-based mipmap generation.
      * @return A FormatCompatibility struct indicating whether the format is compatible
@@ -45,16 +49,7 @@ public:
     [[nodiscard]] static FormatCompatibility getCompatibilityFor(wgpu::TextureFormat,
             wgpu::TextureDimension, uint32_t sampleCount);
 
-    explicit WebGPURenderPassMipmapGenerator(wgpu::Device const&);
-
-    /**
-     * IMPORTANT NOTE: when reusing a command encoder and/or textures make sure to flush/submit
-     * pending commands (draws, etc.) to the GPU prior to calling this call, because texture updates
-     * may otherwise (unintentionally) happen after draw commands encoded in the encoder.
-     * Submitting any commands up to this point ensures the calls happen in the expected
-     * sequence.
-     */
-    void generateMipmaps(wgpu::Queue const&, wgpu::Texture const&);
+    void generateMipmaps(wgpu::Texture const&);
 
 private:
     enum class ScalarSampleType : uint8_t {
@@ -72,6 +67,7 @@ private:
             wgpu::RenderPipeline const&, uint32_t layer, uint32_t mipLevel);
 
     wgpu::Device mDevice;
+    WebGPUQueueManager* mQueueManager;
     const wgpu::Sampler mPreviousMipLevelSampler{ nullptr };
     const wgpu::ShaderModule mShaderModule{ nullptr };
     const wgpu::BindGroupLayout mTextureBindGroupLayout{ nullptr };

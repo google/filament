@@ -52,7 +52,7 @@ struct GLDescriptorSet : public HwDescriptorSet {
     using HwDescriptorSet::HwDescriptorSet;
 
     GLDescriptorSet(OpenGLContext& gl, DescriptorSetLayoutHandle dslh,
-            GLDescriptorSetLayout const* layout) noexcept;
+            GLDescriptorSetLayout const* layout);
 
     // update a buffer descriptor in the set
     void update(OpenGLContext& gl,

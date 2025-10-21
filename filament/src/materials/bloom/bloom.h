@@ -22,6 +22,6 @@
 
 namespace filament {
 
-utils::Slice<StaticMaterialInfo> getBloomMaterialList() noexcept;
+utils::Slice<const StaticMaterialInfo> getBloomMaterialList() noexcept;
 
 } // namespace filament

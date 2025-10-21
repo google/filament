@@ -40,7 +40,7 @@ protected:
     // Platform Interface
 
     Driver* createDriver(void* sharedContext,
-            const DriverConfig& driverConfig) noexcept override;
+            const DriverConfig& driverConfig) override;
 
     // Currently returns 0
     int getOSVersion() const noexcept override;

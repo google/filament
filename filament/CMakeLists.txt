@@ -117,6 +117,7 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/details/BufferAllocator.cpp
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
@@ -196,6 +197,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
@@ -249,9 +251,10 @@ set(PRIVATE_HDRS
 set(MATERIAL_SRCS
         src/materials/antiAliasing/fxaa/fxaa.mat
         src/materials/antiAliasing/taa/taa.mat
+        src/materials/blitArray.mat
         src/materials/blitDepth.mat
         src/materials/blitLow.mat
-        src/materials/blitArray.mat
+        src/materials/clearDepth.mat
         src/materials/bloom/bloomDownsample.mat
         src/materials/bloom/bloomDownsample2x.mat
         src/materials/bloom/bloomDownsample9.mat

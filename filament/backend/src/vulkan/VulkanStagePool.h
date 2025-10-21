@@ -245,7 +245,7 @@ private:
     // unmapping memory, freeing the allocation, and deleting the VulkanStage
     // object. Note: takes an r-value because after this call, `stage` won't
     // exist.
-    void destroyStage(VulkanStage const*&& stage);
+    void destroyStage(VulkanStage const* stage);
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
     std::multimap<uint32_t, VulkanStage*> mStages;
