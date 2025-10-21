@@ -362,7 +362,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         }
 
         DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
@@ -446,7 +446,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -513,7 +513,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -602,9 +602,9 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         // Update samplers.
         DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture,
-                { .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
