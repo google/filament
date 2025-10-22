@@ -48,10 +48,10 @@ void UboManager::beginFrame(DriverApi& driver,
     mAllocator.releaseFreeSlots();
 
     // Traverse all MIs and see which of them need slot allocation.
-    bool needReallocation =
+    AllocationResult allocationResult =
             updateMaterialInstanceAllocations(materialInstances, /*forceAllocateAll*/ false);
 
-    if (!needReallocation) {
+    if (allocationResult == ReallocationRequired) {
         // No need to grow the buffer, so we can just map the buffer for writing and return.
         mMmbHandle = driver.mapBuffer(mUbHandle, 0, mUboSize,
             MapBufferAccessFlags::WRITE_BIT | MapBufferAccessFlags::INVALIDATE_RANGE_BIT,
@@ -175,7 +175,7 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
     mFenceAllocationList.erase(mFenceAllocationList.begin(), firstToKeep);
 }
 
-bool UboManager::updateMaterialInstanceAllocations(
+UboManager::AllocationResult UboManager::updateMaterialInstanceAllocations(
         const ResourceList<FMaterialInstance>& materialInstances, bool forceAllocateAll) {
     mNeedReallocate = false;
 
@@ -214,7 +214,7 @@ bool UboManager::updateMaterialInstanceAllocations(
                 } // Else, the slot is valid and no need to allocate a new slot.
             });
 
-    return mNeedReallocate;
+    return needReallocate ? ReallocationRequired : Success;
 }
 
 void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {

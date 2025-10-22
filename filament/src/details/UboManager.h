@@ -81,9 +81,13 @@ private:
             BufferAllocator::AllocationId id) const;
 
     void checkFenceAndUnlockSlots(backend::DriverApi& driver);
-    // Returns true if the current buffer needs reallocation.
-    // Otherwise, returns false.
-    bool updateMaterialInstanceAllocations(
+
+    enum AllocationResult {
+        Success,
+        ReallocationRequired
+    };
+
+    AllocationResult updateMaterialInstanceAllocations(
             const ResourceList<FMaterialInstance>& materialInstances, bool forceAllocateAll);
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
     BufferAllocator::allocation_size_t calculateRequiredSize(
