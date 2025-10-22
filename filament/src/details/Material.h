@@ -213,6 +213,8 @@ public:
     backend::descriptor_binding_t getSamplerBinding(
             std::string_view const& name) const;
 
+    const char* getParameterTransformName(std::string_view samplerName) const noexcept;
+
     bool hasMaterialProperty(Property property) const noexcept {
         return bool(mDefinition.materialProperties & uint64_t(property));
     }

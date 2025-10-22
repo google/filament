@@ -279,6 +279,17 @@ Java_com_google_android_filament_Material_nHasParameter(JNIEnv* env, jclass,
     return (jboolean) hasParameter;
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_google_android_filament_Material_nGetParameterTransformName(JNIEnv* env, jclass,
+        jlong nativeMaterial, jstring samplerName_) {
+    Material* material = (Material*) nativeMaterial;
+    const char* samplerName = env->GetStringUTFChars(samplerName_, 0);
+    const char* transformName = material->getParameterTransformName(samplerName);
+    jstring transformName_ = env->NewStringUTF(transformName ? transformName : "");
+    env->ReleaseStringUTFChars(samplerName_, samplerName);
+    return transformName_;
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_Material_nCompile(JNIEnv *env, jclass clazz,

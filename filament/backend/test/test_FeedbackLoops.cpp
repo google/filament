@@ -183,7 +183,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
                 auto descriptorSet = shader.createDescriptorSet(api);
                 auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
@@ -220,7 +220,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
                 auto descriptorSet = shader.createDescriptorSet(api);
                 auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });

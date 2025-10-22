@@ -107,11 +107,8 @@ jobs:
       - id: get_commit_msg
         uses: ./.github/actions/get-commit-msg
       - name: Check for manual edits to /docs
-        env:
-          COMMIT_MESSAGE: ${{ steps.get_commit_msg.outputs.msg }}
         run: |
-          COMMIT_ID=$(echo "${COMMIT_MESSAGE}" | head -n 1 | sed "s/commit //g")
-          bash docs_src/build/presubmit_check.sh ${COMMIT_ID}
+          bash docs_src/build/presubmit_check.sh ${{ steps.get_commit_msg.outputs.hash }}
 
   test-renderdiff:
     name: test-renderdiff

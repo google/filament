@@ -23,6 +23,7 @@
 
 #include "ds/DescriptorSet.h"
 
+#include "details/BufferAllocator.h"
 #include "details/Engine.h"
 
 #include "private/backend/DriverApi.h"
@@ -57,6 +58,9 @@ class FMaterialInstance : public MaterialInstance {
 public:
     FMaterialInstance(FEngine& engine, FMaterial const* material,
                       const char* name) noexcept;
+    // Use this constructor when you need to override the ubo batching flag for an individual MI.
+    FMaterialInstance(FEngine& engine, FMaterial const* material,
+                      const char* name, bool useUboBatching) noexcept;
     FMaterialInstance(FEngine& engine, FMaterialInstance const* other, const char* name);
     FMaterialInstance(const FMaterialInstance& rhs) = delete;
     FMaterialInstance& operator=(const FMaterialInstance& rhs) = delete;
@@ -74,6 +78,12 @@ public:
     void commit(FEngine::DriverApi& driver) const;
 
     void use(FEngine::DriverApi& driver, Variant variant = {}) const;
+
+    void assignUboAllocation(const backend::Handle<backend::HwBufferObject>& ubHandle,
+            BufferAllocator::AllocationId id,
+            BufferAllocator::allocation_size_t offset);
+
+    BufferAllocator::AllocationId getAllocationId() const noexcept;
 
     FMaterial const* getMaterial() const noexcept { return mMaterial; }
 
@@ -234,6 +244,8 @@ public:
         return mIsDefaultInstance;
     }
 
+    bool isUsingUboBatching() const noexcept { return mUseUboBatching; }
+
     // Called by the engine to ensure that unset samplers are initialized with placedholders.
     void fixMissingSamplers() const;
 
@@ -274,7 +286,7 @@ private:
         backend::SamplerParams params;
     };
 
-    backend::Handle<backend::HwBufferObject> mUbHandle;
+    std::variant<BufferAllocator::AllocationId, backend::Handle<backend::HwBufferObject>> mUboData;
     tsl::robin_map<backend::descriptor_binding_t, TextureParameter> mTextureParameters;
     mutable DescriptorSet mDescriptorSet;
     UniformBuffer mUniforms;
@@ -296,6 +308,7 @@ private:
     bool mHasScissor : 1;
     bool mIsDoubleSided : 1;
     bool mIsDefaultInstance : 1;
+    bool mUseUboBatching : 1;
     TransparencyMode mTransparencyMode : 2;
 
     uint64_t mMaterialSortingKey = 0;
