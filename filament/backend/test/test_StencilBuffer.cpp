@@ -127,8 +127,8 @@ public:
 
 TEST_F(BasicStencilBufferTest, StencilBuffer) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Stencil not supported, see b/417230776");
+    SKIP_IF(Backend::VULKAN, "b/453776821");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -154,8 +154,7 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
 
 TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Stencil not supported, see b/417230776");
+    SKIP_IF(Backend::VULKAN, "b/453776965");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -181,9 +180,10 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
 
 TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Stencil not supported, see b/417230776");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL), "Stencil isn't applied");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453757787");
+    SKIP_IF(Backend::VULKAN, "b/453777217");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
