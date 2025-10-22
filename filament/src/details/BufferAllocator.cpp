@@ -22,10 +22,6 @@
 namespace filament {
 namespace {
 
-static bool isValidId(BufferAllocator::AllocationId id) {
-    return id != BufferAllocator::UNALLOCATED && id != BufferAllocator::REALLOCATION_REQUIRED;
-}
-
 #ifndef NDEBUG
 constexpr static bool isPowerOfTwo(uint32_t n) {
     return (n > 0) && ((n & (n - 1)) == 0);
@@ -54,7 +50,7 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
 
     // Initialize the pool with a single large free slot.
     mSlotPool.emplace_back(InternalSlotNode{
-        .mSlot = {
+        .slot = {
             .offset = 0,
             .slotSize = mTotalSize,
             .isAllocated = false,
@@ -68,9 +64,9 @@ void BufferAllocator::reset(allocation_size_t newTotalSize) {
     auto freeListIter = mFreeList.emplace(newTotalSize, firstNode);
     auto offsetMapIter = mOffsetMap.emplace(0, firstNode);
 
-    firstNode->mSlotPoolIterator = mSlotPool.begin();
-    firstNode->mFreeListIterator = freeListIter;
-    firstNode->mOffsetMapIterator = offsetMapIter.first;
+    firstNode->slotPoolIterator = mSlotPool.begin();
+    firstNode->freeListIterator = freeListIter;
+    firstNode->offsetMapIterator = offsetMapIter.first;
 }
 
 std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
@@ -87,25 +83,25 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
     }
 
     InternalSlotNode* targetNode = bestFitIter->second;
-    const allocation_size_t originalSlotSize = targetNode->mSlot.slotSize;
+    const allocation_size_t originalSlotSize = targetNode->slot.slotSize;
 
     mFreeList.erase(bestFitIter);
-    targetNode->mFreeListIterator = mFreeList.end();
-    targetNode->mSlot.isAllocated = true;
+    targetNode->freeListIterator = mFreeList.end();
+    targetNode->slot.isAllocated = true;
 
     // Split the slot if it is larger than what we need.
     if (originalSlotSize > alignedSize) {
-        targetNode->mSlot.slotSize = alignedSize;
+        targetNode->slot.slotSize = alignedSize;
 
         allocation_size_t remainingSize = originalSlotSize - alignedSize;
-        allocation_size_t newSlotOffset = targetNode->mSlot.offset + alignedSize;
+        allocation_size_t newSlotOffset = targetNode->slot.offset + alignedSize;
         assert_invariant(remainingSize % mSlotSize == 0);
         assert_invariant(newSlotOffset % mSlotSize == 0);
 
         // Create a new node for the remaining free space.
-        auto insertPos = std::next(targetNode->mSlotPoolIterator);
+        auto insertPos = std::next(targetNode->slotPoolIterator);
         auto newNodeIter = mSlotPool.emplace(insertPos, InternalSlotNode{
-            .mSlot = {
+            .slot = {
                 .offset = newSlotOffset,
                 .slotSize = remainingSize,
                 .isAllocated = false,
@@ -117,22 +113,22 @@ std::pair<BufferAllocator::AllocationId, BufferAllocator::allocation_size_t>
         // Add the new free slot to our tracking maps.
         auto freeListIter = mFreeList.emplace(remainingSize, newNode);
         auto offsetMapIter = mOffsetMap.emplace(newSlotOffset, newNode);
-        newNode->mSlotPoolIterator = newNodeIter;
-        newNode->mFreeListIterator = freeListIter;
-        newNode->mOffsetMapIterator = offsetMapIter.first;
+        newNode->slotPoolIterator = newNodeIter;
+        newNode->freeListIterator = freeListIter;
+        newNode->offsetMapIterator = offsetMapIter.first;
     }
 
-    auto allocationId = calculateIdByOffset(targetNode->mSlot.offset);
-    return { allocationId, targetNode->mSlot.offset };
+    AllocationId allocationId = calculateIdByOffset(targetNode->slot.offset);
+    return { allocationId, targetNode->slot.offset };
 }
 
 BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
         AllocationId id) const noexcept {
-    if (!isValidId(id)) {
+    if (!isValid(id)) {
         return nullptr;
     }
 
-    auto offset = getAllocationOffset(id);
+    allocation_size_t offset = getAllocationOffset(id);
     auto iter = mOffsetMap.find(offset);
 
     // We cannot find the corresponding node in the map.
@@ -143,62 +139,62 @@ BufferAllocator::InternalSlotNode* BufferAllocator::getNodeById(
 }
 
 void BufferAllocator::retire(AllocationId id) {
-    auto targetNode = getNodeById(id);
+    InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
-    targetNode->mSlot.isAllocated = false;
+    targetNode->slot.isAllocated = false;
 }
 
 void BufferAllocator::acquireGpu(AllocationId id) {
-    auto targetNode = getNodeById(id);
+    InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
-    targetNode->mSlot.gpuUseCount++;
+    targetNode->slot.gpuUseCount++;
 }
 
 void BufferAllocator::releaseGpu(AllocationId id) {
-    auto targetNode = getNodeById(id);
+    InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
-    assert_invariant(targetNode->mSlot.gpuUseCount > 0);
+    assert_invariant(targetNode->slot.gpuUseCount > 0);
 
-    targetNode->mSlot.gpuUseCount--;
+    targetNode->slot.gpuUseCount--;
 }
 
 void BufferAllocator::releaseFreeSlots() {
     auto curr = mSlotPool.begin();
     while (curr != mSlotPool.end()) {
-        if (!curr->mSlot.isFree()) {
+        if (!curr->slot.isFree()) {
             ++curr;
             continue;
         }
 
         auto next = std::next(curr);
         bool merged = false;
-        while (next != mSlotPool.end() && next->mSlot.isFree()) {
+        while (next != mSlotPool.end() && next->slot.isFree()) {
             merged = true;
             // Combine the size of free slots
-            curr->mSlot.slotSize += next->mSlot.slotSize;
-            assert_invariant(curr->mSlot.slotSize % mSlotSize == 0);
+            curr->slot.slotSize += next->slot.slotSize;
+            assert_invariant(curr->slot.slotSize % mSlotSize == 0);
 
             // Erase the merged slot from all maps
-            if (next->mFreeListIterator != mFreeList.end()) {
-                mFreeList.erase(next->mFreeListIterator);
+            if (next->freeListIterator != mFreeList.end()) {
+                mFreeList.erase(next->freeListIterator);
             }
-            mOffsetMap.erase(next->mOffsetMapIterator);
+            mOffsetMap.erase(next->offsetMapIterator);
             next = mSlotPool.erase(next);
         }
 
         // If we performed any merge, the current block's size has changed.
         // We need to update its position in the mFreeList.
-        if (curr->mFreeListIterator != mFreeList.end()) {
+        if (curr->freeListIterator != mFreeList.end()) {
             // If it's already in the free list and we merged, we need to update it.
             if (merged) {
-                mFreeList.erase(curr->mFreeListIterator);
-                curr->mFreeListIterator = mFreeList.emplace(curr->mSlot.slotSize, &(*curr));
+                mFreeList.erase(curr->freeListIterator);
+                curr->freeListIterator = mFreeList.emplace(curr->slot.slotSize, &(*curr));
             }
         } else {
             // If it's not in the free list, it must be a newly freed block. Add it.
-            curr->mFreeListIterator = mFreeList.emplace(curr->mSlot.slotSize, &(*curr));
+            curr->freeListIterator = mFreeList.emplace(curr->slot.slotSize, &(*curr));
         }
 
         curr = next;
@@ -211,16 +207,16 @@ BufferAllocator::allocation_size_t BufferAllocator::getTotalSize() const noexcep
 
 BufferAllocator::allocation_size_t
     BufferAllocator::getAllocationOffset(AllocationId id) const {
-    assert_invariant(isValidId(id));
+    assert_invariant(isValid(id));
 
     return (id - 1) * mSlotSize;
 }
 
 bool BufferAllocator::isLockedByGpu(AllocationId id) const {
-    auto targetNode = getNodeById(id);
+    InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
-    return targetNode->mSlot.gpuUseCount > 0;
+    return targetNode->slot.gpuUseCount > 0;
 }
 
 BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
@@ -232,10 +228,14 @@ BufferAllocator::AllocationId BufferAllocator::calculateIdByOffset(
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::getAllocationSize(AllocationId id) const {
-    auto targetNode = getNodeById(id);
+    InternalSlotNode* targetNode = getNodeById(id);
     assert_invariant(targetNode != nullptr);
 
-    return targetNode->mSlot.slotSize;
+    return targetNode->slot.slotSize;
+}
+
+bool BufferAllocator::isValid(AllocationId id) {
+    return id != UNALLOCATED && id != REALLOCATION_REQUIRED;
 }
 
 BufferAllocator::allocation_size_t BufferAllocator::alignUp(

@@ -98,15 +98,17 @@ public:
 
     [[nodiscard]] allocation_size_t getAllocationSize(AllocationId id) const;
 
+    [[nodiscard]] static bool isValid(AllocationId id);
+
 private:
     [[nodiscard]] AllocationId calculateIdByOffset(allocation_size_t offset) const;
 
     // Having an internal node type holding the base slot node and additional information.
     struct InternalSlotNode {
-        Slot mSlot;
-        std::list<InternalSlotNode>::iterator mSlotPoolIterator;
-        std::multimap<allocation_size_t, InternalSlotNode*>::iterator mFreeListIterator;
-        std::unordered_map<allocation_size_t, InternalSlotNode*>::iterator mOffsetMapIterator;
+        Slot slot;
+        std::list<InternalSlotNode>::iterator slotPoolIterator;
+        std::multimap<allocation_size_t, InternalSlotNode*>::iterator freeListIterator;
+        std::unordered_map<allocation_size_t, InternalSlotNode*>::iterator offsetMapIterator;
     };
 
     [[nodiscard]] InternalSlotNode* getNodeById(AllocationId id) const noexcept;
