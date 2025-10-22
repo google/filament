@@ -264,7 +264,8 @@ public class Engine {
                     config.disableHandleUseAfterFreeCheck,
                     config.preferredShaderLanguage.ordinal(),
                     config.forceGLES2Context, config.assertNativeWindowIsValid,
-                    config.gpuContextPriority.ordinal());
+                    config.gpuContextPriority.ordinal(),
+                    config.sharedUboInitialSizeInBytes);
             return this;
         }
 
@@ -525,6 +526,16 @@ public class Engine {
          * GPU context priority level. Controls GPU work scheduling and preemption.
          */
         public GpuContextPriority gpuContextPriority = GpuContextPriority.DEFAULT;
+
+        /**
+         * The initial size in bytes of the shared uniform buffer used for material instance batching.
+         *
+         * If the buffer runs out of space during a frame, it will be automatically reallocated
+         * with a larger capacity. Setting an appropriate initial size can help avoid runtime
+         * reallocations, which can cause a minor performance stutter, at the cost of higher
+         * initial memory usage.
+         */
+        public long sharedUboInitialSizeInBytes = 256 * 64;
     }
 
     private Engine(long nativeEngine, Config config) {
@@ -1529,7 +1540,8 @@ public class Engine {
             boolean disableHandleUseAfterFreeCheck,
             int preferredShaderLanguage,
             boolean forceGLES2Context, boolean assertNativeWindowIsValid,
-            int gpuContextPriority);
+            int gpuContextPriority,
+            long sharedUboInitialSizeInBytes);
     private static native void nSetBuilderFeatureLevel(long nativeBuilder, int ordinal);
     private static native void nSetBuilderSharedContext(long nativeBuilder, long sharedContext);
     private static native void nSetBuilderPaused(long nativeBuilder, boolean paused);

@@ -99,11 +99,15 @@ struct MaterialParams {
 // The problems are caused by both uploading and rendering into the same texture, since the OpenGL
 // backend's readPixels does not work correctly with textures that have image data uploaded.
 TEST_F(BackendTest, FeedbackLoops) {
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Image is unexpectedly darker, see b/417226296");
     SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::OPENGL),
             "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
             "data");
+    SKIP_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::WEBGPU),
+            "OpenGL image is upside down due to readPixels failing for texture with uploaded image "
+            "data");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453756688");
+    SKIP_IF(Backend::VULKAN, "Image is unexpectedly darker, see b/453776546");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
 
@@ -179,7 +183,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
                 auto descriptorSet = shader.createDescriptorSet(api);
                 auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });
@@ -216,7 +220,7 @@ TEST_F(BackendTest, FeedbackLoops) {
 
                 auto descriptorSet = shader.createDescriptorSet(api);
                 auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
-                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, {
+                api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
                 });

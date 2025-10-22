@@ -5,9 +5,9 @@
     "presets": [
         {
             "name": "base",
-            "models": ["Box", "BoxTextured", "Duck", "lucy", "FlightHelmet"],
+            "models": ["Box", "BoxTextured", "FlightHelmet", "lucy"],
             "rendering": {
-                "viewer.cameraFocusDistance": 0,
+                "viewer.cameraFocalLength": 35.0,
                 "view.postProcessingEnabled": true,
                 "view.dithering": "NONE"
             },
@@ -17,26 +17,52 @@
             }
         },
         {
-            "name": "helmet_only",
+            "name": "bloom_models",
             "models": ["DamagedHelmet"],
+            "rendering": {}
+        },
+        {
+            "name": "ssao_models",
+            "models": ["Duck", "lucy"],
+            "rendering": {}
+        },
+        {
+            "name": "transmission_models",
+            "models": ["TransmissionRoughnessTest", "IridescentDishWithOlives"],
             "rendering": {}
         }
     ],
     "tests": [
         {
             "name": "Bloom",
-            "description": "Testing bloom",
-            "apply_presets": ["base", "helmet_only"],
+            "description": "Bloom",
+            "apply_presets": ["base", "bloom_models"],
             "rendering": {
                 "view.bloom.enabled": true
             }
         },
         {
             "name": "MSAA",
-            "description": "Testing multisampling anti-aliasing",
+            "description": "Multisampling anti-aliasing",
             "apply_presets": ["base"],
             "rendering": {
                 "view.msaa.enabled": true
+            }
+        },
+        {
+            "name": "Transimssion",
+            "description": "transmission",
+            "apply_presets": ["base", "transmission_models"],
+            "rendering": {
+                "viewer.cameraFocalLength": 52.0
+            }
+        },
+        {
+            "name": "SSAO",
+            "description": "Screen space ambient occulsion",
+            "apply_presets": ["base", "ssao_models"],
+            "rendering": {
+                "view.ssao.enabled": true
             }
         }
     ]

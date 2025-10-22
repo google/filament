@@ -623,6 +623,10 @@ class_<Renderer>("Renderer")
         }
         engine->execute();
     }), allow_raw_pointers())
+    .function("getUserTime", &Renderer::getUserTime)
+    .function("resetUserTime", &Renderer::resetUserTime)
+    .function("skipNextFrames", &Renderer::skipNextFrames)
+    .function("getFrameToSkipCount", &Renderer::getFrameToSkipCount)
     .function("_setClearOptions", &Renderer::setClearOptions, allow_raw_pointers())
     .function("getClearOptions", &Renderer::getClearOptions)
     .function("setPresentationTime", &Renderer::setPresentationTime)
@@ -1349,6 +1353,10 @@ class_<Material>("Material")
         return self->createInstance(name.c_str()); }), allow_raw_pointers())
     .function("getName", EMBIND_LAMBDA(std::string, (Material* self), {
         return std::string(self->getName());
+    }), allow_raw_pointers())
+    .function("getParameterTransformName", EMBIND_LAMBDA(std::string, (Material* self, std::string samplerName), {
+        const char* transformName = self->getParameterTransformName(samplerName.c_str());
+        return transformName ? std::string(transformName) : std::string();
     }), allow_raw_pointers());
 
 class_<MaterialInstance>("MaterialInstance")

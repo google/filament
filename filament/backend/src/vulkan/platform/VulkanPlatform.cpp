@@ -29,16 +29,6 @@
 #include <utils/Panic.h>
 #include <utils/PrivateImplementation-impl.h>
 
-#define SWAPCHAIN_RET_FUNC(func, handle, ...)                                                      \
-    if (mImpl->mSurfaceSwapChains.find(handle) != mImpl->mSurfaceSwapChains.end()) {               \
-        return static_cast<VulkanPlatformSurfaceSwapChain*>(handle)->func(__VA_ARGS__);            \
-    } else if (mImpl->mHeadlessSwapChains.find(handle) != mImpl->mHeadlessSwapChains.end()) {      \
-        return static_cast<VulkanPlatformHeadlessSwapChain*>(handle)->func(__VA_ARGS__);           \
-    } else {                                                                                       \
-        PANIC_PRECONDITION("Bad handle for swapchain");                                            \
-        return {};                                                                                 \
-    }
-
 using namespace utils;
 using namespace bluevk;
 
@@ -685,26 +675,11 @@ struct VulkanPlatformPrivate {
     VkQueue mProtectedGraphicsQueue = VK_NULL_HANDLE;
     VulkanContext mContext = {};
 
-    // We use a map to both map a handle (i.e. SwapChainPtr) to the concrete type and also to
-    // store the actual swapchain struct, which is either backed-by-surface or headless.
-    std::unordered_set<SwapChainPtr> mSurfaceSwapChains;
-    std::unordered_set<SwapChainPtr> mHeadlessSwapChains;
-
     bool mSharedContext = false;
     bool mForceXCBSwapchain = false;
 };
 
 void VulkanPlatform::terminate() {
-    for (auto swapchain: mImpl->mHeadlessSwapChains) {
-        delete static_cast<VulkanPlatformHeadlessSwapChain*>(swapchain);
-    }
-    mImpl->mHeadlessSwapChains.clear();
-
-    for (auto swapchain: mImpl->mSurfaceSwapChains) {
-        delete static_cast<VulkanPlatformSurfaceSwapChain*>(swapchain);
-    }
-    mImpl->mSurfaceSwapChains.clear();
-
     if (!mImpl->mSharedContext) {
         vkDestroyDevice(mImpl->mDevice, VKALLOC);
         vkDestroyInstance(mImpl->mInstance, VKALLOC);
@@ -940,38 +915,31 @@ VulkanPlatform::VulkanPlatform() = default;
 VulkanPlatform::~VulkanPlatform() = default;
 
 VulkanPlatform::SwapChainBundle VulkanPlatform::getSwapChainBundle(SwapChainPtr handle) {
-    SWAPCHAIN_RET_FUNC(getSwapChainBundle, handle, )
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->getSwapChainBundle();
 }
 
 VkResult VulkanPlatform::acquire(SwapChainPtr handle, ImageSyncData* outImageSyncData) {
-    SWAPCHAIN_RET_FUNC(acquire, handle, outImageSyncData)
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->acquire(outImageSyncData);
 }
 
-VkResult VulkanPlatform::present(SwapChainPtr handle, uint32_t index,
-        VkSemaphore finishedDrawing) {
-    SWAPCHAIN_RET_FUNC(present, handle, index, finishedDrawing)
+VkResult VulkanPlatform::present(SwapChainPtr handle, uint32_t index, VkSemaphore finishedDrawing) {
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->present(index, finishedDrawing);
 }
 
 bool VulkanPlatform::hasResized(SwapChainPtr handle) {
-    SWAPCHAIN_RET_FUNC(hasResized, handle, )
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->hasResized();
 }
 
 bool VulkanPlatform::isProtected(SwapChainPtr handle) {
-    SWAPCHAIN_RET_FUNC(isProtected, handle, )
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->isProtected();
 }
 
 VkResult VulkanPlatform::recreate(SwapChainPtr handle) {
-    SWAPCHAIN_RET_FUNC(recreate, handle, )
+    return static_cast<VulkanPlatformSwapChainBase*>(handle)->recreate();
 }
 
 void VulkanPlatform::destroy(SwapChainPtr handle) {
-    if (mImpl->mSurfaceSwapChains.erase(handle)) {
-        delete static_cast<VulkanPlatformSurfaceSwapChain*>(handle);
-    } else if (mImpl->mHeadlessSwapChains.erase(handle)) {
-        delete static_cast<VulkanPlatformHeadlessSwapChain*>(handle);
-    } else {
-        PANIC_PRECONDITION("Bad handle for swapchain");
-    }
+    delete static_cast<VulkanPlatformSwapChainBase*>(handle);
 }
 
 SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
@@ -981,7 +949,6 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     if (headless) {
         VulkanPlatformHeadlessSwapChain* swapchain = new VulkanPlatformHeadlessSwapChain(
                 mImpl->mContext, mImpl->mDevice, mImpl->mGraphicsQueue, extent, flags);
-        mImpl->mHeadlessSwapChains.insert(swapchain);
         return swapchain;
     }
 
@@ -1000,7 +967,6 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
             surface, fallbackExtent, flags);
-    mImpl->mSurfaceSwapChains.insert(swapchain);
     return swapchain;
 }
 
@@ -1064,6 +1030,5 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWin
         VkInstance instance, uint64_t flags) const noexcept {
     return createVkSurfaceKHRImpl(nativeWindow, instance, flags);
 }
-#undef SWAPCHAIN_RET_FUNC
 
 }// namespace filament::backend

@@ -32,46 +32,27 @@ namespace filament::backend {
 
 static constexpr uint32_t const VULKAN_UNDEFINED_EXTENT = 0xFFFFFFFF;
 
-struct VulkanPlatformSwapChainImpl : public Platform::SwapChain {
-    VulkanPlatformSwapChainImpl(VulkanContext const& context, VkDevice device, VkQueue queue);
+struct VulkanPlatformSwapChainBase : public Platform::SwapChain {
+    VulkanPlatformSwapChainBase(VulkanContext const& context, VkDevice device, VkQueue queue);
 
     inline VulkanPlatform::SwapChainBundle getSwapChainBundle() const {
         return mSwapChainBundle;
     }
 
-    ~VulkanPlatformSwapChainImpl();
+    virtual ~VulkanPlatformSwapChainBase();
 
-    // Non-virtual override-able method
-    VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData) {
-        PANIC_PRECONDITION("Should not be called");
-        return VK_ERROR_UNKNOWN;
-    }
+    virtual VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData) = 0;
 
-    // Non-virtual override-able method
-    VkResult present(uint32_t index, VkSemaphore finished) {
-        PANIC_PRECONDITION("Should not be called");
-        return VK_ERROR_UNKNOWN;
-    }
+    virtual VkResult present(uint32_t index, VkSemaphore finished) = 0;
 
-    // Non-virtual override-able method
-    VkResult recreate() {
-        PANIC_PRECONDITION("Should not be called");
-        return VK_ERROR_UNKNOWN;
-    }
+    virtual VkResult recreate() = 0;
 
-    // Non-virtual override-able method
-    bool hasResized() {
-        return false;
-    }
+    virtual bool hasResized() const = 0;
 
-    // Non-virtual override-able method
-    bool isProtected() {
-        return false;
-    }
+    virtual bool isProtected() const = 0;
 
 protected:
-    // Non-virtual override-able method
-    void destroy();
+    virtual void destroy() = 0;
 
     VkImage createImage(VkExtent2D extent, VkFormat format, bool isProtected);
 
@@ -83,35 +64,29 @@ protected:
     std::unordered_map<VkImage, VkDeviceMemory> mMemory;
 };
 
-struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainImpl {
+struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainBase {
     VulkanPlatformSurfaceSwapChain(VulkanContext const& context, VkPhysicalDevice physicalDevice,
             VkDevice device, VkQueue queue, VkInstance instance, VkSurfaceKHR surface,
             VkExtent2D fallbackExtent, uint64_t flags);
 
-    ~VulkanPlatformSurfaceSwapChain();
+    ~VulkanPlatformSurfaceSwapChain() override;
 
-    // Non-virtual override
-    VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData);
+    virtual VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData) override;
 
-    // Non-virtual override
-    VkResult present(uint32_t index, VkSemaphore finished);
+    virtual VkResult present(uint32_t index, VkSemaphore finished) override;
 
-    // Non-virtual override-able method
-    VkResult recreate();
+    virtual VkResult recreate() override;
 
-    // Non-virtual override-able method
-    bool hasResized();
+    virtual bool hasResized() const override;
 
-    // Non-virtual override-able method
-    bool isProtected();
+    virtual bool isProtected() const override;
 
 protected:
-    // Non-virtual override-able method
-    void destroy();
+    virtual void destroy() override;
 
 private:
     static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
-    
+
     VkResult create();
 
     VkInstance mInstance;
@@ -123,29 +98,35 @@ private:
     VkSemaphore mImageReady[IMAGE_READY_SEMAPHORE_COUNT];
     uint32_t mCurrentImageReadyIndex;
 
-    bool mUsesRGB = false;
-    bool mHasStencil = false;
-    bool mIsProtected = false;
+    bool const mUsesRGB = false;
+    bool const mHasStencil = false;
+    bool const mIsProtected = false;
     bool mSuboptimal;
 };
 
-struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainImpl {
+struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainBase {
     static constexpr size_t const HEADLESS_SWAPCHAIN_SIZE = 2;
 
     VulkanPlatformHeadlessSwapChain(VulkanContext const& context, VkDevice device, VkQueue queue,
             VkExtent2D extent, uint64_t flags);
 
-    ~VulkanPlatformHeadlessSwapChain();
+    ~VulkanPlatformHeadlessSwapChain() override;
 
-    // Non-virtual override
-    VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData);
+    virtual VkResult acquire(VulkanPlatform::ImageSyncData* outImageSyncData) override;
 
-    // Non-virtual override
-    VkResult present(uint32_t index, VkSemaphore finished);
+    virtual VkResult present(uint32_t index, VkSemaphore finished) override;
+
+    virtual VkResult recreate() override {
+        PANIC_PRECONDITION("Should not be called");
+        return VK_ERROR_UNKNOWN;
+    }
+
+    virtual bool hasResized() const override { return false; }
+
+    virtual bool isProtected() const override { return false; }
 
 protected:
-    // Non-virtual override-able method
-    void destroy();
+    virtual void destroy() override;
 
 private:
     uint32_t mCurrentIndex;

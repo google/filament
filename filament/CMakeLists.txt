@@ -117,6 +117,7 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/details/BufferAllocator.cpp
         src/details/BufferObject.cpp
         src/details/Camera.cpp
         src/details/ColorGrading.cpp
@@ -196,6 +197,7 @@ set(PRIVATE_HDRS
         src/components/LightManager.h
         src/components/RenderableManager.h
         src/components/TransformManager.h
+        src/details/BufferAllocator.h
         src/details/BufferObject.h
         src/details/Camera.h
         src/details/ColorGrading.h
@@ -727,6 +729,18 @@ set(LINUX_COMPILER_FLAGS
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
+elseif (FILAMENT_USING_GCC)
+    # GCC is not officially supported, so use a weaker set of warnings (incl. not using -Werror).
+    set(FILAMENT_WARNINGS
+            -Wall -Wextra-semi -Wundef
+            -Wno-unused-parameter -Wno-missing-field-initializers
+            -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-function
+            -Wnon-virtual-dtor -Wimplicit-fallthrough
+            -Wno-strict-aliasing
+            -Wno-changes-meaning -Wno-return-type
+            -Wno-invalid-constexpr -Wno-parentheses
+            -Wno-sign-compare -Wno-deprecated-declarations
+    )
 else()
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers

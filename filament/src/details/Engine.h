@@ -776,6 +776,7 @@ public:
         } backend;
         struct {
             bool check_crc32_after_loading = false;
+            bool enable_material_instance_uniform_batching = false;
         } material;
     } features;
 
@@ -825,6 +826,9 @@ public:
             { "material.check_crc32_after_loading",
               "Verify the checksum of package data when a material is loaded.",
               &features.material.check_crc32_after_loading, false },
+            { "material.enable_material_instance_uniform_batching",
+              "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
+              &features.material.enable_material_instance_uniform_batching, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

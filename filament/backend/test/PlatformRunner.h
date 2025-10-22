@@ -35,12 +35,15 @@ enum class Backend : uint8_t {
     NOOP = 5,
 };
 
-enum class OperatingSystem: uint8_t {
+enum class OperatingSystem : uint8_t {
     OTHER = 1,
     // Also represents android phones.
     LINUX = 2,
     // Also represents iOS phones.
     APPLE = 3,
+
+    CONTINUOUS_INTEGRATION = 4,
+    CI = 4,
     // TODO: When tests support windows add it here.
 };
 
@@ -73,11 +76,17 @@ void initTests(Backend backend, OperatingSystem operatingSystem, bool isMobile, 
  */
 int runTests();
 
+struct TestArguments {
+    Backend backend;
+    bool headlessOnly = false;
+    bool isContinuousIntegration = false;
+};
+
 /**
  * A utility method that can be invoked by test runners to parse arguments.
  * Looks through the provided command-line arguments and finds any -a <backend> arguments.
  */
-Backend parseArgumentsForBackend(int argc, char* argv[]);
+TestArguments parseArguments(int argc, char* argv[]);
 
 } // namespace test
 

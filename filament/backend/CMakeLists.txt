@@ -497,6 +497,13 @@ endif()
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
+elseif (FILAMENT_USING_GCC)
+    # GCC is not officially supported, so use a weaker set of warnings (incl. not using -Werror)
+    set(FILAMENT_WARNINGS
+            -Wall -Wno-unused-parameter -Wno-missing-field-initializers
+            -Wdeprecated -Wnon-virtual-dtor -Wno-strict-aliasing
+            -Wno-invalid-constexpr -Wno-parentheses -Wno-unused-variable
+    )
 else()
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers

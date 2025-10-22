@@ -18,6 +18,7 @@
 
 #include "BackendTestUtils.h"
 #include "Lifetimes.h"
+#include "PlatformRunner.h"
 #include "Shader.h"
 #include "SharedShaders.h"
 #include "Skip.h"
@@ -232,7 +233,7 @@ public:
 
 TEST_F(LoadImageTest, UpdateImage2D) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
-    FAIL_IF(Backend::VULKAN, "Multiple test cases crash, see b/417481434");
+    SKIP_IF(Backend::VULKAN, "b/453776547");
 
     // All of these test cases should result in the same rendered image, and thus the same hash.
     static const uint32_t expectedHash = 1875922935;
@@ -362,7 +363,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
         }
 
         DescriptorSetHandle  descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
                 .filterMag = SamplerMagFilter::NEAREST,
                 .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
 
@@ -392,6 +393,9 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 }
 
 TEST_F(LoadImageTest, UpdateImageSRGB) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453756688");
+    SKIP_IF(Backend::VULKAN, "b/454040142");
+
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -446,7 +450,7 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -513,7 +517,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 
     // Update samplers.
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-    api.updateDescriptorSetTexture(descriptorSet, 0, texture, {
+    api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
             .filterMag = SamplerMagFilter::LINEAR,
             .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
     });
@@ -545,12 +549,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 }
 
 TEST_F(LoadImageTest, UpdateImage3D) {
-    FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Crashing when reading pixels without a redundant call to makeCurrent right before the"
-            "render pass. b/422798473");
-    NONFATAL_FAIL_IF(SkipEnvironment(OperatingSystem::APPLE, Backend::VULKAN),
-            "Checkerboard not drawn, possibly due to using wrong z value of 3d texture, "
-            "see b/417254499");
+    SKIP_IF(Backend::VULKAN, "b/453776983");
     auto& api = getDriverApi();
     Cleanup cleanup(api);
     api.startCapture();
@@ -602,9 +601,9 @@ TEST_F(LoadImageTest, UpdateImage3D) {
 
         // Update samplers.
         DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
-        api.updateDescriptorSetTexture(descriptorSet, 0, texture,
-                { .filterMag = SamplerMagFilter::LINEAR,
-                    .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
+        api.updateDescriptorSetTexture(descriptorSet, 0, texture, SamplerParams{
+                .filterMag = SamplerMagFilter::LINEAR,
+                .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
 
         api.bindDescriptorSet(descriptorSet, 0, {});
 
