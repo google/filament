@@ -53,9 +53,8 @@ void UboManager::beginFrame(DriverApi& driver,
 
     if (allocationResult == ReallocationRequired) {
         // No need to grow the buffer, so we can just map the buffer for writing and return.
-        mMmbHandle = driver.mapBuffer(mUbHandle, 0, mUboSize,
-            MapBufferAccessFlags::WRITE_BIT | MapBufferAccessFlags::INVALIDATE_RANGE_BIT,
-            "UboManager");
+        mMmbHandle = driver.mapBuffer(mUbHandle, 0, mUboSize, MapBufferAccessFlags::WRITE_BIT,
+                "UboManager");
 
         return;
     }
