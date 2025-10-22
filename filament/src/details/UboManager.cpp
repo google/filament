@@ -61,7 +61,7 @@ void UboManager::beginFrame(DriverApi& driver,
     }
 
     // Calculate the required size and grow the Ubo.
-    const auto requiredSize = calculateRequiredSize(materialInstances);
+    const allocation_size_t requiredSize = calculateRequiredSize(materialInstances);
     reallocate(driver, requiredSize);
     mNeedReallocate = false;
 
@@ -77,7 +77,7 @@ void UboManager::beginFrame(DriverApi& driver,
 
     // Migrate all MI data to the new allocated slots.
     materialInstances.forEach([this, &driver](const FMaterialInstance* mi) {
-        const auto allocationId = mi->getAllocationId();
+        const AllocationId allocationId = mi->getAllocationId();
         assert_invariant(allocationId != BufferAllocator::UNALLOCATED &&
                          allocationId != BufferAllocator::REALLOCATION_REQUIRED);
         updateSlot(driver, allocationId, mi->getUniformBuffer().toBufferDescriptor(driver));
@@ -114,7 +114,7 @@ void UboManager::terminate(DriverApi& driver) {
 
 void UboManager::updateSlot(DriverApi& driver, AllocationId id,
         BufferDescriptor bufferDescriptor) const {
-    const auto offset = mAllocator.getAllocationOffset(id);
+    const allocation_size_t offset = mAllocator.getAllocationOffset(id);
     driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
 }
 
@@ -132,8 +132,8 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
 
     // Iterate from the newest fence to the oldest.
     for (auto it = mFenceAllocationList.rbegin(); it != mFenceAllocationList.rend(); ++it) {
-        const auto& fence = it->first;
-        const auto status = driver.getFenceStatus(fence);
+        const Handle<HwFence>& fence = it->first;
+        const FenceStatus status = driver.getFenceStatus(fence);
 
         // If we have already seen a signaled fence, we can assume all older fences
         // are also complete, regardless of their reported status (e.g., TIMEOUT_EXPIRED).
@@ -166,7 +166,7 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
 
     // Release GPU locks for all completed fences.
     for (auto it = mFenceAllocationList.begin(); it != firstToKeep; ++it) {
-        for (const auto& id: it->second) {
+        for (const AllocationId& id: it->second) {
             mAllocator.releaseGpu(id);
         }
         // Destroy the fence handle as it's no longer needed.
@@ -233,7 +233,7 @@ allocation_size_t UboManager::calculateRequiredSize(
     BufferAllocator& allocator = mAllocator;
     allocation_size_t newBufferSize = 0;
     materialInstances.forEach([&newBufferSize, &allocator](const FMaterialInstance* mi) {
-        auto allocationId = mi->getAllocationId();
+        const AllocationId allocationId = mi->getAllocationId();
         if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
             // For MIs whose parameters have been updated, aside from the slot it is being
             // occupied by the GPU, we need to preserve an additional slot for it.
