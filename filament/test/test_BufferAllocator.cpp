@@ -450,4 +450,11 @@ TEST_F(BufferAllocatorTest, AlignUp) {
     EXPECT_EQ(mAllocator.alignUp(999), 1024);
 }
 
+TEST_F(BufferAllocatorTest, ValidId) {
+    EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::UNALLOCATED));
+    EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::REALLOCATION_REQUIRED));
+    EXPECT_TRUE(BufferAllocator::isValid(100));
+    EXPECT_TRUE(BufferAllocator::isValid(999));
+}
+
 } // anonymous namespace
