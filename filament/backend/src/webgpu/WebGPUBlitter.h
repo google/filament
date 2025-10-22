@@ -97,11 +97,12 @@ private:
 
     struct RenderPipelineKey {
         wgpu::TextureViewDimension sourceDimension;   // 4 bytes
+        wgpu::TextureFormat sourceTextureFormat;      // 4
+        wgpu::TextureSampleType sourceSampleType;     // 4
         wgpu::TextureFormat destinationTextureFormat; // 4
         uint8_t sourceSampleCount;                    // 1
         SamplerMagFilter filterType;                  // 1
-        bool depthSource;                             // 1
-        uint8_t padding = 0;                          // 1
+        uint8_t padding[2] = {};                      // 2
 
         bool operator==(const RenderPipelineKey& other) const;
         using Hasher = utils::hash::MurmurHashFn<RenderPipelineKey>;
@@ -109,10 +110,10 @@ private:
 
     struct PipelineLayoutKey {
         wgpu::TextureViewDimension sourceDimension; // 4 bytes
+        wgpu::TextureSampleType sourceSampleType;   // 4
         SamplerMagFilter filterType;                // 1
         bool multisampledSource;                    // 1
-        bool depthSource;                           // 1
-        uint8_t padding = 0;                        // 1
+        uint8_t padding[2] = {};                    // 2
 
         bool operator==(const PipelineLayoutKey& other) const;
         using Hasher = utils::hash::MurmurHashFn<PipelineLayoutKey>;
@@ -120,20 +121,20 @@ private:
 
     struct ShaderModuleKey {
         wgpu::TextureViewDimension sourceDimension;   // 4 bytes
+        wgpu::TextureFormat sourceTextureFormat;      // 4
+        wgpu::TextureFormat destinationTextureFormat; // 4
         bool multisampledSource;                      // 1
-        bool depthSource;                             // 1
-        bool depthDestination;                        // 1
-        uint8_t padding = 0;                          // 1
+        uint8_t padding0[3] = {};                     // 3
 
         bool operator==(const ShaderModuleKey& other) const;
         using Hasher = utils::hash::MurmurHashFn<ShaderModuleKey>;
     };
 
-    static_assert(sizeof(RenderPipelineKey) == 12,
+    static_assert(sizeof(RenderPipelineKey) == 20,
             "RenderPipelineKey must not have implicit padding.");
-    static_assert(sizeof(PipelineLayoutKey) == 8,
+    static_assert(sizeof(PipelineLayoutKey) == 12,
             "PipelineLayoutKey must not have implicit padding.");
-    static_assert(sizeof(ShaderModuleKey) == 8, "ShaderModuleKey must not have implicit padding.");
+    static_assert(sizeof(ShaderModuleKey) == 16, "ShaderModuleKey must not have implicit padding.");
 
     wgpu::Device mDevice;
     wgpu::Sampler mNearestSampler{ nullptr };

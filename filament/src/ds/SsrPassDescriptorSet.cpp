@@ -70,7 +70,7 @@ void SsrPassDescriptorSet::setFrameUniforms(FEngine const& engine,
 
 void SsrPassDescriptorSet::prepareHistorySSR(FEngine const& engine, Handle<HwTexture> ssr) noexcept {
     mDescriptorSet.setSampler(engine.getPerViewDescriptorSetLayoutSsrVariant(),
-            +PerViewBindingPoints::SSR_HISTORY, ssr, {
+            +PerViewBindingPoints::SSR_HISTORY, ssr, SamplerParams{
                 .filterMag = SamplerMagFilter::LINEAR,
                 .filterMin = SamplerMinFilter::LINEAR
             });
@@ -80,7 +80,7 @@ void SsrPassDescriptorSet::prepareStructure(FEngine const& engine,
         Handle<HwTexture> structure) noexcept {
     // sampler must be NEAREST
     mDescriptorSet.setSampler(engine.getPerViewDescriptorSetLayoutSsrVariant(),
-            +PerViewBindingPoints::STRUCTURE, structure, {});
+            +PerViewBindingPoints::STRUCTURE, structure, SamplerParams{});
 }
 
 void SsrPassDescriptorSet::commit(FEngine& engine) noexcept {

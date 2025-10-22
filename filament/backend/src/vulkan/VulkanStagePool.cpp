@@ -149,7 +149,7 @@ VulkanStage* VulkanStagePool::allocateNewStage(uint32_t capacity) {
     return new VulkanStage(memory, buffer, capacity, pMapping);
 }
 
-void VulkanStagePool::destroyStage(VulkanStage const*&& stage) {
+void VulkanStagePool::destroyStage(VulkanStage const* stage) {
     assert(stage->isSafeToReset());  // Ensure all segments have been reset already.
     vmaUnmapMemory(mAllocator, stage->memory());
     vmaDestroyBuffer(mAllocator, stage->buffer(), stage->memory());
@@ -196,7 +196,7 @@ fvkmemory::resource_ptr<VulkanStageImage::Resource> VulkanStagePool::acquireImag
 
     VkImage image;
     VmaAllocation memory;
-    const UTILS_UNUSED VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
+    UTILS_UNUSED const VkResult result = vmaCreateImage(mAllocator, &imageInfo, &allocInfo,
             &image, &memory, nullptr);
 
     assert_invariant(result == VK_SUCCESS);
@@ -239,7 +239,7 @@ void VulkanStagePool::gc() noexcept {
                 FVK_LOGD << "Destroying a staging buffer with hndl " << pair.second->buffer()
                          << utils::io::endl;
 #endif
-                destroyStage(std::move(pair.second));
+                destroyStage(pair.second);
                 continue;
             }
 
@@ -276,7 +276,7 @@ void VulkanStagePool::gc() noexcept {
 
 void VulkanStagePool::terminate() noexcept {
     for (auto& pair : mStages) {
-        destroyStage(std::move(pair.second));
+        destroyStage(pair.second);
     }
     mStages.clear();
 

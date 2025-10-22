@@ -1,6 +1,6 @@
 # Rendering Difference Test
 
-We created a few scripts to run `gltf_viewer` and produce headless renderings.
+This tool is a collections of scripts to run `gltf_viewer` and produce headless renderings.
 
 This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around [Mesa]'s
@@ -9,10 +9,10 @@ Additionally, we should be able to use GPUs where available (though this is more
 work).
 
 The script `render.py` contains the core logic for taking input parameters (such as the test
-description file) and then running gltf_viewer to produce the renderings.
+description file) and then running `gltf_viewer` to produce the renderings.
 
 In the `test` directory is a list of test descriptions that are specified in json. Please see
-`sample.json` to parse the structure.
+`sample.json` to glean the structure.
 
 ## Setting up python
 

@@ -74,7 +74,7 @@ def _get_deletes_updates(update_dir, golden_dir):
     for fpath in base.intersection(new):
       base_fpath = os.path.join(golden_dir, fpath)
       new_fpath = os.path.join(update_dir, fpath)
-      if (ext == 'tif' and not same_image(new_fpath, base_fpath)) or \
+      if (ext == 'tif' and not same_image(new_fpath, base_fpath)[0]) or \
          (ext == 'json' and _file_as_str(new_fpath) != _file_as_str(base_fpath)):
         update.append(fpath)
 
