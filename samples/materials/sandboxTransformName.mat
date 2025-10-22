@@ -1,0 +1,42 @@
+material {
+    name : LitOpaque,
+    shadingModel : lit,
+    parameters : [
+        {
+            type : samplerExternal,
+            name : sampler,
+            transformName : transform
+        },
+        {
+            type : samplerExternal,
+            name : videoTexture,
+            transformName : videoTransform
+        },
+        {
+            type : sampler2d,
+            name : sampler1,
+        },
+        {
+            type : samplerExternal,
+            name : sampler2,
+        },
+        {
+            type : sampler2d,
+            name : sampler3,
+        },
+        {
+           type : int,
+           name : paramInt
+        },
+        {
+           type : float,
+           name : paramFloat
+        }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+    }
+}
