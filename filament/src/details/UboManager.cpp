@@ -21,7 +21,7 @@
 
 #include <backend/DriverEnums.h>
 
-#include <utils/Log.h>
+#include <utils/Logger.h>
 
 namespace filament {
 
@@ -66,9 +66,7 @@ void UboManager::beginFrame(DriverApi& driver,
     mNeedReallocate = false;
 
     // Allocate slots for each MI on the new Ubo.
-#ifndef NDEBUG
-    const bool needReallocationAgain =
-#endif
+    UTILS_UNUSED_IN_RELEASE const bool needReallocationAgain =
             updateMaterialInstanceAllocations(materialInstances, /*forceAllocateAll*/ true);
     assert_invariant(!needReallocationAgain);
 
@@ -144,7 +142,7 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
             signaledCount++;
 #ifndef NDEBUG
             if (UTILS_UNLIKELY(status != FenceStatus::CONDITION_SATISFIED)) {
-                slog.w << "A fence is either an error or hasn't signaled, but the new fence has "
+                LOG(WARNING) << "A fence is either an error or hasn't signaled, but the new fence has "
                           "been "
                           "signaled. Will release the resource anyways."
                        << io::endl;
