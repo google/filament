@@ -18,12 +18,15 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
+
+#include <math/mat3.h>
 
 #include <chrono>
 
@@ -67,7 +70,7 @@ public:
      * @return `true` on success, `false` on failure. The default implementation
      *         returns `false`.
      */
-    bool convertSyncToFd(Platform::Sync* sync, int* fd) noexcept;
+    bool convertSyncToFd(Sync* sync, int* fd) noexcept;
 
 protected:
     // --------------------------------------------------------------------------------------------
@@ -80,12 +83,12 @@ protected:
     int getOSVersion() const noexcept override;
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) override;
+            const DriverConfig& driverConfig) override;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
-    struct SyncEGLAndroid : public Platform::Sync {
+    struct SyncEGLAndroid : public Sync {
         EGLSyncKHR sync;
     };
 
@@ -106,8 +109,8 @@ protected:
 
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
-    Platform::Sync* createSync() noexcept override;
-    void destroySync(Platform::Sync* sync) noexcept override;
+    Sync* createSync() noexcept override;
+    void destroySync(Sync* sync) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;
@@ -120,7 +123,7 @@ protected:
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
 
     struct ExternalImageEGLAndroid : public ExternalImageEGL {
@@ -140,12 +143,24 @@ protected:
     bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
             ExternalTexture* texture) noexcept;
 
-protected:
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
 
+    struct SwapChainEGLAndroid : public SwapChainEGL {
+        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+                void* nativeWindow, uint64_t flags);
+        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+                uint32_t width, uint32_t height, uint64_t flags);
+        void terminate(PlatformEGLAndroid& platform);
+    };
+
 private:
+    // prevent derived classes' implementations to call through
+    [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
+    [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+
     struct InitializeJvmForPerformanceManagerIfNeeded {
         InitializeJvmForPerformanceManagerIfNeeded();
     };

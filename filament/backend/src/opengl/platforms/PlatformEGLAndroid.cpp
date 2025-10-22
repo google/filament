@@ -14,28 +14,33 @@
  * limitations under the License.
  */
 
-#include <backend/AcquiredImage.h>
-#include <backend/Platform.h>
-#include <backend/platforms/PlatformEGL.h>
 #include <backend/platforms/PlatformEGLAndroid.h>
+
+#include "opengl/GLUtils.h"
+
+#include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
+#include <backend/Platform.h>
+#include <backend/platforms/OpenGLPlatform.h>
+#include <backend/platforms/PlatformEGL.h>
 
 #include <private/backend/BackendUtilsAndroid.h>
 #include <private/backend/VirtualMachineEnv.h>
 
-#include "opengl/GLUtils.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
 #include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
-#include <utils/Logger.h>
-#include <utils/Panic.h>
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
-#include <utils/compiler.h>
+#include <utils/debug.h>
+#include <utils/Logger.h>
+#include <utils/Panic.h>
 #include <utils/ostream.h>
-#include <utils/ostream.h>
+
+#include <math/mat3.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -76,14 +81,14 @@ extern PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
 extern PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
 extern PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
 
-UTILS_PRIVATE PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC eglGetNativeClientBufferANDROID = {};
-UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID = {};
-UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC eglGetCompositorTimingSupportedANDROID = {};
-UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID = {};
-UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID = {};
-UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID = {};
-UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
-UTILS_PRIVATE PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID = {};
+UTILS_PRIVATE PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC eglGetNativeClientBufferANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC eglGetCompositorTimingSupportedANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID{}; // NOLINT(*-use-internal-linkage)
+UTILS_PRIVATE PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID{}; // NOLINT(*-use-internal-linkage)
 }
 using namespace glext;
 
@@ -102,10 +107,7 @@ PlatformEGLAndroid::InitializeJvmForPerformanceManagerIfNeeded::InitializeJvmFor
 // ---------------------------------------------------------------------------------------------
 
 PlatformEGLAndroid::PlatformEGLAndroid() noexcept
-        : PlatformEGL(),
-          mExternalStreamManager(ExternalStreamManagerAndroid::create()),
-          mInitializeJvmForPerformanceManagerIfNeeded(),
-          mPerformanceHintManager() {
+        : mExternalStreamManager(ExternalStreamManagerAndroid::create()) {
     mOSVersion = android_get_device_api_level();
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
@@ -130,10 +132,10 @@ void PlatformEGLAndroid::terminate() noexcept {
     PlatformEGL::terminate();
 }
 
-static constexpr const std::string_view kNativeWindowInvalidMsg =
+static constexpr std::string_view kNativeWindowInvalidMsg =
         "ANativeWindow is invalid. It probably has been destroyed. EGL surface = ";
 
-bool PlatformEGLAndroid::makeCurrent(ContextType type,
+bool PlatformEGLAndroid::makeCurrent(ContextType const type,
         SwapChain* drawSwapChain,
         SwapChain* readSwapChain) {
 
@@ -147,7 +149,7 @@ bool PlatformEGLAndroid::makeCurrent(ContextType type,
         // anw can be nullptr if we're using a pbuffer surface
         if (UTILS_LIKELY(dsc->nativeWindow)) {
             // this a proxy of is_valid()
-            auto result = ANativeWindow_getBuffersDefaultDataSpace(dsc->nativeWindow);
+            auto const result = ANativeWindow_getBuffersDefaultDataSpace(dsc->nativeWindow);
             FILAMENT_CHECK_POSTCONDITION(result >= 0) << kNativeWindowInvalidMsg << dsc->sur;
         }
     } else {
@@ -174,9 +176,9 @@ bool PlatformEGLAndroid::makeCurrent(ContextType type,
 }
 
 void PlatformEGLAndroid::beginFrame(
-        int64_t monotonic_clock_ns,
+        int64_t const monotonic_clock_ns,
         int64_t refreshIntervalNs,
-        uint32_t frameId) noexcept {
+        uint32_t const frameId) noexcept {
     if (mPerformanceHintSession.isValid()) {
         if (refreshIntervalNs <= 0) {
             // we're not provided with a target time, assume 16.67ms
@@ -188,7 +190,7 @@ void PlatformEGLAndroid::beginFrame(
     PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
 }
 
-void backend::PlatformEGLAndroid::preCommit() noexcept {
+void PlatformEGLAndroid::preCommit() noexcept {
     if (mPerformanceHintSession.isValid()) {
         auto const actualWorkDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
                 clock::now() - mStartTimeOfActualWork);
@@ -198,7 +200,7 @@ void backend::PlatformEGLAndroid::preCommit() noexcept {
 }
 
 Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
-        const Platform::DriverConfig& driverConfig) {
+        const DriverConfig& driverConfig) {
 
     // the refresh rate default value doesn't matter, we change it later
     int32_t const tid = gettid();
@@ -206,29 +208,37 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
             mPerformanceHintManager, &tid, 1, 16'666'667 };
 
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
-    auto extensions = GLUtils::split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
+    auto const extensions = GLUtils::split(eglQueryString(getEglDisplay(), EGL_EXTENSIONS));
 
-    eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress(
-            "eglGetNativeClientBufferANDROID");
+    eglGetNativeClientBufferANDROID =
+            PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC(eglGetProcAddress(
+                    "eglGetNativeClientBufferANDROID"));
 
     if (extensions.has("EGL_ANDROID_presentation_time")) {
-        eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC)eglGetProcAddress(
-                "eglPresentationTimeANDROID");
+        eglPresentationTimeANDROID =
+                PFNEGLPRESENTATIONTIMEANDROIDPROC(eglGetProcAddress(
+                        "eglPresentationTimeANDROID"));
     }
 
     if (extensions.has("EGL_ANDROID_get_frame_timestamps")) {
-        eglGetCompositorTimingSupportedANDROID = (PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC)eglGetProcAddress(
-                "eglGetCompositorTimingSupportedANDROID");
-        eglGetCompositorTimingANDROID = (PFNEGLGETCOMPOSITORTIMINGANDROIDPROC)eglGetProcAddress(
-                "eglGetCompositorTimingANDROID");
-        eglGetNextFrameIdANDROID = (PFNEGLGETNEXTFRAMEIDANDROIDPROC)eglGetProcAddress(
-                "eglGetNextFrameIdANDROID");
-        eglGetFrameTimestampSupportedANDROID = (PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC)eglGetProcAddress(
-                "eglGetFrameTimestampSupportedANDROID");
-        eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
-                "eglGetFrameTimestampsANDROID");
+        eglGetCompositorTimingSupportedANDROID =
+                PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC(eglGetProcAddress(
+                        "eglGetCompositorTimingSupportedANDROID"));
+        eglGetCompositorTimingANDROID =
+                PFNEGLGETCOMPOSITORTIMINGANDROIDPROC(eglGetProcAddress(
+                        "eglGetCompositorTimingANDROID"));
+        eglGetNextFrameIdANDROID =
+                PFNEGLGETNEXTFRAMEIDANDROIDPROC(eglGetProcAddress(
+                        "eglGetNextFrameIdANDROID"));
+        eglGetFrameTimestampSupportedANDROID =
+                PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC(eglGetProcAddress(
+                        "eglGetFrameTimestampSupportedANDROID"));
+        eglGetFrameTimestampsANDROID =
+                PFNEGLGETFRAMETIMESTAMPSANDROIDPROC(eglGetProcAddress(
+                        "eglGetFrameTimestampsANDROID"));
         eglDupNativeFenceFDANDROID =
-                (PFNEGLDUPNATIVEFENCEFDANDROIDPROC) eglGetProcAddress("eglDupNativeFenceFDANDROID");
+                PFNEGLDUPNATIVEFENCEFDANDROIDPROC(eglGetProcAddress(
+                        "eglDupNativeFenceFDANDROID"));
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -244,11 +254,30 @@ PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() {
     }
 }
 
-Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareBuffer const* buffer,
-        bool sRGB) noexcept {
+Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uint64_t const flags) {
+    auto* const sc = new(std::nothrow) SwapChainEGLAndroid(*this, nativeWindow, flags);
+    return sc;
+}
+
+Platform::SwapChain* PlatformEGLAndroid::createSwapChain(
+        uint32_t const width, uint32_t const height, uint64_t const flags) {
+    auto* const sc = new(std::nothrow) SwapChainEGLAndroid(*this, width, height, flags);
+    return sc;
+}
+
+void PlatformEGLAndroid::destroySwapChain(SwapChain* swapChain) noexcept {
+    if (swapChain) {
+        SwapChainEGLAndroid* const sc = static_cast<SwapChainEGLAndroid*>(swapChain);
+        sc->terminate(*this);
+        delete sc;
+    }
+}
+
+Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
+        AHardwareBuffer const* buffer, bool const sRGB) noexcept {
     if (__builtin_available(android 26, *)) {
         auto* const p = new (std::nothrow) ExternalImageEGLAndroid;
-        auto hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
+        auto const hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
         AHardwareBuffer_acquire(hardwareBuffer);
         p->aHardwareBuffer = hardwareBuffer;
         p->sRGB = sRGB;
@@ -256,13 +285,13 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(AHardwareB
         AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
-        auto textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        auto const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
         p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
     }
 
-    return Platform::ExternalImageHandle{};
+    return ExternalImageHandle{};
 }
 
 PlatformEGLAndroid::ExternalImageDescAndroid PlatformEGLAndroid::getExternalImageDesc(
@@ -285,7 +314,7 @@ bool PlatformEGLAndroid::setExternalImage(ExternalImageHandleRef externalImage,
     auto const* const eglExternalImage =
             static_cast<ExternalImageEGLAndroid const*>(externalImage.get());
     if (eglExternalImage->aHardwareBuffer) {
-        return PlatformEGLAndroid::setImage(eglExternalImage, texture);
+        return setImage(eglExternalImage, texture);
     }
     // not a AHardwareBuffer, fallback to the inherited version
     return PlatformEGL::setExternalImage(externalImage, texture);
@@ -298,7 +327,7 @@ OpenGLPlatform::ExternalTexture* PlatformEGLAndroid::createExternalImageTexture(
 }
 
 void PlatformEGLAndroid::destroyExternalImageTexture(ExternalTexture* texture) noexcept {
-    ExternalTextureAndroid* outTexture = static_cast<ExternalTextureAndroid*>(texture);
+    ExternalTextureAndroid const* outTexture = static_cast<ExternalTextureAndroid*>(texture);
     glDeleteTextures(1, &texture->id);
 
     if (outTexture->eglImage != EGL_NO_IMAGE) {
@@ -309,10 +338,10 @@ void PlatformEGLAndroid::destroyExternalImageTexture(ExternalTexture* texture) n
 
 bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImage,
         UTILS_UNUSED_IN_RELEASE ExternalTexture* texture) noexcept {
-    AHardwareBuffer* hardwareBuffer = eglExternalImage->aHardwareBuffer;
+    AHardwareBuffer const* hardwareBuffer = eglExternalImage->aHardwareBuffer;
 
     // Get the EGL client buffer from AHardwareBuffer
-    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
+    EGLClientBuffer const clientBuffer = eglGetNativeClientBufferANDROID(hardwareBuffer);
     EGLint imageAttrs[] = {
         EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
         EGL_NONE, EGL_NONE,  // Reserve space
@@ -330,7 +359,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
         imageAttrs[attrIndex++] = EGL_TRUE;
     }
     // Create an EGLImage from the client buffer
-    EGLImageKHR eglImage = eglCreateImageKHR(eglGetCurrentDisplay(), EGL_NO_CONTEXT,
+    EGLImageKHR const eglImage = eglCreateImageKHR(eglGetCurrentDisplay(), EGL_NO_CONTEXT,
             EGL_NATIVE_BUFFER_ANDROID, clientBuffer, imageAttrs);
     if (eglImage == EGL_NO_IMAGE_KHR) {
         // Handle error
@@ -378,12 +407,12 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
     return true;
 }
 
-void PlatformEGLAndroid::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
-    EGLSurface currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
+void PlatformEGLAndroid::setPresentationTime(int64_t const presentationTimeInNanosecond) noexcept {
+    EGLSurface const currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
     if (currentDrawSurface != EGL_NO_SURFACE) {
         if (eglPresentationTimeANDROID) {
             eglPresentationTimeANDROID(
-                    mEGLDisplay,
+                    getEglDisplay(),
                     currentDrawSurface,
                     presentationTimeInNanosecond);
         }
@@ -394,19 +423,19 @@ Platform::Stream* PlatformEGLAndroid::createStream(void* nativeStream) noexcept 
     return mExternalStreamManager.acquire(static_cast<jobject>(nativeStream));
 }
 
-void PlatformEGLAndroid::destroyStream(Platform::Stream* stream) noexcept {
+void PlatformEGLAndroid::destroyStream(Stream* stream) noexcept {
     mExternalStreamManager.release(stream);
 }
 
 Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
-    auto sync = eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
-    return new SyncEGLAndroid{.sync = sync};
+    auto const sync = eglCreateSyncKHR(getEglDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+    return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
 }
 
-bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept {
+bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
     assert_invariant(sync && fd);
-    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
-    *fd = eglDupNativeFenceFDANDROID(mEGLDisplay, eglSync.sync);
+    SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    *fd = eglDupNativeFenceFDANDROID(getEglDisplay(), eglSync.sync);
     // In the case where there was no native FD, -1 is returned. Return false
     // to indicate there was an error in this case.
     if (*fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
@@ -416,14 +445,14 @@ bool PlatformEGLAndroid::convertSyncToFd(Platform::Sync* sync, int* fd) noexcept
     return true;
 }
 
-void PlatformEGLAndroid::destroySync(Platform::Sync* sync) noexcept {
+void PlatformEGLAndroid::destroySync(Sync* sync) noexcept {
     assert_invariant(sync);
-    SyncEGLAndroid& eglSync = static_cast<SyncEGLAndroid&>(*sync);
-    eglDestroySyncKHR(mEGLDisplay, eglSync.sync);
+    SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
     delete sync;
 }
 
-void PlatformEGLAndroid::attach(Stream* stream, intptr_t tname) noexcept {
+void PlatformEGLAndroid::attach(Stream* stream, intptr_t const tname) noexcept {
     mExternalStreamManager.attach(stream, tname);
 }
 
@@ -443,29 +472,30 @@ int PlatformEGLAndroid::getOSVersion() const noexcept {
     return mOSVersion;
 }
 
-AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) noexcept {
+AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const source) noexcept {
     // Convert the AHardwareBuffer to EGLImage.
     AHardwareBuffer const* const pHardwareBuffer = (const AHardwareBuffer*)source.image;
 
-    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(pHardwareBuffer);
+    EGLClientBuffer const clientBuffer = eglGetNativeClientBufferANDROID(pHardwareBuffer);
     if (!clientBuffer) {
         LOG(ERROR) << "Unable to get EGLClientBuffer from AHardwareBuffer.";
         return {};
     }
 
-    PlatformEGL::Config attributes;
+    Config attributes;
 
     if (__builtin_available(android 26, *)) {
         AHardwareBuffer_Desc desc;
         AHardwareBuffer_describe(pHardwareBuffer, &desc);
         bool const isProtectedContent =
-                desc.usage & AHardwareBuffer_UsageFlags::AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
+                desc.usage & AHARDWAREBUFFER_USAGE_PROTECTED_CONTENT;
         if (isProtectedContent) {
             attributes[EGL_PROTECTED_CONTENT_EXT] = EGL_TRUE;
         }
     }
 
-    EGLImageKHR eglImage = eglCreateImageKHR(mEGLDisplay,
+    EGLDisplay const dpy = getEglDisplay();
+    EGLImageKHR const eglImage = eglCreateImageKHR(dpy,
             EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID, clientBuffer, attributes.data());
     if (eglImage == EGL_NO_IMAGE_KHR) {
         LOG(ERROR) << "eglCreateImageKHR returned no image.";
@@ -474,15 +504,15 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
 
     // Destroy the EGLImage before invoking the user's callback.
     struct Closure {
-        Closure(AcquiredImage const& acquiredImage, EGLDisplay display)
+        Closure(AcquiredImage const& acquiredImage, EGLDisplay const display)
                 : acquiredImage(acquiredImage), display(display) {}
         AcquiredImage acquiredImage;
         EGLDisplay display;
     };
-    Closure* closure = new(std::nothrow) Closure(source, mEGLDisplay);
+    Closure* const closure = new(std::nothrow) Closure(source, dpy);
     auto patchedCallback = [](void* image, void* userdata) {
-        Closure* closure = (Closure*)userdata;
-        if (eglDestroyImageKHR(closure->display, (EGLImageKHR) image) == EGL_FALSE) {
+        Closure const* const closure = static_cast<Closure*>(userdata);
+        if (eglDestroyImageKHR(closure->display, EGLImageKHR(image)) == EGL_FALSE) {
             LOG(ERROR) << "eglDestroyImageKHR failed.";
         }
         closure->acquiredImage.callback(closure->acquiredImage.image, closure->acquiredImage.userData);
@@ -492,6 +522,21 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage source) n
     return { eglImage, patchedCallback, closure, source.handler };
 }
 
-} // namespace filament::backend
-
 // ---------------------------------------------------------------------------------------------
+// PlatformEGLAndroid::SwapChainEGLAndroid
+
+PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+        void* nativeWindow, uint64_t const flags)
+    : SwapChainEGL(platform, nativeWindow, flags) {
+}
+
+PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+                uint32_t const width, uint32_t const height, uint64_t const flags)
+    : SwapChainEGL(platform, width, height, flags) {
+}
+
+void PlatformEGLAndroid::SwapChainEGLAndroid::terminate(PlatformEGLAndroid& platform) {
+    SwapChainEGL::terminate(platform);
+}
+
+} // namespace filament::backend
