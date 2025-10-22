@@ -1252,6 +1252,19 @@ size_t MetalDriver::getMaxArrayTextureLayers() {
     return 256;
 }
 
+size_t MetalDriver::getUniformBufferOffsetAlignment() {
+#if defined(FILAMENT_IOS)
+#if TARGET_OS_SIMULATOR
+    // The iOS simulator has differing alignment requirements.
+    return 256;
+#else
+    return 4;
+#endif  // TARGET_OS_SIMULATOR
+#else
+    return 32;
+#endif
+}
+
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     FILAMENT_CHECK_PRECONDITION(data.buffer)

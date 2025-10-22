@@ -1410,6 +1410,10 @@ size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
 }
 
+size_t VulkanDriver::getUniformBufferOffsetAlignment() {
+    return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
+}
+
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
         Handle<HwBufferObject> boh) {
     auto vb = resource_ptr<VulkanVertexBuffer>::cast(&mResourceManager, vbh);

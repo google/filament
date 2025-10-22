@@ -274,6 +274,10 @@ size_t NoopDriver::getMaxArrayTextureLayers() {
     return 256u;
 }
 
+size_t NoopDriver::getUniformBufferOffsetAlignment() {
+    return 256u;
+}
+
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
