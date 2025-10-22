@@ -78,8 +78,7 @@ void UboManager::beginFrame(DriverApi& driver,
     // Migrate all MI data to the new allocated slots.
     materialInstances.forEach([this, &driver](const FMaterialInstance* mi) {
         const AllocationId allocationId = mi->getAllocationId();
-        assert_invariant(allocationId != BufferAllocator::UNALLOCATED &&
-                         allocationId != BufferAllocator::REALLOCATION_REQUIRED);
+        assert_invariant(BufferAllocator::isValid(allocationId));
         updateSlot(driver, allocationId, mi->getUniformBuffer().toBufferDescriptor(driver));
     });
 }
