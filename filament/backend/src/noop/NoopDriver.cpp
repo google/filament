@@ -450,4 +450,13 @@ void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t 
         BufferDescriptor&& data) {
 }
 
+bool NoopDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
 } // namespace filament

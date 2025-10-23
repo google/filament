@@ -92,6 +92,8 @@ public:
         using time_point_ns = int64_t;
         /** duration in nanosecond on the std::steady_clock */
         using duration_ns = int64_t;
+        static constexpr time_point_ns INVALID = -1;    //!< value not supported
+        static constexpr time_point_ns PENDING = -2;    //!< value not yet available
         uint32_t frameId;                   //!< monotonically increasing frame identifier
         duration_ns frameTime;              //!< frame duration on the GPU in nanosecond [ns]
         duration_ns denoisedFrameTime;      //!< denoised frame duration on the GPU in [ns]
@@ -101,6 +103,7 @@ public:
         time_point_ns backendEndFrame;      //!< Backend thread time of frame end since epoch [ns]
         time_point_ns gpuFrameComplete;     //!< GPU thread time of frame end since epoch [ns] or 0
         time_point_ns vsync;                //!< VSYNC time of this frame since epoch [ns]
+        time_point_ns displayPresent;       //!< Actual presentation time of this frame since epoch [ns]
     };
 
     /**

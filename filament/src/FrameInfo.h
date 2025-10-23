@@ -19,6 +19,10 @@
 
 #include <filament/Renderer.h>
 
+#include <details/SwapChain.h>
+
+#include <backend/Platform.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <private/backend/DriverApi.h>
@@ -53,12 +57,13 @@ struct FrameInfoImpl : public details::FrameInfo {
     using clock = std::chrono::steady_clock;
     using time_point = clock::time_point;
     uint32_t frameId;
-    time_point beginFrame;           // main thread beginFrame time
-    time_point endFrame;             // main thread endFrame time
-    time_point backendBeginFrame;    // backend thread beginFrame time (makeCurrent time)
-    time_point backendEndFrame;      // backend thread endFrame time (present time)
-    time_point gpuFrameComplete;     // the frame is done rendering on the gpu
-    time_point vsync;                // vsync time
+    time_point beginFrame{};           // main thread beginFrame time
+    time_point endFrame{};             // main thread endFrame time
+    time_point backendBeginFrame{};    // backend thread beginFrame time (makeCurrent time)
+    time_point backendEndFrame{};      // backend thread endFrame time (present time)
+    time_point gpuFrameComplete{};     // the frame is done rendering on the gpu
+    time_point vsync{};                // vsync time
+    backend::FrameTimestamps::time_point_ns displayPresent{ backend::FrameTimestamps::PENDING };
     backend::FenceHandle fence{};    // the fence used for gpuFrameComplete
     std::atomic_bool ready{};        // true once backend thread has populated its data
     explicit FrameInfoImpl(uint32_t const id) noexcept
@@ -250,6 +255,8 @@ public:
         return pFront ? *pFront : details::FrameInfo{};
     }
 
+    void updateUserHistory(FSwapChain* swapChain, backend::DriverApi& driver);
+
     utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const;
 
 private:
@@ -259,12 +266,14 @@ private:
         backend::Handle<backend::HwTimerQuery> handle{};
         FrameInfoImpl* pInfo = nullptr;
     };
+    utils::FixedCapacityVector<Renderer::FrameInfo> mUserFrameHistory;
     std::array<Query, POOL_COUNT> mQueries{};
     uint32_t mIndex = 0;                // index of current query
     uint32_t mLast = 0;                 // index of oldest query still active
     FrameInfoImpl* pFront = nullptr;    // the most recent slot with a valid frame time
     FrameHistoryQueue mFrameTimeHistory{};
     utils::AsyncJobQueue mJobQueue;
+    FSwapChain* mLastSeenSwapChain = nullptr;
     bool const mHasTimerQueries = false;
 };
 

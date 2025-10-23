@@ -1477,6 +1477,15 @@ void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph, Primit
     primitive->type = pt;
 }
 
+bool MetalDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool MetalDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        backend::FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
 void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw, "A draw SwapChain must be set.");
     auto* drawSwapChain = handle_cast<MetalSwapChain>(schDraw);

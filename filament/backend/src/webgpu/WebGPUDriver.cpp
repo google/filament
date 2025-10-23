@@ -1273,6 +1273,15 @@ void WebGPUDriver::nextSubpass(int) {
     //todo
 }
 
+bool WebGPUDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool WebGPUDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
 void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSwapChain,
         Handle<HwSwapChain> readSwapChain) {
     FWGPU_SYSTRACE_SCOPE();
