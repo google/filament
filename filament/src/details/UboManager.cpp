@@ -40,7 +40,7 @@ UboManager::UboManager(DriverApi& driver, allocation_size_t defaultSlotSizeInByt
 }
 
 void UboManager::beginFrame(DriverApi& driver,
-        const ResourceList<FMaterialInstance>& materialInstances) {
+        const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>& materialInstances) {
     // Check finished frames and decrement GPU count accordingly.
     checkFenceAndUnlockSlots(driver);
 
@@ -49,11 +49,11 @@ void UboManager::beginFrame(DriverApi& driver,
 
     // Traverse all MIs and see which of them need slot allocation.
     AllocationResult allocationResult =
-            updateMaterialInstanceAllocations(materialInstances, /*forceAllocateAll*/ false);
+            updateMaterialInstanceAllocations(materialInstances, ON_DEMAND);
 
-    if (allocationResult == ReallocationRequired) {
+    if (allocationResult == SUCCESS) {
         // No need to grow the buffer, so we can just map the buffer for writing and return.
-        mMmbHandle = driver.mapBuffer(mUbHandle, 0, mUboSize, MapBufferAccessFlags::WRITE_BIT,
+        mMemoryMappedBufferHandle = driver.mapBuffer(mUbHandle, 0, mUboSize, MapBufferAccessFlags::WRITE_BIT,
                 "UboManager");
 
         return;
@@ -62,39 +62,52 @@ void UboManager::beginFrame(DriverApi& driver,
     // Calculate the required size and grow the Ubo.
     const allocation_size_t requiredSize = calculateRequiredSize(materialInstances);
     reallocate(driver, requiredSize);
-    mNeedReallocate = false;
 
     // Allocate slots for each MI on the new Ubo.
-    UTILS_UNUSED_IN_RELEASE const bool needReallocationAgain =
-            updateMaterialInstanceAllocations(materialInstances, /*forceAllocateAll*/ true);
-    assert_invariant(!needReallocationAgain);
+    UTILS_UNUSED_IN_RELEASE const AllocationResult needReallocationAgain =
+            updateMaterialInstanceAllocations(materialInstances, ALWAYS);
+    assert_invariant(needReallocationAgain != REALLOCATION_REQUIRED);
 
     // Map the buffer so that we can write to it
-    mMmbHandle = driver.mapBuffer(mUbHandle, 0, mUboSize,
-            MapBufferAccessFlags::WRITE_BIT | MapBufferAccessFlags::INVALIDATE_RANGE_BIT,
-            "UboManager");
+    mMemoryMappedBufferHandle =
+            driver.mapBuffer(mUbHandle, 0, mUboSize, MapBufferAccessFlags::WRITE_BIT, "UboManager");
 
     // Migrate all MI data to the new allocated slots.
-    materialInstances.forEach([this, &driver](const FMaterialInstance* mi) {
-        const AllocationId allocationId = mi->getAllocationId();
-        assert_invariant(BufferAllocator::isValid(allocationId));
-        updateSlot(driver, allocationId, mi->getUniformBuffer().toBufferDescriptor(driver));
-    });
+    for (const auto& materialInstance : materialInstances) {
+        materialInstance.second.forEach([this, &driver](const FMaterialInstance* mi) {
+            if (!mi->isUsingUboBatching()) return;
+
+            const AllocationId allocationId = mi->getAllocationId();
+            assert_invariant(BufferAllocator::isValid(allocationId));
+            updateSlot(driver, allocationId, mi->getUniformBuffer().toBufferDescriptor(driver));
+        });
+    }
 }
 
-void UboManager::finishBeginFrame(DriverApi& driver) const {
-    driver.unmapBuffer(mMmbHandle);
+void UboManager::finishBeginFrame(DriverApi& driver) {
+    if (mMemoryMappedBufferHandle) {
+        driver.unmapBuffer(mMemoryMappedBufferHandle);
+        mMemoryMappedBufferHandle.clear();
+    }
 }
 
 void UboManager::endFrame(DriverApi& driver,
-        const ResourceList<FMaterialInstance>& materialInstances) {
+        const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>& materialInstances) {
     BufferAllocator& allocator = mAllocator;
     std::unordered_set<AllocationId> allocationIds;
-    materialInstances.forEach([&allocator, &allocationIds](const FMaterialInstance* mi) {
-        const AllocationId id = mi->getAllocationId();
-        allocator.acquireGpu(id);
-        allocationIds.insert(id);
-    });
+    for (const auto& materialInstance : materialInstances) {
+        materialInstance.second.forEach([&allocator, &allocationIds](const FMaterialInstance* mi) {
+            if (!mi->isUsingUboBatching()) return;
+
+            const AllocationId id = mi->getAllocationId();
+            if (!BufferAllocator::isValid(id)) {
+                return;
+            }
+
+            allocator.acquireGpu(id);
+            allocationIds.insert(id);
+        });
+    }
 
     mFenceAllocationList.emplace_back( driver.createFence(), std::move(allocationIds) );
 }
@@ -112,8 +125,17 @@ void UboManager::terminate(DriverApi& driver) {
 
 void UboManager::updateSlot(DriverApi& driver, AllocationId id,
         BufferDescriptor bufferDescriptor) const {
+    if (!mMemoryMappedBufferHandle)
+        return;
+
     const allocation_size_t offset = mAllocator.getAllocationOffset(id);
-    driver.copyToMemoryMappedBuffer(mMmbHandle, offset, std::move(bufferDescriptor));
+    driver.copyToMemoryMappedBuffer(mMemoryMappedBufferHandle, offset, std::move(bufferDescriptor));
+}
+
+void UboManager::retireSlot(BufferAllocator::AllocationId id) {
+    if (!BufferAllocator::isValid(id))
+        return;
+    mAllocator.retire(id);
 }
 
 allocation_size_t UboManager::getTotalSize() const noexcept {
@@ -175,72 +197,101 @@ void UboManager::checkFenceAndUnlockSlots(DriverApi& driver) {
 }
 
 UboManager::AllocationResult UboManager::updateMaterialInstanceAllocations(
-        const ResourceList<FMaterialInstance>& materialInstances, bool forceAllocateAll) {
-    mNeedReallocate = false;
+        const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                materialInstances,
+        AllocationMode allocationMode) {
+    AllocationResult result = SUCCESS;
+    for (const auto& materialInstance: materialInstances) {
+        materialInstance.second.forEach([this, &result, allocationMode](FMaterialInstance* mi) {
+            if (tryAllocateMaterialInstanceSlot(mi, mAllocator, mUbHandle, allocationMode) ==
+                    REALLOCATION_REQUIRED) {
+                result = REALLOCATION_REQUIRED;
+            }
+        });
+    }
 
-    BufferAllocator& allocator = mAllocator;
-    bool& needReallocate = mNeedReallocate;
-    Handle<HwBufferObject>& ubHandle = mUbHandle;
+    return result;
+}
 
-    materialInstances.forEach(
-            [&allocator, &needReallocate, &ubHandle, forceAllocateAll](FMaterialInstance* mi) {
-                const AllocationId id = mi->getAllocationId();
-                assert_invariant(id != BufferAllocator::REALLOCATION_REQUIRED);
-                // When setting forceAllocateAll = true, we assume the Ubo has already been reallocated
-                // and we're going to allocate new slots for all MIs.
-                if (id == BufferAllocator::UNALLOCATED || forceAllocateAll) {
-                    // The material instance is first time being allocated.
-                    auto [newId, newOffset] = allocator.allocate(mi->getUniformBuffer().getSize());
-                    // Even if the allocation is not valid, we need to set it to let the following
-                    // process knows.
-                    mi->assignUboAllocation(ubHandle, newId, newOffset);
+UboManager::AllocationResult UboManager::tryAllocateMaterialInstanceSlot(FMaterialInstance* mi,
+        BufferAllocator& allocator, const Handle<HwBufferObject>& ubHandle,
+        AllocationMode allocationMode) {
+    if (!mi->isUsingUboBatching()) return SUCCESS;
 
-                    if (newId == BufferAllocator::REALLOCATION_REQUIRED) {
-                        needReallocate = true;
-                    }
-                } else if (mi->getUniformBuffer().isDirty() && allocator.isLockedByGpu(id)) {
-                    // If the uniform buffer is updated and the slot is still being locked by GPU,
-                    // we will need to allocate a new slot to write the updated content.
-                    allocator.retire(id);
-                    auto [newId, newOffset] = allocator.allocate(mi->getUniformBuffer().getSize());
-                    // Even if the allocation is not valid, we need to set it to let the following
-                    // process knows.
-                    mi->assignUboAllocation(ubHandle, newId, newOffset);
+    const AllocationId id = mi->getAllocationId();
+    auto allocateAndAssign = [&](AllocationId originalId) -> AllocationResult {
+        auto [newId, newOffset] = allocator.allocate(mi->getUniformBuffer().getSize());
+        // Special handling for instances that were previously UNALLOCATED:
+        // If the new allocation also fails, keep it UNALLOCATED to signal initial failure.
+        if (originalId == BufferAllocator::UNALLOCATED &&
+                newId == BufferAllocator::REALLOCATION_REQUIRED) {
+            newId = BufferAllocator::UNALLOCATED;
+        }
 
-                    if (newId == BufferAllocator::REALLOCATION_REQUIRED) {
-                        needReallocate = true;
-                    }
-                } // Else, the slot is valid and no need to allocate a new slot.
-            });
+        // Even if the allocation is not valid, we need to set it to let the following
+        // process knows.
+        mi->assignUboAllocation(ubHandle, newId, newOffset);
 
-    return needReallocate ? ReallocationRequired : Success;
+        if (!BufferAllocator::isValid(newId)) {
+            return REALLOCATION_REQUIRED;
+        }
+        return SUCCESS;
+    };
+
+    if (!BufferAllocator::isValid(id) || allocationMode == ALWAYS) {
+        // The material instance is first time being allocated (if !isValid)
+        // or is being forcibly re-allocated (if ALWAYS).
+        return allocateAndAssign(id);
+    }
+
+    if (mi->getUniformBuffer().isDirty() && allocator.isLockedByGpu(id)) {
+        // If the uniform buffer is updated and the slot is still being locked by GPU,
+        // we will need to allocate a new slot to write the updated content.
+        // This is known as "orphaning".
+        allocator.retire(id);
+        return allocateAndAssign(id);
+    }
+    // Else, the slot is valid and no need to allocate a new slot.
+
+    return SUCCESS;
 }
 
 void UboManager::reallocate(DriverApi& driver, allocation_size_t requiredSize) {
     if (mUbHandle) {
         driver.destroyBufferObject(mUbHandle);
     }
+
+    for (auto& [fence, allocations]: mFenceAllocationList) {
+        driver.destroyFence(std::move(fence));
+    }
+    mFenceAllocationList.clear();
+
     mAllocator.reset(requiredSize);
     mUboSize = requiredSize;
     mUbHandle = driver.createBufferObject(requiredSize, BufferObjectBinding::UNIFORM,
-            BufferUsage::DYNAMIC);
+            BufferUsage::DYNAMIC | BufferUsage::SHARED_WRITE_BIT);
 }
 
 allocation_size_t UboManager::calculateRequiredSize(
-        const ResourceList<FMaterialInstance>& materialInstances) {
+        const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                materialInstances) {
     BufferAllocator& allocator = mAllocator;
     allocation_size_t newBufferSize = 0;
-    materialInstances.forEach([&newBufferSize, &allocator](const FMaterialInstance* mi) {
-        const AllocationId allocationId = mi->getAllocationId();
-        if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
-            // For MIs whose parameters have been updated, aside from the slot it is being
-            // occupied by the GPU, we need to preserve an additional slot for it.
-            newBufferSize += 2 * allocator.alignUp(mi->getUniformBuffer().getSize());
-        } else {
-            newBufferSize += allocator.alignUp(mi->getUniformBuffer().getSize());
-        }
-    });
-    return newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER;
+    for (const auto& materialInstance: materialInstances) {
+        materialInstance.second.forEach([&newBufferSize, &allocator](const FMaterialInstance* mi) {
+            if (!mi->isUsingUboBatching()) return;
+
+            const AllocationId allocationId = mi->getAllocationId();
+            if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
+                // For MIs whose parameters have been updated, aside from the slot it is being
+                // occupied by the GPU, we need to preserve an additional slot for it.
+                newBufferSize += 2 * allocator.alignUp(mi->getUniformBuffer().getSize());
+            } else {
+                newBufferSize += allocator.alignUp(mi->getUniformBuffer().getSize());
+            }
+        });
+    }
+    return allocator.alignUp(newBufferSize * BUFFER_SIZE_GROWTH_MULTIPLIER);
 }
 
 } // namespace filament

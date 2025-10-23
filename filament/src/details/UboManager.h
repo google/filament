@@ -29,6 +29,7 @@
 
 namespace filament {
 
+class FMaterial;
 class FMaterialInstance;
 
 // This class is NOT thread-safe and designed to be used on a single core thread.
@@ -53,21 +54,26 @@ public:
     // 3. Reallocating a larger shared UBO if the current one is insufficient.
     // 4. Mapping the shared UBO into CPU-accessible memory to prepare for uniform data writes.
     void beginFrame(backend::DriverApi& driver,
-            const ResourceList<FMaterialInstance>& materialInstances);
+            const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                    materialInstances);
 
     // Unmap the buffer here
-    void finishBeginFrame(backend::DriverApi& driver) const;
+    void finishBeginFrame(backend::DriverApi& driver);
 
     // Create a fence and associate it with a set of allocation ids.
     // The gpuUseCount of these allocations will be incremented, and they will be decremented
     // After the corresponding frame has been done.
     void endFrame(backend::DriverApi& driver,
-            const ResourceList<FMaterialInstance>& materialInstances);
+            const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                    materialInstances);
 
     void terminate(backend::DriverApi& driver);
 
     void updateSlot(backend::DriverApi& driver, BufferAllocator::AllocationId id,
             backend::BufferDescriptor bufferDescriptor) const;
+
+    // Call this when a material instance is no longer holding a slot. e.g. it is destroyed.
+    void retireSlot(BufferAllocator::AllocationId id);
 
     // Returns the size of the actual UBO. Note that when there's allocation failed, it will be
     // reallocated to a bigger size at the next frame.
@@ -83,20 +89,30 @@ private:
     void checkFenceAndUnlockSlots(backend::DriverApi& driver);
 
     enum AllocationResult {
-        Success,
-        ReallocationRequired
+        SUCCESS,
+        REALLOCATION_REQUIRED
+    };
+
+    enum AllocationMode {
+        ON_DEMAND,
+        ALWAYS
     };
 
     AllocationResult updateMaterialInstanceAllocations(
-            const ResourceList<FMaterialInstance>& materialInstances, bool forceAllocateAll);
+            const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                    materialInstances,
+            AllocationMode allocationMode);
+    static AllocationResult tryAllocateMaterialInstanceSlot(FMaterialInstance* mi,
+            BufferAllocator& allocator, const backend::Handle<backend::HwBufferObject>& ubHandle,
+            AllocationMode allocationMode);
     void reallocate(backend::DriverApi& driver, BufferAllocator::allocation_size_t requiredSize);
     BufferAllocator::allocation_size_t calculateRequiredSize(
-            const ResourceList<FMaterialInstance>& materialInstances);
+            const std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>>&
+                    materialInstances);
 
     backend::Handle<backend::HwBufferObject> mUbHandle;
-    backend::MemoryMappedBufferHandle mMmbHandle;
+    backend::MemoryMappedBufferHandle mMemoryMappedBufferHandle;
     BufferAllocator::allocation_size_t mUboSize{};
-    bool mNeedReallocate{};
 
     // Not ideal, but we need to know which slots to decrement gpuUseCount for each frame.
     using FenceAllocationList = std::vector<std::pair<backend::Handle<backend::HwFence>,
