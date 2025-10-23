@@ -52,14 +52,18 @@ using namespace filamesh;
 
 struct App {
     struct UiState {
-        int objectCountSlider = 1000;
+        int objectCountSlider = 100;
         float updateRatio = 0.5f;
         bool animate = true;
+        int deltaCount = 5;
     } ui;
 
     int currentObjectCount = 0;
     int desiredObjectCount = 1000;
     uint32_t frameCounter = 0;
+    float spacing = 2.5f;
+    float distanceToCamera = -20.0f;
+    int gridDim = 1;
 
     Material* litMaterial = nullptr;
     MeshReader::Mesh suzanneTemplate;
@@ -115,46 +119,51 @@ static int handleCommandLineArguments(int argc, char* argv[], Config* config) {
     return optind;
 }
 
-static void clearScene(Engine* engine, Scene* scene, App& app) {
+static void removeObjects(Engine* engine, Scene* scene, App& app, int count) {
+    if (count <= 0) return;
+
     EntityManager& em = EntityManager::get();
+    const int removeCount = std::min(count, app.currentObjectCount);
 
-    for (Entity e : app.renderables) {
-        engine->destroy(e);
-        em.destroy(e);
-    }
-    app.renderables.clear();
+    for (int i = 0; i < removeCount; ++i) {
+        Entity renderable = app.renderables.back();
+        scene->remove(renderable);
+        engine->destroy(renderable);
+        em.destroy(renderable);
+        app.renderables.pop_back();
 
-    for (const MaterialInstance* mi : app.materialInstances) {
+        MaterialInstance* mi = app.materialInstances.back();
         engine->destroy(mi);
+        app.materialInstances.pop_back();
     }
-    app.materialInstances.clear();
 
-    app.currentObjectCount = 0;
+    app.currentObjectCount = app.renderables.size();
 }
 
-static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
+static void clearScene(Engine* engine, Scene* scene, App& app) {
+    removeObjects(engine, scene, app, app.currentObjectCount);
+}
+
+static void addObjects(Engine* engine, Scene* scene, App& app, int count) {
+    if (count <= 0) return;
+
     TransformManager& tcm = engine->getTransformManager();
     EntityManager& em = EntityManager::get();
 
-    const int gridDim = static_cast<int>(sqrt(app.desiredObjectCount));
-    const float spacing = 2.5f;
+    int const oldTotal = app.currentObjectCount;
+    int const newTotal = oldTotal + count;
 
-    if (app.desiredObjectCount == 0) {
-        app.currentObjectCount = 0;
-        return;
-    }
+    app.renderables.reserve(newTotal);
+    app.materialInstances.reserve(newTotal);
 
-    app.renderables.reserve(app.desiredObjectCount);
-    app.materialInstances.reserve(app.desiredObjectCount);
+    for (int i = oldTotal; i < newTotal; ++i) {
+        int const x = i % app.gridDim;
+        int const y = i / app.gridDim;
 
-    for (int i = 0; i < app.desiredObjectCount; ++i) {
-        const int x = i % gridDim;
-        const int y = i / gridDim;
-
-        float3 position = {
-            (x - gridDim / 2.0f) * spacing,
-            (y - gridDim / 2.0f) * spacing,
-            -20.0f
+        float3 const position = {
+            (x - app.gridDim / 2.0f) * app.spacing,
+            (y - app.gridDim / 2.0f) * app.spacing,
+            app.distanceToCamera
         };
 
         MaterialInstance* mi = app.litMaterial->createInstance();
@@ -178,9 +187,14 @@ static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
 
         tcm.setTransform(tcm.getInstance(renderable), mat4f::translation(position));
     }
-    app.currentObjectCount = app.desiredObjectCount;
+
+    app.currentObjectCount = newTotal;
 }
 
+static void createSceneObjects(Engine* engine, Scene* scene, App& app) {
+    app.gridDim = static_cast<int>(ceil(sqrt(app.desiredObjectCount)));
+    addObjects(engine, scene, app, std::max(0, app.desiredObjectCount - app.currentObjectCount));
+}
 
 int main(int argc, char** argv) {
     Config config;
@@ -198,8 +212,6 @@ int main(int argc, char** argv) {
         app.litMaterial = Material::Builder()
                 .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
                 .build(*engine);
-
-        createSceneObjects(engine, scene, app);
 
         app.light = EntityManager::get().create();
         LightManager::Builder(LightManager::Type::SUN)
@@ -228,11 +240,23 @@ int main(int argc, char** argv) {
     auto gui = [&app](Engine* engine, View* view) {
         ImGui::Begin("Material Instance Stress Test Controls");
         ImGui::Text("Objects: %d", app.currentObjectCount);
-        ImGui::SliderInt("Object Count", &app.ui.objectCountSlider, 100, 10000);
+        ImGui::SliderInt("Object Count", &app.ui.objectCountSlider, 1, 1000);
 
         if (ImGui::Button("Apply")) {
             app.desiredObjectCount = app.ui.objectCountSlider;
         }
+
+        ImGui::Separator();
+        ImGui::InputInt("Delta Count", &app.ui.deltaCount);
+        if (ImGui::Button("Add Objects")) {
+            app.desiredObjectCount += app.ui.deltaCount;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Remove Objects")) {
+            app.desiredObjectCount = std::max(0, app.desiredObjectCount - app.ui.deltaCount);
+        }
+        ImGui::Separator();
+
         ImGui::SliderFloat("Update Ratio / Frame", &app.ui.updateRatio, 0.0f, 1.0f);
         ImGui::Checkbox("Animate", &app.ui.animate);
         ImGui::End();
@@ -240,9 +264,20 @@ int main(int argc, char** argv) {
 
     auto animate = [&app](Engine* engine, View* view, double now) {
         if (app.currentObjectCount != app.desiredObjectCount) {
-            clearScene(engine, view->getScene(), app);
-            engine->flushAndWait();
-            createSceneObjects(engine, view->getScene(), app);
+            if (app.desiredObjectCount == app.ui.objectCountSlider) {
+                clearScene(engine, view->getScene(), app);
+                engine->flushAndWait();
+                createSceneObjects(engine, view->getScene(), app);
+            } else {
+                if (app.desiredObjectCount > app.currentObjectCount) {
+                    const int toAdd = app.desiredObjectCount - app.currentObjectCount;
+                    addObjects(engine, view->getScene(), app, toAdd);
+                } else {
+                    const int toRemove = app.currentObjectCount - app.desiredObjectCount;
+                    removeObjects(engine, view->getScene(), app, toRemove);
+                }
+            }
+            app.ui.objectCountSlider = app.currentObjectCount;
         }
 
         if (!app.ui.animate || app.currentObjectCount == 0) {
@@ -254,10 +289,9 @@ int main(int argc, char** argv) {
         for (int i = 0; i < updateCount; ++i) {
             const int instanceIndex = (frame * i) % app.currentObjectCount;
             MaterialInstance* mi = app.materialInstances[instanceIndex];
-            const int gridDim = static_cast<int>(sqrt(app.desiredObjectCount));
 
-            const float x = static_cast<float>(instanceIndex % gridDim);
-            const float y = static_cast<float>(instanceIndex / gridDim);
+            const float x = static_cast<float>(instanceIndex % app.gridDim);
+            const float y = static_cast<float>(instanceIndex / app.gridDim);
 
             const float r = 0.5f + 0.5f * sin(now + (x + y) * 0.2f);
             const float g = 0.5f + 0.5f * cos(now + (x - y) * 0.2f);
