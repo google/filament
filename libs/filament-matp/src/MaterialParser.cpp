@@ -358,7 +358,6 @@ utils::Status MaterialParser::parseMaterial(const char* buffer, size_t size,
         }
     }
 
-
     std::string identifier;
     for (auto lexeme : lexemes) {
         if (lexeme.getType() == MaterialType::IDENTIFIER) {

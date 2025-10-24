@@ -384,17 +384,12 @@ public:
      * }
      * ~~~~~
      *
-     * @param code The source code of the material.
+     * @param code The source code of the material. Expected it to be all inlined. (#includes are
+     * resolved.)
      * @param line The line number offset of the material, where 0 is the first line. Used for error
      *             reporting
      */
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
-
-    /**
-     * Set the callback used for resolving include directives.
-     * The default is no callback, which disallows all includes.
-     */
-    MaterialBuilder& includeCallback(IncludeCallback callback) noexcept;
 
     /**
      * Set the vertex code content of this material.
@@ -419,7 +414,8 @@ public:
      * }
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-     * @param code The source code of the material.
+     * @param code The source code of the material. Expected it to be all inlined. (#includes are
+     * resolved.)
      * @param line The line number offset of the material, where 0 is the first line. Used for error
      *             reporting
      */
@@ -888,22 +884,16 @@ private:
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 
     utils::CString mMaterialName;
-    utils::CString mFileName;
     utils::CString mCompilationParameters;
 
     class ShaderCode {
     public:
         void setLineOffset(size_t offset) noexcept { mLineOffset = offset; }
-        void setUnresolved(const utils::CString& code) noexcept {
-            mIncludesResolved = false;
+        void setCode(const utils::CString& code) noexcept {
             mCode = code;
         }
 
-        // Resolve all the #include directives, returns true if successful.
-        bool resolveIncludes(IncludeCallback callback, const utils::CString& fileName) noexcept;
-
-        const utils::CString& getResolved() const noexcept {
-            assert(mIncludesResolved);
+        const utils::CString& getCode() const noexcept {
             return mCode;
         }
 
@@ -912,13 +902,10 @@ private:
     private:
         utils::CString mCode;
         size_t mLineOffset = 0;
-        bool mIncludesResolved = false;
     };
 
     ShaderCode mMaterialFragmentCode;
     ShaderCode mMaterialVertexCode;
-
-    IncludeCallback mIncludeCallback = nullptr;
 
     PropertyList mProperties;
     ParameterList mParameters;
