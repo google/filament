@@ -9,9 +9,11 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(HDRS
         include/filamat/Enums.h
+        include/filamat/Includes.h
         include/filamat/IncludeCallback.h
         include/filamat/MaterialBuilder.h
-        include/filamat/Package.h)
+        include/filamat/Package.h
+)
 
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
@@ -23,7 +25,6 @@ set(COMMON_PRIVATE_HDRS
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/ShaderEntry.h
         src/eiff/SimpleFieldChunk.h
-        src/Includes.h
         src/PushConstantDefinitions.h)
 
 set(COMMON_SRCS

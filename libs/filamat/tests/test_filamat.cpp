@@ -56,14 +56,12 @@ std::string shaderWithAllProperties(JobSystem& jobSystem, ShaderStage type,
     MockIncluder includer;
     includer
             .sourceForInclude("modify_normal.h", "material.normal = vec3(0.8);");
-
     filamat::MaterialBuilder builder;
     builder.material(fragmentCode.c_str());
     builder.materialVertex(vertexCode.c_str());
     builder.platform(filamat::MaterialBuilder::Platform::MOBILE);
     builder.optimization(filamat::MaterialBuilder::Optimization::NONE);
     builder.shading(shadingModel);
-    builder.includeCallback(includer);
     builder.refractionMode(refractionMode);
     builder.vertexDomain(vertexDomain);
 

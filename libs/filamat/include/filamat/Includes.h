@@ -17,9 +17,9 @@
 #ifndef TNT_FILAMAT_INCLUDES_H
 #define TNT_FILAMAT_INCLUDES_H
 
-#include <utils/CString.h>
-
 #include <filamat/IncludeCallback.h>
+
+#include <utils/CString.h>
 
 #include <vector>
 
@@ -48,7 +48,7 @@ struct FoundInclude {
     utils::CString name;
     size_t startPosition;
     size_t length;
-    size_t line;        // the line number the include was found on (first line is 1)
+    size_t line;        // the line number the #include was found on.
 };
 
 std::vector<FoundInclude> parseForIncludes(const utils::CString& source);

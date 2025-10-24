@@ -20,10 +20,9 @@
 #include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
-#include "Includes.h"
+#include "GLSLPostProcessor.h"
 #include "MaterialVariants.h"
 #include "PushConstantDefinitions.h"
-#include "GLSLPostProcessor.h"
 
 #include "sca/GLSLTools.h"
 
@@ -226,29 +225,19 @@ MaterialBuilder& MaterialBuilder::name(const char* name) noexcept {
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::fileName(const char* name) noexcept {
-    mFileName = CString(name);
-    return *this;
-}
-
 MaterialBuilder& MaterialBuilder::compilationParameters(const char* params) noexcept {
     mCompilationParameters = CString(params);
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::material(const char* code, size_t const line) noexcept {
-    mMaterialFragmentCode.setUnresolved(CString(code));
+    mMaterialFragmentCode.setCode(CString(code));
     mMaterialFragmentCode.setLineOffset(line);
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::includeCallback(IncludeCallback callback) noexcept {
-    mIncludeCallback = std::move(callback);
-    return *this;
-}
-
 MaterialBuilder& MaterialBuilder::materialVertex(const char* code, size_t const line) noexcept {
-    mMaterialVertexCode.setUnresolved(CString(code));
+    mMaterialVertexCode.setCode(CString(code));
     mMaterialVertexCode.setLineOffset(line);
     return *this;
 }
@@ -650,7 +639,7 @@ bool MaterialBuilder::hasSamplerType(SamplerType const samplerType) const noexce
 void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     prepare(mEnableFramebufferFetch, mFeatureLevel);
 
-    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getCode().empty();
     const bool isPostProcessMaterial = mMaterialDomain == MaterialDomain::POST_PROCESS;
     // TODO: Currently, for surface materials, we rely on the presence of a custom vertex shader to
     // infer the default shader stages. We could do better by analyzing the AST of the vertex shader
@@ -850,29 +839,6 @@ bool MaterialBuilder::runSemanticAnalysis(MaterialInfo* inOutInfo,
     return success;
 }
 
-bool MaterialBuilder::ShaderCode::resolveIncludes(IncludeCallback callback,
-        const CString& fileName) noexcept {
-    if (!mCode.empty()) {
-        ResolveOptions const options {
-                .insertLineDirectives = true,
-                .insertLineDirectiveCheck = true
-        };
-        IncludeResult source {
-                .includeName = fileName,
-                .text = mCode,
-                .lineNumberOffset = getLineOffset(),
-                .name = CString("")
-        };
-        if (!filamat::resolveIncludes(source, std::move(callback), options)) {
-            return false;
-        }
-        mCode = source.text;
-    }
-
-    mIncludesResolved = true;
-    return true;
-}
-
 static void showErrorMessage(const char* materialName, filament::Variant const variant,
         MaterialBuilder::TargetApi const targetApi, backend::ShaderStage const shaderType,
         MaterialBuilder::FeatureLevel const featureLevel,
@@ -944,8 +910,8 @@ bool MaterialBuilder::generateShaders(JobSystem& jobSystem, const std::vector<Va
     // End: must be protected by lock
 
     ShaderGenerator sg(mProperties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
-            mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
-            mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
+            mMaterialFragmentCode.getCode(), mMaterialFragmentCode.getLineOffset(),
+            mMaterialVertexCode.getCode(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
     container.emplace<bool>(MaterialHasCustomDepthShader,
@@ -1317,12 +1283,6 @@ error:
 
     // TODO: maybe check MaterialDomain::COMPUTE has outputs
 
-    // Resolve all the #include directives within user code.
-    if (!mMaterialFragmentCode.resolveIncludes(mIncludeCallback, mFileName) ||
-        !mMaterialVertexCode.resolveIncludes(mIncludeCallback, mFileName)) {
-        goto error;
-    }
-
     if (mCustomSurfaceShading && mShading != Shading::LIT) {
         slog.e << "Error: customSurfaceShading can only be used with lit materials." << io::endl;
         goto error;
@@ -1533,7 +1493,7 @@ bool MaterialBuilder::hasCustomVaryings() const noexcept {
 }
 
 bool MaterialBuilder::needsStandardDepthProgram() const noexcept {
-    const bool hasEmptyVertexCode = mMaterialVertexCode.getResolved().empty();
+    const bool hasEmptyVertexCode = mMaterialVertexCode.getCode().empty();
     return !hasEmptyVertexCode ||
            hasCustomVaryings() ||
            mBlendingMode == BlendingMode::MASKED ||
@@ -1546,8 +1506,8 @@ std::string MaterialBuilder::peek(backend::ShaderStage const stage,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
     ShaderGenerator const sg(properties, mVariables, mOutputs, mDefines, mConstants, mPushConstants,
-            mMaterialFragmentCode.getResolved(), mMaterialFragmentCode.getLineOffset(),
-            mMaterialVertexCode.getResolved(), mMaterialVertexCode.getLineOffset(),
+            mMaterialFragmentCode.getCode(), mMaterialFragmentCode.getLineOffset(),
+            mMaterialVertexCode.getCode(), mMaterialVertexCode.getLineOffset(),
             mMaterialDomain);
 
     MaterialInfo info;
@@ -1732,8 +1692,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
     }
 
     // create a unique material id
-    auto const& vert = mMaterialVertexCode.getResolved();
-    auto const& frag = mMaterialFragmentCode.getResolved();
+    auto const& vert = mMaterialVertexCode.getCode();
+    auto const& frag = mMaterialFragmentCode.getCode();
     std::hash<std::string_view> const hasher;
     size_t const materialId = hash::combine(
             MATERIAL_VERSION,
