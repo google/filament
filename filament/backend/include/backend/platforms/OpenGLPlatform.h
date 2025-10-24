@@ -430,7 +430,7 @@ public:
     virtual bool isExtraContextSupported() const noexcept;
 
     /**
-     * Creates an OpenGL context with the same configuration than the main context and makes it
+     * Creates an OpenGL context with the same configuration with the main context and makes it
      * current to the current thread. Must not be called from the main driver thread.
      * createContext() is only supported if isExtraContextSupported() returns true.
      * These additional contexts will be automatically terminated in terminate.
@@ -443,7 +443,7 @@ public:
 
     /**
      * Detach and destroy the current context if any and releases all resources associated to
-     * this thread.
+     * this thread. This must be called from the same thread where createContext() was called.
      */
     virtual void releaseContext() noexcept;
 };
