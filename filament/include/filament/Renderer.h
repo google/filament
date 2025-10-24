@@ -95,8 +95,8 @@ public:
         static constexpr time_point_ns INVALID = -1;    //!< value not supported
         static constexpr time_point_ns PENDING = -2;    //!< value not yet available
         uint32_t frameId;                   //!< monotonically increasing frame identifier
-        duration_ns frameTime;              //!< frame duration on the GPU in nanosecond [ns]
-        duration_ns denoisedFrameTime;      //!< denoised frame duration on the GPU in [ns]
+        duration_ns gpuFrameDuration;       //!< frame duration on the GPU in nanosecond [ns]
+        duration_ns denoisedGpuFrameDuration; //!< denoised frame duration on the GPU in [ns]
         time_point_ns beginFrame;           //!< Renderer::beginFrame() time since epoch [ns]
         time_point_ns endFrame;             //!< Renderer::endFrame() time since epoch [ns]
         time_point_ns backendBeginFrame;    //!< Backend thread time of frame start since epoch [ns]
@@ -107,7 +107,7 @@ public:
     };
 
     /**
-     * Retrieve an historic of frame timing information. The maximum frame history size is
+     * Retrieve a history of frame timing information. The maximum frame history size is
      * given by getMaxFrameHistorySize().
      * @param historySize requested history size. The returned vector could be smaller.
      * @return A vector of FrameInfo.

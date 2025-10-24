@@ -159,7 +159,7 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config,
                 << ", Dm=" << h[0].endFrame - h[0].beginFrame
                 << ", L =" << h[0].backendBeginFrame - h[0].beginFrame
                 << ", Db=" << h[0].backendEndFrame - h[0].backendBeginFrame
-                << ", T =" << h[0].frameTime;
+                << ", T =" << h[0].gpuFrameDuration;
     }
 #endif
 }
