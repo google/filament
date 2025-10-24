@@ -618,8 +618,8 @@ void PlatformEGL::destroySwapChain(SwapChain* swapChain) noexcept {
             // - this is actually a bit too aggressive, but it is a rare operation.
             egl.makeCurrent(mEGLDummySurface, mEGLDummySurface);
             eglDestroySurface(mEGLDisplay, sc->sur);
-            delete sc;
         }
+        delete sc;
     }
 }
 
