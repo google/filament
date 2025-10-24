@@ -27,10 +27,11 @@
 #include <private/backend/BackendUtilsAndroid.h>
 #include <private/backend/VirtualMachineEnv.h>
 
+#include "AndroidNativeWindow.h"
+#include "AndroidSwapChainHelper.h"
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
-#include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
 #include <utils/android/PerformanceHintManager.h>
@@ -49,13 +50,14 @@
 
 #include <jni.h>
 
+#include <array>
 #include <chrono>
+#include <limits>
+#include <mutex>
 #include <new>
 #include <string_view>
 
-#include <dlfcn.h>
 #include <unistd.h>
-
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -112,19 +114,9 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
     }
-
-    mNativeWindowLib = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
-    if (mNativeWindowLib) {
-        ANativeWindow_getBuffersDefaultDataSpace =
-                (int32_t(*)(ANativeWindow*))dlsym(mNativeWindowLib,
-                        "ANativeWindow_getBuffersDefaultDataSpace");
-    }
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
-    if (mNativeWindowLib) {
-        dlclose(mNativeWindowLib);
-    }
 }
 
 void PlatformEGLAndroid::terminate() noexcept {
@@ -139,38 +131,19 @@ bool PlatformEGLAndroid::makeCurrent(ContextType const type,
         SwapChain* drawSwapChain,
         SwapChain* readSwapChain) {
 
+    // remember the current swapchain for use in beginFrame()
+    mCurrentDrawSwapChain = static_cast<SwapChainEGLAndroid*>(drawSwapChain);
+
     // fast & safe path
     if (UTILS_LIKELY(!mAssertNativeWindowIsValid)) {
         return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
     }
 
     SwapChainEGL const* const dsc = static_cast<SwapChainEGL const*>(drawSwapChain);
-    if (ANativeWindow_getBuffersDefaultDataSpace) {
-        // anw can be nullptr if we're using a pbuffer surface
-        if (UTILS_LIKELY(dsc->nativeWindow)) {
-            // this a proxy of is_valid()
-            auto const result = ANativeWindow_getBuffersDefaultDataSpace(dsc->nativeWindow);
-            FILAMENT_CHECK_POSTCONDITION(result >= 0) << kNativeWindowInvalidMsg << dsc->sur;
-        }
-    } else {
-        // If we don't have ANativeWindow_getBuffersDefaultDataSpace, we revert to using the
-        // private query() call.
-        // Shadow version if the real ANativeWindow, so we can access the query() hook. Query
-        // has existed since forever, probably Android 1.0.
-        struct NativeWindow {
-            // is valid query enum value
-            enum { IS_VALID = 17 };
-            uint64_t pad[18];
-            int (* query)(ANativeWindow const*, int, int*);
-        } const* pWindow = reinterpret_cast<NativeWindow const*>(dsc->nativeWindow);
-        int isValid = 0;
-        if (UTILS_LIKELY(pWindow->query)) { // just in case it's nullptr
-            int const err = pWindow->query(dsc->nativeWindow, NativeWindow::IS_VALID, &isValid);
-            if (UTILS_LIKELY(err >= 0)) { // in case the IS_VALID enum is not recognized
-                // query call succeeded
-                FILAMENT_CHECK_POSTCONDITION(isValid) << kNativeWindowInvalidMsg << dsc->sur;
-            }
-        }
+    // anw can be nullptr if we're using a pbuffer surface
+    if (dsc->nativeWindow) {
+        auto [err, valid] = NativeWindow::isValid(dsc->nativeWindow);
+        FILAMENT_CHECK_POSTCONDITION(!err && valid) << kNativeWindowInvalidMsg << dsc->sur;
     }
     return PlatformEGL::makeCurrent(type, drawSwapChain, readSwapChain);
 }
@@ -179,14 +152,26 @@ void PlatformEGLAndroid::beginFrame(
         int64_t const monotonic_clock_ns,
         int64_t refreshIntervalNs,
         uint32_t const frameId) noexcept {
+    // associate the user frameid with the system frame id
+    setPresentFrameId(mCurrentDrawSwapChain, frameId);
+
     if (mPerformanceHintSession.isValid()) {
         if (refreshIntervalNs <= 0) {
-            // we're not provided with a target time, assume 16.67ms
+            // we're not provided with a target time, use the display period, if everything fails,
+            // assume 16.67ms
             refreshIntervalNs = 16'666'667;
+
+            CompositorTiming compositorTiming{};
+            bool const hasCompositorTiming =
+                    queryCompositorTiming(mCurrentDrawSwapChain, &compositorTiming);
+            if (hasCompositorTiming && compositorTiming.compositeInterval > 0) {
+                refreshIntervalNs = compositorTiming.compositeInterval;
+            }
         }
         mStartTimeOfActualWork = clock::time_point(std::chrono::nanoseconds(monotonic_clock_ns));
         mPerformanceHintSession.updateTargetWorkDuration(refreshIntervalNs);
     }
+
     PlatformEGL::beginFrame(monotonic_clock_ns, refreshIntervalNs, frameId);
 }
 
@@ -210,17 +195,21 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
     Driver* driver = PlatformEGL::createDriver(sharedContext, driverConfig);
     auto const extensions = GLUtils::split(eglQueryString(getEglDisplay(), EGL_EXTENSIONS));
 
+    ext.egl.ANDROID_presentation_time = extensions.has("EGL_ANDROID_presentation_time");
+    ext.egl.ANDROID_get_frame_timestamps = extensions.has("EGL_ANDROID_get_frame_timestamps");
+    ext.egl.ANDROID_native_fence_sync = extensions.has("EGL_ANDROID_native_fence_sync");
+
     eglGetNativeClientBufferANDROID =
             PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC(eglGetProcAddress(
                     "eglGetNativeClientBufferANDROID"));
 
-    if (extensions.has("EGL_ANDROID_presentation_time")) {
-        eglPresentationTimeANDROID =
-                PFNEGLPRESENTATIONTIMEANDROIDPROC(eglGetProcAddress(
-                        "eglPresentationTimeANDROID"));
+    if (ext.egl.ANDROID_presentation_time) {
+        eglGetNativeClientBufferANDROID =
+                PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC(eglGetProcAddress(
+                        "eglGetNativeClientBufferANDROID"));
     }
 
-    if (extensions.has("EGL_ANDROID_get_frame_timestamps")) {
+    if (ext.egl.ANDROID_get_frame_timestamps) {
         eglGetCompositorTimingSupportedANDROID =
                 PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC(eglGetProcAddress(
                         "eglGetCompositorTimingSupportedANDROID"));
@@ -236,9 +225,14 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
         eglGetFrameTimestampsANDROID =
                 PFNEGLGETFRAMETIMESTAMPSANDROIDPROC(eglGetProcAddress(
                         "eglGetFrameTimestampsANDROID"));
+    }
+
+    if (ext.egl.ANDROID_native_fence_sync) {
         eglDupNativeFenceFDANDROID =
                 PFNEGLDUPNATIVEFENCEFDANDROIDPROC(eglGetProcAddress(
                         "eglDupNativeFenceFDANDROID"));
+    } else {
+        LOG(ERROR) << "EGL_ANDROID_native_fence_sync not supported!";
     }
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
@@ -252,6 +246,128 @@ PlatformEGLAndroid::ExternalImageEGLAndroid::~ExternalImageEGLAndroid() {
             AHardwareBuffer_release(aHardwareBuffer);
         }
     }
+}
+
+bool PlatformEGLAndroid::isCompositorTimingSupported() const noexcept {
+    return true;
+}
+
+bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
+        CompositorTiming* outCompositorTiming) const noexcept {
+    if (!swapchain) {
+        return false;
+    }
+
+    if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
+        EGLSurface sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
+        if (sur == EGL_NO_SURFACE) {
+            return false;
+        }
+
+        std::array<EGLnsecsANDROID, 3> values;
+        constexpr std::array<EGLint, 3> names{
+            EGL_COMPOSITE_DEADLINE_ANDROID,
+            EGL_COMPOSITE_INTERVAL_ANDROID,
+            EGL_COMPOSITE_TO_PRESENT_LATENCY_ANDROID
+        };
+        EGLBoolean const success = eglGetCompositorTimingANDROID(getEglDisplay(), sur,
+                names.size(), names.data(), values.data());
+        if (!success) {
+            return false;
+        }
+        outCompositorTiming->compositeDeadline = values[0];
+        outCompositorTiming->compositeInterval = values[1];
+        outCompositorTiming->compositeToPresentLatency = values[2];
+        return true;
+    }
+
+    // fallback to private APIs
+    auto const anw = static_cast<SwapChainEGL const *>(swapchain)->nativeWindow;
+    int const status = NativeWindow::getCompositorTiming(anw,
+            &outCompositorTiming->compositeDeadline,
+            &outCompositorTiming->compositeInterval,
+            &outCompositorTiming->compositeToPresentLatency);
+    if (status == 0) {
+        return true;
+    }
+
+    return PlatformEGL::queryCompositorTiming(swapchain, outCompositorTiming);
+}
+
+bool PlatformEGLAndroid::setPresentFrameId(SwapChain const* swapchain,
+        uint64_t const frameId) noexcept {
+    if (swapchain) {
+        SwapChainEGLAndroid const* const sc = static_cast<SwapChainEGLAndroid const*>(swapchain);
+        return sc->setPresentFrameId(frameId);
+    }
+    return PlatformEGL::setPresentFrameId(swapchain, frameId);
+}
+
+bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) const noexcept {
+
+    if (!swapchain) {
+        return false;
+    }
+
+    SwapChainEGLAndroid const* const sc = static_cast<SwapChainEGLAndroid const*>(swapchain);
+    uint64_t const hwFrameId = sc->getFrameId(frameId);
+    if (hwFrameId == std::numeric_limits<uint64_t>::max()) {
+        return false;
+    }
+
+    if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
+        EGLSurface const sur = sc->sur;
+        if (sur == EGL_NO_SURFACE) {
+            return false;
+        }
+
+        std::array<EGLnsecsANDROID, 9> values;
+        constexpr std::array<EGLint, 9> names{
+            EGL_REQUESTED_PRESENT_TIME_ANDROID,                 // requestedPresentTime
+            EGL_RENDERING_COMPLETE_TIME_ANDROID,                // acquireTime
+            EGL_COMPOSITION_LATCH_TIME_ANDROID,                 // latchTime
+            EGL_FIRST_COMPOSITION_START_TIME_ANDROID,           // firstRefreshStartTime
+            EGL_LAST_COMPOSITION_START_TIME_ANDROID,            // lastRefreshStartTime
+            EGL_FIRST_COMPOSITION_GPU_FINISHED_TIME_ANDROID,    // gpuCompositionDoneTime
+            EGL_DISPLAY_PRESENT_TIME_ANDROID,                   // displayPresentTime
+            EGL_DEQUEUE_READY_TIME_ANDROID,                     // dequeueReadyTime
+            EGL_READS_DONE_TIME_ANDROID,                        // releaseTime
+        };
+        EGLBoolean const success = eglGetFrameTimestampsANDROID(getEglDisplay(), sur, hwFrameId,
+                names.size(), names.data(), values.data());
+        if (!success) {
+            return false;
+        }
+        outFrameTimestamps->requestedPresentTime = values[0];
+        outFrameTimestamps->acquireTime = values[1];
+        outFrameTimestamps->latchTime = values[2];
+        outFrameTimestamps->firstRefreshStartTime = values[3];
+        outFrameTimestamps->lastRefreshStartTime = values[4];
+        outFrameTimestamps->gpuCompositionDoneTime = values[5];
+        outFrameTimestamps->displayPresentTime = values[6];
+        outFrameTimestamps->dequeueReadyTime = values[7];
+        outFrameTimestamps->releaseTime = values[8];
+        return true;
+    }
+
+    // fallback to private APIs
+    auto const anw = sc->nativeWindow;
+    int const status = NativeWindow::getFrameTimestamps(anw, hwFrameId,
+            &outFrameTimestamps->requestedPresentTime,
+            &outFrameTimestamps->acquireTime,
+            &outFrameTimestamps->latchTime,
+            &outFrameTimestamps->firstRefreshStartTime,
+            &outFrameTimestamps->lastRefreshStartTime,
+            &outFrameTimestamps->gpuCompositionDoneTime,
+            &outFrameTimestamps->displayPresentTime,
+            &outFrameTimestamps->dequeueReadyTime,
+            &outFrameTimestamps->releaseTime);
+    if (status == 0) {
+        return true;
+    }
+
+    return PlatformEGL::queryFrameTimestamps(swapchain, frameId, outFrameTimestamps);
 }
 
 Platform::SwapChain* PlatformEGLAndroid::createSwapChain(void* nativeWindow, uint64_t const flags) {
@@ -410,7 +526,7 @@ bool PlatformEGLAndroid::setImage(ExternalImageEGLAndroid const* eglExternalImag
 void PlatformEGLAndroid::setPresentationTime(int64_t const presentationTimeInNanosecond) noexcept {
     EGLSurface const currentDrawSurface = eglGetCurrentSurface(EGL_DRAW);
     if (currentDrawSurface != EGL_NO_SURFACE) {
-        if (eglPresentationTimeANDROID) {
+        if (UTILS_UNLIKELY(ext.egl.ANDROID_presentation_time)) {
             eglPresentationTimeANDROID(
                     getEglDisplay(),
                     currentDrawSurface,
@@ -434,6 +550,11 @@ Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
 
 bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
     assert_invariant(sync && fd);
+
+    if (UTILS_UNLIKELY(!ext.egl.ANDROID_native_fence_sync)) {
+        return false;
+    }
+
     SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
     *fd = eglDupNativeFenceFDANDROID(getEglDisplay(), eglSync.sync);
     // In the case where there was no native FD, -1 is returned. Return false
@@ -528,6 +649,14 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const sou
 PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
         void* nativeWindow, uint64_t const flags)
     : SwapChainEGL(platform, nativeWindow, flags) {
+    if (UTILS_LIKELY(platform.ext.egl.ANDROID_get_frame_timestamps)) {
+        if (sur != EGL_NO_SURFACE) {
+            // we ignore the result, it doesn't matter much if it fails
+            eglSurfaceAttrib(platform.getEglDisplay(), sur, EGL_TIMESTAMPS_ANDROID, EGL_TRUE);
+        }
+    } else {
+        NativeWindow::enableFrameTimestamps(EGLNativeWindowType(nativeWindow), true);
+    }
 }
 
 PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
@@ -537,6 +666,14 @@ PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid 
 
 void PlatformEGLAndroid::SwapChainEGLAndroid::terminate(PlatformEGLAndroid& platform) {
     SwapChainEGL::terminate(platform);
+}
+
+bool PlatformEGLAndroid::SwapChainEGLAndroid::setPresentFrameId(uint64_t frameId) const noexcept {
+    return mImpl.setPresentFrameId(nativeWindow, frameId);
+}
+
+uint64_t PlatformEGLAndroid::SwapChainEGLAndroid::getFrameId(uint64_t const frameId) const noexcept {
+    return mImpl.getFrameId(frameId);
 }
 
 } // namespace filament::backend
