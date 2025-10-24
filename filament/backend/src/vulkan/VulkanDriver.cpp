@@ -60,19 +60,6 @@ namespace filament::backend {
 
 namespace {
 
-size_t gcd(size_t a, size_t b) {
-    while (b) {
-        a = a % b;
-        std::swap(a, b);
-    }
-    return a;
-}
-
-size_t lcm(size_t a, size_t b) {
-    if (a == 0 || b == 0) return 0;
-    return (a / gcd(a, b)) * b;
-}
-
 VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevice,
         VkDevice device) {
     VmaAllocator allocator;
@@ -1403,8 +1390,8 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
 }
 
 size_t VulkanDriver::getMaxUniformBufferSize() {
-    return lcm(mContext.getPhysicalDeviceLimits().maxUniformBufferRange,
-            mContext.getPhysicalDeviceLimits().nonCoherentAtomSize);
+    return std::max(mContext.getPhysicalDeviceLimits().maxUniformBufferRange,
+            static_cast<uint32_t>(mContext.getPhysicalDeviceLimits().nonCoherentAtomSize));
 }
 
 size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
