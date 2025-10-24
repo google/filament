@@ -9,3 +9,4 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 - materials: Add a new API getParameterTransformName that will return the value of the transformName field of a sampler
 parameter. [⚠️ **Recompile Materials**]
+- Metal: Add support for the `SwapChain::CONFIG_MSAA_4_SAMPLES` flag.
