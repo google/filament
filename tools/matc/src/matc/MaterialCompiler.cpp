@@ -96,6 +96,10 @@ bool MaterialCompiler::run(const matp::Config& config) {
     std::strncpy(modifiedBuffer.get(), result.text.c_str(), size);
     buffer = std::move(modifiedBuffer);
 
+    if (config.getOutputFormat() == matp::Config::OutputFormat::MAT) {
+        return writeMat(buffer, size, config);
+    }
+
     mParser.processTemplateSubstitutions(config, size, buffer);
 
     MaterialBuilder::init();
