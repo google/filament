@@ -37,6 +37,8 @@
             "name": "Bloom",
             "description": "Bloom",
             "apply_presets": ["base", "bloom_models"],
+            // Do not include "webgpu" in the following backend since it is flaky (b/454921221)
+            "backends": ["opengl", "vulkan"],
             "rendering": {
                 "view.bloom.enabled": true
             }
