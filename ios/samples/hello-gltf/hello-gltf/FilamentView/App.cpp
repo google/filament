@@ -158,6 +158,7 @@ void App::setupMesh() {
     delete resourceLoader;
     delete stbDecoder;
     delete ktxDecoder;
+    delete webpDecoder;
 
     scene->addEntities(app.asset->getEntities(), app.asset->getEntityCount());
 }
