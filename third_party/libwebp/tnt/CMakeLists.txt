@@ -22,5 +22,10 @@ set(WEBP_BUILD_EXTRAS OFF)
 set(WEBP_BUILD_WEBP_JS OFF)
 set(WEBP_BUILD_FUZZTEST OFF)
 
+set(TARGET webpdecoder)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/..)
-target_include_directories(webpdecoder PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../src>)
+target_include_directories(${TARGET} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../src>)
+set_target_properties(${TARGET} PROPERTIES FOLDER ThirdParty)
+
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

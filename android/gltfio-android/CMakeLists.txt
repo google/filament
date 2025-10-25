@@ -30,6 +30,10 @@ add_library(stb STATIC IMPORTED)
 set_target_properties(stb PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libstb.a)
 
+add_library(webpdecoder STATIC IMPORTED)
+set_target_properties(webpdecoder PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libwebpdecoder.a)
+
 add_library(basis_transcoder STATIC IMPORTED)
 set_target_properties(basis_transcoder PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbasis_transcoder.a)
@@ -103,6 +107,7 @@ target_link_libraries(gltfio-jni
         PRIVATE basis_transcoder
         PRIVATE uberarchive
         PRIVATE dracodec
+        PRIVATE webpdecoder
         PRIVATE utils
         PRIVATE uberzlib
         PRIVATE perfetto        # needed only when FILAMENT_ENABLE_PERFETTO is defined
