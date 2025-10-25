@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# converted instructions and command listing from README into shell script.
 owner=jkuhlmann
 project=cgltf
 tag=v1.15
