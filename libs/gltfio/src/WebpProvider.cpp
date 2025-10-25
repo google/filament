@@ -36,6 +36,10 @@ using std::unique_ptr;
 
 namespace filament::gltfio {
 
+//
+// cribbed entirely from StbProvider. Only changes are use of WebPGetInfo, WebpDecode, WebpFree
+// instead of the stbi equivalents.
+//
 class WebpProvider final : public TextureProvider {
 public:
     WebpProvider(Engine* engine);
