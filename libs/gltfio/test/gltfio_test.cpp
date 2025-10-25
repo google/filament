@@ -44,6 +44,7 @@ using namespace gltfio;
 using namespace utils;
 
 char const* ANIMATED_MORPH_CUBE_GLB = "AnimatedMorphCube.glb";
+char const* DAMAGED_HELMET_WEBP_GLB = "DamagedHelmetWebp.glb";
 
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
@@ -132,7 +133,7 @@ protected:
         mMaterialProvider = createUbershaderProvider(mEngine, UBERARCHIVE_DEFAULT_DATA,
                 UBERARCHIVE_DEFAULT_SIZE);
 
-        for (auto fname: {ANIMATED_MORPH_CUBE_GLB}) {
+        for (auto fname: {ANIMATED_MORPH_CUBE_GLB, DAMAGED_HELMET_WEBP_GLB}) {
             Path gltfFile = Path::getCurrentExecutable().getParent() + Path(fname);
             mData[fname] =
                     std::make_unique<glTFData>(gltfFile, mEngine, mMaterialProvider, mNameManager);
@@ -238,6 +239,18 @@ TEST_F(glTFIOTest, AnimatedMorphCubeRenderables) {
     // The number of vertices for the morph target should be the face vertices in a cube =>
     // (6 faces * 4 vertices per face) = 24 vertices
     EXPECT_EQ(morphTargetBuffer->getVertexCount(), 24u);
+}
+
+TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
+    FilamentAsset const& damagedHelmetAsset = *mData[DAMAGED_HELMET_WEBP_GLB]->getAsset();
+    Entity const* renderables = damagedHelmetAsset.getRenderableEntities();
+    auto& renderableManager = mEngine->getRenderableManager();
+
+    auto inst = renderableManager.getInstance(renderables[0]);
+    auto materialInst = renderableManager.getMaterialInstanceAt(inst, 0);
+    std::string_view name{materialInst->getName()};
+    EXPECT_EQ(name, "Material_MR");
+    EXPECT_EQ(mEngine->getTextureCount() == 8, true);
 }
 
 int main(int argc, char** argv) {
