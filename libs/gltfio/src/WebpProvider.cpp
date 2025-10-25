@@ -136,7 +136,7 @@ Texture* WebpProvider::pushTexture(const uint8_t* data, size_t byteCount,
         auto& source = info->sourceBuffer;
         int width, height;
 
-        auto texels = WebPDecodeRGBA(source.data(), source.size(), &width, &height);
+        uint8_t* texels = WebPDecodeRGBA(source.data(), source.size(), &width, &height);
 
         // Test asynchronous loading by uncommenting this line.
         // std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10000));
@@ -257,7 +257,7 @@ void WebpProvider::decodeSingleTexture() {
         if (info->state == TextureState::DECODING) {
             auto& source = info->sourceBuffer;
             int width, height;
-            auto texels = WebPDecodeRGBA(source.data(), source.size(), &width, &height);
+            uint8_t* texels = WebPDecodeRGBA(source.data(), source.size(), &width, &height);
             source.clear();
             source.shrink_to_fit();
             info->decodedTexelsBaseMipmap.store(texels ? intptr_t(texels) : DECODING_ERROR);
