@@ -77,6 +77,7 @@ set(GLTFIO_INCLUDE_DIRS
         ../../third_party/cgltf
         ../../third_party/robin-map
         ../../third_party/stb
+        ../../third_party/libwebp/src
         ../../libs/utils/include
         ../../libs/ktxreader/include
 )

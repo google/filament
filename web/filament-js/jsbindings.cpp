@@ -2036,6 +2036,7 @@ struct UbershaderProvider {
 
 struct StbProvider { TextureProvider* provider; };
 struct Ktx2Provider { TextureProvider* provider; };
+struct WebpProvider { TextureProvider* provider; };
 
 class_<UbershaderProvider>("gltfio$UbershaderProvider")
     .constructor(EMBIND_LAMBDA(UbershaderProvider, (Engine* engine), {
@@ -2052,6 +2053,11 @@ class_<StbProvider>("gltfio$StbProvider")
 class_<Ktx2Provider>("gltfio$Ktx2Provider")
     .constructor(EMBIND_LAMBDA(Ktx2Provider, (Engine* engine), {
         return Ktx2Provider { createKtx2Provider(engine) };
+    }));
+
+class_<WebpProvider>("gltfio$WebpProvider")
+    .constructor(EMBIND_LAMBDA(WebpProvider, (Engine* engine), {
+        return WebpProvider { createWebpProvider(engine) };
     }));
 
 class_<AssetLoader>("gltfio$AssetLoader")
@@ -2111,6 +2117,11 @@ class_<ResourceLoader>("gltfio$ResourceLoader")
 
     .function("addKtx2Provider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
             Ktx2Provider provider), {
+        self->addTextureProvider(mime.c_str(), provider.provider);
+    }), allow_raw_pointers())
+
+    .function("addWebpProvider", EMBIND_LAMBDA(void, (ResourceLoader* self, std::string mime,
+            WebpProvider provider), {
         self->addTextureProvider(mime.c_str(), provider.provider);
     }), allow_raw_pointers())
 

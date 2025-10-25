@@ -58,9 +58,11 @@ public:
           mResourceLoader(new ResourceLoader({
                   engine, filename.getAbsolutePath().c_str(), false, /* normalizeSkinningWeights */
           })),
-          mStbDecoder(createStbProvider(engine)), mKtxDecoder(createKtx2Provider(engine)) {
+          mStbDecoder(createStbProvider(engine)), mKtxDecoder(createKtx2Provider(engine)),
+          mWebpDecoder(createWebpProvider(engine)) {
         mResourceLoader->addTextureProvider("image/png", mStbDecoder);
         mResourceLoader->addTextureProvider("image/ktx2", mKtxDecoder);
+        mResourceLoader->addTextureProvider("image/webp", mWebpDecoder);
 
         long contentSize = static_cast<long>(getFileSize(filename.c_str()));
         if (contentSize <= 0) {
@@ -99,6 +101,7 @@ public:
         delete mResourceLoader;
         delete mStbDecoder;
         delete mKtxDecoder;
+        delete mWebpDecoder;
 
         AssetLoader::destroy(&mAssetLoader);
     }
@@ -109,6 +112,7 @@ public:
     ResourceLoader* mResourceLoader = nullptr;
     TextureProvider* mStbDecoder = nullptr;
     TextureProvider* mKtxDecoder = nullptr;
+    TextureProvider* mWebpDecoder = nullptr;
     FilamentAsset* mAsset = nullptr;
 };
 

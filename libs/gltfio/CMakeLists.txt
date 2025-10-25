@@ -49,6 +49,7 @@ set(SRCS
         src/UbershaderProvider.cpp
         src/Utility.cpp
         src/Utility.h
+        src/WebpProvider.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/downcast.h
@@ -182,7 +183,7 @@ set_target_properties(uberarchive PROPERTIES FOLDER Libs)
 # ==================================================================================================
 
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
-link_libraries(math utils filament cgltf stb ktxreader geometry tsl uberzlib)
+link_libraries(math utils filament cgltf stb ktxreader webpdecoder geometry tsl uberzlib)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 

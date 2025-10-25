@@ -179,6 +179,11 @@ TextureProvider* createStbProvider(filament::Engine* engine);
  */
 TextureProvider* createKtx2Provider(filament::Engine* engine);
 
+/**
+ * Creates a decoder that can handle "image/webp" lossless and lossy content
+ */
+TextureProvider* createWebpProvider(filament::Engine* engine);
+
 } // namespace filament::gltfio
 
 template<> struct utils::EnableBitMaskOperators<filament::gltfio::TextureProvider::TextureFlags>
