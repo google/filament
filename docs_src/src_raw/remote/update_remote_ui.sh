@@ -8,10 +8,10 @@ tar -xvzf filament-release-web.tgz
 rm filament-release-web.tgz
 rm filament-web.zip
 rm filament.d.ts
-cp ../../web/samples/remote.html index.html
+cp ../../../web/samples/remote.html index.html
 
 popd
 
 git status
 echo ""
-echo "All done! Next, make a git commit that updates docs/remote."
+echo "All done! Next, commit the changed files"
