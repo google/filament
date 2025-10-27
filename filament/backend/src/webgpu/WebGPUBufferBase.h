@@ -55,6 +55,8 @@ private:
     // of 4. This member is used to pad the data if the source size is not a multiple of 4.
     std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 
+    std::vector<std::unique_ptr<wgpu::Buffer>> mStagingBuffers;
+
     const wgpu::Device& mDevice;
 };
 
