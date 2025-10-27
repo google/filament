@@ -58,6 +58,8 @@ option(FILAMENT_USE_ABSEIL_LOGGING "Use Abseil to log, may increase binary size"
 
 option(FILAMENT_ENABLE_EXPERIMENTAL_GCC_SUPPORT "Enable GCC support (unsupported)" OFF)
 
+option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support for Filament (builds libwebp when ON)" OFF)
+
 # This is to disable GTAO for the short-term while we investigate a way to better manage size increases.
 # On the regular filament build (where size is of less concern), we enable GTAO by default.
 option(FILAMENT_DISABLE_GTAO "Disable GTAO" OFF)
@@ -837,6 +839,7 @@ add_subdirectory(${EXTERNAL}/getopt)
 add_subdirectory(${EXTERNAL}/perfetto/tnt)
 add_subdirectory(${EXTERNAL}/zstd/tnt)
 
+
 # Note that this has to be placed after mikktspace in order for combine_static_libs to work.
 add_subdirectory(${LIBRARIES}/geometry)
 
@@ -857,6 +860,11 @@ endif()
 
 if (FILAMENT_ENABLE_FGVIEWER)
     add_subdirectory(${LIBRARIES}/fgviewer)
+endif()
+
+if (FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    add_subdirectory(${EXTERNAL}/libwebp/tnt)
+    add_definitions(-DFILAMENT_SUPPORTS_WEBP_TEXTURES)
 endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
