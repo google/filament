@@ -143,6 +143,7 @@ public:
 
     NSUInteger getSurfaceWidth() const;
     NSUInteger getSurfaceHeight() const;
+    NSUInteger getSampleCount() const;
 
     bool isPixelBuffer() const { return type == SwapChainType::CVPIXELBUFFERREF; }
 
@@ -423,6 +424,10 @@ public:
     MetalAttachment getDepthAttachment();
     MetalAttachment getStencilAttachment();
 
+    // Returns the number of samples that should be used in the pipeline state that renders to this
+    // render target. Takes into account "automagic" resolve and MSAA SwapChains.
+    NSUInteger getSampleCount() const;
+
 private:
 
     static MTLLoadAction getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
@@ -436,6 +441,7 @@ private:
     MetalAttachment depth = {};
     MetalAttachment stencil = {};
     math::uint2 attachmentSize = {};
+    uint8_t samples = 1;
 };
 
 // MetalFence is used to implement both Fences and Syncs.

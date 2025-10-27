@@ -214,6 +214,14 @@ NSUInteger MetalSwapChain::getSurfaceHeight() const {
     return (NSUInteger) layer.drawableSize.height;
 }
 
+
+NSUInteger MetalSwapChain::getSampleCount() const {
+    if (flags & flags & SwapChain::CONFIG_MSAA_4_SAMPLES) {
+        return 4u;
+    }
+    return 1u;
+}
+
 bool MetalSwapChain::isAbandoned() const {
     return context.currentFrame < abandonedUntilFrame;
 }
@@ -1030,7 +1038,8 @@ MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint
         uint8_t samples, AttachmentInfo colorAttachments[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
         AttachmentInfo depthAttachment, AttachmentInfo stencilAttachment)
         : HwRenderTarget(width, height),
-          context(context) {
+          context(context),
+          samples(samples) {
     math::uint2 tmin = { std::numeric_limits<uint32_t>::max() };
     UTILS_UNUSED_IN_RELEASE math::uint2 tmax = { 0 };
     UTILS_UNUSED_IN_RELEASE size_t attachmentCount = 0;
@@ -1292,6 +1301,14 @@ MetalAttachment MetalRenderTarget::getStencilAttachment() {
         return context->currentDrawSwapChain->acquireStencilTexture();
     }
     return stencil;
+}
+
+NSUInteger MetalRenderTarget::getSampleCount() const {
+    if (defaultRenderTarget) {
+        assert_invariant(context->currentDrawSwapChain);
+        return context->currentDrawSwapChain->getSampleCount();
+    }
+    return samples;
 }
 
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,

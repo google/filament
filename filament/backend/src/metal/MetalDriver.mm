@@ -1820,35 +1820,29 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
     auto [fragment, vertex] = functions.getRasterFunctions();
 
     // Pipeline state
-    std::vector<NSUInteger> sampleCounts;
+    MetalRenderTarget* const rt = mContext->currentRenderTarget;
     MTLPixelFormat colorPixelFormat[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = { MTLPixelFormatInvalid };
     for (size_t i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
-        const auto& attachment = mContext->currentRenderTarget->getDrawColorAttachment(i);
+        const auto& attachment = rt->getDrawColorAttachment(i);
         if (!attachment) {
             continue;
         }
         colorPixelFormat[i] = attachment.getPixelFormat();
-        sampleCounts.push_back(attachment.getSampleCount());
+        assert_invariant(attachment.getSampleCount() == rt->getSampleCount());
     }
     MTLPixelFormat depthPixelFormat = MTLPixelFormatInvalid;
-    const auto& depthAttachment = mContext->currentRenderTarget->getDepthAttachment();
+    const auto& depthAttachment = rt->getDepthAttachment();
     if (depthAttachment) {
         depthPixelFormat = depthAttachment.getPixelFormat();
-        sampleCounts.push_back(depthAttachment.getSampleCount());
+        assert_invariant(depthAttachment.getSampleCount() == rt->getSampleCount());
     }
     MTLPixelFormat stencilPixelFormat = MTLPixelFormatInvalid;
-    const auto& stencilAttachment = mContext->currentRenderTarget->getStencilAttachment();
+    const auto& stencilAttachment = rt->getStencilAttachment();
     if (stencilAttachment) {
         stencilPixelFormat = stencilAttachment.getPixelFormat();
-        sampleCounts.push_back(stencilAttachment.getSampleCount());
         assert_invariant(isMetalFormatStencil(stencilPixelFormat));
+        assert_invariant(stencilAttachment.getSampleCount() == rt->getSampleCount());
     }
-    UTILS_UNUSED_IN_RELEASE bool allSampleCountsEqual =
-            std::adjacent_find(sampleCounts.begin(), sampleCounts.end(), std::not_equal_to<>()) ==
-            sampleCounts.end();
-    assert_invariant(sampleCounts.size() > 0);
-    assert_invariant(allSampleCountsEqual);
-    NSUInteger sampleCount = sampleCounts.front();
     MetalPipelineState const pipelineState {
         .vertexFunction = vertex,
         .fragmentFunction = fragment,
@@ -1865,7 +1859,7 @@ void MetalDriver::bindPipeline(PipelineState const& ps) {
         },
         .depthAttachmentPixelFormat = depthPixelFormat,
         .stencilAttachmentPixelFormat = stencilPixelFormat,
-        .sampleCount = sampleCount,
+        .sampleCount = rt->getSampleCount(),
         .blendState = BlendState {
             .alphaBlendOperation = getMetalBlendOperation(rs.blendEquationAlpha),
             .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),
