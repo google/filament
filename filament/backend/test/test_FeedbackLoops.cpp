@@ -109,19 +109,18 @@ TEST_F(BackendTest, FeedbackLoops) {
     SKIP_IF(Backend::VULKAN, "Image is unexpectedly darker, see b/453776546");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
                 SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-        Shader shader = Shader(api, cleanup, ShaderConfig {
+        Shader shader = Shader(api, *mCleanup, ShaderConfig {
             .vertexShader = fullscreenVs,
             .fragmentShader = fullscreenFs,
             .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}, {"Params"}}
@@ -131,18 +130,18 @@ TEST_F(BackendTest, FeedbackLoops) {
 
         // Create a texture.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(
             SamplerType::SAMPLER_2D, kNumLevels, kTexFormat, 1, kTexWidth, kTexHeight, 1, usage));
 
         // Create ubo
-        auto ubuffer = cleanup.add(api.createBufferObject(sizeof(MaterialParams),
+        auto ubuffer = addCleanup(api.createBufferObject(sizeof(MaterialParams),
                 BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
 
         // Create a RenderTarget for each miplevel.
         Handle<HwRenderTarget> renderTargets[kNumLevels];
         for (uint8_t level = 0; level < kNumLevels; level++) {
             LOG(INFO) << "Level " << int(level) << ": " << (kTexWidth >> level) << "x" << (kTexHeight >> level);
-            renderTargets[level] = cleanup.add(api.createRenderTarget( TargetBufferFlags::COLOR,
+            renderTargets[level] = addCleanup(api.createRenderTarget( TargetBufferFlags::COLOR,
                     kTexWidth >> level, kTexHeight >> level, 1, 0, { texture, level, 0 }, {}, {}));
         }
 
@@ -176,13 +175,12 @@ TEST_F(BackendTest, FeedbackLoops) {
             params.flags.discardStart = TargetBufferFlags::ALL;
             state.rasterState.disableBlending();
             for (int targetLevel = 1; targetLevel < kNumLevels; targetLevel++) {
-                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel - 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
                 auto descriptorSet = shader.createDescriptorSet(api);
-                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                auto textureView = addCleanup(api.createTextureView(texture, sourceLevel, 1));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
@@ -213,13 +211,12 @@ TEST_F(BackendTest, FeedbackLoops) {
             state.rasterState.blendFunctionSrcRGB = BlendFunction::ONE;
             state.rasterState.blendFunctionDstRGB = BlendFunction::ONE;
             for (int targetLevel = kNumLevels - 2; targetLevel >= 0; targetLevel--) {
-                Cleanup passCleanup(api);
                 const uint32_t sourceLevel = targetLevel + 1;
                 params.viewport.width = kTexWidth >> targetLevel;
                 params.viewport.height = kTexHeight >> targetLevel;
 
                 auto descriptorSet = shader.createDescriptorSet(api);
-                auto textureView = passCleanup.add(api.createTextureView(texture, sourceLevel, 1));
+                auto textureView = addCleanup(api.createTextureView(texture, sourceLevel, 1));
                 api.updateDescriptorSetTexture(descriptorSet, 0, textureView, SamplerParams{
                         .filterMag = SamplerMagFilter::LINEAR,
                         .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST
