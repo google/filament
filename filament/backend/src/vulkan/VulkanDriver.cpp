@@ -1773,8 +1773,13 @@ bool VulkanDriver::isCompositorTimingSupported() {
     return false;
 }
 
+bool VulkanDriver::queryCompositorTiming(SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
 bool VulkanDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
-        backend::FrameTimestamps* outFrameTimestamps) {
+        FrameTimestamps* outFrameTimestamps) {
     return false;
 }
 

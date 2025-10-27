@@ -110,7 +110,7 @@ public:
 
         /**
          * The time delta [ns] between the start of composition and the expected present time of
-         *  that composition. This can be used to estimate the latency of the actual present time.
+         * that composition. This can be used to estimate the latency of the actual present time.
          */
         duration_ns compositeToPresentLatency;
     };

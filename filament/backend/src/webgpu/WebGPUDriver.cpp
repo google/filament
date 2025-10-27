@@ -1277,6 +1277,11 @@ bool WebGPUDriver::isCompositorTimingSupported() {
     return false;
 }
 
+bool WebGPUDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
 bool WebGPUDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
         FrameTimestamps* outFrameTimestamps) {
     return false;

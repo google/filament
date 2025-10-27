@@ -1481,8 +1481,13 @@ bool MetalDriver::isCompositorTimingSupported() {
     return false;
 }
 
+bool MetalDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
 bool MetalDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
-        backend::FrameTimestamps* outFrameTimestamps) {
+        FrameTimestamps* outFrameTimestamps) {
     return false;
 }
 

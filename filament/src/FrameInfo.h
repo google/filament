@@ -57,15 +57,30 @@ struct FrameInfoImpl : public details::FrameInfo {
     using clock = std::chrono::steady_clock;
     using time_point = clock::time_point;
     uint32_t frameId;
-    time_point beginFrame{};           // main thread beginFrame time
-    time_point endFrame{};             // main thread endFrame time
-    time_point backendBeginFrame{};    // backend thread beginFrame time (makeCurrent time)
-    time_point backendEndFrame{};      // backend thread endFrame time (present time)
-    time_point gpuFrameComplete{};     // the frame is done rendering on the gpu
-    time_point vsync{};                // vsync time
+    // main thread beginFrame time
+    time_point beginFrame{};
+    // main thread endFrame time
+    time_point endFrame{};
+    // backend thread beginFrame time (makeCurrent time)
+    time_point backendBeginFrame{};
+    // backend thread endFrame time (present time)
+    time_point backendEndFrame{};
+    // the frame is done rendering on the gpu
+    time_point gpuFrameComplete{};
+    // vsync time
+    time_point vsync{};
+    // Actual presentation time of this frame
     backend::FrameTimestamps::time_point_ns displayPresent{ backend::FrameTimestamps::PENDING };
-    backend::FenceHandle fence{};    // the fence used for gpuFrameComplete
-    std::atomic_bool ready{};        // true once backend thread has populated its data
+    // deadline for queuing a frame [ns]
+    backend::CompositorTiming::time_point_ns presentDeadline{};
+    // display refresh rate [ns]
+    backend::CompositorTiming::duration_ns displayPresentInterval{};
+    // time between the start of composition and the expected present time [ns]
+    backend::CompositorTiming::duration_ns compositionToPresentLatency{};
+    // the fence used for gpuFrameComplete
+    backend::FenceHandle fence{};
+    // true once backend thread has populated its data
+    std::atomic_bool ready{};
     explicit FrameInfoImpl(uint32_t const id) noexcept
         : frameId(id) {
     }
@@ -244,8 +259,8 @@ public:
     void terminate(FEngine& engine) noexcept;
 
     // call this immediately after "make current"
-    void beginFrame(backend::DriverApi& driver, Config const& config,
-            uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
+    void beginFrame(FSwapChain* swapChain, backend::DriverApi& driver,
+            Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
 
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;

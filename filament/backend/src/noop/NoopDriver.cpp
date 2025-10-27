@@ -454,6 +454,11 @@ bool NoopDriver::isCompositorTimingSupported() {
     return false;
 }
 
+bool NoopDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        backend::CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
 bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
         FrameTimestamps* outFrameTimestamps) {
     return false;

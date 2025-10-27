@@ -392,9 +392,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
 
-        mFrameInfoManager.updateUserHistory(mSwapChain, driver);
-        mFrameInfoManager.beginFrame(driver, {
-                .historySize = mFrameRateOptions.history
+        mFrameInfoManager.updateUserHistory(swapChain, driver);
+        mFrameInfoManager.beginFrame(swapChain, driver, {
+            .historySize = mFrameRateOptions.history
         }, mFrameId, appVsync);
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)

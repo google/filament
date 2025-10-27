@@ -16,6 +16,8 @@
 
 #include "FrameInfo.h"
 
+#include <details/Engine.h>
+
 #include <filament/Renderer.h>
 
 #include <backend/DriverEnums.h>
@@ -27,17 +29,18 @@
 #include <utils/debug.h>
 #include <utils/FixedCapacityVector.h>
 #include <utils/JobSystem.h>
+#include <utils/Logger.h>
 
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <ratio>
 #include <utility>
 
 #include <stdint.h>
 #include <stddef.h>
-#include <details/Engine.h>
 
 namespace filament {
 
@@ -85,8 +88,10 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
     mJobQueue.drainAndExit();
 }
 
-void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config,
-        uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept {
+void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
+        Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point const vsync) noexcept {
+    auto const now = std::chrono::steady_clock::now();
+
     auto& history = mFrameTimeHistory;
     // don't exceed the capacity, drop the oldest entry
     if (UTILS_LIKELY(history.size() == history.capacity())) {
@@ -100,7 +105,20 @@ void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config,
 
     // store the current time
     front.vsync = vsync;
-    front.beginFrame = std::chrono::steady_clock::now();
+    front.beginFrame = now;
+
+    // store compositor timings if supported
+    CompositorTiming compositorTiming{};
+    if (driver.isCompositorTimingSupported() &&
+        driver.queryCompositorTiming(swapChain->getHwHandle(), &compositorTiming)) {
+        front.presentDeadline = compositorTiming.compositeDeadline;
+        front.displayPresentInterval = compositorTiming.compositeInterval;
+        front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
+    } else {
+        front.presentDeadline = Renderer::FrameInfo::INVALID;
+        front.displayPresentInterval = Renderer::FrameInfo::INVALID;
+        front.compositionToPresentLatency = Renderer::FrameInfo::INVALID;
+    }
 
     if (mHasTimerQueries) {
         // references are not invalidated by CircularQueue<>, so we can associate a reference to
@@ -285,17 +303,28 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
 
         using namespace std::chrono;
         // can't throw by construction
+
+        auto toDuration = [](details::FrameInfo::duration const d) {
+            return duration_cast<nanoseconds>(d).count();
+        };
+
+        auto toTimepoint = [](FrameInfoImpl::time_point const tp) {
+            return duration_cast<nanoseconds>(tp.time_since_epoch()).count();
+        };
+
         result.push_back({
-                entry.frameId,
-                duration_cast<nanoseconds>(entry.frameTime).count(),
-                duration_cast<nanoseconds>(entry.denoisedFrameTime).count(),
-                duration_cast<nanoseconds>(entry.beginFrame.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.endFrame.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.backendBeginFrame.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.backendEndFrame.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.gpuFrameComplete.time_since_epoch()).count(),
-                duration_cast<nanoseconds>(entry.vsync.time_since_epoch()).count(),
-                entry.displayPresent
+                .frameId                        = entry.frameId,
+                .gpuFrameDuration               = toDuration(entry.frameTime),
+                .denoisedGpuFrameDuration       = toDuration(entry.denoisedFrameTime),
+                .beginFrame                     = toTimepoint(entry.beginFrame),
+                .endFrame                       = toTimepoint(entry.endFrame),
+                .backendBeginFrame              = toTimepoint(entry.backendBeginFrame),
+                .backendEndFrame                = toTimepoint(entry.backendEndFrame),
+                .gpuFrameComplete               = toTimepoint(entry.gpuFrameComplete),
+                .vsync                          = toTimepoint(entry.vsync),
+                .displayPresent                 = entry.displayPresent,
+                .displayPresentInterval         = entry.displayPresentInterval,
+                .compositionToPresentLatency    = entry.compositionToPresentLatency
         });
     }
     std::swap(mUserFrameHistory, result);

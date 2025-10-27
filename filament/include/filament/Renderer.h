@@ -104,6 +104,9 @@ public:
         time_point_ns gpuFrameComplete;     //!< GPU thread time of frame end since epoch [ns] or 0
         time_point_ns vsync;                //!< VSYNC time of this frame since epoch [ns]
         time_point_ns displayPresent;       //!< Actual presentation time of this frame since epoch [ns]
+        time_point_ns presentDeadline;      //!< deadline for queuing a frame [ns]
+        duration_ns displayPresentInterval; //!< display refresh rate [ns]
+        duration_ns compositionToPresentLatency; //!< time between the start of composition and the expected present time [ns]
     };
 
     /**

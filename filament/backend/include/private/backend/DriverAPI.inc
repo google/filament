@@ -369,6 +369,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
 DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getUniformBufferOffsetAlignment)
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
 DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryFrameTimestamps, backend::SwapChainHandle, swapChain, uint64_t, frameId, backend::FrameTimestamps*, outFrameTimestamps)
+DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryCompositorTiming, backend::SwapChainHandle, swapChain, backend::CompositorTiming*, outCompositorTiming)
 
 /*
  * Updating driver objects
