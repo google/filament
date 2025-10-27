@@ -134,9 +134,9 @@ void VulkanSwapChain::present(DriverBase& driver) {
     mAcquired = false;
     mIsFirstRenderPass = true;
 
-    if (mFrameScheduled.callback) {
-        driver.scheduleCallback(mFrameScheduled.handler,
-                [callback = mFrameScheduled.callback]() {
+    if (frameScheduled.callback) {
+        driver.scheduleCallback(frameScheduled.handler,
+                [callback = frameScheduled.callback]() {
                     PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
                     callback->operator()(noop);
                 });

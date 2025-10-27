@@ -390,11 +390,11 @@ void WebGPUSwapChain::present(DriverBase& driver) {
     if (!isHeadless()) {
         mSurface.Present();
     }
-    if (mFrameScheduled.callback) {
-        driver.scheduleCallback(mFrameScheduled.handler,
-                [callback = mFrameScheduled.callback]() {
+    if (frameScheduled.callback) {
+        driver.scheduleCallback(frameScheduled.handler,
+                [callback = std::move(frameScheduled.callback)]() {
                     PresentCallable noop = PresentCallable(PresentCallable::noopPresent, nullptr);
-                    callback->operator()(noop);
+                    callback(noop);
                 });
     }
 }
