@@ -203,3 +203,23 @@ jobs:
           ./build.sh -p desktop debug gltf_viewer
       - name: Run test
         run: bash test/code-correctness/test.sh
+
+  test-backend:
+    name: test-backend
+    runs-on: macos-14-xlarge
+    steps:
+      - uses: actions/checkout@v4.1.6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/mac-prereq
+      - uses: ./.github/actions/get-mesa
+      - uses: ./.github/actions/get-vulkan-sdk
+      - name: Prerequisites
+        run: |
+          # Must have at least clang-16 for a webgpu/dawn build.
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+        shell: bash
+      - name: Run backend tests
+        shell: bash
+        run: |
+          bash test/backend/test.sh
