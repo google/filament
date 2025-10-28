@@ -23,6 +23,7 @@
 #include <backend/Platform.h>
 
 #include <cstdint>
+#include <memory>
 
 namespace filament::backend {
 
@@ -52,8 +53,13 @@ public:
     void present(DriverBase& driver);
 
     void setFrameScheduledCallback(CallbackHandler* handler, FrameScheduledCallback&& callback) {
-        frameScheduled.handler = handler;
-        frameScheduled.callback = std::move(callback);
+        if (!callback) {
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
+            return;
+        }
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     }
 
 private:
@@ -83,8 +89,8 @@ private:
 
     struct {
         CallbackHandler* handler = nullptr;
-        FrameScheduledCallback callback;
-    } frameScheduled;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
 };
 
 } // namespace filament::backend

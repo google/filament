@@ -25,8 +25,6 @@ using namespace filament::backend;
 namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
-    SKIP_IF(Backend::WEBGPU, "Frame callbacks are unsupported in WebGPU");
-
     auto& api = getDriverApi();
 
     // Create a SwapChain.
@@ -37,10 +35,13 @@ TEST_F(BackendTest, FrameScheduledCallback) {
     Handle<HwRenderTarget> renderTarget = addCleanup(api.createDefaultRenderTarget());
 
     int callbackCountA = 0;
-    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
-        callable();
-        callbackCountA++;
-    }, 0);
+    api.setFrameScheduledCallback(
+            swapChain, nullptr,
+            [&callbackCountA](PresentCallable callable) {
+                callable();
+                callbackCountA++;
+            },
+            0);
 
     // Render the first frame.
     api.makeCurrent(swapChain, swapChain);
