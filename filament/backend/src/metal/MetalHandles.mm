@@ -1174,6 +1174,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
                 params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
         if (attachment.getMsaaTexture()) {
+            // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.
             // We're rendering into our temporary MSAA texture and doing an automatic resolve.
             // We should not be attempting to load anything into the MSAA texture.
             // This might happen if the user is rendering multiple views into a MSAA SwapChain,
@@ -1206,6 +1207,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 
     if (depthAttachment.getMsaaTexture()) {
+        // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         // This might happen if the user is rendering multiple views into a MSAA SwapChain,
@@ -1238,6 +1240,7 @@ void MetalRenderTarget::setUpRenderPassAttachments(MTLRenderPassDescriptor* desc
     }
 
     if (stencilAttachment.getMsaaTexture()) {
+        // Check that the loadAction is valid for MSAA targets: either DontCare or Clear.
         // We're rendering into our temporary MSAA texture and doing an automatic resolve.
         // We should not be attempting to load anything into the MSAA texture.
         // This might happen if the user is rendering multiple views into a MSAA SwapChain,
