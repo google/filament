@@ -2,11 +2,17 @@
 
 ## Enabling
 
-When building though build.sh, pass the `-b` flag. This sets the cmake variable
+When building though `build.sh`, pass the `-b` flag. This sets the cmake variable
 `FILAMENT_ENABLE_ASAN_UBSAN=ON` which eventually passes `"-fsanitize=address -fsanitize=undefined"`
 to all compile and link operations.
 
-If building through CMake directly, or an IDE like CLion that doesn't use build.sh, instead pass
+It might be desirable to pair the `-b` with `-y release`. The `-y` flag indicates that targets
+in `/tools` will be built separately from the filament target, and the filament build depends on
+the `/tools` targets as prebuilt binaries. This separation reduces ASAN/UBSAN build time
+considerably. This option assumes that the user is trying to catch sanitization issues for
+filament and not the tools that are used to build filament.
+
+If building through CMake directly, or an IDE like CLion that doesn't use `build.sh`, instead pass
 `-DFILAMENT_ENABLE_ASAN_UBSAN=ON` to cmake in order to get the same result.
 
 ## Getting memory leak detection on Mac
