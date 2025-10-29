@@ -50,6 +50,11 @@ id<MTLTexture> createTextureViewWithLodRange(id<MTLTexture> texture, NSUInteger 
  */
 id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteger slice);
 
+/**
+ * Returns the required alignment for uniform buffer offsets.
+ */
+size_t getUniformBufferOffsetAlignment();
+
 } // namespace filament::backend
 
 #endif //TNT_FILAMENT_DRIVER_METALUTILS_H

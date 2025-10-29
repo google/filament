@@ -29,6 +29,7 @@
 #include "MetalHandles.h"
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
+#include "MetalUtils.h"
 
 #include <backend/platforms/PlatformMetal.h>
 #include <backend/platforms/PlatformMetal-ObjC.h>
@@ -1253,16 +1254,7 @@ size_t MetalDriver::getMaxArrayTextureLayers() {
 }
 
 size_t MetalDriver::getUniformBufferOffsetAlignment() {
-#if defined(FILAMENT_IOS)
-#if TARGET_OS_SIMULATOR
-    // The iOS simulator has differing alignment requirements.
-    return 256;
-#else
-    return 4;
-#endif  // TARGET_OS_SIMULATOR
-#else
-    return 32;
-#endif
+    return ::filament::backend::getUniformBufferOffsetAlignment();
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
