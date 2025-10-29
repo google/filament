@@ -65,7 +65,7 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // by writing the bulk of the data first, and then copying the remaining bytes into a
 // padded temporary chunk which is then written to the buffer.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
-        const uint32_t byteOffset, wgpu::Queue const& queue) {
+        const uint32_t byteOffset, wgpu::Device const& device) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
             << "updateGPUBuffer called with a null buffer";
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= mBuffer.GetSize())
@@ -79,76 +79,34 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     // This may have some performance implications. That should be investigated later.
     assert_invariant(mBuffer.GetUsage() & wgpu::BufferUsage::CopyDst);
 
-    // Fetch a staging buffer from the pool or create a new one
-    std::unique_ptr<wgpu::Buffer> stagingBuffer;
-    if (!mStagingBuffers.empty()) {
-        stagingBuffer = std::move(mStagingBuffers.back());
-        mStagingBuffers.pop_back();
-        std::cout << "Run Yu: fetched a staging buffer." << std::endl;
-    } else {
-        wgpu::BufferDescriptor descriptor{ .label = "staging buffer",
-            .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
-            .size = mBuffer.GetSize(),
-            .mappedAtCreation = true };
-        std::cout << "Run Yu: creating a new staging buffer, with size of " << descriptor.size
-                  << std::endl;
-        stagingBuffer = std::make_unique<wgpu::Buffer>(mDevice.CreateBuffer(&descriptor));
-    }
-
     // Calculate some alignment related sizes
-    const size_t copySizeRemainder = bufferDescriptor.size % FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
-    const size_t legalCopySize = bufferDescriptor.size - copySizeRemainder;
-    // WGPU requires the offset of GetMappedRange to be a multiple of 8
-    const int stagingOffsetShift = -(byteOffset % FILAMENT_WEBGPU_MAPPED_RANGE_OFFSET_MODULUS);
+    const size_t remainder = bufferDescriptor.size % FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
+    const size_t legalSize = bufferDescriptor.size - remainder;
+    const size_t copySize =
+            remainder == 0 ? legalSize : legalSize + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
-    void* mappedRange = stagingBuffer->GetMappedRange(byteOffset + stagingOffsetShift);
+    // create a staging buffer
+    wgpu::BufferDescriptor descriptor{ .label = "staging buffer",
+        .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
+        .size = copySize,
+        .mappedAtCreation = true };
+    wgpu::Buffer stagingBuffer = mDevice.CreateBuffer(&descriptor);
+
+    void* mappedRange = stagingBuffer.GetMappedRange();
     // copy the data to the staging buffer
-    memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
+    memcpy(mappedRange, bufferDescriptor.buffer, copySize);
 
-    stagingBuffer->Unmap();
+    stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
     wgpu::CommandEncoderDescriptor commandEncodeDescriptor = {};
     commandEncodeDescriptor.label = "copy buffer to buffer";
     const wgpu::CommandEncoder commandEncoder =
             mDevice.CreateCommandEncoder(&commandEncodeDescriptor);
-    commandEncoder.CopyBufferToBuffer(*stagingBuffer, byteOffset + stagingOffsetShift, mBuffer,
-            byteOffset,
-            copySizeRemainder == 0 ? bufferDescriptor.size
-                                   : legalCopySize + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS);
+    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
+            byteOffset, copySize);
     wgpu::CommandBuffer commandBuffer = commandEncoder.Finish();
-    queue.Submit(1, &commandBuffer);
-
-    // Immediately after copying, re-map the buffer. Push onto the list of staging buffers when the
-    // mapping completes.
-    auto bufferMapped = [this, &stagingBuffer](wgpu::MapAsyncStatus status,
-                                wgpu::StringView message) {
-        this->mStagingBuffers.push_back(std::move(stagingBuffer));
-    };
-    stagingBuffer->MapAsync(wgpu::MapMode::Write, 0, mBuffer.GetSize(),
-            wgpu::CallbackMode::AllowSpontaneous, bufferMapped);
-
-    // This is where it gets confusing, I'm not sure how this CPU-to-GPU synchronization works
-    // in WGPU. With Vulkan and DX a Fence is used here.
-    bool ready = false;
-    queue.OnSubmittedWorkDone(wgpu::CallbackMode::AllowSpontaneous,
-            [&ready](wgpu::QueueWorkDoneStatus status, wgpu::StringView sv) {
-                switch (status) {
-                    case wgpu::QueueWorkDoneStatus::Success:
-                        std::cout << "Run Yu, queued commands finished successfully" << std::endl;
-                        ready = true;
-                        break;
-                    case wgpu::QueueWorkDoneStatus::Error:
-                    case wgpu::QueueWorkDoneStatus::CallbackCancelled:
-                        std::cout << "Run Yu: queue submission met error or cancellation"
-                                  << std::endl;
-                        break;
-                }
-            });
-
-    while (!ready) {
-        mDevice.Tick();
-    }
+    mDevice.GetQueue().Submit(1, &commandBuffer);
 }
 
 } // namespace filament::backend
