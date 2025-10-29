@@ -841,6 +841,10 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
     return mDeviceLimits.maxTextureArrayLayers;
 }
 
+size_t WebGPUDriver::getUniformBufferOffsetAlignment(){
+    return mDeviceLimits.minUniformBufferOffsetAlignment;
+}
+
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
     // make sure command elements (draws, etc.) prior to the buffer update are processed before the
@@ -1250,11 +1254,6 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             customDepthStencilMsaaSidecarTextureView);
 
     mRenderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDescriptor);
-
-    // Ensure viewport dimensions are not 0
-    FILAMENT_CHECK_POSTCONDITION(params.viewport.width > 0) << "viewport width is 0?";
-    FILAMENT_CHECK_POSTCONDITION(params.viewport.height > 0) << "viewport height is 0?";
-
     mRenderPassEncoder.SetViewport(
             static_cast<float>(params.viewport.left),
             static_cast<float>(params.viewport.bottom),

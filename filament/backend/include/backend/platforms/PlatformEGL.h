@@ -25,6 +25,7 @@
 #include <EGL/eglext.h>
 #include <EGL/eglplatform.h>
 
+#include <utils/compiler.h>
 #include <utils/Invocable.h>
 
 #include <initializer_list>
@@ -100,10 +101,6 @@ protected:
     bool isProtectedContextSupported() const noexcept override;
     bool isSRGBSwapChainSupported() const noexcept override;
     bool isMSAASwapChainSupported(uint32_t samples) const noexcept override;
-
-    SwapChain* createSwapChain(void* nativewindow, uint64_t flags) override;
-    SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
-    void destroySwapChain(SwapChain* swapChain) noexcept override;
     bool isSwapChainProtected(SwapChain* swapChain) noexcept override;
 
     ContextType getCurrentContextType() const noexcept override;
@@ -158,17 +155,9 @@ protected:
         return egl.makeCurrent(context, mEGLDummySurface, mEGLDummySurface);
     }
 
-    // TODO: this should probably use getters instead.
-    EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
-    EGLContext mEGLContext = EGL_NO_CONTEXT;
-    EGLContext mEGLContextProtected = EGL_NO_CONTEXT;
-    EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
-    ContextType mCurrentContextType = ContextType::NONE;
-    // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
-    EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
-    Config mContextAttribs;
-    std::vector<EGLContext> mAdditionalContexts;
-    bool mMSAA4XSupport = false;
+    EGLDisplay getEglDisplay() const noexcept { return mEGLDisplay; }
+    EGLConfig getEglConfig() const noexcept { return mEGLConfig; }
+    EGLConfig getSuitableConfigForSwapChain(uint64_t flags, bool window, bool pbuffer) const;
 
     // supported extensions detected at runtime
     struct {
@@ -185,7 +174,11 @@ protected:
         } egl;
     } ext;
 
-    struct SwapChainEGL : public Platform::SwapChain {
+    struct SwapChainEGL : public SwapChain {
+        SwapChainEGL(PlatformEGL const& platform, void* nativeWindow, uint64_t flags);
+        SwapChainEGL(PlatformEGL const& platform, uint32_t width, uint32_t height, uint64_t flags);
+        void terminate(PlatformEGL& platform);
+
         EGLSurface sur = EGL_NO_SURFACE;
         Config attribs{};
         EGLNativeWindowType nativeWindow{};
@@ -201,10 +194,25 @@ protected:
         ~ExternalImageEGL() override;
     };
 
-protected:
+private:
+    // prevent derived classes' implementations to call through
+    [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
+    [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+
     EGLConfig findSwapChainConfig(uint64_t flags, bool window, bool pbuffer) const;
 
-private:
+    EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
+    EGLContext mEGLContext = EGL_NO_CONTEXT;
+    EGLContext mEGLContextProtected = EGL_NO_CONTEXT;
+    EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
+    ContextType mCurrentContextType = ContextType::NONE;
+    // mEGLConfig is valid only if ext.egl.KHR_no_config_context is false
+    EGLConfig mEGLConfig = EGL_NO_CONFIG_KHR;
+    Config mContextAttribs;
+    std::vector<EGLContext> mAdditionalContexts;
+    bool mMSAA4XSupport = false;
+
     class EGL {
         EGLDisplay& mEGLDisplay;
         EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
