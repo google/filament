@@ -12,4 +12,4 @@ parameter. [⚠️ **Recompile Materials**]
 
 - third_party: Optionally add libwebp to build
   - controlled by cmake flag FILAMENT_SUPPORTS_WEBP_TEXTURES, defaults to OFF
-  - actual webp texture support for GLTFIO coming in subsequent change
+  - actual webp texture support for libs/gltfio coming in subsequent change
