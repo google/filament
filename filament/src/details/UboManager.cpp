@@ -75,7 +75,9 @@ void UboManager::beginFrame(DriverApi& driver,
     // Migrate all MI data to the new allocated slots.
     for (const auto& materialInstance : materialInstances) {
         materialInstance.second.forEach([this, &driver](const FMaterialInstance* mi) {
-            if (!mi->isUsingUboBatching()) return;
+            if (!mi->isUsingUboBatching()) {
+                return;
+            }
 
             const AllocationId allocationId = mi->getAllocationId();
             assert_invariant(BufferAllocator::isValid(allocationId));
@@ -97,7 +99,9 @@ void UboManager::endFrame(DriverApi& driver,
     std::unordered_set<AllocationId> allocationIds;
     for (const auto& materialInstance : materialInstances) {
         materialInstance.second.forEach([&allocator, &allocationIds](const FMaterialInstance* mi) {
-            if (!mi->isUsingUboBatching()) return;
+            if (!mi->isUsingUboBatching()) {
+                return;
+            }
 
             const AllocationId id = mi->getAllocationId();
             if (!BufferAllocator::isValid(id)) {
@@ -216,7 +220,9 @@ UboManager::AllocationResult UboManager::updateMaterialInstanceAllocations(
 UboManager::AllocationResult UboManager::tryAllocateMaterialInstanceSlot(FMaterialInstance* mi,
         BufferAllocator& allocator, const Handle<HwBufferObject>& ubHandle,
         AllocationMode allocationMode) {
-    if (!mi->isUsingUboBatching()) return SUCCESS;
+    if (!mi->isUsingUboBatching()) {
+        return SUCCESS;
+    }
 
     const AllocationId id = mi->getAllocationId();
     auto allocateAndAssign = [&](AllocationId originalId) -> AllocationResult {
@@ -279,7 +285,9 @@ allocation_size_t UboManager::calculateRequiredSize(
     allocation_size_t newBufferSize = 0;
     for (const auto& materialInstance: materialInstances) {
         materialInstance.second.forEach([&newBufferSize, &allocator](const FMaterialInstance* mi) {
-            if (!mi->isUsingUboBatching()) return;
+            if (!mi->isUsingUboBatching()) {
+                return;
+            }
 
             const AllocationId allocationId = mi->getAllocationId();
             if (allocationId == BufferAllocator::REALLOCATION_REQUIRED) {
