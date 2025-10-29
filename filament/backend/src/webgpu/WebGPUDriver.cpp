@@ -1497,7 +1497,7 @@ void WebGPUDriver::readPixels(Handle<HwRenderTarget> sourceRenderTargetHandle, c
 
     mReadPixelMapsCounter.startTask();
     userData->buffer.MapAsync(
-            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowProcessEvents,
+            wgpu::MapMode::Read, 0, bufferSize, wgpu::CallbackMode::AllowSpontaneous,
             [](wgpu::MapAsyncStatus status, const char* message, UserData* userdata) {
                 std::unique_ptr<UserData> data(static_cast<UserData*>(userdata));
                 if (UTILS_LIKELY(status == wgpu::MapAsyncStatus::Success)) {

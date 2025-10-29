@@ -159,16 +159,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="rendering-difference-test"><a class="header" href="#rendering-difference-test">Rendering Difference Test</a></h1>
-<p>We created a few scripts to run <code>gltf_viewer</code> and produce headless renderings.</p>
+<p>This tool is a collections of scripts to run <code>gltf_viewer</code> and produce headless renderings.</p>
 <p>This is mainly useful for continuous integration where GPUs are generally not available on cloud
 machines. To perform software rasterization, these scripts are centered around <a href="https://docs.mesa3d.org">Mesa</a>'s
 software rasterizers, but nothing bars us from using another rasterizer like <a href="https://github.com/google/swiftshader">SwiftShader</a>.
 Additionally, we should be able to use GPUs where available (though this is more of a future
 work).</p>
 <p>The script <code>render.py</code> contains the core logic for taking input parameters (such as the test
-description file) and then running gltf_viewer to produce the renderings.</p>
+description file) and then running <code>gltf_viewer</code> to produce the renderings.</p>
 <p>In the <code>test</code> directory is a list of test descriptions that are specified in json. Please see
-<code>sample.json</code> to parse the structure.</p>
+<code>sample.json</code> to glean the structure.</p>
 <h2 id="setting-up-python"><a class="header" href="#setting-up-python">Setting up python</a></h2>
 <p>The <code>renderdiff</code> project uses <code>python</code> extensively. To install the dependencies for producing
 renderings, do the following step</p>

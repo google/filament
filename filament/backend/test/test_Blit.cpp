@@ -158,7 +158,7 @@ TEST_F(BlitTest, ColorMagnify) {
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = mCleanup.add(api.createSwapChainHeadless(256, 256, 0));
+    auto swapChain = mCleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
@@ -222,7 +222,7 @@ TEST_F(BlitTest, ColorMinify) {
     constexpr int kNumLevels = 3;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = mCleanup.add(api.createSwapChainHeadless(256, 256, 0));
+    auto swapChain = mCleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
@@ -371,7 +371,7 @@ TEST_F(BlitTest, Blit2DTextureArray) {
     constexpr int kDstTexLayer = 0;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = mCleanup.add(api.createSwapChainHeadless(256, 256, 0));
+    auto swapChain = mCleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
@@ -437,7 +437,7 @@ TEST_F(BlitTest, BlitRegion) {
     constexpr int kDstLevel = 0;
 
     // Create a SwapChain and make it current. We don't really use it so the res doesn't matter.
-    auto swapChain = mCleanup.add(api.createSwapChainHeadless(256, 256, 0));
+    auto swapChain = mCleanup.add(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
     // Create a source texture.
