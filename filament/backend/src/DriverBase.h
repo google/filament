@@ -29,6 +29,8 @@
 #include "private/backend/Dispatcher.h"
 #include "private/backend/Driver.h"
 
+#include "JobQueue.h"
+
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -72,22 +74,24 @@ struct HwVertexBuffer : public HwBase {
 };
 
 struct HwBufferObject : public HwBase {
-    uint32_t byteCount{};
+    uint32_t byteCount : 31;
+    uint32_t asynchronous : 1;
 
     HwBufferObject() noexcept = default;
-    explicit HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
+    explicit HwBufferObject(uint32_t byteCount, bool async) noexcept : byteCount(byteCount), asynchronous(async) {}
 };
 
 struct HwMemoryMappedBuffer : public HwBase {
 };
 
 struct HwIndexBuffer : public HwBase {
-    uint32_t count : 27;
+    uint32_t count : 26;
     uint32_t elementSize : 5;
+    uint32_t asynchronous : 1;
 
     HwIndexBuffer() noexcept : count{}, elementSize{} { }
-    HwIndexBuffer(uint8_t elementSize, uint32_t indexCount) noexcept :
-            count(indexCount), elementSize(elementSize) {
+    HwIndexBuffer(uint8_t elementSize, uint32_t indexCount, bool async) noexcept :
+            count(indexCount), elementSize(elementSize), asynchronous(async) {
         // we could almost store elementSize on 4 bits because it's never > 16 and never 0
         assert_invariant(elementSize > 0 && elementSize <= 16);
         assert_invariant(indexCount < (1u << 27));
@@ -120,16 +124,19 @@ struct HwTexture : public HwBase {
     uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
     uint8_t samples : 4; // Sample count per pixel (should always be a power of 2)
     TextureFormat format{};
-    uint8_t reserved0 = 0;
+    struct {
+        uint8_t asynchronous : 1;
+        uint8_t reserved : 7;
+    };
     TextureUsage usage{};
     uint16_t reserved1 = 0;
     HwStream* hwStream = nullptr;
 
     HwTexture() noexcept : levels{}, samples{} {}
-    HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples,
-              uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage) noexcept
-            : width(width), height(height), depth(depth),
-              target(target), levels(levels), samples(samples), format(fmt), usage(usage) { }
+    HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples, uint32_t width,
+              uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage, bool async) noexcept
+            : width(width), height(height), depth(depth), target(target), levels(levels),
+              samples(samples), format(fmt), asynchronous(async), usage(usage) {}
 };
 
 struct HwRenderTarget : public HwBase {
@@ -172,7 +179,7 @@ struct HwTimerQuery : public HwBase {
 
 class DriverBase : public Driver {
 public:
-    DriverBase() noexcept;
+    explicit DriverBase(const Platform::DriverConfig& driverConfig) noexcept;
     ~DriverBase() noexcept override;
 
     void purge() noexcept final;
@@ -205,7 +212,7 @@ public:
         });
     }
 
-    void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback);
+    void scheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) final;
 
     // --------------------------------------------------------------------------------------------
     // Privates
@@ -213,6 +220,13 @@ public:
 
 protected:
     class CallbackDataDetails;
+
+    [[nodiscard]] Platform::DriverConfig const& getDriverConfig() const noexcept {
+        return mDriverConfig;
+    }
+
+    [[nodiscard]] JobQueue* getJobQueue() const noexcept { return mJobQueue.get(); }
+    [[nodiscard]] JobWorker* getJobWorker() const noexcept { return mJobWorker.get(); }
 
     void scheduleDestroy(BufferDescriptor&& buffer) {
         if (buffer.hasCallback()) {
@@ -228,6 +242,12 @@ protected:
     void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
 private:
+    // Event callbacks invoked from the worker thread
+    virtual void onBeginForThreadWorker() {}
+    virtual void onEndForThreadWorker() {}
+
+    const Platform::DriverConfig mDriverConfig;
+
     std::mutex mPurgeLock;
     std::vector<std::pair<void*, CallbackHandler::Callback>> mCallbacks;
 
@@ -236,6 +256,9 @@ private:
     std::condition_variable mServiceThreadCondition;
     std::vector<std::tuple<CallbackHandler*, CallbackHandler::Callback, void*>> mServiceThreadCallbackQueue;
     bool mExitRequested = false;
+
+    JobQueue::Ptr mJobQueue;
+    JobWorker::Ptr mJobWorker;
 };
 
 

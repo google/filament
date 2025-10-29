@@ -28,10 +28,13 @@
 namespace filament::backend {
 
 Driver* NoopDriver::create() {
-    return new NoopDriver();
+    Platform::DriverConfig driverConfig;
+    return new NoopDriver(driverConfig);
 }
 
-NoopDriver::NoopDriver() noexcept = default;
+NoopDriver::NoopDriver(const Platform::DriverConfig& driverConfig) noexcept
+    : DriverBase(driverConfig) {
+}
 
 NoopDriver::~NoopDriver() noexcept = default;
 
@@ -462,6 +465,10 @@ bool NoopDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
 
 bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
         FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
+bool NoopDriver::cancelAsyncJob(AsyncCallId jobId) {
     return false;
 }
 

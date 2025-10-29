@@ -926,7 +926,7 @@ void OpenGLContext::bindBuffer(GLenum target, GLuint buffer) noexcept {
         size_t const targetIndex = getIndexForBufferTarget(target);
         update_state(state.buffers.genericBinding[targetIndex], buffer, [&]() {
             glBindBuffer(target, buffer);
-        });
+        }, true); // TODO: split the GL state for shared contexts
     }
 }
 

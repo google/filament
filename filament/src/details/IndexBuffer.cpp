@@ -15,6 +15,7 @@
  */
 
 #include "details/IndexBuffer.h"
+#include "details/AsyncHelpers.h"
 #include "details/Engine.h"
 
 #include "FilamentAPI-impl.h"
@@ -36,6 +37,10 @@ namespace filament {
 struct IndexBuffer::BuilderDetails {
     uint32_t mIndexCount = 0;
     IndexType mIndexType = IndexType::UINT;
+    bool mAsynchronous = false;
+    backend::CallbackHandler* mAsyncCreationHandler = nullptr;
+    AsyncCallbackType mAsyncCreationCallback;
+    void* mAsyncCreationUserData = nullptr;
 };
 
 using BuilderType = IndexBuffer;
@@ -64,6 +69,15 @@ IndexBuffer::Builder& IndexBuffer::Builder::name(utils::StaticString const& name
     return BuilderNameMixin::name(name);
 }
 
+IndexBuffer::Builder& IndexBuffer::Builder::async(backend::CallbackHandler* handler,
+        AsyncCallbackType callback, void* user) noexcept {
+    mImpl->mAsynchronous = true;
+    mImpl->mAsyncCreationHandler = handler;
+    mImpl->mAsyncCreationCallback = std::move(callback);
+    mImpl->mAsyncCreationUserData = user;
+    return *this;
+}
+
 IndexBuffer* IndexBuffer::Builder::build(Engine& engine) {
     return downcast(engine).createIndexBuffer(*this);
 }
@@ -80,11 +94,42 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const Builder& builder)
             << "Invalid index type " << static_cast<int>(builder->mIndexType) << ", tag=" << tag;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    mHandle = driver.createIndexBuffer(
-            backend::ElementType(builder->mIndexType),
-            uint32_t(builder->mIndexCount),
-            backend::BufferUsage::STATIC,
-            std::move(name));
+
+    if (builder->mAsynchronous) {
+        // Copy the callback instead of moving it because moving would leave the builder with an
+        // empty completion callback. If the builder were emptied, users would need to call `async`
+        // again to reuse the builder for an additional new object.
+        auto copiedCompletionCallback = builder->mAsyncCreationCallback;
+
+        using IndexBufferCountdownCallbackHandler = CountdownCallbackHandler<IndexBuffer>;
+        auto* cdHandler = IndexBufferCountdownCallbackHandler::make(
+                /* handler */ builder->mAsyncCreationHandler,
+                /* userCallback */ std::move(copiedCompletionCallback),
+                /* userParam1 */ this,
+                /* userParam2 */ builder->mAsyncCreationUserData,
+                /* onCountdownComplete */ [this]() {
+                    mCreationComplete.store(true, std::memory_order_relaxed);
+                },
+                /* driver */ &engine.getDriver());
+
+        mHandle = driver.createIndexBufferAsync(
+                backend::ElementType(builder->mIndexType),
+                uint32_t(builder->mIndexCount),
+                backend::BufferUsage::STATIC,
+                cdHandler, &IndexBufferCountdownCallbackHandler::countdownCallback, cdHandler,
+                std::move(name));
+        cdHandler->increaseCountdown();
+    } else {
+        mHandle = driver.createIndexBuffer(
+                backend::ElementType(builder->mIndexType),
+                uint32_t(builder->mIndexCount),
+                backend::BufferUsage::STATIC,
+                std::move(name));
+        // In regular (non-asynchronous) mode, we know creation is complete as soon as all
+        // creation-relevant API calls are recorded into the command stream, because subsequent API
+        // calls will always be invoked after that (even including asynchronous version of APIs).
+        mCreationComplete.store(true, std::memory_order_relaxed);
+    }
 }
 
 void FIndexBuffer::terminate(FEngine& engine) {
@@ -98,6 +143,19 @@ void FIndexBuffer::setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_
             << "byteOffset must be a multiple of 4";
 
     engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset);
+}
+
+backend::AsyncCallId FIndexBuffer::setBufferAsync(FEngine& engine, BufferDescriptor&& buffer,
+            uint32_t byteOffset, backend::CallbackHandler* handler, AsyncCallbackType callback,
+            void* user) {
+
+    FILAMENT_CHECK_PRECONDITION((byteOffset & 0x3) == 0)
+            << "byteOffset must be a multiple of 4";
+
+    using IndexBufferCallbackAdapter = CallbackAdapter<IndexBuffer>;
+    auto* const cbWrapper = IndexBufferCallbackAdapter::make(std::move(callback), this, user);
+    return engine.getDriverApi().updateIndexBufferAsync(mHandle, std::move(buffer), byteOffset,
+            handler, &IndexBufferCallbackAdapter::func, cbWrapper);
 }
 
 } // namespace filament

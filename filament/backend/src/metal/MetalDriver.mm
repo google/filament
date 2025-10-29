@@ -111,14 +111,16 @@ Dispatcher MetalDriver::getDispatcher() const noexcept {
 
 MetalDriver::MetalDriver(
         PlatformMetal* platform, const Platform::DriverConfig& driverConfig) noexcept
-    : mPlatform(*platform),
+    : DriverBase(driverConfig),
+      mPlatform(*platform),
       mContext(new MetalContext),
       mHandleAllocator(
                 "Handles",
                 driverConfig.handleArenaSize,
                 driverConfig.disableHandleUseAfterFreeCheck,
                 driverConfig.disableHeapHandleTags),
-      mStereoscopicType(driverConfig.stereoscopicType) {
+      mStereoscopicType(driverConfig.stereoscopicType),
+      mAsynchronousMode(driverConfig.asynchronousMode) {
     mContext->driver = this;
 
     TrackedMetalBuffer::setPlatform(platform);
@@ -461,6 +463,12 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
     mHandleAllocator.associateTagToHandle(ibh.getId(), std::move(tag));
 }
 
+void MetalDriver::createIndexBufferAsyncR(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount,
         BufferObjectBinding bindingType, BufferUsage usage, utils::ImmutableCString&& tag) {
     auto* bufferObject =
@@ -470,6 +478,12 @@ void MetalDriver::createBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteC
             << ", tag=" << tag.c_str_safe();
     bufferObject->getBuffer()->setLabel(tag);
     mHandleAllocator.associateTagToHandle(boh.getId(), std::move(tag));
+}
+
+void MetalDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t byteCount,
+        BufferObjectBinding bindingType, BufferUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 // fixme: TextureUsage is a bitfield
@@ -523,6 +537,13 @@ void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
 }
 
+void MetalDriver::createTextureAsyncR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
+}
+
 void MetalDriver::createTextureViewR(Handle<HwTexture> th, Handle<HwTexture> srch,
         uint8_t baseLevel, uint8_t levelCount, utils::ImmutableCString&& tag) {
     MetalTexture const* src = handle_cast<MetalTexture>(srch);
@@ -541,6 +562,13 @@ void MetalDriver::createTextureViewSwizzleR(Handle<HwTexture> th, Handle<HwTextu
     mContext->textures.insert(texture);
     texture->setLabel(tag);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
+}
+
+void MetalDriver::createTextureViewSwizzleAsyncR(Handle<HwTexture> th, Handle<HwTexture> srch,
+        backend::TextureSwizzle r, backend::TextureSwizzle g, backend::TextureSwizzle b,
+        backend::TextureSwizzle a, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void MetalDriver::createTextureExternalImage2R(Handle<HwTexture> th,
@@ -600,6 +628,14 @@ void MetalDriver::importTextureR(Handle<HwTexture> th, intptr_t i,
     mContext->textures.insert(texture);
     texture->setLabel(tag);
     mHandleAllocator.associateTagToHandle(th.getId(), std::move(tag));
+}
+
+void MetalDriver::importTextureAsyncR(Handle<HwTexture> th, intptr_t i,
+        SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage, CallbackHandler* handler,
+        CallbackHandler::Callback callback, void* user, utils::ImmutableCString&& tag) {
+    // TODO: implement this.
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph,
@@ -794,11 +830,23 @@ Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer>();
 }
 
+Handle<HwIndexBuffer> MetalDriver::createIndexBufferAsyncS() noexcept {
+    return alloc_handle<MetalIndexBuffer>();
+}
+
 Handle<HwBufferObject> MetalDriver::createBufferObjectS() noexcept {
     return alloc_handle<MetalBufferObject>();
 }
 
+Handle<HwBufferObject> MetalDriver::createBufferObjectAsyncS() noexcept {
+    return alloc_handle<MetalBufferObject>();
+}
+
 Handle<HwTexture> MetalDriver::createTextureS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureAsyncS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -807,6 +855,10 @@ Handle<HwTexture> MetalDriver::createTextureViewS() noexcept {
 }
 
 Handle<HwTexture> MetalDriver::createTextureViewSwizzleS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::createTextureViewSwizzleAsyncS() noexcept {
     return alloc_handle<MetalTexture>();
 }
 
@@ -824,6 +876,30 @@ Handle<HwTexture> MetalDriver::createTextureExternalImagePlaneS() noexcept {
 
 Handle<HwTexture> MetalDriver::importTextureS() noexcept {
     return alloc_handle<MetalTexture>();
+}
+
+Handle<HwTexture> MetalDriver::importTextureAsyncS() noexcept {
+    return alloc_handle<MetalTexture>();
+}
+
+AsyncCallId MetalDriver::update3DImageAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId MetalDriver::setVertexBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId MetalDriver::updateBufferObjectAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
+}
+
+AsyncCallId MetalDriver::updateIndexBufferAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
@@ -872,6 +948,11 @@ Handle<HwDescriptorSetLayout> MetalDriver::createDescriptorSetLayoutS() noexcept
 
 Handle<HwDescriptorSet> MetalDriver::createDescriptorSetS() noexcept {
     return alloc_handle<MetalDescriptorSet>();
+}
+
+AsyncCallId MetalDriver::queueCommandAsyncS() noexcept {
+    // TODO: implement this.
+    return InvalidAsyncCallId;
 }
 
 void MetalDriver::destroyVertexBufferInfo(Handle<HwVertexBufferInfo> vbih) {
@@ -1291,6 +1372,12 @@ void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&
             [&]() { return mHandleAllocator.getHandleTag(ibh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
 }
+void MetalDriver::updateIndexBufferAsyncR(AsyncCallId jobId, Handle<HwIndexBuffer> ibh,
+        BufferDescriptor&& data, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
 
 void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescriptor&& data,
         uint32_t byteOffset) {
@@ -1305,6 +1392,12 @@ void MetalDriver::updateBufferObject(Handle<HwBufferObject> boh, BufferDescripto
     bo->updateBuffer(data.buffer, data.size, byteOffset,
             [&]() { return mHandleAllocator.getHandleTag(boh.getId()).c_str_safe(); });
     scheduleDestroy(std::move(data));
+}
+
+void MetalDriver::updateBufferObjectAsyncR(AsyncCallId jobId, Handle<HwBufferObject> boh,
+        BufferDescriptor&& data, uint32_t byteOffset, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void MetalDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> boh,
@@ -1332,6 +1425,12 @@ void MetalDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t ind
     vertexBuffer->buffers[index] = bufferObject->getBuffer();
 }
 
+void MetalDriver::setVertexBufferObjectAsyncR(AsyncCallId jobId, Handle<HwVertexBuffer> vbh,
+        uint32_t index, Handle<HwBufferObject> boh, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
 void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
         uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
         uint32_t width, uint32_t height, uint32_t depth,
@@ -1346,6 +1445,14 @@ void MetalDriver::update3DImage(Handle<HwTexture> th, uint32_t level,
             "update3DImage(th = %d, level = %d, xoffset = %d, yoffset = %d, zoffset = %d, width = "
             "%d, height = %d, depth = %d, data = ?)\n",
             th.getId(), level, xoffset, yoffset, zoffset, width, height, depth);
+}
+
+void MetalDriver::update3DImageAsyncR(AsyncCallId jobId, Handle<HwTexture> th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+        uint32_t width, uint32_t height, uint32_t depth,
+        PixelBufferDescriptor&& data, CallbackHandler* handler,
+        CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
 }
 
 void MetalDriver::setupExternalImage2(Platform::ExternalImageHandleRef image) {
@@ -2298,6 +2405,16 @@ void MetalDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t
         BufferDescriptor&& data) {
     auto* mmb = handle_cast<MetalMemoryMappedBuffer>(mmbh);
     mmb->copy(*this, offset, std::move(data));
+}
+
+void MetalDriver::queueCommandAsyncR(AsyncCallId jobId, utils::Invocable<void()>&& command,
+        CallbackHandler* handler, CallbackHandler::Callback const callback, void* user) {
+    // TODO: implement this.
+}
+
+bool MetalDriver::cancelAsyncJob(AsyncCallId jobId) {
+    // TODO: implement this.
+    return false;
 }
 
 // explicit instantiation of the Dispatcher

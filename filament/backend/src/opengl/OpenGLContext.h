@@ -361,8 +361,8 @@ public:
 
     FeatureLevel getFeatureLevel() const noexcept { return mFeatureLevel; }
 
-    // This is the index of the context in use. Must be 0 or 1. This is used to manange the
-    // OpenGL name of ContainerObjects within each context.
+    // This is the index of the context in use. Must be either 0 (Unprotected) or 1 (Protected).
+    // This is used to manage the OpenGL name of ContainerObjects within each context.
     uint32_t contextIndex = 0;
 
     // Try to keep the State structure sorted by data-access patterns
@@ -524,7 +524,7 @@ private:
     TimerQueryFactoryInterface* mTimerQueryFactory = nullptr;
     std::vector<std::function<void(OpenGLContext&)>> mDestroyWithNormalContext;
     RenderPrimitive mDefaultVAO;
-    std::optional<GLuint> mDefaultFbo[2];
+    std::optional<GLuint> mDefaultFbo[2]; // 0:Unprotected, 1:Protected
     mutable tsl::robin_map<SamplerParams, GLuint,
             SamplerParams::Hasher, SamplerParams::EqualTo> mSamplerMap;
 
@@ -691,7 +691,7 @@ void OpenGLContext::activeTexture(GLuint unit) noexcept {
     assert_invariant(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
-    });
+    }, true); // TODO: split the GL state for shared contexts
 }
 
 void OpenGLContext::bindSampler(GLuint unit, GLuint sampler) noexcept {
@@ -752,7 +752,7 @@ void OpenGLContext::bindVertexArray(RenderPrimitive const* p) noexcept {
             // glBindBuffer().
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vao->elementArray);
         }
-    });
+    }, true); // TODO: split the GL state for shared contexts
 }
 
 void OpenGLContext::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
@@ -791,11 +791,11 @@ void OpenGLContext::bindTexture(GLuint unit, GLuint target, GLuint texId, bool e
     update_state(state.textures.units[unit].target, target, [&]() {
         activeTexture(unit);
         glBindTexture(state.textures.units[unit].target, 0);
-    });
+    }, true); // TODO: split the GL state for shared contexts
     update_state(state.textures.units[unit].id, texId, [&]() {
         activeTexture(unit);
         glBindTexture(target, texId);
-    }, external);
+    }, true/*external*/); // TODO: split the GL state for shared contexts
 }
 
 void OpenGLContext::useProgram(GLuint program) noexcept {
