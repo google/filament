@@ -32,6 +32,7 @@
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
+#include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
 #include <utils/android/PerformanceHintManager.h>
@@ -57,6 +58,7 @@
 #include <new>
 #include <string_view>
 
+#include <dlfcn.h>
 #include <unistd.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -114,9 +116,30 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
     if (mOSVersion < 0) {
         mOSVersion = __ANDROID_API_FUTURE__;
     }
+
+    // TODO: remove this code one the new NDK is available
+    void* nativeWindowLibHandle = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
+    if (nativeWindowLibHandle) {
+        ANativeWindow_setProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool))dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_setProducerThrottlingEnabled");
+
+        ANativeWindow_isProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool*))dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_isProducerThrottlingEnabled");
+
+        if (ANativeWindow_setProducerThrottlingEnabled &&
+                ANativeWindow_isProducerThrottlingEnabled) {
+            mHasProducerThrottlingControl = true;
+            LOG(INFO) << "Producer Throttling API available";
+        }
+    }
 }
 
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
+    // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
+    // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
+    // not to call dlclose().
 }
 
 void PlatformEGLAndroid::terminate() noexcept {
@@ -396,12 +419,13 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
         auto const hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
         AHardwareBuffer_acquire(hardwareBuffer);
         p->aHardwareBuffer = hardwareBuffer;
-        p->sRGB = sRGB;
         AHardwareBuffer_Desc hardwareBufferDescription = {};
         AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
         auto const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        // Only set sRGB as true if the filament format requires it, otherwise the eglCreateImage might fail.
+        p->sRGB = textureFormat == TextureFormat::SRGB8 || textureFormat == TextureFormat::SRGB8_A8;
         p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
@@ -649,6 +673,16 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const sou
 PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
         void* nativeWindow, uint64_t const flags)
     : SwapChainEGL(platform, nativeWindow, flags) {
+
+    if (nativeWindow && platform.mHasProducerThrottlingControl) {
+        // Disable Producer Throttling when supported. This allows eglSwapBuffers() to not stall
+        int32_t const result = platform.ANativeWindow_setProducerThrottlingEnabled(
+                EGLNativeWindowType(nativeWindow), false);
+        if (UTILS_UNLIKELY(result < 0)) {
+            LOG(WARNING) << "ANativeWindow_setProducerThrottlingEnabled(false) failed: " << result;
+        }
+    }
+
     if (UTILS_LIKELY(platform.ext.egl.ANDROID_get_frame_timestamps)) {
         if (sur != EGL_NO_SURFACE) {
             // we ignore the result, it doesn't matter much if it fails

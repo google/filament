@@ -19,6 +19,7 @@
 
 #include "MetalContext.h"
 #include "MetalFlags.h"
+#include "MetalUtils.h"
 
 #include <backend/DriverEnums.h>
 #include <backend/platforms/PlatformMetal.h>
@@ -260,18 +261,8 @@ public:
     // In practice, MetalRingBuffer is used for argument buffers, which are kept in the constant
     // address space. Constant buffers have specific alignment requirements when specifying an
     // offset.
-#if defined(FILAMENT_IOS)
-#if TARGET_OS_SIMULATOR
-    // The iOS simulator has differing alignment requirements.
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 256;
-#else
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 4;
-#endif  // TARGET_OS_SIMULATOR
-#else
-    static constexpr auto METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT = 32;
-#endif
     static inline auto computeSlotSize(MTLSizeAndAlign layout) {
-         return align(align(layout.size, layout.align), METAL_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
+         return align(align(layout.size, layout.align), getUniformBufferOffsetAlignment());
     }
 
     MetalRingBuffer(id<MTLDevice> device, MTLResourceOptions options, MTLSizeAndAlign layout,

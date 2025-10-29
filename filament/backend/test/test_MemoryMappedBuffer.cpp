@@ -160,12 +160,11 @@ protected:
         SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
         auto& api = getDriverApi();
-        Cleanup cleanup(api);
 
-        auto const swapChain = cleanup.add(createSwapChain());
+        auto const swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        auto const renderTarget = makeRenderTarget(cleanup);
+        auto const renderTarget = makeRenderTarget(*mCleanup);
 
         constexpr std::array<math::float2, 3> vertices = {{
             {-0.25f, -0.25f},
@@ -182,7 +181,7 @@ protected:
         const uint32_t baseVertex = totalOffset / stride;
 
         // Create a buffer large enough to hold the offset and the vertex data.
-        auto const bufferObject = cleanup.add(api.createBufferObject(vertexDataSize + totalOffset,
+        auto const bufferObject = addCleanup(api.createBufferObject(vertexDataSize + totalOffset,
                 BufferObjectBinding::VERTEX, BufferUsage::SHARED_WRITE_BIT));
 
         int callbackExecuted = 0;
@@ -198,11 +197,11 @@ protected:
         flushAndWait();
         EXPECT_EQ(callbackExecuted, 1);
 
-        auto [shader, descset] = getSimpleShader(cleanup, color);
+        auto [shader, descset] = getSimpleShader(*mCleanup, color);
 
-        auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 3, stride, baseVertex, bufferObject);
+        auto [vbih, vbh, ibh] = setupGeometryBuffer(*mCleanup, 3, stride, baseVertex, bufferObject);
 
-        auto const renderPrimitive = cleanup.add(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+        auto const renderPrimitive = addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
 
         PipelineState state = getColorWritePipelineState();
         shader.addProgramToPipelineState(state);
@@ -220,10 +219,9 @@ TEST_F(MemoryMappedTest, MapCopyUnmap) {
     SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create a buffer object.
-    BufferObjectHandle const bufferObject = cleanup.add(api.createBufferObject(1024,
+    BufferObjectHandle const bufferObject = addCleanup(api.createBufferObject(1024,
             BufferObjectBinding::VERTEX, BufferUsage::DYNAMIC_BIT | BufferUsage::SHARED_WRITE_BIT));
 
     // Map the buffer.
@@ -269,12 +267,11 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
     SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
-    auto const swapChain = cleanup.add(createSwapChain());
+    auto const swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
-    auto const renderTarget = makeRenderTarget(cleanup);
+    auto const renderTarget = makeRenderTarget(*mCleanup);
 
     constexpr std::array<math::float2, 3> triangle1 = {{{-0.5f, 0.5f}, {-0.8f, 0.2f}, {-0.2f, 0.2f}}};
     constexpr std::array<math::float2, 3> triangle2 = {{{0.5f, 0.5f}, {0.2f, 0.2f}, {0.8f, 0.2f}}};
@@ -282,7 +279,7 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
     constexpr size_t singleTriangleSize = triangle1.size() * sizeof(math::float2);
     constexpr size_t totalDataSize = singleTriangleSize * 3;
 
-    auto const bufferObject = cleanup.add(api.createBufferObject(totalDataSize,
+    auto const bufferObject = addCleanup(api.createBufferObject(totalDataSize,
             BufferObjectBinding::VERTEX, BufferUsage::SHARED_WRITE_BIT));
 
     int callbacksExecuted = 0;
@@ -301,11 +298,11 @@ TEST_F(MemoryMappedTest, MultipleCopies) {
     flushAndWait();
     EXPECT_EQ(callbacksExecuted, 3);
 
-    auto [shader, descset] = getSimpleShader(cleanup, { 1, 1, 0, 1 });
+    auto [shader, descset] = getSimpleShader(*mCleanup, { 1, 1, 0, 1 });
 
-    auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 9, sizeof(math::float2), 0, bufferObject);
+    auto [vbih, vbh, ibh] = setupGeometryBuffer(*mCleanup, 9, sizeof(math::float2), 0, bufferObject);
 
-    auto const renderPrimitive = cleanup.add(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+    auto const renderPrimitive = addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);
@@ -322,12 +319,11 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     SKIP_IF(Backend::WEBGPU, "HwMemoryMappedBuffer APIs not yet implemented");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
-    auto renderTarget = makeRenderTarget(cleanup);
+    auto renderTarget = makeRenderTarget(*mCleanup);
 
     constexpr std::array<math::float2, 3> triangle1 = {{{-0.5f, 0.5f}, {-0.8f, 0.2f}, {-0.2f, 0.2f}}};
     constexpr std::array<math::float2, 3> triangle2 = {{{0.5f, 0.5f}, {0.2f, 0.2f}, {0.8f, 0.2f}}};
@@ -335,7 +331,7 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     constexpr size_t singleTriangleSize = triangle1.size() * sizeof(math::float2);
     constexpr size_t totalDataSize = singleTriangleSize * 3;
 
-    auto bufferObject = cleanup.add(api.createBufferObject(totalDataSize,
+    auto bufferObject = addCleanup(api.createBufferObject(totalDataSize,
             BufferObjectBinding::VERTEX, BufferUsage::SHARED_WRITE_BIT));
 
     int callbacksExecuted = 0;
@@ -358,11 +354,11 @@ TEST_F(MemoryMappedTest, UpdatePartial) {
     }
 
 
-    auto [shader, descset] = getSimpleShader(cleanup, { 1, 1, 0, 1 });
+    auto [shader, descset] = getSimpleShader(*mCleanup, { 1, 1, 0, 1 });
 
-    auto [vbih, vbh, ibh] = setupGeometryBuffer(cleanup, 9, sizeof(math::float2), 0, bufferObject);
+    auto [vbih, vbh, ibh] = setupGeometryBuffer(*mCleanup, 9, sizeof(math::float2), 0, bufferObject);
 
-    auto renderPrimitive = cleanup.add(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
+    auto renderPrimitive = addCleanup(api.createRenderPrimitive(vbh, ibh, PrimitiveType::TRIANGLES));
 
     PipelineState state = getColorWritePipelineState();
     shader.addProgramToPipelineState(state);

@@ -319,19 +319,17 @@ TEST_F(LoadImageTest, UpdateImage2D) {
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     for (const auto& t : testCases) {
-        Cleanup cleanup(api);
-
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
         // Create a program.
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
             SamplerType::SAMPLER_2D, getSamplerFormat(t.textureFormat), Precision::HIGH, false };
 
         std::string const fragment = getFormattedFragment(fragmentTemplate, t.textureFormat);
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, *mCleanup, ShaderConfig{
            .vertexShader = mVertexShader,
            .fragmentShader= fragment,
            .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
@@ -339,7 +337,7 @@ TEST_F(LoadImageTest, UpdateImage2D) {
 
         // Create a Texture.
         auto usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
                 t.textureFormat, 1, kTexSize, kTexSize, 1u, usage));
 
         // Upload some pixel data.
@@ -397,7 +395,6 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     SKIP_IF(Backend::VULKAN, "b/454040142");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat const pixelFormat = PixelDataFormat::RGBA;
@@ -405,22 +402,22 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
     TextureFormat const textureFormat = TextureFormat::SRGB8_A8;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string const fragment = getFormattedFragment(fragmentTemplate, textureFormat);
-    Shader shader(api, cleanup, ShaderConfig{
+    Shader shader(api, *mCleanup, ShaderConfig{
         .vertexShader = mVertexShader, .fragmentShader = fragment, .uniforms = {{
             "test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo
     }}});
 
     // Create a texture.
     Handle<HwTexture> const texture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, textureFormat, 1, kTexSize,
+            addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, textureFormat, 1, kTexSize,
                     kTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
     // Create image data.
@@ -481,7 +478,6 @@ TEST_F(LoadImageTest, UpdateImageSRGB) {
 
 TEST_F(LoadImageTest, UpdateImageMipLevel) {
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
@@ -489,15 +485,15 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     TextureFormat textureFormat = TextureFormat::RGBA32F;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string const fragment = getFormattedFragment(fragmentUpdateImageMip, textureFormat);
-    Shader shader(api, cleanup, ShaderConfig {
+    Shader shader(api, *mCleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_FLOAT, samplerInfo}}
@@ -507,7 +503,7 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
     // Base level: 1024
     // Level 1:     512     <-- upload data and sample from this level
     // Level 2:     256
-    Handle<HwTexture> texture = cleanup.add(
+    Handle<HwTexture> texture = addCleanup(
             api.createTexture(SamplerType::SAMPLER_2D, 3, textureFormat, 1, kDoubleTexSize,
                     kDoubleTexSize, 1, TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE));
 
@@ -551,7 +547,6 @@ TEST_F(LoadImageTest, UpdateImageMipLevel) {
 TEST_F(LoadImageTest, UpdateImage3D) {
     SKIP_IF(Backend::VULKAN, "b/453776983");
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
     api.startCapture();
 
     PixelDataFormat pixelFormat = PixelDataFormat::RGBA;
@@ -561,22 +556,22 @@ TEST_F(LoadImageTest, UpdateImage3D) {
     TextureUsage usage = TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE | TextureUsage::COLOR_ATTACHMENT;
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+    auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
     // Create a program.
     filament::SamplerInterfaceBlock::SamplerInfo samplerInfo { "test", "tex", 0,
         SamplerType::SAMPLER_2D_ARRAY, getSamplerFormat(textureFormat), Precision::HIGH, false };
     std::string fragment = getFormattedFragment(fragmentUpdateImage3DTemplate, samplerType);
-    Shader shader(api, cleanup, ShaderConfig {
+    Shader shader(api, *mCleanup, ShaderConfig {
         .vertexShader = mVertexShader,
         .fragmentShader = fragment,
         .uniforms = {{"test_tex", DescriptorType::SAMPLER_2D_ARRAY_FLOAT, samplerInfo}}
     });
 
     // Create a texture.
-    Handle<HwTexture> texture = cleanup.add(api.createTexture(samplerType, 1,
+    Handle<HwTexture> texture = addCleanup(api.createTexture(samplerType, 1,
             textureFormat, 1, kTexSize, kTexSize, 4, usage));
 
     // Create image data for all 4 layers.
