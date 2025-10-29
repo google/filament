@@ -84,12 +84,12 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
     inline void setFrameScheduledCallback(CallbackHandler* handler,
             FrameScheduledCallback&& callback) noexcept {
         if (!callback) {
-            frameScheduled.handler = nullptr;
-            frameScheduled.callback.reset();
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
             return;
         }
-        frameScheduled.handler = handler;
-        frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
     }
 
 private:
@@ -110,8 +110,8 @@ private:
     // These fields store a callback to notify the client that Filament is commiting a frame.
     struct {
         CallbackHandler* handler = nullptr;
-        std::shared_ptr<FrameScheduledCallback> callback = nullptr;
-    } frameScheduled;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.

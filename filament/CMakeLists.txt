@@ -708,6 +708,13 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
+elseif(FILAMENT_USING_GCC)
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -fno-finite-math-only
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
+    )
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math

@@ -88,7 +88,9 @@ public:
      * @see getFrameInfoHistory()
      */
     struct FrameInfo {
+        /** duration in nanosecond since epoch of std::steady_clock */
         using time_point_ns = int64_t;
+        /** duration in nanosecond on the std::steady_clock */
         using duration_ns = int64_t;
         uint32_t frameId;                   //!< monotonically increasing frame identifier
         duration_ns frameTime;              //!< frame duration on the GPU in nanosecond [ns]

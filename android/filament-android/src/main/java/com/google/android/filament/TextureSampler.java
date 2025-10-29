@@ -294,8 +294,8 @@ public class TextureSampler {
     /**
      * This controls anisotropic filtering.
      *
-     * @param anisotropy Amount of anisotropy, should be a power-of-two. The default is 0.
-     *                   The maximum permissible value is 7.
+     * @param anisotropy Amount of anisotropy, should be a power-of-two. The default is 1.
+     *                   The maximum permissible value is 128.
      */
     public void setAnisotropy(float anisotropy) {
         mSampler = nSetAnisotropy(mSampler, anisotropy);

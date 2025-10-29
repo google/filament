@@ -38,18 +38,17 @@ public:
 
     Handle <HwSwapChain> mSwapChain;
     ProgramHandle mProgram;
-    Cleanup mCleanup;
 
-    BasicStencilBufferTest() : mCleanup(getDriverApi()) {}
+    BasicStencilBufferTest() = default;
 
     void SetUp() override {
         auto& api = getDriverApi();
 
         // Create a platform-specific SwapChain and make it current.
-        mSwapChain = mCleanup.add(createSwapChain());
+        mSwapChain = addCleanup(createSwapChain());
         api.makeCurrent(mSwapChain, mSwapChain);
 
-        Shader shader = SharedShaders::makeShader(api, mCleanup, ShaderRequest{
+        Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
                 .mVertexType = VertexShaderType::Noop,
                 .mFragmentType = FragmentShaderType::White,
                 .mUniformType = ShaderUniformType::None
@@ -130,16 +129,15 @@ TEST_F(BasicStencilBufferTest, StencilBuffer) {
     SKIP_IF(Backend::VULKAN, "b/453776821");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
     auto colorTexture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+            addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
                     screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
     auto stencilTexture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::STENCIL8, 1,
+            addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::STENCIL8, 1,
                     screenWidth(), screenHeight(), 1, TextureUsage::STENCIL_ATTACHMENT));
-    auto renderTarget = cleanup.add(api.createRenderTarget(TargetBufferFlags::COLOR0 |
+    auto renderTarget = addCleanup(api.createRenderTarget(TargetBufferFlags::COLOR0 |
                                                                    TargetBufferFlags::STENCIL,
             screenWidth(), screenHeight(), 1, 0, { { colorTexture } }, {}, { { stencilTexture } }));
 
@@ -156,16 +154,15 @@ TEST_F(BasicStencilBufferTest, DepthAndStencilBuffer) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
     SKIP_IF(Backend::VULKAN, "b/453776965");
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create two textures: a color and a stencil, and an associated RenderTarget.
     auto colorTexture =
-            cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
+            addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1, TextureFormat::RGBA8, 1,
                     screenWidth(), screenHeight(), 1, TextureUsage::COLOR_ATTACHMENT));
-    auto depthStencilTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+    auto depthStencilTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::DEPTH24_STENCIL8, 1, screenWidth(), screenHeight(), 1,
             TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
-    auto renderTarget = cleanup.add(api.createRenderTarget(
+    auto renderTarget = addCleanup(api.createRenderTarget(
             TargetBufferFlags::COLOR0 | TargetBufferFlags::STENCIL, screenWidth(), screenHeight(),
             1, 0, { { colorTexture } }, { depthStencilTexture }, { { depthStencilTexture } }));
 
@@ -185,23 +182,22 @@ TEST_F(BasicStencilBufferTest, StencilBufferMSAA) {
     SKIP_IF(Backend::VULKAN, "b/453777217");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create two textures: a single-sampled color and a MSAA stencil texture.
     // We also create two RenderTargets, one for each pass:
     // Pass 0: Render a triangle only into the MSAA stencil buffer.
     // Pass 1: Render a triangle into (an auto-created) MSAA color buffer using the stencil test.
     //         Performs an auto-resolve on the color.
-    auto colorTexture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+    auto colorTexture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::RGBA8, 1, screenWidth(), screenHeight(), 1,
             TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE));
-    auto depthStencilTextureMSAA = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D, 1,
+    auto depthStencilTextureMSAA = addCleanup(api.createTexture(SamplerType::SAMPLER_2D, 1,
             TextureFormat::DEPTH24_STENCIL8, 4, screenWidth(), screenHeight(), 1,
             TextureUsage::STENCIL_ATTACHMENT | TextureUsage::DEPTH_ATTACHMENT));
-    auto renderTarget0 = cleanup.add(api.createRenderTarget(
+    auto renderTarget0 = addCleanup(api.createRenderTarget(
             TargetBufferFlags::DEPTH_AND_STENCIL, screenWidth(), screenHeight(), 4, 0,
             {{}}, { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));
-    auto renderTarget1 = cleanup.add(
+    auto renderTarget1 = addCleanup(
             api.createRenderTarget(TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH_AND_STENCIL,
                     screenWidth(), screenHeight(), 4, 0, { { colorTexture } },
                     { depthStencilTextureMSAA }, { depthStencilTextureMSAA }));

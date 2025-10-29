@@ -1514,7 +1514,8 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
 }
 
 size_t VulkanDriver::getMaxUniformBufferSize() {
-    return mContext.getPhysicalDeviceLimits().maxUniformBufferRange;
+    return std::max(mContext.getPhysicalDeviceLimits().maxUniformBufferRange,
+            static_cast<uint32_t>(mContext.getPhysicalDeviceLimits().nonCoherentAtomSize));
 }
 
 size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
@@ -1532,6 +1533,10 @@ size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
+}
+
+size_t VulkanDriver::getUniformBufferOffsetAlignment() {
+    return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,

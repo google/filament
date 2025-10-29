@@ -56,6 +56,8 @@
             void* library { nullptr };
         } g_x11;
     } // namespace
+#elif defined(FILAMENT_SUPPORTS_OSMESA)
+    // No need
 #else
     #error Not a supported Linux or FeeBSD + WebGPU platform
 #endif

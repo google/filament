@@ -398,8 +398,8 @@ if (MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
 endif()
 
-# Add colors to ninja builds
-if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
+# Add colors to ninja builds (when not using gcc)
+if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja" AND NOT FILAMENT_USING_GCC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
 endif()

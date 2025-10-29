@@ -57,16 +57,15 @@ using namespace filament::backend;
 TEST_F(BackendTest, TextureViewLod) {
     auto& api = getDriverApi();
     api.startCapture(0);
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        Shader whiteShader = SharedShaders::makeShader(api, cleanup, ShaderRequest {
+        Shader whiteShader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest {
             .mVertexType = VertexShaderType::Textured,
             .mFragmentType = FragmentShaderType::White,
             .mUniformType = ShaderUniformType::Sampler
@@ -78,7 +77,7 @@ TEST_F(BackendTest, TextureViewLod) {
         filament::SamplerInterfaceBlock::SamplerInfo samplerInfo {
             "backend_test", "sib_tex", 0,
             SamplerType::SAMPLER_2D, SamplerFormat::FLOAT, Precision::HIGH, false };
-        Shader texturedShader(api, cleanup, ShaderConfig {
+        Shader texturedShader(api, *mCleanup, ShaderConfig {
            .vertexShader = vertexShader,
            .fragmentShader = fragmentTexturedLod,
            .uniforms = {{
@@ -93,7 +92,7 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 3:   16x16 (yellow)
         const size_t kTextureSize = 128;
         const size_t kMipLevels = 4;
-        Handle<HwTexture> texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
                 kMipLevels, TextureFormat::RGBA8, 1, kTextureSize, kTextureSize, 1,
                 TextureUsage::SAMPLEABLE | TextureUsage::COLOR_ATTACHMENT
                 | TextureUsage::UPLOADABLE));
@@ -130,11 +129,11 @@ TEST_F(BackendTest, TextureViewLod) {
         // Level 1:   64x64 (green)             <-- base
         // Level 2:   32x32 (blue)              <--- white triangle rendered
         // Level 3:   16x16 (yellow)            <-- max
-        auto texture13 = cleanup.add(api.createTextureView(texture, 1, 3));
+        auto texture13 = addCleanup(api.createTextureView(texture, 1, 3));
 
         // Render a white triangle into level 2.
         // We specify mip level 2, because minMaxLevels has no effect when rendering into a texture.
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
+        Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
                 TargetBufferFlags::COLOR, 32, 32, 1, 0,
                 {texture, 2 /* level */, 0 /* layer */}, {}, {}));
         {
@@ -154,7 +153,7 @@ TEST_F(BackendTest, TextureViewLod) {
         }
 
         backend::Handle<HwRenderTarget> defaultRenderTarget =
-                cleanup.add(api.createDefaultRenderTarget());
+                addCleanup(api.createDefaultRenderTarget());
 
         PipelineState state = getColorWritePipelineState();
         texturedShader.addProgramToPipelineState(state);
@@ -182,7 +181,7 @@ TEST_F(BackendTest, TextureViewLod) {
         api.endRenderPass();
 
         // Adjust the base mip to 2.
-        auto texture22 = cleanup.add(api.createTextureView(texture, 2, 2));
+        auto texture22 = addCleanup(api.createTextureView(texture, 2, 2));
 
         DescriptorSetHandle descriptorSet22 = texturedShader.createDescriptorSet(api);
         api.updateDescriptorSetTexture(descriptorSet22, 0, texture22, SamplerParams{

@@ -104,7 +104,7 @@ void initPushConstants() {
 }
 
 TEST_F(BackendTest, PushConstants) {
-    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "see b/453757504");
+    SKIP_IF(Backend::OPENGL, "see b/453757504");
     SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "see b/453776664");
     SKIP_IF(Backend::WEBGPU, "Push constants not supported on WebGPU");
 
@@ -113,22 +113,21 @@ TEST_F(BackendTest, PushConstants) {
     auto& api = getDriverApi();
 
     api.startCapture(0);
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
         ShaderGenerator shaderGen(triangleVs, triangleFs, sBackend, sIsMobilePlatform);
         Program p =
                 shaderGen.getProgramWithPushConstants(api, { gVertConstants, gFragConstants, {} });
-        ProgramHandle program = cleanup.add(api.createProgram(std::move(p)));
+        ProgramHandle program = addCleanup(api.createProgram(std::move(p)));
 
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
+        Handle<HwRenderTarget> renderTarget = addCleanup(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 

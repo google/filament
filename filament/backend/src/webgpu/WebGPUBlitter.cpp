@@ -317,32 +317,35 @@ void WebGPUBlitter::blit(wgpu::Queue const& queue, wgpu::CommandEncoder const& c
         .occlusionQuerySet = nullptr,      // not applicable
         .timestampWrites = nullptr,        // not applicable
     };
+    const wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
+        .view = destinationView,
+        .depthLoadOp = wgpu::LoadOp::Clear,
+        .depthStoreOp = wgpu::StoreOp::Store,
+        .depthClearValue = 0.0f, // explicitly defining for consistency
+        .depthReadOnly = false,
+        .stencilLoadOp = wgpu::LoadOp::Undefined,   // stencil not supported
+        .stencilStoreOp = wgpu::StoreOp::Undefined, // stencil not supported
+    };
+
+    // color destination...
+    const wgpu::RenderPassColorAttachment colorAttachment{
+        .view = destinationView,
+        .depthSlice = args.destination.texture.GetDimension() == wgpu::TextureDimension::e3D
+                              ? args.destination.layerOrDepth
+                              : wgpu::kDepthSliceUndefined,
+        // we don't need this resolveTarget because we are doing a resolve in software (the
+        // shader), but we probably should (leveraging a msaa sidecar texture) to take advantage
+        // of hardware acceleration. Thus, this might be an opportunity for optimization
+        .resolveTarget = nullptr,
+        .loadOp = wgpu::LoadOp::Clear,
+        .storeOp = wgpu::StoreOp::Store,
+        .clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
+    };
+
+
     if (depthDestination) {
-        const wgpu::RenderPassDepthStencilAttachment depthStencilAttachment{
-            .view = destinationView,
-            .depthLoadOp = wgpu::LoadOp::Clear,
-            .depthStoreOp = wgpu::StoreOp::Store,
-            .depthClearValue = 0.0f, // explicitly defining for consistency
-            .depthReadOnly = false,
-            .stencilLoadOp = wgpu::LoadOp::Undefined,   // stencil not supported
-            .stencilStoreOp = wgpu::StoreOp::Undefined, // stencil not supported
-        };
         renderPassDescriptor.depthStencilAttachment = &depthStencilAttachment;
     } else {
-        // color destination...
-        const wgpu::RenderPassColorAttachment colorAttachment{
-            .view = destinationView,
-            .depthSlice = args.destination.texture.GetDimension() == wgpu::TextureDimension::e3D
-                                  ? args.destination.layerOrDepth
-                                  : wgpu::kDepthSliceUndefined,
-            // we don't need this resolveTarget because we are doing a resolve in software (the
-            // shader), but we probably should (leveraging a msaa sidecar texture) to take advantage
-            // of hardware acceleration. Thus, this might be an opportunity for optimization
-            .resolveTarget = nullptr,
-            .loadOp = wgpu::LoadOp::Clear,
-            .storeOp = wgpu::StoreOp::Store,
-            .clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 },
-        };
         renderPassDescriptor.colorAttachmentCount = 1;
         renderPassDescriptor.colorAttachments = &colorAttachment;
     }

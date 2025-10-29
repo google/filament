@@ -32,12 +32,11 @@ TEST_F(BackendTest, TestTemplate) {
     constexpr int kRenderTargetSize = 512;
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
-    RenderTargetHandle renderTarget = cleanup.add(api.createDefaultRenderTarget());
+    RenderTargetHandle renderTarget = addCleanup(api.createDefaultRenderTarget());
 
-    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+    Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
             .mVertexType = VertexShaderType::Simple,
             .mFragmentType = FragmentShaderType::SolidColored,
             .mUniformType = ShaderUniformType::Simple,
@@ -50,7 +49,7 @@ TEST_F(BackendTest, TestTemplate) {
     PipelineState ps = getColorWritePipelineState();
     shader.addProgramToPipelineState(ps);
 
-    auto ubuffer = cleanup.add(api.createBufferObject(sizeof(SimpleMaterialParams),
+    auto ubuffer = addCleanup(api.createBufferObject(sizeof(SimpleMaterialParams),
             BufferObjectBinding::UNIFORM, BufferUsage::STATIC));
     shader.uploadUniform(api, ubuffer, SimpleMaterialParams{
             .color = float4(1, 0, 0, 1),

@@ -256,16 +256,15 @@ TEST_F(ReadPixelsTest, ReadPixels) {
     TestCase const testCases[] = { t0, t2, t3, t4, t5, t6, t7, t8 };
 
     DriverApi& api = getDriverApi();
-    Cleanup cleanup(api);
 
     std::string vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
             ShaderUniformType::None);
-    Shader floatShader(api, cleanup, ShaderConfig{
+    Shader floatShader(api, *mCleanup, ShaderConfig{
             .vertexShader = vertexShader,
             .fragmentShader = fragmentFloat,
             .uniforms = {}
     });
-    Shader uintShader(api, cleanup, ShaderConfig{
+    Shader uintShader(api, *mCleanup, ShaderConfig{
             .vertexShader = vertexShader,
             .fragmentShader = fragmentUint,
             .uniforms = {}
@@ -275,9 +274,9 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         // Create a platform-specific SwapChain and make it current.
         Handle<HwSwapChain> swapChain;
         if (t.useDefaultRT) {
-            swapChain = cleanup.add(createSwapChain());
+            swapChain = addCleanup(createSwapChain());
         } else {
-            swapChain = cleanup.add(api.createSwapChainHeadless(t.getRenderTargetSize(),
+            swapChain = addCleanup(api.createSwapChainHeadless(t.getRenderTargetSize(),
                     t.getRenderTargetSize(), 0));
         }
 
@@ -285,7 +284,7 @@ TEST_F(ReadPixelsTest, ReadPixels) {
 
         // Create a Texture and RenderTarget to render into.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> const texture = cleanup.add(api.createTexture(SamplerType::SAMPLER_2D,
+        Handle<HwTexture> const texture = addCleanup(api.createTexture(SamplerType::SAMPLER_2D,
                 t.mipLevels, t.textureFormat, 1, renderTargetBaseSize, renderTargetBaseSize, 1,
                 usage));
 
@@ -293,11 +292,11 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         if (t.useDefaultRT) {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = cleanup.add(api.createDefaultRenderTarget());
+            renderTarget = addCleanup(api.createDefaultRenderTarget());
         } else {
             // The width and height must match the width and height of the respective mip
             // level (at least for OpenGL).
-            renderTarget = cleanup.add(api.createRenderTarget(
+            renderTarget = addCleanup(api.createRenderTarget(
                     TargetBufferFlags::COLOR, t.getRenderTargetSize(),
                     t.getRenderTargetSize(), t.samples, 0, {{ texture, uint8_t(t.mipLevel) }}, {},
                     {}));
@@ -330,11 +329,10 @@ TEST_F(ReadPixelsTest, ReadPixels) {
         api.endRenderPass();
 
         if (t.mipLevel > 0) {
-            Cleanup localCleanup(api);
             // Render red to the first mip level to check that the backend is actually reading the
             // correct mip.
             RenderPassParams p = params;
-            Handle<HwRenderTarget> mipLevelOneRT = localCleanup.add(api.createRenderTarget(
+            Handle<HwRenderTarget> mipLevelOneRT = addCleanup(api.createRenderTarget(
                     TargetBufferFlags::COLOR, renderTargetBaseSize, renderTargetBaseSize, 1, 0,
                     {{ texture }}, {}, {}));
             p.clearColor = { 1.f, 0.f, 0.f, 1.f };
@@ -382,13 +380,12 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
     const int iterationCount = 100;
 
     DriverApi& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create a platform-specific SwapChain and make it current.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
     api.makeCurrent(swapChain, swapChain);
 
-    Shader shader = SharedShaders::makeShader(api, cleanup, ShaderRequest{
+    Shader shader = SharedShaders::makeShader(api, *mCleanup, ShaderRequest{
             .mVertexType = VertexShaderType::Noop,
             .mFragmentType = FragmentShaderType::White,
             .mUniformType = ShaderUniformType::None
@@ -396,7 +393,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
 
     // Create a Texture and RenderTarget to render into.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-    Handle<HwTexture> texture = cleanup.add(api.createTexture(
+    Handle<HwTexture> texture = addCleanup(api.createTexture(
             SamplerType::SAMPLER_2D,            // target
             1,                                  // levels
             TextureFormat::RGBA8,               // format
@@ -406,7 +403,7 @@ TEST_F(ReadPixelsTest, ReadPixelsPerformance) {
             1,                                  // depth
             usage));                             // usage
 
-    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
+    Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
             TargetBufferFlags::COLOR,
             renderTargetSize,                          // width
             renderTargetSize,                          // height

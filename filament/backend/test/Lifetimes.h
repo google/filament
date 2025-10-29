@@ -19,14 +19,12 @@
 
 #include <vector>
 #include <functional>
-#include <optional>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
 #include "backend/Handle.h"
 #include "backend/DriverApiForward.h"
-#include "BackendTest.h"
 
 class RenderFrame {
 public:

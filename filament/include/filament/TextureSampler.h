@@ -154,8 +154,8 @@ public:
 
     /**
      * This controls anisotropic filtering.
-     * @param anisotropy Amount of anisotropy, should be a power-of-two. The default is 0.
-     *                   The maximum permissible value is 7.
+     * @param anisotropy Amount of anisotropy, should be a power-of-two. The default is 1.
+     *                   The maximum permissible value is 128.
      */
     void setAnisotropy(float anisotropy) noexcept {
         const int log2 = ilogbf(anisotropy > 0 ? anisotropy : -anisotropy);

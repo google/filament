@@ -48,16 +48,15 @@ using namespace filament::backend;
 
 TEST_F(BackendTest, MRT) {
     DriverApi& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // The test is executed within this block scope to force destructors to run before
     // executeCommands().
     {
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, *mCleanup, ShaderConfig{
                 .vertexShader = SharedShaders::getVertexShaderText(VertexShaderType::Noop,
                         ShaderUniformType::None),
                 .fragmentShader = fragment,
@@ -66,11 +65,11 @@ TEST_F(BackendTest, MRT) {
 
         TrianglePrimitive triangle(api);
 
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
         // Create two Textures.
         auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
-        Handle<HwTexture> textureA = cleanup.add(api.createTexture(
+        Handle<HwTexture> textureA = addCleanup(api.createTexture(
                     SamplerType::SAMPLER_2D,            // target
                     1,                                  // levels
                     TextureFormat::RGBA8,               // format
@@ -79,7 +78,7 @@ TEST_F(BackendTest, MRT) {
                     screenHeight(),                     // height
                     1,                                  // depth
                     usage));                            // usage
-        Handle<HwTexture> textureB = cleanup.add(api.createTexture(
+        Handle<HwTexture> textureB = addCleanup(api.createTexture(
                     SamplerType::SAMPLER_2D,            // target
                     1,                                  // levels
                     TextureFormat::RGBA8,               // format
@@ -90,7 +89,7 @@ TEST_F(BackendTest, MRT) {
                     usage));                            // usage
 
         // Create a RenderTarget with two attachments.
-        Handle<HwRenderTarget> renderTarget = cleanup.add(api.createRenderTarget(
+        Handle<HwRenderTarget> renderTarget = addCleanup(api.createRenderTarget(
                 TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1,
                 // The width and height must match the width and height of the respective mip
                 // level (at least for OpenGL).

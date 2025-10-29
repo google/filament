@@ -9,8 +9,8 @@ To publish under the `com.google.android` namespace, you'll also need to email
 `central-support@sonatype.com` with your account information to request access.
 
 Then, generate a user token through the Sonatype website. Navigate to
-[https://central.sonatype.com/account](https://central.sonatype.com/account) and select **Generate
-User Token**.
+[https://central.sonatype.com/usertoken](https://central.sonatype.com/usertoken)
+and select **Generate User Token**.
 
 Finally, add the generated token credentials to `~/.gradle/gradle.properties`. (Note: these are
 different from the credentials used to log into your Sonatype account):

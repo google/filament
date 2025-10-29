@@ -63,19 +63,18 @@ TEST_F(BackendTest, MissingRequiredAttributes) {
     // executeCommands().
     {
         DriverApi& api = getDriverApi();
-        Cleanup cleanup(api);
         // Create a platform-specific SwapChain and make it current.
-        auto swapChain = cleanup.add(createSwapChain());
+        auto swapChain = addCleanup(createSwapChain());
         api.makeCurrent(swapChain, swapChain);
 
         // Create a program.
-        Shader shader(api, cleanup, ShaderConfig{
+        Shader shader(api, *mCleanup, ShaderConfig{
                 .vertexShader = vertex,
                 .fragmentShader = SharedShaders::getFragmentShaderText(FragmentShaderType::White,
                         ShaderUniformType::None),
         });
 
-        auto defaultRenderTarget = cleanup.add(api.createDefaultRenderTarget());
+        auto defaultRenderTarget = addCleanup(api.createDefaultRenderTarget());
 
         TrianglePrimitive triangle(api);
 

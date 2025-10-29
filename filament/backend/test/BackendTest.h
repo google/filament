@@ -28,6 +28,7 @@
 
 #include "PlatformRunner.h"
 #include "ImageExpectations.h"
+#include "Lifetimes.h"
 
 namespace test {
 
@@ -48,10 +49,13 @@ public:
     static std::filesystem::path binaryDirectory();
 
 protected:
-
     BackendTest();
     ~BackendTest() override;
 
+    template<typename HandleType>
+    filament::backend::Handle<HandleType> addCleanup(filament::backend::Handle<HandleType> handle) {
+        return mCleanup->add(handle);
+    }
     void initializeDriver();
     void executeCommands();
     void flushAndWait();
@@ -77,6 +81,9 @@ protected:
 
     static bool matchesEnvironment(Backend backend);
     static bool matchesEnvironment(OperatingSystem operatingSystem);
+
+    std::unique_ptr<Cleanup> mCleanup;
+
 private:
     // Adds all the images that failed an ImageExpectation to the XML metadata for the current tests
     // case. Add --gtest_output=xml as a command line argument to generate a test_detail.xml file in

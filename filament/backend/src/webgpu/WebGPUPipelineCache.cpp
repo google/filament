@@ -338,6 +338,10 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
     // To handle this, we check if any color targets are configured for this pipeline. If not, we
     // create a pipeline *without* a fragment stage. This makes the pipeline valid for a
     // depth-only pass, allowing depth writes to proceed correctly.
+
+    // Note that this needs to be defined in the same scope as the CreateRenderpipeline call
+    std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
+
     if (request.fragmentShaderModule != nullptr && request.colorFormatCount > 0) {
         fragmentState.module = request.fragmentShaderModule;
         fragmentState.entryPoint = "main";
@@ -346,7 +350,6 @@ wgpu::RenderPipeline WebGPUPipelineCache::createRenderPipeline(
         fragmentState.constantCount = 0;
         fragmentState.constants = nullptr;
         fragmentState.targetCount = request.colorFormatCount;
-        std::array<wgpu::ColorTargetState, MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT> colorTargets {};
         assert_invariant(fragmentState.targetCount <= MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT);
         for (size_t targetIndex = 0; targetIndex < fragmentState.targetCount; targetIndex++) {
             wgpu::ColorTargetState& colorTarget = colorTargets[targetIndex];
