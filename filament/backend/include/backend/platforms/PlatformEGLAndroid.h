@@ -203,7 +203,10 @@ private:
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
 
+    int32_t (*ANativeWindow_setProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
+    int32_t (*ANativeWindow_isProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
     bool mAssertNativeWindowIsValid = false;
+    bool mHasProducerThrottlingControl = false;
 };
 
 } // namespace filament::backend
