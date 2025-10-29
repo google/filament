@@ -91,6 +91,46 @@ public:
 
     using ExternalImageHandleRef = ExternalImageHandle const&;
 
+    struct CompositorTiming {
+        /** duration in nanosecond since epoch of std::steady_clock */
+        using time_point_ns = int64_t;
+        /** duration in nanosecond on the std::steady_clock */
+        using duration_ns = int64_t;
+        /**
+         * The timestamp [ns] since epoch of the next time the compositor will begin composition.
+         * This is effectively the deadline for when the compositor must receive a newly queued
+         * frame.
+         */
+        time_point_ns compositeDeadline;
+
+        /**
+         * The time delta [ns] between subsequent composition events.
+         */
+        duration_ns compositeInterval;
+
+        /**
+         * The time delta [ns] between the start of composition and the expected present time of
+         *  that composition. This can be used to estimate the latency of the actual present time.
+         */
+        duration_ns compositeToPresentLatency;
+    };
+
+    struct FrameTimestamps {
+        /** duration in nanosecond since epoch of std::steady_clock */
+        using time_point_ns = int64_t;
+        static constexpr time_point_ns INVALID = -1;    //!< value not supported
+        static constexpr time_point_ns PENDING = -2;    //!< value not yet available
+        time_point_ns requestedPresentTime;
+        time_point_ns acquireTime;
+        time_point_ns latchTime;
+        time_point_ns firstRefreshStartTime;
+        time_point_ns lastRefreshStartTime;
+        time_point_ns gpuCompositionDoneTime;
+        time_point_ns displayPresentTime;
+        time_point_ns dequeueReadyTime;
+        time_point_ns releaseTime;
+    };
+
     /**
      * The type of technique for stereoscopic rendering. (Note that the materials used will need to
      * be compatible with the chosen technique.)
@@ -247,6 +287,65 @@ public:
      */
     virtual bool pumpEvents() noexcept;
 
+    // --------------------------------------------------------------------------------------------
+    // Swapchain timing APIs
+
+    /**
+     * Whether this platform supports compositor timing querying.
+     *
+     * @return true if this Platform supports compositor timings, false otherwise [default]
+     * @see queryCompositorTiming()
+     * @see setPresentFrameId()
+     * @see queryFrameTimestamps()
+     */
+    virtual bool isCompositorTimingSupported() const noexcept;
+
+    /**
+     * If compositor timing is supported, fills the provided CompositorTiming structure
+     * with timing information form the compositor the swapchain's native window is using.
+     * The swapchain'snative window must be valid (i.e. not a headless swapchain).
+     * @param swapchain to query the compositor timing from
+     * @return true on success, false otherwise (e.g. if not supported)
+     * @see isCompositorTimingSupported()
+     */
+    virtual bool queryCompositorTiming(SwapChain const* UTILS_NONNULL swapchain,
+            CompositorTiming* UTILS_NONNULL outCompositorTiming) const noexcept;
+
+    /**
+     * Associate a generic frameId which must be monotonically increasing (albeit not strictly) with
+     * the next frame to be presented on the specified swapchain.
+     *
+     * This must be called from the backend thread.
+     *
+     * @param swapchain
+     * @param frameId
+     * @return true on success, false otherwise
+     * @see isCompositorTimingSupported()
+     * @see queryFrameTimestamps()
+     */
+    virtual bool setPresentFrameId(SwapChain const* UTILS_NONNULL swapchain,
+            uint64_t frameId) noexcept;
+
+    /**
+     * If compositor timing is supported, fills the provided FrameTimestamps structure
+     * with timing information of a given frame, identified by the frame id, of the specified
+     * swapchain. The system only keeps a limited history of frames timings.
+     *
+     * This API is thread safe and can be called from any thread.
+     *
+     * @param swapchain swapchain to query the timestamps of
+     * @param frameId frame we're interested it
+     * @param outFrameTimestamps output structure receiving the timestamps
+     * @return true if successful, false otherwise
+     * @see isCompositorTimingSupported()
+     * @see setPresentFrameId()
+     */
+    virtual bool queryFrameTimestamps(SwapChain const* UTILS_NONNULL swapchain,
+            uint64_t frameId, FrameTimestamps* UTILS_NONNULL outFrameTimestamps) const noexcept;
+
+    // --------------------------------------------------------------------------------------------
+    // Caching APIs
+
     /**
      * InsertBlobFunc is an Invocable to an application-provided function that a
      * backend implementation may use to insert a key/value pair into the
@@ -338,6 +437,9 @@ public:
      */
     size_t retrieveBlob(const void* UTILS_NONNULL key, size_t keySize,
             void* UTILS_NONNULL value, size_t valueSize);
+
+    // --------------------------------------------------------------------------------------------
+    // Debugging APIs
 
     using DebugUpdateStatFunc = utils::Invocable<void(const char* UTILS_NONNULL key, uint64_t value)>;
 

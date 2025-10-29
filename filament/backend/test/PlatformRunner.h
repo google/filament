@@ -35,13 +35,15 @@ enum class Backend : uint8_t {
     NOOP = 5,
 };
 
-enum class OperatingSystem: uint8_t {
+enum class OperatingSystem : uint8_t {
     OTHER = 1,
     // Also represents android phones.
     LINUX = 2,
     // Also represents iOS phones.
     APPLE = 3,
+
     CONTINUOUS_INTEGRATION = 4,
+    CI = 4,
     // TODO: When tests support windows add it here.
 };
 

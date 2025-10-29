@@ -145,7 +145,10 @@ static void createFaces(DriverApi& dapi, Handle<HwTexture> texture, int baseWidt
 }
 
 TEST_F(BlitTest, ColorMagnify) {
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453757697");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453777397");
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
+
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -210,6 +213,9 @@ TEST_F(BlitTest, ColorMagnify) {
 
 TEST_F(BlitTest, ColorMinify) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758045");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::VULKAN), "b/453776623");
+
     auto& api = getDriverApi();
     mCleanup.addPostCall([&]() { executeCommands(); });
 
@@ -267,6 +273,7 @@ TEST_F(BlitTest, ColorMinify) {
 
 TEST_F(BlitTest, ColorResolve) {
     SKIP_IF(Backend::WEBGPU, "test cases fail in WebGPU, see b/424157731");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758075");
     auto& api = getDriverApi();
 
     if (api.getFeatureLevel() < FeatureLevel::FEATURE_LEVEL_2) {

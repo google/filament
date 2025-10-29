@@ -1254,11 +1254,6 @@ void WebGPUDriver::beginRenderPass(Handle<HwRenderTarget> renderTargetHandle,
             customDepthStencilMsaaSidecarTextureView);
 
     mRenderPassEncoder = commandEncoder.BeginRenderPass(&renderPassDescriptor);
-
-    // Ensure viewport dimensions are not 0
-    FILAMENT_CHECK_POSTCONDITION(params.viewport.width > 0) << "viewport width is 0?";
-    FILAMENT_CHECK_POSTCONDITION(params.viewport.height > 0) << "viewport height is 0?";
-
     mRenderPassEncoder.SetViewport(
             static_cast<float>(params.viewport.left),
             static_cast<float>(params.viewport.bottom),
