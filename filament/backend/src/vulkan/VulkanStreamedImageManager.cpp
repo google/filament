@@ -22,15 +22,8 @@
 #include "VulkanSamplerCache.h"
 
 namespace filament::backend {
-    VulkanStreamedImageManager::VulkanStreamedImageManager(
-        VulkanExternalImageManager* manager,
-        VulkanDescriptorSetCache* descriptorSet,
-        VulkanSamplerCache* samplerCache)
-    : mExternalImageManager(manager),
-      mDescriptorSetCache(descriptorSet),
-      mSamplerCache(samplerCache) {
-
-}
+VulkanStreamedImageManager::VulkanStreamedImageManager(VulkanExternalImageManager* manager)
+        : mExternalImageManager(manager) {}
 
 VulkanStreamedImageManager::~VulkanStreamedImageManager() = default;
 
@@ -58,20 +51,8 @@ void VulkanStreamedImageManager::onStreamAcquireImage(fvkmemory::resource_ptr<Vu
     for (StreamedTextureBinding const& data: mStreamedTexturesBindings) {
         // Find the right stream
         if (data.image->getStream() == stream) {
-            // For some reason, some of the frames coming to us, are on streams where the
-            // descriptor set isn't external...
-            if (data.image->getVkFormat() == VK_FORMAT_UNDEFINED) {
-                mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
-                        data.samplerParams);
-            } else {
-                //... In this case we just default to using the normal path and update the
-                // sampler.
-                VulkanSamplerCache::Params cacheParams = {
-                    .sampler = data.samplerParams,
-                };
-                VkSampler const vksampler = mSamplerCache->getSampler(cacheParams);
-                mDescriptorSetCache->updateSampler(data.set, data.binding, image, vksampler);
-            }
+            mExternalImageManager->bindExternallySampledTexture(data.set, data.binding, image,
+                    data.samplerParams);
         }
     }
 }

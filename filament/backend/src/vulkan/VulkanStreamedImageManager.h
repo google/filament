@@ -34,9 +34,7 @@ class VulkanSamplerCache;
 class VulkanStreamedImageManager {
 public:
     VulkanStreamedImageManager(
-            VulkanExternalImageManager* manager,
-            VulkanDescriptorSetCache* descriptorSet,
-            VulkanSamplerCache* samplerCache);
+            VulkanExternalImageManager* manager);
     ~VulkanStreamedImageManager();
     void terminate();
 
@@ -59,8 +57,6 @@ private:
     std::vector<StreamedTextureBinding> mStreamedTexturesBindings;
 
     VulkanExternalImageManager* mExternalImageManager;
-    VulkanDescriptorSetCache*   mDescriptorSetCache;
-    VulkanSamplerCache*         mSamplerCache;
 };
 
 } // namespace filament::backend

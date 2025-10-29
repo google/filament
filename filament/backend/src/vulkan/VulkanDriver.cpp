@@ -269,7 +269,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
       mQueryManager(mPlatform->getDevice()),
       mExternalImageManager(platform, &mSamplerCache, &mYcbcrConversionCache, &mDescriptorSetCache,
               &mDescriptorSetLayoutCache),
-      mStreamedImageManager(&mExternalImageManager, &mDescriptorSetCache, &mSamplerCache),
+      mStreamedImageManager(&mExternalImageManager),
       mIsSRGBSwapChainSupported(mPlatform->getCustomization().isSRGBSwapChainSupported),
       mIsMSAASwapChainSupported(false), // TODO: support MSAA swapchain
       mStereoscopicType(driverConfig.stereoscopicType) {
