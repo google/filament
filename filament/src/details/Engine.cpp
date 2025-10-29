@@ -705,6 +705,12 @@ void FEngine::shutdown() {
         // Driver::terminate() has been called here.
     }
 
+    // Handle any pending deferred destruction for asynchronous objects.
+    if (isAsynchronousModeEnabled()) {
+        gcDeferredAsyncObjectDestruction();
+        assert_invariant(mDeferredAsyncObjectDestruction.empty());
+    }
+
     // Finally, call user callbacks that might have been scheduled.
     // These callbacks CANNOT call driver APIs.
     getDriver().purge();
@@ -755,13 +761,28 @@ void FEngine::prepare(DriverApi& driver) {
     });
 }
 
-void FEngine::gc() {
+void FEngine::gcManagers() {
     // Note: this runs in a Job
     auto& em = mEntityManager;
     mRenderableManager.gc(em);
     mLightManager.gc(em);
     mTransformManager.gc(em);
     mCameraManager.gc(*this, em);
+}
+
+void FEngine::gcDeferredAsyncObjectDestruction() {
+    if (mDeferredAsyncObjectDestruction.empty()) {
+        return;
+    }
+    auto it = std::remove_if(
+            mDeferredAsyncObjectDestruction.begin(),
+            mDeferredAsyncObjectDestruction.end(),
+            [](auto& f) {
+                return f(); // Returns true if it should be removed
+            }
+    );
+    // Actually erase the elements from the vector
+    mDeferredAsyncObjectDestruction.erase(it, mDeferredAsyncObjectDestruction.end());
 }
 
 void FEngine::submitFrame() {
@@ -1184,6 +1205,36 @@ bool FEngine::terminateAndDestroyLocked(Lock& lock, const T* p, ResourceList<T>&
     return success;
 }
 
+template<typename T>
+UTILS_NOINLINE
+void FEngine::terminateAndDeferAsyncObjectDestruction(const T* p, ResourceList<T>& list) {
+    bool const success = list.remove(p);
+
+#if UTILS_HAS_RTTI
+    auto typeName = CallStack::typeName<T>();
+    const char * const typeNameCStr = typeName.c_str();
+#else
+    const char * const typeNameCStr = "<no-rtti>";
+#endif
+
+    if (ASSERT_PRECONDITION_NON_FATAL(success,
+        "Object %s at %p doesn't exist (double free?)", typeNameCStr, p)) {
+        // Terminate the backend resource immediately as they're unnecessary from this point.
+        const_cast<T*>(p)->terminate(*this);
+
+        // We defer the destruction of the frontend object until the creation process completes.
+        // This ensures the object remains valid while the creation process still holds references
+        // to it.
+        mDeferredAsyncObjectDestruction.push_back([this, p=const_cast<T*>(p)]() {
+            if (!p->isCreationComplete()) {
+                return false;
+            }
+            mHeapAllocator.destroy(p);
+            return true;
+        });
+    }
+}
+
 // -----------------------------------------------------------------------------------------------
 
 UTILS_NOINLINE
@@ -1193,11 +1244,19 @@ bool FEngine::destroy(const FBufferObject* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FVertexBuffer* p) {
+    if (p && !p->isCreationComplete()) {
+        terminateAndDeferAsyncObjectDestruction(p, mVertexBuffers);
+        return true;
+    }
     return terminateAndDestroy(p, mVertexBuffers);
 }
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FIndexBuffer* p) {
+    if (p && !p->isCreationComplete()) {
+        terminateAndDeferAsyncObjectDestruction(p, mIndexBuffers);
+        return true;
+    }
     return terminateAndDestroy(p, mIndexBuffers);
 }
 
@@ -1233,6 +1292,10 @@ bool FEngine::destroy(const FColorGrading* p) {
 
 UTILS_NOINLINE
 bool FEngine::destroy(const FTexture* p) {
+    if (p && !p->isCreationComplete()) {
+        terminateAndDeferAsyncObjectDestruction(p, mTextures);
+        return true;
+    }
     return terminateAndDestroy(p, mTextures);
 }
 

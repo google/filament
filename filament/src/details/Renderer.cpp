@@ -307,9 +307,14 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 
     engine.flush();     // flush command stream
 
-    // Run the component managers' GC
-    auto& js = engine.getJobSystem();
-    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    // Run GC
+    JobSystem& js = engine.getJobSystem();
+    auto *rootJob = js.setRootJob(js.createJob());
+    js.run(jobs::createJob(js, nullptr, &FEngine::gcManagers, &engine)); // gc all component managers
+    if (engine.isAsynchronousModeEnabled()) {
+        js.run(jobs::createJob(js, nullptr, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
+    }
+    js.runAndWait(rootJob);
 
     mFrameSkipper.frameSkipped();
 }
@@ -510,9 +515,14 @@ void FRenderer::endFrame() {
 
     engine.flush();     // flush command stream
 
-    // Run the component managers' GC
-    auto& js = engine.getJobSystem();
-    js.runAndWait(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
+    // Run GC
+    JobSystem& js = engine.getJobSystem();
+    auto *rootJob = js.setRootJob(js.createJob());
+    js.run(jobs::createJob(js, nullptr, &FEngine::gcManagers, &engine)); // gc all component managers
+    if (engine.isAsynchronousModeEnabled()) {
+        js.run(jobs::createJob(js, nullptr, &FEngine::gcDeferredAsyncObjectDestruction, &engine));
+    }
+    js.runAndWait(rootJob);
 }
 
 void FRenderer::readPixels(
