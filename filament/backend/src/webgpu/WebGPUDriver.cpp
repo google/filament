@@ -339,7 +339,7 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
-    return allocHandle<HwIndexBuffer>();
+    return allocHandle<WebGPUIndexBuffer>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
