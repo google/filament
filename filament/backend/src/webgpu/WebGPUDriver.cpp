@@ -841,6 +841,10 @@ size_t WebGPUDriver::getMaxArrayTextureLayers() {
     return mDeviceLimits.maxTextureArrayLayers;
 }
 
+size_t WebGPUDriver::getUniformBufferOffsetAlignment(){
+    return mDeviceLimits.minUniformBufferOffsetAlignment;
+}
+
 void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
     // make sure command elements (draws, etc.) prior to the buffer update are processed before the

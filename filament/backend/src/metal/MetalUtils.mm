@@ -68,4 +68,5 @@ id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteg
                                            slices:NSMakeRange(slice, 1)];
 }
 
+
 } // namespace filament::backend

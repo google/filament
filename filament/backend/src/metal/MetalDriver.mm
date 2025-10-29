@@ -29,6 +29,7 @@
 #include "MetalHandles.h"
 #include "MetalState.h"
 #include "MetalTimerQuery.h"
+#include "MetalUtils.h"
 
 #include <backend/platforms/PlatformMetal.h>
 #include <backend/platforms/PlatformMetal-ObjC.h>
@@ -1250,6 +1251,10 @@ size_t MetalDriver::getMaxTextureSize(SamplerType type) {
 size_t MetalDriver::getMaxArrayTextureLayers() {
     // TODO: return the actual size instead of hardcoding the minspec
     return 256;
+}
+
+size_t MetalDriver::getUniformBufferOffsetAlignment() {
+    return ::filament::backend::getUniformBufferOffsetAlignment();
 }
 
 void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
