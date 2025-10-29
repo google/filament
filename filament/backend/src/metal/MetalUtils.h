@@ -53,7 +53,18 @@ id<MTLTexture> createTextureViewWithSingleSlice(id<MTLTexture> texture, NSUInteg
 /**
  * Returns the required alignment for uniform buffer offsets.
  */
-size_t getUniformBufferOffsetAlignment();
+constexpr size_t getUniformBufferOffsetAlignment() {
+#if defined(FILAMENT_IOS)
+#if TARGET_OS_SIMULATOR
+    // The iOS simulator has differing alignment requirements.
+    return 256;
+#else
+    return 4;
+#endif  // TARGET_OS_SIMULATOR
+#else
+    return 32;
+#endif
+}
 
 } // namespace filament::backend
 
