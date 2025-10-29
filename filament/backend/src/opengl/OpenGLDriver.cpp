@@ -2666,6 +2666,10 @@ size_t OpenGLDriver::getMaxArrayTextureLayers() {
     return mContext.gets.max_array_texture_layers;
 }
 
+size_t OpenGLDriver::getUniformBufferOffsetAlignment() {
+    return mContext.gets.uniform_buffer_offset_alignment;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Swap chains
 // ------------------------------------------------------------------------------------------------
