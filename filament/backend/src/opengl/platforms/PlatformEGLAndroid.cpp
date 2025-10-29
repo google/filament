@@ -423,7 +423,7 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
         AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
-        auto const const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        auto const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
         // Only set sRGB as true if the filament format requires it, otherwise the eglCreateImage might fail.
         p->sRGB = textureFormat == TextureFormat::SRGB8 || textureFormat == TextureFormat::SRGB8_A8;
         p->format = textureFormat;
