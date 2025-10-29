@@ -429,6 +429,8 @@ public:
     API_AVAILABLE(ios(12.0))
     void onSignal(MetalFenceSignalBlock block);
 
+    void cancel();
+
 private:
 
     MetalContext& context;
