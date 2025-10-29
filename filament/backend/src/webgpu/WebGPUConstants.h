@@ -24,9 +24,6 @@
 // WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple of 4.
 constexpr size_t FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS = 4;
 
-// WebGPU requires the offset of GPUBuffer:getMappedRange() to be a multiple of 8.
-constexpr size_t FILAMENT_WEBGPU_MAPPED_RANGE_OFFSET_MODULUS = 8;
-
 // FWGPU is short for Filament WebGPU
 
 // turn on runtime validation, namely for debugging, that would normally not run (for release)

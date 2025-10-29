@@ -21,7 +21,6 @@
 
 #include <webgpu/webgpu_cpp.h>
 
-#include <array>
 #include <cstdint>
 
 namespace filament::backend {
@@ -50,10 +49,6 @@ protected:
 
 private:
     const wgpu::Buffer mBuffer;
-    const wgpu::Device& mDevice;
-    // WebGPU requires that the source buffer of a writeBuffer call has a size that is a multiple
-    // of 4. This member is used to pad the data if the source size is not a multiple of 4.
-    std::array<uint8_t, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS> mRemainderChunk{};
 };
 
 } // namespace filament::backend

@@ -57,13 +57,12 @@ namespace {
 
 WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::BufferUsage usage,
         const uint32_t size, char const* const label)
-    : mBuffer{ createBuffer(device, usage, size, label) }, mDevice (device) {}
+    : mBuffer{ createBuffer(device, usage, size, label) } {}
 
 // Updates the GPU buffer with data from a BufferDescriptor.
-// WebGPU requires that the size of the data written to a buffer is a multiple of 4.
-// This function handles cases where the buffer descriptor's size is not a multiple of 4
-// by writing the bulk of the data first, and then copying the remaining bytes into a
-// padded temporary chunk which is then written to the buffer.
+// WebGPU requires that the size of the data copied from the staging buffer to the GPU buffer is a
+// multiple of 4. This function handles cases where the buffer descriptor's size is not a multiple
+// of 4 by writing the data first, and then padding to reach aligment to 4 with zeros.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Device const& device) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
@@ -81,32 +80,37 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
 
     // Calculate some alignment related sizes
     const size_t remainder = bufferDescriptor.size % FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
-    const size_t legalSize = bufferDescriptor.size - remainder;
-    const size_t copySize =
-            remainder == 0 ? legalSize : legalSize + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
+    const size_t mainBulk = bufferDescriptor.size - remainder;
+    const size_t stagingBufferSize =
+            remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
     // create a staging buffer
-    wgpu::BufferDescriptor descriptor{ .label = "staging buffer",
+    wgpu::BufferDescriptor descriptor{ .label = "stagingBuffer",
         .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
-        .size = copySize,
+        .size = stagingBufferSize,
         .mappedAtCreation = true };
-    wgpu::Buffer stagingBuffer = mDevice.CreateBuffer(&descriptor);
+    wgpu::Buffer stagingBuffer = device.CreateBuffer(&descriptor);
 
     void* mappedRange = stagingBuffer.GetMappedRange();
-    // copy the data to the staging buffer
-    memcpy(mappedRange, bufferDescriptor.buffer, copySize);
+    memcpy(mappedRange, bufferDescriptor.buffer, bufferDescriptor.size);
+
+    // Make sure the padded memory is set to 0 to have deterministic behaviors
+    if (remainder != 0) {
+        uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
+        std::memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
+    }
 
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    wgpu::CommandEncoderDescriptor commandEncodeDescriptor = {};
-    commandEncodeDescriptor.label = "copy buffer to buffer";
+    wgpu::CommandEncoderDescriptor commandEncodeDescriptor = {
+        .label = "CopyFromStagingBufferToGPUBuffer"
+    };
     const wgpu::CommandEncoder commandEncoder =
-            mDevice.CreateCommandEncoder(&commandEncodeDescriptor);
-    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
-            byteOffset, copySize);
+            device.CreateCommandEncoder(&commandEncodeDescriptor);
+    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset, stagingBufferSize);
     wgpu::CommandBuffer commandBuffer = commandEncoder.Finish();
-    mDevice.GetQueue().Submit(1, &commandBuffer);
+    device.GetQueue().Submit(1, &commandBuffer);
 }
 
 } // namespace filament::backend
