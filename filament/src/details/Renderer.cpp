@@ -220,6 +220,9 @@ std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
     if (!outTarget) {
         outTarget = mRenderTargetHandle;
         outAttachmentMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+        if (mSwapChain->hasStencilBuffer()) {
+            outAttachmentMask |= TargetBufferFlags::STENCIL;
+        }
     }
     return { outTarget, outAttachmentMask };
 }

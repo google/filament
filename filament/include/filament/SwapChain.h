@@ -238,8 +238,11 @@ public:
      * given sample points within each pixel. Only supported when isMSAASwapChainSupported(4) is
      * true.
      *
-     * This is only supported by EGL(Android). Other GL platforms (GLX, WGL, etc) don't support it
-     * because the swapchain MSAA settings must be configured before window creation.
+     * This is supported by EGL(Android) and Metal. Other GL platforms (GLX, WGL, etc) don't support
+     * it because the swapchain MSAA settings must be configured before window creation.
+     *
+     * With Metal, this flag should only be used when rendering a single View into a SwapChain. This
+     * flag is not supported when rendering multiple Filament Views into this SwapChain.
      *
      * @see isMSAASwapChainSupported(4)
      */

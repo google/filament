@@ -60,7 +60,7 @@ protected:
     void executeCommands();
     void flushAndWait();
 
-    filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain();
+    filament::backend::Handle<filament::backend::HwSwapChain> createSwapChain(uint64_t flags = 0);
 
     static filament::backend::PipelineState getColorWritePipelineState();
 
