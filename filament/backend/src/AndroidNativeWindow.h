@@ -58,6 +58,17 @@ struct NativeWindow {
             int64_t* outReleaseTime);
 };
 
+struct AndroidProducerThrottling {
+    AndroidProducerThrottling();
+    int32_t setProducerThrottlingEnabled(ANativeWindow* window, bool enabled) const;
+    int32_t isProducerThrottlingEnabled(ANativeWindow* window, bool* outEnabled) const;
+    bool isSupported() const noexcept;
+private:
+    int32_t (*mSetProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
+    int32_t (*mIsProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
+};
+
+
 } // namespace filament::backend
 
 #endif //FILAMENT_BACKEND_ANDROIDNATIVEWINDOW_H

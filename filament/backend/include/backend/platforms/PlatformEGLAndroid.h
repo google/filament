@@ -30,6 +30,8 @@
 
 #include <math/mat3.h>
 
+#include "AndroidNativeWindow.h"
+
 #include <chrono>
 
 #include <stddef.h>
@@ -185,6 +187,10 @@ private:
     [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
     void destroySwapChain(SwapChain* swapChain) noexcept override;
 
+    bool isProducerThrottlingControlSupported() const;
+
+    int32_t setProducerThrottlingEnabled(EGLNativeWindowType nativeWindow, bool enabled) const;
+
     struct InitializeJvmForPerformanceManagerIfNeeded {
         InitializeJvmForPerformanceManagerIfNeeded();
     };
@@ -202,11 +208,8 @@ private:
 
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
-
-    int32_t (*ANativeWindow_setProducerThrottlingEnabled)(ANativeWindow* window, bool enabled) = nullptr;
-    int32_t (*ANativeWindow_isProducerThrottlingEnabled)(ANativeWindow* window, bool* outEnabled) = nullptr;
+    AndroidProducerThrottling mProducerThrottling;
     bool mAssertNativeWindowIsValid = false;
-    bool mHasProducerThrottlingControl = false;
 };
 
 } // namespace filament::backend
