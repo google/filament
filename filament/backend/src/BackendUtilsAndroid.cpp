@@ -25,8 +25,11 @@ TextureFormat mapToFilamentFormat(unsigned int format, bool isSrgbTransfer) noex
         switch (format) {
             case AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM:
                 return TextureFormat::SRGB8;
-            default:
+            case AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM:
+            case AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM:
                 return TextureFormat::SRGB8_A8;
+            default:
+                break;
         }
     }
     switch (format) {

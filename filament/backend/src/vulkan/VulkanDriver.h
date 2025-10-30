@@ -48,6 +48,10 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 
+#if defined(__ANDROID__)
+#include "AndroidNativeWindow.h"
+#endif
+
 namespace filament::backend {
 
 class VulkanPlatform;
@@ -193,6 +197,9 @@ private:
     bool const mIsSRGBSwapChainSupported;
     bool const mIsMSAASwapChainSupported;
     backend::StereoscopicType const mStereoscopicType;
+#if defined(__ANDROID__)
+    AndroidProducerThrottling mProducerThrottling;
+#endif
 };
 
 } // namespace filament::backend

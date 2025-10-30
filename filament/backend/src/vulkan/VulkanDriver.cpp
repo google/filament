@@ -915,6 +915,15 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             FVK_LOGW << "protected swapchain requested, but Platform does not support it";
         }
     }
+
+#if defined(__ANDROID__)
+    // on Android, disable producer throttling
+    if (mProducerThrottling.isSupported()) {
+        mProducerThrottling.setProducerThrottlingEnabled(
+                static_cast<ANativeWindow*>(nativeWindow), false);
+    }
+#endif
+
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
             mContext, &mResourceManager, mAllocator, &mCommands, mStagePool, nativeWindow, flags);
     swapChain.inc();
@@ -1156,6 +1165,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+    fence->cancel();
     fence.dec();
 }
 
@@ -1180,9 +1190,9 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    std::shared_ptr const cmdfence = fence->wait(until);
-    if (!cmdfence) {
-        return FenceStatus::TIMEOUT_EXPIRED;
+    auto const [cmdfence, canceled] = fence->wait(until);
+    if (!cmdfence || canceled) {
+        return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
 
     // now we are holding a reference to our VulkanCmdFence, so we know it can't

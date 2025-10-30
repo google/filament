@@ -7,6 +7,8 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 
 ## Release notes for next branch cut
 
+- Metal: Add support for the `SwapChain::CONFIG_MSAA_4_SAMPLES` flag.
+
 - third_party: Optionally add libwebp to build
   - controlled by cmake flag FILAMENT_SUPPORTS_WEBP_TEXTURES, defaults to OFF
   - actual webp texture support for libs/gltfio coming in subsequent change

@@ -807,8 +807,9 @@ void OpenGLDriver::textureStorage(GLTexture* t,
                         for (GLint face = 0 ; face < 6 ; face++) {
                             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
                                     level, GLint(t->gl.internalFormat),
-                                    GLsizei(width), GLsizei(height), 0,
-                                    format, type, nullptr);
+                                    std::max(GLsizei(1), GLsizei(width >> level)),
+                                    std::max(GLsizei(1), GLsizei(height >> level)),
+                                    0, format, type, nullptr);
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
@@ -2287,9 +2288,14 @@ mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
 
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        GLFence const* f = handle_cast<GLFence*>(fh);
+        GLFence const* const f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
+        } else {
+            // signal waiters it's time to give-up
+            std::unique_lock const lock(f->state->lock);
+            f->state->status = FenceStatus::ERROR;
+            f->state->cond.notify_all();
         }
         destruct(fh, f);
     }

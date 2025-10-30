@@ -834,8 +834,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         // Write back the active feature level.
         config.featureLevel = mFilamentApp->mEngine->getActiveFeatureLevel();
 
-        mSwapChain = mFilamentApp->mEngine->createSwapChain(
-                nativeSwapChain, filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
+        mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain,
+                filament::SwapChain::CONFIG_HAS_STENCIL_BUFFER);
     }
 
     mRenderer = mFilamentApp->mEngine->createRenderer();
