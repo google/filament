@@ -61,7 +61,7 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // Updates the GPU buffer with data from a BufferDescriptor.
 // WebGPU requires that the size of the data copied from the staging buffer to the GPU buffer is a
 // multiple of 4. This function handles cases where the buffer descriptor's size is not a multiple
-// of 4 by writing the data first, and then padding to reach aligment to 4 with zeros.
+// of 4 by padding with zeros.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Device const& device,
         WebGPUQueueManager& webGPUQueueManager) {
