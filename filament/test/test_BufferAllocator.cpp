@@ -51,6 +51,7 @@ TEST_F(BufferAllocatorTest, InitialState) {
     auto [id, offset] = mAllocator.allocate(TOTAL_SIZE);
     EXPECT_EQ(id, 1); // The first ID should be 1.
     EXPECT_EQ(offset, 0);
+    EXPECT_EQ(mAllocator.getAllocationSize(id), TOTAL_SIZE);
 }
 
 TEST_F(BufferAllocatorTest, SimpleAllocation) {
@@ -59,12 +60,16 @@ TEST_F(BufferAllocatorTest, SimpleAllocation) {
     EXPECT_EQ(id, 1);
     EXPECT_EQ(offset, 0);
     EXPECT_EQ(mAllocator.getAllocationOffset(id), offset);
+    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
+    EXPECT_EQ(mAllocator.getAllocationSize(id), 128);
 
     // Try to allocate again. The next allocation should start after the first one.
     auto [id2, offset2] = mAllocator.allocate(50); // Aligns to 64
     EXPECT_EQ(id2, 3); // ID is (128 / 64) + 1 = 3
     EXPECT_EQ(offset2, 128);
     EXPECT_EQ(mAllocator.getAllocationOffset(id2), offset2);
+    EXPECT_FALSE(mAllocator.isLockedByGpu(id2));
+    EXPECT_EQ(mAllocator.getAllocationSize(id2), 64);
 }
 
 TEST_F(BufferAllocatorTest, AllocateZeroSize) {
@@ -79,18 +84,29 @@ TEST_F(BufferAllocatorTest, AllocateZeroSize) {
     EXPECT_EQ(fullOffset, 0);
 }
 
+TEST_F(BufferAllocatorTest, GetAllocationSizeForInvalidId) {
+    EXPECT_DEATH(auto result = mAllocator.getAllocationSize(BufferAllocator::UNALLOCATED),
+            "failed assertion");
+    EXPECT_DEATH(auto result = mAllocator.getAllocationSize(BufferAllocator::REALLOCATION_REQUIRED),
+            "failed assertion");
+    EXPECT_DEATH(auto result = mAllocator.getAllocationSize(999), "failed assertion");
+}
+
 TEST_F(BufferAllocatorTest, AllocateAll) {
     auto [id1, offset1] = mAllocator.allocate(512);
     EXPECT_EQ(id1, 1);
     EXPECT_EQ(offset1, 0);
+    EXPECT_EQ(mAllocator.getAllocationSize(id1), 512);
 
     auto [id2, offset2] = mAllocator.allocate(512);
     EXPECT_EQ(id2, 9); // ID is (512 / 64) + 1 = 9
     EXPECT_EQ(offset2, 512);
+    EXPECT_EQ(mAllocator.getAllocationSize(id2), 512);
 
     // The buffer is now full. The next allocation should fail.
     auto [id3, offset3] = mAllocator.allocate(1);
     EXPECT_EQ(id3, BufferAllocator::REALLOCATION_REQUIRED);
+    EXPECT_DEATH(auto result = mAllocator.getAllocationSize(id3), "failed assertion");
 }
 
 TEST_F(BufferAllocatorTest, AllocationFailure) {
@@ -108,6 +124,7 @@ TEST_F(BufferAllocatorTest, AllocationLifecycle) {
     // 1. Allocate
     auto [id, offset] = mAllocator.allocate(128);
     EXPECT_EQ(id, 1);
+    EXPECT_EQ(mAllocator.getAllocationSize(id), 128);
 
     // 2. Retire from CPU side
     mAllocator.retire(id);
@@ -115,13 +132,16 @@ TEST_F(BufferAllocatorTest, AllocationLifecycle) {
     // 3. The slot is not free yet because the GPU might still be using it.
     // Let's simulate the GPU acquiring and releasing it.
     mAllocator.acquireGpu(id);
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     mAllocator.releaseGpu(id);
+    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
 
     // Now the slot should be considered free, but it's not merged yet.
     // Let's try to allocate something else to see where it goes.
     auto [id2, offset2] = mAllocator.allocate(200); // Aligns to 256
     EXPECT_EQ(id2, 3); // It should use the space after the first retired slot.
     EXPECT_EQ(offset2, 128);
+    EXPECT_EQ(mAllocator.getAllocationSize(id2), 256);
 
     // Now, let's release the free slots.
     mAllocator.releaseFreeSlots();
@@ -131,6 +151,7 @@ TEST_F(BufferAllocatorTest, AllocationLifecycle) {
     auto [id3, offset3] = mAllocator.allocate(100); // Aligns to 128
     EXPECT_EQ(id3, 1); // It should reuse the first slot.
     EXPECT_EQ(offset3, 0);
+    EXPECT_EQ(mAllocator.getAllocationSize(id3), 128);
 }
 
 TEST_F(BufferAllocatorTest, RetireThenReleaseGpu) {
@@ -176,11 +197,15 @@ TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
     // 2. Retire from CPU, then acquire multiple times for GPU (e.g., used in 3 command buffers).
     mAllocator.retire(id);
     mAllocator.acquireGpu(id); // gpuUseCount = 1
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     mAllocator.acquireGpu(id); // gpuUseCount = 2
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     mAllocator.acquireGpu(id); // gpuUseCount = 3
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
 
     // 3. Release GPU lock once. The slot should still be locked.
     mAllocator.releaseGpu(id); // gpuUseCount = 2
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     mAllocator.releaseFreeSlots();
     auto [failId1, failOffset1] = mAllocator.allocate(64);
     EXPECT_NE(failOffset1, 0); // Should not be able to allocate at offset 0.
@@ -189,12 +214,14 @@ TEST_F(BufferAllocatorTest, MultipleGpuAcquires) {
     // 4. Release GPU lock again. The slot should still be locked.
     mAllocator.releaseGpu(id); // gpuUseCount = 1
     mAllocator.releaseFreeSlots();
+    EXPECT_TRUE(mAllocator.isLockedByGpu(id));
     auto [failId2, failOffset2] = mAllocator.allocate(64);
     EXPECT_NE(failOffset2, 0); // Still cannot allocate at offset 0.
     EXPECT_NE(failId2, 1);
 
     // 5. Final release. The lock count is now 0.
     mAllocator.releaseGpu(id); // gpuUseCount = 0
+    EXPECT_FALSE(mAllocator.isLockedByGpu(id));
 
     // 6. Now it should be freed and available.
     mAllocator.releaseFreeSlots();
@@ -375,8 +402,10 @@ TEST_F(BufferAllocatorTest, InvalidOperations) {
     EXPECT_DEATH(mAllocator.releaseGpu(999), "failed assertion");
 
     // Check that an invalid offset query panics in debug/testing builds.
-    EXPECT_DEATH(mAllocator.getAllocationOffset(BufferAllocator::UNALLOCATED), "failed assertion");
-    EXPECT_DEATH(mAllocator.getAllocationOffset(BufferAllocator::REALLOCATION_REQUIRED),
+    EXPECT_DEATH(auto result = mAllocator.getAllocationOffset(BufferAllocator::UNALLOCATED),
+            "failed assertion");
+    EXPECT_DEATH(auto result =
+                         mAllocator.getAllocationOffset(BufferAllocator::REALLOCATION_REQUIRED),
             "failed assertion");
 }
 
@@ -410,6 +439,22 @@ TEST_F(BufferAllocatorTest, ComplexScenario) {
     auto [failId2,failOffset2] = mAllocator.allocate(1);
     EXPECT_EQ(failId2, BufferAllocator::REALLOCATION_REQUIRED);
     EXPECT_EQ(failOffset2,0);
+}
+
+TEST_F(BufferAllocatorTest, AlignUp) {
+    EXPECT_EQ(mAllocator.alignUp(1), 64);
+    EXPECT_EQ(mAllocator.alignUp(63), 64);
+    EXPECT_EQ(mAllocator.alignUp(100), 128);
+    EXPECT_EQ(mAllocator.alignUp(234), 256);
+    EXPECT_EQ(mAllocator.alignUp(255), 256);
+    EXPECT_EQ(mAllocator.alignUp(999), 1024);
+}
+
+TEST_F(BufferAllocatorTest, ValidId) {
+    EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::UNALLOCATED));
+    EXPECT_FALSE(BufferAllocator::isValid(BufferAllocator::REALLOCATION_REQUIRED));
+    EXPECT_TRUE(BufferAllocator::isValid(100));
+    EXPECT_TRUE(BufferAllocator::isValid(999));
 }
 
 } // anonymous namespace
