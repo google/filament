@@ -85,7 +85,8 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
             remainder == 0 ? bufferDescriptor.size : mainBulk + FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS;
 
     // create a staging buffer
-    wgpu::BufferDescriptor descriptor{ .label = "stagingBuffer",
+    wgpu::BufferDescriptor descriptor{
+        .label = "Filament WebGPU Staging Buffer",
         .usage = wgpu::BufferUsage::MapWrite | wgpu::BufferUsage::CopySrc,
         .size = stagingBufferSize,
         .mappedAtCreation = true };
