@@ -106,7 +106,6 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     // Copy the staging buffer contents to the destination buffer.
     webGPUQueueManager.getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
             stagingBufferSize);
-    webGPUQueueManager.flush();
 }
 
 } // namespace filament::backend
