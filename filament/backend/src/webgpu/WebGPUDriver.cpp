@@ -852,7 +852,7 @@ void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUIndexBuffer>(indexBufferHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
@@ -863,14 +863,14 @@ void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> bufferObjectHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, mQueueManager);
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
