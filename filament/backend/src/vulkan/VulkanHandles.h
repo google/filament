@@ -28,6 +28,7 @@
 #include "VulkanTexture.h"
 #include "vulkan/VulkanCommands.h"
 #include "vulkan/memory/Resource.h"
+#include "vulkan/memory/ResourcePointer.h"
 #include "vulkan/utils/Definitions.h"
 #include "vulkan/utils/StaticVector.h"
 
@@ -56,6 +57,8 @@ inline uint8_t collapsedCount(Bitmask const& mask) {
 }
 
 } // anonymous namespace
+
+class VulkanDescriptorSetCache;
 
 struct VulkanBufferObject;
 
@@ -159,38 +162,14 @@ public:
     using OnRecycle = std::function<void(VulkanDescriptorSet*)>;
 
     VulkanDescriptorSet(
-            fvkutils::UniformBufferBitmask const& dynamicUboMask,
-            uint8_t uniqueDynamicUboCount,
-            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
-        : dynamicUboMask(dynamicUboMask),
-          uniqueDynamicUboCount(uniqueDynamicUboCount),
-          mVkSet(vkSet),
-          mOnRecycleFn(std::move(onRecycleFn)) {}
+            fvkmemory::resource_ptr<VulkanDescriptorSetLayout> layout,
+            OnRecycle&& onRecycleFn, VkDescriptorSet vkSet);
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    ~VulkanDescriptorSet() {
-        if (mOnRecycleFn) {
-            mOnRecycleFn(this);
-        }
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
-    }
+    ~VulkanDescriptorSet();
 
     VkDescriptorSet getVkSet() const noexcept {
-        return mVkSet;
-    }
-
-    VkDescriptorSet getExternalSamplerVkSet() const noexcept {
-        return mExternalSamplerVkSet;
-    }
-
-    void setExternalSamplerVkSet(VkDescriptorSet vkset, OnRecycle onRecycle) {
-        mExternalSamplerVkSet = vkset;
-        if (mOnRecycleExternalSamplerFn) {
-            mOnRecycleExternalSamplerFn(this);
-        }
-        mOnRecycleExternalSamplerFn = onRecycle;
+        return mSets[mCurrentSetIndex].vkSet;
     }
 
     void setOffsets(backend::DescriptorSetOffsetArray&& offsets) noexcept {
@@ -211,17 +190,33 @@ public:
 
     void referencedBy(VulkanCommandBuffer& commands);
 
-    fvkutils::UniformBufferBitmask const dynamicUboMask;
+    bool isBound() const {
+        return bool(mSets[mCurrentSetIndex].fenceStatus);
+    }
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> getLayout() const { return mLayout; }
+
+    fvkutils::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const uniqueDynamicUboCount;
 
 private:
-    VkDescriptorSet const mVkSet;
-    VkDescriptorSet mExternalSamplerVkSet = VK_NULL_HANDLE;
+    friend class VulkanDescriptorSetCache;
 
+    void addNewSet(VkDescriptorSet vkSet, OnRecycle&& onRecycleFn);
+
+    void gc();
+
+    struct InternalVkSet {
+        VkDescriptorSet vkSet = {};
+        OnRecycle onRecycleFn;
+        std::shared_ptr<VulkanCmdFence> fenceStatus;
+    };
+
+    fvkmemory::resource_ptr<VulkanDescriptorSetLayout> mLayout;
     backend::DescriptorSetOffsetArray mOffsets;
     std::vector<fvkmemory::resource_ptr<fvkmemory::Resource>> mResources;
-    OnRecycle mOnRecycleFn;
-    OnRecycle mOnRecycleExternalSamplerFn;
+    uint8_t mCurrentSetIndex;
+    std::vector<InternalVkSet> mSets;
     fvkutils::UniformBufferBitmask mUboMask;
 };
 
