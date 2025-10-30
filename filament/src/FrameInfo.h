@@ -54,6 +54,8 @@ struct FrameInfo {
 } // namespace details
 
 struct FrameInfoImpl : public details::FrameInfo {
+    using FrameTimestamps = backend::FrameTimestamps;
+    using CompositorTiming = backend::CompositorTiming;
     using clock = std::chrono::steady_clock;
     using time_point = clock::time_point;
     uint32_t frameId;
@@ -70,13 +72,13 @@ struct FrameInfoImpl : public details::FrameInfo {
     // vsync time
     time_point vsync{};
     // Actual presentation time of this frame
-    backend::FrameTimestamps::time_point_ns displayPresent{ backend::FrameTimestamps::PENDING };
+    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
     // deadline for queuing a frame [ns]
-    backend::CompositorTiming::time_point_ns presentDeadline{};
+    CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
     // display refresh rate [ns]
-    backend::CompositorTiming::duration_ns displayPresentInterval{};
+    CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
-    backend::CompositorTiming::duration_ns compositionToPresentLatency{};
+    CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
     // true once backend thread has populated its data

@@ -101,7 +101,7 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
     }
 
     // create a new entry
-    auto& front = history.emplace_front(frameId);
+    FrameInfoImpl& front = history.emplace_front(frameId);
 
     // store the current time
     front.vsync = vsync;
@@ -114,10 +114,6 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
         front.presentDeadline = compositorTiming.compositeDeadline;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
-    } else {
-        front.presentDeadline = Renderer::FrameInfo::INVALID;
-        front.displayPresentInterval = Renderer::FrameInfo::INVALID;
-        front.compositionToPresentLatency = Renderer::FrameInfo::INVALID;
     }
 
     if (mHasTimerQueries) {
@@ -287,9 +283,11 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
         auto& entry = history[i];
 
         // retrieve the displayPresentTime only we don't already have it
-        if (entry.displayPresent < 0) {
+        if (entry.displayPresent == Renderer::FrameInfo::PENDING) {
+            FrameTimestamps frameTimestamps{
+                .displayPresentTime = FrameTimestamps::INVALID
+            };
             if (swapChain && driver.isCompositorTimingSupported()) {
-                FrameTimestamps frameTimestamps{};
                 // queryFrameTimestamps could fail if this frameid is no longer available
                 bool const success = driver.queryFrameTimestamps(swapChain->getHwHandle(),
                         entry.frameId, &frameTimestamps);
@@ -298,6 +296,8 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                             entry.displayPresent == frameTimestamps.displayPresentTime);
                     entry.displayPresent = frameTimestamps.displayPresentTime;
                 }
+            } else {
+                entry.displayPresent = Renderer::FrameInfo::INVALID;
             }
         }
 
@@ -323,6 +323,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .gpuFrameComplete               = toTimepoint(entry.gpuFrameComplete),
                 .vsync                          = toTimepoint(entry.vsync),
                 .displayPresent                 = entry.displayPresent,
+                .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
                 .compositionToPresentLatency    = entry.compositionToPresentLatency
         });
