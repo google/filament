@@ -419,6 +419,10 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
 
+    if (mCurrentSwapChain) { // This should be guaranteed
+        mPlatform->setPresentFrameId(mCurrentSwapChain->swapChain, frameId);
+    }
+
     // Check if any command have finished and reset all its used resources. The resources
     // wont be destroyed but their reference count will decreased if the command is already
     // completed.
@@ -1770,17 +1774,35 @@ void VulkanDriver::nextSubpass(int) {
 }
 
 bool VulkanDriver::isCompositorTimingSupported() {
-    return false;
+    return mPlatform->isCompositorTimingSupported();
 }
 
-bool VulkanDriver::queryCompositorTiming(SwapChainHandle swapChain,
+bool VulkanDriver::queryCompositorTiming(Handle<HwSwapChain> const swapChain,
         CompositorTiming* outCompositorTiming) {
-    return false;
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return sc->queryCompositorTiming(outCompositorTiming);
 }
 
-bool VulkanDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+bool VulkanDriver::queryFrameTimestamps(Handle<HwSwapChain> const swapChain, uint64_t const frameId,
         FrameTimestamps* outFrameTimestamps) {
-    return false;
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return sc->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
