@@ -98,7 +98,7 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
 void logMTLCommandBufferError(MTLCommandBufferError error) {
 #define MTL_COMMAND_ERROR_CASE(ERR)                                                                \
     if (error == (ERR)) {                                                                          \
-        LOG(ERROR) << "Filament Metal command buffer errored with " #ERR ".";                      \
+        LOG(ERROR) << "Filament Metal error: " #ERR ".";                                           \
         return;                                                                                    \
     }
 
@@ -122,7 +122,7 @@ void logMTLCommandBufferError(MTLCommandBufferError error) {
         MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorStackOverflow)
     }
 
-    LOG(ERROR) << "Filament Metal command buffer errored with unknown error.";
+    LOG(ERROR) << "Filament Metal unknown error.";
 
 #undef MTL_COMMAND_ERROR_CASE
 }
