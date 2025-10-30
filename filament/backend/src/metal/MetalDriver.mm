@@ -1039,6 +1039,8 @@ void MetalDriver::updateStreams(DriverApi* driver) {
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
+        auto* fence = handle_cast<MetalFence>(fh);
+        fence->cancel();
         destruct_handle<MetalFence>(fh);
     }
 }

@@ -1310,18 +1310,28 @@ void MetalFence::onSignal(MetalFenceSignalBlock block) {
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
     if (@available(iOS 12, *)) {
         using ns = std::chrono::nanoseconds;
+
+        // keep a reference on the stack so our state cannot be destroyed while we wait
+        auto state = this->state;
+
         std::unique_lock<std::mutex> guard(state->mutex);
         while (state->status == FenceStatus::TIMEOUT_EXPIRED) {
             if (timeoutNs == FENCE_WAIT_FOR_EVER) {
                 state->cv.wait(guard);
             } else if (timeoutNs == 0 ||
                     state->cv.wait_for(guard, ns(timeoutNs)) == std::cv_status::timeout) {
-                return FenceStatus::TIMEOUT_EXPIRED;
+                return state->status;
             }
         }
-        return FenceStatus::CONDITION_SATISFIED;
+        return state->status;
     }
     return FenceStatus::ERROR;
+}
+
+void MetalFence::cancel() {
+    std::unique_lock guard(state->mutex);
+    state->status = FenceStatus::ERROR;
+    state->cv.notify_all();
 }
 
 MetalDescriptorSetLayout::MetalDescriptorSetLayout(DescriptorSetLayout&& l) noexcept

@@ -45,13 +45,19 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
             });
             if (!success) {
                 // !success indicates a timeout
-                return FenceStatus::TIMEOUT_EXPIRED;
+                return mStatus == VK_ERROR_UNKNOWN ?
+                        FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
             }
         }
 
         // The fence could have already signaled, avoid calling into vkWaitForFences()
         if (mStatus == VK_SUCCESS) {
             return FenceStatus::CONDITION_SATISFIED;
+        }
+
+        // Or it could have been canceled, return immediately
+        if (mStatus == VK_ERROR_UNKNOWN) {
+            return FenceStatus::ERROR;
         }
     }
 
@@ -62,7 +68,7 @@ FenceStatus VulkanCmdFence::wait(VkDevice device, uint64_t const timeout,
     // place simultaneously. vkResetFence is only called once it knows the fence has signaled,
     // which guaranties that vkResetFence won't have to wait too long, just enough for
     // all the vkWaitForFences() to return.
-    VkResult status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
+    VkResult const status = vkWaitForFences(device, 1, &mFence, VK_TRUE, timeout);
     if (status == VK_TIMEOUT) {
         return FenceStatus::TIMEOUT_EXPIRED;
     }

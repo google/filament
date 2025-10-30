@@ -39,6 +39,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <details/Engine.h>
 
 namespace filament {
 
@@ -57,23 +58,33 @@ FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept
 
 FrameInfoManager::~FrameInfoManager() noexcept = default;
 
-void FrameInfoManager::terminate(DriverApi& driver) noexcept {
+void FrameInfoManager::terminate(FEngine& engine) noexcept {
+    DriverApi& driver = engine.getDriverApi();
+
     if (mHasTimerQueries) {
         for (auto const& query : mQueries) {
             driver.destroyTimerQuery(query.handle);
         }
     }
 
-    // wait for all pending callbacks to be called & terminate the thread
-    mJobQueue.drainAndExit();
-
-    // destroy the fences that are still alive
+    // Destroy the fences that are still alive, they will error out.
     for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
         auto& info = mFrameTimeHistory[i];
         if (info.fence) {
             driver.destroyFence(std::move(info.fence));
         }
     }
+
+    // for extra safety submit the current command buffer (because nothing else will while we
+    // wait in drainAndExit()), this is in case the backend is already waiting on a h/w fence
+    // e.g. vkWaitForFences().
+    driver.flush();
+
+    // make sure the driver commands above will be processed
+    engine.flush();
+
+    // wait for all pending callbacks to be called & terminate the thread
+    mJobQueue.drainAndExit();
 }
 
 void FrameInfoManager::beginFrame(DriverApi& driver, Config const& config,

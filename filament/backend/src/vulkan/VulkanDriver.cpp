@@ -1165,6 +1165,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+    fence->cancel();
     fence.dec();
 }
 
@@ -1189,9 +1190,9 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    std::shared_ptr const cmdfence = fence->wait(until);
-    if (!cmdfence) {
-        return FenceStatus::TIMEOUT_EXPIRED;
+    auto const [cmdfence, canceled] = fence->wait(until);
+    if (!cmdfence || canceled) {
+        return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
 
     // now we are holding a reference to our VulkanCmdFence, so we know it can't
