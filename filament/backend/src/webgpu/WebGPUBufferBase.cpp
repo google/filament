@@ -17,6 +17,7 @@
 #include "WebGPUBufferBase.h"
 
 #include "WebGPUConstants.h"
+#include "WebGPUQueueManager.h"
 
 #include "DriverBase.h"
 #include <backend/BufferDescriptor.h>
@@ -64,7 +65,7 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // of 4 by padding with zeros.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
         const uint32_t byteOffset, wgpu::Device const& device,
-        WebGPUQueueManager& webGPUQueueManager) {
+        WebGPUQueueManager* const webGPUQueueManager) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
             << "updateGPUBuffer called with a null buffer";
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= mBuffer.GetSize())
@@ -104,8 +105,8 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    webGPUQueueManager.getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
-            stagingBufferSize);
+    webGPUQueueManager->getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer,
+            byteOffset, stagingBufferSize);
 }
 
 } // namespace filament::backend
