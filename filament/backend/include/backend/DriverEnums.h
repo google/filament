@@ -1681,7 +1681,7 @@ static_assert(sizeof(StencilState::StencilOperations) == 5u,
 static_assert(sizeof(StencilState) == 12u,
         "StencilState size not what was intended");
 
-using FrameScheduledCallback = utils::Invocable<void(backend::PresentCallable)>;
+using FrameScheduledCallback = utils::Invocable<void(PresentCallable)>;
 
 enum class Workaround : uint16_t {
     // The EASU pass must split because shader compiler flattens early-exit branch
@@ -1707,7 +1707,11 @@ enum class Workaround : uint16_t {
     EMULATE_SRGB_SWAPCHAIN,
 };
 
-using StereoscopicType = backend::Platform::StereoscopicType;
+using StereoscopicType = Platform::StereoscopicType;
+
+using FrameTimestamps = Platform::FrameTimestamps;
+
+using CompositorTiming = Platform::CompositorTiming;
 
 } // namespace filament::backend
 

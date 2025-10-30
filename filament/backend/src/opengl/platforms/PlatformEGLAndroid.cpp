@@ -342,8 +342,8 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
         outFrameTimestamps->requestedPresentTime = values[0];
         outFrameTimestamps->acquireTime = values[1];
         outFrameTimestamps->latchTime = values[2];
-        outFrameTimestamps->firstRefreshStartTime = values[3];
-        outFrameTimestamps->lastRefreshStartTime = values[4];
+        outFrameTimestamps->firstCompositionStartTime = values[3];
+        outFrameTimestamps->lastCompositionStartTime = values[4];
         outFrameTimestamps->gpuCompositionDoneTime = values[5];
         outFrameTimestamps->displayPresentTime = values[6];
         outFrameTimestamps->dequeueReadyTime = values[7];
@@ -357,8 +357,8 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
             &outFrameTimestamps->requestedPresentTime,
             &outFrameTimestamps->acquireTime,
             &outFrameTimestamps->latchTime,
-            &outFrameTimestamps->firstRefreshStartTime,
-            &outFrameTimestamps->lastRefreshStartTime,
+            &outFrameTimestamps->firstCompositionStartTime,
+            &outFrameTimestamps->lastCompositionStartTime,
             &outFrameTimestamps->gpuCompositionDoneTime,
             &outFrameTimestamps->displayPresentTime,
             &outFrameTimestamps->dequeueReadyTime,
