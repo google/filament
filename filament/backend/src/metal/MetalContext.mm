@@ -95,6 +95,35 @@ void initializeSupportedGpuFamilies(MetalContext* context) {
     }
 }
 
+void logMTLCommandBufferError(MTLCommandBufferError error) {
+#define MTL_COMMAND_ERROR_CASE(ERR)                                                                \
+    if (error == (ERR)) {                                                                          \
+        LOG(ERROR) << "Filament Metal command buffer errored with " #ERR ".";                      \
+        return;                                                                                    \
+    }
+
+#if !defined(FILAMENT_IOS)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorDeviceRemoved)
+#endif
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorNone)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorInternal)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorTimeout)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorPageFault)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorAccessRevoked)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorNotPermitted)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorOutOfMemory)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorInvalidResource)
+    MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorMemoryless)
+
+    if (@available(iOS 15.0, *)) {
+        MTL_COMMAND_ERROR_CASE(MTLCommandBufferErrorStackOverflow)
+    }
+
+    LOG(ERROR) << "Filament Metal command buffer errored with unknown error.";
+
+#undef MTL_COMMAND_ERROR_CASE
+}
+
 id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
     if (context->pendingCommandBuffer) {
         return context->pendingCommandBuffer;
@@ -120,8 +149,7 @@ id<MTLCommandBuffer> getPendingCommandBuffer(MetalContext* context) {
         }
 
         if (UTILS_UNLIKELY(errorCode != MTLCommandBufferErrorNone)) {
-            LOG(ERROR) << "Filament Metal command buffer errored with code: " << errorCode << " ("
-                       << stringifyMTLCommandBufferError(errorCode) << ").";
+            logMTLCommandBufferError(errorCode);
         }
     }];
     FILAMENT_CHECK_POSTCONDITION(context->pendingCommandBuffer)
