@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 #define TNT_FILAMENT_BACKEND_WEBGPUBUFFERBASE_H
 
-#include "WebGPUConstants.h"
+#include "WebGPUQueueManager.h"
 
 #include <webgpu/webgpu_cpp.h>
 
@@ -40,7 +40,8 @@ public:
      * happen after draw commands encoded in the encoder. Submitting any commands up to this point
      * ensures the calls happen in the expected sequence.
      */
-    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const&);
+    void updateGPUBuffer(BufferDescriptor const&, uint32_t byteOffset, wgpu::Device const& device,
+            WebGPUQueueManager& webGPUQueueManager);
 
     [[nodiscard]] wgpu::Buffer const& getBuffer() const { return mBuffer; }
 

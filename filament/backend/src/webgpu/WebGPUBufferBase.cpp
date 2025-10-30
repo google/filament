@@ -63,7 +63,8 @@ WebGPUBufferBase::WebGPUBufferBase(wgpu::Device const& device, const wgpu::Buffe
 // multiple of 4. This function handles cases where the buffer descriptor's size is not a multiple
 // of 4 by writing the data first, and then padding to reach aligment to 4 with zeros.
 void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
-        const uint32_t byteOffset, wgpu::Device const& device) {
+        const uint32_t byteOffset, wgpu::Device const& device,
+        WebGPUQueueManager& webGPUQueueManager) {
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.buffer)
             << "updateGPUBuffer called with a null buffer";
     FILAMENT_CHECK_PRECONDITION(bufferDescriptor.size + byteOffset <= mBuffer.GetSize())
@@ -102,14 +103,9 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     stagingBuffer.Unmap();
 
     // Copy the staging buffer contents to the destination buffer.
-    wgpu::CommandEncoderDescriptor commandEncodeDescriptor = {
-        .label = "CopyFromStagingBufferToGPUBuffer"
-    };
-    const wgpu::CommandEncoder commandEncoder =
-            device.CreateCommandEncoder(&commandEncodeDescriptor);
-    commandEncoder.CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset, stagingBufferSize);
-    wgpu::CommandBuffer commandBuffer = commandEncoder.Finish();
-    device.GetQueue().Submit(1, &commandBuffer);
+    webGPUQueueManager.getCommandEncoder().CopyBufferToBuffer(stagingBuffer, 0, mBuffer, byteOffset,
+            stagingBufferSize);
+    webGPUQueueManager.flush();
 }
 
 } // namespace filament::backend
