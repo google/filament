@@ -807,8 +807,9 @@ void OpenGLDriver::textureStorage(GLTexture* t,
                         for (GLint face = 0 ; face < 6 ; face++) {
                             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
                                     level, GLint(t->gl.internalFormat),
-                                    GLsizei(width), GLsizei(height), 0,
-                                    format, type, nullptr);
+                                    std::max(GLsizei(1), GLsizei(width >> level)),
+                                    std::max(GLsizei(1), GLsizei(height >> level)),
+                                    0, format, type, nullptr);
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
