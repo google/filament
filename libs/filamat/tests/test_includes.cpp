@@ -16,11 +16,10 @@
 
 #include <gtest/gtest.h>
 
-#include "filamat/MaterialBuilder.h"
-
-#include "Includes.h"
-
 #include "MockIncluder.h"
+
+#include <filamat/Includes.h>
+#include <filamat/MaterialBuilder.h>
 
 #include <utils/CString.h>
 #include <utils/JobSystem.h>
@@ -389,7 +388,7 @@ TEST(IncludeResolver, SingleIncludeLineDirective) {
         .sourceForInclude("test.h", "include");
     filamat::ResolveOptions options = {
         .insertLineDirectives = true,
-        .insertLineDirectiveCheck = false   // makes it simplier to test
+        .insertLineDirectiveCheck = false   // makes it simpler to test
     };
     filamat::IncludeResult source {
         .includeName = utils::CString("root.h"),
@@ -447,7 +446,7 @@ TEST(IncludeResolver, MultipleIncludesSameLineLineDirective) {
 
     filamat::ResolveOptions options = {
         .insertLineDirectives = true,
-        .insertLineDirectiveCheck = false   // makes it simplier to test
+        .insertLineDirectiveCheck = false   // makes it simpler to test
     };
     filamat::IncludeResult source {
         .includeName = utils::CString("root.h"),
@@ -505,7 +504,6 @@ TEST_F(MaterialBuilder, Include) {
     std::string shaderCode(R"(
         #include "test.h"
     )");
-    mBuilder.material(shaderCode.c_str());
 
     MockIncluder includer;
     includer.sourceForInclude("test.h", R"(
@@ -513,7 +511,16 @@ TEST_F(MaterialBuilder, Include) {
             prepareMaterial(material);
         }
     )");
-    mBuilder.includeCallback(includer);
+
+    filamat::ResolveOptions const options;
+    filamat::IncludeResult source {
+        .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
+    };
+
+    EXPECT_TRUE(filamat::resolveIncludes(source, std::move(includer), options));
+
+    // Set the material with the resolved material.
+    mBuilder.material(source.text.c_str());
 
     filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
@@ -526,7 +533,6 @@ TEST_F(MaterialBuilder, IncludeVertex) {
             functionDefinedInTest();
         }
     )");
-    mBuilder.materialVertex(shaderCode.c_str());
 
     MockIncluder includer;
     includer.sourceForInclude("test.h", R"(
@@ -534,7 +540,15 @@ TEST_F(MaterialBuilder, IncludeVertex) {
 
         }
     )");
-    mBuilder.includeCallback(includer);
+    filamat::ResolveOptions const options;
+    filamat::IncludeResult source {
+        .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
+    };
+
+    EXPECT_TRUE(filamat::resolveIncludes(source, std::move(includer), options));
+
+    // Set the materialVertex with the resolved material.
+    mBuilder.materialVertex(source.text.c_str());
 
     filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
@@ -546,15 +560,21 @@ TEST_F(MaterialBuilder, IncludeWithinFunction) {
             #include "prepare.h"
         }
     )");
-    mBuilder.material(shaderCode.c_str());
 
     MockIncluder includer;
     includer
         .sourceForInclude("prepare.h", R"(
                 prepareMaterial(material);
         )");
+    filamat::ResolveOptions options;
+    filamat::IncludeResult source {
+        .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
+    };
 
-    mBuilder.includeCallback(includer);
+    EXPECT_TRUE(filamat::resolveIncludes(source, std::move(includer), options));
+
+    // Set the material with the resolved material.
+    mBuilder.material(source.text.c_str());
 
     filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_TRUE(result.isValid());
@@ -564,10 +584,16 @@ TEST_F(MaterialBuilder, IncludeFailure) {
     std::string shaderCode(R"(
         #include "nonexistent.h"
     )");
-    mBuilder.material(shaderCode.c_str());
 
     MockIncluder includer;
-    mBuilder.includeCallback(includer);
+    filamat::ResolveOptions const options;
+    filamat::IncludeResult source {
+        .text = utils::CString(shaderCode.c_str(), shaderCode.size()),
+    };
+
+    EXPECT_FALSE(filamat::resolveIncludes(source, std::move(includer), options));
+
+    mBuilder.material(source.text.c_str());
 
     filamat::Package result = mBuilder.build(*jobSystem);
     EXPECT_FALSE(result.isValid());
