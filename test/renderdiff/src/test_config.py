@@ -110,12 +110,14 @@ class PresetConfig(RenderingConfig):
         assert 0 <= tolerance['allowed_diff_pixels'] <= 100, "allowed_diff_pixels must be 0-100%"
 
 class TestConfig(RenderingConfig):
-  def __init__(self, data, existing_models, presets):
+  def __init__(self, data, existing_models, presets, backends):
     RenderingConfig.__init__(self, data)
     description = data.get('description')
     if description:
       assert _is_string(description)
       self.description = description
+
+    self.backends = data.get('backends', backends)
 
     apply_presets = data.get('apply_presets')
     rendering = {}
@@ -179,7 +181,6 @@ class RenderTestConfig():
     assert 'backends' in data
     backends = data['backends']
     assert _is_list_of_strings(backends)
-    self.backends = backends
 
     assert 'model_search_paths' in data
     model_search_paths = data.get('model_search_paths')
@@ -199,7 +200,7 @@ class RenderTestConfig():
       presets = [PresetConfig(p, self.models) for p in preset_data]
 
     assert 'tests' in data
-    self.tests = [TestConfig(t, self.models, presets) for t in data['tests']]
+    self.tests = [TestConfig(t, self.models, presets, backends) for t in data['tests']]
     test_names = list([t.name for t in self.tests])
 
     # We cannot have duplicate test names
@@ -224,4 +225,4 @@ if __name__ == "__main__":
   parser.add_argument('--test', help='Configuration of the test', required=True)
 
   args, _ = parser.parse_known_args(sys.argv[1:])
-  test = parse_test_config_from_path(args.test)
+  test = parse_from_path(args.test)

@@ -111,12 +111,12 @@ void BackendTest::flushAndWait() {
     getDriver().purge();
 }
 
-Handle<HwSwapChain> BackendTest::createSwapChain() {
+Handle<HwSwapChain> BackendTest::createSwapChain(uint64_t flags) {
     const NativeView& view = getNativeView();
     if (!view.ptr) {
-        return getDriverApi().createSwapChainHeadless(view.width, view.height, 0);
+        return getDriverApi().createSwapChainHeadless(view.width, view.height, flags);
     }
-    return getDriverApi().createSwapChain(view.ptr, 0);
+    return getDriverApi().createSwapChain(view.ptr, flags);
 }
 
 PipelineState BackendTest::getColorWritePipelineState() {

@@ -35,8 +35,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-struct VulkanHeadlessSwapChain;
-struct VulkanSurfaceSwapChain;
 class VulkanCommands;
 
 // A wrapper around the platform implementation of swapchain.
@@ -90,6 +88,14 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
         }
         mFrameScheduled.handler = handler;
         mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
+
+    bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const {
+        return mPlatform->queryCompositorTiming(swapChain, outCompositorTiming);
+    }
+
+    bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const {
+        return mPlatform->queryFrameTimestamps(swapChain, frameId, outFrameTimestamps);
     }
 
 private:

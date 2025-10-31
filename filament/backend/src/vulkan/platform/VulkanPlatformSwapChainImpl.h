@@ -24,6 +24,10 @@
 
 #include <bluevk/BlueVK.h>
 
+#ifdef __ANDROID__
+#include <AndroidSwapChainHelper.h>
+#endif
+
 #include <unordered_map>
 
 using namespace bluevk;
@@ -51,6 +55,12 @@ struct VulkanPlatformSwapChainBase : public Platform::SwapChain {
 
     virtual bool isProtected() const = 0;
 
+    virtual bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const;
+
+    virtual bool setPresentFrameId(uint64_t frameId) const;
+
+    virtual bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const;
+
 protected:
     virtual void destroy() = 0;
 
@@ -67,7 +77,7 @@ protected:
 struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainBase {
     VulkanPlatformSurfaceSwapChain(VulkanContext const& context, VkPhysicalDevice physicalDevice,
             VkDevice device, VkQueue queue, VkInstance instance, VkSurfaceKHR surface,
-            VkExtent2D fallbackExtent, uint64_t flags);
+            VkExtent2D fallbackExtent, void* nativeWindow, uint64_t flags);
 
     ~VulkanPlatformSurfaceSwapChain() override;
 
@@ -83,6 +93,12 @@ struct VulkanPlatformSurfaceSwapChain : public VulkanPlatformSwapChainBase {
 
 protected:
     virtual void destroy() override;
+
+    bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const override;
+
+    bool setPresentFrameId(uint64_t frameId) const override;
+
+    bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const override;
 
 private:
     static constexpr int IMAGE_READY_SEMAPHORE_COUNT = FVK_MAX_COMMAND_BUFFERS;
@@ -102,6 +118,11 @@ private:
     bool const mHasStencil = false;
     bool const mIsProtected = false;
     bool mSuboptimal;
+    UTILS_UNUSED void* mNativeWindow = nullptr;
+
+#ifdef __ANDROID__
+    AndroidSwapChainHelper mImpl{};
+#endif
 };
 
 struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainBase {

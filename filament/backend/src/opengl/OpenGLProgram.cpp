@@ -262,19 +262,24 @@ void OpenGLProgram::initializeProgramState(OpenGLContext& context, GLuint progra
 }
 
 void OpenGLProgram::updateUniforms(
-        uint32_t index, GLuint id, void const* buffer, uint16_t age) const noexcept {
+        uint32_t const index, GLuint const id, void const* buffer,
+        uint16_t const age, uint32_t const offset) const noexcept {
     assert_invariant(mUniformsRecords);
     assert_invariant(buffer);
 
     // only update the uniforms if the UBO has changed since last time we updated
     UniformsRecord const& records = mUniformsRecords[index];
-    if (records.id == id && records.age == age) {
+    if (records.id == id && records.age == age && records.offset == offset) {
         return;
     }
     records.id = id;
     records.age = age;
+    records.offset = offset;
 
     assert_invariant(records.uniforms.size() == records.locations.size());
+
+    // apply the offset to the buffer
+    buffer = static_cast<char const*>(buffer) + offset;
 
     for (size_t i = 0, c = records.uniforms.size(); i < c; i++) {
         Program::Uniform const& u = records.uniforms[i];

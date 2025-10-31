@@ -19,10 +19,13 @@
 #include <android/native_window.h>
 
 #include <utils/compiler.h>
+#include <utils/Logger.h>
 
 #include <cstdint>
 #include <cerrno>
 #include <utility>
+
+#include <dlfcn.h>
 
 namespace filament::backend {
 
@@ -73,6 +76,46 @@ int NativeWindow::getFrameTimestamps(ANativeWindow* anw,
             outFirstRefreshStartTime, outLastRefreshStartTime,
             outGpuCompositionDoneTime, outDisplayPresentTime,
             outDequeueReadyTime, outReleaseTime);
+}
+
+AndroidProducerThrottling::AndroidProducerThrottling() {
+    // note: we don't need to dlclose() mNativeWindowLib here, because the library will be cleaned
+    // when the process ends and dlopen() are ref-counted. dlclose() NDK documentation documents
+    // not to call dlclose().
+    void* nativeWindowLibHandle = dlopen("libnativewindow.so", RTLD_LOCAL | RTLD_NOW);
+    if (nativeWindowLibHandle) {
+        mSetProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool)) dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_setProducerThrottlingEnabled");
+
+        mIsProducerThrottlingEnabled =
+                (int32_t(*)(ANativeWindow*, bool*)) dlsym(nativeWindowLibHandle,
+                        "ANativeWindow_isProducerThrottlingEnabled");
+
+        if (mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled) {
+            LOG(INFO) << "Producer Throttling API available";
+        }
+    }
+}
+
+int32_t AndroidProducerThrottling::setProducerThrottlingEnabled(
+        ANativeWindow* window, bool enabled) const {
+    if (mSetProducerThrottlingEnabled) {
+        return mSetProducerThrottlingEnabled(window, enabled);
+    }
+    return -1;
+}
+
+int32_t AndroidProducerThrottling::isProducerThrottlingEnabled(
+        ANativeWindow* window, bool* outEnabled) const {
+    if (mIsProducerThrottlingEnabled) {
+        return mIsProducerThrottlingEnabled(window, outEnabled);
+    }
+    return -1;
+}
+
+bool AndroidProducerThrottling::isSupported() const noexcept {
+    return mSetProducerThrottlingEnabled && mIsProducerThrottlingEnabled;
 }
 
 } // namespace filament::backend
