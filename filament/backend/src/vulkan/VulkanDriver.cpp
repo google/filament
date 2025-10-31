@@ -1769,6 +1769,20 @@ void VulkanDriver::nextSubpass(int) {
     }
 }
 
+bool VulkanDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool VulkanDriver::queryCompositorTiming(SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
+bool VulkanDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
+}
+
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     FVK_SYSTRACE_SCOPE();
 

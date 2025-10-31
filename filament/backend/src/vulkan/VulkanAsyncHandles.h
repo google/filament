@@ -57,12 +57,15 @@ struct VulkanCmdFence {
         std::chrono::steady_clock::time_point until);
 
     void cancel() {
-        setStatus(VK_ERROR_UNKNOWN);
+        std::lock_guard const l(mLock);
+        mCanceled = true;
+        mCond.notify_all();
     }
 
 private:
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
     std::condition_variable_any mCond;
+    bool mCanceled = false;
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.

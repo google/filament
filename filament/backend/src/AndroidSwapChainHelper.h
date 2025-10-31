@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_ANDROIDSWAPCHAINHELPER_H
 
 #include <utils/Mutex.h>
+#include <utils/MonotonicRingMap.h>
 
 #include <android/native_window.h>
 
@@ -39,7 +40,7 @@ struct AndroidSwapChainHelper {
 private:
     static constexpr size_t MAX_HISTORY_SIZE = 32;
     mutable utils::Mutex mLock; // very low-contention lock
-    mutable std::map<uint64_t, uint64_t> mFrameIdToSystemFrameId{};
+    mutable utils::MonotonicRingMap<MAX_HISTORY_SIZE, uint64_t, uint64_t> mFrameIdToSystemFrameId{};
 };
 
 }

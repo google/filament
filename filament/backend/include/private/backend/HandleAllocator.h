@@ -208,7 +208,7 @@ public:
                 HandleBase::HandleId const index = (handle.getId() & HANDLE_INDEX_MASK);
                 // if we've already handed out this handle index before, it's definitely a
                 // use-after-free, otherwise it's probably just a corrupted handle
-                if (index < mId) {
+                if (index < mId.load(std::memory_order_relaxed)) {
                     FILAMENT_CHECK_POSTCONDITION(p != nullptr)
                             << "use-after-free of heap Handle with id=" << handle.getId()
                             << ", tag=" << getHandleTag(handle.getId()).c_str_safe();

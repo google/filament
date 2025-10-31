@@ -103,7 +103,7 @@ def _render_test_config(gltf_viewer,
       with open(test_json_path, 'w') as f:
         f.write(f'[{test.to_filament_format()}]')
 
-      for backend in test_config.backends:
+      for backend in test.backends:
         if backend == 'vulkan':
           assert vk_icd, "VK ICD must be specified when testing vulkan backend"
         for model in test.models:

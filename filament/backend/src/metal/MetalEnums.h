@@ -451,38 +451,6 @@ inline MTLTextureSwizzleChannels getSwizzleChannels(TextureSwizzle r, TextureSwi
             getSwizzle(a));
 }
 
-inline const char* stringifyMTLCommandBufferError(MTLCommandBufferError error) {
-#if !defined(FILAMENT_IOS)
-    if (error == MTLCommandBufferErrorDeviceRemoved) {
-        return "MTLCommandBufferErrorDeviceRemoved";
-    }
-#endif
-    switch (error) {
-        case MTLCommandBufferErrorNone:
-            return "MTLCommandBufferErrorNone";
-        case MTLCommandBufferErrorInternal:
-            return "MTLCommandBufferErrorInternal";
-        case MTLCommandBufferErrorTimeout:
-            return "MTLCommandBufferErrorTimeout";
-        case MTLCommandBufferErrorPageFault:
-            return "MTLCommandBufferErrorPageFault";
-        case MTLCommandBufferErrorAccessRevoked:
-            return "MTLCommandBufferErrorAccessRevoked";
-        case MTLCommandBufferErrorNotPermitted:
-            return "MTLCommandBufferErrorNotPermitted";
-        case MTLCommandBufferErrorOutOfMemory:
-            return "MTLCommandBufferErrorOutOfMemory";
-        case MTLCommandBufferErrorInvalidResource:
-            return "MTLCommandBufferErrorInvalidResource";
-        case MTLCommandBufferErrorMemoryless:
-            return "MTLCommandBufferErrorMemoryless";
-        case MTLCommandBufferErrorStackOverflow:
-            return "MTLCommandBufferErrorStackOverflow";
-        default:
-            return "Unknown";
-    }
-}
-
 } // namespace backend
 } // namespace filament
 
