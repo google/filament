@@ -303,13 +303,10 @@ void GLDescriptorSet::bind(
                     offset += offsets[dynamicOffsetIndex++];
                 }
                 if (arg.bo) {
-                    auto buffer = static_cast<char const*>(arg.bo->gl.buffer) + offset;
-                    p.updateUniforms(bindingPoint, arg.bo->gl.id, buffer, arg.bo->age);
+                    p.updateUniforms(bindingPoint, arg.bo->gl.id, arg.bo->gl.buffer, arg.bo->age, offset);
                 }
             } else if constexpr (std::is_same_v<T, Sampler>) {
                 GLuint const unit = p.getTextureUnit(set, binding);
-
-
                 if (arg.handle) {
                     GLTexture const* const t = handleAllocator.handle_cast<GLTexture*>(arg.handle);
                     gl.bindTexture(unit, t->gl.target, t->gl.id, t->gl.external);
