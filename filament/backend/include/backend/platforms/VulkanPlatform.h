@@ -37,6 +37,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __ANDROID__
+#include "AndroidFrameCallback.h"
+#endif
+
 namespace filament::backend {
 
 using SwapChain = Platform::SwapChain;
@@ -464,6 +468,10 @@ private:
             uint64_t flags) noexcept;
 
     friend struct VulkanPlatformPrivate;
+
+#ifdef __ANDROID__
+    AndroidFrameCallback mAndroidFrameCallback;
+#endif
 };
 
 }// namespace filament::backend

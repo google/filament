@@ -47,7 +47,7 @@ class FEngine;
 namespace details {
 struct FrameInfo {
     using duration = std::chrono::duration<float, std::milli>;
-    duration frameTime{};            // frame period
+    duration gpuFrameDuration{};     // frame period
     duration denoisedFrameTime{};    // frame period (median filter)
     bool valid = false;              // true if the data of the structure is valid
 };
@@ -79,6 +79,9 @@ struct FrameInfoImpl : public details::FrameInfo {
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
     CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
+    // system's expected present time [ns]
+    FrameTimestamps::time_point_ns expectedPresentTime{ FrameTimestamps::INVALID };
+
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
     // true once backend thread has populated its data

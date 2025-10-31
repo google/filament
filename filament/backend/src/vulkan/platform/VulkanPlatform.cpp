@@ -680,6 +680,9 @@ struct VulkanPlatformPrivate {
 };
 
 void VulkanPlatform::terminate() {
+#ifdef __ANDROID__
+    mAndroidFrameCallback.terminate();
+#endif
     if (!mImpl->mSharedContext) {
         vkDestroyDevice(mImpl->mDevice, VKALLOC);
         vkDestroyInstance(mImpl->mInstance, VKALLOC);
@@ -903,6 +906,10 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     printDepthFormats(mImpl->mPhysicalDevice);
 #endif
 
+#ifdef __ANDROID__
+    mAndroidFrameCallback.init();
+#endif
+
     // Note that `context` is an alias of mImpl->mContext.
     return VulkanDriver::create(this, context, driverConfig);
 }
@@ -980,6 +987,18 @@ bool VulkanPlatform::isCompositorTimingSupported() const noexcept {
 
 bool VulkanPlatform::queryCompositorTiming(SwapChain const* swapchain,
         CompositorTiming* outCompositorTiming) const noexcept {
+    if (!swapchain) {
+        return false;
+    }
+
+#ifdef __ANDROID__
+    AndroidFrameCallback::Timeline const preferredTimeline{
+        mAndroidFrameCallback.getPreferredTimeline() };
+    outCompositorTiming->frameTime = preferredTimeline.frameTime;
+    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
+    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+#endif
+
     auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
     return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
 }

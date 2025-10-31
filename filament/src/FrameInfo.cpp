@@ -114,6 +114,12 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
         front.presentDeadline = compositorTiming.compositeDeadline;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
+        front.expectedPresentTime = compositorTiming.expectedPresentTime;
+        if (compositorTiming.frameTime != CompositorTiming::INVALID) {
+            // of we have a vsync time from the compositor, ignore the one from the user
+            front.vsync = FrameInfoImpl::time_point{
+                std::chrono::nanoseconds(compositorTiming.frameTime) };
+        }
     }
 
     if (mHasTimerQueries) {
@@ -146,7 +152,7 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
                     FILAMENT_TRACING_VALUE(FILAMENT_TRACING_CATEGORY_FILAMENT, "FrameInfo::elapsed", uint32_t(elapsed));
                     // conversion to our duration happens here
                     pFront = mQueries[mLast].pInfo;
-                    pFront->frameTime = std::chrono::duration<uint64_t, std::nano>(elapsed);
+                    pFront->gpuFrameDuration = std::chrono::duration<uint64_t, std::nano>(elapsed);
                     mLast = (mLast + 1) % POOL_COUNT;
                     denoiseFrameTime(history, config);
                     break;
@@ -230,7 +236,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
     // find the first slot that has a valid frame duration
     size_t first = history.size();
     for (size_t i = 0, c = history.size(); i < c; ++i) {
-        if (history[i].frameTime != duration(0)) {
+        if (history[i].gpuFrameDuration != duration(0)) {
             first = i;
             break;
         }
@@ -248,7 +254,7 @@ void FrameInfoManager::denoiseFrameTime(FrameHistoryQueue& history, Config const
             size_t(config.historySize) });
 
         for (size_t i = 0; i < size; ++i) {
-            median[i] = history[first + i].frameTime;
+            median[i] = history[first + i].gpuFrameDuration;
         }
         std::sort(median.begin(), median.begin() + size);
         duration const denoisedFrameTime = median[size / 2];
@@ -314,7 +320,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
 
         result.push_back({
                 .frameId                        = entry.frameId,
-                .gpuFrameDuration               = toDuration(entry.frameTime),
+                .gpuFrameDuration               = toDuration(entry.gpuFrameDuration),
                 .denoisedGpuFrameDuration       = toDuration(entry.denoisedFrameTime),
                 .beginFrame                     = toTimepoint(entry.beginFrame),
                 .endFrame                       = toTimepoint(entry.endFrame),
@@ -325,7 +331,9 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .displayPresent                 = entry.displayPresent,
                 .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
-                .compositionToPresentLatency    = entry.compositionToPresentLatency
+                .compositionToPresentLatency    = entry.compositionToPresentLatency,
+                .expectedPresentTime            = entry.expectedPresentTime,
+
         });
     }
     std::swap(mUserFrameHistory, result);
