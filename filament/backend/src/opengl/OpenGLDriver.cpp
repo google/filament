@@ -2704,6 +2704,39 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
 #endif
 }
 
+bool OpenGLDriver::isCompositorTimingSupported() {
+    // this is a synchronous call
+    return mPlatform.isCompositorTimingSupported();
+}
+
+bool OpenGLDriver::queryCompositorTiming(SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryCompositorTiming(sc->swapChain, outCompositorTiming);
+}
+
+bool OpenGLDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t const frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryFrameTimestamps(sc->swapChain, frameId, outFrameTimestamps);
+}
+
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     DEBUG_MARKER()
 
