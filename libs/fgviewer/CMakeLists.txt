@@ -4,7 +4,7 @@ project(fgviewer C ASM)
 set(TARGET fgviewer)
 set(PUBLIC_HDR_DIR include)
 
-if (CMAKE_CROSSCOMPILING)
+if (CMAKE_CROSSCOMPILING OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
     include(${IMPORT_EXECUTABLES})
 endif()
 

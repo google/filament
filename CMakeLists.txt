@@ -753,12 +753,61 @@ function(combine_static_libs TARGET OUTPUT DEPS)
 endfunction()
 
 # ==================================================================================================
-# Configuration for CMAKE_CROSSCOMPILING.
+# Configuration importing/exporting prebuilt "/tools" executables
 # ==================================================================================================
+
+# In certain cases, we want the ability to separate the build type/flags (release, debug) of tools
+# (matc, resgen, etc...) from filament.  Cross compilation is one such case (e.g. building material
+# with matc running on host while building filament for Android) [1]. Another example is when client
+# wants to enable ASAN for filament but not the tool [2].
+#
+# Here are the varibles that are used to determine behavior is such flows:
+#   - CMAKE_CROSSCOMPILING : Set by cmake to indicate the build's target platform is different
+#     from the host platform.
+#   - IMPORT_EXECUTABLES_DIR : This is the directory containing the /ImportExecutables-type.cmake
+#     which are then included in other CMakeLists.txt to enable finding targets that have been
+#     prebuilt. This is set by the client in their `cmake` invocation.
+#   - IMPORT_EXECUTABLES : Path to a file to for 1) exporting the prebuilt targets or 2)
+#     importing a previously exported targets. (Used internally and should not be set by client).
+#   - FILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR : A path set by the client to indicate that
+#     they wish to export the tools as prebuilts, and the corresponding targets will be recorded
+#     in a cmake file (i.e IMPORT_EXECUTABLES). IMPORT_EXECUTABLES will be set relative to the the
+#     given path. This will set FILAMENT_EXPORT_PREBUILT_EXECUTABLES=ON.
+#   - FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR : A path set by the client to indicate that they wish
+#     to import the tools as prebuilts from a .cmake file. The location (IMPORT_EXECUTABLES) of the
+#     file is relative to the path given. This will set FILAMENT_IMPORT_PREBUILT_EXECUTABLES=ON.
+#   - IMPORT_PREBUILT_EXECUTABLES and EXPORT_PREBUILT_EXECUTABLES are internal booleans set to
+#     ON based on the prescence of FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR and
+#     FILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR.
+#
+# In conclusion, for cases
+#   - [1] (crosscompiling), the client must set IMPORT_EXECUTABLES_DIR for both when they are building
+#     the tools and when they are building the target-platform filament.
+#   - [2] (all other instances), the client must set FILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR in
+#     the prebuilt exporting step, and set FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR in the importing
+#     step.
+
+# TODO: Fold the cross compilation case into the more general FILAMENT_IMPORT/EXPORT variables.
+
+if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR)
+   set(FILAMENT_EXPORT_PREBUILT_EXECUTABLES ON)
+   set(IMPORT_EXECUTABLES_DIR ${FILAMENT_EXPORT_PREBUILT_EXECUTABLES_DIR})
+endif()
+
+if (FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR)
+   set(FILAMENT_IMPORT_PREBUILT_EXECUTABLES ON)
+   set(IMPORT_EXECUTABLES_DIR ${FILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR})
+endif()
+
 if (WEBGL)
     set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
 else()
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    if (FILAMENT_EXPORT_PREBUILT_EXECUTABLES OR FILAMENT_IMPORT_PREBUILT_EXECUTABLES)
+        set(IMPORT_EXECUTABLES_BUILD_TYPE Prebuilt)
+    else()
+        set(IMPORT_EXECUTABLES_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+    endif()
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${IMPORT_EXECUTABLES_BUILD_TYPE}.cmake)
 endif()
 
 # ==================================================================================================
@@ -917,6 +966,6 @@ if (IS_HOST_PLATFORM)
 endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
-if (NOT CMAKE_CROSSCOMPILING)
+if ((NOT CMAKE_CROSSCOMPILING AND NOT FILAMENT_IMPORT_PREBUILT_EXECUTABLES) OR FILAMENT_EXPORT_PREBUILT_EXECUTABLES)
     export(TARGETS matc cmgen filamesh mipgen resgen uberz glslminifier FILE ${IMPORT_EXECUTABLES})
 endif()
