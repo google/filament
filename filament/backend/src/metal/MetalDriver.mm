@@ -1005,7 +1005,8 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 
 utils::FixedCapacityVector<ShaderLanguage> MetalDriver::getShaderLanguages(
         ShaderLanguage preferredLanguage) const noexcept {
-    if (preferredLanguage == backend::ShaderLanguage::MSL) {
+    if (preferredLanguage == backend::ShaderLanguage::UNSPECIFIED ||
+            preferredLanguage == backend::ShaderLanguage::MSL) {
         return { backend::ShaderLanguage::MSL, backend::ShaderLanguage::METAL_LIBRARY };
     }
     return { backend::ShaderLanguage::METAL_LIBRARY, backend::ShaderLanguage::MSL };
