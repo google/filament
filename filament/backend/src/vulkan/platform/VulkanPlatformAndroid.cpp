@@ -502,13 +502,4 @@ bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uin
     return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
-
-// Deprecated platform dependent helper methods
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() { return {}; }
-
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
-    return SurfaceBundle{};
-}
-
 } // namespace filament::backend

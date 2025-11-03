@@ -67,8 +67,12 @@
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     #if defined(__ANDROID__)
         #include "backend/platforms/VulkanPlatformAndroid.h"
-    #else
-        #include "backend/platforms/VulkanPlatform.h"
+    #elif defined(__APPLE__)
+        #include "backend/platforms/VulkanPlatformApple.h"
+    #elif defined(__linux__)
+        #include "backend/platforms/VulkanPlatformLinux.h"
+    #elif defined(WIN32)
+        #include "backend/platforms/VulkanPlatformWindows.h"
     #endif
 #endif
 
@@ -117,8 +121,14 @@ Platform* PlatformFactory::create(Backend* backend) noexcept {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #if defined(__ANDROID__)
                 return new VulkanPlatformAndroid();
+            #elif defined(__APPLE__)
+                return new VulkanPlatformApple();
+            #elif defined(__linux__)
+                return new VulkanPlatformLinux();
+            #elif defined(WIN32)
+                return new VulkanPlatformWindows();
             #else
-                return new VulkanPlatform();
+                return nullptr;
             #endif
         #else
             return nullptr;
