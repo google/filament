@@ -14,6 +14,7 @@
 
 import subprocess
 import os
+import shutil
 import argparse
 import sys
 import pathlib
@@ -104,8 +105,7 @@ def mkdir_p(path_str):
   pathlib.Path(path_str).mkdir(parents=True, exist_ok=True)
 
 def mv_f(src_str, dst_str):
-  src = pathlib.Path(src_str)
-  src.replace(dst_str)
+  shutil.move(src_str, dst_str)
 
 def important_print(msg):
   lines = msg.split('\n')

@@ -682,7 +682,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
 
                     data.picking = builder.createTexture("Picking Buffer", {
                             .width = width, .height = height,
-                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32F });
+                            .format = isFL0 ? TextureFormat::RGBA8 : TextureFormat::RG32UI });
 
                     data.picking = builder.write(data.picking,
                         FrameGraphTexture::Usage::COLOR_ATTACHMENT);

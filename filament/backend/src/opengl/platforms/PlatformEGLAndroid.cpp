@@ -32,6 +32,7 @@
 #include "ExternalStreamManagerAndroid.h"
 
 #include <android/api-level.h>
+#include <android/native_window.h>
 #include <android/hardware_buffer.h>
 
 #include <utils/android/PerformanceHintManager.h>
@@ -116,8 +117,7 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
     }
 }
 
-PlatformEGLAndroid::~PlatformEGLAndroid() noexcept {
-}
+PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
 
 void PlatformEGLAndroid::terminate() noexcept {
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
@@ -342,8 +342,8 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
         outFrameTimestamps->requestedPresentTime = values[0];
         outFrameTimestamps->acquireTime = values[1];
         outFrameTimestamps->latchTime = values[2];
-        outFrameTimestamps->firstRefreshStartTime = values[3];
-        outFrameTimestamps->lastRefreshStartTime = values[4];
+        outFrameTimestamps->firstCompositionStartTime = values[3];
+        outFrameTimestamps->lastCompositionStartTime = values[4];
         outFrameTimestamps->gpuCompositionDoneTime = values[5];
         outFrameTimestamps->displayPresentTime = values[6];
         outFrameTimestamps->dequeueReadyTime = values[7];
@@ -357,8 +357,8 @@ bool PlatformEGLAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64
             &outFrameTimestamps->requestedPresentTime,
             &outFrameTimestamps->acquireTime,
             &outFrameTimestamps->latchTime,
-            &outFrameTimestamps->firstRefreshStartTime,
-            &outFrameTimestamps->lastRefreshStartTime,
+            &outFrameTimestamps->firstCompositionStartTime,
+            &outFrameTimestamps->lastCompositionStartTime,
             &outFrameTimestamps->gpuCompositionDoneTime,
             &outFrameTimestamps->displayPresentTime,
             &outFrameTimestamps->dequeueReadyTime,
@@ -396,12 +396,13 @@ Platform::ExternalImageHandle PlatformEGLAndroid::createExternalImage(
         auto const hardwareBuffer = const_cast<AHardwareBuffer*>(buffer);
         AHardwareBuffer_acquire(hardwareBuffer);
         p->aHardwareBuffer = hardwareBuffer;
-        p->sRGB = sRGB;
         AHardwareBuffer_Desc hardwareBufferDescription = {};
         AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDescription);
         p->height = hardwareBufferDescription.height;
         p->width = hardwareBufferDescription.width;
         auto const textureFormat = mapToFilamentFormat(hardwareBufferDescription.format, sRGB);
+        // Only set sRGB as true if the filament format requires it, otherwise the eglCreateImage might fail.
+        p->sRGB = textureFormat == TextureFormat::SRGB8 || textureFormat == TextureFormat::SRGB8_A8;
         p->format = textureFormat;
         p->usage = mapToFilamentUsage(hardwareBufferDescription.usage, textureFormat);
         return ExternalImageHandle{ p };
@@ -643,12 +644,32 @@ AcquiredImage PlatformEGLAndroid::transformAcquiredImage(AcquiredImage const sou
     return { eglImage, patchedCallback, closure, source.handler };
 }
 
+
+bool PlatformEGLAndroid::isProducerThrottlingControlSupported() const {
+    return mProducerThrottling.isSupported();
+}
+
+int32_t PlatformEGLAndroid::setProducerThrottlingEnabled(
+    EGLNativeWindowType const nativeWindow, bool const enabled) const {
+    return mProducerThrottling.setProducerThrottlingEnabled(nativeWindow, enabled);
+}
+
 // ---------------------------------------------------------------------------------------------
 // PlatformEGLAndroid::SwapChainEGLAndroid
 
 PlatformEGLAndroid::SwapChainEGLAndroid::SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
         void* nativeWindow, uint64_t const flags)
     : SwapChainEGL(platform, nativeWindow, flags) {
+
+    if (nativeWindow && platform.isProducerThrottlingControlSupported()) {
+        // Disable Producer Throttling when supported. This allows eglSwapBuffers() to not stall
+        int32_t const result = platform.setProducerThrottlingEnabled(
+                EGLNativeWindowType(nativeWindow), false);
+        if (UTILS_UNLIKELY(result < 0)) {
+            LOG(WARNING) << "ANativeWindow_setProducerThrottlingEnabled(false) failed: " << result;
+        }
+    }
+
     if (UTILS_LIKELY(platform.ext.egl.ANDROID_get_frame_timestamps)) {
         if (sur != EGL_NO_SURFACE) {
             // we ignore the result, it doesn't matter much if it fails
