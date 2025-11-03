@@ -21,16 +21,17 @@
 
 #include "Allocators.h"
 #include "DFG.h"
-#include "PostProcessManager.h"
-#include "ResourceList.h"
 #include "HwDescriptorSetLayoutFactory.h"
 #include "HwVertexBufferInfoFactory.h"
 #include "MaterialCache.h"
+#include "PostProcessManager.h"
+#include "ResourceList.h"
+#include "UboManager.h"
 
 #include "components/CameraManager.h"
 #include "components/LightManager.h"
-#include "components/TransformManager.h"
 #include "components/RenderableManager.h"
+#include "components/TransformManager.h"
 
 #include "ds/DescriptorSetLayout.h"
 
@@ -263,6 +264,14 @@ public:
         return mBackend;
     }
 
+    bool isUboBatchingEnabled() const noexcept {
+        return mUboManager.has_value();
+    }
+
+    std::optional<UboManager>& getUboManager() noexcept {
+        return mUboManager;
+    }
+
     Platform* getPlatform() const noexcept {
         return mPlatform;
     }
@@ -337,10 +346,10 @@ public:
     FRenderer* createRenderer() noexcept;
 
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
-            const FMaterialInstance* other, const char* name) noexcept;
+            const FMaterialInstance* other, const char* name, bool useUboBatching) noexcept;
 
     FMaterialInstance* createMaterialInstance(const FMaterial* material,
-                                              const char* name) noexcept;
+                                              const char* name, bool useUboBatching) noexcept;
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
@@ -650,6 +659,7 @@ private:
 
     uint32_t mFlushCounter = 0;
 
+    std::optional<UboManager> mUboManager = std::nullopt;
     RootArenaScope::Arena mPerRenderPassArena;
     HeapAllocatorArena mHeapAllocator;
 

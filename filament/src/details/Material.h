@@ -108,8 +108,12 @@ public:
             backend::CallbackHandler* handler,
             utils::Invocable<void(Material*)>&& callback) noexcept;
 
-    // Create an instance of this material
+    // Create an instance of this material without specifying to use ubo batching or not.
+    // Whether UBO batching is used will be determined by engine settings.
     FMaterialInstance* createInstance(const char* name) const noexcept;
+
+    // Creates an instance of this material, specifying whether to use UBO batching.
+    FMaterialInstance* createInstance(const char* name, bool useUboBatching) const noexcept;
 
     bool hasParameter(const char* name) const noexcept;
 

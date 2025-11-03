@@ -452,6 +452,12 @@ void FRenderer::endFrame() {
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.submitFrame(driver);
 
+    if (engine.isUboBatchingEnabled()) {
+        std::optional<UboManager>& uboManager = engine.getUboManager();
+        assert_invariant(uboManager.has_value());
+        uboManager->endFrame(driver, engine.getMaterialInstanceResourceList());
+    }
+
     driver.endFrame(mFrameId);
 
     // gives the backend a chance to execute periodic tasks

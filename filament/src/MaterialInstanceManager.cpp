@@ -39,7 +39,8 @@ std::pair<FMaterialInstance*, int32_t> Record::getInstance() {
     }
     assert_invariant(mAvailable == mInstances.size());
     auto& name = mMaterial->getName();
-    FMaterialInstance* inst = mMaterial->createInstance(name.c_str_safe());
+    // Disable Ubo batching for post process materials explicitly.
+    FMaterialInstance* inst = mMaterial->createInstance(name.c_str_safe(), false);
     mInstances.push_back(inst);
     return { inst, mAvailable++ };
 }
