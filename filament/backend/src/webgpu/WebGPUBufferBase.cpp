@@ -99,7 +99,7 @@ void WebGPUBufferBase::updateGPUBuffer(BufferDescriptor const& bufferDescriptor,
     // Make sure the padded memory is set to 0 to have deterministic behaviors
     if (remainder != 0) {
         uint8_t* paddingStart = static_cast<uint8_t*>(mappedRange) + bufferDescriptor.size;
-        std::memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
+        memset(paddingStart, 0, FILAMENT_WEBGPU_BUFFER_SIZE_MODULUS - remainder);
     }
 
     stagingBuffer.Unmap();
