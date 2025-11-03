@@ -17,7 +17,6 @@
 #include "filamat/MaterialBuilder.h"
 
 #include <filamat/Enums.h>
-#include <filamat/IncludeCallback.h>
 #include <filamat/Package.h>
 
 #include "GLSLPostProcessor.h"

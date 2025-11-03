@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filamat/Includes.h>
+#include "Includes.h"
 
 #include <utils/Log.h>
 #include <utils/compiler.h>
@@ -22,7 +22,7 @@
 
 #include <string>
 
-namespace filamat {
+namespace matc {
 
 static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
@@ -308,4 +308,4 @@ std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
     return results;
 }
 
-} // namespace filamat
+} // namespace matc

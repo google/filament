@@ -17,12 +17,12 @@
 #include "MaterialCompiler.h"
 
 #include "DirIncluder.h"
+#include "Includes.h"
 
 #include <memory>
 #include <iostream>
 #include <utility>
 
-#include <filamat/Includes.h>
 #include <filamat/MaterialBuilder.h>
 
 #include <filament-matp/Config.h>
@@ -78,14 +78,14 @@ bool MaterialCompiler::run(const matp::Config& config) {
         .insertLineDirectives = true,
         .insertLineDirectiveCheck = true
     };
-    // This is both source and result, this will be mutated by `filamat::resolveIncludes` call.
+    // This is both source and result, this will be mutated by `resolveIncludes` call.
     IncludeResult result {
         .includeName = fileName,
         .text = utils::CString(buffer.get(), size),
         .name = CString("")
     };
 
-    if (!filamat::resolveIncludes(result, std::move(includer), options)) {
+    if (!resolveIncludes(result, std::move(includer), options)) {
         return false;
     }
 

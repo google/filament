@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_INCLUDER_H
-#define TNT_FILAMAT_INCLUDER_H
+#ifndef TNT_INCLUDER_H
+#define TNT_INCLUDER_H
 
 #include <utils/CString.h>
 
 #include <functional>
 
-namespace filamat {
+namespace matc {
 
 struct IncludeResult {
     // The include name of the root file, as if it were being included.
@@ -64,6 +64,6 @@ using IncludeCallback = std::function<bool(
         const utils::CString& includedBy,
         IncludeResult& result)>;
 
-} // namespace filamat
+} // namespace matc
 
 #endif
