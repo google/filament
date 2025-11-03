@@ -46,6 +46,9 @@
     "libs/matdbg/README.md": {
         "dest": "dup/matdbg.md"
     },
+    "libs/fgviewer/README.md": {
+        "dest": "dup/fgviewer.md"
+    },
     "tools/normal-blending/README.md": {
         "dest": "dup/normal_blending.md"
     },

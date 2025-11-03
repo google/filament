@@ -32,6 +32,7 @@
   - [Libraries](./notes/libs.md)
     - [bluegl](./dup/bluegl.md)
     - [bluevk](./dup/bluevk.md)
+    - [fgviewer](./dup/fgviewer.md)
     - [filamat](./dup/filamat.md)
     - [gltfio](./dup/gltfio.md)
     - [iblprefilter](./dup/iblprefilter.md)

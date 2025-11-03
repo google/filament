@@ -88,7 +88,7 @@ public:
     }
 
     // For ES2 only
-    void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age) const noexcept;
+    void updateUniforms(uint32_t index, GLuint id, void const* buffer, uint16_t age, uint32_t offset) const noexcept;
     void setRec709ColorSpace(bool rec709) const noexcept;
 
     PushConstantBundle getPushConstants() {
@@ -123,6 +123,7 @@ private:
         LocationInfo locations;
         mutable GLuint id = 0;
         mutable uint16_t age = std::numeric_limits<uint16_t>::max();
+        mutable uint32_t offset = 0;
     };
     UniformsRecord const* mUniformsRecords = nullptr;
     GLint mRec709Location : 24;     // 4 bytes

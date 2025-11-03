@@ -966,8 +966,33 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     // The VulkanPlatformSurfaceSwapChain now `owns` the surface.
     VulkanPlatformSurfaceSwapChain* swapchain = new VulkanPlatformSurfaceSwapChain(mImpl->mContext,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
-            surface, fallbackExtent, flags);
+            surface, fallbackExtent, nativeWindow, flags);
     return swapchain;
+}
+
+bool VulkanPlatform::isCompositorTimingSupported() const noexcept {
+#ifdef __ANDROID__
+    return true;
+#else
+    return Platform::isCompositorTimingSupported();
+#endif
+}
+
+bool VulkanPlatform::queryCompositorTiming(SwapChain const* swapchain,
+        CompositorTiming* outCompositorTiming) const noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+}
+
+bool VulkanPlatform::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->setPresentFrameId(frameId);
+}
+
+bool VulkanPlatform::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) const noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,

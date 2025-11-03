@@ -127,7 +127,7 @@ TEST(MonotonicRingMap, FindAfterWrapAround) {
     ASSERT_NE(nullptr, map.find(80));
 }
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) && defined(GTEST_HAS_DEATH_TEST)
 TEST(MonotonicRingMap, MonotonicityDeathTest) {
     MonotonicRingMap<4, uint64_t, uint64_t> map;
     map.insert(10, 100);
