@@ -680,9 +680,6 @@ struct VulkanPlatformPrivate {
 };
 
 void VulkanPlatform::terminate() {
-#ifdef __ANDROID__
-    mAndroidFrameCallback.terminate();
-#endif
     if (!mImpl->mSharedContext) {
         vkDestroyDevice(mImpl->mDevice, VKALLOC);
         vkDestroyInstance(mImpl->mInstance, VKALLOC);
@@ -906,10 +903,6 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
     printDepthFormats(mImpl->mPhysicalDevice);
 #endif
 
-#ifdef __ANDROID__
-    mAndroidFrameCallback.init();
-#endif
-
     // Note that `context` is an alias of mImpl->mContext.
     return VulkanDriver::create(this, context, driverConfig);
 }
@@ -975,43 +968,6 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
             mImpl->mPhysicalDevice, mImpl->mDevice, mImpl->mGraphicsQueue, mImpl->mInstance,
             surface, fallbackExtent, nativeWindow, flags);
     return swapchain;
-}
-
-bool VulkanPlatform::isCompositorTimingSupported() const noexcept {
-#ifdef __ANDROID__
-    return true;
-#else
-    return Platform::isCompositorTimingSupported();
-#endif
-}
-
-bool VulkanPlatform::queryCompositorTiming(SwapChain const* swapchain,
-        CompositorTiming* outCompositorTiming) const noexcept {
-    if (!swapchain) {
-        return false;
-    }
-
-#ifdef __ANDROID__
-    AndroidFrameCallback::Timeline const preferredTimeline{
-        mAndroidFrameCallback.getPreferredTimeline() };
-    outCompositorTiming->frameTime = preferredTimeline.frameTime;
-    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
-    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
-#endif
-
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
-}
-
-bool VulkanPlatform::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->setPresentFrameId(frameId);
-}
-
-bool VulkanPlatform::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
-        FrameTimestamps* outFrameTimestamps) const noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,

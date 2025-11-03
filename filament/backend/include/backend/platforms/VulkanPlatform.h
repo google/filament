@@ -37,10 +37,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __ANDROID__
-#include "AndroidFrameCallback.h"
-#endif
-
 namespace filament::backend {
 
 using SwapChain = Platform::SwapChain;
@@ -435,16 +431,6 @@ public:
         return {};
     }
 
-    bool isCompositorTimingSupported() const noexcept override;
-
-    bool queryCompositorTiming(SwapChain const* swapchain,
-            CompositorTiming* outCompositorTiming) const noexcept override;
-
-    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
-
-    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
-            FrameTimestamps* outFrameTimestamps) const noexcept override;
-
 protected:
     struct VulkanSync : public Platform::Sync {
         VkFence fence;
@@ -468,10 +454,6 @@ private:
             uint64_t flags) noexcept;
 
     friend struct VulkanPlatformPrivate;
-
-#ifdef __ANDROID__
-    AndroidFrameCallback mAndroidFrameCallback;
-#endif
 };
 
 }// namespace filament::backend
