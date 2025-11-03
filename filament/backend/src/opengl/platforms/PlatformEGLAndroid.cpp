@@ -551,6 +551,8 @@ Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
         if (sync == EGL_NO_SYNC_KHR) {
             LOG(ERROR) << "Failed to create sync: " << eglGetError();
         }
+    } else {
+        LOG(WARNING) << "Native fences not supported on this device.";
     }
     return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
 }
@@ -559,13 +561,13 @@ bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
     assert_invariant(sync && fd);
 
     if (UTILS_UNLIKELY(!ext.egl.ANDROID_native_fence_sync)) {
+        LOG(WARNING) << "Native fences not supported, cannot convert to fd.";
         return false;
     }
 
     SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
     if (eglSync.sync == EGL_NO_SYNC_KHR) {
-        LOG(ERROR) << "Cannot convert sync to fd, because the underlying fence "
-                      "does not exist - does this display support fences?";
+        LOG(ERROR) << "Invalid fence, cannot convert to fd.";
         return false;
     }
 
