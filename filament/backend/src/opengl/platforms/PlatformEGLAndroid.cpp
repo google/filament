@@ -567,7 +567,15 @@ void PlatformEGLAndroid::destroyStream(Stream* stream) noexcept {
 }
 
 Platform::Sync* PlatformEGLAndroid::createSync() noexcept {
-    auto const sync = eglCreateSyncKHR(getEglDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+    EGLSyncKHR sync = EGL_NO_SYNC_KHR;
+    if (UTILS_LIKELY(ext.egl.ANDROID_native_fence_sync)) {
+        sync = eglCreateSyncKHR(getEglDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, nullptr);
+        if (sync == EGL_NO_SYNC_KHR) {
+            LOG(ERROR) << "Failed to create sync: " << eglGetError();
+        }
+    } else {
+        LOG(WARNING) << "Native fences not supported on this device.";
+    }
     return new(std::nothrow) SyncEGLAndroid{ .sync = sync };
 }
 
@@ -575,10 +583,16 @@ bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
     assert_invariant(sync && fd);
 
     if (UTILS_UNLIKELY(!ext.egl.ANDROID_native_fence_sync)) {
+        LOG(WARNING) << "Native fences not supported, cannot convert to fd.";
         return false;
     }
 
     SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+    if (eglSync.sync == EGL_NO_SYNC_KHR) {
+        LOG(ERROR) << "Invalid fence, cannot convert to fd.";
+        return false;
+    }
+
     *fd = eglDupNativeFenceFDANDROID(getEglDisplay(), eglSync.sync);
     // In the case where there was no native FD, -1 is returned. Return false
     // to indicate there was an error in this case.
@@ -591,8 +605,12 @@ bool PlatformEGLAndroid::convertSyncToFd(Sync* sync, int* fd) noexcept {
 
 void PlatformEGLAndroid::destroySync(Sync* sync) noexcept {
     assert_invariant(sync);
-    SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
-    eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
+    if (UTILS_LIKELY(ext.egl.ANDROID_native_fence_sync)) {
+        SyncEGLAndroid const& eglSync = static_cast<SyncEGLAndroid&>(*sync);
+        if (eglSync.sync != EGL_NO_SYNC_KHR) {
+            eglDestroySyncKHR(getEglDisplay(), eglSync.sync);
+        }
+    }
     delete sync;
 }
 
