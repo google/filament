@@ -160,10 +160,15 @@
                     <main>
                         <h1 id="running-with-asanubsan"><a class="header" href="#running-with-asanubsan">Running with ASAN/UBSAN</a></h1>
 <h2 id="enabling"><a class="header" href="#enabling">Enabling</a></h2>
-<p>When building though build.sh, pass the <code>-b</code> flag. This sets the cmake variable
+<p>When building though <code>build.sh</code>, pass the <code>-b</code> flag. This sets the cmake variable
 <code>FILAMENT_ENABLE_ASAN_UBSAN=ON</code> which eventually passes <code>"-fsanitize=address -fsanitize=undefined"</code>
 to all compile and link operations.</p>
-<p>If building through CMake directly, or an IDE like CLion that doesn't use build.sh, instead pass
+<p>It might be desirable to pair the <code>-b</code> with <code>-y release</code>. The <code>-y</code> flag indicates that targets
+in <code>/tools</code> will be built separately from the filament target, and the filament build depends on
+the <code>/tools</code> targets as prebuilt binaries. This separation reduces ASAN/UBSAN build time
+considerably. This option assumes that the user is trying to catch sanitization issues for
+filament and not the tools that are used to build filament.</p>
+<p>If building through CMake directly, or an IDE like CLion that doesn't use <code>build.sh</code>, instead pass
 <code>-DFILAMENT_ENABLE_ASAN_UBSAN=ON</code> to cmake in order to get the same result.</p>
 <h2 id="getting-memory-leak-detection-on-mac"><a class="header" href="#getting-memory-leak-detection-on-mac">Getting memory leak detection on Mac</a></h2>
 <p>Memory leak detection isn't enabled by default on MacOS. There are two issues to address, first is

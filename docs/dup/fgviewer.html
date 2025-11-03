@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>filamat - Filament</title>
+        <title>fgviewer - Filament</title>
 
 
         <!-- Custom HTML head -->
@@ -158,189 +158,149 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="filamat"><a class="header" href="#filamat">Filamat</a></h1>
-<p>Filamat allows for generating materials programatically on the device as opposed to with the <code>matc</code>
-tool on the host machine. The cost is a binary size increase of your app due to the relatively
-larger size of the <code>filamat</code> library.</p>
-<p>For a smaller-sized library, see <a href="#filamat-lite"><code>filamat_lite</code></a>. It has no dependencies on
-<code>glslang</code>, but can only compile materials for OpenGL and does no shader code optimization.</p>
-<p>The filamat package is included in the releases available on
-<a href="https://github.com/google/filament/releases">GitHub</a>.</p>
-<h2 id="libraries"><a class="header" href="#libraries">Libraries</a></h2>
-<p>Filamat is distributed as a set of static libraries you must link against:</p>
-<ul>
-<li><code>filamat</code>, Filamat main library</li>
-<li><code>filabridge</code>, Support library for Filament / Filamat</li>
-<li><code>shaders</code>, Shader text for material generation</li>
-<li><code>utils</code>, Support library for Filament / Filamat</li>
-<li><code>smol-v</code>, SPIR-V compression library</li>
-</ul>
-<p>To use Filamat from Java you must use the following two libraries instead:</p>
-<ul>
-<li><code>filamat-java.jar</code>, Contains Filamat's Java classes</li>
-<li><code>filamat-jni</code>, Filamat's JNI bindings</li>
-</ul>
-<h2 id="linking-against-filamat"><a class="header" href="#linking-against-filamat">Linking against Filamat</a></h2>
-<p>This walkthrough will get you successfully compiling and linking native code against Filamat with
-minimum dependencies.</p>
-<p>To start, download Filament's <a href="https://github.com/google/filament/releases">latest binary release</a>
-and extract into a directory of your choosing. Binary releases are suffixed with the platform name,
-for example, <code>filament-20181009-linux.tgz</code>.</p>
-<p>Create a file, <code>main.cpp</code>, in the same directory with the following contents:</p>
-<pre><code class="language-c++">#include &lt;filamat/MaterialBuilder.h&gt;
-
-#include &lt;iostream&gt;
-
-using namespace filamat;
-
-int main(int argc, char** argv)
-{
-    // Must be called before any materials can be built.
-    MaterialBuilder::init();
-
-    MaterialBuilder builder;
-    builder
-        .name("My material")
-        .material("void material (inout MaterialInputs material) {"
-                  "  prepareMaterial(material);"
-                  "  material.baseColor.rgb = float3(1.0, 0.0, 0.0);"
-                  "}")
-        .shading(MaterialBuilder::Shading::LIT)
-        .targetApi(MaterialBuilder::TargetApi::ALL)
-        .platform(MaterialBuilder::Platform::ALL);
-
-    Package package = builder.build();
-    if (package.isValid()) {
-        std::cout &lt;&lt; "Success!" &lt;&lt; std::endl;
-    }
-
-    // Call when finished building all materials to release internal MaterialBuilder resources.
-    MaterialBuilder::shutdown();
-    return 0;
-}
-</code></pre>
-<p>The directory should look like:</p>
-<pre><code>|-- README.md
-|-- bin
-|-- docs
-|-- include
-|-- lib
-|-- main.cpp
-</code></pre>
-<p>We'll use a platform-specific Makefile to compile and link <code>main.cpp</code> with Filamat's libraries.
-Copy your platform's Makefile below into a <code>Makefile</code> inside the same directory.</p>
-<h3 id="linux"><a class="header" href="#linux">Linux</a></h3>
-<pre><code class="language-make">FILAMENT_LIBS=-lfilamat -lfilabridge -lshaders -lutils -lsmol-v
-CC=clang++
-
-main: main.o
-	$(CC) -Llib/x86_64/ -stdlib=libc++ main.o $(FILAMENT_LIBS) -lpthread -ldl -o main
-
-main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++20 -stdlib=libc++ -pthread -c main.cpp
-
-clean:
-	rm -f main main.o
-
-.PHONY: clean
-</code></pre>
-<h3 id="macos"><a class="header" href="#macos">macOS</a></h3>
-<pre><code class="language-make">FILAMENT_LIBS=-lfilamat -lfilabridge -lshaders -lutils -lsmol-v
-CC=clang++
-
-main: main.o
-	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -o main
-
-main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++20 -c main.cpp
-
-clean:
-	rm -f main main.o
-
-.PHONY: clean
-</code></pre>
-<h3 id="windows"><a class="header" href="#windows">Windows</a></h3>
-<p>Note that the static libraries distributed for Windows include several
-variants: mt, md, mtd, mdd. These correspond to the <a href="https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2017">run-time library
-flags</a>
-<code>/MT</code>, <code>/MD</code>, <code>/MTd</code>, and <code>/MDd</code>, respectively. Here we use the mt variant.</p>
-<p>When building Filamat from source, the <code>USE_STATIC_CRT</code> CMake option can be
-used to change the run-time library version.</p>
-<pre><code class="language-make">FILAMENT_LIBS=lib/x86_64/mt/filamat.lib lib/x86_64/mt/filabridge.lib lib/x86_64/mt/shaders.lib \
-              lib/x86_64/mt/utils.lib lib/x86_64/mt/smol-v.lib
-CC=clang-cl.exe
-
-main.exe: main.obj
-	$(CC) main.obj $(FILAMENT_LIBS) gdi32.lib user32.lib opengl32.lib
-
-main.obj: main.cpp
-	$(CC) /MT /Iinclude/ /std:c++20 /c main.cpp
-
-clean:
-	del main.exe main.obj
-
-.PHONY: clean
-</code></pre>
-<h2 id="compiling"><a class="header" href="#compiling">Compiling</a></h2>
-<p>You should be able to invoke <code>make</code> and run the executable successfully:</p>
-<pre><code>$ make
-$ ./main
-Success!
-</code></pre>
-<p>On Windows, you'll need to open up a Visual Studio Native Tools Command Prompt
-and invoke <code>nmake</code> instead of <code>make</code>.</p>
-<h2 id="using-the-material-with-filament"><a class="header" href="#using-the-material-with-filament">Using the Material with Filament</a></h2>
-<p>For simplicity, this demo doesn't do anything useful with the built material package. To use the
-material with Filament, pass the material package's data into a Filament Material builder:</p>
-<pre><code class="language-c++">    Package package = builder.build();
-    filament::Material* myMaterial = Material::Builder()
-        .package(package.getData(), package.getSize())
-        .build(*engine);
-</code></pre>
-<p>Note that this will require <a href="../../filament/README.html">linking against Filament's libraries</a> in
-addition to Filamat's.</p>
-<h2 id="filamat-lite"><a class="header" href="#filamat-lite">Filamat Lite</a></h2>
-<p>The <code>filamat_lite</code> library is interchangeable with <code>filamat</code>, with a few caveats:</p>
+                        <h1 id="fgviewer"><a class="header" href="#fgviewer">fgviewer</a></h1>
 <ol>
-<li>Material compilation is only supported for the OpenGL backend.</li>
-<li>No shader-level optimization is performed.</li>
-<li>GLSL correctness is not checked.</li>
+<li><a href="#capabilities">Capabilities</a></li>
+<li><a href="#setup-for-desktop">Setup for Desktop</a></li>
+<li><a href="#setup-for-android">Setup for Android</a></li>
+<li><a href="#debugger-usage">Debugger Usage</a></li>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#c-server">C++ Server</a></li>
+<li><a href="#javascript-client">JavaScript Client</a></li>
+<li><a href="#http-requests">HTTP Requests</a></li>
+<li><a href="#wish-list">Wish List</a></li>
 </ol>
-<p>In addition, <code>filamat_lite</code> only performs a simple text match to determine which properties on the
-<code>MaterialInputs</code> structure are set. The <code>material</code> input variable must also always be refered to by
-the name <code>material</code>.</p>
-<pre><code class="language-glsl">void anotherFunction(inout MaterialInputs m) {
-    // Incorrect! The MaterialInputs is being referred to by the name "m".
-    m.metallic = 0.0;
-}
-
-void aFunction(inout MaterialInputs material) {
-    // Works, but only because the variable name "material" is used.
-    material.reflectance = 0.5;
-}
-
-// The MaterialInputs variable must be named material.
-void material(inout MaterialInputs material) {
-    prepareMaterial(material);
-
-    // Good.
-    material.roughness = materialParams.roughness;
-    material.baseColor.rgb = vec3(1.0, 0.0, 1.0);
-
-    aFunction(material);
-    anotherFunction(material);
+<h2 id="capabilities"><a class="header" href="#capabilities">Capabilities</a></h2>
+<p>fgviewer is a library and web application for real-time visualization of the frame graph in Filament.
+It displays active passes and resource usage, providing insights into the rendering pipeline.</p>
+<h2 id="setup-for-desktop"><a class="header" href="#setup-for-desktop">Setup for Desktop</a></h2>
+<p>When using the easy build script, include the <code>-t</code> argument. For example:</p>
+<pre><code>./build.sh -ft debug gltf_viewer
+</code></pre>
+<p>The <code>t</code> enables a CMake option called <code>FILAMENT_ENABLE_FGVIEWER</code> and the <code>f</code> ensures that CMake gets
+re-run so that the option is honored.</p>
+<p>Next, set an environment variable as follows. In Windows, use <code>set</code> instead of <code>export</code>.</p>
+<pre><code>export FILAMENT_FGVIEWER_PORT=8050
+</code></pre>
+<p>Next, launch any app that links against a debug build of a Filament and point your web browser to
+http://localhost:8050. Skip ahead to <strong>Debugger Usage</strong>.</p>
+<h2 id="setup-for-android"><a class="header" href="#setup-for-android">Setup for Android</a></h2>
+<p>Rebuild Filament for Android after enabling a CMake option called <code>FILAMENT_ENABLE_FGVIEWER</code>. Note that
+CMake is invoked from several places for Android (both gradle and our easy build script), so one
+pragmatic and reliable way of doing this is to simply hack <code>CMakeLists.txt</code> and
+<code>filament-android/CMakeLists.txt</code> by unconditionally setting <code>FILAMENT_ENABLE_FGVIEWER</code> to <code>ON</code>.</p>
+<p>After rebuilding Filament with the option enabled, ensure that internet permissions are enabled in
+your app by adding the following into your manifest as a child of the <code>&lt;manifest&gt;</code> element.</p>
+<pre><code>&lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+</code></pre>
+<p>Now launch your app as usual. The Filament Engine sets up a server that is hardcoded to listen to
+port <code>8085</code>. Next, you will need to forward your device's TCP port <code>8085</code> to your host port of choice.
+For example, to forward the fgviewer server on your device to port <code>8085</code> on your host machine, do the
+following:</p>
+<pre><code>adb forward tcp:8085 tcp:8085
+</code></pre>
+<p>This lets you go to http://localhost:8085 in Chrome on your host machine.</p>
+<h2 id="debugger-usage"><a class="header" href="#debugger-usage">Debugger Usage</a></h2>
+<p>After opening the fgviewer page in your browser, you can see the active views are on the left panel.
+Then you can select any of them to see the active passes and resources for that view.</p>
+<p align="center">
+  <img width="600px" src=https://github.com/user-attachments/assets/2d31767f-fc25-4f17-8c14-528fe5c6b698>
+</p>
+<h2 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h2>
+<p align="center">
+  <img width="450" src=https://github.com/user-attachments/assets/537ebb89-6ad0-4b93-bbeb-207d4fe9ec5a>
+</p>
+<p>The fgviewer library has two parts: a C++ server and a JavaScript client. The C++ server is
+responsible for instancing a <a href="https://github.com/civetweb/civetweb">civetweb</a> context that handles HTTP requests. The
+JavaScript client is a small web app that contains a view into an in-browser database of framegraphs.</p>
+<p>When a new connection is established, the client asks the server for a list of framegraphs
+in order to populate its in-browser database. If the connection is lost (e.g. if the app crashes),
+then the database stays intact and the web app is still functional.</p>
+<h2 id="c-server"><a class="header" href="#c-server">C++ Server</a></h2>
+<p>The civetweb server is wrapped by our <code>DebugServer</code> class, which provides a public interface consisting of
+a few methods invoked by the Filament engine.</p>
+<p>Since each view corresponds to a frame graph, the engine should notify <code>DebugServer</code> of any changes to the views
+on the engine side.</p>
+<ul>
+<li><strong>createView</strong> Notifies the debugger that a new view has been created.</li>
+<li><strong>updateView</strong> Notifies the debugger of updates to an existing view.</li>
+<li><strong>destroyView</strong> Notifies the debugger that a view is being removed.</li>
+</ul>
+<h2 id="javascript-client"><a class="header" href="#javascript-client">JavaScript Client</a></h2>
+<p>The web app is built using LitElement, a lightweight library for creating Web Components. Our goal is to keep the code simple and modern, avoiding frameworks like React or Angular.</p>
+<p>The app presents a view over a pseudo-database, which is essentially a global variable holding a dictionary that maps frame graph ids to objects following the JSON structure described below.</p>
+<h2 id="http-requests"><a class="header" href="#http-requests">HTTP requests</a></h2>
+<p>The server responds to the following GET requests by returning a JSON blob. The <code>{id}</code> in these
+requests is a concept specific to fgviewer (not Filament) which is an 8-digit hex string for identifying frame graphs.</p>
+<hr />
+<p><code>/api/framegraphs</code></p>
+<p>Returns an array containing all framegraphs in an app. Example:</p>
+<pre><code class="language-json">[{
+    "fgid": "00000000",
+    "viewName": "Main View",
+    "passes": [{
+        "name": "shadow pass",
+        "reads": [],
+        "writes": ["0"]
+    }],
+    "resources": [{
+        "id": "0",
+        "name": "shadowmap",
+        "properties": [{"resolution": "256x256"}, {"is_subresource": "false"}]
+    }]
+},
+{
+    "fgid": "00000001",
+    "viewName": "UI view",
+    ...
+}]
+</code></pre>
+<hr />
+<p><code>/api/framegraph?fg={id}</code></p>
+<p>Returns a specific framegraph info. Example:</p>
+<pre><code class="language-json">{
+  "fgid": "00000000",
+  "viewName": "Main View",
+  "passes": [{
+    "name": "shadow pass",
+    "reads": [],
+    "writes": ["0"]
+  }],
+  "resources": [{
+    "id": "0",
+    "name": "shadowmap",
+    "properties": [{"resolution": "256x256"}, {"is_subresource": "false"}]
+  }]
 }
 </code></pre>
+<hr />
+<p><code>/api/status</code></p>
+<p>Returns one of the below:</p>
+<ul>
+<li><code>0</code>: first time connected</li>
+<li><code>1</code>: no-op</li>
+<li><code>{fgid}</code>: the corresponding frame graph has an update
+<ul>
+<li>Then the web view can request for the actual info using the previous api</li>
+</ul>
+</li>
+</ul>
+<p>If the request gets timeout, the web page show disconnected to the user.</p>
+<hr />
+<h2 id="wish-list"><a class="header" href="#wish-list">Wish List</a></h2>
+<ul>
+<li>Display the texture contents on the webview</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dup/fgviewer.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dup/bluevk.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../dup/gltfio.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dup/filamat.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -350,11 +310,11 @@ void material(inout MaterialInputs material) {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dup/fgviewer.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dup/bluevk.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../dup/gltfio.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dup/filamat.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

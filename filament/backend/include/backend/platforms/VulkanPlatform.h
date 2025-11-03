@@ -431,6 +431,16 @@ public:
         return {};
     }
 
+    bool isCompositorTimingSupported() const noexcept override;
+
+    bool queryCompositorTiming(SwapChain const* swapchain,
+            CompositorTiming* outCompositorTiming) const noexcept override;
+
+    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
+
+    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* outFrameTimestamps) const noexcept override;
+
 protected:
     struct VulkanSync : public Platform::Sync {
         VkFence fence;
