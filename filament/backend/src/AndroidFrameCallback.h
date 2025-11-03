@@ -20,11 +20,12 @@
 #include <android/choreographer.h>
 #include <android/looper.h>
 
-#include <mutex>
-#include <atomic>
-#include <thread>
+#include <utils/CountDownLatch.h>
 
+#include <atomic>
 #include <cstdint>
+#include <mutex>
+#include <thread>
 
 namespace filament::backend {
 
@@ -55,6 +56,7 @@ public:
 private:
     // looper
     std::thread mLooperThread;
+    mutable utils::CountDownLatch mInitBarrier{ 1 };
     ALooper* mLooper = nullptr;
     std::atomic_bool mExitRequested{ false };
 

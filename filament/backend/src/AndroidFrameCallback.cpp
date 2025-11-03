@@ -16,14 +16,26 @@
 
 #include "AndroidFrameCallback.h"
 
+#include <android/choreographer.h>
+#include <android/looper.h>
+
 #include <utils/Panic.h>
 #include <utils/debug.h>
+#include <utils/JobSystem.h>
+
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
 
 namespace filament::backend {
+
+using namespace utils;
 
 AndroidFrameCallback::AndroidFrameCallback() = default;
 
 AndroidFrameCallback::~AndroidFrameCallback() noexcept {
+    assert_invariant(!mLooperThread.joinable());
     assert_invariant(mLooper == nullptr);
 }
 
@@ -37,12 +49,18 @@ void AndroidFrameCallback::init() {
             mLooper = ALooper_prepare(0);
             // acquire a reference, so we can use it from our main thread
             ALooper_acquire(mLooper);
+            // set thread name
+            JobSystem::setThreadName("Filament Choreographer");
+            // set priority
+            JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
             // start the choreographer callbacks
             if (__builtin_available(android 33, *)) {
                 mChoreographer = AChoreographer_getInstance();
                 // request our first callback for the next frame
                 AChoreographer_postVsyncCallback(mChoreographer, &vsyncCallback, this);
             }
+            // signal we're ready to run and choreographer and looper are initialized
+            mInitBarrier.latch();
             // our main loop just sits there to handle events
             while (true) {
                 int const result = ALooper_pollOnce(-1, nullptr, nullptr, nullptr);
@@ -52,20 +70,26 @@ void AndroidFrameCallback::init() {
                 }
             }
         });
+
+        // wait for the thread and looper to be created and ready to run
+        mInitBarrier.await();
     }
 }
 
 void AndroidFrameCallback::terminate() {
     if (__builtin_available(android 33, *)) {
-        // request exit
-        mExitRequested.store(true, std::memory_order_relaxed);
-        // wake the looper right away
-        ALooper_wake(mLooper);
-        // release our reference to the looper
-        ALooper_release(mLooper);
-        mLooper = nullptr;
-        // and make sure to wait for the thread to terminate
-        mLooperThread.join();
+        // the thread wouldn't be joinable if terminate() is called twice, or init() is not called.
+        if (mLooperThread.joinable()) {
+            // request exit
+            mExitRequested.store(true, std::memory_order_relaxed);
+            // wake the looper right away
+            ALooper_wake(mLooper);
+            // release our reference to the looper
+            ALooper_release(mLooper);
+            mLooper = nullptr;
+            // and make sure to wait for the thread to terminate
+            mLooperThread.join();
+        }
     }
 }
 
