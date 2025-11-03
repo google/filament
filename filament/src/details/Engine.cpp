@@ -591,11 +591,6 @@ void FEngine::shutdown() {
     mLightManager.terminate();              // free-up all lights
     mCameraManager.terminate(*this);        // free-up all cameras
 
-    if (isUboBatchingEnabled()) {
-        mUboManager->terminate(driver);
-        mUboManager.reset();
-    }
-
     mPerViewDescriptorSetLayoutDepthVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
     mPerViewDescriptorSetLayoutSsrVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
     mPerRenderableDescriptorSetLayout.terminate(mHwDescriptorSetLayoutFactory, driver);
@@ -667,6 +662,11 @@ void FEngine::shutdown() {
     driver.destroyBufferObject(std::move(mDummyUniformBuffer));
 
     driver.destroyRenderTarget(std::move(mDefaultRenderTarget));
+
+    if (isUboBatchingEnabled()) {
+        mUboManager->terminate(driver);
+        mUboManager.reset();
+    }
 
     /*
      * Shutdown the backend...
