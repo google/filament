@@ -96,6 +96,7 @@ public:
         using time_point_ns = int64_t;
         /** duration in nanosecond on the std::steady_clock */
         using duration_ns = int64_t;
+        static constexpr time_point_ns INVALID = -1;    //!< value not supported
         /**
          * The timestamp [ns] since epoch of the next time the compositor will begin composition.
          * This is effectively the deadline for when the compositor must receive a newly queued
@@ -113,6 +114,24 @@ public:
          * that composition. This can be used to estimate the latency of the actual present time.
          */
         duration_ns compositeToPresentLatency;
+
+        /**
+         * The timestamp [ns] since epoch of the system's expected presentation time.
+         * INVALID if not supported.
+         */
+        time_point_ns expectedPresentTime;
+
+        /**
+         * The timestamp [ns] since epoch of the current frame's start (i.e. vsync)
+         * INVALID if not supported.
+         */
+        time_point_ns frameTime;
+
+        /**
+         * The timestamp [ns] since epoch of the current frame's deadline
+         * INVALID if not supported.
+         */
+        time_point_ns frameTimelineDeadline;
     };
 
     struct FrameTimestamps {

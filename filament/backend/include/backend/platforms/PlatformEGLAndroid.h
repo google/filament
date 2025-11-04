@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
 #include "AndroidSwapChainHelper.h"
+#include "AndroidFrameCallback.h"
 
 #include <backend/AcquiredImage.h>
 #include <backend/DriverEnums.h>
@@ -210,6 +211,8 @@ private:
     clock::time_point mStartTimeOfActualWork;
     AndroidProducerThrottling mProducerThrottling;
     bool mAssertNativeWindowIsValid = false;
+
+    AndroidFrameCallback mAndroidFrameCallback;
 };
 
 } // namespace filament::backend
