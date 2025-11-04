@@ -140,6 +140,8 @@ if __name__ == "__main__":
   res, err = execute('mdbook build', cwd=MDBOOK_DIR)
   assert res == 0, f"failed to execute `mdbook`. return-code={res} err=\"{err}\""
 
-  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, dirs_exist_ok=True)
+  RAW_IGNORES = shutil.ignore_patterns('update_remote_ui.sh')
+
+  shutil.copytree(RAW_COPIES_DIR, BOOK_OUPUT_DIR, ignore=RAW_IGNORES, dirs_exist_ok=True)
   shutil.copy(os.path.join(MARKDEEP_DIR, FILAMENT_MD), BOOK_OUPUT_DIR)
   shutil.copy(os.path.join(MARKDEEP_DIR, MATERIALS_MD), BOOK_OUPUT_DIR)

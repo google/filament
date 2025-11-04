@@ -19,6 +19,10 @@
 
 #include <filament/Renderer.h>
 
+#include <details/SwapChain.h>
+
+#include <backend/Platform.h>
+#include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
 #include <private/backend/DriverApi.h>
@@ -50,17 +54,35 @@ struct FrameInfo {
 } // namespace details
 
 struct FrameInfoImpl : public details::FrameInfo {
+    using FrameTimestamps = backend::FrameTimestamps;
+    using CompositorTiming = backend::CompositorTiming;
     using clock = std::chrono::steady_clock;
     using time_point = clock::time_point;
     uint32_t frameId;
-    time_point beginFrame;           // main thread beginFrame time
-    time_point endFrame;             // main thread endFrame time
-    time_point backendBeginFrame;    // backend thread beginFrame time (makeCurrent time)
-    time_point backendEndFrame;      // backend thread endFrame time (present time)
-    time_point gpuFrameComplete;     // the frame is done rendering on the gpu
-    time_point vsync;                // vsync time
-    backend::FenceHandle fence{};    // the fence used for gpuFrameComplete
-    std::atomic_bool ready{};        // true once backend thread has populated its data
+    // main thread beginFrame time
+    time_point beginFrame{};
+    // main thread endFrame time
+    time_point endFrame{};
+    // backend thread beginFrame time (makeCurrent time)
+    time_point backendBeginFrame{};
+    // backend thread endFrame time (present time)
+    time_point backendEndFrame{};
+    // the frame is done rendering on the gpu
+    time_point gpuFrameComplete{};
+    // vsync time
+    time_point vsync{};
+    // Actual presentation time of this frame
+    FrameTimestamps::time_point_ns displayPresent{ FrameTimestamps::PENDING };
+    // deadline for queuing a frame [ns]
+    CompositorTiming::time_point_ns presentDeadline{ FrameTimestamps::INVALID };
+    // display refresh rate [ns]
+    CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
+    // time between the start of composition and the expected present time [ns]
+    CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
+    // the fence used for gpuFrameComplete
+    backend::FenceHandle fence{};
+    // true once backend thread has populated its data
+    std::atomic_bool ready{};
     explicit FrameInfoImpl(uint32_t const id) noexcept
         : frameId(id) {
     }
@@ -234,11 +256,13 @@ public:
     explicit FrameInfoManager(backend::DriverApi& driver) noexcept;
 
     ~FrameInfoManager() noexcept;
-    void terminate(backend::DriverApi& driver) noexcept;
+
+    // The command queue must be empty before calling terminate()
+    void terminate(FEngine& engine) noexcept;
 
     // call this immediately after "make current"
-    void beginFrame(backend::DriverApi& driver, Config const& config,
-            uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
+    void beginFrame(FSwapChain* swapChain, backend::DriverApi& driver,
+            Config const& config, uint32_t frameId, std::chrono::steady_clock::time_point vsync) noexcept;
 
     // call this immediately before "swap buffers"
     void endFrame(backend::DriverApi& driver) noexcept;
@@ -247,6 +271,8 @@ public:
         // if pFront is not set yet, return FrameInfo(). But the `valid` field will be false in this case.
         return pFront ? *pFront : details::FrameInfo{};
     }
+
+    void updateUserHistory(FSwapChain* swapChain, backend::DriverApi& driver);
 
     utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const;
 
@@ -257,12 +283,14 @@ private:
         backend::Handle<backend::HwTimerQuery> handle{};
         FrameInfoImpl* pInfo = nullptr;
     };
+    utils::FixedCapacityVector<Renderer::FrameInfo> mUserFrameHistory;
     std::array<Query, POOL_COUNT> mQueries{};
     uint32_t mIndex = 0;                // index of current query
     uint32_t mLast = 0;                 // index of oldest query still active
     FrameInfoImpl* pFront = nullptr;    // the most recent slot with a valid frame time
     FrameHistoryQueue mFrameTimeHistory{};
     utils::AsyncJobQueue mJobQueue;
+    FSwapChain* mLastSeenSwapChain = nullptr;
     bool const mHasTimerQueries = false;
 };
 

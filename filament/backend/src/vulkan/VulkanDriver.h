@@ -49,6 +49,10 @@
 #include <utils/Allocator.h>
 #include <utils/compiler.h>
 
+#if defined(__ANDROID__)
+#include "AndroidNativeWindow.h"
+#endif
+
 namespace filament::backend {
 
 class VulkanPlatform;
@@ -204,6 +208,9 @@ private:
     // setAcquiredImage is a DECL_DRIVER_API_SYNCHRONOUS_N which means we don't necessarily have the
     // data to process it at call time. So we store it and process it during updateStreams.
     std::vector<resource_ptr<VulkanStream>> mStreamsWithPendingAcquiredImage;
+#if defined(__ANDROID__)
+    AndroidProducerThrottling mProducerThrottling;
+#endif
 };
 
 } // namespace filament::backend

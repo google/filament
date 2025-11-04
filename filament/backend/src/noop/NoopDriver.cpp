@@ -274,6 +274,10 @@ size_t NoopDriver::getMaxArrayTextureLayers() {
     return 256u;
 }
 
+size_t NoopDriver::getUniformBufferOffsetAlignment() {
+    return 256u;
+}
+
 void NoopDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     scheduleDestroy(std::move(p));
@@ -444,6 +448,20 @@ void NoopDriver::unmapBuffer(MemoryMappedBufferHandle mmbh) {
 
 void NoopDriver::copyToMemoryMappedBuffer(MemoryMappedBufferHandle mmbh, size_t offset,
         BufferDescriptor&& data) {
+}
+
+bool NoopDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool NoopDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        backend::CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
+bool NoopDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
 }
 
 } // namespace filament

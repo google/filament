@@ -35,8 +35,6 @@ using namespace bluevk;
 
 namespace filament::backend {
 
-struct VulkanHeadlessSwapChain;
-struct VulkanSurfaceSwapChain;
 class VulkanCommands;
 
 // A wrapper around the platform implementation of swapchain.
@@ -84,12 +82,20 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
     inline void setFrameScheduledCallback(CallbackHandler* handler,
             FrameScheduledCallback&& callback) noexcept {
         if (!callback) {
-            frameScheduled.handler = nullptr;
-            frameScheduled.callback.reset();
+            mFrameScheduled.handler = nullptr;
+            mFrameScheduled.callback.reset();
             return;
         }
-        frameScheduled.handler = handler;
-        frameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+        mFrameScheduled.handler = handler;
+        mFrameScheduled.callback = std::make_shared<FrameScheduledCallback>(std::move(callback));
+    }
+
+    bool queryCompositorTiming(CompositorTiming* outCompositorTiming) const {
+        return mPlatform->queryCompositorTiming(swapChain, outCompositorTiming);
+    }
+
+    bool queryFrameTimestamps(uint64_t frameId, FrameTimestamps* outFrameTimestamps) const {
+        return mPlatform->queryFrameTimestamps(swapChain, frameId, outFrameTimestamps);
     }
 
 private:
@@ -110,8 +116,8 @@ private:
     // These fields store a callback to notify the client that Filament is commiting a frame.
     struct {
         CallbackHandler* handler = nullptr;
-        std::shared_ptr<FrameScheduledCallback> callback = nullptr;
-    } frameScheduled;
+        std::shared_ptr<FrameScheduledCallback> callback;
+    } mFrameScheduled;
 
     // We create VulkanTextures based on VkImages. VulkanTexture has facilities for doing layout
     // transitions, which are useful here.

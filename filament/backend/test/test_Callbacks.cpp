@@ -25,23 +25,23 @@ using namespace filament::backend;
 namespace test {
 
 TEST_F(BackendTest, FrameScheduledCallback) {
-    SKIP_IF(Backend::WEBGPU, "Frame callbacks are unsupported in WebGPU");
-
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create a SwapChain.
     // In order for the frameScheduledCallback to be called, this must be a real SwapChain (not
     // headless) so we obtain a drawable.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
 
-    Handle<HwRenderTarget> renderTarget = cleanup.add(api.createDefaultRenderTarget());
+    Handle<HwRenderTarget> renderTarget = addCleanup(api.createDefaultRenderTarget());
 
     int callbackCountA = 0;
-    api.setFrameScheduledCallback(swapChain, nullptr, [&callbackCountA](PresentCallable callable) {
-        callable();
-        callbackCountA++;
-    }, 0);
+    api.setFrameScheduledCallback(
+            swapChain, nullptr,
+            [&callbackCountA](PresentCallable callable) {
+                callable();
+                callbackCountA++;
+            },
+            0);
 
     // Render the first frame.
     api.makeCurrent(swapChain, swapChain);
@@ -100,10 +100,9 @@ TEST_F(BackendTest, FrameCompletedCallback) {
     SKIP_IF(Backend::WEBGPU, "Frame callbacks are unsupported in WebGPU");
 
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     // Create a SwapChain.
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
 
     int callbackCountA = 0;
     api.setFrameCompletedCallback(swapChain, nullptr,

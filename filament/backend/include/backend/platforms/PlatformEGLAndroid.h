@@ -17,13 +17,20 @@
 #ifndef TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 #define TNT_FILAMENT_BACKEND_OPENGL_OPENGL_PLATFORM_EGL_ANDROID_H
 
+#include "AndroidSwapChainHelper.h"
+
 #include <backend/AcquiredImage.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 #include <backend/platforms/OpenGLPlatform.h>
 #include <backend/platforms/PlatformEGL.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
+
+#include <math/mat3.h>
+
+#include "AndroidNativeWindow.h"
 
 #include <chrono>
 
@@ -67,9 +74,17 @@ public:
      * @return `true` on success, `false` on failure. The default implementation
      *         returns `false`.
      */
-    bool convertSyncToFd(Platform::Sync* sync, int* fd) noexcept;
+    bool convertSyncToFd(Sync* sync, int* fd) noexcept;
 
 protected:
+    struct {
+        struct {
+            bool ANDROID_presentation_time = false;
+            bool ANDROID_get_frame_timestamps = false;
+            bool ANDROID_native_fence_sync = false;
+        } egl;
+    } ext;
+
     // --------------------------------------------------------------------------------------------
     // Platform Interface
 
@@ -80,12 +95,22 @@ protected:
     int getOSVersion() const noexcept override;
 
     Driver* createDriver(void* sharedContext,
-            const Platform::DriverConfig& driverConfig) override;
+            const DriverConfig& driverConfig) override;
+
+    bool isCompositorTimingSupported() const noexcept override;
+
+    bool queryCompositorTiming(SwapChain const* swapchain,
+            CompositorTiming* outCompositorTiming) const noexcept override;
+
+    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
+
+    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* outFrameTimestamps) const noexcept override;
 
     // --------------------------------------------------------------------------------------------
     // OpenGLPlatform Interface
 
-    struct SyncEGLAndroid : public Platform::Sync {
+    struct SyncEGLAndroid : public Sync {
         EGLSyncKHR sync;
     };
 
@@ -106,8 +131,8 @@ protected:
 
     Stream* createStream(void* nativeStream) noexcept override;
     void destroyStream(Stream* stream) noexcept override;
-    Platform::Sync* createSync() noexcept override;
-    void destroySync(Platform::Sync* sync) noexcept override;
+    Sync* createSync() noexcept override;
+    void destroySync(Sync* sync) noexcept override;
     void attach(Stream* stream, intptr_t tname) noexcept override;
     void detach(Stream* stream) noexcept override;
     void updateTexImage(Stream* stream, int64_t* timestamp) noexcept override;
@@ -120,7 +145,7 @@ protected:
      */
     AcquiredImage transformAcquiredImage(AcquiredImage source) noexcept override;
 
-    OpenGLPlatform::ExternalTexture* createExternalImageTexture() noexcept override;
+    ExternalTexture* createExternalImageTexture() noexcept override;
     void destroyExternalImageTexture(ExternalTexture* texture) noexcept override;
 
     struct ExternalImageEGLAndroid : public ExternalImageEGL {
@@ -140,12 +165,32 @@ protected:
     bool setImage(ExternalImageEGLAndroid const* eglExternalImage,
             ExternalTexture* texture) noexcept;
 
-protected:
     bool makeCurrent(ContextType type,
             SwapChain* drawSwapChain,
             SwapChain* readSwapChain) override;
 
+    struct SwapChainEGLAndroid : public SwapChainEGL {
+        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+                void* nativeWindow, uint64_t flags);
+        SwapChainEGLAndroid(PlatformEGLAndroid const& platform,
+                uint32_t width, uint32_t height, uint64_t flags);
+        void terminate(PlatformEGLAndroid& platform);
+        bool setPresentFrameId(uint64_t frameId) const noexcept;
+        uint64_t getFrameId(uint64_t frameId) const noexcept;
+    private:
+        AndroidSwapChainHelper mImpl{};
+    };
+
 private:
+    // prevent derived classes' implementations to call through
+    [[nodiscard]] SwapChain* createSwapChain(void* nativeWindow, uint64_t flags) override;
+    [[nodiscard]] SwapChain* createSwapChain(uint32_t width, uint32_t height, uint64_t flags) override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+
+    bool isProducerThrottlingControlSupported() const;
+
+    int32_t setProducerThrottlingEnabled(EGLNativeWindowType nativeWindow, bool enabled) const;
+
     struct InitializeJvmForPerformanceManagerIfNeeded {
         InitializeJvmForPerformanceManagerIfNeeded();
     };
@@ -159,12 +204,11 @@ private:
     InitializeJvmForPerformanceManagerIfNeeded const mInitializeJvmForPerformanceManagerIfNeeded;
     utils::PerformanceHintManager mPerformanceHintManager;
     utils::PerformanceHintManager::Session mPerformanceHintSession;
+    SwapChainEGLAndroid* mCurrentDrawSwapChain{};
 
     using clock = std::chrono::high_resolution_clock;
     clock::time_point mStartTimeOfActualWork;
-
-    void* mNativeWindowLib = nullptr;
-    int32_t (*ANativeWindow_getBuffersDefaultDataSpace)(ANativeWindow* window) = nullptr;
+    AndroidProducerThrottling mProducerThrottling;
     bool mAssertNativeWindowIsValid = false;
 };
 
