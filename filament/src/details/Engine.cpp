@@ -974,6 +974,8 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material,
     FILAMENT_CHECK_PRECONDITION(
             !useUboBatching || material->getMaterialDomain() == MaterialDomain::SURFACE)
             << "UBO batching is only supported for surface materials.";
+    FILAMENT_CHECK_PRECONDITION(!useUboBatching || isUboBatchingEnabled())
+            << "UBO batching is not enabled.";
     FMaterialInstance* p =
             mHeapAllocator.make<FMaterialInstance>(*this, other, name, useUboBatching);
     if (UTILS_LIKELY(p)) {
@@ -988,6 +990,8 @@ FMaterialInstance* FEngine::createMaterialInstance(const FMaterial* material, co
     FILAMENT_CHECK_PRECONDITION(
             !useUboBatching || material->getMaterialDomain() == MaterialDomain::SURFACE)
             << "UBO batching is only supported for surface materials.";
+    FILAMENT_CHECK_PRECONDITION(!useUboBatching || isUboBatchingEnabled())
+           << "UBO batching is not enabled.";
 
     FMaterialInstance* p =
             mHeapAllocator.make<FMaterialInstance>(*this, material, name, useUboBatching);

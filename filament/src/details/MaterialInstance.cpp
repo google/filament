@@ -195,6 +195,8 @@ FMaterialInstance* FMaterialInstance::duplicate(FMaterialInstance const* other, 
                                                           : engine.isUboBatchingEnabled() &&
                                                                     material->getMaterialDomain() ==
                                                                             MaterialDomain::SURFACE;
+    FILAMENT_CHECK_PRECONDITION(!useUboBatchingValue || engine.isUboBatchingEnabled())
+            << "UBO batching is not enabled.";
     return engine.createMaterialInstance(material, other, name, useUboBatchingValue);
 }
 
