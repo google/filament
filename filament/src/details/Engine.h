@@ -765,18 +765,16 @@ public:
                 // TODO: clean-up the following flags (equivalent to setting them to true) when
                 // clients have addressed their usages.
                 bool assert_material_instance_in_use = CORRECTNESS_ASSERTION_DEFAULT;
-                bool assert_destroy_material_before_material_instance =
-                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_destroy_material_before_material_instance = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_vertex_buffer_count_exceeds_8 = CORRECTNESS_ASSERTION_DEFAULT;
-                bool assert_vertex_buffer_attribute_stride_mult_of_4 =
-                        CORRECTNESS_ASSERTION_DEFAULT;
-                bool assert_material_instance_texture_descriptor_set_compatible =
-                        CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_vertex_buffer_attribute_stride_mult_of_4 = CORRECTNESS_ASSERTION_DEFAULT;
+                bool assert_material_instance_texture_descriptor_set_compatible = CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
             struct {
                 bool disable_gpu_frame_complete_metric = true;
             } frame_info;
+            bool skip_frame_when_cpu_ahead_of_display = false;
         } engine;
         struct {
             struct {
@@ -862,6 +860,9 @@ public:
             { "engine.frame_info.disable_gpu_complete_metric",
               "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
               &features.engine.frame_info.disable_gpu_frame_complete_metric },
+            { "engine.skip_frame_when_cpu_ahead_of_display",
+              "Automatically skip frames when the CPU gets ahead of the display.",
+              &features.engine.skip_frame_when_cpu_ahead_of_display },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {

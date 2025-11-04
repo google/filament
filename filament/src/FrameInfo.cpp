@@ -135,12 +135,7 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
         front.presentDeadline = compositorTiming.compositeDeadline;
         front.displayPresentInterval = compositorTiming.compositeInterval;
         front.compositionToPresentLatency = compositorTiming.compositeToPresentLatency;
-        front.expectedPresentTime = compositorTiming.expectedPresentTime;
-        if (compositorTiming.frameTime != CompositorTiming::INVALID) {
-            // of we have a vsync time from the compositor, ignore the one from the user
-            front.vsync = FrameInfoImpl::time_point{
-                std::chrono::nanoseconds(compositorTiming.frameTime) };
-        }
+        front.expectedPresentLatency = compositorTiming.expectedPresentLatency;
     }
 
     if (mHasTimerQueries) {
@@ -334,6 +329,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 if (success) {
                     assert_invariant(entry.displayPresent < 0 ||
                             entry.displayPresent == frameTimestamps.displayPresentTime);
+
                     entry.displayPresent = frameTimestamps.displayPresentTime;
                 }
             } else {
@@ -366,8 +362,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
                 .presentDeadline                = entry.presentDeadline,
                 .displayPresentInterval         = entry.displayPresentInterval,
                 .compositionToPresentLatency    = entry.compositionToPresentLatency,
-                .expectedPresentTime            = entry.expectedPresentTime,
-
+                .expectedPresentLatency         = entry.expectedPresentLatency
         });
     }
     std::swap(mUserFrameHistory, result);

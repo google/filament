@@ -296,9 +296,18 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
 
     AndroidFrameCallback::Timeline const preferredTimeline{
             mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-    outCompositorTiming->frameTime = preferredTimeline.frameTime;
-    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
-    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+    // FIXME: expectedPresentLatency might reflect the previous frame's value because
+    //        the choreographer's callback can happen before (good) or after (bad) us.
+    //        This problem is mitigated by storing the latency instead of the deadline,
+    //        because it generally is constant frame to frame.
+    if (UTILS_LIKELY(preferredTimeline.expectedPresentTime > preferredTimeline.frameTime)) {
+        // latency can never be negative, let's be safe
+        outCompositorTiming->expectedPresentLatency =
+                preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
+    } else {
+        // fake a reasonable value (33ms)
+        outCompositorTiming->expectedPresentLatency = 33'000'000;
+    }
     outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;

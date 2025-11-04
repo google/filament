@@ -80,8 +80,8 @@ struct FrameInfoImpl : public details::FrameInfo {
     CompositorTiming::duration_ns displayPresentInterval{ FrameTimestamps::INVALID };
     // time between the start of composition and the expected present time [ns]
     CompositorTiming::duration_ns compositionToPresentLatency{ FrameTimestamps::INVALID };
-    // system's expected present time [ns]
-    FrameTimestamps::time_point_ns expectedPresentTime{ FrameTimestamps::INVALID };
+    // system's expected present latency from vsync [ns]
+    CompositorTiming::duration_ns expectedPresentLatency{ FrameTimestamps::INVALID };
 
     // the fence used for gpuFrameComplete
     backend::FenceHandle fence{};
