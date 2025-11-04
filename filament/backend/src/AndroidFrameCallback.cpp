@@ -19,6 +19,8 @@
 #include <android/choreographer.h>
 #include <android/looper.h>
 
+#include <private/utils/Tracing.h>
+
 #include <utils/Panic.h>
 #include <utils/debug.h>
 #include <utils/JobSystem.h>
@@ -107,6 +109,8 @@ AndroidFrameCallback::Timeline AndroidFrameCallback::getPreferredTimeline() cons
 
 void AndroidFrameCallback::vsyncCallback(const AChoreographerFrameCallbackData* callbackData) {
     if (__builtin_available(android 33, *)) {
+        FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+
         // request the next frame callback
         AChoreographer_postVsyncCallback(mChoreographer, &vsyncCallback, this);
 

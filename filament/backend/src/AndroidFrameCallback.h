@@ -29,6 +29,11 @@
 
 namespace filament::backend {
 
+/*
+ * AndroidFrameCallback uses a dedicated thread running a Looper and uses
+ * Choreographer to receive the FrameCallbackData.
+ *
+ */
 class AndroidFrameCallback {
 public:
     struct Timeline {

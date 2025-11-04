@@ -270,7 +270,7 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
     outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
 
     if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
-        EGLSurface sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
+        EGLSurface const sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
         if (sur == EGL_NO_SURFACE) {
             return false;
         }

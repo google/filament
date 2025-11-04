@@ -277,7 +277,8 @@ public:
 
     void updateUserHistory(FSwapChain* swapChain, backend::DriverApi& driver);
 
-    utils::FixedCapacityVector<Renderer::FrameInfo> getFrameInfoHistory(size_t historySize) const;
+    utils::FixedCapacityVector<Renderer::FrameInfo>
+            getFrameInfoHistory(size_t historySize = MAX_FRAMETIME_HISTORY) const;
 
 private:
     using FrameHistoryQueue = CircularQueue<FrameInfoImpl, MAX_FRAMETIME_HISTORY>;

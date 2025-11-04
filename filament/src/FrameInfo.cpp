@@ -342,7 +342,7 @@ void FrameInfoManager::updateUserHistory(FSwapChain* swapChain, DriverApi& drive
 FixedCapacityVector<Renderer::FrameInfo> FrameInfoManager::getFrameInfoHistory(
         size_t const historySize) const {
     auto result = mUserFrameHistory;
-    if (result.capacity() >= historySize) {
+    if (result.size() >= historySize) {
         result.resize(historySize);
     }
     return result;
