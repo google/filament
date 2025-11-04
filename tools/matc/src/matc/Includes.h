@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_INCLUDES_H
-#define TNT_FILAMAT_INCLUDES_H
+#ifndef TNT_INCLUDES_H
+#define TNT_INCLUDES_H
 
-#include <utils/CString.h>
+#include "IncludeCallback.h"
 
-#include <filamat/IncludeCallback.h>
+#include "utils/CString.h"
 
 #include <vector>
 
-namespace filamat {
+namespace matc {
 
 struct ResolveOptions {
     // If true, insert #line directives before / after each include.
@@ -48,11 +48,11 @@ struct FoundInclude {
     utils::CString name;
     size_t startPosition;
     size_t length;
-    size_t line;        // the line number the include was found on (first line is 1)
+    size_t line;        // the line number the #include was found on (first line is 0).
 };
 
 std::vector<FoundInclude> parseForIncludes(const utils::CString& source);
 
-} // namespace filamat
+} // namespace matc
 
 #endif

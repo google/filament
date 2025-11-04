@@ -9,9 +9,9 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(HDRS
         include/filamat/Enums.h
-        include/filamat/IncludeCallback.h
         include/filamat/MaterialBuilder.h
-        include/filamat/Package.h)
+        include/filamat/Package.h
+)
 
 set(COMMON_PRIVATE_HDRS
         src/eiff/Chunk.h
@@ -23,7 +23,6 @@ set(COMMON_PRIVATE_HDRS
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/ShaderEntry.h
         src/eiff/SimpleFieldChunk.h
-        src/Includes.h
         src/PushConstantDefinitions.h)
 
 set(COMMON_SRCS
@@ -39,7 +38,6 @@ set(COMMON_SRCS
         src/shaders/SibGenerator.cpp
         src/shaders/UibGenerator.cpp
         src/Enums.cpp
-        src/Includes.cpp
         src/MaterialBuilder.cpp
         src/MaterialVariants.cpp
 )
@@ -160,8 +158,7 @@ if (IS_HOST_PLATFORM)
             tests/test_filamat.cpp
             tests/test_argBufferFixup.cpp
             tests/test_clipDistanceFixup.cpp
-            tests/test_line_dictionary.cpp
-            tests/test_includes.cpp)
+            tests/test_line_dictionary.cpp)
 
     add_executable(${TARGET} ${SRCS})
     target_include_directories(${TARGET} PRIVATE src)

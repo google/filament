@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_INCLUDER_H
-#define TNT_FILAMAT_INCLUDER_H
+#ifndef TNT_INCLUDER_H
+#define TNT_INCLUDER_H
 
 #include <utils/CString.h>
 
 #include <functional>
 
-namespace filamat {
+namespace matc {
 
 struct IncludeResult {
     // The include name of the root file, as if it were being included.
     // I.e., 'foobar.h' in the case of #include "foobar.h"
+    // Only relevant when the ResolveOptions::insertLineDirectives is enabled.
     const utils::CString includeName;
 
     // The following fields should be filled out by the IncludeCallback when processing an include,
@@ -34,9 +35,6 @@ struct IncludeResult {
     // The full contents of the include file. This may contain additional, recursive include
     // directives.
     utils::CString text;
-
-    // The line number for the first line of text (first line is 0).
-    size_t lineNumberOffset = 0;
 
     // The name of the include file. This gets passed as "includerName" for any includes inside of
     // source. This field isn't used by the include system; it's up to the callback to give meaning
@@ -66,6 +64,6 @@ using IncludeCallback = std::function<bool(
         const utils::CString& includedBy,
         IncludeResult& result)>;
 
-} // namespace filamat
+} // namespace matc
 
 #endif

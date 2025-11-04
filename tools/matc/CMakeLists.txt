@@ -13,14 +13,17 @@ set(HDRS
         src/matc/CommandlineConfig.h
         src/matc/Compiler.h
         src/matc/DirIncluder.h
+        src/matc/Includes.h
+        src/matc/IncludeCallback.h
         src/matc/MaterialCompiler.h
         )
 
 set(SRCS
         src/matc/Compiler.cpp
-        src/matc/MaterialCompiler.cpp
         src/matc/CommandlineConfig.cpp
         src/matc/DirIncluder.cpp
+        src/matc/Includes.cpp
+        src/matc/MaterialCompiler.cpp
         )
 
 # ==================================================================================================
@@ -70,10 +73,12 @@ install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 # ==================================================================================================
 project(test_matc)
 set(TARGET test_matc)
-set(SRCS tests/test_includer.cpp)
+set(SRCS tests/test_includer.cpp tests/test_includes.cpp)
 
 add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} matlang gtest)
+
+target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
 set_target_properties(test_matc PROPERTIES FOLDER Tests)
