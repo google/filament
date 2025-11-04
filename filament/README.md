@@ -92,7 +92,7 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl -labseil
 CC=clang++
 
 main: main.o
@@ -110,7 +110,7 @@ clean:
 ### macOS
 
 ```make
-FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -lvkshaders -libl -labseil
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v -libl -labseil
 FRAMEWORKS=-framework Cocoa -framework Metal -framework CoreVideo
 CC=clang++
 ARCH ?= $(shell uname -m)
@@ -140,7 +140,7 @@ used to change the run-time library version.
 
 ```make
 FILAMENT_LIBS=filament.lib backend.lib bluegl.lib bluevk.lib filabridge.lib filaflat.lib \
-              utils.lib geometry.lib smol-v.lib ibl.lib vkshaders.lib abseil.lib
+              utils.lib geometry.lib smol-v.lib ibl.lib abseil.lib
 CC=cl.exe
 
 main.exe: main.obj
