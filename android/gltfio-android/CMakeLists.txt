@@ -6,7 +6,7 @@ option(FILAMENT_ENABLE_FGVIEWER "Enables Frame Graph Viewer" OFF)
 option(FILAMENT_ENABLE_MATDBG "Enables Material debugger" OFF)
 option(FILAMENT_DISABLE_MATOPT "Disables material optimizations" OFF)
 option(FILAMENT_SUPPORTS_WEBGPU "Enables WebGPU on Android" OFF)
-option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support on Android" OFF)
+option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support on Android" ON)
 
 set(CMAKE_CXX_STANDARD 20)
 
