@@ -44,6 +44,7 @@ using namespace gltfio;
 using namespace utils;
 
 char const* ANIMATED_MORPH_CUBE_GLB = "AnimatedMorphCube.glb";
+char const* DAMAGED_HELMET_WEBP_GLB = "DamagedHelmetWebp.glb";
 
 static std::ifstream::pos_type getFileSize(const char* filename) {
     std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
@@ -58,9 +59,13 @@ public:
           mResourceLoader(new ResourceLoader({
                   engine, filename.getAbsolutePath().c_str(), false, /* normalizeSkinningWeights */
           })),
-          mStbDecoder(createStbProvider(engine)), mKtxDecoder(createKtx2Provider(engine)) {
+          mStbDecoder(createStbProvider(engine)), mKtxDecoder(createKtx2Provider(engine)),
+          mWebpDecoder(createOptionalWebpProvider(engine)) {
         mResourceLoader->addTextureProvider("image/png", mStbDecoder);
         mResourceLoader->addTextureProvider("image/ktx2", mKtxDecoder);
+        if (mWebpDecoder) {
+            mResourceLoader->addTextureProvider("image/webp", mWebpDecoder);
+        }
 
         long contentSize = static_cast<long>(getFileSize(filename.c_str()));
         if (contentSize <= 0) {
@@ -99,6 +104,7 @@ public:
         delete mResourceLoader;
         delete mStbDecoder;
         delete mKtxDecoder;
+        delete mWebpDecoder;
 
         AssetLoader::destroy(&mAssetLoader);
     }
@@ -109,6 +115,7 @@ public:
     ResourceLoader* mResourceLoader = nullptr;
     TextureProvider* mStbDecoder = nullptr;
     TextureProvider* mKtxDecoder = nullptr;
+    TextureProvider* mWebpDecoder = nullptr;
     FilamentAsset* mAsset = nullptr;
 };
 
@@ -128,7 +135,7 @@ protected:
         mMaterialProvider = createUbershaderProvider(mEngine, UBERARCHIVE_DEFAULT_DATA,
                 UBERARCHIVE_DEFAULT_SIZE);
 
-        for (auto fname: {ANIMATED_MORPH_CUBE_GLB}) {
+        for (auto fname: {ANIMATED_MORPH_CUBE_GLB, DAMAGED_HELMET_WEBP_GLB}) {
             Path gltfFile = Path::getCurrentExecutable().getParent() + Path(fname);
             mData[fname] =
                     std::make_unique<glTFData>(gltfFile, mEngine, mMaterialProvider, mNameManager);
@@ -234,6 +241,24 @@ TEST_F(glTFIOTest, AnimatedMorphCubeRenderables) {
     // The number of vertices for the morph target should be the face vertices in a cube =>
     // (6 faces * 4 vertices per face) = 24 vertices
     EXPECT_EQ(morphTargetBuffer->getVertexCount(), 24u);
+}
+
+TEST_F(glTFIOTest, DamagedHelmetWebpMaterials) {
+    FilamentAsset const& damagedHelmetAsset = *mData[DAMAGED_HELMET_WEBP_GLB]->getAsset();
+    Entity const* renderables = damagedHelmetAsset.getRenderableEntities();
+    auto& renderableManager = mEngine->getRenderableManager();
+
+    auto inst = renderableManager.getInstance(renderables[0]);
+    auto materialInst = renderableManager.getMaterialInstanceAt(inst, 0);
+    std::string_view name{materialInst->getName()};
+    EXPECT_EQ(name, "Material_MR");
+#if defined(FILAMENT_SUPPORTS_WEBP_TEXTURES)
+    EXPECT_EQ(!!*mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder, true);
+    EXPECT_EQ(mEngine->getTextureCount() == 8, true);    
+#else
+    EXPECT_EQ(*mData[DAMAGED_HELMET_WEBP_GLB]->mWebpDecoder, nullptr);
+    EXPECT_EQ(mEngine->getTextureCount() == 3, true);    
+#endif
 }
 
 int main(int argc, char** argv) {
