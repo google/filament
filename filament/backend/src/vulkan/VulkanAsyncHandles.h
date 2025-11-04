@@ -56,9 +56,16 @@ struct VulkanCmdFence {
     FenceStatus wait(VkDevice device, uint64_t timeout,
         std::chrono::steady_clock::time_point until);
 
+    void cancel() {
+        std::lock_guard const l(mLock);
+        mCanceled = true;
+        mCond.notify_all();
+    }
+
 private:
     std::shared_mutex mLock; // NOLINT(*-include-cleaner)
     std::condition_variable_any mCond;
+    bool mCanceled = false;
     // Internally we use the VK_INCOMPLETE status to mean "not yet submitted". When this fence
     // gets submitted, its status changes to VK_NOT_READY. Finally, when the GPU actually
     // finishes executing the command buffer, the status changes to VK_SUCCESS.
@@ -70,28 +77,43 @@ struct VulkanFence : public HwFence, fvkmemory::ThreadSafeResource {
     VulkanFence() {}
 
     void setFence(std::shared_ptr<VulkanCmdFence> fence) {
-        std::lock_guard lock(mState->lock);
+        std::lock_guard const lock(mState->lock);
         mState->sharedFence = std::move(fence);
         mState->cond.notify_all();
     }
 
     std::shared_ptr<VulkanCmdFence>& getSharedFence() {
-        std::lock_guard lock(mState->lock);
+        std::lock_guard const lock(mState->lock);
         return mState->sharedFence;
     }
 
-    std::shared_ptr<VulkanCmdFence> wait(std::chrono::steady_clock::time_point const until) {
+    std::pair<std::shared_ptr<VulkanCmdFence>, bool>
+            wait(std::chrono::steady_clock::time_point const until) {
         // hold a reference so that our state doesn't disappear while we wait
         std::shared_ptr state{ mState };
         std::unique_lock lock(state->lock);
-        state->cond.wait_until(lock, until, [&state] { return bool(state->sharedFence); });
+        state->cond.wait_until(lock, until, [&state] {
+            return bool(state->sharedFence) || state->canceled;
+        });
         // here mSharedFence will be null if we timed out
-        return state->sharedFence;
+        return { state->sharedFence, state->canceled };
     }
+
+    void cancel() const {
+        std::shared_ptr const state{ mState };
+        std::unique_lock const lock(state->lock);
+        if (state->sharedFence) {
+            state->sharedFence->cancel();
+        }
+        state->canceled = true;
+        state->cond.notify_all();
+    }
+
 private:
     struct State {
         std::mutex lock;
         std::condition_variable cond;
+        bool canceled = false;
         std::shared_ptr<VulkanCmdFence> sharedFence;
     };
     std::shared_ptr<State> mState{ std::make_shared<State>() };

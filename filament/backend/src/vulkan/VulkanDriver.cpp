@@ -419,6 +419,10 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns,
         int64_t refreshIntervalNs, uint32_t frameId) {
     FVK_PROFILE_MARKER(PROFILE_NAME_BEGINFRAME);
 
+    if (mCurrentSwapChain) { // This should be guaranteed
+        mPlatform->setPresentFrameId(mCurrentSwapChain->swapChain, frameId);
+    }
+
     // Check if any command have finished and reset all its used resources. The resources
     // wont be destroyed but their reference count will decreased if the command is already
     // completed.
@@ -915,6 +919,15 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
             FVK_LOGW << "protected swapchain requested, but Platform does not support it";
         }
     }
+
+#if defined(__ANDROID__)
+    // on Android, disable producer throttling
+    if (mProducerThrottling.isSupported()) {
+        mProducerThrottling.setProducerThrottlingEnabled(
+                static_cast<ANativeWindow*>(nativeWindow), false);
+    }
+#endif
+
     auto swapChain = resource_ptr<VulkanSwapChain>::make(&mResourceManager, sch, mPlatform,
             mContext, &mResourceManager, mAllocator, &mCommands, mStagePool, nativeWindow, flags);
     swapChain.inc();
@@ -1156,6 +1169,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+    fence->cancel();
     fence.dec();
 }
 
@@ -1180,9 +1194,9 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    std::shared_ptr const cmdfence = fence->wait(until);
-    if (!cmdfence) {
-        return FenceStatus::TIMEOUT_EXPIRED;
+    auto const [cmdfence, canceled] = fence->wait(until);
+    if (!cmdfence || canceled) {
+        return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
 
     // now we are holding a reference to our VulkanCmdFence, so we know it can't
@@ -1757,6 +1771,38 @@ void VulkanDriver::nextSubpass(int) {
         VulkanAttachment& subpassInput = renderTarget->getColor0();
         mDescriptorSetCache.updateInputAttachment({}, subpassInput);
     }
+}
+
+bool VulkanDriver::isCompositorTimingSupported() {
+    return mPlatform->isCompositorTimingSupported();
+}
+
+bool VulkanDriver::queryCompositorTiming(Handle<HwSwapChain> const swapChain,
+        CompositorTiming* outCompositorTiming) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return sc->queryCompositorTiming(outCompositorTiming);
+}
+
+bool VulkanDriver::queryFrameTimestamps(Handle<HwSwapChain> const swapChain, uint64_t const frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    auto sc = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return sc->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
 void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {

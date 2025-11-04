@@ -31,31 +31,27 @@ AndroidSwapChainHelper::AndroidSwapChainHelper() = default;
 AndroidSwapChainHelper::~AndroidSwapChainHelper() noexcept = default;
 
 bool AndroidSwapChainHelper::setPresentFrameId(
-        ANativeWindow* anw, uint64_t frameId) const noexcept {
+        ANativeWindow* anw, uint64_t const frameId) const noexcept {
     uint64_t sysFrameId{};
     int const status = NativeWindow::getNextFrameId(anw, &sysFrameId);
     if (status == 0) {
         std::lock_guard const lock(mLock);
         auto const pos = mFrameIdToSystemFrameId.find(frameId);
-        if (pos != mFrameIdToSystemFrameId.end() && pos->second != sysFrameId) {
+        if (pos && *pos != sysFrameId) {
             // we're trying to associate the same frame id to a different frame!
             return false;
         }
-        // make space by destroying the oldest entry
-        if (mFrameIdToSystemFrameId.size() >= MAX_HISTORY_SIZE) {
-            mFrameIdToSystemFrameId.erase(mFrameIdToSystemFrameId.begin());
-        }
-        mFrameIdToSystemFrameId.insert(mFrameIdToSystemFrameId.end(), { frameId, sysFrameId });
+        // oldest entry is removed
+        mFrameIdToSystemFrameId.insert(frameId, sysFrameId);
         return true;
     }
     return false;
 }
 
-uint64_t AndroidSwapChainHelper::getFrameId(uint64_t frameId) const noexcept {
+uint64_t AndroidSwapChainHelper::getFrameId(uint64_t const frameId) const noexcept {
     std::lock_guard const lock(mLock);
-    auto pos = mFrameIdToSystemFrameId.find(frameId);
-    if (pos != mFrameIdToSystemFrameId.end()) {
-        return pos->second;
+    if (auto const* const pos = mFrameIdToSystemFrameId.find(frameId)) {
+        return *pos;
     }
     return std::numeric_limits<uint64_t>::max();
 }

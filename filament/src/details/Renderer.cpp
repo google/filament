@@ -184,7 +184,8 @@ void FRenderer::terminate(FEngine& engine) {
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
         engine.execute();
     }
-    mFrameInfoManager.terminate(driver);
+
+    mFrameInfoManager.terminate(engine);
     mFrameSkipper.terminate(driver);
     mResourceAllocator->terminate();
 }
@@ -220,6 +221,9 @@ std::pair<Handle<HwRenderTarget>, TargetBufferFlags>
     if (!outTarget) {
         outTarget = mRenderTargetHandle;
         outAttachmentMask = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
+        if (mSwapChain->hasStencilBuffer()) {
+            outAttachmentMask |= TargetBufferFlags::STENCIL;
+        }
     }
     return { outTarget, outAttachmentMask };
 }
@@ -278,6 +282,8 @@ void FRenderer::skipFrame(uint64_t vsyncSteadyClockTimeNano) {
 
     FEngine& engine = mEngine;
     FEngine::DriverApi& driver = engine.getDriverApi();
+
+    mFrameInfoManager.updateUserHistory(nullptr, driver);
 
     // Gives the backend a chance to execute periodic tasks. This must be called before
     // the frame skipper.
@@ -389,8 +395,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
         // This need to occur after the backend beginFrame() because some backends need to start
         // a command buffer before creating a fence.
 
-        mFrameInfoManager.beginFrame(driver, {
-                .historySize = mFrameRateOptions.history
+        mFrameInfoManager.updateUserHistory(swapChain, driver);
+        mFrameInfoManager.beginFrame(swapChain, driver, {
+            .historySize = mFrameRateOptions.history
         }, mFrameId, appVsync);
 
         // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
@@ -435,13 +442,12 @@ void FRenderer::endFrame() {
         driver.debugThreading();
     }
 
-    FILAMENT_CHECK_PRECONDITION(engine.isValid(mSwapChain))
+    FILAMENT_CHECK_PRECONDITION(mSwapChain && engine.isValid(mSwapChain))
             << "SwapChain must remain valid until endFrame is called.";
 
-    if (mSwapChain) {
-        mSwapChain->commit(driver);
-        mSwapChain = nullptr;
-    }
+    // mSwapChain cannot be null by construction
+    mSwapChain->commit(driver);
+    mSwapChain = nullptr;
 
     mFrameInfoManager.endFrame(driver);
     mFrameSkipper.submitFrame(driver);

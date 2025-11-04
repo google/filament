@@ -339,7 +339,7 @@ Handle<HwTimerQuery> WebGPUDriver::createTimerQueryS() noexcept {
 }
 
 Handle<HwIndexBuffer> WebGPUDriver::createIndexBufferS() noexcept {
-    return allocHandle<HwIndexBuffer>();
+    return allocHandle<WebGPUIndexBuffer>();
 }
 
 Handle<HwTexture> WebGPUDriver::createTextureViewS() noexcept {
@@ -852,7 +852,7 @@ void WebGPUDriver::updateIndexBuffer(Handle<HwIndexBuffer> indexBufferHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUIndexBuffer>(indexBufferHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice.GetQueue());
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
@@ -863,14 +863,14 @@ void WebGPUDriver::updateBufferObject(Handle<HwBufferObject> bufferObjectHandle,
     // draw calls are made.
     flush();
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice.GetQueue());
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
 void WebGPUDriver::updateBufferObjectUnsynchronized(Handle<HwBufferObject> bufferObjectHandle,
         BufferDescriptor&& bufferDescriptor, const uint32_t byteOffset) {
     handleCast<WebGPUBufferObject>(bufferObjectHandle)
-            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice.GetQueue());
+            ->updateGPUBuffer(bufferDescriptor, byteOffset, mDevice, &mQueueManager);
     scheduleDestroy(std::move(bufferDescriptor));
 }
 
@@ -1271,6 +1271,20 @@ void WebGPUDriver::endRenderPass(int /* dummy */) {
 
 void WebGPUDriver::nextSubpass(int) {
     //todo
+}
+
+bool WebGPUDriver::isCompositorTimingSupported() {
+    return false;
+}
+
+bool WebGPUDriver::queryCompositorTiming(backend::SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    return false;
+}
+
+bool WebGPUDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    return false;
 }
 
 void WebGPUDriver::makeCurrent(Handle<HwSwapChain> drawSwapChain,

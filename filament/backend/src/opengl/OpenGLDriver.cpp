@@ -807,8 +807,9 @@ void OpenGLDriver::textureStorage(GLTexture* t,
                         for (GLint face = 0 ; face < 6 ; face++) {
                             glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
                                     level, GLint(t->gl.internalFormat),
-                                    GLsizei(width), GLsizei(height), 0,
-                                    format, type, nullptr);
+                                    std::max(GLsizei(1), GLsizei(width >> level)),
+                                    std::max(GLsizei(1), GLsizei(height >> level)),
+                                    0, format, type, nullptr);
                         }
                     } else {
                         glTexImage2D(t->gl.target, level, GLint(t->gl.internalFormat),
@@ -2287,9 +2288,14 @@ mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
 
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        GLFence const* f = handle_cast<GLFence*>(fh);
+        GLFence const* const f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
+        } else {
+            // signal waiters it's time to give-up
+            std::unique_lock const lock(f->state->lock);
+            f->state->status = FenceStatus::ERROR;
+            f->state->cond.notify_all();
         }
         destruct(fh, f);
     }
@@ -2696,6 +2702,39 @@ void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
         });
     }
 #endif
+}
+
+bool OpenGLDriver::isCompositorTimingSupported() {
+    // this is a synchronous call
+    return mPlatform.isCompositorTimingSupported();
+}
+
+bool OpenGLDriver::queryCompositorTiming(SwapChainHandle swapChain,
+        CompositorTiming* outCompositorTiming) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryCompositorTiming(sc->swapChain, outCompositorTiming);
+}
+
+bool OpenGLDriver::queryFrameTimestamps(SwapChainHandle swapChain, uint64_t const frameId,
+        FrameTimestamps* outFrameTimestamps) {
+    // this is a synchronous call
+    if (!swapChain) {
+        return false;
+    }
+    GLSwapChain const* const sc = handle_cast<GLSwapChain*>(swapChain);
+    if (!sc) {
+        // can happen if the SwapChainHandle is not initialized yet (still in CommandStream)
+        return false;
+    }
+    return mPlatform.queryFrameTimestamps(sc->swapChain, frameId, outFrameTimestamps);
 }
 
 void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
