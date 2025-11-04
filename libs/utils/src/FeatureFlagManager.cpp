@@ -133,6 +133,9 @@ FeatureFlagManager::FeatureFlagManager() : mFeatures{{
         { "engine.frame_info.disable_gpu_complete_metric",
           "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
           &features.engine.frame_info.disable_gpu_frame_complete_metric },
+        { "engine.skip_frame_when_cpu_ahead_of_display",
+          "Automatically skip frames when the CPU gets ahead of the display.",
+          &features.engine.skip_frame_when_cpu_ahead_of_display },
 }} {
     overrideFeatureDefaults({ mFeatures.data(), mFeatures.size() });
 }

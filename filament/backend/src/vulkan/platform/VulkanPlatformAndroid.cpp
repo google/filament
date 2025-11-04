@@ -538,9 +538,12 @@ bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
 
     AndroidFrameCallback::Timeline const preferredTimeline{
         mAndroidDetails.androidFrameCallback.getPreferredTimeline() };
-    outCompositorTiming->frameTime = preferredTimeline.frameTime;
-    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
-    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+    // FIXME: expectedPresentLatency might reflect the previous frame's value because
+    //        the choreographer's callback can happen before (good) or after (bad) us.
+    //        This problem is mitigated by storing the latency instead of the deadline,
+    //        because it generally is constant frame to frame.
+    outCompositorTiming->expectedPresentLatency =
+            preferredTimeline.expectedPresentTime - preferredTimeline.frameTime;
     outCompositorTiming->compositeDeadline = CompositorTiming::INVALID;
     outCompositorTiming->compositeInterval = CompositorTiming::INVALID;
     outCompositorTiming->compositeToPresentLatency = CompositorTiming::INVALID;

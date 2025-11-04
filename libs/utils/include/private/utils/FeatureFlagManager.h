@@ -65,6 +65,7 @@ public:
             struct {
                 bool disable_gpu_frame_complete_metric = true;
             } frame_info;
+            bool skip_frame_when_cpu_ahead_of_display = false;
         } engine;
         struct {
             struct {
