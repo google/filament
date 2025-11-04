@@ -67,7 +67,7 @@ VulkanPlatform::SurfaceBundle VulkanPlatformWindows::createVkSurfaceKHR(void* na
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
             << "vkCreateWin32SurfaceKHR failed."
             << " error=" << static_cast<int32_t>(result);
-    return std::make_tuple(surface, extent);
+    return std::make_tuple(surface, VkExtent2D{});
 }
 
 } // namespace filament::backend
