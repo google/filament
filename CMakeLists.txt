@@ -58,7 +58,7 @@ option(FILAMENT_USE_ABSEIL_LOGGING "Use Abseil to log, may increase binary size"
 
 option(FILAMENT_ENABLE_EXPERIMENTAL_GCC_SUPPORT "Enable GCC support (unsupported)" OFF)
 
-option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support for Filament (builds libwebp when ON)" OFF)
+option(FILAMENT_SUPPORTS_WEBP_TEXTURES "Enable webp texture support for Filament (builds libwebp when ON)" ON)
 
 # This is to disable GTAO for the short-term while we investigate a way to better manage size increases.
 # On the regular filament build (where size is of less concern), we enable GTAO by default.
