@@ -12,3 +12,5 @@ appropriate header in [RELEASE_NOTES.md](./RELEASE_NOTES.md).
 - third_party: Optionally add libwebp to build
   - controlled by cmake flag FILAMENT_SUPPORTS_WEBP_TEXTURES, defaults to OFF
   - actual webp texture support for libs/gltfio coming in subsequent change
+
+- materials: Make Material Instances' UBO descriptor use dynamic offsets. [⚠️ **Recompile Materials**]
