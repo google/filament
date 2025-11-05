@@ -1,6 +1,6 @@
 {
   "name": "filament",
-  "version": "1.66.2",
+  "version": "1.67.0",
   "description": "Real-time physically based rendering engine",
   "main": "filament.js",
   "module": "filament.js",
