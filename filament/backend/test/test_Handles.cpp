@@ -49,7 +49,7 @@ TEST(HandlesTest, useAfterFreePool) {
     HandleAllocatorTest allocator("Test Handles", POOL_SIZE_BYTES);
 
     Handle<MyHandle> handleA = allocator.allocate<Concrete>();
-    allocator.deallocate(handleA);
+    allocator.deallocate<Concrete>(handleA);
 
     Handle<MyHandle> handleB = allocator.allocate<Concrete>();
 
@@ -69,7 +69,7 @@ TEST(HandlesTest, useAfterFreeHeap) {
     // This one is guaranteed to be a heap handle.
     Handle<MyHandle> handleA = allocator.allocate<Concrete>();
     EXPECT_TRUE(handleA.getId() & HANDLE_HEAP_FLAG);
-    allocator.deallocate(handleA);
+    allocator.deallocate<Concrete>(handleA);
 
     Handle<MyHandle> handleB = allocator.allocate<Concrete>();
 
