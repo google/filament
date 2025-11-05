@@ -16,9 +16,6 @@
 
 #include "MaterialCompiler.h"
 
-#include "DirIncluder.h"
-#include "Includes.h"
-
 #include <memory>
 #include <iostream>
 #include <utility>
@@ -27,7 +24,6 @@
 
 #include <filament-matp/Config.h>
 
-#include <utils/CString.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
@@ -69,31 +65,22 @@ bool MaterialCompiler::run(const matp::Config& config) {
         glslang::FinalizeProcess();
         return success;
     }
-    // Inline material (i.e. resolve #include directives)
-    DirIncluder includer;
-    includer.setIncludeDirectory(materialFilePath.getParent());
-    utils::CString fileName = utils::CString(materialFilePath.getName().c_str());
+    auto [resolvedStatus, resolvedString] =
+            mParser.resolveIncludes(buffer, size, materialFilePath,
+            config.getInsertLineDirectives(),
+            config.getInsertLineDirectiveChecks());
 
-    ResolveOptions const options {
-        .insertLineDirectives = true,
-        .insertLineDirectiveCheck = true
-    };
-    // This is both source and result, this will be mutated by `resolveIncludes` call.
-    IncludeResult result {
-        .includeName = fileName,
-        .text = utils::CString(buffer.get(), size),
-        .name = CString("")
-    };
-
-    if (!resolveIncludes(result, std::move(includer), options)) {
+    // It has failed to resolve the include directives.
+    if (!resolvedStatus.isOk()) {
+        std::cerr << resolvedStatus.getMessage() << std::endl;
         return false;
     }
 
     // Now that the buffer is mutated, we need to update the buffer pointer and the size
     // before parsing.
-    size = result.text.size();
+    size = resolvedString.size();
     auto modifiedBuffer = std::make_unique<char[]>(size);
-    std::strncpy(modifiedBuffer.get(), result.text.c_str(), size);
+    std::strncpy(modifiedBuffer.get(), resolvedString.c_str(), size);
     buffer = std::move(modifiedBuffer);
 
     if (config.getOutputFormat() == matp::Config::OutputFormat::MAT) {

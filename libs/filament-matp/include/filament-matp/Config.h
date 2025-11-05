@@ -155,6 +155,9 @@ public:
         return mWorkarounds;
     }
 
+    bool getInsertLineDirectives() const noexcept { return mInsertLineDirectives; }
+    bool getInsertLineDirectiveChecks() const noexcept { return mInsertLineDirectiveChecks; }
+
 protected:
     bool mDebug = false;
     bool mIsValid = true;
@@ -174,6 +177,8 @@ protected:
     filament::UserVariantFilterMask mVariantFilter = 0;
     Workarounds mWorkarounds = Workarounds::ALL;
     bool mIncludeEssl1 = true;
+    bool mInsertLineDirectives = true;
+    bool mInsertLineDirectiveChecks = true;
 };
 
 } // namespace matp

@@ -20,8 +20,10 @@
 
 #include <unordered_map>
 
-#include <utils/Status.h>
 #include "Config.h"
+
+#include <utils/Path.h>
+#include <utils/Status.h>
 
 namespace filamat {
 class MaterialBuilder;
@@ -36,7 +38,13 @@ class MaterialLexeme;
 class MaterialParser {
 public:
     MaterialParser();
-
+    // Resolves #include directives in the material by looking at the given file structure.
+    // Returns the string of resolved material with the state that indicates whether the include
+    // resolution was successful.
+    std::pair<utils::Status, utils::CString> resolveIncludes(
+            std::unique_ptr<const char[]>& buffer, ssize_t size,
+            const utils::Path& materialFilePath,
+            bool insertLineDirectives, bool insertLineDirectiveCheck);
     // Parses a string material so that it can be used in MaterialBuilder.
     // Call MaterialBuilder::init before passing in the builder; call MaterialBuilder::build to
     // create filamat::Package after.

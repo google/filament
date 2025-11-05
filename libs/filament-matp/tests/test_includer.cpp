@@ -16,17 +16,17 @@
 
 #include <gtest/gtest.h>
 
-#include <matc/DirIncluder.h>
+#include "DirIncluder.h"
 
 using namespace utils;
-using namespace matc;
+using namespace matp;
 
 const utils::Path root = utils::Path(__FILE__).getParent();
 
 // TODO: these tests are disabled as they fail on CI, which needs investigation.
 
 TEST(DirIncluder, DISABLED_IncludeNonexistent) {
-    matc::DirIncluder includer;
+    DirIncluder includer;
     {
         IncludeResult i {
             .includeName = CString("nonexistent.h")
@@ -45,7 +45,7 @@ TEST(DirIncluder, DISABLED_IncludeNonexistent) {
 }
 
 TEST(DirIncluder, DISABLED_IncludeFile) {
-    matc::DirIncluder includer;
+    DirIncluder includer;
     includer.setIncludeDirectory(root);
 
     IncludeResult result {
@@ -63,7 +63,7 @@ TEST(DirIncluder, DISABLED_IncludeFile) {
 }
 
 TEST(DirIncluder, DISABLED_IncludeFileFromIncluder) {
-    matc::DirIncluder includer;
+    DirIncluder includer;
     includer.setIncludeDirectory(root);
 
     utils::CString includerFile((root + "Dir/Baz.h").c_str());
@@ -76,9 +76,4 @@ TEST(DirIncluder, DISABLED_IncludeFileFromIncluder) {
     EXPECT_STREQ("// Bar.h", result.text.c_str());
 
     EXPECT_STREQ((root + "Dir/Bar.h").c_str(), result.name.c_str());
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
