@@ -256,7 +256,7 @@ public:
         uint32_t historySize;
     };
 
-    explicit FrameInfoManager(backend::DriverApi& driver) noexcept;
+    explicit FrameInfoManager(FEngine& engine, backend::DriverApi& driver) noexcept;
 
     ~FrameInfoManager() noexcept;
 
@@ -296,6 +296,7 @@ private:
     utils::AsyncJobQueue mJobQueue;
     FSwapChain* mLastSeenSwapChain = nullptr;
     bool const mHasTimerQueries = false;
+    bool const mDisableGpuFrameComplete = false;
 };
 
 

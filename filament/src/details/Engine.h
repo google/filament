@@ -758,6 +758,9 @@ public:
                         CORRECTNESS_ASSERTION_DEFAULT;
                 bool assert_texture_can_generate_mipmap = CORRECTNESS_ASSERTION_DEFAULT;
             } debug;
+            struct {
+                bool disable_gpu_frame_complete_metric = true;
+            } frame_info;
         } engine;
         struct {
             struct {
@@ -829,6 +832,9 @@ public:
             { "material.enable_material_instance_uniform_batching",
               "Make all MaterialInstances share a common large uniform buffer and use sub-allocations within it.",
               &features.material.enable_material_instance_uniform_batching, false },
+            { "engine.frame_info.disable_gpu_complete_metric",
+              "Disable Renderer::FrameInfo::gpuFrameComplete reporting",
+              &features.engine.frame_info.disable_gpu_frame_complete_metric, false },
     }};
 
     utils::Slice<const FeatureFlag> getFeatureFlags() const noexcept {
