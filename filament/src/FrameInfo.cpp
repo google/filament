@@ -70,6 +70,10 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
     }
 
     if (!mDisableGpuFrameComplete) {
+        // remove all pending callbacks. This is okay to do because they have no
+        // side effect.
+        mJobQueue.cancelAll();
+
         // Destroy the fences that are still alive, they will error out.
         for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
             auto& info = mFrameTimeHistory[i];
