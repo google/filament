@@ -1022,13 +1022,4 @@ VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const no
     return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
 }
 
-ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
-    return getSwapchainInstanceExtensionsImpl();
-}
-
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
-        VkInstance instance, uint64_t flags) const noexcept {
-    return createVkSurfaceKHRImpl(nativeWindow, instance, flags);
-}
-
-}// namespace filament::backend
+} // namespace filament::backend

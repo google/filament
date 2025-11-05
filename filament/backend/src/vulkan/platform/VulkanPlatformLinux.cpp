@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#include <backend/platforms/VulkanPlatform.h>
+#include <backend/platforms/VulkanPlatformLinux.h>
 #include <backend/DriverEnums.h>
 
 #include "vulkan/VulkanConstants.h"
-#include "vulkan/VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -74,17 +73,13 @@
             void* library = nullptr;
         } g_x11_vk;
     }// anonymous namespace
-#elif defined(WIN32)
-    // No platform specific includes
-#else
-    // Not a supported Vulkan platform
 #endif
 
 using namespace bluevk;
 
 namespace filament::backend {
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() {
+VulkanPlatform::ExtensionSet VulkanPlatformLinux::getSwapchainInstanceExtensions() const {
     VulkanPlatform::ExtensionSet const ret = {
 #if defined(__linux__) && defined(FILAMENT_SUPPORTS_WAYLAND)
         VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
@@ -95,15 +90,13 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl(
     #if defined(FILAMENT_SUPPORTS_XLIB)
         VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
     #endif
-#elif defined(WIN32)
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
     };
     return ret;
 }
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
+VulkanPlatform::SurfaceBundle VulkanPlatformLinux::createVkSurfaceKHR(void* nativeWindow,
+        VkInstance instance, uint64_t flags) const noexcept {
     VkSurfaceKHR surface;
 
     // On certain platforms, the extent of the surface cannot be queried from Vulkan. In those
@@ -182,26 +175,6 @@ VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativ
                         << "vkCreateXlibSurfaceKHR error=" << static_cast<int32_t>(result);
             }
         #endif
-    #elif defined(WIN32)
-        // On (at least) NVIDIA drivers, the Vulkan implementation (specifically the call to
-        // vkGetPhysicalDeviceSurfaceCapabilitiesKHR()) does not correctly handle the fact that
-        // each native window has its own DPI_AWARENESS_CONTEXT, and erroneously uses the context
-        // of the calling thread. As a workaround, we set the current thread's DPI_AWARENESS_CONTEXT
-        // to that of the native window we've been given. This isn't a perfect solution, because an
-        // application could create swap chains on multiple native windows with varying DPI-awareness,
-        // but even then, at least one of the windows would be guaranteed to work correctly.
-        SetThreadDpiAwarenessContext(GetWindowDpiAwarenessContext((HWND) nativeWindow));
-
-        VkWin32SurfaceCreateInfoKHR const createInfo = {
-            .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-            .hinstance = GetModuleHandle(nullptr),
-            .hwnd = (HWND) nativeWindow,
-        };
-        VkResult const result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr,
-                (VkSurfaceKHR*) &surface);
-        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
-                << "vkCreateWin32SurfaceKHR failed."
-                << " error=" << static_cast<int32_t>(result);
 #endif
         return std::make_tuple(surface, extent);
 }
