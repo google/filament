@@ -19,7 +19,7 @@
 #include <matc/DirIncluder.h>
 
 using namespace utils;
-using namespace filamat;
+using namespace matc;
 
 const utils::Path root = utils::Path(__FILE__).getParent();
 

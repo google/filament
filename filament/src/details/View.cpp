@@ -372,7 +372,7 @@ float2 FView::updateScale(FEngine& engine,
         debugFrameHistory->back() = {
                 .target             = target,
                 .targetWithHeadroom = targetWithHeadroom,
-                .frameTime          = duration_cast<duration_ms>(info.frameTime).count(),
+                .frameTime          = duration_cast<duration_ms>(info.gpuFrameDuration).count(),
                 .frameTimeDenoised  = duration_cast<duration_ms>(info.denoisedFrameTime).count(),
                 .scale              = mScale.x * mScale.y,
                 .pid_e              = mPidController.getError(),

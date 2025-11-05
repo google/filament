@@ -218,9 +218,11 @@ void FMaterialInstance::commitStreamUniformAssociations(FEngine::DriverApi& driv
         for (auto const& [binding, p]: mTextureParameters) {
             ssize_t offset = mMaterial->getUniformInterfaceBlock().getTransformFieldOffset(binding);
             if (offset >= 0) {
-                mHasStreamUniformAssociations = true;
-                auto stream = p.texture->getStream()->getHandle();
-                descriptor.mStreams.push_back({uint32_t(offset), stream, BufferObjectStreamAssociationType::TRANSFORM_MATRIX});
+                if (auto stream = p.texture->getStream()) {
+                    mHasStreamUniformAssociations = true;
+                    descriptor.mStreams.push_back({ uint32_t(offset), stream->getHandle(),
+                        BufferObjectStreamAssociationType::TRANSFORM_MATRIX });
+                }
             }
         }
         if (descriptor.mStreams.size() > 0) {
