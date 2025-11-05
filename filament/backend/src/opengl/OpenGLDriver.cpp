@@ -2287,9 +2287,14 @@ mat3f OpenGLDriver::getStreamTransformMatrix(Handle<HwStream> sh) {
 
 void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
-        GLFence const* f = handle_cast<GLFence*>(fh);
+        GLFence const* const f = handle_cast<GLFence*>(fh);
         if (mPlatform.canCreateFence() || mContext.isES2()) {
             mPlatform.destroyFence(f->fence);
+        } else {
+            // signal waiters it's time to give-up
+            std::unique_lock const lock(f->state->lock);
+            f->state->status = FenceStatus::ERROR;
+            f->state->cond.notify_all();
         }
         destruct(fh, f);
     }
@@ -2664,6 +2669,10 @@ size_t OpenGLDriver::getMaxTextureSize(SamplerType const target) {
 
 size_t OpenGLDriver::getMaxArrayTextureLayers() {
     return mContext.gets.max_array_texture_layers;
+}
+
+size_t OpenGLDriver::getUniformBufferOffsetAlignment() {
+    return mContext.gets.uniform_buffer_offset_alignment;
 }
 
 // ------------------------------------------------------------------------------------------------

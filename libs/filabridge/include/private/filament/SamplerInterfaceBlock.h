@@ -22,6 +22,7 @@
 
 #include <utils/CString.h>
 #include <utils/FixedCapacityVector.h>
+#include <utils/ImmutableCString.h>
 
 #include <private/filament/DescriptorSets.h>
 
@@ -55,15 +56,18 @@ public:
     using ShaderStageFlags = backend::ShaderStageFlags;
 
     struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
-        utils::CString name;        // name of this sampler
-        utils::CString uniformName; // name of the uniform holding this sampler (needed for glsl/MSL)
-        Binding binding;            // binding in the descriptor set
-        Type type;                  // type of this sampler
-        Format format;              // format of this sampler
-        Precision precision;        // precision of this sampler
-        bool filterable;            // whether the sampling should be filterable.
-        bool multisample;           // multisample capable
-        ShaderStageFlags stages;    // stages the sampler can be accessed from
+        utils::CString name;                    // name of this sampler
+        utils::CString uniformName;             // name of the uniform holding this
+                                                // sampler (needed for glsl/MSL)
+        Binding binding;                        // binding in the descriptor set
+        Type type;                              // type of this sampler
+        Format format;                          // format of this sampler
+        Precision precision;                    // precision of this sampler
+        bool filterable;                        // whether the sampling should be filterable.
+        bool multisample;                       // multisample capable
+        ShaderStageFlags stages;                // stages the sampler can be accessed from
+        utils::ImmutableCString transformName;  // name of the uniform holding the transform
+                                                // matrix for this sampler
     };
 
     using SamplerInfoList = utils::FixedCapacityVector<SamplerInfo>;
@@ -87,6 +91,8 @@ public:
             bool filterable;                // whether the sampling should be filterable.
             bool multisample;               // multisample capable
             ShaderStageFlags stages;        // shader stages using this sampler
+            std::string_view transformName; // name of the uniform holding the transform matrix for
+                                            // this sampler
         };
 
         // Give a name to this sampler interface block
@@ -97,7 +103,7 @@ public:
         // Add a sampler
         Builder& add(std::string_view samplerName, Binding binding, Type type, Format format,
                 Precision precision = Precision::MEDIUM, bool filterable = true,
-                bool multisample = false,
+                bool multisample = false, std::string_view transformName = "",
                 ShaderStageFlags stages = ShaderStageFlags::ALL_SHADER_STAGE_FLAGS) noexcept;
 
         // Add multiple samplers

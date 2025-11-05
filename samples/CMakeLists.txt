@@ -37,6 +37,7 @@ set(MATERIAL_SRCS
         materials/sandboxLitSolidRefractionSsr.mat
         materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
+        materials/sandboxTransformName.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
 )
@@ -280,6 +281,7 @@ if (NOT ANDROID)
     add_demo(image_viewer)
     add_demo(lightbulb)
     add_demo(material_sandbox)
+    add_demo(materialinstancestress)
     add_demo(multiple_windows)
     # Tint does not support setting gl_PointSize, disable the relevant sample if using WebGPU
     # https://github.com/gpuweb/gpuweb/issues/1190
@@ -305,6 +307,7 @@ if (NOT ANDROID)
     target_link_libraries(hellopbr PRIVATE filameshio suzanne-resources)
     target_link_libraries(hellostereo PRIVATE filameshio suzanne-resources)
     target_link_libraries(image_viewer PRIVATE viewer imageio)
+    target_link_libraries(materialinstancestress PRIVATE geometry filameshio suzanne-resources)
     target_link_libraries(multiple_windows PRIVATE filameshio suzanne-resources)
     target_link_libraries(rendertarget PRIVATE filameshio suzanne-resources)
     target_link_libraries(sample_cloth PRIVATE filameshio)

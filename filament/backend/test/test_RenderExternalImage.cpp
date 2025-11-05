@@ -47,24 +47,23 @@ Shader createShader(DriverApi& api, Cleanup& cleanup, Backend backend) {
 // Rendering an external image without setting any data should not crash.
 TEST_F(BackendTest, RenderExternalImageWithoutSet) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::VULKAN, "b/453776730");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     TrianglePrimitive triangle(api);
 
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
 
-    Shader shader = createShader(api, cleanup, sBackend);
+    Shader shader = createShader(api, *mCleanup, sBackend);
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
+    backend::Handle<HwRenderTarget> defaultRenderTarget = addCleanup(
             api.createDefaultRenderTarget());
 
     // Create a texture that will be backed by an external image.
     auto usage = TextureUsage::COLOR_ATTACHMENT | TextureUsage::SAMPLEABLE;
     const NativeView& view = getNativeView();
-    backend::Handle<HwTexture> texture = cleanup.add(api.createTexture(
+    backend::Handle<HwTexture> texture = addCleanup(api.createTexture(
             SamplerType::SAMPLER_EXTERNAL,      // target
             1,                                  // levels
             TextureFormat::RGBA8,               // format
@@ -111,19 +110,19 @@ TEST_F(BackendTest, RenderExternalImageWithoutSet) {
 
 TEST_F(BackendTest, RenderExternalImage) {
     SKIP_IF(Backend::METAL, "External images aren't supported in Metal");
-    SKIP_IF(Backend::VULKAN, "External images aren't supported in Vulkan");
+    SKIP_IF(Backend::VULKAN, "b/453777319");
     SKIP_IF(Backend::WEBGPU, "External images aren't supported in WebGPU");
+    SKIP_IF(SkipEnvironment(OperatingSystem::CI, Backend::OPENGL), "b/453758594");
     auto& api = getDriverApi();
-    Cleanup cleanup(api);
 
     TrianglePrimitive triangle(api);
 
-    auto swapChain = cleanup.add(createSwapChain());
+    auto swapChain = addCleanup(createSwapChain());
 
-    Shader shader = createShader(api, cleanup, sBackend);
+    Shader shader = createShader(api, *mCleanup, sBackend);
     DescriptorSetHandle descriptorSet = shader.createDescriptorSet(api);
 
-    backend::Handle<HwRenderTarget> defaultRenderTarget = cleanup.add(
+    backend::Handle<HwRenderTarget> defaultRenderTarget = addCleanup(
             api.createDefaultRenderTarget());
 
     // require users to create two Filament textures and have two material parameters
@@ -170,7 +169,7 @@ TEST_F(BackendTest, RenderExternalImage) {
 
     api.setupExternalImage(pixBuffer);
     backend::Handle<HwTexture> texture =
-            cleanup.add(api.createTextureExternalImage(SamplerType::SAMPLER_EXTERNAL,
+            addCleanup(api.createTextureExternalImage(SamplerType::SAMPLER_EXTERNAL,
                     TextureFormat::RGBA8, 1024, 1024, usage, pixBuffer));
 
     // We're now free to release the buffer.

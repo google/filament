@@ -234,7 +234,9 @@ public:
     explicit FrameInfoManager(backend::DriverApi& driver) noexcept;
 
     ~FrameInfoManager() noexcept;
-    void terminate(backend::DriverApi& driver) noexcept;
+
+    // The command queue must be empty before calling terminate()
+    void terminate(FEngine& engine) noexcept;
 
     // call this immediately after "make current"
     void beginFrame(backend::DriverApi& driver, Config const& config,

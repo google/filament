@@ -104,6 +104,8 @@ if (FILAMENT_SUPPORTS_OPENGL AND NOT FILAMENT_USE_EXTERNAL_GLES3)
         list(APPEND SRCS src/VirtualMachineEnv.cpp)
     endif ()
     if (ANDROID)
+        list(APPEND SRCS src/AndroidNativeWindow.cpp)
+        list(APPEND SRCS src/AndroidSwapChainHelper.cpp)
         list(APPEND SRCS src/opengl/platforms/ExternalStreamManagerAndroid.cpp)
         list(APPEND SRCS src/opengl/platforms/PlatformEGLAndroid.cpp)
     elseif (IOS)
@@ -469,6 +471,13 @@ if (MSVC)
 elseif(WEBGL)
     # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
     set(OPTIMIZATION_FLAGS -fvisibility-inlines-hidden)
+elseif(FILAMENT_USING_GCC)
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -fno-finite-math-only
+        -ffp-contract=fast
+        -fvisibility-inlines-hidden
+    )
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
@@ -495,6 +504,13 @@ endif()
 
 if (MSVC)
     set(FILAMENT_WARNINGS /W3)
+elseif (FILAMENT_USING_GCC)
+    # GCC is not officially supported, so use a weaker set of warnings (incl. not using -Werror)
+    set(FILAMENT_WARNINGS
+            -Wall -Wno-unused-parameter -Wno-missing-field-initializers
+            -Wdeprecated -Wnon-virtual-dtor -Wno-strict-aliasing
+            -Wno-invalid-constexpr -Wno-parentheses -Wno-unused-variable
+    )
 else()
     set(FILAMENT_WARNINGS
             -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
@@ -576,6 +592,7 @@ if (APPLE OR LINUX)
         test/test_BufferUpdates.cpp
         test/test_Callbacks.cpp
         test/test_MemoryMappedBuffer.cpp
+        test/test_MsaaSwapChain.cpp
         test/test_MRT.cpp
         test/test_PushConstants.cpp
         test/test_LoadImage.cpp

@@ -18,12 +18,15 @@
 
 #include <utils/Logger.h>
 #include <utils/Panic.h>
+#include <utils/ThreadUtils.h>
 
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 #include <GL/glxext.h>
 
 #include <dlfcn.h>
+
+#include <mutex>
 
 #define LIBRARY_GLX "libGL.so.1"
 #define LIBRARY_X11 "libX11.so.6"
@@ -230,9 +233,68 @@ Driver* PlatformGLX::createDriver(void* sharedGLContext,
 void PlatformGLX::terminate() noexcept {
     g_glx.setCurrentContext(mGLXDisplay, None, None, nullptr);
     g_glx.destroyPbuffer(mGLXDisplay, mDummySurface);
+    for (auto it : mAdditionalContexts) {
+        g_glx.destroyContext(mGLXDisplay, it.second);
+    }
     g_glx.destroyContext(mGLXDisplay, mGLXContext);
     g_x11.closeDisplay(mGLXDisplay);
     bluegl::unbind();
+}
+
+bool PlatformGLX::isExtraContextSupported() const noexcept {
+    return true;
+}
+
+void PlatformGLX::createContext(bool shared) {
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+
+    {
+        std::shared_lock<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it != mAdditionalContexts.end()) {
+            LOG(WARNING) << "Shared context is already created";
+            return;
+        }
+    }
+
+    int contextAttribs[] = {
+        GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+        GLX_CONTEXT_MINOR_VERSION_ARB, 1,
+        GL_NONE
+    };
+
+    GLXContext context = g_glx.createContext(mGLXDisplay, mGLXConfig,
+            mGLXContext, True, contextAttribs);
+    if (!context) {
+        LOG(ERROR) << "Failed to create shared context";
+        return;
+    }
+
+    g_glx.setCurrentContext(mGLXDisplay,
+            (GLXDrawable)None, (GLXDrawable)None, context);
+
+    std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+    mAdditionalContexts[currentThreadId] = context;
+}
+
+void PlatformGLX::releaseContext() noexcept {
+    g_glx.setCurrentContext(mGLXDisplay,
+            (GLXDrawable)None, (GLXDrawable)None, nullptr);
+
+    std::thread::id currentThreadId = utils::ThreadUtils::getThreadId();
+    GLXContext context;
+    {
+        std::lock_guard<std::shared_mutex> lock(mAdditionalContextsLock);
+        auto it = mAdditionalContexts.find(currentThreadId);
+        if (it == mAdditionalContexts.end()) {
+            LOG(WARNING) << "Attempted to destroy non-existing shared context";
+            return;
+        }
+        context = it->second;
+        mAdditionalContexts.erase(it);
+    }
+
+    g_glx.destroyContext(mGLXDisplay, context);
 }
 
 Platform::SwapChain* PlatformGLX::createSwapChain(void* nativeWindow, uint64_t flags) noexcept {

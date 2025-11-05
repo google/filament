@@ -1156,6 +1156,7 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
+    fence->cancel();
     fence.dec();
 }
 
@@ -1164,6 +1165,10 @@ FenceStatus VulkanDriver::getFenceStatus(Handle<HwFence> const fh) {
 }
 
 FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout) {
+    if (!fh) {
+        return FenceStatus::ERROR;
+    }
+
     auto fence = resource_ptr<VulkanFence>::cast(&mResourceManager, fh);
 
     // we have to take into account that the STL's wait_for() actually works with
@@ -1180,9 +1185,9 @@ FenceStatus VulkanDriver::fenceWait(FenceHandle const fh, uint64_t const timeout
         until = now + nanoseconds(timeout);
     }
 
-    std::shared_ptr const cmdfence = fence->wait(until);
-    if (!cmdfence) {
-        return FenceStatus::TIMEOUT_EXPIRED;
+    auto const [cmdfence, canceled] = fence->wait(until);
+    if (!cmdfence || canceled) {
+        return canceled ? FenceStatus::ERROR : FenceStatus::TIMEOUT_EXPIRED;
     }
 
     // now we are holding a reference to our VulkanCmdFence, so we know it can't
@@ -1390,7 +1395,8 @@ uint8_t VulkanDriver::getMaxDrawBuffers() {
 }
 
 size_t VulkanDriver::getMaxUniformBufferSize() {
-    return mContext.getPhysicalDeviceLimits().maxUniformBufferRange;
+    return std::max(mContext.getPhysicalDeviceLimits().maxUniformBufferRange,
+            static_cast<uint32_t>(mContext.getPhysicalDeviceLimits().nonCoherentAtomSize));
 }
 
 size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
@@ -1408,6 +1414,10 @@ size_t VulkanDriver::getMaxTextureSize(SamplerType type) {
 
 size_t VulkanDriver::getMaxArrayTextureLayers() {
     return mContext.getPhysicalDeviceLimits().maxImageArrayLayers;
+}
+
+size_t VulkanDriver::getUniformBufferOffsetAlignment() {
+    return mContext.getPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
 }
 
 void VulkanDriver::setVertexBufferObject(Handle<HwVertexBuffer> vbh, uint32_t index,
