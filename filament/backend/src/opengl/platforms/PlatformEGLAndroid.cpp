@@ -34,6 +34,8 @@
 #include <android/api-level.h>
 #include <android/native_window.h>
 #include <android/hardware_buffer.h>
+#include <android/choreographer.h>
+#include <android/looper.h>
 
 #include <utils/android/PerformanceHintManager.h>
 #include <utils/compiler.h>
@@ -120,6 +122,7 @@ PlatformEGLAndroid::PlatformEGLAndroid() noexcept
 PlatformEGLAndroid::~PlatformEGLAndroid() noexcept = default;
 
 void PlatformEGLAndroid::terminate() noexcept {
+    mAndroidFrameCallback.terminate();
     ExternalStreamManagerAndroid::destroy(&mExternalStreamManager);
     PlatformEGL::terminate();
 }
@@ -237,6 +240,8 @@ Driver* PlatformEGLAndroid::createDriver(void* sharedContext,
 
     mAssertNativeWindowIsValid = driverConfig.assertNativeWindowIsValid;
 
+    mAndroidFrameCallback.init();
+
     return driver;
 }
 
@@ -258,8 +263,14 @@ bool PlatformEGLAndroid::queryCompositorTiming(SwapChain const* swapchain,
         return false;
     }
 
+    AndroidFrameCallback::Timeline const preferredTimeline{
+            mAndroidFrameCallback.getPreferredTimeline() };
+    outCompositorTiming->frameTime = preferredTimeline.frameTime;
+    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
+    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+
     if (UTILS_LIKELY(ext.egl.ANDROID_get_frame_timestamps)) {
-        EGLSurface sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
+        EGLSurface const sur = static_cast<SwapChainEGL const *>(swapchain)->sur;
         if (sur == EGL_NO_SURFACE) {
             return false;
         }

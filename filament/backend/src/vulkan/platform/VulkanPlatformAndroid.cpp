@@ -17,15 +17,18 @@
 
 #include "vulkan/VulkanConstants.h"
 #include "vulkan/VulkanContext.h"
+#include "vulkan/platform/VulkanPlatformSwapChainImpl.h"
+#include "vulkan/utils/Image.h"
 
-#include <backend/DriverEnums.h>
 #include <private/backend/BackendUtilsAndroid.h>
 
+#include <backend/DriverEnums.h>
+
 #include <utils/Panic.h>
-#include "vulkan/utils/Image.h"
 
 #include <bluevk/BlueVK.h>
 
+#include <android/api-level.h>
 #include <android/hardware_buffer.h>
 #include <android/native_window.h>
 
@@ -164,6 +167,15 @@ VulkanPlatformAndroid::ExternalImageVulkanAndroid::~ExternalImageVulkanAndroid()
         }
     }
 }
+
+VulkanPlatformAndroid::VulkanPlatformAndroid() {
+    mOSVersion = android_get_device_api_level();
+    if (mOSVersion < 0) {
+        mOSVersion = __ANDROID_API_FUTURE__;
+    }
+}
+
+VulkanPlatformAndroid::~VulkanPlatformAndroid() noexcept = default;
 
 Platform::ExternalImageHandle VulkanPlatformAndroid::createExternalImage(
         AHardwareBuffer const* buffer, bool sRGB) noexcept {
@@ -442,12 +454,52 @@ VulkanPlatform::SurfaceBundle VulkanPlatformAndroid::createVkSurfaceKHR(void* na
     return { surface, extent };
 }
 
-// Deprecated platform dependent helper methods
-VulkanPlatform::ExtensionSet VulkanPlatform::getSwapchainInstanceExtensionsImpl() { return {}; }
+int VulkanPlatformAndroid::getOSVersion() const noexcept {
+    return mOSVersion;
+}
 
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHRImpl(void* nativeWindow,
-        VkInstance instance, uint64_t flags) noexcept {
-    return SurfaceBundle{};
+void VulkanPlatformAndroid::terminate() {
+    mAndroidFrameCallback.terminate();
+    VulkanPlatform::terminate();
+}
+
+Driver* VulkanPlatformAndroid::createDriver(void* sharedContext, DriverConfig const& driverConfig) {
+    Driver* driver = VulkanPlatform::createDriver(sharedContext, driverConfig);
+    if (driver) {
+        mAndroidFrameCallback.init();
+    }
+    return driver;
+}
+
+bool VulkanPlatformAndroid::isCompositorTimingSupported() const noexcept {
+    return true;
+}
+
+bool VulkanPlatformAndroid::queryCompositorTiming(SwapChain const* swapchain,
+        CompositorTiming* outCompositorTiming) const noexcept {
+    if (!swapchain) {
+        return false;
+    }
+
+    AndroidFrameCallback::Timeline const preferredTimeline{
+        mAndroidFrameCallback.getPreferredTimeline() };
+    outCompositorTiming->frameTime = preferredTimeline.frameTime;
+    outCompositorTiming->expectedPresentTime = preferredTimeline.expectedPresentTime;
+    outCompositorTiming->frameTimelineDeadline = preferredTimeline.frameTimelineDeadline;
+
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
+}
+
+bool VulkanPlatformAndroid::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->setPresentFrameId(frameId);
+}
+
+bool VulkanPlatformAndroid::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
+        FrameTimestamps* outFrameTimestamps) const noexcept {
+    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
+    return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
 }
 
 } // namespace filament::backend

@@ -22,7 +22,7 @@
 
 namespace matc {
 
-bool DirIncluder::operator()(const utils::CString& includedBy, filamat::IncludeResult& result) {
+bool DirIncluder::operator()(const utils::CString& includedBy, IncludeResult& result) {
     auto getHeaderPath = [&result, &includedBy, this]() {
         // includedBy is the path to the file that's including result.includeName.
         // If it's empty, then search from the root include directory.

@@ -22,7 +22,7 @@
 
 #include <string>
 
-namespace filamat {
+namespace matc {
 
 static bool isWhitespace(char c) {
     return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
@@ -83,10 +83,16 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
         return false;
     }
 
-    const size_t lineNumberOffset = root.lineNumberOffset;
     utils::CString& text = root.text;
 
     std::vector<FoundInclude> includes = parseForIncludes(text);
+    if (includes.empty()) {
+        // No more to resolve.
+        return true;
+    }
+
+    const size_t lineNumberOffset = includes[0].line;
+
     bool sourceDirty = false;
 
     // If we weren't given an include name, use "0", which is default when no #line directives are
@@ -96,7 +102,7 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
     auto insertLineDirective = [&options](utils::io::ostream& stream, size_t line, const char* filename) {
         if (options.insertLineDirectiveCheck) {
             stream << "#if defined(GL_GOOGLE_cpp_style_line_directive)\n";
-            // The #endif itself will count as a line, so subtact 1.
+            // The #endif itself will count as a line, so subtract 1.
             line--;
         }
         stream << "#line " << line << " \"" << filename << '\"';
@@ -128,9 +134,10 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
         // 3
 
         // We want to insert a closing directive with a line number of 3.
-        // In this example, include.line is 2 and lineNumberOffset is 0.
+        // In this example, include.line is 2 and lineNumberOffset is 1. (Since the offset is the
+        // line number of the #include, thus it is inclusive)
         // So, the math works out as such:
-        const size_t lineDirectiveLine = include.line + lineNumberOffset + 1;
+        const size_t lineDirectiveLine = include.line + lineNumberOffset;
 
         utils::io::sstream closingDirective;
 
@@ -169,12 +176,13 @@ bool resolveIncludes(IncludeResult& root, IncludeCallback callback,
         sourceDirty = true;
     }
 
-    // Add a line directive on the first line for the root include.
+    // Add a line directive on the previous line for the root include.
     if (options.insertLineDirectives && depth == 0) {
         utils::io::sstream lineDirective;
-        insertLineDirective(lineDirective, lineNumberOffset + 1, rootIncludeName);
+        insertLineDirective(lineDirective, lineNumberOffset, rootIncludeName);
         lineDirective << '\n';
-        text.insert(0, utils::CString(lineDirective.c_str()));
+        const size_t startPos = includes[0].startPosition;
+        text.insert(startPos, utils::CString(lineDirective.c_str()));
         sourceDirty = true;
     }
 
@@ -300,4 +308,4 @@ std::vector<FoundInclude> parseForIncludes(const utils::CString& source) {
     return results;
 }
 
-} // namespace filamat
+} // namespace matc

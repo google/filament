@@ -431,38 +431,20 @@ public:
         return {};
     }
 
-    bool isCompositorTimingSupported() const noexcept override;
-
-    bool queryCompositorTiming(SwapChain const* swapchain,
-            CompositorTiming* outCompositorTiming) const noexcept override;
-
-    bool setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept override;
-
-    bool queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
-            FrameTimestamps* outFrameTimestamps) const noexcept override;
-
 protected:
     struct VulkanSync : public Platform::Sync {
         VkFence fence;
         std::shared_ptr<VulkanCmdFence> fenceStatus;
     };
 
-    virtual ExtensionSet getSwapchainInstanceExtensions() const;
-
     using SurfaceBundle = std::tuple<VkSurfaceKHR, VkExtent2D>;
+    virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
     virtual SurfaceBundle createVkSurfaceKHR(void* nativeWindow, VkInstance instance,
-            uint64_t flags) const noexcept;
+            uint64_t flags) const noexcept = 0;
 
     virtual VkExternalFenceHandleTypeFlagBits getFenceExportFlags() const noexcept;
 
 private:
-    // Platform dependent helper methods
-    static ExtensionSet getSwapchainInstanceExtensionsImpl();
-
-    // Platform dependent helper methods
-    static SurfaceBundle createVkSurfaceKHRImpl(void* nativeWindow, VkInstance instance,
-            uint64_t flags) noexcept;
-
     friend struct VulkanPlatformPrivate;
 };
 

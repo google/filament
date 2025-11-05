@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-#include "Includes.h"
+#include <matc/IncludeCallback.h>
+
+#include <utils/CString.h>
 
 #include <unordered_map>
 #include <string>
@@ -35,7 +37,7 @@ public:
         return *this;
     }
 
-    bool operator()(const utils::CString& includedBy, filamat::IncludeResult& result) {
+    bool operator()(const utils::CString& includedBy, matc::IncludeResult& result) {
         auto key = result.includeName.c_str();
         auto found = mIncludeMap.find(key);
 

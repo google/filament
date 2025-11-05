@@ -17,6 +17,7 @@
 #include "MaterialCompiler.h"
 
 #include "DirIncluder.h"
+#include "Includes.h"
 
 #include <memory>
 #include <iostream>
@@ -26,6 +27,7 @@
 
 #include <filament-matp/Config.h>
 
+#include <utils/CString.h>
 #include <utils/JobSystem.h>
 #include <utils/Log.h>
 #include <utils/Path.h>
@@ -52,8 +54,6 @@ bool MaterialCompiler::run(const matp::Config& config) {
     }
     std::unique_ptr<const char[]> buffer = input->read();
 
-    mParser.processTemplateSubstitutions(config, size, buffer);
-
     utils::Path const materialFilePath = utils::Path(input->getName()).getAbsolutePath();
     assert(materialFilePath.isFile());
 
@@ -69,16 +69,41 @@ bool MaterialCompiler::run(const matp::Config& config) {
         glslang::FinalizeProcess();
         return success;
     }
+    // Inline material (i.e. resolve #include directives)
+    DirIncluder includer;
+    includer.setIncludeDirectory(materialFilePath.getParent());
+    utils::CString fileName = utils::CString(materialFilePath.getName().c_str());
+
+    ResolveOptions const options {
+        .insertLineDirectives = true,
+        .insertLineDirectiveCheck = true
+    };
+    // This is both source and result, this will be mutated by `resolveIncludes` call.
+    IncludeResult result {
+        .includeName = fileName,
+        .text = utils::CString(buffer.get(), size),
+        .name = CString("")
+    };
+
+    if (!resolveIncludes(result, std::move(includer), options)) {
+        return false;
+    }
+
+    // Now that the buffer is mutated, we need to update the buffer pointer and the size
+    // before parsing.
+    size = result.text.size();
+    auto modifiedBuffer = std::make_unique<char[]>(size);
+    std::strncpy(modifiedBuffer.get(), result.text.c_str(), size);
+    buffer = std::move(modifiedBuffer);
+
+    if (config.getOutputFormat() == matp::Config::OutputFormat::MAT) {
+        return writeMat(buffer, size, config);
+    }
+
+    mParser.processTemplateSubstitutions(config, size, buffer);
 
     MaterialBuilder::init();
     MaterialBuilder builder;
-
-    // Set the root include directory to the directory containing the material file.
-    DirIncluder includer;
-    includer.setIncludeDirectory(materialFilePath.getParent());
-
-    builder.includeCallback(includer)
-            .fileName(materialFilePath.getName().c_str());
 
     utils::Status status = mParser.parse(builder, config, size, buffer);
     if (!status.isOk()) {
@@ -133,7 +158,6 @@ bool MaterialCompiler::checkParameters(const matp::Config& config) {
     return true;
 }
 
-// this can either be here or material parser
 bool MaterialCompiler::compileRawShader(const char* glsl, size_t size, bool isDebug,
         matp::Config::Output* output, const char* ext) const noexcept {
     using namespace glslang;

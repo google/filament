@@ -970,31 +970,6 @@ SwapChainPtr VulkanPlatform::createSwapChain(void* nativeWindow, uint64_t flags,
     return swapchain;
 }
 
-bool VulkanPlatform::isCompositorTimingSupported() const noexcept {
-#ifdef __ANDROID__
-    return true;
-#else
-    return Platform::isCompositorTimingSupported();
-#endif
-}
-
-bool VulkanPlatform::queryCompositorTiming(SwapChain const* swapchain,
-        CompositorTiming* outCompositorTiming) const noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryCompositorTiming(outCompositorTiming);
-}
-
-bool VulkanPlatform::setPresentFrameId(SwapChain const* swapchain, uint64_t frameId) noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->setPresentFrameId(frameId);
-}
-
-bool VulkanPlatform::queryFrameTimestamps(SwapChain const* swapchain, uint64_t frameId,
-        FrameTimestamps* outFrameTimestamps) const noexcept {
-    auto vulkanSwapchain = static_cast<VulkanPlatformSwapChainBase const *>(swapchain);
-    return vulkanSwapchain->queryFrameTimestamps(frameId, outFrameTimestamps);
-}
-
 Platform::Sync* VulkanPlatform::createSync(VkFence fence,
         std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
     return new VulkanSync{.fence = fence, .fenceStatus = fenceStatus};
@@ -1047,13 +1022,4 @@ VkExternalFenceHandleTypeFlagBits VulkanPlatform::getFenceExportFlags() const no
     return static_cast<VkExternalFenceHandleTypeFlagBits>(0);
 }
 
-ExtensionSet VulkanPlatform::getSwapchainInstanceExtensions() const {
-    return getSwapchainInstanceExtensionsImpl();
-}
-
-VulkanPlatform::SurfaceBundle VulkanPlatform::createVkSurfaceKHR(void* nativeWindow,
-        VkInstance instance, uint64_t flags) const noexcept {
-    return createVkSurfaceKHRImpl(nativeWindow, instance, flags);
-}
-
-}// namespace filament::backend
+} // namespace filament::backend
