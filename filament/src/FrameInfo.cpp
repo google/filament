@@ -47,9 +47,10 @@ namespace filament {
 using namespace utils;
 using namespace backend;
 
-FrameInfoManager::FrameInfoManager(DriverApi& driver) noexcept
+FrameInfoManager::FrameInfoManager(FEngine& engine, DriverApi& driver) noexcept
     : mJobQueue("FrameInfoGpuComplete", JobSystem::Priority::URGENT_DISPLAY),
-      mHasTimerQueries(driver.isFrameTimeSupported()) {
+      mHasTimerQueries(driver.isFrameTimeSupported()),
+      mDisableGpuFrameComplete(engine.features.engine.frame_info.disable_gpu_frame_complete_metric) {
     if (mHasTimerQueries) {
         for (auto& query : mQueries) {
             query.handle = driver.createTimerQuery();
@@ -68,11 +69,13 @@ void FrameInfoManager::terminate(FEngine& engine) noexcept {
         }
     }
 
-    // Destroy the fences that are still alive, they will error out.
-    for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
-        auto& info = mFrameTimeHistory[i];
-        if (info.fence) {
-            driver.destroyFence(std::move(info.fence));
+    if (!mDisableGpuFrameComplete) {
+        // Destroy the fences that are still alive, they will error out.
+        for (size_t i = 0, c = mFrameTimeHistory.size(); i < c; i++) {
+            auto& info = mFrameTimeHistory[i];
+            if (info.fence) {
+                driver.destroyFence(std::move(info.fence));
+            }
         }
     }
 
@@ -95,8 +98,10 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
     auto& history = mFrameTimeHistory;
     // don't exceed the capacity, drop the oldest entry
     if (UTILS_LIKELY(history.size() == history.capacity())) {
-        assert_invariant(history.back().fence);
-        driver.destroyFence(std::move(history.back().fence));
+        if (!mDisableGpuFrameComplete) {
+            assert_invariant(history.back().fence);
+            driver.destroyFence(std::move(history.back().fence));
+        }
         history.pop_back();
     }
 
@@ -185,12 +190,14 @@ void FrameInfoManager::beginFrame(FSwapChain* swapChain, DriverApi& driver,
 }
 
 void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
-    // create a Fence to capture the GPU complete time
-    FenceHandle const fence = driver.createFence();
-
     auto& front = mFrameTimeHistory.front();
-    front.fence = fence;
     front.endFrame = std::chrono::steady_clock::now();
+
+    if (!mDisableGpuFrameComplete) {
+        // create a Fence to capture the GPU complete time
+        FenceHandle const fence = driver.createFence();
+        front.fence = fence;
+    }
 
     if (mHasTimerQueries) {
         // close the timer query
@@ -198,33 +205,36 @@ void FrameInfoManager::endFrame(DriverApi& driver) noexcept {
     }
 
     // queue custom backend command to query the current time
-    driver.queueCommand([&jobQueue = mJobQueue, &driver, &front] {
+    driver.queueCommand([&jobQueue = mJobQueue, &driver, &front,
+            disableGpuFrameComplete = mDisableGpuFrameComplete] {
         // backend frame end-time
         front.backendEndFrame = std::chrono::steady_clock::now();
 
-        if (UTILS_UNLIKELY(!jobQueue.isValid())) {
+        if (UTILS_UNLIKELY(disableGpuFrameComplete || !jobQueue.isValid())) {
             front.gpuFrameComplete = {};
             front.ready.store(true, std::memory_order_release);
             return;
         }
 
-        // now launch a job that'll wait for the gpu to complete
-        jobQueue.push([&driver, &front] {
-            FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
-            if (status == FenceStatus::CONDITION_SATISFIED) {
-                front.gpuFrameComplete = std::chrono::steady_clock::now();
-            } else if (status == FenceStatus::TIMEOUT_EXPIRED) {
-                // that should never happen because:
-                // - we wait forever
-                // - made sure that the createFence() command was processed on the backed
-                //   (because we're inside a custom command)
-            } else {
-                // We got an error, fenceWait might not be supported
-                front.gpuFrameComplete = {};
-            }
-            // finally, signal that the data is available
-            front.ready.store(true, std::memory_order_release);
-        });
+        if (!disableGpuFrameComplete) {
+            // now launch a job that'll wait for the gpu to complete
+            jobQueue.push([&driver, &front] {
+                FenceStatus const status = driver.fenceWait(front.fence, FENCE_WAIT_FOR_EVER);
+                if (status == FenceStatus::CONDITION_SATISFIED) {
+                    front.gpuFrameComplete = std::chrono::steady_clock::now();
+                } else if (status == FenceStatus::TIMEOUT_EXPIRED) {
+                    // that should never happen because:
+                    // - we wait forever
+                    // - made sure that the createFence() command was processed on the backed
+                    //   (because we're inside a custom command)
+                } else {
+                    // We got an error, fenceWait might not be supported
+                    front.gpuFrameComplete = {};
+                }
+                // finally, signal that the data is available
+                front.ready.store(true, std::memory_order_release);
+            });
+        }
     });
 
     mIndex = (mIndex + 1) % POOL_COUNT;
